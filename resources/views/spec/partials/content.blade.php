@@ -1,0 +1,255 @@
+<aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="icon">📐</div>
+      <h2>لوحة التوصيف</h2>
+      <span>أكواد وكميات — قبل التصنيع</span>
+    </div>
+    <ul class="nav-menu">
+      <li><a href="#" class="active" data-section="orders"><span class="nav-icon">📥</span> طلبات التوصيف</a></li>
+      <li><a href="#" data-section="spec"><span class="nav-icon">👁️</span> معاينة التوصيف</a></li>
+      <li><a href="#" data-section="pricing"><span class="nav-icon">💰</span> إرسال للتسعير</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1 id="pageTitle">طلبات التوصيف — إرسال للتسعير</h1>
+        <p>خالد عمر حسن — أخصائي التوصيف الفني</p>
+      </div>
+      <div class="user-chip">
+        <div class="avatar">خ</div>
+        <span>خالد عمر</span>
+      </div>
+    </div>
+
+    <!-- Orders Section -->
+    <div class="section-view active" id="section-orders">
+    <div id="analytics-orders"></div>
+    <div class="content-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📥 طلبات التوصيف — إرسال للتسعير (قبل التصنيع)</h3>
+          <span class="badge" id="ordersCount">4</span>
+        </div>
+        <div class="orders-toolbar">
+          <input type="text" id="ordersSearch" placeholder="🔍 بحث برقم الطلب أو اسم المريض...">
+          <div class="export-btns">
+            <button class="btn-export excel" onclick="exportOrders('excel')">📊 Excel</button>
+            <button class="btn-export pdf" onclick="exportOrders('pdf')">📄 PDF</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul class="order-list" id="ordersList"></ul>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📋 تفاصيل طلب الصرف</h3>
+        </div>
+        <div class="panel-body">
+          <div id="emptyState" class="empty-state">
+            <div class="icon">📥</div>
+            <p>اختر طلب صرف من القائمة لعرض تفاصيل الأصناف المطلوبة</p>
+          </div>
+
+          <form id="specForm" class="spec-form" style="display:none;">
+            <div class="patient-banner visible" id="patientBanner">
+              <h4 id="bannerName">—</h4>
+              <div class="details">
+                <span>رقم الطلب: <strong id="bannerOrderId">—</strong></span>
+                <span>الطبيب: <strong id="bannerDoctor">—</strong></span>
+                <span>التاريخ: <strong id="bannerDate">—</strong></span>
+              </div>
+            </div>
+
+            <div class="order-detail-grid">
+              <div class="order-detail-item">
+                <div class="label">جهة التعاقد</div>
+                <div class="value" id="bannerCompany">—</div>
+              </div>
+              <div class="order-detail-item">
+                <div class="label">عدد الأصناف</div>
+                <div class="value" id="bannerItemCount">—</div>
+              </div>
+              <div class="order-detail-item">
+                <div class="label">حالة الطلب</div>
+                <div class="value" style="color:var(--warning);">بانتظار الصرف</div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title">📦 الأصناف المطلوبة من العيادة</div>
+              <div class="stock-table-wrap">
+                <table class="stock-table">
+                  <thead>
+                    <tr>
+                      <th>الصنف</th>
+                      <th>الكود</th>
+                      <th>الفئة</th>
+                      <th class="col-qty">الكمية المطلوبة</th>
+                      <th class="col-qty">المتوفر</th>
+                      <th class="col-status">حالة المخزون</th>
+                    </tr>
+                  </thead>
+                  <tbody id="orderItemsBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>ملاحظات مخزون (اختياري)</label>
+              <textarea class="form-control" id="techNotes" rows="3" placeholder="أي ملاحظات خاصة بالصرف أو الكميات..."></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="submitSpec">
+                📤 اعتماد التوصيف وإرسال للتسعير
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Spec Section (standalone) -->
+    <div class="section-view" id="section-spec">
+      <div id="analytics-spec"></div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📦 معاينة التوصيف — بدون صرف مخزني</h3>
+        </div>
+        <div class="panel-body" style="padding:24px;">
+          <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">هذا القسم للمعاينة فقط — الصرف الفعلي يتم من <strong>لوحة المخزون (BOM)</strong> بعد موافقة العميل.</p>
+          <ul class="order-list" id="ordersListSpec" style="margin-bottom:20px;border:1px solid var(--border);border-radius:10px;"></ul>
+          <div id="specSectionHint" class="empty-state" style="padding:24px;">
+            <div class="icon">📦</div>
+            <p>اختر طلب صرف لعرض تفاصيل الأصناف المطلوبة</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing Section -->
+    <div class="section-view" id="section-pricing">
+      <div id="analytics-pricing"></div>
+      <div class="panel pricing-wrap">
+        <div class="panel-header">
+          <h3>💰 طلبات مرسلة للتسعير</h3>
+          <span class="badge" id="pricingCount">3</span>
+        </div>
+
+        <div class="pricing-summary">
+          <div class="pricing-stat">
+            <div class="ps-icon" style="background:rgba(217,119,6,0.12)">📋</div>
+            <div>
+              <div class="ps-label">إجمالي الطلبات</div>
+              <div class="ps-value" id="prTotal">3</div>
+            </div>
+          </div>
+          <div class="pricing-stat">
+            <div class="ps-icon" style="background:rgba(217,119,6,0.12)">⏳</div>
+            <div>
+              <div class="ps-label">في انتظار موافقة الأدمن</div>
+              <div class="ps-value" id="prPending" style="color:#b45309">2</div>
+            </div>
+          </div>
+          <div class="pricing-stat">
+            <div class="ps-icon" style="background:rgba(5,150,105,0.12)">✅</div>
+            <div>
+              <div class="ps-label">أُرسل للاستقبال</div>
+              <div class="ps-value" id="prSent" style="color:#047857">1</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pricing-info-banner">
+          📋 بعد حساب التكلفة يتوقف الطلب عند موافقة الأدمن — ثم يُحوَّل للاستقبال لإصدار عرض السعر
+        </div>
+
+        <div class="pricing-toolbar">
+          <input type="text" id="pricingSearch" placeholder="بحث برقم الطلب أو اسم المريض...">
+          <div class="filter-pills" id="pricingFilters">
+            <button class="filter-pill active" data-prfilter="all">الكل</button>
+            <button class="filter-pill" data-prfilter="pending">⏳ في انتظار موافقة الأدمن</button>
+            <button class="filter-pill" data-prfilter="sent">✅ معتمد — جاهز للاستقبال</button>
+          </div>
+          <div class="export-btns">
+            <button class="btn-export excel" onclick="exportPricing('excel')">📊 Excel</button>
+            <button class="btn-export pdf" onclick="exportPricing('pdf')">📄 PDF</button>
+          </div>
+        </div>
+
+        <div class="pricing-table-wrap">
+          <table class="pricing-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>رقم الطلب</th>
+                <th>المريض</th>
+                <th>التاريخ</th>
+                <th class="col-center">البنود</th>
+                <th class="col-center">الحالة / التقدم</th>
+                <th class="col-actions">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="pricingTable"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="7" id="pricingFooter">عرض 3 من 3 طلبات</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Pricing Detail Modal -->
+  <div class="modal-overlay" id="pricingModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="pricingModalTitle">🧾 تفاصيل طلب التسعير</h3>
+        <button type="button" class="modal-close" id="closePricingModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="pricing-detail-meta" id="pricingModalMeta"></div>
+        <div class="pricing-detail-steps-wrap">
+          <h4>📊 مسار التسعير</h4>
+          <div id="pricingModalSteps"></div>
+        </div>
+        <div class="pricing-detail-items">
+          <h4>📦 الأصناف المطلوبة</h4>
+          <div class="stock-table-wrap">
+            <table class="stock-table">
+              <thead>
+                <tr>
+                  <th>الصنف</th>
+                  <th>الكود</th>
+                  <th>الفئة</th>
+                  <th class="col-qty">الكمية</th>
+                  <th class="col-qty">المتاح</th>
+                  <th class="col-status">التوفر</th>
+                </tr>
+              </thead>
+              <tbody id="pricingModalItems"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pricing-detail-note">
+          📋 الطلب يظهر للإدارة للاعتماد — بعد الموافقة يُرسل تلقائياً للاستقبال.
+        </div>
+        <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+          <button type="button" class="btn-view" id="btnClosePricingModal">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>

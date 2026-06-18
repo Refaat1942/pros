@@ -1,0 +1,259 @@
+<aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="icon">🩺</div>
+      <h2>لوحة الطبيب المعالج</h2>
+      <span>العيادة والتشخيص</span>
+    </div>
+    <!-- <div class="privacy-notice">
+      <strong>🔒 حجب مالي مفعّل</strong>
+      جميع الأسعار والتكاليف محجوبة عن هذه اللوحة وفقاً لسياسة فصل الاختصاصات.
+    </div> -->
+    <ul class="nav-menu">
+      <li><a href="#" class="active" data-section="queue"><span class="nav-icon">📋</span> قائمة الانتظار</a></li>
+      <li><a href="#" data-section="diagnosis"><span class="nav-icon">📝</span> التشخيص الطبي</a></li>
+      <li><a href="#" data-section="records"><span class="nav-icon">📁</span> السجل الطبي</a></li>
+      <li><a href="#" data-section="transfer"><span class="nav-icon">📦</span> المحولون للمخزون</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1 id="pageTitle">العيادة الطبية — قائمة الانتظار</h1>
+        <p>د. سارة عبدالله — اليوم: الأحد 08/06/2026</p>
+      </div>
+      <div class="user-chip">
+        <div class="avatar">س</div>
+        <span>د. سارة عبدالله</span>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-mini">
+        <div class="icon">📅</div>
+        <div class="info">
+          <div class="label">حالات اليوم</div>
+          <div class="value" id="todayCount">8</div>
+        </div>
+      </div>
+      <div class="stat-mini">
+        <div class="icon">⏳</div>
+        <div class="info">
+          <div class="label">في الانتظار</div>
+          <div class="value" id="waitingCount">5</div>
+        </div>
+      </div>
+      <div class="stat-mini">
+        <div class="icon">✅</div>
+        <div class="info">
+          <div class="label">تم الفحص</div>
+          <div class="value">3</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Queue Section -->
+    <div class="section-view active" id="section-queue">
+    <div id="analytics-queue"></div>
+    <div class="content-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📋 قائمة الانتظار الرقمية</h3>
+          <span class="count-badge" id="queueBadge">5</span>
+        </div>
+        <div class="data-toolbar">
+          <input type="text" id="queueSearch" placeholder="🔍 بحث بالاسم أو الجهة...">
+          <select id="queuePriorityFilter">
+            <option value="all">كل الأولويات</option>
+            <option value="urgent">عاجل</option>
+            <option value="normal">عادي</option>
+          </select>
+          <span class="toolbar-count" id="queueCount">5 مريض</span>
+          <div class="export-btns">
+            <button class="btn-export excel" onclick="exportQueue('excel')">📊 Excel</button>
+            <button class="btn-export pdf" onclick="exportQueue('pdf')">📄 PDF</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم المريض</th>
+                <th>الجهة</th>
+                <th>الأولوية</th>
+                <th>الانتظار</th>
+              </tr>
+            </thead>
+            <tbody id="queueTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📝 اختيار مريض للفحص</h3>
+        </div>
+        <div class="panel-body" style="padding:24px;">
+          <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">اختر مريضاً من قائمة الانتظار ثم انتقل لقسم "التشخيص الطبي" لإدخال التقرير.</p>
+          <div class="patient-info-bar" id="patientBarQueue">
+            <h4 id="selectedPatientNameQueue">—</h4>
+            <p id="selectedPatientInfoQueue">—</p>
+          </div>
+          <button class="btn btn-primary" id="goToDiagnosis" disabled onclick="switchSection('diagnosis')">📝 الانتقال للتشخيص</button>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Diagnosis Section -->
+    <div class="section-view" id="section-diagnosis">
+      <div id="analytics-diagnosis"></div>
+      <div class="panel form-panel">
+        <div class="panel-header">
+          <h3>📝 التشخيص الطبي</h3>
+        </div>
+        <div class="panel-body">
+          <div class="patient-info-bar" id="patientBar">
+            <h4 id="selectedPatientName">—</h4>
+            <p id="selectedPatientInfo">—</p>
+          </div>
+
+          <div class="silent-clinic-note" id="silentClinicNote" style="display:none;">
+            🪖 <span>مريض عسكري — <strong>عيادة صامتة</strong>: يُسجَّل الكشف والتوصيف ويتخطّى النظام عرض السعر والتحصيل (تقييم مالي صامت في الخلفية).</span>
+          </div>
+
+          <form id="diagnosisForm">
+            <div class="form-group">
+              <label>التوصيات الطبية <span class="required">*</span></label>
+              <div class="stock-multi-select" id="medicalRecommendationsSelect">
+                <div class="sms-selected"></div>
+                <div class="sms-control">
+                  <input type="text" class="sms-search" placeholder="🔍 ابحث واختر من أصناف المخزون..." autocomplete="off">
+                  <button type="button" class="sms-toggle" aria-label="فتح القائمة">▼</button>
+                </div>
+                <div class="sms-dropdown"></div>
+              </div>
+              <p class="field-hint">اختيار متعدد من المخزون — حدّد <strong>الكمية</strong> لكل صنف (بحد أقصى المتوفر)</p>
+            </div>
+
+            <div class="form-group">
+              <label>التشخيص الدقيق <span class="required">*</span></label>
+              <textarea class="form-control" id="diagnosis" placeholder="أدخل التشخيص الطبي التفصيلي..." required></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>الروشتة الطبية</label>
+              <textarea class="form-control" id="prescription" placeholder="الأدوية والإرشادات الطبية (اختياري)..."></textarea>
+            </div>
+
+            <!-- <div class="blocked-notice">
+              🔒 الأسعار والتكاليف المالية محجوبة — لا تظهر في هذه الشاشة
+            </div> -->
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="saveBtn" disabled>
+                💾 حفظ واعتماد التقرير
+              </button>
+              <button type="button" class="btn btn-transfer" id="transferBtn" disabled>
+                📦 تحويل للمخزون
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Records Section -->
+    <div class="section-view" id="section-records">
+      <div id="analytics-records"></div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📁 السجل الطبي — التقارير المعتمدة</h3>
+          <span class="count-badge">12 تقرير</span>
+        </div>
+        <div class="data-toolbar">
+          <input type="text" id="recordsSearch" placeholder="🔍 بحث بالاسم أو التوصيات...">
+          <span class="toolbar-count" id="recordsCount">5 تقارير</span>
+          <div class="export-btns">
+            <button class="btn-export excel" onclick="exportRecords('excel')">📊 Excel</button>
+            <button class="btn-export pdf" onclick="exportRecords('pdf')">📄 PDF</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table>
+            <thead>
+              <tr>
+                <th>المريض</th>
+                <th>التوصيات الطبية</th>
+                <th>الطبيب</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="recordsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transfer Section -->
+    <div class="section-view" id="section-transfer">
+      <div id="analytics-transfer"></div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📦 الحالات المحولة للمخزون</h3>
+          <span class="count-badge" id="transferredCount">3</span>
+        </div>
+        <div class="data-toolbar">
+          <input type="text" id="transferSearch" placeholder="🔍 بحث بالاسم أو الجهة...">
+          <select id="transferStatusFilter">
+            <option value="all">كل الحالات</option>
+            <option value="قيد التوصيف">قيد التوصيف</option>
+            <option value="في الورشة">في الورشة</option>
+            <option value="مكتمل">مكتمل</option>
+          </select>
+          <span class="toolbar-count" id="transferCount">3 حالة</span>
+          <div class="export-btns">
+            <button class="btn-export excel" onclick="exportTransferred('excel')">📊 Excel</button>
+            <button class="btn-export pdf" onclick="exportTransferred('pdf')">📄 PDF</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table>
+            <thead>
+              <tr>
+                <th>المريض</th>
+                <th>التوصيات الطبية</th>
+                <th>الجهة</th>
+                <th>تاريخ التحويل</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="transferredTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="record-modal-overlay" id="recordDetailModal" role="dialog" aria-modal="true" aria-labelledby="recordModalTitle">
+    <div class="record-modal" onclick="event.stopPropagation()">
+      <div class="record-modal-header">
+        <div>
+          <h3 id="recordModalTitle">—</h3>
+          <div class="modal-meta" id="recordModalMeta">—</div>
+        </div>
+        <button type="button" class="record-modal-close" id="recordModalClose" aria-label="إغلاق">&times;</button>
+      </div>
+      <div class="record-modal-body" id="recordModalBody"></div>
+      <div class="record-modal-footer">
+        <button type="button" class="btn-close-modal" id="recordModalCloseBtn">إغلاق</button>
+      </div>
+    </div>
+  </div>

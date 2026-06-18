@@ -1,0 +1,430 @@
+/**
+ * Dashboard Mobile — responsive للهاتف و iPhone
+ */
+@media (max-width: 768px) {
+  :root {
+    --dm-bar-h: 52px;
+    --dm-nav-h: 62px;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    flex-direction: column;
+    padding-top: calc(var(--dm-bar-h) + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(var(--dm-nav-h) + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+  }
+
+  /* ── Sidebar drawer (RTL) ── */
+  .sidebar {
+    display: flex !important;
+    width: min(288px, 88vw);
+    transform: translateX(100%);
+    transition: transform 0.28s ease;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.18);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  body.dm-nav-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .dm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 99;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
+  body.dm-nav-open .dm-overlay {
+    display: block;
+  }
+
+  /* ── Mobile top bar ── */
+  .dm-mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--dm-bar-h) + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 12px 0 12px;
+    background: var(--card, #fff);
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    z-index: 110;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .dm-menu-btn,
+  .dm-home-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    background: #f8fafc;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .dm-menu-btn:active,
+  .dm-home-btn:active {
+    background: #f1f5f9;
+  }
+
+  .dm-mobile-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--secondary, #1e3a5f);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  /* ── Bottom nav ── */
+  .dm-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--dm-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--card, #fff);
+    border-top: 1px solid var(--border, #e2e8f0);
+    z-index: 110;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  .dm-bottom-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dm-bottom-nav a {
+    flex: 1 0 auto;
+    min-width: 72px;
+    max-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 8px;
+    text-decoration: none;
+    color: var(--text-muted, #64748b);
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'Tajawal', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    border: none;
+    background: none;
+  }
+
+  .dm-bottom-nav a .nav-icon {
+    font-size: 20px;
+    width: auto;
+    line-height: 1;
+  }
+
+  .dm-bottom-nav a.active {
+    color: var(--primary, #0e7490);
+    background: rgba(14, 116, 144, 0.06);
+  }
+
+  /* ── Main content ── */
+  .main {
+    margin-right: 0 !important;
+    padding: 16px 12px !important;
+    width: 100%;
+    min-height: auto;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .page-header h1 {
+    font-size: 1.15rem !important;
+    line-height: 1.35;
+  }
+
+  .page-header p {
+    font-size: 12px;
+  }
+
+  .user-chip > span {
+    display: none;
+  }
+
+  .user-chip {
+    align-self: flex-end;
+    padding: 4px;
+  }
+
+  /* ── Stats ── */
+  .stats-row,
+  .stats-grid,
+  .inventory-summary,
+  .pricing-summary {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .stat-mini,
+  .stat-card,
+  .inv-stat,
+  .pricing-stat {
+    padding: 12px 14px !important;
+  }
+
+  .stat-mini .info .value,
+  .stat-card .stat-value {
+    font-size: 1.25rem !important;
+  }
+
+  /* ── Grids ── */
+  .content-grid,
+  .panels-grid,
+  .form-row,
+  .add-patient-form-grid,
+  .add-stock-grid,
+  .checkbox-grid,
+  .quote-meta,
+  .patient-file-meta,
+  .modal-meta-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Toolbars ── */
+  .data-toolbar,
+  .orders-toolbar,
+  .inventory-toolbar,
+  .search-bar,
+  .panel-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+  }
+
+  .data-toolbar input,
+  .orders-toolbar input,
+  .inventory-toolbar input,
+  .search-bar input,
+  .inventory-toolbar input {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .export-btns,
+  .filter-pills {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .btn-export,
+  .filter-pill {
+    min-height: 44px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ── Tables — scroll أفقي ── */
+  .panel-body,
+  .stock-table-wrap,
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table,
+  .stock-table {
+    min-width: 520px;
+    font-size: 12px;
+  }
+
+  table th,
+  table td,
+  .stock-table th,
+  .stock-table td {
+    padding: 10px 12px !important;
+  }
+
+  /* ── Panels ── */
+  .panel-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 16px !important;
+  }
+
+  .panel-header h3 {
+    font-size: 0.9rem !important;
+  }
+
+  /* ── Forms — منع zoom على iPhone ── */
+  input,
+  select,
+  textarea,
+  .form-control {
+    font-size: 16px !important;
+  }
+
+  .form-actions,
+  .add-patient-form-actions,
+  .add-stock-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn,
+  .add-patient-form-actions .btn,
+  .add-stock-actions .btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  /* ── Modals ── */
+  .modal,
+  .modal-box {
+    width: calc(100% - 24px) !important;
+    max-width: none !important;
+    margin: 12px !important;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  /* ── Charts (ChartKit) ── */
+  .ck-charts {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ck-chart-card.ck-wide {
+    grid-column: 1 !important;
+  }
+
+  .ck-stats {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .ck-stat {
+    padding: 12px !important;
+  }
+
+  .ck-stat-value {
+    font-size: 1.1rem !important;
+  }
+
+  .ck-column-chart {
+    gap: 6px;
+  }
+
+  .ck-column-yaxis {
+    min-width: 32px;
+    font-size: 9px;
+  }
+
+  .ck-column-bars {
+    gap: 6px;
+  }
+
+  .ck-column-label {
+    font-size: 10px !important;
+  }
+
+  .ck-donut-wrap.ck-donut-lg {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ck-donut-summary {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* ── Inventory health ── */
+  .inventory-health-panel {
+    grid-template-columns: 1fr !important;
+  }
+
+  .category-chips {
+    flex-wrap: wrap;
+  }
+
+  .add-stock-bar {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  /* ── Order list / queue ── */
+  .order-item {
+    padding: 14px !important;
+  }
+
+  /* ── Add patient collapsible ── */
+  .add-patient-toggle {
+    padding: 14px 16px !important;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ── Report cards admin ── */
+  .reports-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .report-card.wide {
+    grid-column: span 1 !important;
+  }
+
+  .debt-cards {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .stats-row,
+  .stats-grid,
+  .ck-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dm-bottom-nav a {
+    min-width: 64px;
+    font-size: 9px;
+  }
+}
+
+@media (min-width: 769px) {
+  .dm-mobile-bar,
+  .dm-bottom-nav,
+  .dm-overlay {
+    display: none !important;
+  }
+}
