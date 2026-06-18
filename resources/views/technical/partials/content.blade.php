@@ -22,23 +22,28 @@
     <div class="page-header">
       <div>
         <h1 id="pageTitle">المخزون — توفر الأصناف</h1>
-        <p>محمد فتحي إبراهيم — مسؤول المخزون</p>
+        <p></p>
       </div>
       <div class="user-chip">
-        <div class="avatar">م</div>
-        <span>محمد فتحي</span>
+        <div class="avatar"></div>
+        <span></span>
       </div>
     </div>
 
     <!-- Inventory Section -->
     <div class="section-view active" id="section-inventory">
-      <div id="analytics-inventory-charts"></div>
+      <div id="analytics-inventory-charts">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '💚', 'label' => 'صحة المخزون', 'value' => '0/100', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '✅', 'label' => 'متوفر', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '⚠️', 'label' => 'منخفض', 'value' => '0', 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+        ['icon' => '🔒', 'label' => 'محجوز', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+      ]])</div>
       <div class="panel inventory-wrap">
         <div class="panel-header">
           <h3>📦 توفر المخزون — الكميات المتاحة</h3>
           <div style="display:flex;align-items:center;gap:10px;">
             <button type="button" class="btn-action primary" id="btnReceiveStock">📥 استلام وارد</button>
-            <span class="badge" id="inventoryBadge">10 أصناف</span>
+            <span class="badge" id="inventoryBadge">0 صنف</span>
           </div>
         </div>
 
@@ -47,75 +52,55 @@
             <div class="inv-stat-icon total">📦</div>
             <div>
               <div class="inv-stat-label">إجمالي الأصناف</div>
-              <div class="inv-stat-value" id="invTotal">10</div>
+              <div class="inv-stat-value" id="invTotal">0</div>
             </div>
           </div>
           <div class="inv-stat">
             <div class="inv-stat-icon ok">✅</div>
             <div>
               <div class="inv-stat-label">متوفر</div>
-              <div class="inv-stat-value" id="invOk" style="color:#047857">7</div>
+              <div class="inv-stat-value" id="invOk" style="color:#047857">0</div>
             </div>
           </div>
           <div class="inv-stat">
             <div class="inv-stat-icon low">⚠️</div>
             <div>
               <div class="inv-stat-label">كمية منخفضة</div>
-              <div class="inv-stat-value" id="invLow" style="color:#b91c1c">3</div>
+              <div class="inv-stat-value" id="invLow" style="color:#b91c1c">0</div>
             </div>
           </div>
           <div class="inv-stat">
             <div class="inv-stat-icon total">🔢</div>
             <div>
               <div class="inv-stat-label">إجمالي الوحدات</div>
-              <div class="inv-stat-value" id="invUnits">144</div>
+              <div class="inv-stat-value" id="invUnits">0</div>
             </div>
           </div>
           <div class="inv-stat">
             <div class="inv-stat-icon reserved">🔒</div>
             <div>
               <div class="inv-stat-label">محجوز للطلبات</div>
-              <div class="inv-stat-value" id="invReserved" style="color:#0e7490">11</div>
+              <div class="inv-stat-value" id="invReserved" style="color:#0e7490">0</div>
             </div>
           </div>
           <div class="inv-stat">
             <div class="inv-stat-icon critical">🚨</div>
             <div>
               <div class="inv-stat-label">حرج (≤20%)</div>
-              <div class="inv-stat-value" id="invCritical" style="color:#b91c1c">3</div>
+              <div class="inv-stat-value" id="invCritical" style="color:#b91c1c">0</div>
             </div>
           </div>
         </div>
 
         <div class="inventory-health-panel">
           <div class="health-gauge">
-            <div class="health-gauge-ring" id="invHealthRing" style="background:conic-gradient(#059669 0 281deg,#e2e8f0 281deg 360deg)">
-              <div class="health-gauge-ring-inner"><span id="invHealthScore">78</span><span>/100</span></div>
+            <div class="health-gauge-ring" id="invHealthRing" style="background:conic-gradient(#e2e8f0 0 360deg)">
+              <div class="health-gauge-ring-inner"><span id="invHealthScore">0</span><span>/100</span></div>
             </div>
             <div class="health-gauge-label">صحة المخزون</div>
-            <div class="health-gauge-sub" id="invHealthLabel">جيد — يحتاج متابعة</div>
+            <div class="health-gauge-sub" id="invHealthLabel"></div>
           </div>
-          <div class="health-details" id="invHealthDetails">
-            <div class="health-detail-row">
-              <span class="hdr-label">توفر الأصناف</span>
-              <div class="hdr-bar"><div class="hdr-bar-fill" style="width:70%;background:#059669"></div></div>
-              <span class="hdr-val" style="color:#047857">70%</span>
-            </div>
-            <div class="health-detail-row">
-              <span class="hdr-label">تغطية الطلبات الجارية</span>
-              <div class="hdr-bar"><div class="hdr-bar-fill" style="width:85%;background:#0e7490"></div></div>
-              <span class="hdr-val" style="color:#0e7490">85%</span>
-            </div>
-            <div class="health-detail-row">
-              <span class="hdr-label">أصناف بكمية كافية</span>
-              <div class="hdr-bar"><div class="hdr-bar-fill" style="width:70%;background:#d97706"></div></div>
-              <span class="hdr-val" style="color:#b45309">70%</span>
-            </div>
-            <div class="health-detail-row">
-              <span class="hdr-label">آخر تحديث للمخزون</span>
-              <span class="hdr-val" style="flex:1;text-align:left;color:var(--text-muted);font-weight:500" id="invLastUpdate">08/06/2026 08:10</span>
-            </div>
-          </div>
+          <div class="health-details" id="invHealthDetails"></div>
         </div>
 
         <div class="inventory-alerts" id="invAlerts">
@@ -157,7 +142,7 @@
             <tbody id="inventoryTable"></tbody>
             <tfoot>
               <tr>
-                <td colspan="6" id="inventoryFooter">عرض 10 من 10 أصناف</td>
+                <td colspan="6" id="inventoryFooter"></td>
               </tr>
             </tfoot>
           </table>
@@ -167,7 +152,12 @@
 
     <!-- BOM Section -->
     <div class="section-view" id="section-bom">
-      <div id="analytics-bom"></div>
+      <div id="analytics-bom">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📦', 'label' => 'خام', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '✅', 'label' => 'تام', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '💰', 'label' => 'قيمة إجمالية', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+      ]])</div>
       <div class="panel inventory-wrap">
         <div class="panel-header">
           <h3>📋 قائمة المواد (BOM) — خام → تحت التشغيل → تام</h3>
@@ -300,7 +290,7 @@
             <input type="text" class="form-control" id="rcvInvoice" placeholder="INV-...">
           </div>
           <div class="form-group"><label>تاريخ التوريد</label>
-            <input type="text" class="form-control" id="rcvDate" value="08/06/2026">
+            <input type="text" class="form-control" id="rcvDate" value="">
           </div>
         </div>
         <div class="receive-wac" id="rcvWacPreview">—</div>

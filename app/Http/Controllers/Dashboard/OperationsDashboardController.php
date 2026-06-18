@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
-use Illuminate\View\View;
+use App\Http\Controllers\Dashboard\Concerns\ShowsDashboardPage;
 
 class OperationsDashboardController extends Controller
 {
-    public function index(): View
+    use ShowsDashboardPage;
+
+    protected function dashboardKey(): string
     {
-        return view('operations.index');
+        return 'operations';
     }
 }

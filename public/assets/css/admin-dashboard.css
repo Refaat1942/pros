@@ -416,8 +416,7 @@
       color: var(--primary);
     }
 
-    .section-view { display: none; }
-    .section-view.active { display: block; animation: fadeIn 0.3s ease; }
+    .section-view { display: block; animation: fadeIn 0.3s ease; }
 
     .catalog-form {
       display: none;

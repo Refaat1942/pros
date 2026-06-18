@@ -657,8 +657,7 @@
       gap: 8px;
     }
 
-    .section-view { display: none; }
-    .section-view.active { display: block; animation: fadeIn 0.3s ease; }
+    .section-view { display: block; animation: fadeIn 0.3s ease; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(8px); }

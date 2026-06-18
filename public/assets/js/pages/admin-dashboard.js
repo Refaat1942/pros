@@ -1,91 +1,33 @@
-    StockCatalog.ensureSeeded();
-    CasesWorkflow.ensureSeeded();
-    PricingQueue.ensureSeeded();
-    BomInventory.ensureSeeded();
-    var ADMIN_USER = 'أحمد محمود حسن';
+    var ADMIN_USER = '';
     var pricingApprovalSearch = '';
     var pricingApprovalFilter = 'pending';
     var selectedPricingId = null;
     var casesFilter = 'waiting_return';
     var casesSearchTerm = '';
-    var catalogItems = StockCatalog.getAll();
+    var catalogItems = [];
     var catalogSearchTerm = '';
     var catalogCategoryFilter = 'all';
     var editingCatalogCode = null;
-    var employees = [
-      { name: 'أحمد محمود حسن', role: 'admin', roleLabel: 'إدارة النظام', status: 'active', lastLogin: '08/06/2026 09:15' },
-      { name: 'د. سارة عبدالله', role: 'doctor', roleLabel: 'طبيب معالج', status: 'active', lastLogin: '08/06/2026 08:42' },
-      { name: 'محمد فتحي إبراهيم', role: 'technical', roleLabel: 'أخصائي فني', status: 'active', lastLogin: '08/06/2026 08:30' },
-      { name: 'نورهان علي سالم', role: 'reception', roleLabel: 'موظف استقبال', status: 'active', lastLogin: '08/06/2026 07:55' },
-      { name: 'خالد عمر يوسف', role: 'store', roleLabel: 'أمين مخزن', status: 'active', lastLogin: '08/06/2026 08:10' },
-      { name: 'د. ياسمين رشدي', role: 'doctor', roleLabel: 'طبيب معالج', status: 'inactive', lastLogin: '05/06/2026 16:20' }
-    ];
+    var employees = [];
+    var companySearchTerm = '';
+    var contractCompanies = [];
+    var debts = [];
+    var auditLogs = [];
+    var suppliers = [];
 
     var COMPANIES_STORAGE_KEY = 'clinic_contract_companies';
-    var companySearchTerm = '';
-
-    var DEFAULT_COMPANY_NAMES = [
-      'شركة التأمين الوطني',
-      'هيئة التأمين الصحي',
-      'مجلس الدفاع المدني',
-      'شركة مصر للتأمين',
-      'صندوق رعاية ذوي الإعاقة',
-      'وزارة الداخلية — التأمين'
-    ];
 
     function loadCompanies() {
-      try {
-        var raw = localStorage.getItem(COMPANIES_STORAGE_KEY);
-        if (raw) {
-          var parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length) return parsed;
-        }
-      } catch (e) { /* ignore */ }
-      return DEFAULT_COMPANY_NAMES.map(function(name, i) {
-        return { id: 'CO-' + String(i + 1).padStart(3, '0'), name: name };
-      });
+      return contractCompanies.slice();
     }
 
     function saveCompanies(list) {
-      localStorage.setItem(COMPANIES_STORAGE_KEY, JSON.stringify(list));
+      contractCompanies = list.slice();
     }
 
-    function ensureCompaniesSeeded() {
-      if (!localStorage.getItem(COMPANIES_STORAGE_KEY)) {
-        saveCompanies(loadCompanies());
-      }
-    }
-
-    var contractCompanies = loadCompanies();
-    ensureCompaniesSeeded();
-
-    if (typeof CreditNotes !== 'undefined') CreditNotes.ensureSeeded();
     function reloadDebts() {
-      return typeof CreditNotes !== 'undefined' ? CreditNotes.getDebts() : debts;
+      return debts;
     }
-    var debts = reloadDebts();
-
-    var auditLogs = [
-      { time: '08/06/2026 09:42:18', user: 'نورهان علي', action: 'إنشاء', desc: 'إنشاء ملف مريض جديد — الرقم القومي: 2980515...', tag: 'patients', ip: '192.168.1.21', mac: 'A4:5E:60:DC:11:02', before: '—', after: 'PT-CIV-0042' },
-      { time: '08/06/2026 09:38:05', user: 'د. سارة عبدالله', action: 'تحديث', desc: 'اعتماد التقرير الطبي للمريض: محمود عبد الرحمن', tag: 'medical', ip: '192.168.1.34', mac: 'A4:5E:60:DC:22:7B', before: 'مسودة', after: 'معتمد' },
-      { time: '08/06/2026 09:22:41', user: 'محمد فتحي', action: 'إنشاء', desc: 'حفظ التوصيف الفني — طلب #ORD-2026-0847', tag: 'technical', ip: '192.168.1.40', mac: 'A4:5E:60:DC:33:9C', before: '—', after: '3 بنود' },
-      { time: '08/06/2026 08:55:33', user: 'خالد عمر', action: 'صرف مخزن', desc: 'تأكيد صرف خامات بالباركود — أمر تشغيل #WO-2026-0312', tag: 'inventory', ip: '192.168.1.55', mac: 'A4:5E:60:DC:44:1D', before: 'خام', after: 'تحت التشغيل' },
-      { time: '08/06/2026 08:30:12', user: 'أحمد محمود', action: 'عرض', desc: 'استعراض تقرير الأصناف الراكدة — ١٧ صنف', tag: 'reports', ip: '192.168.1.10', mac: 'A4:5E:60:DC:55:2E', before: '—', after: '—' },
-      { time: '08/06/2026 08:15:00', user: 'أحمد محمود', action: 'تعديل', desc: 'تحديث صلاحيات موظف: خالد عمر يوسف', tag: 'users', ip: '192.168.1.10', mac: 'A4:5E:60:DC:55:2E', before: 'مخزن', after: 'مخزن + جرد' },
-      { time: '08/06/2026 07:50:22', user: 'نورهان علي', action: 'إنشاء', desc: 'إصدار عرض سعر QT-2026-0847 — 110,500 ج.م', tag: 'finance', ip: '192.168.1.21', mac: 'A4:5E:60:DC:11:02', before: '—', after: '110,500 ج.م' },
-      { time: '07/06/2026 16:45:10', user: 'أحمد محمود', action: 'إنشاء', desc: 'تسجيل فاتورة مشتريات — مورد Ottobock', tag: 'suppliers', ip: '192.168.1.10', mac: 'A4:5E:60:DC:55:2E', before: '—', after: '485,000 ج.م' }
-    ];
-
-    var suppliers = [
-      { name: 'Ottobock Egypt', specialty: 'مفاصل وأطراف صناعية', lastInvoice: '05/06/2026', amount: 485000, status: 'paid' },
-      { name: 'Össur Middle East', specialty: 'أطراف carbon وprotheses', lastInvoice: '28/05/2026', amount: 320000, status: 'paid' },
-      { name: 'شركة المستقبل الطبي', specialty: 'مستلزمات وbattانات', lastInvoice: '01/06/2026', amount: 95000, status: 'partial' },
-      { name: 'Proteor France', specialty: 'مفاصل هيدروليكية', lastInvoice: '20/05/2026', amount: 560000, status: 'paid' },
-      { name: 'Fillauer LLC', specialty: 'مكونات أمريكية', lastInvoice: '15/05/2026', amount: 275000, status: 'pending' },
-      { name: 'شركة النيل للتوريدات', specialty: 'مواد خام محلية', lastInvoice: '08/06/2026', amount: 42000, status: 'paid' },
-      { name: 'Blatchford Group', specialty: 'أقدam صناعية', lastInvoice: '30/04/2026', amount: 198000, status: 'paid' },
-      { name: 'شركة الإسكندرية الطبية', specialty: 'أدوات وعدد', lastInvoice: '02/06/2026', amount: 35000, status: 'paid' }
-    ];
 
     var sectionTitles = {
       overview: 'لوحة المعلومات — الإدارة العليا',
@@ -101,14 +43,16 @@
       suppliers: 'الموردون وفواتير المشتريات'
     };
 
+    function dashboardPageUrl(page) {
+      var seg = window.location.pathname.split('/').filter(Boolean);
+      return '/' + (seg[0] || 'admin') + '/' + page;
+    }
+
     function switchSection(sectionId) {
-      document.querySelectorAll('.section-view').forEach(function(el) {
-        el.classList.toggle('active', el.id === 'section-' + sectionId);
-      });
-      document.querySelectorAll('.nav-menu a[data-section]').forEach(function(a) {
-        a.classList.toggle('active', a.getAttribute('data-section') === sectionId);
-      });
-      document.getElementById('pageTitle').textContent = sectionTitles[sectionId] || sectionTitles.overview;
+      if (!document.getElementById('section-' + sectionId)) {
+        window.location.href = dashboardPageUrl(sectionId);
+        return;
+      }
       if (sectionId === 'pricing') renderPricingApproval();
       if (sectionId === 'cases') renderCasesSection();
       if (sectionId === 'overview') renderOverviewCasesCounts();
@@ -149,8 +93,11 @@
 
     document.querySelectorAll('.nav-menu a[data-section]').forEach(function(link) {
       link.addEventListener('click', function(e) {
-        e.preventDefault();
-        switchSection(link.getAttribute('data-section'));
+        var sectionId = link.getAttribute('data-section');
+        if (sectionId && !document.getElementById('section-' + sectionId)) {
+          e.preventDefault();
+          switchSection(sectionId);
+        }
       });
     });
 
@@ -280,25 +227,6 @@
         }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       }
 
-      ChartKit.mount('analytics-cases', {
-        stats: [
-          { icon: '⏳', label: 'بانتظار الرجوع', value: waiting.length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '🏭', label: 'تحت التنفيذ', value: progress.length, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' },
-          { icon: '✅', label: 'تم التسليم', value: delivered.length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '⏱', label: 'متوسط انتظار', value: waiting.length ? Math.round(waiting.reduce(function(s,c){return s+CasesWorkflow.daysBetween(c.quoteDate);},0)/waiting.length) + ' يوم' : '—', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'توزيع الحالات', items: [
-            { label: 'بانتظار الرجوع', value: waiting.length, color: '#d97706' },
-            { label: 'تحت التنفيذ', value: progress.length, color: '#0e7490' },
-            { label: 'تم التسليم', value: delivered.length, color: '#059669' }
-          ]},
-          { type: 'bar', title: 'مديونيات مفتوحة (ألف ج.م)', color: '#dc2626', items: progress.slice(0, 5).map(function(c) {
-            var rem = Math.max(0, (c.totalCost || 0) - (c.paid || 0));
-            return { label: c.patient.slice(0, 10), value: Math.round(rem / 1000), display: Math.round(rem / 1000) + ' ألف' };
-          })}
-        ]
-      });
     }
 
     function exportCases(type) {
@@ -1205,207 +1133,11 @@
       if (el) { el.addEventListener('input', renderSuppliers); el.addEventListener('change', renderSuppliers); }
     });
     function renderAdminAnalytics() {
-      var totalDue = debts.reduce(function(s,d){return s+d.due;},0);
-      var totalCol = debts.reduce(function(s,d){return s+d.collected;},0);
-      var paidCount = debts.length;
-      ChartKit.mount('analytics-overview', {
-        stats: [
-          { icon: '💵', label: 'إيرادات يونيو', value: '2,500 ألف ج.م', color: '#059669', bg: 'rgba(5,150,105,0.1)', sub: '↑ 12%' },
-          { icon: '👤', label: 'مرضى', value: '1,247', color: '#0e7490', bg: 'rgba(14,116,144,0.1)' },
-          { icon: '📦', label: 'صحة المخزون', value: '78%', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '💰', label: 'مديونيات', value: formatNumber(Math.round((totalDue-totalCol)/1000)) + ' ألف ج.م', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' }
-        ],
-        charts: [
-          { type: 'column', title: 'الإيرادات — 6 أشهر (ألف ج.م)', color: '#7c3aed', wide: true, unit: 'EGP_K', items: [
-            { label: 'يناير', value: 1800, sub: '↑ 5%' },
-            { label: 'فبراير', value: 2100, sub: '↑ 17%' },
-            { label: 'مارس', value: 1700, sub: '↓ 19%' },
-            { label: 'أبريل', value: 2200, sub: '↑ 29%' },
-            { label: 'مايو', value: 1900, sub: '↓ 14%' },
-            { label: 'يونيو', value: 2500, sub: '↑ 32%' }
-          ], footer: 'إجمالي نصف السنة: <strong>12,200 ألف ج.م</strong> · متوسط شهري: <strong>2,033 ألف ج.م</strong> · الأعلى: <strong>يونيو 2,500 ألف ج.م</strong>' },
-          { type: 'donut', title: 'حالة المديونيات', large: true, items: [
-            { label: 'مسدد', value: paidCount, display: paidCount + ' جهة', color: '#059669' }
-          ], summary: [
-            { label: 'المستحق', value: formatNumber(Math.round(totalDue / 1000)) + ' ألف ج.م' },
-            { label: 'المحصّل', value: formatNumber(Math.round(totalCol / 1000)) + ' ألف ج.م', color: '#059669' },
-            { label: 'المتبقي', value: formatNumber(Math.round((totalDue - totalCol) / 1000)) + ' ألف ج.م', color: '#dc2626' }
-          ]},
-          { type: 'bar', title: 'المحصّل حسب جهة التعاقد (ألف ج.م)', color: '#059669', items: debts.map(function(d){
-            return { label: d.company.slice(0, 16), value: d.collected/1000, display: formatNumber(Math.round(d.collected/1000)) + ' ألف ج.م' };
-          }).sort(function(a,b){ return b.value - a.value; }) }
-        ]
-      });
-      ChartKit.mount('analytics-employees', {
-        stats: [
-          { icon: '👥', label: 'الموظفون', value: employees.length, bg: 'rgba(124,58,237,0.1)' },
-          { icon: '✅', label: 'نشط', value: employees.filter(function(e){return e.status==='active';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '⏸️', label: 'غير نشط', value: employees.filter(function(e){return e.status==='inactive';}).length, bg: 'rgba(100,116,139,0.1)' },
-          { icon: '🩺', label: 'أطباء', value: employees.filter(function(e){return e.role==='doctor';}).length, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'توزيع الأدوار', items: [
-            { label: 'إدارة', value: 1, color: '#7c3aed' }, { label: 'أطباء', value: 2, color: '#0e7490' },
-            { label: 'فني', value: 1, color: '#d97706' }, { label: 'استقبال', value: 1, color: '#059669' }, { label: 'مخزن', value: 1, color: '#64748b' }
-          ]},
-          { type: 'bar', title: 'نشاط الموظفين', color: '#7c3aed', items: [
-            { label: 'أحمد', value: 5 }, { label: 'سارة', value: 4 }, { label: 'محمد', value: 3 }, { label: 'نورهان', value: 4 }
-          ]}
-        ]
-      });
-      var withDebts = contractCompanies.filter(function(c) {
-        return debts.some(function(d) { return d.company === c.name; });
-      }).length;
-      ChartKit.mount('analytics-companies', {
-        stats: [
-          { icon: '🏢', label: 'شركات', value: contractCompanies.length, bg: 'rgba(124,58,237,0.1)' },
-          { icon: '💰', label: 'لها مديونيات', value: withDebts, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' },
-          { icon: '➕', label: 'بدون مديونيات', value: contractCompanies.length - withDebts, bg: 'rgba(100,116,139,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'جهات التعاقد — المتبقي (ألف ج.م)', color: '#7c3aed', wide: true, items: contractCompanies.map(function(c) {
-            var debt = debts.find(function(d) { return d.company === c.name; });
-            return {
-              label: c.name,
-              value: debt ? (debt.due - debt.collected) / 1000 : 0,
-              display: debt ? formatNumber(Math.round((debt.due - debt.collected) / 1000)) + ' ألف ج.م' : '—'
-            };
-          })}
-        ]
-      });
-      var totalDue = debts.reduce(function(s,d){return s+d.due;},0);
-      var totalCol = debts.reduce(function(s,d){return s+d.collected;},0);
-      ChartKit.mount('analytics-debts', {
-        stats: [
-          { icon: '📋', label: 'جهات', value: debts.length, bg: 'rgba(124,58,237,0.1)' },
-          { icon: '💳', label: 'المستحق', value: formatNumber(Math.round(totalDue / 1000)) + ' ألف ج.م', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
-          { icon: '✅', label: 'المحصّل', value: formatNumber(Math.round(totalCol / 1000)) + ' ألف ج.م', color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '⏳', label: 'المتبقي', value: formatNumber(Math.round((totalDue - totalCol) / 1000)) + ' ألف ج.م', color: '#dc2626', bg: 'rgba(220,38,38,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'المحصّل حسب جهة التعاقد (ألف ج.م)', color: '#059669', items: debts.map(function(d){
-            return { label: d.company.slice(0,14), value: d.collected/1000, display: formatNumber(Math.round(d.collected/1000)) + ' ألف ج.م' };
-          })},
-          { type: 'donut', title: 'حالة السداد', items: [
-            { label: 'مسدد', value: debts.length, color: '#059669' }
-          ]}
-        ]
-      });
-      ChartKit.mount('analytics-audit', {
-        stats: [
-          { icon: '📝', label: 'عمليات', value: auditLogs.length, bg: 'rgba(124,58,237,0.1)' },
-          { icon: '➕', label: 'إنشاء', value: auditLogs.filter(function(a){return a.action==='إنشاء';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '✏️', label: 'تحديث', value: auditLogs.filter(function(a){return a.action==='تحديث'||a.action==='تعديل';}).length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '👁️', label: 'عرض', value: auditLogs.filter(function(a){return a.action==='عرض';}).length, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'حسب القسم', items: [
-            { label: 'مرضى', value: 1, color: '#059669' }, { label: 'طبي', value: 1, color: '#0e7490' },
-            { label: 'فني', value: 1, color: '#d97706' }, { label: 'مالي', value: 2, color: '#7c3aed' }, { label: 'مخزن', value: 1, color: '#64748b' }
-          ]},
-          { type: 'bar', title: 'نوع العملية', color: '#7c3aed', items: [
-            { label: 'إنشاء', value: 4 }, { label: 'تحديث', value: 2 }, { label: 'عرض', value: 1 }, { label: 'تعديل', value: 1 }
-          ]}
-        ]
-      });
-      var catItems = StockCatalog.getAll();
-      var totalPrices = catItems.reduce(function(s, i) { return s + (i.prices ? i.prices.length : 0); }, 0);
-      var multiPrice = catItems.filter(function(i) { return i.prices && i.prices.length > 1; }).length;
-      ChartKit.mount('analytics-catalog', {
-        stats: [
-          { icon: '📦', label: 'أصناف', value: catItems.length, bg: 'rgba(124,58,237,0.1)' },
-          { icon: '💰', label: 'أسعار مسجلة', value: totalPrices, color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
-          { icon: '🏷️', label: 'متعدد الأسعار', value: multiPrice, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' },
-          { icon: '📊', label: 'فئات', value: 5, bg: 'rgba(217,119,6,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'الفئات', items: [
-            { label: 'مفاصل', value: catItems.filter(function(i){return i.category==='مفاصل';}).length, color: '#d97706' },
-            { label: 'أقدام', value: catItems.filter(function(i){return i.category==='أقدام';}).length, color: '#059669' },
-            { label: 'بطانات', value: catItems.filter(function(i){return i.category==='بطانات';}).length, color: '#7c3aed' },
-            { label: 'محولات', value: catItems.filter(function(i){return i.category==='محولات';}).length, color: '#0e7490' },
-            { label: 'إكسسوارات', value: catItems.filter(function(i){return i.category==='إكسسوارات';}).length, color: '#dc2626' }
-          ]},
-          { type: 'bar', title: 'أسعار لكل صنف', color: '#7c3aed', items: catItems.slice(0, 6).map(function(i) {
-            return { label: i.name.slice(0, 12), value: (i.prices || []).length, display: (i.prices || []).length + ' سعر' };
-          })}
-        ]
-      });
-      var pricingAll = PricingQueue.getAll();
-      var pricingPending = pricingAll.filter(function(p){return p.statusKey==='pending';});
-      var pricingSent = pricingAll.filter(function(p){return p.statusKey==='sent';});
-      ChartKit.mount('analytics-pricing', {
-        stats: [
-          { icon: '⏳', label: 'انتظار موافقة الأدمن', value: pricingPending.length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '✅', label: 'جاهز لعرض السعر', value: pricingSent.length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '📋', label: 'إجمالي الطلبات', value: pricingAll.length, bg: 'rgba(124,58,237,0.1)' },
-          { icon: '💰', label: 'قيمة معلقة', value: formatNumber(Math.round(pricingPending.reduce(function(s,p){return s+PricingQueue.estimateTotal(p.recommendations);},0)/1000)) + ' ألف ج.م', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'حالة الطلبات', items: [
-            { label: 'انتظار الأدمن', value: pricingPending.length, color: '#d97706' },
-            { label: 'جاهز للعرض', value: pricingSent.length, color: '#059669' }
-          ]},
-          { type: 'bar', title: 'التقدير (ألف ج.م)', color: '#7c3aed', items: pricingPending.slice(0, 5).map(function(p){
-            return { label: p.patient.slice(0, 10), value: Math.round(PricingQueue.estimateTotal(p.recommendations)/1000), display: formatNumber(Math.round(PricingQueue.estimateTotal(p.recommendations)/1000)) + 'K' };
-          })}
-        ]
-      });
-      var supTotal = suppliers.reduce(function(s,x){return s+x.amount;},0);
-      ChartKit.mount('analytics-suppliers', {
-        stats: [
-          { icon: '🏭', label: 'موردون', value: suppliers.length, bg: 'rgba(124,58,237,0.1)' },
-          { icon: '💰', label: 'فواتير', value: formatNumber(Math.round(supTotal / 1000)) + ' ألف ج.م', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
-          { icon: '✅', label: 'مسددة', value: suppliers.filter(function(s){return s.status==='paid';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '⏳', label: 'معلقة', value: suppliers.filter(function(s){return s.status==='pending';}).length, color: '#dc2626', bg: 'rgba(220,38,38,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'قيمة الفواتير (ألف ج.م)', color: '#7c3aed', items: suppliers.slice(0,5).map(function(s){
-            return { label: s.name.slice(0,14), value: s.amount/1000, display: formatNumber(Math.round(s.amount/1000)) + ' ألف ج.م' };
-          })},
-          { type: 'donut', title: 'حالة الفواتير', items: [
-            { label: 'مسددة', value: suppliers.filter(function(s){return s.status==='paid';}).length, color: '#059669' },
-            { label: 'جزئية', value: suppliers.filter(function(s){return s.status==='partial';}).length, color: '#d97706' },
-            { label: 'معلقة', value: suppliers.filter(function(s){return s.status==='pending';}).length, color: '#dc2626' }
-          ]}
-        ]
-      });
+      return;
     }
 
     function renderBomAdminReport() {
-      var summaryEl = document.getElementById('bomAdminSummary');
-      var tableEl = document.getElementById('bomAdminTable');
-      var footerEl = document.getElementById('bomAdminFooter');
-      if (!summaryEl || !tableEl) return;
-
-      var summary = BomInventory.getSummary();
-      summaryEl.innerHTML = ['raw', 'wip', 'finished'].map(function(key) {
-        var s = summary[key];
-        return '<div class="bom-admin-stat ' + key + '">' +
-          '<div class="bas-label">' + s.label + '</div>' +
-          '<div class="bas-value">' + s.count + ' قائمة</div>' +
-          '<div class="bas-money">' + BomInventory.formatMoney(s.totalValue) + '</div>' +
-          '<div class="bas-sub">' + s.itemCount + ' بند</div></div>';
-      }).join('');
-
-      var list = BomInventory.getAll();
-      if (!list.length) {
-        tableEl.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد قوائم BOM</td></tr>';
-      } else {
-        tableEl.innerHTML = list.map(function(b) {
-          return '<tr>' +
-            '<td>' + b.patient + '</td>' +
-            '<td>' + b.orderRef + '</td>' +
-            '<td><span class="stage-badge ' + BomInventory.getStageBadgeClass(b.stage) + '">' + BomInventory.getStageLabel(b.stage) + '</span></td>' +
-            '<td class="bom-items-cell">' + BomInventory.renderItemsList(b.items, true) + '</td>' +
-            '<td><strong>' + BomInventory.formatMoney(BomInventory.bomTotalValue(b)) + '</strong></td></tr>';
-        }).join('');
-      }
-
-      var totalVal = list.reduce(function(s, b) { return s + BomInventory.bomTotalValue(b); }, 0);
-      if (footerEl) {
-        footerEl.textContent = list.length + ' قائمة BOM · إجمالي القيمة (Highest Batch Cost): ' + BomInventory.formatMoney(totalVal);
-      }
+      return;
     }
 
     /* ===== 5 لوحات قيادة BI ===== */
@@ -1418,71 +1150,7 @@
     }
 
     function renderBI() {
-      var el = document.getElementById('biContent');
-      if (!el) return;
-      var dist = CasesWorkflow.getTypeDistribution();
-      var sla = CasesWorkflow.getSlaSummary(21);
-      var cases = CasesWorkflow.getAll();
-
-      // 1) إدارة المرضى
-      var slaList = sla.breached.length
-        ? sla.breached.map(function(c){ return '<li>' + c.patient + ' — ' + CasesWorkflow.turnaroundDays(c) + ' يوم (' + (c.stageLabel||'') + ')</li>'; }).join('')
-        : '<li style="color:var(--accent,#059669)">لا توجد حالات متأخرة عن الـ SLA ✅</li>';
-      var board1 = biCard('1. إدارة المرضى', '👥',
-        biRow('إجمالي الحالات', dist.total) +
-        biRow('🌐 مدني', dist.civilian, '#0e7490') +
-        biRow('🪖 عسكري', dist.military, '#b45309') +
-        biRow('متوسط زمن التنفيذ (Turnaround)', sla.avgTat + ' يوم') +
-        biRow('حالات مفتوحة', sla.openCount) +
-        '<div class="bi-sub">⏱️ حالات متأخرة عن الـ SLA (' + sla.slaLimit + ' يوم):<ul class="bi-list">' + slaList + '</ul></div>');
-
-      // 2) المخازن وسلاسل الإمداد
-      var invVal = StockCatalog.inventoryValue();
-      var stagnant = StockCatalog.getStagnant(180);
-      var low = StockCatalog.getAll().filter(function(i){ return i.status === 'low'; });
-      var board2 = biCard('2. المخازن وسلاسل الإمداد', '📦',
-        biRow('القيمة المالية الإجمالية (WAC)', formatNumber(invVal) + ' ج.م', '#0e7490') +
-        biRow('عدد الأصناف', StockCatalog.getAll().length) +
-        biRow('🚨 أصناف ناقصة (قرب حد الأمان)', low.length, '#b91c1c') +
-        '<div class="bi-sub">🐌 أصناف راكدة (>180 يوم):<ul class="bi-list">' +
-          (stagnant.length ? stagnant.map(function(i){ return '<li>' + i.name + ' (رصيد ' + i.qty + ' · آخر حركة ' + i.lastMoved + ')</li>'; }).join('') : '<li>لا يوجد ✅</li>') +
-        '</ul></div>');
-
-      // 3) العمليات والتشغيل
-      var ops = (typeof OperationsDesk !== 'undefined') ? OperationsDesk.getSummary() : { queue:0, production:0, ready:0 };
-      var openWO = cases.filter(function(c){ return c.stageKey === 'manufacturing'; });
-      var board3 = biCard('3. العمليات والتشغيل', '🏭',
-        biRow('أوامر التشغيل المفتوحة', openWO.length, '#7c3aed') +
-        biRow('بانتظار الصرف', ops.queue) +
-        biRow('داخل الورش حالياً', ops.production) +
-        biRow('جاهز للتسليم', ops.ready, '#059669') +
-        '<div class="bi-sub">⏲️ زمن الإنتاج التقديري لكل ورشة:' +
-          '<ul class="bi-list"><li>توليد: 6 س</li><li>تجميع: 8 س</li><li>صب: 5 س</li><li>تشطيب: 4 س</li></ul></div>');
-
-      // 4) الجهات والتكاليف
-      var civCost = cases.filter(function(c){ return c.patientType === 'civilian'; }).reduce(function(s,c){ return s + (c.totalCost||0); }, 0);
-      var milCost = cases.filter(function(c){ return c.patientType === 'military'; }).reduce(function(s,c){ return s + (c.totalCost||0); }, 0);
-      var totalDebts = (typeof debts !== 'undefined') ? debts.reduce(function(s,d){ return s + (d.due||0) - (d.collected||0); }, 0) : 0;
-      var board4 = biCard('4. الجهات والتكاليف', '🏢',
-        biRow('التكلفة التراكمية — الجهات المدنية', formatNumber(civCost) + ' ج.م', '#0e7490') +
-        biRow('التكلفة المجمعة الافتراضية — العسكرية', formatNumber(milCost) + ' ج.م', '#b45309') +
-        biRow('مديونيات الجهات (صافي)', formatNumber(totalDebts) + ' ج.م', '#b91c1c') +
-        '<div class="bi-sub">🪖 التكلفة العسكرية تُرحَّل لحساب الديون السيادية (دون مطالبة دفع).</div>');
-
-      // 5) المشتريات والموردين — مقارنة WAC ↔ أعلى سعر
-      var compRows = StockCatalog.getAll().slice(0, 8).map(function(it){
-        var w = StockCatalog.wac(it); var h = StockCatalog.highestPrice(it);
-        var diff = h - w;
-        return '<tr><td>' + it.name + '</td><td>' + formatNumber(w) + '</td><td>' + formatNumber(h) + '</td>' +
-          '<td style="color:' + (diff>0?'#b45309':'#059669') + '">' + (diff>0?'+':'') + formatNumber(diff) + '</td></tr>';
-      }).join('');
-      var board5 = biCard('5. المشتريات والموردين', '🏭',
-        biRow('عدد الموردين المعتمدين', (typeof suppliers !== 'undefined' ? suppliers.length : 0)) +
-        '<div class="bi-sub">⚖️ مقارنة المتوسط المرجح (WAC) ↔ أعلى سعر شراء:' +
-          '<table class="bi-table"><thead><tr><th>الصنف</th><th>WAC</th><th>أعلى سعر</th><th>الفرق</th></tr></thead><tbody>' +
-          compRows + '</tbody></table></div>');
-
-      el.innerHTML = '<div class="bi-grid">' + board1 + board2 + board3 + board4 + board5 + '</div>';
+      return;
     }
     window.renderBI = renderBI;
 

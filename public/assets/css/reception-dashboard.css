@@ -275,8 +275,7 @@
     .action-btn.primary-action .action-desc { color: white; }
     .action-btn.primary-action .action-desc { opacity: 0.85; }
 
-    .tab-content { display: none; }
-    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    .tab-content { display: block; animation: fadeIn 0.3s ease; }
 
     .search-bar {
       display: flex;

@@ -46,6 +46,8 @@ class RouteServiceProvider extends ServiceProvider
         });
 
         $this->routes(function () {
+            require_once base_path('routes/web/dashboard-routes.php');
+
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));

@@ -21,11 +21,11 @@
     <div class="page-header">
       <div>
         <h1>مكتب الاستقبال والجدولة</h1>
-        <p>نورهان علي سالم — اليوم: الأحد 08/06/2026</p>
+        <p></p>
       </div>
       <div class="user-chip">
-        <div class="avatar">ن</div>
-        <span>نورهان علي</span>
+        <div class="avatar"></div>
+        <span></span>
       </div>
     </div>
 
@@ -34,7 +34,7 @@
         <div class="calendar-toolbar">
           <div class="calendar-header">
             <button type="button" class="cal-nav-btn" id="calPrev" aria-label="الشهر السابق">›</button>
-            <h3 id="calMonthLabel">يونيو 2026</h3>
+            <h3 id="calMonthLabel"></h3>
             <button type="button" class="cal-nav-btn" id="calNext" aria-label="الشهر التالي">‹</button>
           </div>
           <p class="calendar-hint">اضغط على أي يوم لعرض مواعيده في الجدول أدناه</p>
@@ -103,16 +103,26 @@
       </div>
     </section>
 
-    <div id="analytics-reception-main"></div>
+    <div id="analytics-reception-main">@include('partials.dashboard-analytics-empty', ['stats' => [
+      ['icon' => '📅', 'label' => 'مواعيد اليوم', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+      ['icon' => '⏳', 'label' => 'انتظار', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+      ['icon' => '👤', 'label' => 'مرضى', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+      ['icon' => '🧾', 'label' => 'عروض سعر', 'value' => '0', 'bg' => 'rgba(5,150,105,0.1)'],
+    ]])</div>
 
     <!-- Appointments Tab -->
     <div class="tab-content active" id="tab-appointments">
-      <div id="analytics-appointments"></div>
+      <div id="analytics-appointments">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📅', 'label' => 'إجمالي', 'value' => '0', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '🏥', 'label' => 'في العيادة', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '⏳', 'label' => 'انتظار', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '✅', 'label' => 'مكتمل', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+      ]])</div>
       <div class="appointments-layout">
         <div class="panel">
           <div class="panel-header">
-            <h3 id="apptPanelTitle">📅 مواعيد — 08/06/2026</h3>
-            <span style="font-size:12px;font-weight:600;color:var(--primary);" id="apptHeaderCount">7 موعد</span>
+            <h3 id="apptPanelTitle">📅 مواعيد</h3>
+            <span style="font-size:12px;font-weight:600;color:var(--primary);" id="apptHeaderCount">0 موعد</span>
           </div>
           <div class="data-toolbar">
             <input type="text" id="apptSearch" placeholder="🔍 بحث بالاسم أو رقم الهاتف...">
@@ -123,7 +133,7 @@
               <option value="quoted">عرض سعر</option>
               <option value="done">مكتمل</option>
             </select>
-            <span class="toolbar-count" id="apptCount">7 مواعيد</span>
+            <span class="toolbar-count" id="apptCount">0 موعد</span>
             <div class="export-btns">
               <button class="btn-export excel" onclick="exportAppointments('excel')">📊 Excel</button>
               <button class="btn-export pdf" onclick="exportAppointments('pdf')">📄 PDF</button>
@@ -224,11 +234,16 @@
 
     <!-- Patients Tab -->
     <div class="tab-content" id="tab-patients">
-      <div id="analytics-patients"></div>
+      <div id="analytics-patients">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '👤', 'label' => 'مرضى', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '✅', 'label' => 'نشط', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '💰', 'label' => 'عرض سعر', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '⏸️', 'label' => 'غير نشط', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>👤 سجل المرضى المسجلين</h3>
-          <span style="font-size:12px;font-weight:600;color:var(--primary);" id="patientsCount">10 مرضى</span>
+          <span style="font-size:12px;font-weight:600;color:var(--primary);" id="patientsCount">0 مرضى</span>
         </div>
         <div class="search-bar">
           <input type="text" id="patientSearch" placeholder="🔍 بحث بالاسم أو رقم الهاتف...">
@@ -266,7 +281,12 @@
 
     <!-- Quote Tab -->
     <div class="tab-content" id="tab-quote">
-      <div id="analytics-quote"></div>
+      <div id="analytics-quote">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '🧾', 'label' => 'عروض', 'value' => '0', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '💰', 'label' => 'إجمالي', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '✅', 'label' => 'معتمد', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '⏳', 'label' => 'بانتظار', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>🧾 عروض الأسعار</h3>

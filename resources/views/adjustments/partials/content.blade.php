@@ -16,16 +16,21 @@
     <div class="page-header">
       <div>
         <h1 id="pageTitle">المعدلات — تجارب التركيب والمقاسات</h1>
-        <p>أحمد سمير محمود — فني المقاسات</p>
+        <p></p>
       </div>
       <div class="user-chip">
-        <div class="avatar">أ</div>
-        <span>أحمد سمير</span>
+        <div class="avatar"></div>
+        <span></span>
       </div>
     </div>
 
     <div class="section-view active" id="section-adjustments">
-      <div id="analytics-adjustments"></div>
+      <div id="analytics-adjustments">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📏', 'label' => 'حالات للمعد', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.12)'],
+        ['icon' => '1️⃣', 'label' => 'تجربة أولى', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '2️⃣', 'label' => 'تجربة ثانية', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '⏳', 'label' => 'بانتظار تجربة', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+      ]])</div>
       <div class="panel inventory-wrap">
         <div class="panel-header">
           <h3>📏 جدول المعدلات والتجارب</h3>

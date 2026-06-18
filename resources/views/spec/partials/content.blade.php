@@ -18,22 +18,27 @@
     <div class="page-header">
       <div>
         <h1 id="pageTitle">طلبات التوصيف — إرسال للتسعير</h1>
-        <p>خالد عمر حسن — أخصائي التوصيف الفني</p>
+        <p></p>
       </div>
       <div class="user-chip">
-        <div class="avatar">خ</div>
-        <span>خالد عمر</span>
+        <div class="avatar"></div>
+        <span></span>
       </div>
     </div>
 
     <!-- Orders Section -->
     <div class="section-view active" id="section-orders">
-    <div id="analytics-orders"></div>
+    <div id="analytics-orders">@include('partials.dashboard-analytics-empty', ['stats' => [
+      ['icon' => '📥', 'label' => 'طلبات صرف', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+      ['icon' => '📅', 'label' => 'طلبات اليوم', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+      ['icon' => '📊', 'label' => '—', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
+      ['icon' => '📊', 'label' => '—', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
+    ]])</div>
     <div class="content-grid">
       <div class="panel">
         <div class="panel-header">
           <h3>📥 طلبات التوصيف — إرسال للتسعير (قبل التصنيع)</h3>
-          <span class="badge" id="ordersCount">4</span>
+          <span class="badge" id="ordersCount">0</span>
         </div>
         <div class="orders-toolbar">
           <input type="text" id="ordersSearch" placeholder="🔍 بحث برقم الطلب أو اسم المريض...">
@@ -119,7 +124,12 @@
 
     <!-- Spec Section (standalone) -->
     <div class="section-view" id="section-spec">
-      <div id="analytics-spec"></div>
+      <div id="analytics-spec">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📤', 'label' => 'عمليات صرف', 'value' => '0', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '📋', 'label' => 'للتسعير', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '🔩', 'label' => 'متوسط البنود', 'value' => '0', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '⏱️', 'label' => 'متوسط الوقت', 'value' => '—', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>📦 معاينة التوصيف — بدون صرف مخزني</h3>
@@ -137,11 +147,16 @@
 
     <!-- Pricing Section -->
     <div class="section-view" id="section-pricing">
-      <div id="analytics-pricing"></div>
+      <div id="analytics-pricing">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📋', 'label' => 'طلبات', 'value' => '0', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '⏳', 'label' => 'انتظار موافقة الأدمن', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '✅', 'label' => 'جاهز للاستقبال', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '🔩', 'label' => 'متوسط البنود', 'value' => '0', 'bg' => 'rgba(217,119,6,0.1)'],
+      ]])</div>
       <div class="panel pricing-wrap">
         <div class="panel-header">
           <h3>💰 طلبات مرسلة للتسعير</h3>
-          <span class="badge" id="pricingCount">3</span>
+          <span class="badge" id="pricingCount">0</span>
         </div>
 
         <div class="pricing-summary">
@@ -149,21 +164,21 @@
             <div class="ps-icon" style="background:rgba(217,119,6,0.12)">📋</div>
             <div>
               <div class="ps-label">إجمالي الطلبات</div>
-              <div class="ps-value" id="prTotal">3</div>
+              <div class="ps-value" id="prTotal">0</div>
             </div>
           </div>
           <div class="pricing-stat">
             <div class="ps-icon" style="background:rgba(217,119,6,0.12)">⏳</div>
             <div>
               <div class="ps-label">في انتظار موافقة الأدمن</div>
-              <div class="ps-value" id="prPending" style="color:#b45309">2</div>
+              <div class="ps-value" id="prPending" style="color:#b45309">0</div>
             </div>
           </div>
           <div class="pricing-stat">
             <div class="ps-icon" style="background:rgba(5,150,105,0.12)">✅</div>
             <div>
               <div class="ps-label">أُرسل للاستقبال</div>
-              <div class="ps-value" id="prSent" style="color:#047857">1</div>
+              <div class="ps-value" id="prSent" style="color:#047857">0</div>
             </div>
           </div>
         </div>

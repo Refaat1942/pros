@@ -16,11 +16,11 @@
     <div class="page-header">
       <div>
         <h1 id="pageTitle">مكتب التشغيل — أوامر الصرف والإنتاج</h1>
-        <p>م. سامح عبدالله — مسؤول مكتب التشغيل</p>
+        <p></p>
       </div>
       <div class="user-chip">
-        <div class="avatar">س</div>
-        <span>سامح عبدالله</span>
+        <div class="avatar"></div>
+        <span></span>
       </div>
     </div>
 

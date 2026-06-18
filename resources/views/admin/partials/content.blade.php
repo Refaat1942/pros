@@ -26,7 +26,7 @@
     <div class="page-header">
       <div>
         <h1 id="pageTitle">لوحة المعلومات — الإدارة العليا</h1>
-        <p>مرحباً، المدير العام — آخر تحديث: اليوم 08/06/2026</p>
+        <p></p>
       </div>
       <div class="user-chip">
         <div class="avatar">م</div>
@@ -36,7 +36,12 @@
 
     <!-- Overview Section -->
     <div class="section-view active" id="section-overview">
-    <div id="analytics-overview"></div>
+    <div id="analytics-overview">@include('partials.dashboard-analytics-empty', ['stats' => [
+      ['icon' => '💵', 'label' => 'إيرادات', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+      ['icon' => '👤', 'label' => 'مرضى', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+      ['icon' => '📦', 'label' => 'صحة المخزون', 'value' => '0%', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+      ['icon' => '💰', 'label' => 'مديونيات', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+    ]])</div>
 
     <div class="overview-cases-strip" id="overviewCasesStrip">
       <button type="button" class="overview-case-link" data-goto-cases="waiting_return">
@@ -57,7 +62,7 @@
       <div class="panel" id="employees">
         <div class="panel-header">
           <h3>👥 إدارة الموظفين والصلاحيات</h3>
-          <span class="badge">٢٨ موظف</span>
+          <span class="badge" id="employeesOverviewBadge">0 موظف</span>
         </div>
         <div class="panel-body">
           <table>
@@ -79,7 +84,7 @@
       <div class="panel" id="debts">
         <div class="panel-header">
           <h3>💰 مديونيات شركات التعاقد</h3>
-          <span class="badge">٦ جهات</span>
+          <span class="badge" id="debtsOverviewBadge">0 جهة</span>
         </div>
         <div class="panel-body">
           <table>
@@ -116,12 +121,17 @@
           مؤشرات إستراتيجية لحظية: توزيع مدني/عسكري، زمن التنفيذ (SLA)، قيمة المخزون (WAC)، أوامر التشغيل، تكاليف الجهات، ومقارنة WAC ↔ أعلى سعر.
         </p>
       </div>
-      <div id="biContent"></div>
+      <div id="biContent">@include('partials.dashboard-bi-empty')</div>
     </div>
 
     <!-- Catalog Section -->
     <div class="section-view" id="section-catalog">
-      <div id="analytics-catalog"></div>
+      <div id="analytics-catalog">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📦', 'label' => 'أصناف', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '💰', 'label' => 'أسعار مسجلة', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '🏷️', 'label' => 'متعدد الأسعار', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '📊', 'label' => 'فئات', 'value' => '0', 'bg' => 'rgba(217,119,6,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>📦 الأصناف والأسعار</h3>
@@ -202,7 +212,12 @@
 
     <!-- Pricing Approval Section -->
     <div class="section-view" id="section-pricing">
-      <div id="analytics-pricing"></div>
+      <div id="analytics-pricing">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '⏳', 'label' => 'انتظار موافقة الأدمن', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '✅', 'label' => 'جاهز لعرض السعر', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '📋', 'label' => 'إجمالي الطلبات', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '💰', 'label' => 'قيمة معلقة', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>✅ اعتماد طلبات التسعير</h3>
@@ -243,7 +258,12 @@
 
     <!-- Cases Tracking Section -->
     <div class="section-view" id="section-cases">
-      <div id="analytics-cases"></div>
+      <div id="analytics-cases">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '⏳', 'label' => 'بانتظار الرجوع', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '🏭', 'label' => 'تحت التنفيذ', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '✅', 'label' => 'تم التسليم', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '⏱', 'label' => 'متوسط انتظار', 'value' => '—', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+      ]])</div>
       <div class="cases-quick-grid" id="casesQuickGrid">
         <button type="button" class="cases-quick-btn waiting active" data-cases-filter="waiting_return">
           <span class="cq-icon">⏳</span>
@@ -289,11 +309,16 @@
 
     <!-- Employees Section -->
     <div class="section-view" id="section-employees">
-      <div id="analytics-employees"></div>
+      <div id="analytics-employees">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '👥', 'label' => 'الموظفون', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '✅', 'label' => 'نشط', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '⏸️', 'label' => 'غير نشط', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
+        ['icon' => '🩺', 'label' => 'أطباء', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>👥 إدارة الموظفين والصلاحيات</h3>
-          <span class="badge">٢٨ موظف</span>
+          <span class="badge" id="employeesSectionBadge">0 موظف</span>
         </div>
         <div class="data-toolbar">
           <input type="text" id="empSearch" placeholder="🔍 بحث بالاسم...">
@@ -310,7 +335,7 @@
             <option value="active">نشط</option>
             <option value="inactive">غير نشط</option>
           </select>
-          <span class="toolbar-count" id="empCount">6 موظف</span>
+          <span class="toolbar-count" id="empCount">0 موظف</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportEmployees('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportEmployees('pdf')">📄 PDF</button>
@@ -335,7 +360,12 @@
 
     <!-- Companies Section -->
     <div class="section-view" id="section-companies">
-      <div id="analytics-companies"></div>
+      <div id="analytics-companies">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '🏢', 'label' => 'شركات', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '💰', 'label' => 'لها مديونيات', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '➕', 'label' => 'بدون مديونيات', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
+        ['icon' => '📊', 'label' => '—', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>🏢 شركات التعاقد</h3>
@@ -371,18 +401,23 @@
 
     <!-- Debts Section -->
     <div class="section-view" id="section-debts">
-      <div id="analytics-debts"></div>
+      <div id="analytics-debts">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📋', 'label' => 'جهات', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '💳', 'label' => 'المستحق', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '✅', 'label' => 'المحصّل', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '⏳', 'label' => 'المتبقي', 'value' => '0', 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>💰 مديونيات شركات التعاقد</h3>
-          <span class="badge">٦ جهات</span>
+          <span class="badge" id="debtsSectionBadge">0 جهة</span>
         </div>
         <div class="data-toolbar">
           <input type="text" id="debtSearch" placeholder="🔍 بحث بجهة التعاقد...">
           <select id="debtStatusFilter">
             <option value="paid">مسدد</option>
           </select>
-          <span class="toolbar-count" id="debtCount">6 جهات</span>
+          <span class="toolbar-count" id="debtCount">0 جهة</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportDebts('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportDebts('pdf')">📄 PDF</button>
@@ -433,7 +468,12 @@
 
     <!-- Audit Section -->
     <div class="section-view" id="section-audit">
-      <div id="analytics-audit"></div>
+      <div id="analytics-audit">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📝', 'label' => 'عمليات', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '➕', 'label' => 'إنشاء', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '✏️', 'label' => 'تحديث', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '👁️', 'label' => 'عرض', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+      ]])</div>
       <div class="immutable-audit-banner">
         ⚠️ <span><strong>سجل تدقيق حصين (Immutable Audit Log):</strong> جداول «للكتابة فقط» (Append-Only). لا يملك أي مستخدم — بما في ذلك مدير الـ IT أو المدير العام — صلاحية تعديل أو حذف أي سطر. يلتقط كل حركة: المستخدم، IP/MAC، الطابع الزمني بالثانية، وقيمة البيانات قبل/بعد.</span>
       </div>
@@ -451,7 +491,7 @@
             <option value="تعديل">تعديل</option>
             <option value="عرض">عرض</option>
           </select>
-          <span class="toolbar-count" id="auditCount">8 حركات</span>
+          <span class="toolbar-count" id="auditCount">0 حركة</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportAudit('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportAudit('pdf')">📄 PDF</button>
@@ -464,103 +504,42 @@
     <!-- Reports Section -->
     <div class="section-view" id="section-reports">
       <div class="reports-section-title">💰 التقارير المالية والتشغيلية</div>
-      <div class="report-cards">
-        <div class="report-card">
-          <h4>📈 الإيرادات الشهرية</h4>
-          <div class="report-bar"><span>يناير</span><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div><span>1,800 ألف ج.م</span></div>
-          <div class="report-bar"><span>فبراير</span><div class="bar-track"><div class="bar-fill" style="width:85%"></div></div><span>2,100 ألف ج.م</span></div>
-          <div class="report-bar"><span>مارس</span><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div><span>1,700 ألف ج.م</span></div>
-          <div class="report-bar"><span>أبريل</span><div class="bar-track"><div class="bar-fill" style="width:90%"></div></div><span>2,200 ألف ج.م</span></div>
-          <div class="report-bar"><span>مايو</span><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div><span>1,900 ألف ج.م</span></div>
-          <div class="report-bar"><span>يونيو</span><div class="bar-track"><div class="bar-fill" style="width:95%"></div></div><span>2,500 ألف ج.م</span></div>
-        </div>
-        <div class="report-card">
-          <h4>🔥 الأصناف الأكثر طلباً</h4>
-          <div class="report-bar"><span>ركبة هيدروليكية</span><div class="bar-track"><div class="bar-fill" style="width:92%;background:#059669"></div></div><span>48</span></div>
-          <div class="report-bar"><span>قدم Carbon Spring</span><div class="bar-track"><div class="bar-fill" style="width:78%;background:#059669"></div></div><span>41</span></div>
-          <div class="report-bar"><span>بطانة Silicone</span><div class="bar-track"><div class="bar-fill" style="width:65%;background:#059669"></div></div><span>35</span></div>
-          <div class="report-bar"><span>محول Pyramidal</span><div class="bar-track"><div class="bar-fill" style="width:55%;background:#059669"></div></div><span>29</span></div>
-        </div>
-        <div class="report-card">
-          <h4>📋 أوامر التشغيل — هذا الشهر</h4>
-          <div class="metric-grid">
-            <div class="metric-box"><div class="mv">47</div><div class="ml">أوامر مكتملة</div></div>
-            <div class="metric-box"><div class="mv">12</div><div class="ml">قيد التصنيع</div></div>
-            <div class="metric-box"><div class="mv">8</div><div class="ml">بانتظار خامات</div></div>
-            <div class="metric-box"><div class="mv">94%</div><div class="ml">نسبة الإنجاز</div></div>
-          </div>
-          <div class="card-footer">متوسط زمن التسليم: 14 يوم عمل</div>
-        </div>
+      <div class="report-cards" id="financialReportCards">
+        <div class="report-card"><h4>📈 الإيرادات الشهرية</h4></div>
+        <div class="report-card"><h4>🔥 الأصناف الأكثر طلباً</h4></div>
+        <div class="report-card"><h4>📋 أوامر التشغيل — هذا الشهر</h4></div>
       </div>
 
       <div class="reports-section-title">📦 تقارير المخزون والتحليلات الذكية</div>
-      <div class="report-cards">
-        <div class="report-card wide">
-          <h4>💚 صحة المخزون الإجمالية</h4>
-          <div class="health-score-wrap">
-            <div class="health-ring" style="background:conic-gradient(#059669 0 282deg,#e2e8f0 282deg 360deg)">
-              <div class="health-ring-inner">78<span>/100</span></div>
-            </div>
-            <div class="health-factors">
-              <div class="health-factor"><span>توفر الأصناف الحرجة</span><span class="val warn">71%</span></div>
-              <div class="health-factor"><span>معدل دوران المخزون</span><span class="val good">4.2×/سنة</span></div>
-              <div class="health-factor"><span>نسبة الركود (&gt;60 يوم)</span><span class="val bad">12%</span></div>
-              <div class="health-factor"><span>دقة آخر جرد فعلي</span><span class="val good">98.5%</span></div>
-            </div>
-          </div>
-          <div class="card-footer">آخر تحديث: 08/06/2026 08:10 — أمين المخزن: خالد عمر</div>
-        </div>
-
-        <div class="report-card">
-          <h4>⚠️ الأصناف الراكدة (17 صنف)</h4>
-          <div class="stagnant-item"><span>مفصل كوع ميكانيكي — Large</span><span style="color:var(--danger);font-weight:700;">120 يوم</span></div>
-          <div class="stagnant-item"><span>غطاء تجميلي — Wide</span><span style="color:var(--danger);font-weight:700;">95 يوم</span></div>
-          <div class="stagnant-item"><span>Pin Lock — 30mm</span><span style="color:var(--warning);font-weight:700;">78 يوم</span></div>
-          <div class="stagnant-item"><span>بطانة Gel — Medium</span><span style="color:var(--warning);font-weight:700;">65 يوم</span></div>
-          <div class="stagnant-item"><span>SACH Foot — Size 26</span><span style="color:var(--warning);font-weight:700;">52 يوم</span></div>
-          <div class="card-footer">⚡ تجميد سيولة تقديري: ~185,000 ج.م</div>
-        </div>
-
-        <div class="report-card">
-          <h4>🔴 تحت الحد الأدنى (5 أصناف)</h4>
-          <div class="stagnant-item"><span>Pin Lock — 30mm</span><span style="color:var(--danger);font-weight:700;">2 / 15</span></div>
-          <div class="stagnant-item"><span>مفصل كوع — Small</span><span style="color:var(--danger);font-weight:700;">1 / 10</span></div>
-          <div class="stagnant-item"><span>ركبة Polycentric — Large</span><span style="color:var(--warning);font-weight:700;">3 / 15</span></div>
-          <div class="stagnant-item"><span>Dynamic Response Foot</span><span style="color:var(--warning);font-weight:700;">4 / 12</span></div>
-          <div class="stagnant-item"><span>محول Rotator — 30mm</span><span style="color:var(--warning);font-weight:700;">2 / 10</span></div>
-          <div class="card-footer">🛒 3 أوامر شراء مقترحة للموردين</div>
-        </div>
-
-        <div class="report-card">
-          <h4>📤 حركات الصرف — يونيو 2026</h4>
-          <div class="report-bar"><span>أسبوع 1</span><div class="bar-track"><div class="bar-fill" style="width:70%;background:#0e7490"></div></div><span>34</span></div>
-          <div class="report-bar"><span>أسبوع 2</span><div class="bar-track"><div class="bar-fill" style="width:85%;background:#0e7490"></div></div><span>41</span></div>
-          <div class="report-bar"><span>أسبوع 3</span><div class="bar-track"><div class="bar-fill" style="width:60%;background:#0e7490"></div></div><span>29</span></div>
-          <div class="report-bar"><span>أسبوع 4</span><div class="bar-track"><div class="bar-fill" style="width:92%;background:#0e7490"></div></div><span>48</span></div>
-          <div class="card-footer">إجمالي صرف: 152 عملية — 8 معلقة</div>
-        </div>
-
-        <div class="report-card">
-          <h4>📥 استلام من الموردين — يونيو</h4>
-          <div class="report-bar"><span>Ottobock Egypt</span><div class="bar-track"><div class="bar-fill" style="width:88%;background:#7c3aed"></div></div><span>12 صنف</span></div>
-          <div class="report-bar"><span>Össur Middle East</span><div class="bar-track"><div class="bar-fill" style="width:65%;background:#7c3aed"></div></div><span>8 أصناف</span></div>
-          <div class="report-bar"><span>Proteor France</span><div class="bar-track"><div class="bar-fill" style="width:55%;background:#7c3aed"></div></div><span>6 أصناف</span></div>
-          <div class="report-bar"><span>النيل للتوريدات</span><div class="bar-track"><div class="bar-fill" style="width:40%;background:#7c3aed"></div></div><span>4 أصناف</span></div>
-          <div class="card-footer">4 فواتير مستلمة — 2 بانتظار التسكين</div>
-        </div>
-
-        <div class="report-card">
-          <h4>🏷️ الدفعات النشطة (Batch Tracking)</h4>
-          <div class="batch-item"><span>ركبة هيدروليكية — Ottobock</span><span class="batch-tag">دفعة #B-042 · 8 وحدات</span></div>
-          <div class="batch-item"><span>قدم Carbon Spring — Össur</span><span class="batch-tag">دفعة #B-038 · 12 وحدة</span></div>
-          <div class="batch-item"><span>بطانة Silicone — محلي</span><span class="batch-tag">دفعة #B-051 · 24 وحدة</span></div>
-          <div class="batch-item"><span>Pin Lock — Proteor</span><span class="batch-tag">دفعة #B-029 · 2 وحدة ⚠</span></div>
-          <div class="card-footer">⚡ Highest Batch Cost Logic — 47 دفعة نشطة</div>
-        </div>
-
+      <div class="report-cards" id="inventoryReportCards">
+        <div class="report-card wide"><h4>💚 صحة المخزون الإجمالية</h4></div>
+        <div class="report-card"><h4>⚠️ الأصناف الراكدة</h4></div>
+        <div class="report-card"><h4>🔴 تحت الحد الأدنى</h4></div>
+        <div class="report-card"><h4>📤 حركات الصرف</h4></div>
+        <div class="report-card"><h4>📥 استلام من الموردين</h4></div>
+        <div class="report-card"><h4>🏷️ الدفعات النشطة (Batch Tracking)</h4></div>
         <div class="report-card wide" id="bomAdminPanel">
           <h4>📋 BOM — خام / تحت التشغيل / تام (قيمة Highest Batch Cost)</h4>
-          <div id="bomAdminSummary" class="bom-admin-summary"></div>
+          <div id="bomAdminSummary" class="bom-admin-summary">
+            <div class="bom-admin-stat raw">
+              <div class="bas-label">خام</div>
+              <div class="bas-value">0 قائمة</div>
+              <div class="bas-money">0 ج.م</div>
+              <div class="bas-sub">0 بند</div>
+            </div>
+            <div class="bom-admin-stat wip">
+              <div class="bas-label">تحت التشغيل</div>
+              <div class="bas-value">0 قائمة</div>
+              <div class="bas-money">0 ج.م</div>
+              <div class="bas-sub">0 بند</div>
+            </div>
+            <div class="bom-admin-stat finished">
+              <div class="bas-label">تام</div>
+              <div class="bas-value">0 قائمة</div>
+              <div class="bas-money">0 ج.م</div>
+              <div class="bas-sub">0 بند</div>
+            </div>
+          </div>
           <div class="bom-admin-table-wrap">
             <table class="data-table bom-admin-table">
               <thead>
@@ -572,68 +551,29 @@
                   <th>قيمة BOM</th>
                 </tr>
               </thead>
-              <tbody id="bomAdminTable"></tbody>
+              <tbody id="bomAdminTable">
+                <tr><td colspan="5" class="empty-cell">لا توجد قوائم BOM</td></tr>
+              </tbody>
             </table>
           </div>
-          <div class="card-footer" id="bomAdminFooter">—</div>
+          <div class="card-footer" id="bomAdminFooter"></div>
         </div>
-
-        <div class="report-card">
-          <h4>⏳ أوامر تحضير معلقة</h4>
-          <div class="dispense-item"><span>#WO-2026-0312 — محمود عبد الرحمن</span><span style="color:var(--warning);font-weight:700;">بانتظار صرف</span></div>
-          <div class="dispense-item"><span>#WO-2026-0308 — فاطمة حسين</span><span style="color:var(--warning);font-weight:700;">ناقص Pin Lock</span></div>
-          <div class="dispense-item"><span>#WO-2026-0305 — عبدالله سامي</span><span style="color:var(--primary);font-weight:700;">جاري التحضير</span></div>
-          <div class="dispense-item"><span>#WO-2026-0301 — مريم خالد</span><span style="color:var(--primary);font-weight:700;">جاري التحضير</span></div>
-          <div class="card-footer">4 أوامر — 2 تحتاج تدخل فوري</div>
-        </div>
-
-        <div class="report-card">
-          <h4>📊 توزيع المخزون حسب الفئة</h4>
-          <div class="report-bar"><span>مفاصل وأركام</span><div class="bar-track"><div class="bar-fill" style="width:38%;background:#d97706"></div></div><span>38%</span></div>
-          <div class="report-bar"><span>أقدام صناعية</span><div class="bar-track"><div class="bar-fill" style="width:24%;background:#d97706"></div></div><span>24%</span></div>
-          <div class="report-bar"><span>بطانات ومستلزمات</span><div class="bar-track"><div class="bar-fill" style="width:22%;background:#d97706"></div></div><span>22%</span></div>
-          <div class="report-bar"><span>محولات وعدد</span><div class="bar-track"><div class="bar-fill" style="width:16%;background:#d97706"></div></div><span>16%</span></div>
-          <div c  lass="card-footer">142 صنف مسجل — 1,840 وحدة إجمالي</div>
-        </div>
-
-        <div class="report-card">
-          <h4>🔮 تنبؤ النقص — 30 يوم</h4>
-          <div class="stagnant-item"><span>ركبة هيدروليكية</span><span style="color:var(--danger);font-weight:700;">نفاد متوقع 18/06</span></div>
-          <div class="stagnant-item"><span>Pin Lock — 30mm</span><span style="color:var(--danger);font-weight:700;">نفاد متوقع 12/06</span></div>
-          <div class="stagnant-item"><span>بطانة Gel — Medium</span><span style="color:var(--warning);font-weight:700;">نفاد متوقع 25/06</span></div>
-          <div class="stagnant-item"><span>قدم Carbon Spring</span><span style="color:var(--warning);font-weight:700;">نفاد متوقع 02/07</span></div>
-          <div class="card-footer">بناءً على معدل الطلب + أوامر التشغيل الجارية</div>
-        </div>
-
-        <div class="report-card">
-          <h4>📋 نتائج آخر جرد فعلي</h4>
-          <div class="metric-grid">
-            <div class="metric-box"><div class="mv" style="color:#047857">98.5%</div><div class="ml">دقة الجرد</div></div>
-            <div class="metric-box"><div class="mv" style="color:#b45309">7</div><div class="ml">فروقات</div></div>
-            <div class="metric-box"><div class="mv">142</div><div class="ml">صنف مجرود</div></div>
-            <div class="metric-box"><div class="mv" style="color:#b91c1c">3</div><div class="ml">تالف/نقص</div></div>
-          </div>
-          <div class="card-footer">تاريخ الجرد: 01/06/2026 — أمين المخزن: خالد عمر</div>
-        </div>
-
-        <div class="report-card">
-          <h4>🔄 معدل دوران المخزون</h4>
-          <div class="report-bar"><span>مفاصل</span><div class="bar-track"><div class="bar-fill" style="width:80%;background:#059669"></div></div><span>5.1×</span></div>
-          <div class="report-bar"><span>أقدام</span><div class="bar-track"><div class="bar-fill" style="width:72%;background:#059669"></div></div><span>4.6×</span></div>
-          <div class="report-bar"><span>بطانات</span><div class="bar-track"><div class="bar-fill" style="width:90%;background:#059669"></div></div><span>6.2×</span></div>
-          <div class="report-bar"><span>إكسسوارات</span><div class="bar-track"><div class="bar-fill" style="width:35%;background:#dc2626"></div></div><span>1.8×</span></div>
-          <div class="card-footer">المعدل العام: 4.2× — الهدف: ≥ 4.0×</div>
-        </div>
+        <div class="report-card"><h4>⏳ أوامر تحضير معلقة</h4></div>
       </div>
     </div>
 
     <!-- Suppliers Section -->
     <div class="section-view" id="section-suppliers">
-      <div id="analytics-suppliers"></div>
+      <div id="analytics-suppliers">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '🏭', 'label' => 'موردون', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '💰', 'label' => 'فواتير', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+        ['icon' => '✅', 'label' => 'مسددة', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '⏳', 'label' => 'معلقة', 'value' => '0', 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>🏭 الموردون وفواتير المشتريات</h3>
-          <span class="badge">8 موردين</span>
+          <span class="badge" id="suppliersSectionBadge">0 مورد</span>
         </div>
         <div class="data-toolbar">
           <input type="text" id="supplierSearch" placeholder="🔍 بحث بالمورد أو التخصص...">
@@ -643,7 +583,7 @@
             <option value="partial">جزئية</option>
             <option value="pending">معلقة</option>
           </select>
-          <span class="toolbar-count" id="supplierCount">8 موردين</span>
+          <span class="toolbar-count" id="supplierCount">0 مورد</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportSuppliers('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportSuppliers('pdf')">📄 PDF</button>

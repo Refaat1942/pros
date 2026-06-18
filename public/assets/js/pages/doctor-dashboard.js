@@ -1,4 +1,3 @@
-    StockCatalog.ensureSeeded();
     var recommendationsSelect = StockMultiSelect.create('medicalRecommendationsSelect');
 
     window.addEventListener('storage', function(e) {
@@ -7,33 +6,15 @@
       }
     });
 
-    var queue = [
-      { id: 1, name: 'محمود عبد الرحمن أحمد', company: 'التأمين الوطني', priority: 'normal', wait: '12 دقيقة', nationalId: '29805151234567', patientType: 'civilian' },
-      { id: 2, name: 'فاطمة حسين محمد', company: 'هيئة التأمين الصحي', priority: 'urgent', wait: '25 دقيقة', nationalId: '28512019876543', patientType: 'civilian' },
-      { id: 3, name: 'عبدالله سامي رشاد', company: 'صندوق ذوي الإعاقة', priority: 'normal', wait: '8 دقائق', nationalId: '30102001112233', patientType: 'civilian' },
-      { id: 4, name: 'مريم خالد إبراهيم', company: 'شركة مصر للتأمين', priority: 'normal', wait: '18 دقيقة', nationalId: '29003034567890', patientType: 'civilian' },
-      { id: 5, name: 'يوسف عمر محسن', company: 'إدارة القوات المسلحة الطبية', priority: 'urgent', wait: '32 دقيقة', nationalId: '27808015678901', patientType: 'military', rank: 'نقيب' }
-    ];
+    var queue = [];
+    var medicalRecords = [];
+    var transferred = [];
 
     var PT_META = {
       civilian: { label: 'مدني', icon: '🌐', badge: 'civilian' },
       military: { label: 'عسكري', icon: '🪖', badge: 'military' }
     };
     function ptMeta(t) { return PT_META[t] || PT_META.civilian; }
-
-    var medicalRecords = [
-      { name: 'سارة أحمد فؤاد', nationalId: '29805151234567', company: 'التأمين الوطني', recommendations: ['ركبة هيدروليكية', 'قدم Carbon Spring', 'بطانة Silicone'], diagnosis: 'بتر فخذي أيمن — مرحلة cicatrization مكتملة. حالة الجلد جيدة ومناسبة للتجهيز.', doctor: 'د. سارة عبدالله', date: '07/06/2026', status: 'معتمد', locked: true },
-      { name: 'هدى محمود سعيد', nationalId: '28512019876543', company: 'هيئة التأمين الصحي', recommendations: ['مفصل كوع', 'محول Pyramidal'], diagnosis: 'بتر ساعد أيسر — يحتاج مفصل كوع هيدروليكي مع محول مناسب.', doctor: 'د. سارة عبدالله', date: '06/06/2026', status: 'معتمد', locked: true },
-      { name: 'أحمد فاروق نبيل', nationalId: '29003034567890', company: 'شركة مصر للتأمين', recommendations: ['ركبة Polycentric', 'Pin Lock', 'غطاء تجميلي'], diagnosis: 'بتر فخذي — توصية بركبة polycentric مع نظام Pin Lock.', doctor: 'د. ياسمين رشدي', date: '05/06/2026', status: 'معتمد', locked: true },
-      { name: 'ليلى حسام الدين', nationalId: '30102001112233', company: 'صندوق ذوي الإعاقة', recommendations: ['قدم Carbon Spring', 'جوارب تجويف'], diagnosis: 'بتر قدم — مناسبة لقدم carbon spring مع جوارب تجويف.', doctor: 'د. سارة عبدالله', date: '04/06/2026', status: 'معتمد', locked: true },
-      { name: 'كريم محمد علي', nationalId: '27808015678901', company: 'مجلس الدفاع المدني', recommendations: ['ركبة هيدروليكية', 'بطانة Gel', 'محول Pyramidal'], diagnosis: 'بتر فخذي — حالة cicatrization مستقرة. توصية بركبة هيدروليكية.', doctor: 'د. سارة عبدالله', date: '03/06/2026', status: 'معتمد', locked: true }
-    ];
-
-    var transferred = [
-      { name: 'سارة أحمد فؤاد', recommendations: ['ركبة هيدروليكية', 'قدم Carbon Spring'], company: 'التأمين الوطني', date: '07/06/2026', status: 'في الورشة' },
-      { name: 'هدى محمود سعيد', recommendations: ['مفصل كوع', 'محول Pyramidal'], company: 'ذوي الإعاقة', date: '06/06/2026', status: 'قيد التوصيف' },
-      { name: 'أحمد فاروق نبيل', recommendations: ['ركبة Polycentric', 'Pin Lock'], company: 'مصر للتأمين', date: '05/06/2026', status: 'مكتمل' }
-    ];
 
     function normalizeRec(item) {
       if (typeof item === 'string') return { name: item, qty: 1 };
@@ -212,14 +193,16 @@
       transfer: 'الحالات المحولة للمخزون'
     };
 
+    function dashboardPageUrl(page) {
+      var seg = window.location.pathname.split('/').filter(Boolean);
+      return '/' + (seg[0] || 'doctor') + '/' + page;
+    }
+
     function switchSection(sectionId) {
-      document.querySelectorAll('.section-view').forEach(function(el) {
-        el.classList.toggle('active', el.id === 'section-' + sectionId);
-      });
-      document.querySelectorAll('.nav-menu a[data-section]').forEach(function(a) {
-        a.classList.toggle('active', a.getAttribute('data-section') === sectionId);
-      });
-      document.getElementById('pageTitle').textContent = sectionTitles[sectionId];
+      if (!document.getElementById('section-' + sectionId)) {
+        window.location.href = dashboardPageUrl(sectionId);
+        return;
+      }
       if (sectionId === 'diagnosis' && recommendationsSelect) {
         recommendationsSelect.refresh();
       }
@@ -231,8 +214,11 @@
 
     document.querySelectorAll('.nav-menu a[data-section]').forEach(function(link) {
       link.addEventListener('click', function(e) {
-        e.preventDefault();
-        switchSection(link.getAttribute('data-section'));
+        var sectionId = link.getAttribute('data-section');
+        if (sectionId && !document.getElementById('section-' + sectionId)) {
+          e.preventDefault();
+          switchSection(sectionId);
+        }
       });
     });
 
@@ -504,75 +490,7 @@
     }
 
     function renderDoctorAnalytics() {
-      ChartKit.mount('analytics-queue', {
-        stats: [
-          { icon: '📋', label: 'قائمة الانتظار', value: queue.length, bg: 'rgba(14,116,144,0.1)' },
-          { icon: '🚨', label: 'عاجل', value: queue.filter(function(q){return q.priority==='urgent';}).length, color: '#dc2626', bg: 'rgba(220,38,38,0.1)' },
-          { icon: '⏳', label: 'عادي', value: queue.filter(function(q){return q.priority==='normal';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '⏱️', label: 'متوسط الانتظار', value: '19د', color: '#d97706', bg: 'rgba(217,119,6,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'الأولوية', wide: true, large: true, items: [
-            { label: 'عاجل', value: queue.filter(function(q){return q.priority==='urgent';}).length, color: '#dc2626' },
-            { label: 'عادي', value: queue.filter(function(q){return q.priority==='normal';}).length, color: '#059669' }
-          ], summary: [
-            { label: 'عاجل', value: queue.filter(function(q){return q.priority==='urgent';}).length + ' حالة', color: '#dc2626' },
-            { label: 'عادي', value: queue.filter(function(q){return q.priority==='normal';}).length + ' حالة', color: '#059669' },
-            { label: 'الإجمالي', value: queue.length + ' مريض' }
-          ]}
-        ]
-      });
-      ChartKit.mount('analytics-diagnosis', {
-        stats: [
-          { icon: '📝', label: 'تقارير اليوم', value: 3, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '📦', label: 'أصناف المخزون', value: StockCatalog.getAll().length, bg: 'rgba(14,116,144,0.1)' },
-          { icon: '💊', label: 'توصيات', value: medicalRecords.reduce(function(s, r) {
-            return s + (r.recommendations || []).reduce(function(t, rec) { return t + normalizeRec(rec).qty; }, 0);
-          }, 0), bg: 'rgba(14,116,144,0.1)' },
-          { icon: '📦', label: 'محول للمخزون', value: transferred.length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'الأصناف الأكثر توصية', color: '#0e7490', items: countRecommendedItems(medicalRecords) },
-          { type: 'column', title: 'فحوصات الأسبوع', color: '#0e7490', unit: 'count', items: [
-            { label: 'السبت', value: 4, display: '4 فحوصات', sub: '→' },
-            { label: 'الأحد', value: 6, display: '6 فحوصات', sub: '↑ مرتفع' },
-            { label: 'الإثنين', value: 5, display: '5 فحوصات', sub: '→' },
-            { label: 'الثلاثاء', value: 7, display: '7 فحوصات', sub: '↑ الأعلى' },
-            { label: 'الأربعاء', value: 3, display: '3 فحوصات', sub: '↓ أقل يوم' }
-          ], footer: 'إجمالي الأسبوع: <strong>25 فحص</strong> · متوسط يومي: <strong>5</strong> · الأعلى: <strong>الثلاثاء (7)</strong>' }
-        ]
-      });
-      ChartKit.mount('analytics-records', {
-        stats: [
-          { icon: '📁', label: 'تقارير', value: medicalRecords.length, bg: 'rgba(14,116,144,0.1)' },
-          { icon: '✅', label: 'معتمد', value: medicalRecords.filter(function(r){return r.locked;}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '💊', label: 'متوسط التوصيات', value: Math.round(medicalRecords.reduce(function(s, r) {
-            return s + (r.recommendations || []).reduce(function(t, rec) { return t + normalizeRec(rec).qty; }, 0);
-          }, 0) / Math.max(medicalRecords.length, 1)), bg: 'rgba(14,116,144,0.1)' },
-          { icon: '📦', label: 'أصناف مختلفة', value: countRecommendedItems(medicalRecords).length, bg: 'rgba(14,116,144,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'توزيع التوصيات', color: '#0e7490', items: countRecommendedItems(medicalRecords) },
-          { type: 'donut', title: 'حالة التقارير', items: [
-            { label: 'معتمد', value: medicalRecords.filter(function(r){return r.locked;}).length, color: '#059669' },
-            { label: 'إجمالي', value: medicalRecords.length, color: '#0e7490' }
-          ]}
-        ]
-      });
-      ChartKit.mount('analytics-transfer', {
-        stats: [
-          { icon: '🔧', label: 'محول', value: transferred.length, bg: 'rgba(14,116,144,0.1)' },
-          { icon: '⚙️', label: 'قيد التوصيف', value: transferred.filter(function(t){return t.status.indexOf('توصيف')!==-1;}).length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '🏭', label: 'في الورشة', value: transferred.filter(function(t){return t.status.indexOf('ورشة')!==-1;}).length, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' },
-          { icon: '✅', label: 'مكتمل', value: transferred.filter(function(t){return t.status==='مكتمل';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'حالة التحويل', items: transferred.map(function(t,i){
-            return { label: t.status, value: 1, color: ['#d97706','#0e7490','#059669'][i]||'#64748b' };
-          })},
-          { type: 'bar', title: 'الأصناف المحولة', color: '#0e7490', items: countRecommendedItems(transferred) }
-        ]
-      });
+      return;
     }
     renderDoctorAnalytics();
     renderQueue();

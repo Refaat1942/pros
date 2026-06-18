@@ -23,7 +23,17 @@ return [
     'reception' => [
         'title' => 'لوحة موظف الاستقبال — مركز الأطراف الصناعية',
         'layout' => 'layouts.reception',
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/reception-dashboard.css'],
+        'default_page' => 'appointments',
+        'sidebar' => ['icon' => '📋', 'title' => 'لوحة موظف الاستقبال', 'subtitle' => 'الجدولة والموافقات'],
+        'pages' => [
+            'appointments' => ['title' => 'جدولة المواعيد', 'icon' => '📅', 'label' => 'جدولة المواعيد'],
+            'ocr' => ['title' => 'رفع خطاب الموافقة المالية', 'icon' => '📄', 'label' => 'رفع موافقة'],
+            'quote' => ['title' => 'عروض الأسعار', 'icon' => '💰', 'label' => 'عروض الأسعار'],
+            'delivery' => ['title' => 'تسليم الطرف للمريض', 'icon' => '✅', 'label' => 'تسليم للمريض'],
+            'selfservice' => ['title' => 'متابعة حالة الطلب (خدمة ذاتية)', 'icon' => '📱', 'label' => 'متابعة الحالة (خدمة ذاتية)'],
+            'patients' => ['title' => 'سجل المرضى المسجلين', 'icon' => '👤', 'label' => 'المرضى'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/reception-dashboard.css'],
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
@@ -40,7 +50,15 @@ return [
     'doctor' => [
         'title' => 'لوحة الطبيب المعالج — مركز الأطراف الصناعية',
         'layout' => 'layouts.doctor',
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/doctor-dashboard.css'],
+        'default_page' => 'queue',
+        'sidebar' => ['icon' => '🩺', 'title' => 'لوحة الطبيب المعالج', 'subtitle' => 'العيادة والتشخيص'],
+        'pages' => [
+            'queue' => ['title' => 'العيادة الطبية — قائمة الانتظار', 'icon' => '📋', 'label' => 'قائمة الانتظار'],
+            'diagnosis' => ['title' => 'التشخيص الطبي', 'icon' => '📝', 'label' => 'التشخيص الطبي'],
+            'records' => ['title' => 'السجل الطبي — التقارير المعتمدة', 'icon' => '📁', 'label' => 'السجل الطبي'],
+            'transfer' => ['title' => 'الحالات المحولة للمخزون', 'icon' => '📦', 'label' => 'المحولون للمخزون'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/doctor-dashboard.css'],
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
@@ -55,7 +73,14 @@ return [
     'spec' => [
         'title' => 'لوحة التوصيف الفني — مركز الأطراف الصناعية',
         'layout' => 'layouts.spec',
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/technical-dashboard.css'],
+        'default_page' => 'orders',
+        'sidebar' => ['icon' => '📐', 'title' => 'لوحة التوصيف', 'subtitle' => 'أكواد وكميات – قبل التصنيع'],
+        'pages' => [
+            'orders' => ['title' => 'طلبات التوصيف', 'icon' => '📥', 'label' => 'طلبات التوصيف'],
+            'spec' => ['title' => 'معاينة التوصيف', 'icon' => '👁️', 'label' => 'معاينة التوصيف'],
+            'pricing' => ['title' => 'إرسال للتسعير', 'icon' => '💰', 'label' => 'إرسال للتسعير'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
@@ -74,7 +99,12 @@ return [
     'adjustments' => [
         'title' => 'لوحة المعدلات — مركز الأطراف الصناعية',
         'layout' => 'layouts.adjustments',
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/technical-dashboard.css'],
+        'default_page' => 'adjustments',
+        'sidebar' => ['icon' => '📏', 'title' => 'لوحة المعدلات', 'subtitle' => 'تجارب التركيب والمقاسات'],
+        'pages' => [
+            'adjustments' => ['title' => 'المعدلات — تجارب التركيب والمقاسات', 'icon' => '📏', 'label' => 'جدول المعدلات'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
@@ -93,7 +123,12 @@ return [
     'operations' => [
         'title' => 'لوحة التشغيل — مركز الأطراف الصناعية',
         'layout' => 'layouts.operations',
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/technical-dashboard.css'],
+        'default_page' => 'operations',
+        'sidebar' => ['icon' => '🎯', 'title' => 'مكتب التشغيل', 'subtitle' => 'أوامر الإنتاج والصرف'],
+        'pages' => [
+            'operations' => ['title' => 'مكتب التشغيل — أوامر الصرف والإنتاج', 'icon' => '🎯', 'label' => 'أوامر التشغيل'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
@@ -112,7 +147,14 @@ return [
     'technical' => [
         'title' => 'لوحة المخزون — مركز الأطراف الصناعية',
         'layout' => 'layouts.technical',
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/technical-dashboard.css'],
+        'default_page' => 'inventory',
+        'sidebar' => ['icon' => '📦', 'title' => 'لوحة المخزون', 'subtitle' => 'إدارة الأصناف والكميات'],
+        'pages' => [
+            'inventory' => ['title' => 'المخزون — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزون'],
+            'bom' => ['title' => 'BOM — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'BOM — خام / تشغيل / تام'],
+            'returns' => ['title' => 'إذن ارتجاع', 'icon' => '↩️', 'label' => 'إذن ارتجاع'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
@@ -131,7 +173,22 @@ return [
     'admin' => [
         'title' => 'لوحة إدارة النظام — مركز الأطراف الصناعية',
         'layout' => 'layouts.admin',
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/admin-dashboard.css'],
+        'default_page' => 'overview',
+        'sidebar' => ['icon' => '⚙️', 'title' => 'لوحة إدارة النظام', 'subtitle' => 'المالك والرقابة'],
+        'pages' => [
+            'overview' => ['title' => 'لوحة المعلومات — الإدارة العليا', 'icon' => '📊', 'label' => 'نظرة عامة'],
+            'bi' => ['title' => 'لوحات القيادة (BI) — 5 لوحات', 'icon' => '📡', 'label' => 'لوحات القيادة (BI)'],
+            'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
+            'pricing' => ['title' => 'اعتماد طلبات التسعير', 'icon' => '✅', 'label' => 'اعتماد التسعير'],
+            'cases' => ['title' => 'متابعة الحالات', 'icon' => '📁', 'label' => 'متابعة الحالات'],
+            'employees' => ['title' => 'إدارة الموظفين والصلاحيات', 'icon' => '👥', 'label' => 'الموظفون'],
+            'companies' => ['title' => 'شركات التعاقد', 'icon' => '🏢', 'label' => 'شركات التعاقد'],
+            'debts' => ['title' => 'مديونيات شركات التعاقد', 'icon' => '💰', 'label' => 'المديونيات'],
+            'audit' => ['title' => 'سجل الرقابة الحصين — Immutable Audit Log', 'icon' => '🔒', 'label' => 'سجل الرقابة'],
+            'reports' => ['title' => 'التقارير والتحليلات', 'icon' => '📈', 'label' => 'التقارير'],
+            'suppliers' => ['title' => 'الموردون وفواتير المشتريات', 'icon' => '🏭', 'label' => 'الموردون'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css'],
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',

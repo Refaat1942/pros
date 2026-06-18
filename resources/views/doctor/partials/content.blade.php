@@ -23,11 +23,11 @@
     <div class="page-header">
       <div>
         <h1 id="pageTitle">العيادة الطبية — قائمة الانتظار</h1>
-        <p>د. سارة عبدالله — اليوم: الأحد 08/06/2026</p>
+        <p></p>
       </div>
       <div class="user-chip">
-        <div class="avatar">س</div>
-        <span>د. سارة عبدالله</span>
+        <div class="avatar"></div>
+        <span></span>
       </div>
     </div>
 
@@ -57,12 +57,17 @@
 
     <!-- Queue Section -->
     <div class="section-view active" id="section-queue">
-    <div id="analytics-queue"></div>
+    <div id="analytics-queue">@include('partials.dashboard-analytics-empty', ['stats' => [
+      ['icon' => '📋', 'label' => 'قائمة الانتظار', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
+      ['icon' => '🚨', 'label' => 'عاجل', 'value' => '0', 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+      ['icon' => '⏳', 'label' => 'عادي', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+      ['icon' => '⏱️', 'label' => 'متوسط الانتظار', 'value' => '—', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+    ]])</div>
     <div class="content-grid">
       <div class="panel">
         <div class="panel-header">
           <h3>📋 قائمة الانتظار الرقمية</h3>
-          <span class="count-badge" id="queueBadge">5</span>
+          <span class="count-badge" id="queueBadge">0</span>
         </div>
         <div class="data-toolbar">
           <input type="text" id="queueSearch" placeholder="🔍 بحث بالاسم أو الجهة...">
@@ -71,7 +76,7 @@
             <option value="urgent">عاجل</option>
             <option value="normal">عادي</option>
           </select>
-          <span class="toolbar-count" id="queueCount">5 مريض</span>
+          <span class="toolbar-count" id="queueCount">0 مريض</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportQueue('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportQueue('pdf')">📄 PDF</button>
@@ -111,7 +116,12 @@
 
     <!-- Diagnosis Section -->
     <div class="section-view" id="section-diagnosis">
-      <div id="analytics-diagnosis"></div>
+      <div id="analytics-diagnosis">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📝', 'label' => 'تقارير اليوم', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '📦', 'label' => 'أصناف المخزون', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '💊', 'label' => 'توصيات', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '📦', 'label' => 'محول للمخزون', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+      ]])</div>
       <div class="panel form-panel">
         <div class="panel-header">
           <h3>📝 التشخيص الطبي</h3>
@@ -169,15 +179,20 @@
 
     <!-- Records Section -->
     <div class="section-view" id="section-records">
-      <div id="analytics-records"></div>
+      <div id="analytics-records">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '📁', 'label' => 'تقارير', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '✅', 'label' => 'معتمد', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '💊', 'label' => 'متوسط التوصيات', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '📦', 'label' => 'أصناف مختلفة', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>📁 السجل الطبي — التقارير المعتمدة</h3>
-          <span class="count-badge">12 تقرير</span>
+          <span class="count-badge">0 تقرير</span>
         </div>
         <div class="data-toolbar">
           <input type="text" id="recordsSearch" placeholder="🔍 بحث بالاسم أو التوصيات...">
-          <span class="toolbar-count" id="recordsCount">5 تقارير</span>
+          <span class="toolbar-count" id="recordsCount">0 تقرير</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportRecords('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportRecords('pdf')">📄 PDF</button>
@@ -202,11 +217,16 @@
 
     <!-- Transfer Section -->
     <div class="section-view" id="section-transfer">
-      <div id="analytics-transfer"></div>
+      <div id="analytics-transfer">@include('partials.dashboard-analytics-empty', ['stats' => [
+        ['icon' => '🔧', 'label' => 'محول', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '⚙️', 'label' => 'قيد التوصيف', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '🏭', 'label' => 'في الورشة', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '✅', 'label' => 'مكتمل', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>📦 الحالات المحولة للمخزون</h3>
-          <span class="count-badge" id="transferredCount">3</span>
+          <span class="count-badge" id="transferredCount">0</span>
         </div>
         <div class="data-toolbar">
           <input type="text" id="transferSearch" placeholder="🔍 بحث بالاسم أو الجهة...">
@@ -216,7 +236,7 @@
             <option value="في الورشة">في الورشة</option>
             <option value="مكتمل">مكتمل</option>
           </select>
-          <span class="toolbar-count" id="transferCount">3 حالة</span>
+          <span class="toolbar-count" id="transferCount">0 حالة</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportTransferred('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportTransferred('pdf')">📄 PDF</button>

@@ -6,37 +6,9 @@
       inventory: 'inventory'
     };
 
-    var orders = [
-      { id: 'ORD-2026-0847', name: 'محمود عبد الرحمن أحمد', company: 'التأمين الوطني', recommendations: [
-        { name: 'ركبة هيدروليكية', code: 'ITM-001', qty: 1 },
-        { name: 'قدم Carbon Spring', code: 'ITM-003', qty: 1 },
-        { name: 'بطانة Silicone', code: 'ITM-004', qty: 1 }
-      ], doctor: 'د. سارة عبدالله', date: '08/06/2026' },
-      { id: 'ORD-2026-0845', name: 'فاطمة حسين محمد', company: 'هيئة التأمين الصحي', recommendations: [
-        { name: 'ركبة Polycentric', code: 'ITM-002', qty: 1 },
-        { name: 'Pin Lock', code: 'ITM-006', qty: 1 }
-      ], doctor: 'د. سارة عبدالله', date: '08/06/2026' },
-      { id: 'ORD-2026-0842', name: 'عبدالله سامي رشاد', company: 'صندوق ذوي الإعاقة', recommendations: [
-        { name: 'مفصل كوع', code: 'ITM-010', qty: 1 },
-        { name: 'محول Pyramidal', code: 'ITM-005', qty: 1 }
-      ], doctor: 'د. ياسمين رشدي', date: '07/06/2026' },
-      { id: 'ORD-2026-0839', name: 'مريم خالد إبراهيم', company: 'شركة مصر للتأمين', recommendations: [
-        { name: 'قدم Carbon Spring', code: 'ITM-003', qty: 1 },
-        { name: 'جوارب تجويف', code: 'ITM-009', qty: 1 }
-      ], doctor: 'د. سارة عبدالله', date: '07/06/2026' }
-    ];
-
-    StockCatalog.ensureSeeded();
-    CasesWorkflow.ensureSeeded();
-    PricingQueue.ensureSeeded();
-    BomInventory.ensureSeeded();
-    /* عند كل refresh في لوحة المخزون فقط: استعادة BOM والمخزون للعرض التجريبي */
-    if (dashboardMode === 'inventory') {
-      if (typeof BomInventory !== 'undefined' && BomInventory.resetToSeed) BomInventory.resetToSeed();
-      if (typeof StockCatalog !== 'undefined' && StockCatalog.resetToSeed) StockCatalog.resetToSeed();
-    }
-    var inventory = StockCatalog.getAll();
-    var pricingQueue = PricingQueue.getAll();
+    var orders = [];
+    var inventory = [];
+    var pricingQueue = [];
 
     function syncInventoryStatus() {
       inventory.forEach(function(item) {
@@ -53,25 +25,6 @@
       inventory = StockCatalog.getAll();
       syncInventoryStatus();
     }
-
-    window.addEventListener('storage', function(e) {
-      if (e.key === StockCatalog.STORAGE_KEY) {
-        reloadInventory();
-        renderInventory();
-        renderInventoryMeta();
-        renderStockAnalytics();
-        renderBomSection();
-      }
-      if (e.key === PricingQueue.STORAGE_KEY) {
-        pricingQueue = PricingQueue.getAll();
-        renderPricing();
-        renderStockAnalytics();
-      }
-      if (e.key === BomInventory.STORAGE_KEY) {
-        renderBomSection();
-        if (typeof renderOperations === 'function') renderOperations();
-      }
-    });
 
     var inventoryFilter = 'all';
     var inventorySearchTerm = '';
@@ -93,15 +46,16 @@
       adjustments: 'المعدلات — تجارب التركيب والمقاسات'
     };
 
+    function dashboardPageUrl(page) {
+      var seg = window.location.pathname.split('/').filter(Boolean);
+      return '/' + (seg[0] || 'technical') + '/' + page;
+    }
+
     function switchSection(sectionId) {
-      document.querySelectorAll('.section-view').forEach(function(el) {
-        el.classList.toggle('active', el.id === 'section-' + sectionId);
-      });
-      document.querySelectorAll('.nav-menu a[data-section]').forEach(function(a) {
-        a.classList.toggle('active', a.getAttribute('data-section') === sectionId);
-      });
-      var pageTitle = document.getElementById('pageTitle');
-      if (pageTitle && sectionTitles[sectionId]) pageTitle.textContent = sectionTitles[sectionId];
+      if (!document.getElementById('section-' + sectionId)) {
+        window.location.href = dashboardPageUrl(sectionId);
+        return;
+      }
       if (sectionId === 'bom') renderBomSection();
       if (sectionId === 'returns') renderReturnsSection();
       if (sectionId === 'operations') renderOperations();
@@ -110,8 +64,11 @@
 
     document.querySelectorAll('.nav-menu a[data-section]').forEach(function(link) {
       link.addEventListener('click', function(e) {
-        e.preventDefault();
-        switchSection(link.getAttribute('data-section'));
+        var sectionId = link.getAttribute('data-section');
+        if (sectionId && !document.getElementById('section-' + sectionId)) {
+          e.preventDefault();
+          switchSection(sectionId);
+        }
       });
     });
 
@@ -545,23 +502,17 @@
       setTimeout(function() { toast.classList.remove('show'); }, 4000);
     }
 
+    var techOrderSpecs = [];
+
     function saveTechOrderSpec(order) {
-      var key = 'clinic_tech_order_specs';
-      var list = [];
-      try {
-        var raw = localStorage.getItem(key);
-        if (raw) list = JSON.parse(raw);
-        if (!Array.isArray(list)) list = [];
-      } catch (e) { list = []; }
       var entry = {
         orderRef: order.id,
         patient: order.name,
         recommendations: (order.recommendations || []).slice()
       };
-      var idx = list.findIndex(function(s) { return s.orderRef === order.id; });
-      if (idx >= 0) list[idx] = entry;
-      else list.push(entry);
-      localStorage.setItem(key, JSON.stringify(list));
+      var idx = techOrderSpecs.findIndex(function(s) { return s.orderRef === order.id; });
+      if (idx >= 0) techOrderSpecs[idx] = entry;
+      else techOrderSpecs.push(entry);
     }
 
     var specFormEl = document.getElementById('specForm');
@@ -612,115 +563,7 @@
       renderOrders();
     });
     function renderStockAnalytics() {
-      ChartKit.mount('analytics-orders', {
-        stats: [
-          { icon: '📥', label: 'طلبات صرف', value: orders.length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '📅', label: 'طلبات اليوم', value: orders.filter(function(o){return o.date==='08/06/2026';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'الأصناف المطلوبة', color: '#d97706', items: countOrderRecommendations(orders) },
-          { type: 'bar', title: 'حسب الطبيب', color: '#d97706', items: [
-            { label: 'د. سارة', value: 3 }, { label: 'د. ياسمين', value: 1 }
-          ]}
-        ]
-      });
-      ChartKit.mount('analytics-spec', {
-        stats: [
-          { icon: '📤', label: 'عمليات صرف', value: 2, bg: 'rgba(217,119,6,0.1)' },
-          { icon: '📋', label: 'للتسعير', value: pricingQueue.length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '🔩', label: 'متوسط البنود', value: '5', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '⏱️', label: 'متوسط الوقت', value: '45د', color: '#0e7490', bg: 'rgba(14,116,144,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'أصناف مطلوبة', color: '#d97706', items: [
-            { label: 'ركبة هيدر.', value: 8 }, { label: 'Carbon', value: 6 }, { label: 'Silicone', value: 5 }, { label: 'Pin Lock', value: 3 }
-          ]},
-          { type: 'column', title: 'صرفات الأسبوع', color: '#d97706', unit: 'count', items: [
-            { label: 'الأحد', value: 1, display: '1 صرف', sub: '↓ أقل يوم' },
-            { label: 'الإثنين', value: 3, display: '3 صرفات', sub: '↑ الأعلى' },
-            { label: 'الثلاثاء', value: 2, display: '2 صرف', sub: '→' },
-            { label: 'الأربعاء', value: 2, display: '2 صرف', sub: '→' },
-            { label: 'الخميس', value: 2, display: '2 صرف', sub: '→' }
-          ], footer: 'إجمالي الأسبوع: <strong>10 صرفات</strong> · متوسط يومي: <strong>2</strong> · الأعلى: <strong>الإثنين (3)</strong>' }
-        ]
-      });
-      var okC = inventory.filter(function(i){return i.status==='ok';}).length;
-      var lowC = inventory.filter(function(i){return i.status==='low';}).length;
-      ChartKit.mount('analytics-inventory-charts', {
-        stats: [
-          { icon: '💚', label: 'صحة المخزون', value: computeInventoryHealth().score+'/100', color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '✅', label: 'متوفر', value: okC, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '⚠️', label: 'منخفض', value: lowC, color: '#dc2626', bg: 'rgba(220,38,38,0.1)' },
-          { icon: '🔒', label: 'محجوز', value: inventory.reduce(function(s,i){return s+(i.reserved||0);},0), color: '#0e7490', bg: 'rgba(14,116,144,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'الفئات', items: [
-            { label: 'مفاصل', value: 3, color: '#d97706' }, { label: 'أقدام', value: 1, color: '#059669' },
-            { label: 'بطانات', value: 3, color: '#7c3aed' }, { label: 'محولات', value: 1, color: '#0e7490' }, { label: 'إكسسوارات', value: 2, color: '#dc2626' }
-          ]},
-          { type: 'bar', title: 'أصناف منخفضة — الكمية', color: '#dc2626', items: inventory.filter(function(i){return i.status==='low';}).map(function(i){
-            return { label: i.name.slice(0,12), value: i.qty, display: i.qty + '' };
-          })}
-        ]
-      });
-      ChartKit.mount('analytics-pricing', {
-        stats: [
-          { icon: '📋', label: 'طلبات', value: pricingQueue.length, bg: 'rgba(217,119,6,0.1)' },
-          { icon: '⏳', label: 'انتظار موافقة الأدمن', value: pricingQueue.filter(function(p){return p.statusKey==='pending';}).length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '✅', label: 'جاهز للاستقبال', value: pricingQueue.filter(function(p){return p.statusKey==='sent';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '🔩', label: 'متوسط البنود', value: pricingQueue.length ? Math.round(pricingQueue.reduce(function(s,p){return s+p.items;},0)/pricingQueue.length) : 0, bg: 'rgba(217,119,6,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'حالة التسعير', items: [
-            { label: 'انتظار الأدمن', value: pricingQueue.filter(function(p){return p.statusKey==='pending';}).length, color: '#d97706' },
-            { label: 'جاهز للاستقبال', value: pricingQueue.filter(function(p){return p.statusKey==='sent';}).length, color: '#059669' }
-          ]},
-          { type: 'bar', title: 'البنود/طلب', color: '#d97706', items: pricingQueue.map(function(p){
-            return { label: p.patient.slice(0,10), value: p.items };
-          })}
-        ]
-      });
-      var bomSummary = BomInventory.getSummary();
-      ChartKit.mount('analytics-bom', {
-        stats: [
-          { icon: '📦', label: 'خام', value: bomSummary.raw.count, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '🏭', label: 'تحت التشغيل', value: bomSummary.wip.count, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' },
-          { icon: '✅', label: 'تام', value: bomSummary.finished.count, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '📋', label: 'إجمالي BOM', value: BomInventory.getAll().length, bg: 'rgba(217,119,6,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'توزيع BOM', items: [
-            { label: 'خام', value: bomSummary.raw.count, color: '#d97706' },
-            { label: 'تحت التشغيل', value: bomSummary.wip.count, color: '#0e7490' },
-            { label: 'تام', value: bomSummary.finished.count, color: '#059669' }
-          ]},
-          { type: 'bar', title: 'بنود لكل مرحلة', color: '#d97706', items: [
-            { label: 'خام', value: bomSummary.raw.itemCount },
-            { label: 'تشغيل', value: bomSummary.wip.itemCount },
-            { label: 'تام', value: bomSummary.finished.itemCount }
-          ]}
-        ]
-      });
-      if (document.getElementById('analytics-adjustments')) {
-        var adjCases = getAdjustmentCases();
-        var trialDone = adjCases.filter(function(c) { return getFittingRecord(c.id).trial1; }).length;
-        var trial2Done = adjCases.filter(function(c) { return getFittingRecord(c.id).trial2; }).length;
-        ChartKit.mount('analytics-adjustments', {
-          stats: [
-            { icon: '📏', label: 'حالات للمعد', value: adjCases.length, color: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
-            { icon: '1️⃣', label: 'تجربة أولى', value: trialDone, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' },
-            { icon: '2️⃣', label: 'تجربة ثانية', value: trial2Done, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-            { icon: '⏳', label: 'بانتظار تجربة', value: adjCases.length - trialDone, color: '#d97706', bg: 'rgba(217,119,6,0.1)' }
-          ],
-          charts: [
-            { type: 'donut', title: 'حالة التجارب', items: [
-              { label: 'بدون تجربة', value: adjCases.length - trialDone, color: '#d97706' },
-              { label: 'تجربة 1 فقط', value: trialDone - trial2Done, color: '#0e7490' },
-              { label: 'تجربتان', value: trial2Done, color: '#059669' }
-            ]}
-          ]
-        });
-      }
+      return;
     }
 
 
@@ -917,21 +760,14 @@
     window.renderOperations = renderOperations;
 
     /* ===== المعدلات — تجارب التركيب ===== */
-    var FITTING_STORAGE_KEY = 'clinic_fitting_trials';
+    var fittingRecordsMap = {};
 
     function loadFittingRecords() {
-      try {
-        var raw = localStorage.getItem(FITTING_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-      } catch (e) { /* ignore */ }
-      return {
-        'CASE-2026-010': { trial1: '05/06/2026', trial2: '', notes: 'ضغط خفيف عند الركبة — يحتاج تعديل بطانة', status: 'trial1' },
-        'CASE-2026-011': { trial1: '06/06/2026', trial2: '08/06/2026', notes: 'المقاس مناسب — جاهز للجودة', status: 'completed' }
-      };
+      return fittingRecordsMap;
     }
 
     function saveFittingRecords(map) {
-      localStorage.setItem(FITTING_STORAGE_KEY, JSON.stringify(map));
+      fittingRecordsMap = map || {};
     }
 
     function getFittingRecord(caseId) {
@@ -1366,4 +1202,9 @@
     var defaultSection = dashboardDefaults[dashboardMode] || 'inventory';
     if (document.getElementById('section-' + defaultSection)) {
       switchSection(defaultSection);
+    } else {
+      var pathPage = window.location.pathname.split('/').filter(Boolean).pop();
+      if (pathPage && document.getElementById('section-' + pathPage)) {
+        switchSection(pathPage);
+      }
     }

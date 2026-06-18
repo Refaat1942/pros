@@ -7,7 +7,4 @@ use Illuminate\Support\Facades\Route;
 | Guard (تصميم فقط): auth:operations
 */
 
-Route::prefix('operations')->name('operations.')->group(function () {
-    // ->middleware('auth:operations')
-    Route::get('/', [OperationsDashboardController::class, 'index'])->name('dashboard');
-});
+registerDashboardPages('operations', 'operations.', OperationsDashboardController::class, 'operations');

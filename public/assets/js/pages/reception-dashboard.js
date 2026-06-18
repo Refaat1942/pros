@@ -1,13 +1,10 @@
-    StockCatalog.ensureSeeded();
-    CasesWorkflow.ensureSeeded();
-    PricingQueue.ensureSeeded();
-    BomInventory.ensureSeeded();
-    var TODAY_DATE = '08/06/2026';
+    var now = new Date();
+    var TODAY_DATE = '';
 
     var calendarView = {
-      year: 2026,
-      month: 6,
-      selectedDate: TODAY_DATE
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      selectedDate: ''
     };
 
     var AR_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -20,126 +17,16 @@
       review: { label: 'مراجعة', dotClass: 'cal-dot-review', tagClass: 'visit-review' }
     };
 
-    var appointments = [
-      { time: '08:00', date: '08/06/2026', visitType: 'followup', name: 'محمود عبد الرحمن', phone: '01012345678', company: 'التأمين الوطني', status: 'in_clinic', statusLabel: 'في العيادة', transferredToClinic: true },
-      { time: '08:30', date: '08/06/2026', visitType: 'exam', name: 'فاطمة حسين محمد', phone: '01123456789', company: 'التأمين الصحي', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '09:00', date: '08/06/2026', visitType: 'exam', name: 'عبدالله سامي رشاد', phone: '01098765432', company: 'ذوي الإعاقة', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '09:30', date: '08/06/2026', visitType: 'review', name: 'مريم خالد إبراهيم', phone: '01234567890', company: 'مصر للتأمين', status: 'quoted', statusLabel: 'عرض سعر' },
-      { time: '10:00', date: '08/06/2026', visitType: 'fitting', name: 'يوسف عمر محسن', phone: '01087654321', company: 'الدفاع المدني', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '10:30', date: '08/06/2026', visitType: 'delivery', name: 'سارة أحمد فؤاد', phone: '01156789012', company: 'التأمين الوطني', status: 'done', statusLabel: 'مكتمل' },
-      { time: '11:30', date: '08/06/2026', visitType: 'delivery', name: 'منى إبراهيم حسن', phone: '01055667788', company: 'التأمين الوطني', status: 'waiting', statusLabel: 'جاهز للاستلام' },
-      { time: '11:00', date: '08/06/2026', visitType: 'followup', name: 'كريم محمد علي', phone: '01065432198', company: 'التأمين الصحي', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '10:00', date: '05/06/2026', visitType: 'followup', name: 'هدى محمود سعيد', phone: '01011223344', company: 'ذوي الإعاقة', status: 'done', statusLabel: 'مكتمل' },
-      { time: '11:30', date: '05/06/2026', visitType: 'exam', name: 'أحمد فاروق نبيل', phone: '01199887766', company: 'مصر للتأمين', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '09:00', date: '06/06/2026', visitType: 'fitting', name: 'ليلى حسام الدين', phone: '01277665544', company: 'التأمين الوطني', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '14:00', date: '06/06/2026', visitType: 'review', name: 'محمود عبد الرحمن', phone: '01012345678', company: 'التأمين الوطني', status: 'done', statusLabel: 'مكتمل' },
-      { time: '10:30', date: '07/06/2026', visitType: 'delivery', name: 'مريم خالد إبراهيم', phone: '01234567890', company: 'مصر للتأمين', status: 'done', statusLabel: 'مكتمل' },
-      { time: '09:30', date: '09/06/2026', visitType: 'exam', name: 'كريم محمد علي', phone: '01065432198', company: 'التأمين الصحي', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '11:00', date: '09/06/2026', visitType: 'fitting', name: 'فاطمة حسين محمد', phone: '01123456789', company: 'التأمين الصحي', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '08:30', date: '10/06/2026', visitType: 'followup', name: 'عبدالله سامي رشاد', phone: '01098765432', company: 'ذوي الإعاقة', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '10:00', date: '10/06/2026', visitType: 'exam', name: 'سارة أحمد فؤاد', phone: '01156789012', company: 'التأمين الوطني', status: 'waiting', statusLabel: 'انتظار' },
-      { time: '14:30', date: '10/06/2026', visitType: 'review', name: 'يوسف عمر محسن', phone: '01087654321', company: 'الدفاع المدني', status: 'quoted', statusLabel: 'عرض سعر' },
-      { time: '09:00', date: '12/06/2026', visitType: 'delivery', name: 'هدى محمود سعيد', phone: '01011223344', company: 'ذوي الإعاقة', status: 'waiting', statusLabel: 'انتظار' }
-    ];
-
-    var quotations = [
-      {
-        id: 'QT-2026-0847',
-        orderRef: 'ORD-2026-0847',
-        patient: 'محمود عبد الرحمن أحمد',
-        company: 'شركة التأمين الوطني',
-        date: '08/06/2026',
-        status: 'approved',
-        statusLabel: 'معتمد',
-        items: [
-          { name: 'ركبة هيدروليكية — ITM-001', qty: 1, amount: 95000 },
-          { name: 'قدم Carbon Spring — ITM-003', qty: 1, amount: 55000 },
-          { name: 'بطانة Silicone — ITM-004', qty: 1, amount: 12000 }
-        ],
-        total: 162000
-      },
-      {
-        id: 'QT-2026-0845',
-        orderRef: 'ORD-2026-0845',
-        patient: 'فاطمة حسين محمد',
-        company: 'هيئة التأمين الصحي',
-        date: '08/06/2026',
-        status: 'pending',
-        statusLabel: 'بانتظار الاعتماد',
-        items: [
-          { name: 'ركبة Polycentric — ITM-002', qty: 1, amount: 72000 },
-          { name: 'Pin Lock — ITM-006', qty: 1, amount: 5800 }
-        ],
-        total: 77800
-      },
-      {
-        id: 'QT-2026-0839',
-        orderRef: 'ORD-2026-0839',
-        patient: 'مريم خالد إبراهيم',
-        company: 'شركة مصر للتأمين',
-        date: '07/06/2026',
-        status: 'approved',
-        statusLabel: 'معتمد',
-        items: [
-          { name: 'قدم Carbon Spring — ITM-003', qty: 1, amount: 55000 },
-          { name: 'جوارب تجويف — ITM-009', qty: 1, amount: 450 }
-        ],
-        total: 55450
-      }
-    ];
-
+    var appointments = [];
+    var quotations = [];
     var quoteSearchTerm = '';
-
-    var patientsRegistry = [
-      { name: 'محمود عبد الرحمن أحمد', phone: '01012345678', company: 'التأمين الوطني', registered: '15/03/2024', lastVisit: '08/06/2026', status: 'active', statusLabel: 'نشط' },
-      { name: 'فاطمة حسين محمد', phone: '01123456789', company: 'التأمين الصحي', registered: '22/01/2025', lastVisit: '08/06/2026', status: 'active', statusLabel: 'نشط' },
-      { name: 'عبدالله سامي رشاد', phone: '01098765432', company: 'ذوي الإعاقة', registered: '10/11/2025', lastVisit: '08/06/2026', status: 'active', statusLabel: 'نشط' },
-      { name: 'مريم خالد إبراهيم', phone: '01234567890', company: 'مصر للتأمين', registered: '05/08/2024', lastVisit: '07/06/2026', status: 'quoted', statusLabel: 'عرض سعر' },
-      { name: 'يوسف عمر محسن', phone: '01087654321', company: 'الدفاع المدني', registered: '18/02/2025', lastVisit: '05/06/2026', status: 'active', statusLabel: 'نشط' },
-      { name: 'سارة أحمد فؤاد', phone: '01156789012', company: 'التأمين الوطني', registered: '30/06/2024', lastVisit: '08/06/2026', status: 'done', statusLabel: 'مكتمل' },
-      { name: 'كريم محمد علي', phone: '01065432198', company: 'التأمين الصحي', registered: '12/09/2025', lastVisit: '08/06/2026', status: 'active', statusLabel: 'نشط' },
-      { name: 'هدى محمود سعيد', phone: '01011223344', company: 'ذوي الإعاقة', registered: '20/04/2024', lastVisit: '01/06/2026', status: 'active', statusLabel: 'نشط' },
-      { name: 'أحمد فاروق نبيل', phone: '01199887766', company: 'مصر للتأمين', registered: '08/12/2023', lastVisit: '28/05/2026', status: 'inactive', statusLabel: 'غير نشط' },
-      { name: 'ليلى حسام الدين', phone: '01277665544', company: 'التأمين الوطني', registered: '14/07/2025', lastVisit: '06/06/2026', status: 'active', statusLabel: 'نشط' }
-    ];
+    var patientsRegistry = [];
 
     function formatQuoteAmount(n) {
       return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    function syncPricingQueueToQuotes() {
-      PricingQueue.getAll().filter(function(p) { return p.statusKey === 'sent'; }).forEach(function(p) {
-        var quoteId = p.id.replace('QT-PENDING', 'QT-2026');
-        var existing = quotations.find(function(q) { return q.id === quoteId || q.orderRef === p.orderRef; });
-        var total = PricingQueue.estimateTotal(p.recommendations);
-        var items = (p.recommendations || []).map(function(r) {
-          var stock = PricingQueue.findStockItem(r.name, r.code);
-          var unit = PricingQueue.highestUnitPrice(stock);
-          var qty = r.qty || 1;
-          return { name: r.name + (r.code ? ' — ' + r.code : ''), qty: qty, amount: unit * qty };
-        });
-        if (existing) {
-          if (existing.status !== 'issued') {
-            existing.status = 'approved';
-            existing.statusLabel = 'معتمد — جاهز للطباعة';
-          }
-          existing.total = total;
-          existing.items = items;
-        } else {
-          quotations.unshift({
-            id: quoteId,
-            orderRef: p.orderRef,
-            patient: p.patient,
-            company: p.company,
-            date: p.approvedAt ? p.approvedAt.split(' ')[0] : TODAY_DATE,
-            status: 'approved',
-            statusLabel: 'معتمد — جاهز للطباعة',
-            items: items,
-            total: total
-          });
-        }
-      });
-    }
+    function syncPricingQueueToQuotes() {}
 
     function markQuoteAsIssued(quote) {
       if (!quote) return;
@@ -644,13 +531,16 @@
     var ssInput = document.getElementById('ssInput');
     if (ssInput) ssInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') renderSelfService(ssInput.value); });
 
+    function dashboardPageUrl(page) {
+      var seg = window.location.pathname.split('/').filter(Boolean);
+      return '/' + (seg[0] || 'reception') + '/' + page;
+    }
+
     function switchTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(function(content) {
-        content.classList.toggle('active', content.id === 'tab-' + tabId);
-      });
-      document.querySelectorAll('.nav-menu a[data-tab]').forEach(function(link) {
-        link.classList.toggle('active', link.getAttribute('data-tab') === tabId);
-      });
+      if (!document.getElementById('tab-' + tabId)) {
+        window.location.href = dashboardPageUrl(tabId);
+        return;
+      }
       var calWrap = document.getElementById('appointmentsCalendarWrap');
       if (calWrap) calWrap.classList.toggle('visible', tabId === 'appointments');
       if (tabId === 'delivery') renderDeliveryTable();
@@ -658,8 +548,11 @@
 
     document.querySelectorAll('.nav-menu a[data-tab]').forEach(function(link) {
       link.addEventListener('click', function(e) {
-        e.preventDefault();
-        switchTab(link.getAttribute('data-tab'));
+        var tabId = link.getAttribute('data-tab');
+        if (tabId && !document.getElementById('tab-' + tabId)) {
+          e.preventDefault();
+          switchTab(tabId);
+        }
       });
     });
 
@@ -685,90 +578,7 @@
     }
 
     function renderReceptionAnalytics() {
-      var dayAppts = getSelectedDayAppointments();
-      var hourlyItems = getHourlyAppointmentsChart();
-      var hourlyTotal = hourlyItems.reduce(function(s, i) { return s + i.value; }, 0);
-      var hourlyPeak = hourlyItems.reduce(function(a, b) { return a.value >= b.value ? a : b; }, hourlyItems[0] || { label: '—', value: 0 });
-      ChartKit.mount('analytics-reception-main', {
-        stats: [
-          { icon: '📅', label: 'مواعيد اليوم', value: dayAppts.length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '⏳', label: 'انتظار', value: dayAppts.filter(function(a){return a.status==='waiting';}).length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '👤', label: 'مرضى', value: patientsRegistry.length, color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
-          { icon: '🧾', label: 'عروض سعر', value: dayAppts.filter(function(a){return a.status==='quoted';}).length, bg: 'rgba(5,150,105,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'حالة المواعيد', large: true, items: [
-            { label: 'انتظار', value: dayAppts.filter(function(a){return a.status==='waiting';}).length, display: dayAppts.filter(function(a){return a.status==='waiting';}).length + ' موعد', color: '#d97706' },
-            { label: 'عيادة', value: dayAppts.filter(function(a){return a.status==='in_clinic';}).length, display: dayAppts.filter(function(a){return a.status==='in_clinic';}).length + ' موعد', color: '#0e7490' },
-            { label: 'عرض سعر', value: dayAppts.filter(function(a){return a.status==='quoted';}).length, display: dayAppts.filter(function(a){return a.status==='quoted';}).length + ' موعد', color: '#7c3aed' },
-            { label: 'مكتمل', value: dayAppts.filter(function(a){return a.status==='done';}).length, display: dayAppts.filter(function(a){return a.status==='done';}).length + ' موعد', color: '#059669' }
-          ], summary: [
-            { label: 'إجمالي اليوم', value: dayAppts.length + ' موعد' },
-            { label: 'انتظار', value: dayAppts.filter(function(a){return a.status==='waiting';}).length + ' موعد', color: '#d97706' },
-            { label: 'مكتمل', value: dayAppts.filter(function(a){return a.status==='done';}).length + ' موعد', color: '#059669' }
-          ]},
-          { type: 'column', title: 'مواعيد اليوم — حسب الساعة', color: '#059669', unit: 'count', items: hourlyItems,
-            footer: 'إجمالي: <strong>' + hourlyTotal + ' موعد</strong> · ذروة: <strong>' + hourlyPeak.label + ' (' + hourlyPeak.value + ')</strong> · ساعات نشطة: <strong>' + hourlyItems.length + '</strong>' }
-        ]
-      });
-      ChartKit.mount('analytics-appointments', {
-        stats: [
-          { icon: '📅', label: 'إجمالي', value: dayAppts.length, bg: 'rgba(5,150,105,0.1)' },
-          { icon: '🏥', label: 'في العيادة', value: dayAppts.filter(function(a){return a.status==='in_clinic';}).length, color: '#0e7490', bg: 'rgba(14,116,144,0.1)' },
-          { icon: '⏳', label: 'انتظار', value: dayAppts.filter(function(a){return a.status==='waiting';}).length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '✅', label: 'مكتمل', value: dayAppts.filter(function(a){return a.status==='done';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'أنواع الزيارات', color: '#059669', items: [
-            { label: 'كشف أولي', value: dayAppts.filter(function(a){return a.visitType==='exam';}).length },
-            { label: 'متابعة', value: dayAppts.filter(function(a){return a.visitType==='followup';}).length },
-            { label: 'تركيب', value: dayAppts.filter(function(a){return a.visitType==='fitting';}).length },
-            { label: 'استلام', value: dayAppts.filter(function(a){return a.visitType==='delivery';}).length },
-            { label: 'مراجعة', value: dayAppts.filter(function(a){return a.visitType==='review';}).length }
-          ].filter(function(i){ return i.value > 0; }) },
-          { type: 'donut', title: 'الحالة', items: [
-            { label: 'انتظار', value: dayAppts.filter(function(a){return a.status==='waiting';}).length, color: '#d97706' },
-            { label: 'عيادة', value: dayAppts.filter(function(a){return a.status==='in_clinic';}).length, color: '#0e7490' },
-            { label: 'مكتمل', value: dayAppts.filter(function(a){return a.status==='done';}).length, color: '#059669' }
-          ]}
-        ]
-      });
-      ChartKit.mount('analytics-quote', {
-        stats: [
-          { icon: '🧾', label: 'عروض', value: quotations.length, bg: 'rgba(5,150,105,0.1)' },
-          { icon: '💰', label: 'إجمالي', value: Math.round(quotations.reduce(function(s,q){return s+q.total;},0)/1000)+'K', color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '✅', label: 'معتمد', value: quotations.filter(function(q){return q.status==='approved';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '⏳', label: 'بانتظار', value: quotations.filter(function(q){return q.status==='pending';}).length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' }
-        ],
-        charts: [
-          { type: 'bar', title: 'قيمة العروض (K)', color: '#059669', items: quotations.map(function(q) {
-            return { label: q.id.replace('QT-2026-',''), value: Math.round(q.total/1000), display: Math.round(q.total/1000)+'K' };
-          })},
-          { type: 'donut', title: 'حالة العروض', items: [
-            { label: 'معتمد', value: quotations.filter(function(q){return q.status==='approved';}).length, color: '#059669' },
-            { label: 'بانتظار', value: quotations.filter(function(q){return q.status==='pending';}).length, color: '#d97706' }
-          ]}
-        ]
-      });
-      ChartKit.mount('analytics-patients', {
-        stats: [
-          { icon: '👤', label: 'مرضى', value: patientsRegistry.length, bg: 'rgba(124,58,237,0.1)' },
-          { icon: '✅', label: 'نشط', value: patientsRegistry.filter(function(p){return p.status==='active';}).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-          { icon: '💰', label: 'عرض سعر', value: patientsRegistry.filter(function(p){return p.status==='quoted';}).length, color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-          { icon: '⏸️', label: 'غير نشط', value: patientsRegistry.filter(function(p){return p.status==='inactive';}).length, bg: 'rgba(100,116,139,0.1)' }
-        ],
-        charts: [
-          { type: 'donut', title: 'حالة المريض', items: [
-            { label: 'نشط', value: patientsRegistry.filter(function(p){return p.status==='active';}).length, color: '#059669' },
-            { label: 'عرض سعر', value: patientsRegistry.filter(function(p){return p.status==='quoted';}).length, color: '#d97706' },
-            { label: 'مكتمل', value: patientsRegistry.filter(function(p){return p.status==='done';}).length, color: '#0e7490' },
-            { label: 'غير نشط', value: patientsRegistry.filter(function(p){return p.status==='inactive';}).length, color: '#64748b' }
-          ]},
-          { type: 'bar', title: 'جهات التعاقد', color: '#7c3aed', items: [
-            { label: 'التأمين الوطني', value: 3 }, { label: 'التأمين الصحي', value: 2 }, { label: 'ذوي الإعاقة', value: 2 }
-          ]}
-        ]
-      });
+      return;
     }
 
     function changeCalendarMonth(delta) {
@@ -921,7 +731,7 @@
     });
 
     document.getElementById('btnScanQR').addEventListener('click', function() { openQRScan(); });
-    document.getElementById('btnSimulateReturn').addEventListener('click', function() { openQRScan('QT-2026-0847'); });
+    document.getElementById('btnSimulateReturn').addEventListener('click', function() { openQRScan(); });
     document.getElementById('closeQrModal').addEventListener('click', closeQRScanModal);
     document.getElementById('qrModal').addEventListener('click', function(e) {
       if (e.target === document.getElementById('qrModal')) closeQRScanModal();
@@ -978,22 +788,14 @@
       setTimeout(function() {
         document.getElementById('ocrLoading').classList.remove('visible');
 
-        var mockData = {
-          name: 'يوسف عمر محسن',
-          amount: '95,000 ج.م',
-          company: 'مجلس الدفاع المدني',
-          ref: 'REF-2026-DM-4521',
-          date: '05/06/2026'
-        };
+        document.getElementById('ocrName').textContent = '—';
+        document.getElementById('ocrAmount').textContent = '—';
+        document.getElementById('ocrCompany').textContent = '—';
+        document.getElementById('ocrRef').textContent = '—';
+        document.getElementById('ocrDate').textContent = '—';
 
-        document.getElementById('ocrName').textContent = mockData.name;
-        document.getElementById('ocrAmount').textContent = mockData.amount;
-        document.getElementById('ocrCompany').textContent = mockData.company;
-        document.getElementById('ocrRef').textContent = mockData.ref;
-        document.getElementById('ocrDate').textContent = mockData.date;
-
-        document.getElementById('confirmName').value = mockData.name;
-        document.getElementById('confirmAmount').value = '95000';
+        document.getElementById('confirmName').value = '';
+        document.getElementById('confirmAmount').value = '';
 
         document.getElementById('ocrResults').classList.add('visible');
         document.getElementById('ocrForm').style.display = 'grid';

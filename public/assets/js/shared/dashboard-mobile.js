@@ -27,7 +27,7 @@
     bar.innerHTML =
       '<button type="button" class="dm-menu-btn" id="dmMenuBtn" aria-label="فتح القائمة">☰</button>' +
       '<span class="dm-mobile-title" id="dmMobileTitle"></span>' +
-      '<a href="index.html" class="dm-home-btn" aria-label="الصفحة الرئيسية">🏠</a>';
+      '<a href="/" class="dm-home-btn" aria-label="الصفحة الرئيسية">🏠</a>';
 
     var bottomNav = document.createElement('nav');
     bottomNav.className = 'dm-bottom-nav';
