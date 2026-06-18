@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('stock_item_id')->constrained('stock_items')->cascadeOnDelete();
             $table->string('price_ref')->nullable(); // PR-001-1
             $table->string('label')->nullable(); // تسمية الدفعة
-            $table->string('supplier_name'); // اسم المورد
+            $table->foreignId('supplier_id')->constrained('suppliers')->restrictOnDelete();
             $table->string('supplier_type')->nullable(); // محلي | مستورد | OEM | موزّع
             $table->string('supplier_item_code')->nullable(); // كود الصنف عند المورد
             $table->decimal('amount', 15, 2); // سعر الوحدة

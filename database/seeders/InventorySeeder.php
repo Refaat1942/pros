@@ -30,11 +30,17 @@ class InventorySeeder extends Seeder
             SeedRegistry::$stockItems[$row['code']] = $item->id;
 
             foreach ($row['prices'] as $price) {
+                $supplierId = SeedRegistry::$suppliers[$price['supplier']] ?? null;
+
+                if (! $supplierId) {
+                    continue;
+                }
+
                 StockItemPrice::query()->create([
                     'stock_item_id' => $item->id,
                     'price_ref' => $price['id'],
                     'label' => $price['label'],
-                    'supplier_name' => $price['supplier'],
+                    'supplier_id' => $supplierId,
                     'supplier_type' => $price['supplierType'],
                     'supplier_item_code' => $price['itemCode'],
                     'amount' => $price['amount'],

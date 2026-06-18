@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ContractCompanySeeder::class,
             ContractCompanyDebtSeeder::class,
+            SupplierSeeder::class,
             InventorySeeder::class,
             PatientSeeder::class,
             CaseSeeder::class,

@@ -332,4 +332,29 @@ class PrototypeSeedData
 
     return [];
   }
+
+  /** أسماء الموردين الفريدة من دفعات أسعار المخزون — stock-catalog.js */
+  public static function supplierNamesFromStock(): array
+  {
+    $names = [];
+
+    foreach (self::stockItems() as $item) {
+      foreach ($item['prices'] as $price) {
+        $names[$price['supplier']] = true;
+      }
+    }
+
+    return array_keys($names);
+  }
+
+  /** موردون إضافيون من admin-dashboard.js غير موجودين في stock-catalog */
+  public static function extraSupplierNames(): array
+  {
+    return [
+      'شركة المستقبل الطبي',
+      'Fillauer LLC',
+      'شركة النيل للتوريدات',
+      'شركة الإسكندرية الطبية',
+    ];
+  }
 }

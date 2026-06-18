@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('quote_no')->unique(); // QT-2026-0847
             $table->string('order_ref');
             $table->foreignId('case_id')->nullable()->constrained('cases')->nullOnDelete();
-            $table->foreignId('pricing_request_id')->nullable()->constrained('pricing_requests')->nullOnDelete();
+            $table->foreignId('pricing_request_id')->nullable()->unique()->constrained('pricing_requests')->nullOnDelete();
             $table->string('patient_name');
             $table->string('company_name')->nullable();
             $table->date('quote_date');

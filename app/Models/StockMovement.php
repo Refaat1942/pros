@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
  * حركة مخزنية — receive / issue / return
@@ -21,7 +22,7 @@ class StockMovement extends Model
         'unit_cost',
         'balance_after',
         'invoice_no',
-        'supplier_name',
+        'supplier_id',
         'reference_type',
         'reference_id',
         'performed_by_user_id',
@@ -38,6 +39,16 @@ class StockMovement extends Model
     public function stockItem(): BelongsTo
     {
         return $this->belongsTo(StockItem::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function reference(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     public function performedBy(): BelongsTo

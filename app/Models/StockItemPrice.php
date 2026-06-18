@@ -14,7 +14,7 @@ class StockItemPrice extends Model
         'stock_item_id',
         'price_ref',
         'label',
-        'supplier_name',
+        'supplier_id',
         'supplier_type',
         'supplier_item_code',
         'amount',
@@ -32,5 +32,10 @@ class StockItemPrice extends Model
     public function stockItem(): BelongsTo
     {
         return $this->belongsTo(StockItem::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }

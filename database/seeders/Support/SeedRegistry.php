@@ -28,6 +28,9 @@ class SeedRegistry
     /** @var array<string, int> stock code => id */
     public static array $stockItems = [];
 
+    /** @var array<string, int> supplier name => id */
+    public static array $suppliers = [];
+
     public static function reset(): void
     {
         self::$companies = [];
@@ -37,5 +40,6 @@ class SeedRegistry
         self::$quotes = [];
         self::$boms = [];
         self::$stockItems = [];
+        self::$suppliers = [];
     }
 }

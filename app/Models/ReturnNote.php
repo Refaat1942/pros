@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * إذن ارتجاع داخلي — clinic_inventory_returns
@@ -54,5 +55,10 @@ class ReturnNote extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(ReturnNoteLine::class);
+    }
+
+    public function stockMovements(): MorphMany
+    {
+        return $this->morphMany(StockMovement::class, 'reference');
     }
 }

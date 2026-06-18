@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
+use App\Enums\PricingRequestStatus;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * طلب التسعير — clinic_pricing_queue
  */
 class PricingRequest extends Model
 {
-    public const STATUS_PENDING = 'pending';
-    public const STATUS_SENT = 'sent';
-
     public const STEP_ADMIN = 1;
     public const STEP_QUOTE_READY = 2;
 
@@ -40,7 +40,24 @@ class PricingRequest extends Model
         'approved_at' => 'datetime',
         'items_count' => 'integer',
         'step' => 'integer',
+        'status_key' => PricingRequestStatus::class,
     ];
+
+    protected $appends = [
+        'status_label',
+    ];
+
+    /**
+     * تسمية الحالة للعرض فقط — تُشتق من status_key وليست مصدر حقيقة.
+     */
+    protected function statusLabel(): Attribute
+    {
+        return Attribute::get(
+            fn (): string => $this->status_key instanceof PricingRequestStatus
+                ? $this->status_key->label()
+                : PricingRequestStatus::from((string) $this->status_key)->label()
+        );
+    }
 
     public function caseRecord(): BelongsTo
     {
@@ -62,8 +79,11 @@ class PricingRequest extends Model
         return $this->hasMany(PricingRequestItem::class);
     }
 
-    public function quote(): HasMany
+    /**
+     * عرض السعر الناتج — علاقة 1:1 (QT-PENDING-xxx → QT-2026-xxx)
+     */
+    public function quote(): HasOne
     {
-        return $this->hasMany(Quote::class);
+        return $this->hasOne(Quote::class);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * قائمة مواد التشغيل — clinic_bom_inventory
@@ -44,6 +45,11 @@ class Bom extends Model
     public function returnNotes(): HasMany
     {
         return $this->hasMany(ReturnNote::class);
+    }
+
+    public function stockMovements(): MorphMany
+    {
+        return $this->morphMany(StockMovement::class, 'reference');
     }
 
     public function totalValue(): float

@@ -17,7 +17,24 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/home';
+    public const HOME = '/';
+
+    /**
+     * Web route files (middleware: web).
+     *
+     * @var list<string>
+     */
+    protected array $webRouteFiles = [
+        'home',
+        'reception',
+        'doctor',
+        'spec',
+        'adjustments',
+        'operations',
+        'technical',
+        'admin',
+        'fallback',
+    ];
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
@@ -33,8 +50,11 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
-            Route::middleware('web')
-                ->group(base_path('routes/web.php'));
+            Route::middleware('web')->group(function () {
+                foreach ($this->webRouteFiles as $routeFile) {
+                    Route::group([], base_path("routes/web/{$routeFile}.php"));
+                }
+            });
         });
     }
 }

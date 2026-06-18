@@ -19,15 +19,13 @@ return new class extends Migration
             $table->decimal('unit_cost', 15, 2)->nullable(); // تكلفة الوحدة عند الوارد
             $table->unsignedInteger('balance_after')->nullable(); // الرصيد بعد الحركة
             $table->string('invoice_no')->nullable();
-            $table->string('supplier_name')->nullable();
-            $table->string('reference_type')->nullable(); // bom | return_note | manual
-            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->foreignId('supplier_id')->nullable()->constrained('suppliers')->nullOnDelete();
+            $table->nullableMorphs('reference'); // يُنشئ reference_type + reference_id (bom | return_note عبر morphMap)
             $table->foreignId('performed_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('moved_at');
             $table->timestamps();
 
             $table->index(['stock_item_id', 'movement_type']);
-            $table->index(['reference_type', 'reference_id']);
             $table->index('moved_at');
         });
     }
