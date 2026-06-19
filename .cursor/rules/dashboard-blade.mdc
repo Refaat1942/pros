@@ -1,0 +1,39 @@
+---
+description: Dashboard Blade pages — one route per sidebar link, static UI until backend
+globs: resources/views/**/*.blade.php,config/dashboards.php,routes/web/*.php
+alwaysApply: false
+---
+
+# Dashboard Blade UI
+
+## Page structure
+
+- Each sidebar link = **separate route + Blade page** (`{role}/pages/{page}.blade.php`)
+- Shared sidebar: `partials/dashboard-sidebar.blade.php` (links via named routes)
+- Layout: `layouts/dashboard-page.blade.php`
+- Config: `config/dashboards.php` → `pages`, `default_page`, assets
+
+## Static UI phase (current)
+
+- Empty states in Blade (`partials/dashboard-analytics-empty`, `dashboard-bi-empty`)
+- JS `render*` / `ChartKit.mount` for analytics must **not** inject fake data
+- Tables/lists start empty; counts show `0`
+- Modals and form shells preserved for future wiring
+
+## Role dashboards (7)
+
+| Route prefix | Role |
+|--------------|------|
+| `/reception/*` | Reception |
+| `/doctor/*` | Doctor |
+| `/spec/*` | Technical spec |
+| `/adjustments/*` | Adjustments |
+| `/operations/*` | Operations desk |
+| `/technical/*` | Inventory |
+| `/admin/*` | System admin + BI |
+
+## BI command boards (admin `/admin/bi`)
+
+Five static cards: (1) patients/SLA, (2) inventory/WAC, (3) operations/WO, (4) entities/costs, (5) suppliers/WAC vs highest price.
+
+Do not re-merge sections into single-page JS tab switching.

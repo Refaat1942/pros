@@ -11,8 +11,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class MedicalRecord extends Model
 {
+    public const STATUS_DRAFT    = 'مسودة';
+    public const STATUS_APPROVED = 'معتمد';
+
     protected $fillable = [
         'patient_id',
+        'appointment_id',
         'case_id',
         'patient_name',
         'national_id',
@@ -35,6 +39,11 @@ class MedicalRecord extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function appointment(): BelongsTo
+    {
+        return $this->belongsTo(Appointment::class);
     }
 
     public function caseRecord(): BelongsTo

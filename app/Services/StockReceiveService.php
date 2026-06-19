@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\StockItem;
+use App\Models\StockMovement;
+use App\Models\Supplier;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * استلام بضاعة وارد — حركة receive + دفعة سعر + إعادة حساب WAC.
+ */
+class StockReceiveService
+{
+    public function __construct(private readonly StockPriceService $stockPriceService)
+    {
+    }
+
+    /**
+     * استلام بضاعة من مورد — يُحدِّث الرصيد وWAC ويُنشئ سجل حركة غير قابل للتعديل.
+     */
+    public function receive(
+        StockItem $item,
+        int       $qty,
+        float     $unitPrice,
+        Supplier  $supplier,
+        string    $invoiceNo,
+        Carbon    $movedAt,
+        User      $performedBy,
+    ): StockMovement {
+        return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $performedBy) {
+            $item = StockItem::lockForUpdate()->findOrFail($item->id);
+
+            $before = [
+                'qty' => $item->qty,
+                'wac' => (float) ($item->wac ?? 0),
+            ];
+
+            $balanceAfter = $item->qty + $qty;
+
+            $movement = StockMovement::create([
+                'stock_item_id'         => $item->id,
+                'movement_type'         => StockMovement::TYPE_RECEIVE,
+                'quantity'              => $qty,
+                'unit_cost'             => $unitPrice,
+                'balance_after'         => $balanceAfter,
+                'invoice_no'            => $invoiceNo,
+                'supplier_id'           => $supplier->id,
+                'reference_type'        => null,
+                'reference_id'          => null,
+                'performed_by_user_id'  => $performedBy->id,
+                'moved_at'              => $movedAt,
+            ]);
+
+            $this->stockPriceService->createPriceBatch(
+                $item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt
+            );
+
+            $this->stockPriceService->recalcWac($item, $qty, $unitPrice);
+
+            $status = $balanceAfter <= StockItem::LOW_QTY_THRESHOLD
+                ? StockItem::STATUS_LOW
+                : StockItem::STATUS_OK;
+
+            $item->update([
+                'qty'           => $balanceAfter,
+                'status'        => $status,
+                'last_moved_at' => $movedAt->toDateString(),
+            ]);
+
+            $item->refresh();
+
+            AuditService::log(
+                action:      'receive',
+                description: 'استلام بضاعة: ' . $item->code,
+                tag:         'warehouse',
+                before:      $before,
+                after:       [
+                    'qty' => $item->qty,
+                    'wac' => (float) $item->wac,
+                ],
+            );
+
+            return $movement->load(['supplier:id,name', 'stockItem', 'performedBy:id,name']);
+        });
+    }
+}

@@ -1,0 +1,42 @@
+---
+description: Stock item master, barcode movements, WAC, no dispense without work order
+globs: app/Models/Stock*.php,app/Services/**/*Stock*,app/Services/**/*Inventory*,app/Services/**/*Bom*,database/migrations/*stock*
+alwaysApply: false
+---
+
+# Inventory & Barcode
+
+## Item master (`StockItem`)
+
+Each item must have: unique `code`, barcode (1D large / 2D DataMatrix small parts), name, specs, category tree, UOM (piece, meter, gram, liter).
+
+Categories: raw, WIP, finished, molds, consumables, tools.
+
+## Opening balance
+
+Seed or migrate opening qty + unit cost; total value = qty × unit price. Recalculate WAC on every inward movement.
+
+## Inward (receive)
+
+Scan barcode → capture qty, supplier invoice, purchase price, receipt date. System updates WAC immediately. No finance user needed for WAC math.
+
+## Outward (dispense) — strict rules
+
+- **Forbidden**: dispense without electronic work order linked to `CaseRecord`
+- Scan item barcode → system matches against approved BOM/spec lines
+- Match → deduct qty, log `StockMovement` with morph reference to BOM/work order
+- Mismatch → **block + auditable alert** (voice/visual); close dispense transaction
+- Military and civilian work orders use the same scan gate
+
+## WAC formula
+
+```
+WAC_new = (prior_qty × prior_WAC + inward_qty × inward_price) / (prior_qty + inward_qty)
+```
+
+Store per `StockItem`; use IFRS-aligned valuation in reports.
+
+## Stagnant & low stock
+
+- Flag stagnant: no movement > 180 days (BI board 2)
+- Low stock: below safety threshold — alert operations (BI board 2)

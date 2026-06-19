@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class StockItem extends Model
 {
-    public const STATUS_OK = 'ok';
+    public const STATUS_OK  = 'ok';
     public const STATUS_LOW = 'low';
 
     public const LOW_QTY_THRESHOLD = 3;
@@ -25,14 +25,16 @@ class StockItem extends Model
         'barcode',
         'qty',
         'reserved',
+        'wac',
         'status',
         'last_moved_at',
         'last_return_ref',
     ];
 
     protected $casts = [
-        'qty' => 'integer',
-        'reserved' => 'integer',
+        'qty'          => 'integer',
+        'reserved'     => 'integer',
+        'wac'          => 'decimal:4',
         'last_moved_at' => 'date',
     ];
 

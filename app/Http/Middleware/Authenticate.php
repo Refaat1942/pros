@@ -2,16 +2,31 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Role;
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Http\Request;
 
 class Authenticate extends Middleware
 {
     /**
-     * Get the path the user should be redirected to when they are not authenticated.
+     * يعيد التوجيه إلى صفحة login الخاصة بالداشبورد الذي حاول الوصول إليه.
+     *
+     * مثال: /reception/queue → /reception/login
+     *        /admin/overview  → /admin/login
+     *        /unknown         → / (الصفحة الرئيسية)
      */
     protected function redirectTo(Request $request): ?string
     {
-        return $request->expectsJson() ? null : route('login');
+        if ($request->expectsJson()) {
+            return null;
+        }
+
+        $segment = $request->segment(1);
+
+        if ($segment && in_array($segment, Role::ALL_SLUGS, true)) {
+            return url("/{$segment}/login");
+        }
+
+        return url('/');
     }
 }

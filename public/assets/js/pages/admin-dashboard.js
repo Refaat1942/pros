@@ -114,6 +114,8 @@
     });
 
     function renderOverviewCasesCounts() {
+      if (document.getElementById('overviewWaitingCount') &&
+          document.getElementById('overviewWaitingCount').dataset.serverRendered === '1') return;
       var waiting = CasesWorkflow.getBucket('waiting_return').length;
       var progress = CasesWorkflow.getBucket('in_progress').length;
       var delivered = CasesWorkflow.getBucket('delivered').length;
@@ -839,7 +841,7 @@
     function renderAuditItems(containerId, limit, filtered) {
       var logs = filtered || (limit ? auditLogs.slice(0, limit) : auditLogs);
       var container = document.getElementById(containerId);
-      if (!container) return;
+      if (!container || container.dataset.serverRendered === '1') return;
       container.innerHTML = logs.map(function(log) {
         var meta = (log.ip || log.before)
           ? '<div class="audit-meta">' +
@@ -1109,6 +1111,8 @@
     }
 
     function renderAuditFull() {
+      var container = document.getElementById('auditListFull');
+      if (container && container.dataset.serverRendered === '1') return;
       var filtered = getFilteredAudit();
       renderAuditItems('auditListFull', null, filtered);
       var ac = document.getElementById('auditCount');
@@ -1150,7 +1154,8 @@
     }
 
     function renderBI() {
-      return;
+      var el = document.getElementById('biContent');
+      if (el && el.dataset.serverRendered === '1') return;
     }
     window.renderBI = renderBI;
 

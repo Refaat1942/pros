@@ -1,10 +1,29 @@
 <?php
 
 use App\Http\Controllers\Dashboard\OperationsDashboardController;
+use App\Http\Controllers\Manufacturing\ManufacturingStageController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Guard (تصميم فقط): auth:operations
+|--------------------------------------------------------------------------
+| Operations Dashboard — Blade pages
+|--------------------------------------------------------------------------
 */
-
 registerDashboardPages('operations', 'operations.', OperationsDashboardController::class, 'operations');
+
+/*
+|--------------------------------------------------------------------------
+| Manufacturing sub-stages — JSON endpoints
+|--------------------------------------------------------------------------
+*/
+Route::prefix('operations')
+    ->middleware(['auth', 'dashboard.guard'])
+    ->name('operations.')
+    ->group(function () {
+
+        Route::get('operations/list', [ManufacturingStageController::class, 'index'])
+            ->name('operations.list');
+
+        Route::post('operations/{case}/advance', [ManufacturingStageController::class, 'advance'])
+            ->name('operations.advance');
+    });

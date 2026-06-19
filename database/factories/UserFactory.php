@@ -2,43 +2,107 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
+    /** كلمة مرور موحّدة لحسابات الاختبار — غيّرها في الإنتاج */
+    public const TEST_PASSWORD = '123456';
+
     protected static ?string $password;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'name'              => fake()->name(),
+            'email'             => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'password'          => static::$password ??= self::TEST_PASSWORD,
+            'status'            => User::STATUS_ACTIVE,
+            'role_id'           => null,
+            'remember_token'    => Str::random(10),
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /**
+     * ربط المستخدم بدور لوحة تحكم — يُنشئ email ثابت: {slug}@clinic.local
+     */
+    public function forRole(string $slug): static
+    {
+        return $this->state(function () use ($slug) {
+            $labels = [
+                Role::SLUG_ADMIN       => 'مسؤول النظام',
+                Role::SLUG_RECEPTION   => 'موظف استقبال',
+                Role::SLUG_DOCTOR      => 'طبيب',
+                Role::SLUG_SPEC        => 'فني مواصفات',
+                Role::SLUG_ADJUSTMENTS => 'فني تعديلات',
+                Role::SLUG_OPERATIONS  => 'مكتب عمليات',
+                Role::SLUG_TECHNICAL   => 'مسؤول مخزن',
+            ];
+
+            $role = Role::firstOrCreate(
+                ['slug' => $slug],
+                ['label_ar' => $labels[$slug] ?? $slug],
+            );
+
+            return [
+                'role_id' => $role->id,
+                'email'   => "{$slug}@clinic.local",
+                'name'    => $role->label_ar,
+            ];
+        });
+    }
+
+    public function admin(): static
+    {
+        return $this->forRole(Role::SLUG_ADMIN);
+    }
+
+    public function reception(): static
+    {
+        return $this->forRole(Role::SLUG_RECEPTION);
+    }
+
+    public function doctor(): static
+    {
+        return $this->forRole(Role::SLUG_DOCTOR);
+    }
+
+    public function spec(): static
+    {
+        return $this->forRole(Role::SLUG_SPEC);
+    }
+
+    public function adjustments(): static
+    {
+        return $this->forRole(Role::SLUG_ADJUSTMENTS);
+    }
+
+    public function operations(): static
+    {
+        return $this->forRole(Role::SLUG_OPERATIONS);
+    }
+
+    public function technical(): static
+    {
+        return $this->forRole(Role::SLUG_TECHNICAL);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['status' => User::STATUS_INACTIVE]);
     }
 }

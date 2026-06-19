@@ -1,0 +1,56 @@
+---
+description: Patient journey stages, civilian vs military paths, workflow status transitions
+globs: app/Models/CaseRecord.php,app/Models/Patient.php,app/Services/**/*Workflow*,app/Services/**/*Case*,database/migrations/*case*
+alwaysApply: false
+---
+
+# Patient Workflow
+
+## Reception (all patients)
+
+1. Register patient → unique `Patient ID`
+2. Classify: civilian | military (+ rank for military)
+3. Link `ContractCompany`
+4. Issue **Dynamic QR** on patient card
+5. Self-service: patient scans QR for queue position and ETA
+
+## Civilian path (`PATH_STANDARD`)
+
+| Stage | Action |
+|-------|--------|
+| Reception + exam | Doctor diagnosis on system |
+| Technical spec | Technician enters item codes/qty only — **no prices, no stock qty** visible |
+| Auto pricing | Background engine: **Highest Purchase Price** per item + margin |
+| Quote | Official quote PDF with QR; wait for contract approval |
+| Approval scan | Scan quote QR + upload approval letter → auto route to operations |
+| Warehouse | Barcode dispense against work order; deduct stock |
+| Delivery | Fitting → final QR scan → close case + invoice to contract entity |
+
+## Military path (`PATH_MILITARY`)
+
+Same through technical spec; then:
+
+- Silent cost calculation in background (no quote, no payment hold)
+- Auto skip to **ready for production** after pricing event
+- Delivery closes case; cost posts to **sovereign debt** aggregate — not patient billing
+
+## `CaseRecord` stage keys (source of truth)
+
+`reception` → `exam` → `technical` → `cost_calc` → `admin_approval` → `quote` → `waiting_return` → `manufacturing` → `delivered`
+
+Manufacturing sub-stages: `warehouse`, `workshop`, `fitting`, `quality`, `issue`, `generation`, `assembly`, `casting`, `finishing`, `closed`
+
+## Event-driven transitions (implement in Service, not UI)
+
+| Trigger | Transition |
+|---------|------------|
+| Doctor approves exam | → awaiting technical spec |
+| Spec saved | → auto pricing |
+| Pricing done (civilian) | → awaiting contract approval |
+| Pricing done (military) | → ready for production |
+| Approval QR scanned (civilian) | → ready for production + work order no |
+| Barcode dispense confirmed | → under manufacturing |
+| Production complete | → ready for delivery |
+| Delivery QR scan | → **closed** + financial posting |
+
+Never add manual stage-change endpoints without a domain event.

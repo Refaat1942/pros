@@ -1,10 +1,77 @@
 <?php
 
+use App\Http\Controllers\Appointment\AppointmentController;
 use App\Http\Controllers\Dashboard\ReceptionDashboardController;
+use App\Http\Controllers\Delivery\DeliveryController;
+use App\Http\Controllers\Patient\PatientController;
+use App\Http\Controllers\Quote\ApprovalScanController;
+use App\Http\Controllers\Quote\QuoteController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Guard (تصميم فقط): auth:reception
+|--------------------------------------------------------------------------
+| Reception Dashboard — Blade pages
+|--------------------------------------------------------------------------
 */
-
 registerDashboardPages('reception', 'reception.', ReceptionDashboardController::class, 'reception');
+
+/*
+|--------------------------------------------------------------------------
+| Reception CRUD — JSON endpoints
+|--------------------------------------------------------------------------
+*/
+Route::prefix('reception')
+    ->middleware(['auth', 'dashboard.guard'])
+    ->name('reception.')
+    ->group(function () {
+
+        // ── Patients ───────────────────────────────────────────────────────
+        Route::get('patients/list', [PatientController::class, 'index'])
+            ->name('patients.list');
+
+        Route::post('patients', [PatientController::class, 'store'])
+            ->name('patients.store');
+
+        Route::get('patients/{patient}', [PatientController::class, 'show'])
+            ->name('patients.show');
+
+        Route::put('patients/{patient}', [PatientController::class, 'update'])
+            ->name('patients.update');
+
+        // ── Appointments ───────────────────────────────────────────────────
+        Route::get('appointments/list', [AppointmentController::class, 'index'])
+            ->name('appointments.list');
+
+        Route::post('appointments', [AppointmentController::class, 'store'])
+            ->name('appointments.store');
+
+        Route::put('appointments/{appointment}', [AppointmentController::class, 'update'])
+            ->name('appointments.update');
+
+        Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])
+            ->name('appointments.update-status');
+
+        // ── Quotes (civilian only) ─────────────────────────────────────────
+        Route::get('quote/list', [QuoteController::class, 'index'])
+            ->name('quote.list');
+
+        Route::post('quote/{quote}/issue', [QuoteController::class, 'issue'])
+            ->name('quote.issue');
+
+        Route::get('quote/{quote}/print', [QuoteController::class, 'print'])
+            ->name('quote.print');
+
+        // ── Approval scan (OCR / QR) ───────────────────────────────────────
+        Route::post('ocr/scan', [ApprovalScanController::class, 'scan'])
+            ->name('ocr.scan');
+
+        // ── Delivery (QR scan close) ───────────────────────────────────────
+        Route::get('delivery/list', [DeliveryController::class, 'index'])
+            ->name('delivery.list');
+
+        Route::post('delivery/scan', [DeliveryController::class, 'scan'])
+            ->name('delivery.scan');
+
+        Route::get('delivery/{case}', [DeliveryController::class, 'show'])
+            ->name('delivery.show');
+    });

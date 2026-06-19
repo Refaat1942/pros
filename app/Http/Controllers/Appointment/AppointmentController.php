@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Http\Controllers\Appointment;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Appointment\StoreAppointmentRequest;
+use App\Http\Requests\Appointment\UpdateAppointmentRequest;
+use App\Http\Requests\Appointment\UpdateAppointmentStatusRequest;
+use App\Models\Appointment;
+use App\Services\AppointmentService;
+use App\Traits\PaginationTrait;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class AppointmentController extends Controller
+{
+    use PaginationTrait;
+
+    public function __construct(private readonly AppointmentService $appointmentService)
+    {
+    }
+
+    /**
+     * قائمة المواعيد — افتراضياً مواعيد اليوم.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $date = $request->date ?? now()->toDateString();
+
+        $appointments = Appointment::with('patient:id,patient_code,name,patient_type')
+            ->whereDate('appointment_date', $date)
+            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+            ->when($request->visit_type, fn ($q, $t) => $q->where('visit_type', $t))
+            ->orderBy('appointment_time')
+            ->orderBy('id')
+            ->paginate(50);
+
+        return response()->json([
+            'date'       => $date,
+            'data'       => $appointments->items(),
+            'pagination' => $this->paginationModel($appointments),
+        ]);
+    }
+
+    public function store(StoreAppointmentRequest $request): JsonResponse
+    {
+        $appointment = $this->appointmentService->book($request->validated());
+
+        return response()->json($appointment, 201);
+    }
+
+    public function update(UpdateAppointmentRequest $request, Appointment $appointment): JsonResponse
+    {
+        $appointment = $this->appointmentService->reschedule($appointment, $request->validated());
+
+        return response()->json($appointment);
+    }
+
+    public function updateStatus(UpdateAppointmentStatusRequest $request, Appointment $appointment): JsonResponse
+    {
+        try {
+            $appointment = $this->appointmentService->advanceStatus(
+                $appointment,
+                $request->validated('status')
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json($appointment);
+    }
+}

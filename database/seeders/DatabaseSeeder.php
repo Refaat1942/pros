@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         SeedRegistry::reset();
 
         $this->call([
+            RolesAndAdminSeeder::class,
             ContractCompanySeeder::class,
             ContractCompanyDebtSeeder::class,
             SupplierSeeder::class,

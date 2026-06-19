@@ -102,3 +102,29 @@ routes/technical.php
 - Use eager loading
 - Update README when adding major features
 - Code must be clean, readable, and scalable
+
+---
+
+## Domain rules (from client analysis)
+
+Full spec: `docs/new_analysis_by_client.md`
+
+Cursor rules (`.cursor/rules/*.mdc`):
+
+| Rule | Scope |
+|------|--------|
+| `domain-core.mdc` | Always — ERP domain, civilian/military isolation |
+| `patient-workflow.mdc` | Cases, patients, workflow services |
+| `inventory-barcode.mdc` | Stock, BOM, barcode dispense |
+| `pricing-financial.mdc` | Pricing, quotes, debts, WAC |
+| `audit-immutable.mdc` | AuditLog append-only |
+| `dashboard-blade.mdc` | Blade dashboards, one page per sidebar link |
+
+Project skills (`.cursor/skills/prosthetics-*`):
+
+- `prosthetics-patient-pathway` — civilian/military journeys
+- `prosthetics-workflow-engine` — event-driven transitions
+- `prosthetics-inventory-barcode` — receive/dispense/WAC
+- `prosthetics-pricing-wac` — highest price vs WAC
+- `prosthetics-bi-dashboards` — 5 BI boards KPIs
+- `prosthetics-audit-log` — immutable audit implementation

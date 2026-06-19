@@ -11,7 +11,7 @@
         <p class="section-label">بوابات الدخول حسب الدور الوظيفي</p>
         <div class="cards-grid">
 
-            <a href="{{ route('reception.dashboard') }}" class="role-card reception">
+            <a href="{{ route('dashboard.login', 'reception') }}" class="role-card reception">
                 <div class="icon-wrap">📋</div>
                 <h2>الاستقبال</h2>
                 <p>تسجيل المرضى والجدولة، إصدار عروض الأسعار مع QR Code، مسح الموافقات، ورفع خطابات الموافقة المالية.</p>
@@ -21,7 +21,7 @@
                 </span>
             </a>
 
-            <a href="{{ route('doctor.dashboard') }}" class="role-card doctor">
+            <a href="{{ route('dashboard.login', 'doctor') }}" class="role-card doctor">
                 <div class="icon-wrap">🩺</div>
                 <h2>الطبيب المعالج</h2>
                 <p>إدارة قائمة انتظار العيادة، إدخال التوصيات الطبية، وتحويل الحالات رقمياً إلى التوصيف الفني.</p>
@@ -31,7 +31,7 @@
                 </span>
             </a>
 
-            <a href="{{ route('spec.dashboard') }}" class="role-card spec">
+            <a href="{{ route('dashboard.login', 'spec') }}" class="role-card spec">
                 <div class="icon-wrap">📐</div>
                 <h2>التوصيف الفني</h2>
                 <p>استقبال طلبات العيادة، تحديد الأكواد والكميات، حساب التكلفة، وإرسال الطلبات لاعتماد الإدارة والتسعير.</p>
@@ -41,7 +41,7 @@
                 </span>
             </a>
 
-            <a href="{{ route('adjustments.dashboard') }}" class="role-card adjustments">
+            <a href="{{ route('dashboard.login', 'adjustments') }}" class="role-card adjustments">
                 <div class="icon-wrap">📏</div>
                 <h2>المعدلات</h2>
                 <p>جدولة تجارب التركيب الأولى والثانية، تسجيل ملاحظات المقاسات، ومتابعة حالات إذن الشغل بعد الورشة.</p>
@@ -51,7 +51,7 @@
                 </span>
             </a>
 
-            <a href="{{ route('operations.dashboard') }}" class="role-card operations">
+            <a href="{{ route('dashboard.login', 'operations') }}" class="role-card operations">
                 <div class="icon-wrap">🎯</div>
                 <h2>التشغيل</h2>
                 <p>مكتب التشغيل المركزي — إصدار أوامر الإنتاج، متابعة مراحل BOM، وصرف الخامات بالباركود للمخزن.</p>
@@ -61,7 +61,7 @@
                 </span>
             </a>
 
-            <a href="{{ route('technical.dashboard') }}" class="role-card inventory">
+            <a href="{{ route('dashboard.login', 'technical') }}" class="role-card inventory">
                 <div class="icon-wrap">📦</div>
                 <h2>المخزون</h2>
                 <p>إدارة أصناف المخزون والكميات، قوائم BOM، صرف بالباركود، استلام الوارد، وإذن الارتجاع من الورشة.</p>
@@ -71,7 +71,7 @@
                 </span>
             </a>
 
-            <a href="{{ route('admin.dashboard') }}" class="role-card admin">
+            <a href="{{ route('dashboard.login', 'admin') }}" class="role-card admin">
                 <div class="icon-wrap">⚙️</div>
                 <h2>الإدارة</h2>
                 <p>التحكم في إعدادات النظام، اعتماد التسعير، التقارير المالية، مديونيات شركات التعاقد، وسجل الرقابة.</p>

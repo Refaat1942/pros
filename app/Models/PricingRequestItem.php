@@ -15,10 +15,14 @@ class PricingRequestItem extends Model
         'stock_item_code',
         'name',
         'qty',
+        'unit_price',
+        'line_total',
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty'        => 'integer',
+        'unit_price' => 'decimal:2',
+        'line_total' => 'decimal:2',
     ];
 
     public function pricingRequest(): BelongsTo

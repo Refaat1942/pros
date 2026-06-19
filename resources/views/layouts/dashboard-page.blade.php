@@ -24,11 +24,15 @@
         <div class="page-header">
             <div>
                 <h1>{{ $pageTitle ?? $dashboardConfig['title'] }}</h1>
-                <p></p>
+                <p>{{ $dashboardConfig['sidebar']['subtitle'] ?? '' }}</p>
             </div>
             <div class="user-chip">
-                <div class="avatar"></div>
-                <span></span>
+                <div class="avatar">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
+                <span>{{ auth()->user()->name }}</span>
+                <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+                    @csrf
+                    <button type="submit" class="logout-btn" title="تسجيل الخروج">↩</button>
+                </form>
             </div>
         </div>
 

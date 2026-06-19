@@ -10,7 +10,6 @@ var OperationsDesk = (function () {
     getInProduction: empty,
     getReady: empty,
     ensureWorkOrder: nullFn,
-    notifyReady: nullFn,
     getSummary: function () { return { queue: 0, production: 0, ready: 0 }; }
   };
 })();

@@ -620,12 +620,6 @@
       renderInventoryMeta();
       renderBomSection();
       if (typeof renderOperations === 'function') renderOperations();
-      // إشعار SMS عند بلوغ مرحلة الجاهزية
-      var bom = BomInventory.getById(bomId);
-      if (bom && bom.caseId && typeof OperationsDesk !== 'undefined') {
-        var msg = OperationsDesk.notifyReady(bom.caseId);
-        if (msg) showToast('📩 ' + msg);
-      }
       showToast('✅ تم إغلاق BOM — المنتج تام وجاهز للتسليم');
     }
     window.handleBomAction = handleBomAction;

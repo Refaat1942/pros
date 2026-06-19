@@ -1,0 +1,188 @@
+<?php
+
+namespace App\Http\Controllers\Bom;
+
+use App\Exceptions\BarcodeDispenseMismatchException;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Bom\DispenseBomRequest;
+use App\Http\Requests\Bom\StoreBomRequest;
+use App\Models\Bom;
+use App\Models\CaseRecord;
+use App\Models\PricingRequestItem;
+use App\Models\TechOrderSpecItem;
+use App\Services\BomService;
+use App\Traits\PaginationTrait;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class BomController extends Controller
+{
+    use PaginationTrait;
+
+    public function __construct(private readonly BomService $bomService)
+    {
+    }
+
+    /**
+     * قائمة BOM — مرشَّحة حسب المرحلة (raw / wip / finished).
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $boms = Bom::with([
+            'caseRecord:id,case_no,stage_key,manufacturing_stage,work_order_no,patient_type',
+            'items',
+        ])
+            ->when($request->stage, fn ($q, $s) => $q->where('stage', $s))
+            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                $q->where('bom_no', 'like', "%{$s}%")
+                  ->orWhere('order_ref', 'like', "%{$s}%")
+                  ->orWhere('patient_name', 'like', "%{$s}%");
+            }))
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        return response()->json([
+            'data'       => collect($boms->items())->map(fn ($b) => $this->formatSummary($b)),
+            'pagination' => $this->paginationModel($boms),
+        ]);
+    }
+
+    /**
+     * نموذج إنشاء BOM — يملأ من بنود طلب التسعير أو التوصيف الفني.
+     */
+    public function create(CaseRecord $case): JsonResponse
+    {
+        abort_unless($case->stage_key === CaseRecord::STAGE_MANUFACTURING, 422, 'الحالة ليست في مرحلة التصنيع.');
+
+        if (! $case->isMilitary() && empty($case->work_order_no)) {
+            abort(422, 'لا يمكن إنشاء BOM — أمر الشغل غير موجود.');
+        }
+
+        if ($case->bom) {
+            abort(422, 'توجد BOM لهذه الحالة بالفعل.');
+        }
+
+        $case->load('pricingRequest.items', 'techOrderSpec.items');
+
+        $prefill = $this->prefillItems($case);
+
+        return response()->json([
+            'case'         => $this->formatCase($case),
+            'prefill_items' => $prefill,
+        ]);
+    }
+
+    /**
+     * إنشاء BOM وحجز الكميات.
+     */
+    public function store(StoreBomRequest $request): JsonResponse
+    {
+        $case = CaseRecord::findOrFail($request->validated('case_id'));
+
+        $bom = $this->bomService->create($case, $request->validated('items'));
+
+        return response()->json([
+            'message' => 'تم إنشاء BOM بنجاح.',
+            'bom'     => $this->formatDetail($bom),
+        ], 201);
+    }
+
+    /**
+     * تفاصيل BOM مع الكميات المصروفة والمرتجعة.
+     */
+    public function show(Bom $bom): JsonResponse
+    {
+        $bom->load(['items', 'caseRecord:id,case_no,stage_key,manufacturing_stage,work_order_no']);
+
+        return response()->json($this->formatDetail($bom));
+    }
+
+    /**
+     * صرف BOM بالباركود — raw → wip.
+     */
+    public function scanDispense(DispenseBomRequest $request, Bom $bom): JsonResponse
+    {
+        try {
+            $bom = $this->bomService->releaseToWip($bom, $request->validated('scanned_barcodes'));
+        } catch (BarcodeDispenseMismatchException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'تم صرف المواد بنجاح — BOM في مرحلة wip.',
+            'bom'     => $this->formatDetail($bom),
+        ]);
+    }
+
+    /**
+     * إغلاق BOM — wip → finished، الحالة → ready_delivery.
+     */
+    public function closeFinished(Bom $bom): JsonResponse
+    {
+        try {
+            $bom = $this->bomService->closeFinished($bom);
+        } catch (\App\Exceptions\InvalidWorkflowTransitionException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'تم إغلاق BOM — الحالة جاهزة للتسليم.',
+            'bom'     => $this->formatDetail($bom),
+            'can_deliver' => $this->bomService->canDeliver($bom->caseRecord),
+        ]);
+    }
+
+    private function prefillItems(CaseRecord $case): array
+    {
+        if ($case->pricingRequest?->items->isNotEmpty()) {
+            return $case->pricingRequest->items->map(fn (PricingRequestItem $i) => [
+                'stock_item_code' => $i->stock_item_code,
+                'name'            => $i->name,
+                'qty'             => $i->qty,
+            ])->values()->all();
+        }
+
+        if ($case->techOrderSpec?->items->isNotEmpty()) {
+            return $case->techOrderSpec->items->map(fn (TechOrderSpecItem $i) => [
+                'stock_item_code' => $i->stock_item_code,
+                'name'            => $i->name,
+                'qty'             => $i->qty,
+            ])->values()->all();
+        }
+
+        return [];
+    }
+
+    private function formatCase(CaseRecord $case): array
+    {
+        return $case->only([
+            'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage',
+            'work_order_no', 'patient_type', 'quote_no',
+        ]);
+    }
+
+    private function formatSummary(Bom $bom): array
+    {
+        return $bom->only([
+            'id', 'bom_no', 'case_id', 'order_ref', 'quote_no',
+            'patient_name', 'stage', 'released_at', 'finished_at',
+        ]) + [
+            'items_count' => $bom->relationLoaded('items') ? $bom->items->count() : 0,
+            'case'        => $bom->relationLoaded('caseRecord') && $bom->caseRecord
+                ? $this->formatCase($bom->caseRecord)
+                : null,
+        ];
+    }
+
+    private function formatDetail(Bom $bom): array
+    {
+        return $this->formatSummary($bom) + [
+            'items' => $bom->relationLoaded('items')
+                ? $bom->items->map->only([
+                    'id', 'stock_item_code', 'name', 'qty',
+                    'unit_cost', 'issued_qty', 'returned_qty',
+                ])
+                : [],
+        ];
+    }
+}

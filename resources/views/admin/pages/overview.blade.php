@@ -1,23 +1,29 @@
 <div class="section-view" id="section-overview">
-    <div id="analytics-overview">@include('partials.dashboard-analytics-empty', ['stats' => [
-      ['icon' => '💵', 'label' => 'إيرادات', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-      ['icon' => '👤', 'label' => 'مرضى', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-      ['icon' => '📦', 'label' => 'صحة المخزون', 'value' => '0%', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-      ['icon' => '💰', 'label' => 'مديونيات', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
-    ]])</div>
+    <div id="analytics-overview">
+      @isset($overview_stats)
+        @include('partials.dashboard-analytics-empty', ['stats' => $overview_stats])
+      @else
+        @include('partials.dashboard-analytics-empty', ['stats' => [
+          ['icon' => '💵', 'label' => 'إيرادات', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+          ['icon' => '👤', 'label' => 'مرضى', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+          ['icon' => '📦', 'label' => 'صحة المخزون', 'value' => '0%', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+          ['icon' => '💰', 'label' => 'مديونيات', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+        ]])
+      @endisset
+    </div>
 
     <div class="overview-cases-strip" id="overviewCasesStrip">
       <button type="button" class="overview-case-link" data-goto-cases="waiting_return">
         <strong>⏳ بانتظار رجوع العميل</strong>
-        <span id="overviewWaitingCount" style="color:#d97706">0</span>
+        <span id="overviewWaitingCount" style="color:#d97706" data-server-rendered="1">{{ $case_strip['waiting_return'] ?? 0 }}</span>
       </button>
       <button type="button" class="overview-case-link" data-goto-cases="in_progress">
         <strong>🏭 تحت التنفيذ</strong>
-        <span id="overviewProgressCount" style="color:#0e7490">0</span>
+        <span id="overviewProgressCount" style="color:#0e7490" data-server-rendered="1">{{ $case_strip['in_progress'] ?? 0 }}</span>
       </button>
       <button type="button" class="overview-case-link" data-goto-cases="delivered">
         <strong>✅ تم التسليم</strong>
-        <span id="overviewDeliveredCount" style="color:#059669">0</span>
+        <span id="overviewDeliveredCount" style="color:#059669" data-server-rendered="1">{{ $case_strip['delivered'] ?? 0 }}</span>
       </button>
     </div>
 
@@ -70,6 +76,8 @@
         <h3>🔒 آخر حركات — سجل الرقابة</h3>
         <span class="badge">آخر ٥</span>
       </div>
-      <div class="panel-body" id="auditPreview"></div>
+      <div class="panel-body" id="auditPreview">
+        @include('partials.audit-log-preview', ['audit_preview' => $audit_preview ?? collect()])
+      </div>
     </div>
     </div>

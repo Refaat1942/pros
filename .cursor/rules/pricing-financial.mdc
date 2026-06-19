@@ -1,0 +1,48 @@
+---
+description: Background pricing, Highest Purchase Price policy, WAC vs quote, contract debts
+globs: app/Models/Pricing*.php,app/Models/Quote*.php,app/Models/ContractCompany*.php,app/Services/**/*Pric*,app/Services/**/*Quote*,app/Services/**/*Debt*
+alwaysApply: false
+---
+
+# Pricing & Financial Policy
+
+## Background pricing engine
+
+Runs after technical spec is saved. Technician never sees prices during spec entry.
+
+## Quote cost basis — Highest Purchase Price (not WAC)
+
+For patient quotes and pending pricing:
+
+```
+line_cost = qty × highest_registered_purchase_price(item)
+quote_total = Σ line_cost + configured margin
+```
+
+WAC is for **inventory valuation and financial reports only** — not for civilian quote building.
+
+## Civilian financial flow
+
+1. `PricingRequest` → admin approval → `Quote` with QR
+2. Contract entity approval (OCR/scan) unlocks manufacturing
+3. On delivery: post receivable to `ContractCompany` / debt ledger
+4. Credit notes for partial/full rejection after delivery (`CreditNote`)
+
+## Military financial flow
+
+- Calculate full cost silently on pricing event
+- No quote, no payment gate, no patient billing
+- On delivery: accumulate cost to **sovereign / military debt** bucket for BI board 4
+
+## Contract entities (`ContractCompany`)
+
+- Civilian insurers, NGOs, etc. — normal AR/debt tracking
+- Military sovereign entities — reporting-only debt, no payment demand
+
+## BI financial metrics (board 4)
+
+- Cumulative civilian cost by contract entity
+- Aggregated military cost (sovereign)
+- Net contract debts outstanding
+
+Purchasing board (5): compare WAC vs highest purchase price per item for negotiation.

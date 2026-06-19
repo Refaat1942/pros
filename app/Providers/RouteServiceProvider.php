@@ -25,6 +25,7 @@ class RouteServiceProvider extends ServiceProvider
      * @var list<string>
      */
     protected array $webRouteFiles = [
+        'auth',
         'home',
         'reception',
         'doctor',

@@ -22,6 +22,7 @@ class CaseRecord extends Model
     public const STAGE_QUOTE = 'quote';
     public const STAGE_WAITING_RETURN = 'waiting_return';
     public const STAGE_MANUFACTURING = 'manufacturing';
+    public const STAGE_READY_DELIVERY = 'ready_delivery';
     public const STAGE_DELIVERED = 'delivered';
 
     // مراحل التصنيع الفرعية — MANUFACTURING_STAGES

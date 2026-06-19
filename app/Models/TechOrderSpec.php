@@ -19,10 +19,12 @@ class TechOrderSpec extends Model
         'doctor_name',
         'tech_notes',
         'submitted_at',
+        'locked',
     ];
 
     protected $casts = [
         'submitted_at' => 'date',
+        'locked'       => 'boolean',
     ];
 
     public function caseRecord(): BelongsTo

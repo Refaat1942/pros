@@ -1,0 +1,41 @@
+---
+description: Smart Prosthetics ERP — domain core (civilian/military isolation, event-driven workflow, QR/Barcode)
+alwaysApply: true
+---
+
+# Domain Core — Smart Prosthetics ERP
+
+Source: `docs/new_analysis_by_client.md`
+
+## System purpose
+
+ERP for a prosthetics manufacturing center: EMR, contract entities, inventory (WAC + barcode), event-driven workflow, background pricing, BI dashboards, immutable audit log.
+
+## Non-negotiable separation
+
+- **Civilian (`Patient::TYPE_CIVILIAN`)**: full financial path — quote → contract approval → payment collection → manufacturing.
+- **Military (`Patient::TYPE_MILITARY`)**: skip quote/approval/payment gates; silent background cost; costs roll to sovereign debt reports (`CaseRecord::PATH_MILITARY`).
+- **Data isolation**: never mix civilian/military logic in queries, policies, or UI filters without explicit `patient_type` / `path` scoping.
+
+## Tracking technology
+
+- **QR Code**: patient card, quote document, approval scan, delivery close.
+- **Barcode**: serialized stock movements — no manual dispense without validated work order + scan match.
+
+## Architecture alignment
+
+- Business logic in **Services** only; controllers return views/JSON.
+- Workflow transitions are **event-driven** — no manual "send to department" buttons in backend design.
+- UI dashboards: static Blade until backend wired; no fake patient names or demo metrics in JS.
+
+## Key aggregates (existing models)
+
+| Concept | Model / table |
+|---------|----------------|
+| Patient file | `Patient` |
+| Operational case | `CaseRecord` (`cases`) |
+| Pricing queue | `PricingRequest` |
+| Quote | `Quote` |
+| BOM | `Bom` |
+| Stock | `StockItem`, `StockMovement` |
+| Audit | `AuditLog` (append-only) |
