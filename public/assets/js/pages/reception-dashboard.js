@@ -619,54 +619,129 @@
       toggleAddPatientForm(true);
     }
 
-    document.getElementById('closeQuoteModal').addEventListener('click', closeQuoteModal);
-    document.getElementById('btnCloseQuoteModal').addEventListener('click', closeQuoteModal);
-    document.getElementById('quoteModal').addEventListener('click', function(e) {
-      if (e.target === document.getElementById('quoteModal')) closeQuoteModal();
-    });
+    var closeQuoteModalBtn = document.getElementById('closeQuoteModal');
+    if (closeQuoteModalBtn) closeQuoteModalBtn.addEventListener('click', closeQuoteModal);
+    var btnCloseQuoteModal = document.getElementById('btnCloseQuoteModal');
+    if (btnCloseQuoteModal) btnCloseQuoteModal.addEventListener('click', closeQuoteModal);
+    var quoteModal = document.getElementById('quoteModal');
+    if (quoteModal) {
+      quoteModal.addEventListener('click', function(e) {
+        if (e.target === quoteModal) closeQuoteModal();
+      });
+    }
 
-    document.getElementById('closePatientFileModal').addEventListener('click', closePatientFileModal);
-    document.getElementById('btnClosePatientFile').addEventListener('click', closePatientFileModal);
-    document.getElementById('patientFileModal').addEventListener('click', function(e) {
-      if (e.target === document.getElementById('patientFileModal')) closePatientFileModal();
-    });
+    var closePatientFileModalBtn = document.getElementById('closePatientFileModal');
+    if (closePatientFileModalBtn) closePatientFileModalBtn.addEventListener('click', closePatientFileModal);
+    var btnClosePatientFile = document.getElementById('btnClosePatientFile');
+    if (btnClosePatientFile) btnClosePatientFile.addEventListener('click', closePatientFileModal);
+    var patientFileModal = document.getElementById('patientFileModal');
+    if (patientFileModal) {
+      patientFileModal.addEventListener('click', function(e) {
+        if (e.target === patientFileModal) closePatientFileModal();
+      });
+    }
 
-    document.getElementById('btnAddPatient').addEventListener('click', function() {
-      toggleAddPatientForm();
-    });
+    var btnAddPatient = document.getElementById('btnAddPatient');
+    if (btnAddPatient) {
+      btnAddPatient.addEventListener('click', function() {
+        toggleAddPatientForm();
+      });
+    }
 
-    document.getElementById('btnCancelAddPatient').addEventListener('click', closeAddPatientForm);
+    var btnCancelAddPatient = document.getElementById('btnCancelAddPatient');
+    if (btnCancelAddPatient) btnCancelAddPatient.addEventListener('click', closeAddPatientForm);
 
+    // ── CSRF helper ────────────────────────────────────────────────────────
+    function getCsrfToken() {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.getAttribute('content') : '';
+    }
+
+    // ── Lookup loaders ──────────────────────────────────────────────────────
+    function loadMilitaryRanks() {
+      fetch('/reception/lookup/military-ranks?all=1', {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() }
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          var sel = document.getElementById('newRankId');
+          if (!sel) return;
+          sel.innerHTML = '<option value="">— اختر الرتبة —</option>';
+          var ranks = json.data || [];
+          if (!ranks.length) {
+            var emptyOpt = document.createElement('option');
+            emptyOpt.value = '';
+            emptyOpt.textContent = '— لا توجد رتب (أضف من لوحة الإدارة) —';
+            sel.appendChild(emptyOpt);
+            return;
+          }
+          ranks.forEach(function(rank) {
+            var opt = document.createElement('option');
+            opt.value = rank.id;
+            opt.textContent = rank.name;
+            sel.appendChild(opt);
+          });
+        })
+        .catch(function() {});
+    }
+
+    function loadContractCompanies(isMilitary) {
+      var url = '/reception/lookup/companies?all=1' + (isMilitary !== undefined ? '&is_military=' + (isMilitary ? '1' : '0') : '');
+      fetch(url, {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() }
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          var sel = document.getElementById('newCompanyId');
+          if (!sel) return;
+          sel.innerHTML = '<option value="">— اختر الجهة —</option>';
+          (json.data || []).forEach(function(co) {
+            var opt = document.createElement('option');
+            opt.value = co.id;
+            opt.textContent = co.name;
+            sel.appendChild(opt);
+          });
+        })
+        .catch(function() {});
+    }
+
+    // Initial load
+    loadMilitaryRanks();
+    loadContractCompanies();
+
+    // ── Patient-type change ─────────────────────────────────────────────────
     var patientTypeSel = document.getElementById('newPatientType');
     if (patientTypeSel) {
       patientTypeSel.addEventListener('change', function() {
         var isMil = patientTypeSel.value === 'military';
-        document.getElementById('grpRank').style.display = isMil ? '' : 'none';
+        var grpRank = document.getElementById('grpRank');
+        var grpSovereign = document.getElementById('grpSovereign');
+        if (grpRank) grpRank.style.display = isMil ? '' : 'none';
+        if (grpSovereign) grpSovereign.style.display = isMil ? '' : 'none';
+        var companyRequired = document.getElementById('companyRequired');
+        if (companyRequired) companyRequired.style.display = isMil ? 'none' : '';
+        loadContractCompanies(isMil);
       });
     }
 
-    function genPatientId(type) {
-      var prefix = type === 'military' ? 'MIL' : 'CIV';
-      var seq = String(Date.now()).slice(-4);
-      return 'PT-' + prefix + '-' + seq;
-    }
-
+    // ── Patient card display ─────────────────────────────────────────────────
     function showPatientCard(data) {
-      var meta = CasesWorkflow.getPatientTypeMeta(data.patientType);
+      var meta = CasesWorkflow.getPatientTypeMeta(data.patientType || data.patient_type);
       document.getElementById('picType').textContent = meta.icon + ' ' + meta.label;
       document.getElementById('picName').textContent = data.name;
-      document.getElementById('picId').textContent = data.patientId;
-      document.getElementById('picCompany').textContent = data.company;
+      document.getElementById('picId').textContent = data.patientId || data.patient_code;
+      document.getElementById('picCompany').textContent = data.company || data.company_name || '—';
       var rankEl = document.getElementById('picRank');
-      if (data.patientType === 'military' && data.rank) {
+      var rankText = data.rank || '';
+      if ((data.patientType || data.patient_type) === 'military' && rankText) {
         rankEl.style.display = '';
-        rankEl.textContent = 'الرتبة: ' + data.rank;
+        rankEl.textContent = 'الرتبة: ' + rankText;
       } else {
         rankEl.style.display = 'none';
       }
-      document.getElementById('picQrText').textContent = data.patientQr;
+      document.getElementById('picQrText').textContent = data.patientQr || data.patient_qr || '—';
       var card = document.getElementById('patientIdCard');
-      if (card) card.setAttribute('data-type', data.patientType);
+      if (card) card.setAttribute('data-type', data.patientType || data.patient_type);
       document.getElementById('patientCardModal').classList.add('visible');
     }
 
@@ -678,57 +753,115 @@
     if (btnClosePC) btnClosePC.addEventListener('click', closePatientCard);
     if (btnClosePCx) btnClosePCx.addEventListener('click', closePatientCard);
 
-    document.getElementById('btnSavePatient').addEventListener('click', function() {
-      var name = document.getElementById('newPatientName').value.trim();
-      var phone = document.getElementById('newPhone').value.trim();
-      var company = document.getElementById('newCompany').value;
-      var patientType = document.getElementById('newPatientType').value || 'civilian';
-      var rank = document.getElementById('newRank') ? document.getElementById('newRank').value.trim() : '';
-      if (!name || !phone || !company) {
-        alert('يرجى تعبئة جميع الحقول');
-        return;
-      }
-      if (!/^01[0-9]{9}$/.test(phone)) {
-        alert('رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01');
-        return;
-      }
-      var patientId = genPatientId(patientType);
-      var patientQr = 'QR-' + patientId;
-      appointments.unshift({
-        time: 'جديد',
-        date: calendarView.selectedDate,
-        visitType: 'exam',
-        name: name,
-        phone: phone,
-        company: company,
-        patientType: patientType,
-        status: 'waiting',
-        statusLabel: 'انتظار'
-      });
-      patientsRegistry.unshift({
-        name: name,
-        phone: phone,
-        company: company,
-        patientType: patientType,
-        patientId: patientId,
-        rank: rank,
-        registered: calendarView.selectedDate,
-        lastVisit: calendarView.selectedDate,
-        status: 'active',
-        statusLabel: 'نشط'
-      });
-      closeAddPatientForm();
-      renderCalendar();
-      renderReceptionAnalytics();
-      renderAppointments();
-      renderPatients();
-      showToast('تم تسجيل ' + name + ' — Patient ID: ' + patientId);
-      showPatientCard({ name: name, company: company, patientType: patientType, rank: rank, patientId: patientId, patientQr: patientQr });
-      document.getElementById('newPatientName').value = '';
-      document.getElementById('newPhone').value = '';
-      document.getElementById('newCompany').value = '';
-      if (document.getElementById('newRank')) document.getElementById('newRank').value = '';
+    // ── Save patient — real API call ────────────────────────────────────────
+    var btnSavePatient = document.getElementById('btnSavePatient');
+    if (btnSavePatient) btnSavePatient.addEventListener('click', function() {
+      var name         = document.getElementById('newPatientName').value.trim();
+      var phone        = (document.getElementById('newPhone').value || '').trim();
+      var nationalId   = (document.getElementById('newNationalId') ? document.getElementById('newNationalId').value : '').trim();
+      var patientType  = document.getElementById('newPatientType').value || 'civilian';
+      var rankId       = document.getElementById('newRankId') ? document.getElementById('newRankId').value : '';
+      var sovereign    = document.getElementById('newSovereignEntity') ? document.getElementById('newSovereignEntity').value.trim() : '';
+      var companyId    = document.getElementById('newCompanyId') ? document.getElementById('newCompanyId').value : '';
+      var errorEl      = document.getElementById('patientFormError');
+
+      // Client-side validation
+      if (!name) { showFormError(errorEl, 'اسم المريض مطلوب'); return; }
+      if (patientType === 'civilian' && !companyId) { showFormError(errorEl, 'جهة التعاقد مطلوبة للمريض المدني'); return; }
+      if (patientType === 'military' && !rankId) { showFormError(errorEl, 'الرتبة العسكرية مطلوبة للمريض العسكري'); return; }
+      if (patientType === 'military' && !sovereign) { showFormError(errorEl, 'الجهة السيادية مطلوبة للمريض العسكري'); return; }
+      if (errorEl) errorEl.style.display = 'none';
+
+      var payload = {
+        name:                 name,
+        phone:                phone || null,
+        national_id:          nationalId || null,
+        patient_type:         patientType,
+        military_rank_id:     rankId ? parseInt(rankId, 10) : null,
+        sovereign_entity:     sovereign || null,
+        contract_company_id:  companyId ? parseInt(companyId, 10) : null,
+      };
+
+      var btn = document.getElementById('btnSavePatient');
+      btn.disabled = true;
+      btn.textContent = 'جاري الحفظ...';
+
+      fetch('/reception/patients', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Accept':        'application/json',
+          'X-CSRF-TOKEN':  getCsrfToken(),
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(function(res) {
+          return res.json().then(function(json) { return { status: res.status, body: json }; });
+        })
+        .then(function(result) {
+          btn.disabled = false;
+          btn.textContent = '💾 حفظ وإضافة للجدولة';
+
+          if (result.status === 201 || result.status === 200) {
+            var p = result.body;
+            // Add to local registry from server response
+            patientsRegistry.unshift({
+              name:         p.name,
+              phone:        p.phone || '—',
+              company:      p.company_name || '—',
+              patientType:  p.patient_type,
+              patientId:    p.patient_code,
+              rank:         p.rank || '',
+              registered:   p.registered_at || calendarView.selectedDate,
+              lastVisit:    p.registered_at || calendarView.selectedDate,
+              status:       p.status || 'active',
+              statusLabel:  'نشط',
+            });
+            closeAddPatientForm();
+            renderCalendar();
+            renderReceptionAnalytics();
+            renderPatients();
+            showToast('تم تسجيل ' + p.name + ' — ' + p.patient_code);
+            showPatientCard(p);
+            resetPatientForm();
+          } else {
+            // Validation errors from Laravel
+            var msgs = [];
+            if (result.body.message) msgs.push(result.body.message);
+            if (result.body.errors) {
+              Object.values(result.body.errors).forEach(function(arr) {
+                arr.forEach(function(m) { msgs.push(m); });
+              });
+            }
+            showFormError(errorEl, msgs.join(' — ') || 'خطأ في الحفظ');
+          }
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = '💾 حفظ وإضافة للجدولة';
+          showFormError(errorEl, 'تعذّر الاتصال بالخادم — حاول مجدداً');
+        });
     });
+
+    function showFormError(el, msg) {
+      if (!el) { alert(msg); return; }
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function resetPatientForm() {
+      document.getElementById('newPatientName').value = '';
+      if (document.getElementById('newPhone')) document.getElementById('newPhone').value = '';
+      if (document.getElementById('newNationalId')) document.getElementById('newNationalId').value = '';
+      if (document.getElementById('newRankId')) document.getElementById('newRankId').value = '';
+      if (document.getElementById('newSovereignEntity')) document.getElementById('newSovereignEntity').value = '';
+      if (document.getElementById('newCompanyId')) document.getElementById('newCompanyId').value = '';
+      document.getElementById('newPatientType').value = 'civilian';
+      document.getElementById('grpRank').style.display = 'none';
+      document.getElementById('grpSovereign').style.display = 'none';
+      var errorEl = document.getElementById('patientFormError');
+      if (errorEl) errorEl.style.display = 'none';
+    }
 
     document.getElementById('btnScanQR').addEventListener('click', function() { openQRScan(); });
     document.getElementById('btnSimulateReturn').addEventListener('click', function() { openQRScan(); });

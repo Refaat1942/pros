@@ -10,14 +10,19 @@
         <h2>{{ $sidebar['title'] ?? $cfg['title'] }}</h2>
         <span>{{ $sidebar['subtitle'] ?? '' }}</span>
     </div>
-    <ul class="nav-menu">
-        @foreach ($pages as $slug => $page)
-            <li>
-                <a href="{{ route($routePrefix . $slug) }}"
-                   class="{{ ($activePage ?? '') === $slug ? 'active' : '' }}">
-                    <span class="nav-icon">{{ $page['icon'] }}</span> {{ $page['label'] }}
-                </a>
-            </li>
-        @endforeach
-    </ul>
+    <div class="sidebar-nav-scroll">
+        <ul class="nav-menu">
+            @foreach ($pages as $slug => $page)
+                <li>
+                    <a href="{{ route($routePrefix . $slug) }}"
+                       class="{{ ($activePage ?? '') === $slug ? 'active' : '' }}">
+                        <span class="nav-icon">{{ $page['icon'] }}</span> {{ $page['label'] }}
+                    </a>
+                </li>
+            @endforeach
+        </ul>
+    </div>
+    <div class="sidebar-footer">
+        <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
+    </div>
 </aside>

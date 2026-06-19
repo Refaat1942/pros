@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Finance\CreditNoteController;
@@ -83,6 +84,19 @@ Route::prefix('admin')
 
         Route::patch('suppliers/{supplier}/toggle', [SupplierController::class, 'toggleActive'])
             ->name('suppliers.toggle');
+
+        // ── Military Ranks — JSON API (الصفحة Blade: GET admin/military-ranks) ──
+        Route::get('military-ranks/list', [MilitaryRankController::class, 'index'])
+            ->name('military-ranks.list');
+
+        Route::post('military-ranks', [MilitaryRankController::class, 'store'])
+            ->name('military-ranks.store');
+
+        Route::put('military-ranks/{militaryRank}', [MilitaryRankController::class, 'update'])
+            ->name('military-ranks.update');
+
+        Route::patch('military-ranks/{militaryRank}/toggle', [MilitaryRankController::class, 'toggleActive'])
+            ->name('military-ranks.toggle');
 
         // ── Pricing Approval ───────────────────────────────────────────────
         Route::get('pricing/list', [PricingApprovalController::class, 'index'])

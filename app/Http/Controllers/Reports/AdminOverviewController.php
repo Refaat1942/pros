@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Reports\Concerns\RendersAdminDashboard;
 use App\Models\AuditLog;
 use App\Models\CaseRecord;
+use App\Models\User;
 use App\Services\BiReportService;
 use Illuminate\View\View;
 
@@ -75,6 +76,11 @@ class AdminOverviewController extends Controller
             'inventory_health_pct' => $board2['item_count'] > 0
                 ? (int) round((($board2['item_count'] - $board2['low_stock']) / $board2['item_count']) * 100)
                 : 0,
+            'employees_preview' => User::query()
+                ->with('role:id,slug,label_ar')
+                ->orderBy('name')
+                ->limit(5)
+                ->get(['id', 'name', 'role_id', 'status', 'last_login_at']),
         ]);
     }
 }

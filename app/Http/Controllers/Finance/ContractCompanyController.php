@@ -26,6 +26,18 @@ class ContractCompanyController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        // ?all=1 — used by patient registration select dropdown
+        if ($request->boolean('all')) {
+            $companies = ContractCompany::when(
+                    $request->has('is_military'),
+                    fn ($q) => $q->where('is_military', $request->boolean('is_military'))
+                )
+                ->orderBy('name')
+                ->get(['id', 'name', 'company_code', 'is_military']);
+
+            return response()->json(['data' => $companies]);
+        }
+
         $companies = ContractCompany::with('debt')
             ->when(
                 $request->has('is_military'),

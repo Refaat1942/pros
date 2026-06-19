@@ -18,6 +18,13 @@ class DatabaseSeeder extends Seeder
      * - عسكري bypass: CASE-2026-004 (path=military, pricingQueueId=null)
      * - BOM: raw (001,005) → wip (002,006,008) → finished (003,004,007)
      */
+    /**
+     * ⚠️  TEST PHASE — Seeders are disabled.
+     * Tables start empty so that validation, data injection,
+     * and status transitions are verified from scratch.
+     * Re-enable by uncommenting $this->call([...]) when the
+     * test phase is complete.
+     */
     public function run(): void
     {
         SeedRegistry::reset();

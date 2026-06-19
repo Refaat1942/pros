@@ -15,7 +15,7 @@ class StorePatientRequest extends BaseRequest
             'phone'               => ['nullable', 'string', 'max:20'],
             'national_id'         => ['nullable', 'string', 'max:20'],
             'patient_type'        => ['required', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
-            'rank'                => ['nullable', 'string', 'max:100'],
+            'military_rank_id'    => ['nullable', 'integer', 'exists:military_ranks,id'],
             'sovereign_entity'    => ['nullable', 'string', 'max:255'],
             'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
         ];
@@ -31,8 +31,8 @@ class StorePatientRequest extends BaseRequest
             }
 
             if ($type === Patient::TYPE_MILITARY) {
-                if (! $this->filled('rank')) {
-                    $validator->errors()->add('rank', 'الرتبة مطلوبة للمريض العسكري.');
+                if (! $this->filled('military_rank_id')) {
+                    $validator->errors()->add('military_rank_id', 'الرتبة العسكرية مطلوبة للمريض العسكري.');
                 }
                 if (! $this->filled('sovereign_entity')) {
                     $validator->errors()->add('sovereign_entity', 'الجهة السيادية مطلوبة للمريض العسكري.');

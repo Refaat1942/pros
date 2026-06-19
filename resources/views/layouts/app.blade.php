@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="@yield('viewport', 'width=device-width, initial-scale=1.0')">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name'))</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">

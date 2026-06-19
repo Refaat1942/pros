@@ -13,8 +13,10 @@
         <div class="data-toolbar">
           <input type="text" id="pricingApprovalSearch" placeholder="🔍 بحث برقم الطلب أو اسم المريض...">
           <select id="pricingApprovalFilter">
-            <option value="pending">في انتظار موافقة الأدمن</option>
-            <option value="sent">معتمد — جاهز لعرض السعر</option>
+            <option value="awaiting_admin_approval">بانتظار الاعتماد</option>
+            <option value="sent_to_reception">تم الإرسال للاستقبال</option>
+            <option value="processing">جاري الاحتساب</option>
+            <option value="insufficient">غير كافٍ</option>
             <option value="all">الكل</option>
           </select>
           <span class="toolbar-count" id="pricingApprovalCount">0 طلب</span>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ContractCompany;
+use App\Models\MilitaryRank;
 use App\Models\Patient;
 use Illuminate\Support\Facades\DB;
 
@@ -31,6 +32,12 @@ class PatientService
                     ->value('name');
             }
 
+            // Resolve rank name from FK for denormalized display field
+            $rankName = null;
+            if (! empty($data['military_rank_id'])) {
+                $rankName = MilitaryRank::where('id', $data['military_rank_id'])->value('name');
+            }
+
             $patient = Patient::create([
                 'patient_code'        => $patientCode,
                 'patient_qr'          => $patientQr,
@@ -38,7 +45,8 @@ class PatientService
                 'phone'               => $data['phone'] ?? null,
                 'national_id'         => $data['national_id'] ?? null,
                 'patient_type'        => $type,
-                'rank'                => $data['rank'] ?? null,
+                'military_rank_id'    => $data['military_rank_id'] ?? null,
+                'rank'                => $rankName,
                 'sovereign_entity'    => $data['sovereign_entity'] ?? null,
                 'contract_company_id' => $data['contract_company_id'] ?? null,
                 'company_name'        => $companyName,
@@ -113,6 +121,7 @@ class PatientService
             'phone',
             'national_id',
             'patient_type',
+            'military_rank_id',
             'rank',
             'sovereign_entity',
             'contract_company_id',

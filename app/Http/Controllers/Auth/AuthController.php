@@ -82,14 +82,10 @@ class AuthController extends Controller
             );
         }
 
-        $dashboard = $user?->role?->slug;
-
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return $dashboard
-            ? redirect()->route('dashboard.login', $dashboard)
-            : redirect('/');
+        return redirect()->route('home');
     }
 }

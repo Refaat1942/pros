@@ -25,7 +25,7 @@ class PricingApprovalController extends Controller
     public function index(Request $request): JsonResponse
     {
         $requests = PricingRequest::with(['caseRecord:id,case_no,stage_key'])
-            ->where('status_key', PricingRequestStatus::Pending->value)
+            ->where('status_key', PricingRequestStatus::AwaitingAdminApproval->value)
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('request_no', 'like', "%{$s}%")
                   ->orWhere('patient_name', 'like', "%{$s}%")

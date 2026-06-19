@@ -306,8 +306,8 @@
       pricingQueue = PricingQueue.getAll();
       var filtered = getFilteredPricing();
 
-      var pendCount = pricingQueue.filter(function(p) { return p.statusKey === 'pending'; }).length;
-      var sentCount = pricingQueue.filter(function(p) { return p.statusKey === 'sent'; }).length;
+      var pendCount = pricingQueue.filter(function(p) { return p.statusKey === 'awaiting_admin_approval'; }).length;
+      var sentCount = pricingQueue.filter(function(p) { return p.statusKey === 'sent_to_reception'; }).length;
 
       document.getElementById('prTotal').textContent        = pricingQueue.length;
       document.getElementById('prPending').textContent      = pendCount;

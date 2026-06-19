@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * محرك التسعير — أعلى سعر شراء (Highest Purchase Price) وليس WAC.
+ *
+ * دورة الحياة الكاملة:
+ *   PricingRequest يُنشأ بحالة processing
+ *   → calculate() يحتسب المجموع ثم يُحوِّل إلى awaiting_admin_approval
+ *   → approve()   يُرسل للاستقبال ويُحوِّل إلى sent_to_reception
  */
 class PricingService
 {
@@ -24,15 +29,21 @@ class PricingService
     }
 
     /**
-     * احتساب تكلفة طلب التسعير — يُستدعى تلقائياً عند إنشاء PricingRequest.
+     * احتساب تكلفة طلب التسعير.
+     *
+     * يبدأ بـ processing ثم يُحوِّل إلى awaiting_admin_approval عند الانتهاء.
      */
     public function calculate(PricingRequest $request): float
     {
         return DB::transaction(function () use ($request) {
-            $request->load('items');
+            $request = PricingRequest::lockForUpdate()->findOrFail($request->id);
 
-            $total  = 0.0;
-            $lines  = [];
+            // Mark as "engine is running"
+            $request->update(['status_key' => PricingRequestStatus::Processing->value]);
+
+            $request->load('items');
+            $total = 0.0;
+            $lines = [];
 
             foreach ($request->items as $item) {
                 $unitPrice = $this->stockPriceService->highestUnitPrice($item->stock_item_code ?? '');
@@ -61,45 +72,52 @@ class PricingService
                 $total += $lineTotal;
             }
 
-            $request->update(['computed_total' => round($total, 2)]);
+            $total = round($total, 2);
+            $before = ['status_key' => PricingRequestStatus::Processing->value, 'computed_total' => 0];
+
+            $request->update([
+                'computed_total' => $total,
+                'status_key'     => PricingRequestStatus::AwaitingAdminApproval->value,
+            ]);
 
             AuditService::log(
                 action:      'calculate',
                 description: "احتساب تكلفة الحالة — {$request->request_no}",
                 tag:         'pricing',
+                before:      $before,
                 after:       [
                     'request_no'     => $request->request_no,
-                    'computed_total' => round($total, 2),
+                    'status_key'     => PricingRequestStatus::AwaitingAdminApproval->value,
+                    'computed_total' => $total,
                     'lines'          => $lines,
                 ],
             );
 
-            return round($total, 2);
+            return $total;
         });
     }
 
     /**
-     * اعتماد طلب التسعير — مسار مدني (Quote) أو عسكري (total_cost صامت).
+     * اعتماد طلب التسعير من الأدمن.
+     *
+     * الشرط: status_key === awaiting_admin_approval
+     * النتيجة: status_key → sent_to_reception + workflow advance
      */
     public function approve(PricingRequest $request, User $approver): void
     {
-        $status = $request->status_key instanceof PricingRequestStatus
-            ? $request->status_key
-            : PricingRequestStatus::from((string) $request->status_key);
+        $status = $this->resolveStatus($request);
 
-        if (! $status->isPending()) {
-            abort(422, 'تم اعتماد طلب التسعير مسبقاً.');
+        if (! $status->isApprovable()) {
+            abort(422, 'طلب التسعير ليس في مرحلة الاعتماد — الحالة الحالية: ' . $status->label());
         }
 
         DB::transaction(function () use ($request, $approver) {
             $request = PricingRequest::lockForUpdate()->findOrFail($request->id);
 
-            $lockedStatus = $request->status_key instanceof PricingRequestStatus
-                ? $request->status_key
-                : PricingRequestStatus::from((string) $request->status_key);
+            $lockedStatus = $this->resolveStatus($request);
 
-            if (! $lockedStatus->isPending()) {
-                abort(422, 'تم اعتماد طلب التسعير مسبقاً.');
+            if (! $lockedStatus->isApprovable()) {
+                abort(422, 'طلب التسعير ليس في مرحلة الاعتماد.');
             }
 
             $before = $request->only(['status_key', 'step', 'approved_at']);
@@ -109,10 +127,10 @@ class PricingService
                 'approved_by'         => $approver->name,
                 'approved_by_user_id' => $approver->id,
                 'step'                => PricingRequest::STEP_QUOTE_READY,
-                'status_key'          => PricingRequestStatus::Sent->value,
+                'status_key'          => PricingRequestStatus::SentToReception->value,
             ]);
 
-            $case = CaseRecord::lockForUpdate()->findOrFail($request->case_id);
+            $case  = CaseRecord::lockForUpdate()->findOrFail($request->case_id);
             $total = (float) $request->computed_total;
 
             if ($request->patient_type === Patient::TYPE_MILITARY) {
@@ -131,5 +149,14 @@ class PricingService
                 after:       $request->fresh()->only(['status_key', 'step', 'approved_at', 'approved_by']),
             );
         });
+    }
+
+    // ── Helper ────────────────────────────────────────────────────────────────
+
+    private function resolveStatus(PricingRequest $request): PricingRequestStatus
+    {
+        return $request->status_key instanceof PricingRequestStatus
+            ? $request->status_key
+            : PricingRequestStatus::from((string) $request->status_key);
     }
 }

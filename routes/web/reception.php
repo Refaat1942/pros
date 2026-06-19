@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Appointment\AppointmentController;
 use App\Http\Controllers\Dashboard\ReceptionDashboardController;
 use App\Http\Controllers\Delivery\DeliveryController;
+use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Patient\PatientController;
 use App\Http\Controllers\Quote\ApprovalScanController;
 use App\Http\Controllers\Quote\QuoteController;
@@ -24,6 +26,13 @@ Route::prefix('reception')
     ->middleware(['auth', 'dashboard.guard'])
     ->name('reception.')
     ->group(function () {
+
+        // ── Lookup lists (select dropdowns) ───────────────────────────────
+        Route::get('lookup/military-ranks', [MilitaryRankController::class, 'index'])
+            ->name('lookup.military-ranks');
+
+        Route::get('lookup/companies', [ContractCompanyController::class, 'index'])
+            ->name('lookup.companies');
 
         // ── Patients ───────────────────────────────────────────────────────
         Route::get('patients/list', [PatientController::class, 'index'])

@@ -16,6 +16,7 @@
       <li><a href="#" data-section="audit"><span class="nav-icon">🔒</span> سجل الرقابة</a></li>
       <li><a href="#" data-section="reports"><span class="nav-icon">📈</span> التقارير</a></li>
       <li><a href="#" data-section="suppliers"><span class="nav-icon">🏭</span> الموردون</a></li>
+      <li><a href="#" data-section="military-ranks"><span class="nav-icon">🪖</span> الرتب العسكرية</a></li>
     </ul>
     <div class="sidebar-footer">
       <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
@@ -61,7 +62,7 @@
     <div class="panels-grid">
       <div class="panel" id="employees">
         <div class="panel-header">
-          <h3>👥 إدارة الموظفين والصلاحيات</h3>
+          <h3>👥 إدارة الموظفين</h3>
           <span class="badge" id="employeesOverviewBadge">0 موظف</span>
         </div>
         <div class="panel-body">
@@ -226,8 +227,10 @@
         <div class="data-toolbar">
           <input type="text" id="pricingApprovalSearch" placeholder="🔍 بحث برقم الطلب أو اسم المريض...">
           <select id="pricingApprovalFilter">
-            <option value="pending">في انتظار موافقة الأدمن</option>
-            <option value="sent">معتمد — جاهز لعرض السعر</option>
+            <option value="awaiting_admin_approval">بانتظار الاعتماد</option>
+            <option value="sent_to_reception">تم الإرسال للاستقبال</option>
+            <option value="processing">جاري الاحتساب</option>
+            <option value="insufficient">غير كافٍ</option>
             <option value="all">الكل</option>
           </select>
           <span class="toolbar-count" id="pricingApprovalCount">0 طلب</span>
@@ -317,7 +320,7 @@
       ]])</div>
       <div class="panel">
         <div class="panel-header">
-          <h3>👥 إدارة الموظفين والصلاحيات</h3>
+          <h3>👥 إدارة الموظفين</h3>
           <span class="badge" id="employeesSectionBadge">0 موظف</span>
         </div>
         <div class="data-toolbar">
@@ -665,6 +668,8 @@
   </div>
 
   </div>
+
+  @include('admin.pages.military-ranks')
 
   <!-- Credit Note Modal -->
   <div class="catalog-modal-overlay" id="creditNoteModal">

@@ -6,7 +6,7 @@
 
 @section('viewport', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
 @section('title', ($pageTitle ?? $dashboardConfig['title']) . ' — مركز الأطراف الصناعية')
-@section('body-attributes'){!! $dashboardConfig['body_attributes'] !!}@endsection
+@section('body-attributes'){!! $dashboardConfig['body_attributes'] !!} data-dashboard="{{ $dashboardKey }}" data-active-page="{{ $activePage ?? '' }}"@endsection
 
 @push('styles')
     @foreach ($dashboardConfig['styles'] as $style)

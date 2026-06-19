@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Dashboard\Concerns;
 
+use App\Services\Dashboard\DashboardPageDataService;
 use Illuminate\View\View;
 
 trait ShowsDashboardPage
@@ -15,10 +16,12 @@ trait ShowsDashboardPage
 
         abort_unless(isset($pages[$page]), 404);
 
-        return view('dashboard.show', [
+        $pageData = app(DashboardPageDataService::class)->resolve($key, $page);
+
+        return view('dashboard.show', array_merge([
             'dashboardKey' => $key,
-            'activePage' => $page,
-            'pageTitle' => $pages[$page]['title'],
-        ]);
+            'activePage'   => $page,
+            'pageTitle'    => $pages[$page]['title'],
+        ], $pageData));
     }
 }

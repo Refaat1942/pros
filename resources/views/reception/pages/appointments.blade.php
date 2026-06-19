@@ -31,7 +31,7 @@
           <h4>➕ تسجيل مريض جديد</h4>
           <div class="add-patient-form-grid">
             <div class="form-group">
-              <label>اسم المريض</label>
+              <label>اسم المريض <span style="color:red">*</span></label>
               <input type="text" class="form-control" id="newPatientName" placeholder="الاسم الكامل">
             </div>
             <div class="form-group">
@@ -39,30 +39,34 @@
               <input type="tel" class="form-control" id="newPhone" placeholder="01xxxxxxxxx" maxlength="11">
             </div>
             <div class="form-group">
-              <label>تصنيف المريض</label>
+              <label>الرقم القومي</label>
+              <input type="text" class="form-control" id="newNationalId" placeholder="14 رقم" maxlength="20">
+            </div>
+            <div class="form-group">
+              <label>تصنيف المريض <span style="color:red">*</span></label>
               <select class="form-control" id="newPatientType">
                 <option value="civilian">🌐 مدني</option>
                 <option value="military">🪖 عسكري</option>
               </select>
             </div>
             <div class="form-group" id="grpRank" style="display:none;">
-              <label>الرتبة العسكرية</label>
-              <input type="text" class="form-control" id="newRank" placeholder="مثال: نقيب / رائد">
+              <label>الرتبة العسكرية <span style="color:red">*</span></label>
+              <select class="form-control" id="newRankId">
+                <option value="">— جاري التحميل —</option>
+              </select>
             </div>
-            <div class="form-group">
-              <label>جهة التعاقد</label>
-              <select class="form-control" id="newCompany">
+            <div class="form-group" id="grpSovereign" style="display:none;">
+              <label>الجهة السيادية <span style="color:red">*</span></label>
+              <input type="text" class="form-control" id="newSovereignEntity" placeholder="مثال: القوات المسلحة / الشرطة">
+            </div>
+            <div class="form-group" id="grpCompany">
+              <label>جهة التعاقد <span id="companyRequired" style="color:red">*</span></label>
+              <select class="form-control" id="newCompanyId">
                 <option value="">— اختر الجهة —</option>
-                <option>شركة التأمين الوطني</option>
-                <option>هيئة التأمين الصحي</option>
-                <option>صندوق رعاية ذوي الإعاقة</option>
-                <option>شركة مصر للتأمين</option>
-                <option>مجلس الدفاع المدني</option>
-                <option>إدارة القوات المسلحة الطبية</option>
-                <option>الحرس الجمهوري — الخدمات الطبية</option>
               </select>
             </div>
           </div>
+          <div id="patientFormError" style="color:#dc2626;font-size:13px;margin:0 0 8px;display:none;"></div>
           <div class="add-patient-form-actions">
             <button class="btn btn-secondary" type="button" id="btnCancelAddPatient">إلغاء</button>
             <button class="btn btn-primary" type="button" id="btnSavePatient">💾 حفظ وإضافة للجدولة</button>

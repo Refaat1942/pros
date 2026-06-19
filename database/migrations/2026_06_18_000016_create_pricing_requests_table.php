@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('doctor_name')->nullable();
             $table->foreignId('doctor_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('patient_type')->default('civilian');
-            $table->string('status_key')->default('pending'); // pending | sent
+            $table->string('status_key')->default('processing'); // processing | awaiting_admin_approval | sent_to_reception | insufficient
             $table->unsignedTinyInteger('step')->default(1); // 1=موافقة الأدمن، 2=جاهز لعرض السعر
             $table->timestamp('approved_at')->nullable();
             $table->string('approved_by')->nullable(); // اسم المعتمد

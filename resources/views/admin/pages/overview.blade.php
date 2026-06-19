@@ -30,8 +30,8 @@
     <div class="panels-grid">
       <div class="panel" id="employees">
         <div class="panel-header">
-          <h3>👥 إدارة الموظفين والصلاحيات</h3>
-          <span class="badge" id="employeesOverviewBadge">0 موظف</span>
+          <h3>👥 إدارة الموظفين</h3>
+          <span class="badge">{{ ($employees_preview ?? collect())->count() }} موظف</span>
         </div>
         <div class="panel-body">
           <table>
@@ -44,7 +44,10 @@
                 <th>إجراء</th>
               </tr>
             </thead>
-            <tbody id="employeesTable">
+            <tbody id="employeesTable" data-server-rendered="1">
+              @isset($employees_preview)
+                @include('partials.employees-table-rows', ['employees' => $employees_preview])
+              @endisset
             </tbody>
           </table>
         </div>

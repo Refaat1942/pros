@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+// MilitaryRank is resolved at runtime — imported for IDE hints
 
 /**
  * ملف المريض — EMR + بطاقة QR
@@ -26,7 +27,8 @@ class Patient extends Model
         'phone',
         'national_id',
         'patient_type',
-        'rank',
+        'military_rank_id',
+        'rank',               // نص مشتق من military_rank.name — للعرض السريع
         'sovereign_entity',
         'contract_company_id',
         'company_name',
@@ -43,6 +45,11 @@ class Patient extends Model
     public function contractCompany(): BelongsTo
     {
         return $this->belongsTo(ContractCompany::class);
+    }
+
+    public function militaryRank(): BelongsTo
+    {
+        return $this->belongsTo(MilitaryRank::class);
     }
 
     public function cases(): HasMany

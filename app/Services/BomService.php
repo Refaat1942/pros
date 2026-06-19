@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\PricingRequestStatus;
 use App\Enums\WorkflowEvent;
 use App\Exceptions\BarcodeDispenseMismatchException;
+use App\Exceptions\InsufficientStockException;
 use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
+use App\Models\PricingRequest;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use Illuminate\Support\Facades\Auth;
@@ -39,6 +42,33 @@ class BomService
      * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
      */
     public function create(CaseRecord $case, array $items): Bom
+    {
+        try {
+            return $this->doCreate($case, $items);
+        } catch (InsufficientStockException $e) {
+            // Runs OUTSIDE the rolled-back transaction — this commit succeeds
+            if ($e->pricingRequestId) {
+                PricingRequest::where('id', $e->pricingRequestId)
+                    ->update(['status_key' => PricingRequestStatus::Insufficient->value]);
+
+                AuditService::log(
+                    action:      'insufficient',
+                    description: "فشل فحص المخزون عند إنشاء BOM — الصنف: {$e->stockItemCode}",
+                    tag:         'pricing',
+                    after:       [
+                        'pricing_request_id' => $e->pricingRequestId,
+                        'missing_code'       => $e->stockItemCode,
+                        'available'          => $e->available,
+                        'required'           => $e->required,
+                    ],
+                );
+            }
+
+            abort(422, $e->getMessage());
+        }
+    }
+
+    private function doCreate(CaseRecord $case, array $items): Bom
     {
         return DB::transaction(function () use ($case, $items) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
@@ -81,7 +111,13 @@ class BomService
                 }
 
                 if ($stockItem->availableQty() < $qty) {
-                    abort(422, "الكمية غير كافية للصنف {$code} — متاح: {$stockItem->availableQty()}");
+                    // Throw outside-transaction-safe exception; BomService::create() catches it
+                    throw new InsufficientStockException(
+                        stockItemCode:    $code,
+                        required:         $qty,
+                        available:        $stockItem->availableQty(),
+                        pricingRequestId: $case->pricing_request_id,
+                    );
                 }
 
                 $unitCost = $this->stockPriceService->highestUnitPrice($code);

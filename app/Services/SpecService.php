@@ -135,7 +135,7 @@ class SpecService
                 'doctor_name'       => $spec->doctor_name,
                 'doctor_user_id'    => $doctor?->doctor_user_id,
                 'patient_type'      => $case->patient_type,
-                'status_key'        => PricingRequestStatus::Pending->value,
+                'status_key'        => PricingRequestStatus::Processing->value,
                 'step'              => PricingRequest::STEP_ADMIN,
             ]);
 
