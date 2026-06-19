@@ -48,7 +48,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <ul class="order-list" id="ordersList"></ul>
+          <ul class="order-list" id="ordersList" data-paginate="10"></ul>
         </div>
       </div>
 
@@ -90,7 +90,7 @@
             <div class="form-section">
               <div class="form-section-title">📦 الأصناف المطلوبة من العيادة</div>
               <div class="stock-table-wrap">
-                <table class="stock-table">
+                <table data-paginate="10" class="stock-table">
                   <thead>
                     <tr>
                       <th>الصنف</th>
@@ -201,7 +201,7 @@
         </div>
 
         <div class="pricing-table-wrap">
-          <table class="pricing-table">
+          <table data-paginate="10" class="pricing-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -242,7 +242,7 @@
         <div class="pricing-detail-items">
           <h4>📦 الأصناف المطلوبة</h4>
           <div class="stock-table-wrap">
-            <table class="stock-table">
+            <table data-paginate="10" class="stock-table">
               <thead>
                 <tr>
                   <th>الصنف</th>

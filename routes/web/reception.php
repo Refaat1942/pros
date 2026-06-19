@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\MilitaryRankController;
+use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Appointment\AppointmentController;
 use App\Http\Controllers\Dashboard\ReceptionDashboardController;
 use App\Http\Controllers\Delivery\DeliveryController;
@@ -30,6 +31,9 @@ Route::prefix('reception')
         // ── Lookup lists (select dropdowns) ───────────────────────────────
         Route::get('lookup/military-ranks', [MilitaryRankController::class, 'index'])
             ->name('lookup.military-ranks');
+
+        Route::get('lookup/visit-types', [VisitTypeController::class, 'index'])
+            ->name('lookup.visit-types');
 
         Route::get('lookup/companies', [ContractCompanyController::class, 'index'])
             ->name('lookup.companies');
@@ -71,6 +75,9 @@ Route::prefix('reception')
             ->name('quote.print');
 
         // ── Approval scan (OCR / QR) ───────────────────────────────────────
+        Route::post('ocr/process', [\App\Http\Controllers\Quote\OcrApprovalController::class, 'process'])
+            ->name('ocr.process');
+
         Route::post('ocr/scan', [ApprovalScanController::class, 'scan'])
             ->name('ocr.scan');
 

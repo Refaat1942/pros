@@ -8,6 +8,7 @@ use App\Models\PricingRequest;
 use App\Services\PricingService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -24,21 +25,22 @@ class PricingApprovalController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $requests = PricingRequest::with(['caseRecord:id,case_no,stage_key'])
-            ->where('status_key', PricingRequestStatus::AwaitingAdminApproval->value)
-            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('request_no', 'like', "%{$s}%")
-                  ->orWhere('patient_name', 'like', "%{$s}%")
-                  ->orWhere('order_ref', 'like', "%{$s}%");
-            }))
-            ->when($request->patient_type, fn ($q, $t) => $q->where('patient_type', $t))
-            ->orderByDesc('request_date')
-            ->orderByDesc('id')
-            ->paginate(20);
+        $requests = $this->fetchForDashboard(
+            PricingRequest::with(['caseRecord:id,case_no,stage_key'])
+                ->where('status_key', PricingRequestStatus::AwaitingAdminApproval->value)
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('request_no', 'like', "%{$s}%")
+                      ->orWhere('patient_name', 'like', "%{$s}%")
+                      ->orWhere('order_ref', 'like', "%{$s}%");
+                }))
+                ->when($request->patient_type, fn ($q, $t) => $q->where('patient_type', $t))
+                ->orderByDesc('request_date')
+                ->orderByDesc('id')
+        );
 
         return response()->json([
-            'data'       => collect($requests->items())->map(fn ($r) => $this->formatSummary($r)),
-            'pagination' => $this->paginationModel($requests),
+            'data'  => collect($requests)->map(fn ($r) => $this->formatSummary($r))->values(),
+            'total' => $requests->count(),
         ]);
     }
 
@@ -59,23 +61,29 @@ class PricingApprovalController extends Controller
     /**
      * اعتماد طلب التسعير — مسار مدني أو عسكري.
      */
-    public function approve(PricingRequest $pricingRequest): JsonResponse
+    public function approve(Request $request, PricingRequest $pricingRequest): RedirectResponse|JsonResponse
     {
         /** @var \App\Models\User $approver */
         $approver = Auth::user();
 
         $this->pricingService->approve($pricingRequest, $approver);
 
-        $pricingRequest->refresh()->load(['items', 'quote', 'caseRecord']);
+        if ($request->expectsJson()) {
+            $pricingRequest->refresh()->load(['items', 'quote', 'caseRecord']);
 
-        return response()->json([
-            'message'         => 'تم اعتماد طلب التسعير بنجاح.',
-            'pricing_request' => $this->formatDetail($pricingRequest),
-            'quote'           => $pricingRequest->quote,
-            'case'            => $pricingRequest->caseRecord?->only([
-                'id', 'case_no', 'stage_key', 'quote_no', 'quote_total', 'total_cost', 'manufacturing_stage',
-            ]),
-        ]);
+            return response()->json([
+                'message'         => 'تم اعتماد طلب التسعير بنجاح.',
+                'pricing_request' => $this->formatDetail($pricingRequest),
+                'quote'           => $pricingRequest->quote,
+                'case'            => $pricingRequest->caseRecord?->only([
+                    'id', 'case_no', 'stage_key', 'quote_no', 'quote_total', 'total_cost', 'manufacturing_stage',
+                ]),
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.pricing')
+            ->with('success', "تم اعتماد طلب التسعير {$pricingRequest->request_no} بنجاح.");
     }
 
     private function formatSummary(PricingRequest $request): array

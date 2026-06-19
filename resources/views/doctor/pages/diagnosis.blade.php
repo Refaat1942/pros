@@ -1,3 +1,8 @@
+@php
+    $appt = $selected_appointment ?? null;
+    $patient = $selected_patient ?? $appt?->patient;
+    $draft = $draft_record ?? null;
+@endphp
 <div class="section-view" id="section-diagnosis">
       <div id="analytics-diagnosis">@include('partials.dashboard-analytics-empty', ['stats' => [
         ['icon' => '📝', 'label' => 'تقارير اليوم', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
@@ -10,52 +15,57 @@
           <h3>📝 التشخيص الطبي</h3>
         </div>
         <div class="panel-body">
+          @if (!$patient)
+            <p style="padding:24px;color:var(--text-muted);text-align:center;">
+              اختر مريضاً من <a href="{{ route('doctor.queue') }}">قائمة الانتظار</a> لبدء الكشف.
+            </p>
+          @else
           <div class="patient-info-bar" id="patientBar">
-            <h4 id="selectedPatientName">—</h4>
-            <p id="selectedPatientInfo">—</p>
+            <h4 id="selectedPatientName">{{ $patient->name }}</h4>
+            <p id="selectedPatientInfo">
+              {{ $patient->patient_code }} — {{ $patient->company_name ?? '—' }}
+              — {{ $patient->patient_type === 'military' ? '🪖 عسكري' : '🌐 مدني' }}
+            </p>
           </div>
 
-          <div class="silent-clinic-note" id="silentClinicNote" style="display:none;">
-            🪖 <span>مريض عسكري — <strong>عيادة صامتة</strong>: يُسجَّل الكشف والتوصيف ويتخطّى النظام عرض السعر والتحصيل (تقييم مالي صامت في الخلفية).</span>
+          @if ($patient->patient_type === 'military')
+          <div class="silent-clinic-note" id="silentClinicNote">
+            🪖 <span>مريض عسكري — <strong>عيادة صامتة</strong>: يُسجَّل الكشف والتوصيف ويتخطّى النظام عرض السعر والتحصيل.</span>
           </div>
+          @endif
 
-          <form id="diagnosisForm">
-            <div class="form-group">
-              <label>التوصيات الطبية <span class="required">*</span></label>
-              <div class="stock-multi-select" id="medicalRecommendationsSelect">
-                <div class="sms-selected"></div>
-                <div class="sms-control">
-                  <input type="text" class="sms-search" placeholder="🔍 ابحث واختر من أصناف المخزون..." autocomplete="off">
-                  <button type="button" class="sms-toggle" aria-label="فتح القائمة">▼</button>
-                </div>
-                <div class="sms-dropdown"></div>
-              </div>
-              <p class="field-hint">اختيار متعدد من المخزون — حدّد <strong>الكمية</strong> لكل صنف (بحد أقصى المتوفر)</p>
-            </div>
+          <form method="POST" action="{{ route('doctor.diagnosis.store') }}" id="diagnosisForm" data-validate-form>
+            @csrf
+            <input type="hidden" name="form" value="diagnosis">
+            <input type="hidden" name="lock" value="1">
+            <input type="hidden" name="patient_id" value="{{ $patient->id }}">
+            <input type="hidden" name="appointment_id" value="{{ $appt?->id }}">
+            @if ($draft)
+                <input type="hidden" name="medical_record_id" value="{{ $draft->id }}">
+            @endif
 
             <div class="form-group">
               <label>التشخيص الدقيق <span class="required">*</span></label>
-              <textarea class="form-control" id="diagnosis" placeholder="أدخل التشخيص الطبي التفصيلي..." required></textarea>
+              <textarea class="form-control" name="diagnosis" id="diagnosis"
+                        data-v-rules="required,min:3,max:5000" maxlength="5000"
+                        placeholder="أدخل التشخيص الطبي التفصيلي...">{{ old('diagnosis', $draft?->diagnosis) }}</textarea>
             </div>
 
             <div class="form-group">
               <label>الروشتة الطبية</label>
-              <textarea class="form-control" id="prescription" placeholder="الأدوية والإرشادات الطبية (اختياري)..."></textarea>
+              <textarea class="form-control" name="prescription" id="prescription"
+                        data-v-rules="max:5000" maxlength="5000"
+                        placeholder="الأدوية والإرشادات الطبية (اختياري)...">{{ old('prescription', $draft?->prescription) }}</textarea>
             </div>
-
-            <!-- <div class="blocked-notice">
-              🔒 الأسعار والتكاليف المالية محجوبة — لا تظهر في هذه الشاشة
-            </div> -->
 
             <div class="form-actions">
-              <button type="submit" class="btn btn-primary" id="saveBtn" disabled>
+              <button type="submit" class="btn btn-primary" id="saveBtn">
                 💾 حفظ واعتماد التقرير
               </button>
-              <button type="button" class="btn btn-transfer" id="transferBtn" disabled>
-                📦 تحويل للمخزون
-              </button>
+              <a href="{{ route('doctor.queue') }}" class="btn btn-secondary">إلغاء</a>
             </div>
           </form>
+          @endif
         </div>
       </div>
     </div>

@@ -22,6 +22,7 @@ class SpecService
     public function __construct(
         private readonly WorkflowService $workflowService,
         private readonly PricingService $pricingService,
+        private readonly BomService $bomService,
     ) {
     }
 
@@ -160,6 +161,12 @@ class SpecService
 
             $this->workflowService->advance($case, WorkflowEvent::SpecSaved->value);
 
+            $this->bomService->createSpecRaw($case->fresh(), $spec->items->map(fn ($i) => [
+                'stock_item_code' => $i->stock_item_code,
+                'name'            => $i->name,
+                'qty'             => $i->qty,
+            ])->all());
+
             AuditService::log(
                 action:      'create',
                 description: "إرسال التوصيف للتسعير — {$requestNo} — {$case->case_no}",
@@ -224,15 +231,10 @@ class SpecService
 
     private function nextRequestNo(): string
     {
-        $last = PricingRequest::where('request_no', 'like', 'QT-PENDING-%')
-            ->lockForUpdate()
-            ->orderByDesc('request_no')
-            ->value('request_no');
+        do {
+            $requestNo = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
+        } while (PricingRequest::where('request_no', $requestNo)->lockForUpdate()->exists());
 
-        $num = $last
-            ? ((int) substr($last, strlen('QT-PENDING-')) + 1)
-            : 1;
-
-        return sprintf('QT-PENDING-%03d', $num);
+        return $requestNo;
     }
 }

@@ -14,7 +14,7 @@
         <div class="pricing-detail-items">
           <h4>📦 الأصناف المطلوبة</h4>
           <div class="stock-table-wrap">
-            <table class="stock-table">
+            <table data-paginate="10" class="stock-table">
               <thead>
                 <tr>
                   <th>الصنف</th>

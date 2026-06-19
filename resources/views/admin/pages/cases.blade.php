@@ -40,7 +40,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead id="casesTableHead"></thead>
             <tbody id="casesTableBody"></tbody>
           </table>

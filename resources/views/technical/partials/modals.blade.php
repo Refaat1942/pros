@@ -8,7 +8,8 @@
       <div class="modal-body">
         <div class="barcode-required" id="barcodeRequired"></div>
         <div class="barcode-scan-row">
-          <input type="text" id="barcodeInput" placeholder="امسح أو اكتب باركود الصنف ثم Enter (مثل BC-001)">
+          <input type="text" id="barcodeInput" placeholder="امسح أو اكتب باركود الصنف ثم Enter (مثل BC-001)"
+                 data-v-rules="required,barcode" maxlength="100">
           <button type="button" class="btn-view" id="btnAddScan">إضافة مسح</button>
         </div>
         <div class="barcode-sim-row">
@@ -37,22 +38,27 @@
       <div class="modal-body">
         <div class="receive-grid">
           <div class="form-group"><label>الصنف</label>
-            <select class="form-control" id="rcvItem"></select>
+            <select class="form-control" id="rcvItem" data-v-rules="required,select"></select>
           </div>
           <div class="form-group"><label>الكمية الواردة</label>
-            <input type="number" class="form-control" id="rcvQty" min="1" value="10">
+            <input type="number" class="form-control" id="rcvQty" min="1" max="999999" value="10"
+                   data-v-rules="required,integer,minValue:1,maxValue:999999">
           </div>
           <div class="form-group"><label>سعر الشراء (للوحدة)</label>
-            <input type="number" class="form-control" id="rcvAmount" min="0" value="0">
+            <input type="number" class="form-control" id="rcvAmount" min="0.01" step="0.01" value="0"
+                   data-v-rules="required,money">
           </div>
           <div class="form-group"><label>المورد</label>
-            <input type="text" class="form-control" id="rcvSupplier" placeholder="اسم المورد">
+            <input type="text" class="form-control" id="rcvSupplier" placeholder="اسم المورد"
+                   data-v-rules="required,min:2,max:255" maxlength="255">
           </div>
           <div class="form-group"><label>رقم فاتورة الشراء</label>
-            <input type="text" class="form-control" id="rcvInvoice" placeholder="INV-...">
+            <input type="text" class="form-control" id="rcvInvoice" placeholder="INV-..."
+                   data-v-rules="required,min:1,max:100" maxlength="100">
           </div>
           <div class="form-group"><label>تاريخ التوريد</label>
-            <input type="text" class="form-control" id="rcvDate" value="">
+            <input type="date" class="form-control" id="rcvDate" value=""
+                   data-v-rules="required,date,dateFuture" max="{{ now()->toDateString() }}">
           </div>
         </div>
         <div class="receive-wac" id="rcvWacPreview">—</div>
@@ -73,11 +79,12 @@
       </div>
       <div class="modal-body">
         <div class="form-group"><label>BOM (تحت التشغيل فقط)</label>
-          <select class="form-control" id="returnBomSelect"></select>
+          <select class="form-control" id="returnBomSelect" data-v-rules="required,select"></select>
         </div>
         <div id="returnLinesPicker"></div>
         <div class="form-group"><label>سبب الارتجاع</label>
-          <input type="text" class="form-control" id="returnReason" placeholder="مثال: فائض عن الحاجة في الورشة">
+          <input type="text" class="form-control" id="returnReason" placeholder="مثال: فائض عن الحاجة في الورشة"
+                 data-v-rules="required,min:3,max:500" maxlength="500">
         </div>
         <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
           <button type="button" class="btn-view" id="btnCancelReturnCreate">إلغاء</button>
@@ -97,8 +104,10 @@
       <div class="modal-body">
         <div id="returnScanInfo"></div>
         <div class="barcode-scan-row">
-          <input type="text" id="returnBarcodeInput" placeholder="امسح باركود الصنف (مثل BC-005)">
-          <input type="number" id="returnQtyInput" min="1" value="1" style="width:80px;" title="الكمية">
+          <input type="text" id="returnBarcodeInput" placeholder="امسح باركود الصنف (مثل BC-005)"
+                 data-v-rules="required,barcode" maxlength="100">
+          <input type="number" id="returnQtyInput" min="1" max="999999" value="1" style="width:80px;" title="الكمية"
+                 data-v-rules="required,integer,minValue:1,maxValue:999999">
           <button type="button" class="btn-view" id="btnReturnScan">تسجيل ارتجاع</button>
         </div>
         <div class="barcode-alarm" id="returnScanAlarm" style="display:none;">

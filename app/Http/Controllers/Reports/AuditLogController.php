@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Reports;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Reports\Concerns\RendersAdminDashboard;
 use App\Models\AuditLog;
+use App\Traits\PaginationTrait;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -14,6 +15,7 @@ use Illuminate\View\View;
 class AuditLogController extends Controller
 {
     use RendersAdminDashboard;
+    use PaginationTrait;
 
     /**
      * سجل الرقابة — مُرقَّم مع فلاتر.
@@ -31,7 +33,7 @@ class AuditLogController extends Controller
                   ->orWhere('description', 'like', "%{$s}%");
             }))
             ->latest('logged_at')
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $actionCounts = AuditLog::query()

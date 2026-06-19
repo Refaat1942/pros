@@ -9,6 +9,7 @@ use App\Http\Requests\Bom\StoreBomRequest;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\PricingRequestItem;
+use App\Models\StockItem;
 use App\Models\TechOrderSpecItem;
 use App\Services\BomService;
 use App\Traits\PaginationTrait;
@@ -28,22 +29,23 @@ class BomController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $boms = Bom::with([
-            'caseRecord:id,case_no,stage_key,manufacturing_stage,work_order_no,patient_type',
-            'items',
-        ])
-            ->when($request->stage, fn ($q, $s) => $q->where('stage', $s))
-            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('bom_no', 'like', "%{$s}%")
-                  ->orWhere('order_ref', 'like', "%{$s}%")
-                  ->orWhere('patient_name', 'like', "%{$s}%");
-            }))
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        $boms = $this->fetchForDashboard(
+            Bom::with([
+                'caseRecord:id,case_no,stage_key,manufacturing_stage,work_order_no,patient_type',
+                'items',
+            ])
+                ->when($request->stage, fn ($q, $s) => $q->where('stage', $s))
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('bom_no', 'like', "%{$s}%")
+                      ->orWhere('order_ref', 'like', "%{$s}%")
+                      ->orWhere('patient_name', 'like', "%{$s}%");
+                }))
+                ->orderByDesc('created_at')
+        );
 
         return response()->json([
-            'data'       => collect($boms->items())->map(fn ($b) => $this->formatSummary($b)),
-            'pagination' => $this->paginationModel($boms),
+            'data'  => collect($boms)->map(fn ($b) => $this->formatSummary($b))->values(),
+            'total' => $boms->count(),
         ]);
     }
 
@@ -105,7 +107,11 @@ class BomController extends Controller
         try {
             $bom = $this->bomService->releaseToWip($bom, $request->validated('scanned_barcodes'));
         } catch (BarcodeDispenseMismatchException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return response()->json([
+                'message' => $e->getMessage(),
+                'blocked' => true,
+                'alarm'   => true,
+            ], 422);
         }
 
         return response()->json([
@@ -120,7 +126,7 @@ class BomController extends Controller
     public function closeFinished(Bom $bom): JsonResponse
     {
         try {
-            $bom = $this->bomService->closeFinished($bom);
+            $bom = $this->bomService->finish($bom);
         } catch (\App\Exceptions\InvalidWorkflowTransitionException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -176,11 +182,18 @@ class BomController extends Controller
 
     private function formatDetail(Bom $bom): array
     {
+        $barcodes = $bom->relationLoaded('items') && $bom->items->isNotEmpty()
+            ? StockItem::whereIn('code', $bom->items->pluck('stock_item_code'))
+                ->pluck('barcode', 'code')
+            : collect();
+
         return $this->formatSummary($bom) + [
             'items' => $bom->relationLoaded('items')
-                ? $bom->items->map->only([
+                ? $bom->items->map(fn ($item) => $item->only([
                     'id', 'stock_item_code', 'name', 'qty',
                     'unit_cost', 'issued_qty', 'returned_qty',
+                ]) + [
+                    'expected_barcode' => $barcodes[$item->stock_item_code] ?? null,
                 ])
                 : [],
         ];

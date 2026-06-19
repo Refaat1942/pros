@@ -1,0 +1,127 @@
+<?php
+
+namespace Tests\Feature\Patient;
+
+use App\Models\CaseRecord;
+use App\Models\Patient;
+use Illuminate\Support\Str;
+use Tests\Support\ProstheticTestHelper;
+use Tests\TestCase;
+
+class PublicTrackingTest extends TestCase
+{
+    use ProstheticTestHelper;
+
+    public function test_public_tracking_page_shows_progress_without_sensitive_data(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $patient->update(['tracking_uid' => 'case-test1234']);
+
+        $case = CaseRecord::create([
+            'case_no'             => 'C-2026-0001',
+            'order_ref'           => 'ORD-0001',
+            'tracking_uid'        => $patient->tracking_uid,
+            'patient_id'          => $patient->id,
+            'contract_company_id' => $company->id,
+            'company_name'        => $company->name,
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'path'                => CaseRecord::PATH_STANDARD,
+            'stage_key'           => CaseRecord::STAGE_MANUFACTURING,
+            'quote_total'         => 50000,
+            'total_cost'          => 40000,
+        ]);
+
+        $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
+
+        $response->assertOk();
+        $response->assertSee('متابعة حالة الطلب');
+        $response->assertSee('جاري التصنيع بالورشة');
+        $response->assertSee('case-test1234');
+        $response->assertDontSee($patient->name);
+        $response->assertDontSee('50000');
+        $response->assertDontSee('40000');
+    }
+
+    public function test_public_tracking_before_case_created_shows_registered_step(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $patient->update(['tracking_uid' => 'case-newreg01']);
+
+        $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
+
+        $response->assertOk();
+        $response->assertSee('تم التسجيل — في انتظار الكشف الطبي');
+        $response->assertSee('تسجيل واستقبال');
+        $response->assertSee('اعتماد عروض الأسعار والموافقات');
+        $response->assertSee('مسار مدني');
+    }
+
+    public function test_civilian_waiting_return_shows_approval_step_not_manufacturing(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $patient->update(['tracking_uid' => 'case-civwait1']);
+
+        CaseRecord::create([
+            'case_no'             => 'C-2026-0099',
+            'order_ref'           => 'ORD-0099',
+            'tracking_uid'        => $patient->tracking_uid,
+            'patient_id'          => $patient->id,
+            'contract_company_id' => $company->id,
+            'company_name'        => $company->name,
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'path'                => CaseRecord::PATH_STANDARD,
+            'stage_key'           => CaseRecord::STAGE_WAITING_RETURN,
+        ]);
+
+        $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
+
+        $response->assertOk();
+        $response->assertSee('بانتظار موافقة الجهة الضامنة');
+        $response->assertSee('اعتماد عروض الأسعار والموافقات');
+        $response->assertSee('← أنت هنا');
+        $response->assertDontSee('جاري التصنيع بالورشة</p>');
+    }
+
+    public function test_military_pathway_shows_six_steps_without_approval_gate(): void
+    {
+        $company = $this->militaryCompany();
+        $patient = $this->militaryPatient($company);
+        $patient->update(['tracking_uid' => 'case-milpath1']);
+
+        $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
+
+        $response->assertOk();
+        $response->assertSee('مسار عسكري');
+        $response->assertDontSee('اعتماد عروض الأسعار والموافقات');
+    }
+
+    public function test_invalid_tracking_uid_returns_404(): void
+    {
+        $this->get(route('public.track.case', ['uid' => 'case-' . Str::random(12)]))
+            ->assertNotFound();
+    }
+
+    public function test_patient_registration_generates_tracking_uid_and_qr(): void
+    {
+        $company = $this->civilianCompany();
+        $visitType = $this->defaultVisitType();
+        $reception = $this->userWithRole('reception');
+
+        $response = $this->actingAs($reception)->postJson('/reception/patients', [
+            'name'                 => 'سارة محمد',
+            'phone'                => '01012345678',
+            'patient_type'         => 'civilian',
+            'contract_company_id'  => $company->id,
+            'visit_type_id'        => $visitType->id,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonStructure(['tracking_uid', 'tracking_url', 'qr_svg']);
+        $this->assertStringStartsWith('case-', $response->json('tracking_uid'));
+        $this->assertStringContainsString($response->json('tracking_uid'), $response->json('tracking_url'));
+        $this->assertStringContainsString('<svg', $response->json('qr_svg'));
+    }
+}

@@ -22,7 +22,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>جهة التعاقد</th>
@@ -46,7 +46,7 @@
           <button type="button" class="btn-action" id="btnNewCreditNote">➕ إنشاء إشعار دائن</button>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>رقم CN</th>

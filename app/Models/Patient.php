@@ -23,6 +23,7 @@ class Patient extends Model
     protected $fillable = [
         'patient_code',
         'patient_qr',
+        'tracking_uid',
         'name',
         'phone',
         'national_id',
@@ -34,12 +35,14 @@ class Patient extends Model
         'company_name',
         'registered_at',
         'last_visit_at',
+        'archived_at',
         'status',
     ];
 
     protected $casts = [
         'registered_at' => 'date',
         'last_visit_at' => 'date',
+        'archived_at' => 'datetime',
     ];
 
     public function contractCompany(): BelongsTo

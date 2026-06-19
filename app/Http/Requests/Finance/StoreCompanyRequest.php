@@ -9,7 +9,7 @@ class StoreCompanyRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'name'        => ['required', 'string', 'max:255', 'unique:contract_companies,name'],
+            'name'        => ['required', 'string', 'min:2', 'max:255', 'unique:contract_companies,name'],
             'is_military' => ['required', 'boolean'],
         ];
     }

@@ -10,6 +10,14 @@
     var inventory = [];
     var pricingQueue = [];
 
+    function refreshPaginated() {
+      if (!window.TablePagination) return;
+      Array.prototype.slice.call(arguments).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) TablePagination.refresh(el);
+      });
+    }
+
     function syncInventoryStatus() {
       inventory.forEach(function(item) {
         StockCatalog.syncStatus(item);
@@ -223,6 +231,7 @@
           '</td>' +
         '</tr>';
       }).join('');
+      refreshPaginated('inventoryTable');
     }
 
     var inventorySearchEl = document.getElementById('inventorySearch');
@@ -319,6 +328,7 @@
       if (filtered.length === 0) {
         document.getElementById('pricingTable').innerHTML =
           '<tr><td colspan="7"><div class="pricing-empty"><div class="empty-icon">📭</div><p>لا توجد طلبات مطابقة للبحث</p></div></td></tr>';
+        refreshPaginated('pricingTable');
         return;
       }
 
@@ -349,6 +359,7 @@
           '</td>' +
         '</tr>';
       }).join('');
+      refreshPaginated('pricingTable');
     }
 
     var pricingSearchEl = document.getElementById('pricingSearch');
@@ -423,6 +434,7 @@
           selectOrder(item.getAttribute('data-id'));
         });
       });
+      refreshPaginated('ordersList', 'ordersListSpec');
     }
 
     function findStockItem(name, code) {
@@ -496,10 +508,14 @@
     }
 
     function showToast(msg) {
+      if (window.DashboardToast) {
+        window.DashboardToast.show(msg);
+        return;
+      }
       var toast = document.getElementById('toast');
       toast.textContent = '✅ ' + msg;
       toast.classList.add('show');
-      setTimeout(function() { toast.classList.remove('show'); }, 4000);
+      setTimeout(function() { toast.classList.remove('show'); }, 5000);
     }
 
     var techOrderSpecs = [];
@@ -733,7 +749,11 @@
       var badge = document.getElementById('opsBadge');
       if (badge) badge.textContent = rows.length;
       if (!tbody) return;
-      if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">لا توجد أوامر تشغيل حالية</td></tr>'; return; }
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">لا توجد أوامر تشغيل حالية</td></tr>';
+        refreshPaginated('opsTable');
+        return;
+      }
       tbody.innerHTML = rows.map(function(c) {
         var bom = BomInventory.getByCaseId(c.id);
         var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
@@ -750,6 +770,7 @@
           '<td class="bom-items-cell">' + (bom ? BomInventory.renderItemsList(bom.items, false) : '—') + '</td>' +
           '<td class="col-actions">' + action + '</td></tr>';
       }).join('');
+      refreshPaginated('opsTable');
     }
     window.renderOperations = renderOperations;
 
@@ -805,6 +826,7 @@
       }
       if (!rows.length) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">لا توجد حالات للمعدلات حالياً</td></tr>';
+        refreshPaginated('adjustmentsTable');
         return;
       }
       tbody.innerHTML = rows.map(function(c) {
@@ -822,6 +844,7 @@
           '<td class="col-actions"><button type="button" class="btn-action primary" onclick="openFittingModal(\'' + c.id + '\')">تسجيل تجربة</button> ' +
           '<span class="badge ' + statusBadge + '">' + statusLabel + '</span></td></tr>';
       }).join('');
+      refreshPaginated('adjustmentsTable');
     }
     window.renderAdjustments = renderAdjustments;
 
@@ -848,7 +871,17 @@
       fittingModalCaseId = null;
     }
 
+    function validateModalFields(ids) {
+      if (!window.DashboardValidation) return true;
+      for (var i = 0; i < ids.length; i++) {
+        var el = document.getElementById(ids[i]);
+        if (el && !DashboardValidation.validateField(el)) return false;
+      }
+      return true;
+    }
+
     function confirmFittingSave() {
+      if (!validateModalFields(['fittingTrial1', 'fittingTrial2', 'fittingNotes'])) return;
       if (!fittingModalCaseId) return;
       var t1 = document.getElementById('fittingTrial1').value.trim();
       var t2 = document.getElementById('fittingTrial2').value.trim();
@@ -901,6 +934,7 @@
         (qty && amount ? ' → بعد الوارد سيُعاد حساب المتوسط المرجح تلقائياً' : '');
     }
     function confirmReceive() {
+      if (!validateModalFields(['rcvItem', 'rcvQty', 'rcvAmount', 'rcvSupplier', 'rcvInvoice', 'rcvDate'])) return;
       var code = document.getElementById('rcvItem').value;
       var res = StockCatalog.receiveStock(code, {
         qty: document.getElementById('rcvQty').value,
@@ -952,6 +986,7 @@
       var notes = InventoryReturns.getAll();
       if (!notes.length) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">لا توجد أذونات ارتجاع</td></tr>';
+        refreshPaginated('returnsTable');
         return;
       }
       tbody.innerHTML = notes.map(function (n) {
@@ -970,6 +1005,7 @@
           '<td><span class="badge ' + statusCls + '">' + InventoryReturns.statusLabel(n.status) + '</span></td>' +
           '<td class="col-actions">' + action + '</td></tr>';
       }).join('');
+      refreshPaginated('returnsTable');
     }
     window.renderReturnsSection = renderReturnsSection;
 
@@ -1011,6 +1047,7 @@
     }
 
     function confirmReturnCreate() {
+      if (!validateModalFields(['returnBomSelect', 'returnReason'])) return;
       var bomId = document.getElementById('returnBomSelect').value;
       var reason = document.getElementById('returnReason').value.trim();
       var lines = [];
@@ -1068,6 +1105,7 @@
     }
 
     function confirmReturnScan() {
+      if (!validateModalFields(['returnBarcodeInput', 'returnQtyInput'])) return;
       var code = document.getElementById('returnBarcodeInput').value;
       var qty = document.getElementById('returnQtyInput').value;
       var res = InventoryReturns.processReturnScan(returnScanState.returnId, code, qty);
@@ -1160,6 +1198,7 @@
       }
       var footer = document.getElementById('bomFooter');
       if (footer) footer.textContent = 'عرض ' + data.length + ' من ' + BomInventory.getAll().length + ' قائمة';
+      refreshPaginated('bomTable');
     }
 
     document.querySelectorAll('[data-bomfilter]').forEach(function(btn) {

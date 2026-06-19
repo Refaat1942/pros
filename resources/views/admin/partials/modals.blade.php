@@ -11,7 +11,7 @@
       <div class="catalog-modal-body">
         <div class="catalog-detail-grid" id="pricingApprovalModalMeta"></div>
         <h4 style="font-size:14px;font-weight:800;margin:16px 0 10px;color:var(--secondary);">📦 البنود والأسعار</h4>
-        <table>
+        <table data-paginate="10">
           <thead>
             <tr>
               <th>الصنف</th>

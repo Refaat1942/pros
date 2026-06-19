@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\Patient;
+use App\Models\VisitType;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -78,12 +79,18 @@ class AppointmentService
         return DB::transaction(function () use ($appointment, $status) {
             $before = ['status' => $appointment->status];
 
-            $appointment->update([
+            $updates = [
                 'status'                => $status,
                 'status_label'          => $this->statusLabel($status),
                 'transferred_to_clinic' => $status === Appointment::STATUS_IN_CLINIC
                     || $appointment->transferred_to_clinic,
-            ]);
+            ];
+
+            if ($status === Appointment::STATUS_IN_CLINIC && ! $appointment->transferred_to_clinic_at) {
+                $updates['transferred_to_clinic_at'] = now();
+            }
+
+            $appointment->update($updates);
 
             if ($appointment->patient_id) {
                 Patient::where('id', $appointment->patient_id)
@@ -104,14 +111,16 @@ class AppointmentService
 
     private function resolvePatientFields(array $data): array
     {
+        $visitFields = $this->resolveVisitTypeFields($data);
+
         if (! empty($data['patient_id'])) {
             $patient = Patient::with('contractCompany')->findOrFail($data['patient_id']);
 
             return [
                 'patient_id'        => $patient->id,
                 'appointment_date'  => $data['appointment_date'],
-                'appointment_time'  => $data['appointment_time'] ?? null,
-                'visit_type'        => $data['visit_type'] ?? Appointment::VISIT_EXAM,
+                'appointment_time'  => $data['appointment_time'] ?? now()->format('H:i'),
+                ...$visitFields,
                 'patient_name'      => $patient->name,
                 'phone'             => $patient->phone,
                 'company_name'      => $patient->company_name,
@@ -125,8 +134,8 @@ class AppointmentService
         return [
             'patient_id'        => null,
             'appointment_date'  => $data['appointment_date'],
-            'appointment_time'  => $data['appointment_time'] ?? null,
-            'visit_type'        => $data['visit_type'] ?? Appointment::VISIT_EXAM,
+            'appointment_time'  => $data['appointment_time'] ?? now()->format('H:i'),
+            ...$visitFields,
             'patient_name'      => $data['patient_name'],
             'phone'             => $data['phone'] ?? null,
             'company_name'      => $data['company_name'] ?? null,
@@ -134,6 +143,24 @@ class AppointmentService
             'status'            => Appointment::STATUS_WAITING,
             'status_label'      => $this->statusLabel(Appointment::STATUS_WAITING),
             'transferred_to_clinic' => false,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{visit_type_id: int, visit_type: string}
+     */
+    private function resolveVisitTypeFields(array $data): array
+    {
+        $visitType = VisitType::active()->find($data['visit_type_id'] ?? null);
+
+        if (! $visitType) {
+            abort(422, 'نوع الزيارة غير صالح أو غير مفعّل.');
+        }
+
+        return [
+            'visit_type_id' => $visitType->id,
+            'visit_type'    => (string) $visitType->id,
         ];
     }
 

@@ -35,7 +35,7 @@
         </p>
         <div class="bom-summary" id="opsSummary"></div>
         <div class="bom-table-wrap">
-          <table class="bom-table">
+          <table data-paginate="10" class="bom-table">
             <thead>
               <tr>
                 <th>أمر التشغيل</th>

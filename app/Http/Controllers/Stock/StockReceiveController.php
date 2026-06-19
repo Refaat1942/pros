@@ -30,21 +30,22 @@ class StockReceiveController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $items = StockItem::query()
-            ->when($request->category, fn ($q, $c) => $q->where('category', $c))
-            ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
-            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
-            }))
-            ->orderBy('code')
-            ->paginate(20);
+        $items = $this->fetchForDashboard(
+            StockItem::query()
+                ->when($request->category, fn ($q, $c) => $q->where('category', $c))
+                ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
+                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+                ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('code', 'like', "%{$search}%")
+                      ->orWhere('barcode', 'like', "%{$search}%");
+                }))
+                ->orderBy('code')
+        );
 
         return response()->json([
-            'data'       => collect($items->items())->map(fn ($item) => $this->formatItem($item)),
-            'pagination' => $this->paginationModel($items),
+            'data'  => collect($items)->map(fn ($item) => $this->formatItem($item))->values(),
+            'total' => $items->count(),
         ]);
     }
 
@@ -81,17 +82,18 @@ class StockReceiveController extends Controller
      */
     public function movements(Request $request, StockItem $stockItem): JsonResponse
     {
-        $movements = StockMovement::with(['supplier:id,name', 'performedBy:id,name'])
-            ->where('stock_item_id', $stockItem->id)
-            ->when($request->movement_type, fn ($q, $t) => $q->where('movement_type', $t))
-            ->orderByDesc('moved_at')
-            ->orderByDesc('id')
-            ->paginate(20);
+        $movements = $this->fetchForDashboard(
+            StockMovement::with(['supplier:id,name', 'performedBy:id,name'])
+                ->where('stock_item_id', $stockItem->id)
+                ->when($request->movement_type, fn ($q, $t) => $q->where('movement_type', $t))
+                ->orderByDesc('moved_at')
+                ->orderByDesc('id')
+        );
 
         return response()->json([
-            'item'       => $this->formatItem($stockItem),
-            'data'       => collect($movements->items())->map(fn ($m) => $this->formatMovement($m)),
-            'pagination' => $this->paginationModel($movements),
+            'item'  => $this->formatItem($stockItem),
+            'data'  => collect($movements)->map(fn ($m) => $this->formatMovement($m))->values(),
+            'total' => $movements->count(),
         ]);
     }
 

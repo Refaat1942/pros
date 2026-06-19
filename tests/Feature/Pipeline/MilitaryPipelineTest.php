@@ -118,6 +118,8 @@ class MilitaryPipelineTest extends TestCase
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key,
             'Military case must jump directly to manufacturing without quotes');
         $this->assertEquals(CaseRecord::PATH_MILITARY, $case->path);
+        $this->assertNotNull($case->work_order_no, 'Military path must auto-generate WO on manufacturing entry');
+        $this->assertMatchesRegularExpression('/^WO-\d{4}-\d{4}$/', $case->work_order_no);
     }
 
     /** No quote must exist for the military case */
@@ -183,12 +185,13 @@ class MilitaryPipelineTest extends TestCase
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
-        app(BomService::class)->closeFinished($bom);
+        $this->advanceCaseToFinishing($case);
+        $this->finishBomAfterQuality($case->fresh());
 
         $recepUser = $this->userWithRole('reception');
         $this->actingAs($recepUser);
 
-        app(DeliveryService::class)->close($case->fresh(), 'QR-PT-MIL-0001');
+        app(DeliveryService::class)->close($case->fresh(), $patient->patient_qr);
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);

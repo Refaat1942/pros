@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Delivery;
 
 use App\Exceptions\DeliveryNotReadyException;
+use App\Exceptions\InvalidPatientQrException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Delivery\ScanDeliveryRequest;
 use App\Models\CaseRecord;
@@ -28,24 +29,25 @@ class DeliveryController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $cases = CaseRecord::with([
-            'patient:id,patient_code,name,patient_type',
-            'bom:id,case_id,bom_no,stage,finished_at',
-        ])
-            ->where('stage_key', CaseRecord::STAGE_READY_DELIVERY)
-            ->whereHas('bom', fn ($q) => $q->where('stage', \App\Models\Bom::STAGE_FINISHED))
-            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('case_no', 'like', "%{$s}%")
-                  ->orWhere('order_ref', 'like', "%{$s}%")
-                  ->orWhere('work_order_no', 'like', "%{$s}%")
-                  ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
-            }))
-            ->orderByDesc('updated_at')
-            ->paginate(20);
+        $cases = $this->fetchForDashboard(
+            CaseRecord::with([
+                'patient:id,patient_code,name,patient_type',
+                'bom:id,case_id,bom_no,stage,finished_at',
+            ])
+                ->where('stage_key', CaseRecord::STAGE_READY_DELIVERY)
+                ->whereHas('bom', fn ($q) => $q->where('stage', \App\Models\Bom::STAGE_FINISHED))
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('case_no', 'like', "%{$s}%")
+                      ->orWhere('order_ref', 'like', "%{$s}%")
+                      ->orWhere('work_order_no', 'like', "%{$s}%")
+                      ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
+                }))
+                ->orderByDesc('updated_at')
+        );
 
         return response()->json([
-            'data'       => collect($cases->items())->map(fn ($c) => $this->formatSummary($c)),
-            'pagination' => $this->paginationModel($cases),
+            'data'  => collect($cases)->map(fn ($c) => $this->formatSummary($c))->values(),
+            'total' => $cases->count(),
         ]);
     }
 
@@ -54,7 +56,17 @@ class DeliveryController extends Controller
      */
     public function scan(ScanDeliveryRequest $request): JsonResponse
     {
-        $patient = Patient::where('patient_qr', $request->validated('scanned_qr'))->first();
+        $scannedQr = $request->validated('scanned_qr');
+
+        if (! preg_match('/^QR-\d{6}$/', $scannedQr)) {
+            return response()->json([
+                'message'  => 'رمز QR مُعدَّل أو غير صالح — تم رفض التسليم.',
+                'blocked'  => true,
+                'security' => true,
+            ], 422);
+        }
+
+        $patient = Patient::where('patient_qr', $scannedQr)->first();
 
         if (! $patient) {
             return response()->json(['message' => 'بطاقة المريض غير موجودة.'], 422);
@@ -72,12 +84,20 @@ class DeliveryController extends Controller
         try {
             $case = $this->deliveryService->close($case, $request->validated('scanned_qr'));
         } catch (DeliveryNotReadyException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return response()->json(['message' => $e->getMessage(), 'blocked' => true], 422);
+        } catch (InvalidPatientQrException $e) {
+            return response()->json([
+                'message'  => $e->getMessage(),
+                'blocked'  => true,
+                'security' => true,
+            ], 422);
         }
 
         return response()->json([
-            'message' => 'تم تسليم الطرف وإغلاق الحالة بنجاح.',
-            'case'    => $this->formatSummary($case),
+            'message'    => 'تم تسليم الطرف وإغلاق الحالة بنجاح.',
+            'case'       => $this->formatSummary($case),
+            'invoice_no' => $case->invoice_no,
+            'closed'     => true,
         ]);
     }
 
@@ -109,7 +129,7 @@ class DeliveryController extends Controller
             'work_order_no', 'patient_type', 'company_name', 'delivered_at',
         ]) + [
             'patient' => $case->relationLoaded('patient') && $case->patient
-                ? $case->patient->only(['id', 'patient_code', 'name'])
+                ? $case->patient->only(['id', 'patient_code', 'name', 'patient_qr'])
                 : null,
             'bom' => $case->relationLoaded('bom') && $case->bom
                 ? $case->bom->only(['id', 'bom_no', 'stage', 'finished_at'])

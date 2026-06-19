@@ -12,12 +12,12 @@ class StoreMedicalRecordRequest extends BaseRequest
             'medical_record_id' => ['nullable', 'integer', 'exists:medical_records,id'],
             'patient_id'        => ['required_without:medical_record_id', 'nullable', 'integer', 'exists:patients,id'],
             'appointment_id'    => ['nullable', 'integer', 'exists:appointments,id'],
-            'diagnosis'         => ['required', 'string', 'max:5000'],
-            'prescription'      => ['nullable', 'string', 'max:5000'],
+            'diagnosis'         => ['required', 'string', 'min:3', 'max:5000'],
+            'prescription'      => $this->notesRules(5000),
             'items'             => ['nullable', 'array'],
             'items.*.stock_item_code' => ['required_with:items', 'string', 'max:50'],
             'items.*.name'            => ['required_with:items', 'string', 'max:255'],
-            'items.*.qty'             => ['required_with:items', 'integer', 'min:1'],
+            'items.*.qty'             => $this->positiveQtyRules(),
         ];
     }
 

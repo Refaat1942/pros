@@ -9,7 +9,7 @@ class ScanDeliveryRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'scanned_qr' => ['required', 'string', 'max:100'],
+            'scanned_qr' => $this->qrCodeRules(),
         ];
     }
 

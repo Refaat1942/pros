@@ -24,19 +24,20 @@ class DebtController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $debts = ContractCompanyDebt::with('contractCompany:id,company_code,name,is_military')
-            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->whereHas(
-                'contractCompany',
-                fn ($q) => $q->where('name', 'like', "%{$s}%")
-                    ->orWhere('company_code', 'like', "%{$s}%")
-            ))
-            ->orderByDesc('due')
-            ->paginate(20);
+        $debts = $this->fetchForDashboard(
+            ContractCompanyDebt::with('contractCompany:id,company_code,name,is_military')
+                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+                ->when($request->search, fn ($q, $s) => $q->whereHas(
+                    'contractCompany',
+                    fn ($q) => $q->where('name', 'like', "%{$s}%")
+                        ->orWhere('company_code', 'like', "%{$s}%")
+                ))
+                ->orderByDesc('due')
+        );
 
         return response()->json([
-            'data'       => collect($debts->items())->map(fn ($d) => $this->formatDebt($d)),
-            'pagination' => $this->paginationModel($debts),
+            'data'  => collect($debts)->map(fn ($d) => $this->formatDebt($d))->values(),
+            'total' => $debts->count(),
         ]);
     }
 

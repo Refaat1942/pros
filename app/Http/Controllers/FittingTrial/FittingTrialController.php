@@ -23,25 +23,26 @@ class FittingTrialController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $cases = CaseRecord::with([
-            'patient:id,patient_code,name',
-            'fittingTrial',
-            'bom:id,case_id,bom_no,stage',
-        ])
-            ->whereIn('stage_key', [
-                CaseRecord::STAGE_MANUFACTURING,
-                CaseRecord::STAGE_READY_DELIVERY,
+        $cases = $this->fetchForDashboard(
+            CaseRecord::with([
+                'patient:id,patient_code,name',
+                'fittingTrial',
+                'bom:id,case_id,bom_no,stage',
             ])
-            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('case_no', 'like', "%{$s}%")
-                  ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
-            }))
-            ->orderByDesc('updated_at')
-            ->paginate(20);
+                ->whereIn('stage_key', [
+                    CaseRecord::STAGE_MANUFACTURING,
+                    CaseRecord::STAGE_READY_DELIVERY,
+                ])
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('case_no', 'like', "%{$s}%")
+                      ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
+                }))
+                ->orderByDesc('updated_at')
+        );
 
         return response()->json([
-            'data'       => collect($cases->items())->map(fn ($c) => $this->formatCase($c)),
-            'pagination' => $this->paginationModel($cases),
+            'data'  => collect($cases)->map(fn ($c) => $this->formatCase($c))->values(),
+            'total' => $cases->count(),
         ]);
     }
 

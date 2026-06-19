@@ -12,6 +12,9 @@
  *   admin       → guard:admin
  */
 return [
+    'table_per_page' => 10,
+    'table_fetch_limit' => 1000,
+
     'home' => [
         'title' => 'نظام إدارة مركز إنتاج الأطراف الصناعية',
         'layout' => 'layouts.app',
@@ -42,6 +45,7 @@ return [
             'assets/js/shared/pricing-queue.js',
             'assets/js/shared/bom-inventory.js',
             'assets/js/pages/reception-dashboard.js',
+            'assets/js/pages/reception-delivery-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => '',
@@ -74,7 +78,7 @@ return [
         'title' => 'لوحة التوصيف الفني — مركز الأطراف الصناعية',
         'layout' => 'layouts.spec',
         'default_page' => 'orders',
-        'sidebar' => ['icon' => '📐', 'title' => 'لوحة التوصيف', 'subtitle' => 'أكواد وكميات – قبل التصنيع'],
+        'sidebar' => ['icon' => '📐', 'title' => 'لوحة التوصيف', 'subtitle' => 'أكواد وكميات – قبل التصنيع', 'show_home_link' => false],
         'pages' => [
             'orders' => ['title' => 'طلبات التوصيف', 'icon' => '📥', 'label' => 'طلبات التوصيف'],
             'spec' => ['title' => 'معاينة التوصيف', 'icon' => '👁️', 'label' => 'معاينة التوصيف'],
@@ -84,13 +88,7 @@ return [
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
-            'assets/js/shared/stock-catalog.js',
-            'assets/js/shared/cases-workflow.js',
-            'assets/js/shared/pricing-queue.js',
-            'assets/js/shared/bom-inventory.js',
-            'assets/js/shared/operations-desk.js',
-            'assets/js/shared/inventory-returns.js',
-            'assets/js/pages/technical-dashboard.js',
+            'assets/js/pages/spec-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="spec"',
@@ -130,18 +128,9 @@ return [
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
-            'assets/js/shared/export-kit.js',
-            'assets/js/shared/charts-kit.js',
-            'assets/js/shared/stock-catalog.js',
-            'assets/js/shared/cases-workflow.js',
-            'assets/js/shared/pricing-queue.js',
-            'assets/js/shared/bom-inventory.js',
-            'assets/js/shared/operations-desk.js',
-            'assets/js/shared/inventory-returns.js',
-            'assets/js/pages/technical-dashboard.js',
+            'assets/js/pages/operations-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
-        'body_attributes' => 'data-dashboard="operations"',
         'guard' => 'operations',
     ],
     'technical' => [
@@ -165,6 +154,7 @@ return [
             'assets/js/shared/operations-desk.js',
             'assets/js/shared/inventory-returns.js',
             'assets/js/pages/technical-dashboard.js',
+            'assets/js/pages/technical-bom-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="inventory"',
@@ -188,6 +178,7 @@ return [
             'reports' => ['title' => 'التقارير والتحليلات', 'icon' => '📈', 'label' => 'التقارير'],
             'suppliers' => ['title' => 'الموردون وفواتير المشتريات', 'icon' => '🏭', 'label' => 'الموردون'],
             'military-ranks' => ['title' => 'الرتب العسكرية', 'icon' => '🪖', 'label' => 'الرتب العسكرية'],
+            'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css'],
         'scripts' => [

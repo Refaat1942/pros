@@ -29,22 +29,23 @@ class TechOrderSpecController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $cases = CaseRecord::with([
-            'patient:id,patient_code,name,patient_type',
-            'techOrderSpec:id,case_id,locked,submitted_at',
-        ])
-            ->where('stage_key', CaseRecord::STAGE_TECHNICAL)
-            ->when($request->search, fn ($q, $s) => $q->whereHas(
-                'patient',
-                fn ($q) => $q->where('name', 'like', "%{$s}%")
-                    ->orWhere('patient_code', 'like', "%{$s}%")
-            ))
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        $cases = $this->fetchForDashboard(
+            CaseRecord::with([
+                'patient:id,patient_code,name,patient_type',
+                'techOrderSpec:id,case_id,locked,submitted_at',
+            ])
+                ->where('stage_key', CaseRecord::STAGE_TECHNICAL)
+                ->when($request->search, fn ($q, $s) => $q->whereHas(
+                    'patient',
+                    fn ($q) => $q->where('name', 'like', "%{$s}%")
+                        ->orWhere('patient_code', 'like', "%{$s}%")
+                ))
+                ->orderByDesc('created_at')
+        );
 
         return response()->json([
-            'data'       => collect($cases->items())->map(fn ($c) => $this->formatCase($c)),
-            'pagination' => $this->paginationModel($cases),
+            'data'  => collect($cases)->map(fn ($c) => $this->formatCase($c))->values(),
+            'total' => $cases->count(),
         ]);
     }
 
@@ -68,6 +69,11 @@ class TechOrderSpecController extends Controller
             ->with('items')
             ->first();
 
+        $submittedSpec = TechOrderSpec::where('case_id', $case->id)
+            ->where('locked', true)
+            ->with('items')
+            ->first();
+
         $stockCatalog = StockItem::query()
             ->orderBy('code')
             ->get(['code', 'name', 'spec', 'category', 'uom']);
@@ -81,6 +87,7 @@ class TechOrderSpecController extends Controller
                 'items'        => $medicalRecord->items->map->only(['stock_item_code', 'name', 'qty']),
             ] : null,
             'draft'          => $draft ? $this->formatSpec($draft) : null,
+            'submitted_spec' => $submittedSpec ? $this->formatSpec($submittedSpec) : null,
             'stock_catalog'  => $stockCatalog,
         ]);
     }
@@ -111,7 +118,7 @@ class TechOrderSpecController extends Controller
         }
 
         return response()->json([
-            'pricing_request' => $this->formatPricingRequest($pricingRequest),
+            'pricing_request' => $this->formatPricingRequest($pricingRequest, forSpec: false),
             'spec'            => $this->formatSpec($spec->fresh()->load('items')),
         ]);
     }
@@ -133,21 +140,22 @@ class TechOrderSpecController extends Controller
      */
     public function pricingStatus(Request $request): JsonResponse
     {
-        $requests = PricingRequest::with([
-            'caseRecord:id,case_no,order_ref,stage_key,patient_type',
-            'items',
-        ])
-            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('request_no', 'like', "%{$s}%")
-                  ->orWhere('patient_name', 'like', "%{$s}%")
-                  ->orWhere('order_ref', 'like', "%{$s}%");
-            }))
-            ->orderByDesc('request_date')
-            ->paginate(20);
+        $requests = $this->fetchForDashboard(
+            PricingRequest::with([
+                'caseRecord:id,case_no,order_ref,stage_key,patient_type',
+                'items',
+            ])
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('request_no', 'like', "%{$s}%")
+                      ->orWhere('patient_name', 'like', "%{$s}%")
+                      ->orWhere('order_ref', 'like', "%{$s}%");
+                }))
+                ->orderByDesc('request_date')
+        );
 
         return response()->json([
-            'data'       => collect($requests->items())->map(fn ($r) => $this->formatPricingRequest($r)),
-            'pagination' => $this->paginationModel($requests),
+            'data'  => collect($requests)->map(fn ($r) => $this->formatPricingRequest($r, forSpec: true))->values(),
+            'total' => $requests->count(),
         ]);
     }
 
@@ -190,9 +198,9 @@ class TechOrderSpecController extends Controller
         ];
     }
 
-    private function formatPricingRequest(PricingRequest $request): array
+    private function formatPricingRequest(PricingRequest $request, bool $forSpec = false): array
     {
-        return $request->only([
+        $data = $request->only([
             'id',
             'request_no',
             'order_ref',
@@ -214,5 +222,11 @@ class TechOrderSpecController extends Controller
                 ? $request->caseRecord->only(['id', 'case_no', 'order_ref', 'stage_key', 'patient_type'])
                 : null,
         ];
+
+        if (! $forSpec) {
+            $data['computed_total'] = $request->computed_total;
+        }
+
+        return $data;
     }
 }

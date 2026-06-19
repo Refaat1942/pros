@@ -45,7 +45,7 @@
         <div class="patient-file-meta" id="patientFileMeta"></div>
         <div class="patient-file-section">
           <h4>📋 آخر الزيارات</h4>
-          <table class="patient-visits-table">
+          <table data-paginate="10" class="patient-visits-table">
             <thead>
               <tr>
                 <th>التاريخ</th>
@@ -80,12 +80,13 @@
           <div class="pic-body">
             <div class="pic-info">
               <div class="pic-name" id="picName">—</div>
-              <div class="pic-id">Patient ID: <strong id="picId">—</strong></div>
+              <div class="pic-id">رقم المريض: <strong id="picId">—</strong></div>
+              <div class="pic-queue" id="picQueueWrap">رقم الدور: <strong id="picQueue">—</strong></div>
               <div class="pic-company" id="picCompany">—</div>
               <div class="pic-rank" id="picRank" style="display:none;"></div>
             </div>
             <div class="pic-qr">
-              <div class="qr-mini" id="picQr"></div>
+              <div class="pic-qr-image" id="picQr"></div>
               <small id="picQrText">—</small>
             </div>
           </div>

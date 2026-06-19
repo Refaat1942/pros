@@ -20,21 +20,22 @@ class SupplierController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $suppliers = Supplier::query()
-            ->when(
-                $request->has('is_active'),
-                fn ($q) => $q->where('is_active', $request->boolean('is_active'))
-            )
-            ->when(
-                $request->search,
-                fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
-            )
-            ->orderBy('name')
-            ->paginate(20);
+        $suppliers = $this->fetchForDashboard(
+            Supplier::query()
+                ->when(
+                    $request->has('is_active'),
+                    fn ($q) => $q->where('is_active', $request->boolean('is_active'))
+                )
+                ->when(
+                    $request->search,
+                    fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
+                )
+                ->orderBy('name')
+        );
 
         return response()->json([
-            'data'       => $suppliers->items(),
-            'pagination' => $this->paginationModel($suppliers),
+            'data'  => $suppliers,
+            'total' => $suppliers->count(),
         ]);
     }
 

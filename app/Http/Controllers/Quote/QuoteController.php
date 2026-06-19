@@ -24,24 +24,25 @@ class QuoteController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $quotes = Quote::with([
-            'caseRecord:id,case_no,stage_key,patient_type,work_order_no',
-            'items',
-        ])
-            ->whereHas('caseRecord', fn ($q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
-            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('quote_no', 'like', "%{$s}%")
-                  ->orWhere('patient_name', 'like', "%{$s}%")
-                  ->orWhere('order_ref', 'like', "%{$s}%");
-            }))
-            ->orderByDesc('quote_date')
-            ->orderByDesc('id')
-            ->paginate(20);
+        $quotes = $this->fetchForDashboard(
+            Quote::with([
+                'caseRecord:id,case_no,stage_key,patient_type,work_order_no',
+                'items',
+            ])
+                ->whereHas('caseRecord', fn ($q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
+                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('quote_no', 'like', "%{$s}%")
+                      ->orWhere('patient_name', 'like', "%{$s}%")
+                      ->orWhere('order_ref', 'like', "%{$s}%");
+                }))
+                ->orderByDesc('quote_date')
+                ->orderByDesc('id')
+        );
 
         return response()->json([
-            'data'       => collect($quotes->items())->map(fn ($q) => $this->formatQuote($q)),
-            'pagination' => $this->paginationModel($quotes),
+            'data'  => collect($quotes)->map(fn ($q) => $this->formatQuote($q))->values(),
+            'total' => $quotes->count(),
         ]);
     }
 

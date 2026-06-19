@@ -151,7 +151,8 @@ class BomLifecycleTest extends TestCase
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
-        app(BomService::class)->closeFinished($bom);
+        $this->advanceCaseToFinishing($case);
+        app(BomService::class)->finish($bom->fresh());
 
         $this->assertEquals(Bom::STAGE_FINISHED, $bom->fresh()->stage);
     }
@@ -165,7 +166,7 @@ class BomLifecycleTest extends TestCase
 
         $this->expectException(HttpException::class);
 
-        app(BomService::class)->closeFinished($bom);  // still raw, not wip
+        app(BomService::class)->finish($bom);
     }
 
     // ── Return note ───────────────────────────────────────────────────────────

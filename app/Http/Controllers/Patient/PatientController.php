@@ -6,17 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Patient\StorePatientRequest;
 use App\Http\Requests\Patient\UpdatePatientRequest;
 use App\Models\Patient;
+use App\Services\CaseTrackingQrService;
 use App\Services\PatientService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class PatientController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly PatientService $patientService)
-    {
+    public function __construct(
+        private readonly PatientService $patientService,
+        private readonly CaseTrackingQrService $caseTrackingQrService,
+    ) {
     }
 
     /**
@@ -24,32 +28,40 @@ class PatientController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $patients = Patient::with('contractCompany:id,name,company_code,is_military')
-            ->when($request->patient_type, fn ($q, $t) => $q->where('patient_type', $t))
-            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->contract_company_id, fn ($q, $id) => $q->where('contract_company_id', $id))
-            ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('patient_code', 'like', "%{$search}%")
-                  ->orWhere('national_id', 'like', "%{$search}%");
-            }))
-            ->orderByDesc('registered_at')
-            ->paginate(20);
+        $patients = $this->fetchForDashboard(
+            Patient::with('contractCompany:id,name,company_code,is_military')
+                ->when($request->patient_type, fn ($q, $t) => $q->where('patient_type', $t))
+                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+                ->when($request->contract_company_id, fn ($q, $id) => $q->where('contract_company_id', $id))
+                ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('patient_code', 'like', "%{$search}%")
+                      ->orWhere('national_id', 'like', "%{$search}%");
+                }))
+                ->orderByDesc('registered_at')
+        );
 
         return response()->json([
-            'data'       => $patients->items(),
-            'pagination' => $this->paginationModel($patients),
+            'data'  => $patients,
+            'total' => $patients->count(),
         ]);
     }
 
     /**
      * تسجيل مريض جديد.
      */
-    public function store(StorePatientRequest $request): JsonResponse
+    public function store(StorePatientRequest $request): RedirectResponse|JsonResponse
     {
         $patient = $this->patientService->register($request->validated());
 
-        return response()->json($this->formatPatientCard($patient), 201);
+        if ($request->expectsJson()) {
+            return response()->json($this->formatPatientCard($patient), 201);
+        }
+
+        return redirect()
+            ->route('reception.appointments')
+            ->with('success', "تم تسجيل المريض «{$patient->name}» — {$patient->patient_code}.")
+            ->with('show_patient_card', $patient->id);
     }
 
     /**
@@ -94,6 +106,7 @@ class PatientController extends Controller
             'id',
             'patient_code',
             'patient_qr',
+            'tracking_uid',
             'name',
             'phone',
             'national_id',
@@ -106,6 +119,9 @@ class PatientController extends Controller
             'last_visit_at',
             'status',
         ]) + [
+            'queue_number' => $patient->id,
+            'tracking_url' => $this->caseTrackingQrService->url($patient),
+            'qr_svg'       => $this->caseTrackingQrService->svg($patient),
             'contract_company' => $patient->relationLoaded('contractCompany')
                 ? $patient->contractCompany
                 : null,

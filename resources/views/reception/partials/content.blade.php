@@ -144,7 +144,7 @@
             </div>
           </div>
           <div class="panel-body">
-            <table>
+            <table data-paginate="10">
               <thead>
                 <tr>
                   <th>الوقت</th>
@@ -265,7 +265,7 @@
           <button class="btn btn-primary" style="padding:10px 20px;" onclick="openAddPatientForm()">➕ مريض جديد</button>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>اسم المريض</th>
@@ -302,7 +302,7 @@
           <button type="button" class="btn btn-secondary" id="btnSimulateReturn" style="padding:8px 16px;font-size:12px;white-space:nowrap;">📱 محاكاة عودة المريض (QR)</button>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>رقم العرض</th>
@@ -331,7 +331,7 @@
           تظهر هنا الحالات التي اكتمل تصنيعها (BOM «تام») وجاهزة للتسليم — بعد تأكيد الاستلام تُغلق الحالة «تم التسليم».
         </p>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>المريض</th>
@@ -361,7 +361,7 @@
             </div>
           </div>
           <div class="search-bar" style="margin-top:16px;">
-            <input type="text" id="ssInput" placeholder="🔍 Patient ID مثل PT-CIV-0006 أو اسم المريض">
+            <input type="text" id="ssInput" placeholder="🔍 رقم المريض (6 أرقام) أو الاسم">
             <button class="btn btn-primary" id="btnSelfService">استعلام</button>
           </div>
           <div id="ssResult"></div>
@@ -417,7 +417,7 @@
         <div class="patient-file-meta" id="patientFileMeta"></div>
         <div class="patient-file-section">
           <h4>📋 آخر الزيارات</h4>
-          <table class="patient-visits-table">
+          <table data-paginate="10" class="patient-visits-table">
             <thead>
               <tr>
                 <th>التاريخ</th>
@@ -452,12 +452,13 @@
           <div class="pic-body">
             <div class="pic-info">
               <div class="pic-name" id="picName">—</div>
-              <div class="pic-id">Patient ID: <strong id="picId">—</strong></div>
+              <div class="pic-id">رقم المريض: <strong id="picId">—</strong></div>
+              <div class="pic-queue" id="picQueueWrap">رقم الدور: <strong id="picQueue">—</strong></div>
               <div class="pic-company" id="picCompany">—</div>
               <div class="pic-rank" id="picRank" style="display:none;"></div>
             </div>
             <div class="pic-qr">
-              <div class="qr-mini" id="picQr"></div>
+              <div class="pic-qr-image" id="picQr"></div>
               <small id="picQrText">—</small>
             </div>
           </div>

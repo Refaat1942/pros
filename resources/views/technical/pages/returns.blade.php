@@ -12,7 +12,7 @@
           <button type="button" class="btn-view" id="btnNewReturn">➕ إنشاء إذن ارتجاع</button>
         </div>
         <div class="bom-table-wrap">
-          <table class="bom-table">
+          <table data-paginate="10" class="bom-table">
             <thead>
               <tr>
                 <th>رقم الإذن</th>

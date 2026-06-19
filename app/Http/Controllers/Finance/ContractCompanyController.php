@@ -10,6 +10,7 @@ use App\Services\AuditService;
 use App\Services\ContractDebtService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -38,29 +39,30 @@ class ContractCompanyController extends Controller
             return response()->json(['data' => $companies]);
         }
 
-        $companies = ContractCompany::with('debt')
-            ->when(
-                $request->has('is_military'),
-                fn ($q) => $q->where('is_military', $request->boolean('is_military'))
-            )
-            ->when(
-                $request->search,
-                fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
-                                  ->orWhere('company_code', 'like', "%{$s}%")
-            )
-            ->orderBy('company_code')
-            ->paginate(20);
+        $companies = $this->fetchForDashboard(
+            ContractCompany::with('debt')
+                ->when(
+                    $request->has('is_military'),
+                    fn ($q) => $q->where('is_military', $request->boolean('is_military'))
+                )
+                ->when(
+                    $request->search,
+                    fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
+                                      ->orWhere('company_code', 'like', "%{$s}%")
+                )
+                ->orderBy('company_code')
+        );
 
         return response()->json([
-            'data'       => $companies->items(),
-            'pagination' => $this->paginationModel($companies),
+            'data'  => $companies,
+            'total' => $companies->count(),
         ]);
     }
 
     /**
      * إنشاء جهة تعاقد → يُنشئ تلقائياً صف المديونية عبر ContractDebtService.
      */
-    public function store(StoreCompanyRequest $request): JsonResponse
+    public function store(StoreCompanyRequest $request): RedirectResponse|JsonResponse
     {
         $company = DB::transaction(function () use ($request) {
             $company = ContractCompany::create([
@@ -81,7 +83,13 @@ class ContractCompanyController extends Controller
             return $company;
         });
 
-        return response()->json($company->load('debt'), 201);
+        if ($request->expectsJson()) {
+            return response()->json($company->load('debt'), 201);
+        }
+
+        return redirect()
+            ->route('admin.companies')
+            ->with('success', "تم إضافة جهة التعاقد «{$company->name}» بنجاح.");
     }
 
     /**

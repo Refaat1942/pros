@@ -8,7 +8,7 @@ use App\Models\CaseRecord;
 use Illuminate\Support\Facades\DB;
 
 /**
- * إغلاق الحالة بالتسليم — مسح QR + ترحيل مالي.
+ * إغلاق الحالة بالتسليم — مسح QR + فاتورة + أرشفة + ترحيل مالي.
  */
 class DeliveryService
 {
@@ -17,19 +17,18 @@ class DeliveryService
         private readonly PatientQrService $patientQrService,
         private readonly WorkflowService $workflowService,
         private readonly FinancialPostingService $financialPostingService,
+        private readonly InvoiceService $invoiceService,
+        private readonly PatientArchiveService $patientArchiveService,
     ) {
     }
 
-    /**
-     * يتحقق من جاهزية التسليم — يفوِّض إلى BomService.
-     */
     public function canDeliver(CaseRecord $case): bool
     {
         return $this->bomService->canDeliver($case);
     }
 
     /**
-     * إغلاق الحالة بعد مسح بطاقة المريض.
+     * إغلاق الحالة بعد مسح بطاقة المريض — حالة مغلقة (delivered).
      */
     public function close(CaseRecord $case, string $scannedQr): CaseRecord
     {
@@ -42,9 +41,7 @@ class DeliveryService
 
             $case->load('patient');
 
-            if (! $case->patient || ! $this->patientQrService->validate($scannedQr, $case->patient)) {
-                abort(422, 'رمز QR لا يطابق بطاقة المريض.');
-            }
+            $this->patientQrService->assertValidForDelivery($scannedQr, $case, $case->patient);
 
             $before = [
                 'stage_key'    => $case->stage_key,
@@ -55,20 +52,29 @@ class DeliveryService
 
             $case->refresh();
 
-            $this->financialPostingService->post($case);
+            $invoice = $this->invoiceService->issueFinalInvoice($case->fresh());
+
+            $this->financialPostingService->post($case->fresh());
+
+            $this->patientArchiveService->archiveOnDelivery($case->patient);
 
             AuditService::log(
                 action:      'deliver',
-                description: 'تسليم الطرف للمريض',
+                description: 'تسليم الطرف للمريض — إغلاق الحالة',
                 tag:         'delivery',
                 before:      $before,
                 after:       [
-                    'stage_key'    => $case->stage_key,
-                    'delivered_at' => $case->delivered_at?->toDateString(),
+                    'stage_key'     => $case->stage_key,
+                    'delivered_at'  => $case->delivered_at?->toDateString(),
+                    'invoice_no'    => $invoice['invoice_no'],
+                    'invoice_total' => $invoice['invoice_total'],
                 ],
             );
 
-            return $case->fresh()->load(['patient:id,patient_code,name', 'bom:id,bom_no,stage']);
+            return $case->fresh()->load([
+                'patient:id,patient_code,name,status,archived_at',
+                'bom:id,bom_no,stage',
+            ]);
         });
     }
 

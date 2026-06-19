@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('pricing_requests', function (Blueprint $table) {
             $table->id();
-            $table->string('request_no')->unique(); // QT-PENDING-001
+            $table->string('request_no')->unique(); // 6-digit random reference
             $table->string('order_ref'); // ORD-2026-0847
             $table->foreignId('case_id')->nullable()->constrained('cases')->nullOnDelete();
             $table->string('patient_name');

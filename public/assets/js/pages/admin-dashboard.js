@@ -13,9 +13,73 @@
     var contractCompanies = [];
     var debts = [];
     var auditLogs = [];
+
+    function refreshPaginated() {
+      if (!window.TablePagination) return;
+      Array.prototype.slice.call(arguments).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) TablePagination.refresh(el);
+      });
+    }
     var suppliers = [];
 
     var COMPANIES_STORAGE_KEY = 'clinic_contract_companies';
+
+    function onId(id, event, handler) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
+    }
+
+    function bindModal(modalId, openBtnId, closeIds) {
+      var modal = document.getElementById(modalId);
+      if (!modal) return;
+      function close() { modal.classList.remove('open'); }
+      function open() { modal.classList.add('open'); }
+      var openBtn = openBtnId ? document.getElementById(openBtnId) : null;
+      if (openBtn) openBtn.addEventListener('click', open);
+      (closeIds || []).forEach(function(id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', close);
+      });
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) close();
+      });
+    }
+
+    function bindTableFilter(inputId, tableId, countId, suffix) {
+      var input = document.getElementById(inputId);
+      var el = document.getElementById(tableId);
+      if (!input || !el || el.dataset.serverRendered !== '1') return;
+      var rowsHost = el.tagName === 'TBODY' ? el : (el.tBodies[0] || el);
+      input.addEventListener('input', function() {
+        var q = input.value.trim().toLowerCase();
+        var visible = 0;
+        rowsHost.querySelectorAll('tr[data-search], tr[data-name], tr[data-code], tr[data-role]').forEach(function(row) {
+          var hay = (
+            (row.dataset.search || '') + ' ' +
+            (row.dataset.name || '') + ' ' +
+            (row.dataset.code || '') + ' ' +
+            (row.querySelector('td') ? row.textContent : '')
+          ).toLowerCase();
+          var show = !q || hay.indexOf(q) !== -1;
+          if (show) {
+            delete row.dataset.paginationSkip;
+            visible++;
+          } else {
+            row.dataset.paginationSkip = '1';
+          }
+        });
+        var countEl = document.getElementById(countId);
+        if (countEl) countEl.textContent = visible + ' ' + suffix;
+        refreshPaginated(tableId);
+      });
+    }
+
+    bindModal('employeeModal', 'btnAddEmployee', ['closeEmployeeModal', 'cancelEmployeeModal']);
+    bindModal('rankModal', 'btnAddRank', ['closeRankModal', 'cancelRankModal']);
+    bindModal('visitTypeModal', 'btnAddVisitType', ['closeVisitTypeModal', 'cancelVisitTypeModal']);
+    bindTableFilter('rankSearch', 'ranksTable', 'rankCount', 'رتبة');
+    bindTableFilter('visitTypeSearch', 'visitTypesTable', 'visitTypeCount', 'نوع');
 
     function loadCompanies() {
       return contractCompanies.slice();
@@ -86,7 +150,7 @@
       });
     });
 
-    document.getElementById('casesSearch').addEventListener('input', function(e) {
+    onId('casesSearch', 'input', function(e) {
       casesSearchTerm = e.target.value.trim();
       renderCasesSection();
     });
@@ -229,6 +293,7 @@
         }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       }
 
+      refreshPaginated('casesTableBody');
     }
 
     function exportCases(type) {
@@ -313,6 +378,7 @@
       if (!filtered.length) {
         document.getElementById('pricingApprovalTable').innerHTML =
           '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px;">لا توجد طلبات مطابقة</td></tr>';
+        refreshPaginated('pricingApprovalTable');
         return;
       }
 
@@ -336,6 +402,7 @@
           '<td>' + actions + '</td>' +
           '</tr>';
       }).join('');
+      refreshPaginated('pricingApprovalTable');
     }
 
     function openPricingApprovalModal(id) {
@@ -408,22 +475,22 @@
       else ExportKit.toPDF('اعتماد التسعير', headers, rows);
     }
 
-    document.getElementById('pricingApprovalSearch').addEventListener('input', function(e) {
+    onId('pricingApprovalSearch', 'input', function(e) {
       pricingApprovalSearch = e.target.value.trim();
       renderPricingApproval();
     });
 
-    document.getElementById('pricingApprovalFilter').addEventListener('change', function(e) {
+    onId('pricingApprovalFilter', 'change', function(e) {
       pricingApprovalFilter = e.target.value;
       renderPricingApproval();
     });
 
-    document.getElementById('closePricingApprovalModal').addEventListener('click', closePricingApprovalModal);
-    document.getElementById('btnClosePricingApprovalModal').addEventListener('click', closePricingApprovalModal);
-    document.getElementById('btnApprovePricingModal').addEventListener('click', function() {
+    onId('closePricingApprovalModal', 'click', closePricingApprovalModal);
+    onId('btnClosePricingApprovalModal', 'click', closePricingApprovalModal);
+    onId('btnApprovePricingModal', 'click', function() {
       if (selectedPricingId) approvePricingRequest(selectedPricingId);
     });
-    document.getElementById('pricingApprovalModal').addEventListener('click', function(e) {
+    onId('pricingApprovalModal', 'click', function(e) {
       if (e.target === this) closePricingApprovalModal();
     });
 
@@ -445,6 +512,7 @@
           '<td><button class="btn-action" style="color:#b91c1c" onclick="deleteCompany(\'' + c.id + '\')">حذف</button></td>' +
           '</tr>';
       }).join('');
+      refreshPaginated('companiesTable');
     }
 
     function addCompany() {
@@ -492,11 +560,11 @@
       else ExportKit.toPDF('شركات التعاقد', headers, rows);
     }
 
-    document.getElementById('btnAddCompany').addEventListener('click', addCompany);
-    document.getElementById('companyNameInput').addEventListener('keydown', function(e) {
+    onId('btnAddCompany', 'click', addCompany);
+    onId('companyNameInput', 'keydown', function(e) {
       if (e.key === 'Enter') { e.preventDefault(); addCompany(); }
     });
-    document.getElementById('companySearch').addEventListener('input', function(e) {
+    onId('companySearch', 'input', function(e) {
       companySearchTerm = e.target.value.trim();
       renderCompanies();
     });
@@ -633,6 +701,7 @@
             '<button class="btn-action" style="color:#b91c1c" onclick="deleteCatalogItem(\'' + item.code + '\')">حذف</button>' +
           '</td></tr>';
       }).join('');
+      refreshPaginated('catalogTable');
     }
 
     var catalogModalItemCode = null;
@@ -800,34 +869,37 @@
       else ExportKit.toPDF('الأصناف والأسعار', headers, rows);
     }
 
-    document.getElementById('btnToggleCatalogForm').addEventListener('click', function() {
-      if (document.getElementById('catalogForm').classList.contains('open')) closeCatalogForm();
+    onId('btnToggleCatalogForm', 'click', function() {
+      var form = document.getElementById('catalogForm');
+      if (!form) return;
+      if (form.classList.contains('open')) closeCatalogForm();
       else openCatalogForm(null);
     });
-    document.getElementById('btnCancelCatalog').addEventListener('click', closeCatalogForm);
-    document.getElementById('btnSaveCatalog').addEventListener('click', saveCatalogItem);
-    document.getElementById('btnAddPriceRow').addEventListener('click', function() {
-      document.getElementById('itemPricesList').insertAdjacentHTML('beforeend', priceRowHtml({}, editingCatalogCode || 'NEW'));
+    onId('btnCancelCatalog', 'click', closeCatalogForm);
+    onId('btnSaveCatalog', 'click', saveCatalogItem);
+    onId('btnAddPriceRow', 'click', function() {
+      var list = document.getElementById('itemPricesList');
+      if (list) list.insertAdjacentHTML('beforeend', priceRowHtml({}, editingCatalogCode || 'NEW'));
     });
-    document.getElementById('catalogSearch').addEventListener('input', function(e) {
+    onId('catalogSearch', 'input', function(e) {
       catalogSearchTerm = e.target.value.trim();
       renderCatalog();
     });
-    document.getElementById('catalogCategoryFilter').addEventListener('change', function(e) {
+    onId('catalogCategoryFilter', 'change', function(e) {
       catalogCategoryFilter = e.target.value;
       renderCatalog();
     });
 
-    document.getElementById('catalogTable').addEventListener('click', function(e) {
+    onId('catalogTable', 'click', function(e) {
       var row = e.target.closest('.catalog-row-clickable');
       if (!row) return;
       showCatalogDetail(row.getAttribute('data-code'));
     });
 
-    document.getElementById('catalogModalClose').addEventListener('click', closeCatalogDetailModal);
-    document.getElementById('catalogModalCloseBtn').addEventListener('click', closeCatalogDetailModal);
-    document.getElementById('catalogDetailModal').addEventListener('click', closeCatalogDetailModal);
-    document.getElementById('catalogModalEdit').addEventListener('click', function() {
+    onId('catalogModalClose', 'click', closeCatalogDetailModal);
+    onId('catalogModalCloseBtn', 'click', closeCatalogDetailModal);
+    onId('catalogDetailModal', 'click', closeCatalogDetailModal);
+    onId('catalogModalEdit', 'click', function() {
       if (!catalogModalItemCode) return;
       var code = catalogModalItemCode;
       closeCatalogDetailModal();
@@ -884,11 +956,16 @@
         var show = (!search || name.indexOf(search) !== -1)
           && (role === 'all' || rowRole === role)
           && (status === 'all' || rowStatus === status);
-        row.style.display = show ? '' : 'none';
-        if (show) visible++;
+        if (show) {
+          delete row.dataset.paginationSkip;
+          visible++;
+        } else {
+          row.dataset.paginationSkip = '1';
+        }
       });
       var ec = document.getElementById('empCount');
       if (ec) ec.textContent = visible + ' موظف';
+      refreshPaginated('employeesTable', 'employeesTableFull');
     }
 
     function getFilteredDebts() {
@@ -986,6 +1063,7 @@
       if (full) full.innerHTML = htmlFiltered;
       var ec = document.getElementById('empCount');
       if (ec) ec.textContent = filtered.length + ' موظف';
+      refreshPaginated('employeesTable', 'employeesTableFull');
     }
 
     function empRow(emp) {
@@ -1007,6 +1085,7 @@
       document.getElementById('debtsTableFull').innerHTML = htmlFiltered;
       var dc = document.getElementById('debtCount');
       if (dc) dc.textContent = filtered.length + ' جهة';
+      refreshPaginated('debtsTable', 'debtsTableFull');
     }
 
     function appendAudit(entry) {
@@ -1030,6 +1109,7 @@
       if (!tbody) return;
       if (!notes.length) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">لا توجد إشعارات دائن</td></tr>';
+        refreshPaginated('creditNotesTable');
         return;
       }
       tbody.innerHTML = notes.map(function (n) {
@@ -1050,6 +1130,7 @@
           '<td><span class="role-badge ' + statusCls + '">' + CreditNotes.statusLabel(n.status) + '</span></td>' +
           '<td>' + actions + '</td></tr>';
       }).join('');
+      refreshPaginated('creditNotesTable');
     }
 
     function openCreditNoteModal() {
@@ -1155,6 +1236,7 @@
       }).join('');
       var sc = document.getElementById('supplierCount');
       if (sc) sc.textContent = filtered.length + ' مورد';
+      refreshPaginated('suppliersTable');
     }
 
     function renderAuditFull() {
@@ -1247,169 +1329,21 @@
       });
     })();
 
-    // ── Military Ranks page ─────────────────────────────────────────────────
-    (function initMilitaryRanksPage() {
-      var ranksTable = document.getElementById('ranksTable');
-      if (!ranksTable) return;
+    bindTableFilter('companySearch', 'companiesTable', 'companiesCount', 'شركة');
+    bindTableFilter('pricingApprovalSearch', 'pricingApprovalTable', 'pricingApprovalCount', 'طلب');
 
-      function getCsrfToken() {
-        var meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? meta.getAttribute('content') : '';
-      }
-
-      var modal = document.getElementById('rankModal');
-      var rankSearch = document.getElementById('rankSearch');
-      var rankCount = document.getElementById('rankCount');
-      var rankError = document.getElementById('rankError');
-
-      function openRankModal() {
-        document.getElementById('editRankId').value = '';
-        document.getElementById('rankName').value = '';
-        document.getElementById('rankCode').value = '';
-        document.getElementById('rankSortOrder').value = '';
-        if (rankError) { rankError.style.display = 'none'; rankError.textContent = ''; }
-        if (modal) modal.classList.add('open');
-      }
-
-      function closeRankModal() {
-        if (modal) modal.classList.remove('open');
-      }
-
-      function updateRankCount() {
-        var visible = ranksTable.querySelectorAll('tr:not(.ranks-empty-row):not([style*="display: none"])').length;
-        if (rankCount) rankCount.textContent = visible + ' رتبة';
-      }
-
-      function appendRankRow(rank, index) {
-        var emptyRow = ranksTable.querySelector('.ranks-empty-row');
-        if (emptyRow) emptyRow.remove();
-        var tr = document.createElement('tr');
-        tr.dataset.rankId = rank.id;
-        tr.dataset.name = rank.name;
-        tr.dataset.code = rank.rank_code;
-        tr.innerHTML =
-          '<td>' + index + '</td>' +
-          '<td><strong>' + rank.name + '</strong></td>' +
-          '<td>' + rank.rank_code + '</td>' +
-          '<td>' + (rank.sort_order || 0) + '</td>' +
-          '<td><span class="status-dot active">فعّالة</span></td>' +
-          '<td><button type="button" class="btn-action" data-toggle-rank="' + rank.id + '" title="تفعيل/تعطيل">تبديل</button></td>';
-        ranksTable.appendChild(tr);
-        updateRankCount();
-      }
-
-      function filterRanks() {
-        var q = (rankSearch ? rankSearch.value : '').trim().toLowerCase();
-        var rows = ranksTable.querySelectorAll('tr[data-rank-id]');
+    var pricingFilter = document.getElementById('pricingApprovalFilter');
+    var pricingTable = document.getElementById('pricingApprovalTable');
+    if (pricingFilter && pricingTable && pricingTable.dataset.serverRendered === '1') {
+      pricingFilter.addEventListener('change', function() {
+        var val = pricingFilter.value;
         var visible = 0;
-        rows.forEach(function(row) {
-          var name = (row.dataset.name || '').toLowerCase();
-          var code = (row.dataset.code || '').toLowerCase();
-          var show = !q || name.indexOf(q) !== -1 || code.indexOf(q) !== -1;
+        pricingTable.querySelectorAll('tbody tr[data-status]').forEach(function(row) {
+          var show = val === 'all' || row.dataset.status === val;
           row.style.display = show ? '' : 'none';
           if (show) visible++;
         });
-        if (rankCount) rankCount.textContent = visible + ' رتبة';
-      }
-
-      var btnAddRank = document.getElementById('btnAddRank');
-      if (btnAddRank) btnAddRank.addEventListener('click', openRankModal);
-
-      ['closeRankModal', 'cancelRankModal'].forEach(function(id) {
-        var btn = document.getElementById(id);
-        if (btn) btn.addEventListener('click', closeRankModal);
+        var countEl = document.getElementById('pricingApprovalCount');
+        if (countEl) countEl.textContent = visible + ' طلب';
       });
-
-      if (modal) {
-        modal.addEventListener('click', function(e) {
-          if (e.target === modal) closeRankModal();
-        });
-      }
-
-      if (rankSearch) rankSearch.addEventListener('input', filterRanks);
-
-      ranksTable.addEventListener('click', function(e) {
-        var btn = e.target.closest('[data-toggle-rank]');
-        if (!btn) return;
-        var rankId = btn.getAttribute('data-toggle-rank');
-        fetch('/admin/military-ranks/' + rankId + '/toggle', {
-          method: 'PATCH',
-          headers: {
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-          },
-        })
-          .then(function(r) { return r.json(); })
-          .then(function(json) {
-            var row = ranksTable.querySelector('tr[data-rank-id="' + rankId + '"]');
-            if (!row) return;
-            var statusCell = row.cells[4];
-            if (statusCell) {
-              statusCell.innerHTML = json.is_active
-                ? '<span class="status-dot active">فعّالة</span>'
-                : '<span class="status-dot inactive">معطّلة</span>';
-            }
-          })
-          .catch(function() { alert('تعذّر تحديث حالة الرتبة'); });
-      });
-
-      var btnSaveRank = document.getElementById('btnSaveRank');
-      if (btnSaveRank) {
-        btnSaveRank.addEventListener('click', function() {
-          var name = document.getElementById('rankName').value.trim();
-          var code = document.getElementById('rankCode').value.trim();
-          var sortOrder = document.getElementById('rankSortOrder').value;
-          if (!name || !code) {
-            if (rankError) {
-              rankError.textContent = 'اسم الرتبة والكود مطلوبان';
-              rankError.style.display = 'block';
-            }
-            return;
-          }
-          btnSaveRank.disabled = true;
-          btnSaveRank.textContent = 'جاري الحفظ...';
-          fetch('/admin/military-ranks', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'X-CSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify({
-              name: name,
-              rank_code: code,
-              sort_order: sortOrder ? parseInt(sortOrder, 10) : 0,
-            }),
-          })
-            .then(function(r) { return r.json().then(function(json) { return { status: r.status, body: json }; }); })
-            .then(function(result) {
-              btnSaveRank.disabled = false;
-              btnSaveRank.textContent = '💾 حفظ';
-              if (result.status === 201) {
-                var nextIndex = ranksTable.querySelectorAll('tr[data-rank-id]').length + 1;
-                appendRankRow(result.body, nextIndex);
-                closeRankModal();
-              } else {
-                var msg = result.body.message || 'خطأ في الحفظ';
-                if (result.body.errors) {
-                  Object.values(result.body.errors).forEach(function(arr) {
-                    arr.forEach(function(m) { msg = m; });
-                  });
-                }
-                if (rankError) {
-                  rankError.textContent = msg;
-                  rankError.style.display = 'block';
-                }
-              }
-            })
-            .catch(function() {
-              btnSaveRank.disabled = false;
-              btnSaveRank.textContent = '💾 حفظ';
-              if (rankError) {
-                rankError.textContent = 'تعذّر الاتصال بالخادم';
-                rankError.style.display = 'block';
-              }
-            });
-        });
-      }
-    })();
+    }

@@ -20,11 +20,15 @@ var ExportKit = (function () {
   }
 
   function notify(msg) {
+    if (window.DashboardToast) {
+      window.DashboardToast.show(msg);
+      return;
+    }
     var t = document.getElementById('toast');
     if (t) {
       t.textContent = '✅ ' + msg;
       t.classList.add('show');
-      setTimeout(function () { t.classList.remove('show'); }, 3200);
+      setTimeout(function () { t.classList.remove('show'); }, 5000);
     }
   }
 

@@ -11,11 +11,11 @@ class StoreTechOrderSpecRequest extends BaseRequest
     {
         return [
             'case_id'    => ['required', 'integer', 'exists:cases,id'],
-            'tech_notes' => ['nullable', 'string', 'max:5000'],
+            'tech_notes' => $this->notesRules(5000),
             'items'      => ['required', 'array', 'min:1'],
-            'items.*.stock_item_code' => ['required', 'string', 'max:50'],
-            'items.*.name'            => ['required', 'string', 'max:255'],
-            'items.*.qty'             => ['required', 'integer', 'min:1'],
+            'items.*.stock_item_code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-_]+$/'],
+            'items.*.name'            => ['required', 'string', 'min:1', 'max:255'],
+            'items.*.qty'             => $this->positiveQtyRules(),
         ];
     }
 

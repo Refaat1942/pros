@@ -75,7 +75,7 @@
             <div class="bi-row"><span>مديونيات الجهات (صافي)</span><strong style="color:#b91c1c">{{ $fmtMoney($b4['net_debts'] ?? 0) }}</strong></div>
             @if(!empty($b4['company_debts']))
                 <div class="bi-sub">تفصيل الجهات:
-                    <table class="bi-table">
+                    <table data-paginate="10" class="bi-table">
                         <thead>
                             <tr><th>الجهة</th><th>مستحق</th><th>محصَّل</th><th>متبقٍ</th></tr>
                         </thead>
@@ -102,7 +102,7 @@
         <div class="bi-card-body">
             <div class="bi-row"><span>عدد الموردين المعتمدين</span><strong>{{ $b5['supplier_count'] ?? 0 }}</strong></div>
             <div class="bi-sub">⚖️ مقارنة المتوسط المرجح (WAC) ↔ أعلى سعر شراء:
-                <table class="bi-table">
+                <table data-paginate="10" class="bi-table">
                     <thead>
                         <tr><th>الصنف</th><th>WAC</th><th>أعلى سعر</th><th>الفرق</th></tr>
                     </thead>

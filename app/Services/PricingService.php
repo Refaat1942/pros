@@ -25,6 +25,7 @@ class PricingService
         private readonly StockPriceService $stockPriceService,
         private readonly WorkflowService $workflowService,
         private readonly QuoteService $quoteService,
+        private readonly WorkOrderService $workOrderService,
     ) {
     }
 
@@ -136,6 +137,7 @@ class PricingService
             if ($request->patient_type === Patient::TYPE_MILITARY) {
                 $case->update(['total_cost' => $total]);
                 $this->workflowService->advance($case, WorkflowEvent::PricingCompletedMilitary->value);
+                $this->workOrderService->generate($case->fresh());
             } else {
                 $this->quoteService->issue($request, $total);
                 $this->workflowService->advance($case->fresh(), WorkflowEvent::PricingCompletedCivilian->value);

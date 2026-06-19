@@ -5,6 +5,26 @@ namespace App\Traits;
 trait PaginationTrait
 {
 
+    protected function perPage(): int
+    {
+        return (int) config('dashboards.table_per_page', 10);
+    }
+
+    protected function dashboardFetchLimit(): int
+    {
+        return (int) config('dashboards.table_fetch_limit', 1000);
+    }
+
+    /**
+     * جلب صفوف الجدول للوحات — التصفح يتم في المتصفح (table-pagination.js).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    protected function fetchForDashboard($query)
+    {
+        return $query->limit($this->dashboardFetchLimit())->get();
+    }
+
     public function paginationModel($col)
     {
         return [

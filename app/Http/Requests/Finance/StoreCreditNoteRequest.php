@@ -16,8 +16,8 @@ class StoreCreditNoteRequest extends BaseRequest
                 CreditNote::TYPE_PARTIAL,
                 CreditNote::TYPE_FULL,
             ])],
-            'amount'  => ['required', 'numeric', 'min:0.01'],
-            'reason'  => ['required', 'string', 'max:1000'],
+            'amount'  => $this->moneyRules(),
+            'reason'  => ['required', 'string', 'min:3', 'max:1000'],
         ];
     }
 

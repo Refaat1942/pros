@@ -1,11 +1,14 @@
     var now = new Date();
     var TODAY_DATE = '';
+    var MIN_SELECTABLE_DATE = '';
 
     var calendarView = {
       year: now.getFullYear(),
       month: now.getMonth() + 1,
       selectedDate: ''
     };
+
+    var appointmentsLoading = false;
 
     var AR_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
@@ -214,12 +217,160 @@
 
       document.getElementById('quoteListCount').textContent = quotations.length;
       document.getElementById('quoteFilterCount').textContent = filtered.length + ' عروض';
+      if (window.TablePagination) TablePagination.refreshById('quotesTable');
     }
 
     function pad2(n) { return String(n).padStart(2, '0'); }
 
     function formatDateKey(day, month, year) {
       return pad2(day) + '/' + pad2(month) + '/' + year;
+    }
+
+    function parseDisplayDate(dateKey) {
+      var parts = (dateKey || '').split('/');
+      if (parts.length !== 3) return null;
+      return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+    }
+
+    function isFutureDate(dateKey) {
+      var d = parseDisplayDate(dateKey);
+      var today = parseDisplayDate(TODAY_DATE);
+      if (!d || !today) return false;
+      d.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      return d > today;
+    }
+
+    function isBeforeMinDate(dateKey) {
+      var d = parseDisplayDate(dateKey);
+      var min = parseDisplayDate(MIN_SELECTABLE_DATE);
+      if (!d || !min) return false;
+      d.setHours(0, 0, 0, 0);
+      min.setHours(0, 0, 0, 0);
+      return d < min;
+    }
+
+    function isDateSelectable(dateKey) {
+      return !isFutureDate(dateKey) && !isBeforeMinDate(dateKey);
+    }
+
+    function clampCalendarMonth() {
+      var todayYear = now.getFullYear();
+      var todayMonth = now.getMonth() + 1;
+      var minYear = now.getFullYear() - 1;
+      var minMonth = now.getMonth() + 1;
+
+      if (calendarView.year > todayYear || (calendarView.year === todayYear && calendarView.month > todayMonth)) {
+        calendarView.year = todayYear;
+        calendarView.month = todayMonth;
+      }
+
+      if (calendarView.year < minYear || (calendarView.year === minYear && calendarView.month < minMonth)) {
+        calendarView.year = minYear;
+        calendarView.month = minMonth;
+      }
+    }
+
+    function syncSelectionToVisibleMonth() {
+      var parts = calendarView.selectedDate.split('/');
+      var selMonth = parseInt(parts[1], 10);
+      var selYear = parseInt(parts[2], 10);
+      if (selMonth === calendarView.month && selYear === calendarView.year && isDateSelectable(calendarView.selectedDate)) {
+        return;
+      }
+
+      var lastDay = new Date(calendarView.year, calendarView.month, 0).getDate();
+      var startDay = lastDay;
+      if (calendarView.year === now.getFullYear() && calendarView.month === now.getMonth() + 1) {
+        startDay = now.getDate();
+      }
+
+      for (var d = startDay; d >= 1; d--) {
+        var candidate = formatDateKey(d, calendarView.month, calendarView.year);
+        if (isDateSelectable(candidate)) {
+          calendarView.selectedDate = candidate;
+          return;
+        }
+      }
+    }
+
+    function updateCalendarNavButtons() {
+      var prev = document.getElementById('calPrev');
+      var next = document.getElementById('calNext');
+      var atCurrent = calendarView.year === now.getFullYear() && calendarView.month === now.getMonth() + 1;
+      var atMin = calendarView.year === (now.getFullYear() - 1) && calendarView.month === (now.getMonth() + 1);
+      if (next) {
+        next.disabled = atCurrent;
+        next.classList.toggle('cal-nav-disabled', atCurrent);
+      }
+      if (prev) {
+        prev.disabled = atMin;
+        prev.classList.toggle('cal-nav-disabled', atMin);
+      }
+    }
+
+    function displayDateFromIso(iso) {
+      if (!iso) return '';
+      var raw = String(iso).split('T')[0];
+      var parts = raw.split('-');
+      if (parts.length !== 3) return raw;
+      return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+
+    function isoDateFromDisplay(display) {
+      if (!display) return '';
+      var parts = display.split('/');
+      if (parts.length !== 3) return display;
+      return parts[2] + '-' + parts[1] + '-' + parts[0];
+    }
+
+    function mapAppointmentFromApi(row) {
+      var patient = row.patient || {};
+      var visitTypeRel = row.visit_type_record || null;
+      var visitTypeName = visitTypeRel && visitTypeRel.name ? visitTypeRel.name : null;
+      return {
+        id: row.id,
+        date: displayDateFromIso(row.appointment_date),
+        time: row.appointment_time ? String(row.appointment_time).substring(0, 5) : '—',
+        name: row.patient_name || patient.name || '—',
+        phone: row.phone || '—',
+        company: row.company_name || '—',
+        visitType: row.visit_type_id ? String(row.visit_type_id) : 'exam',
+        visitTypeLabel: visitTypeName || getVisitMeta('exam').label,
+        status: row.status || 'waiting',
+        statusLabel: row.status_label || row.status || 'waiting',
+        transferredToClinic: !!row.transferred_to_clinic
+      };
+    }
+
+    function fetchAppointmentsForSelectedDate() {
+      if (!calendarView.selectedDate || appointmentsLoading) return Promise.resolve();
+      appointmentsLoading = true;
+      var iso = isoDateFromDisplay(calendarView.selectedDate);
+
+      return fetch('/reception/appointments/list?date=' + encodeURIComponent(iso), {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      })
+        .then(function(res) {
+          if (!res.ok) throw new Error('appointments list failed');
+          return res.json();
+        })
+        .then(function(payload) {
+          appointments = (payload.data || []).map(mapAppointmentFromApi);
+          renderAppointments();
+          renderCalendar();
+          renderReceptionAnalytics();
+        })
+        .catch(function(err) {
+          console.error('fetchAppointmentsForSelectedDate', err);
+        })
+        .finally(function() {
+          appointmentsLoading = false;
+        });
     }
 
     function getVisitMeta(visitType) {
@@ -235,13 +386,13 @@
     }
 
     function selectCalendarDate(dateStr) {
+      if (!isDateSelectable(dateStr)) return;
       calendarView.selectedDate = dateStr;
       var parts = dateStr.split('/');
       calendarView.month = parseInt(parts[1], 10);
       calendarView.year = parseInt(parts[2], 10);
       renderCalendar();
-      renderAppointments();
-      renderReceptionAnalytics();
+      fetchAppointmentsForSelectedDate();
     }
 
     function renderCalendar() {
@@ -279,18 +430,26 @@
       grid.innerHTML = html;
       grid.querySelectorAll('.cal-day[data-date]').forEach(function(btn) {
         btn.addEventListener('click', function() {
+          if (btn.disabled || btn.classList.contains('disabled')) return;
           selectCalendarDate(btn.getAttribute('data-date'));
         });
       });
+      updateCalendarNavButtons();
     }
 
     function buildCalDayCell(dayNum, dateKey, otherMonth) {
+      var selectable = isDateSelectable(dateKey);
       var cls = 'cal-day' + (otherMonth ? ' other-month' : '');
+      if (!selectable) cls += ' disabled';
       if (dateKey === TODAY_DATE) cls += ' today';
-      if (dateKey === calendarView.selectedDate) cls += ' selected';
+      if (dateKey === calendarView.selectedDate && selectable) cls += ' selected';
 
-      return '<button type="button" class="' + cls + '" data-date="' + dateKey + '">' +
-        '<span class="cal-day-num">' + dayNum + '</span></button>';
+      var inner = '<span class="cal-day-num">' + dayNum + '</span>';
+      if (!selectable) {
+        return '<span class="' + cls + '" aria-disabled="true">' + inner + '</span>';
+      }
+
+      return '<button type="button" class="' + cls + '" data-date="' + dateKey + '">' + inner + '</button>';
     }
 
     function getFilteredAppointments() {
@@ -337,24 +496,43 @@
     }
 
     function getApptActionCell(a) {
-      if (a.transferredToClinic) {
+      if (a.transferredToClinic || a.status === 'in_clinic') {
         return '<span style="font-size:12px;font-weight:700;color:#059669;">✅ تم التحويل للعيادة</span>';
       }
-      return '<button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="transferAppointmentToClinic(\'' + a.phone + '\')">تحويل</button>';
+      return '<button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="transferAppointmentToClinic(' + a.id + ')">تحويل</button>';
     }
 
-    function transferAppointmentToClinic(phone) {
-      var appt = appointments.find(function(a) { return a.phone === phone; });
-      if (!appt || appt.transferredToClinic) return;
-      appt.transferredToClinic = true;
-      if (appt.status === 'waiting') {
-        appt.status = 'in_clinic';
-        appt.statusLabel = 'في العيادة';
-      }
-      renderAppointments();
-      renderCalendar();
-      renderReceptionAnalytics();
-      showToast('تم تحويل ' + appt.name + ' للعيادة');
+    function transferAppointmentToClinic(id) {
+      var appt = appointments.find(function(a) { return a.id === id; });
+      if (!appt || appt.transferredToClinic || appt.status === 'in_clinic') return;
+
+      fetch('/reception/appointments/' + id + '/status', {
+        method: 'PATCH',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken()
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ status: 'in_clinic' })
+      })
+        .then(function(res) {
+          if (!res.ok) return res.json().then(function(j) { throw j; });
+          return res.json();
+        })
+        .then(function(row) {
+          var mapped = mapAppointmentFromApi(row);
+          var idx = appointments.findIndex(function(a) { return a.id === id; });
+          if (idx !== -1) appointments[idx] = mapped;
+          renderAppointments();
+          renderCalendar();
+          renderReceptionAnalytics();
+          showToast('تم تحويل ' + mapped.name + ' للعيادة');
+        })
+        .catch(function(err) {
+          showToast((err && err.message) ? err.message : 'تعذّر تحويل الموعد للعيادة', true);
+        });
     }
 
     function renderAppointments() {
@@ -362,10 +540,11 @@
       var tbody = document.getElementById('appointmentsTable');
       tbody.innerHTML = filtered.map(function(a) {
         var vt = getVisitMeta(a.visitType);
+        var visitLabel = a.visitTypeLabel || vt.label;
         return '<tr>' +
           '<td><strong>' + a.time + '</strong></td>' +
           '<td>' + a.name + '</td>' +
-          '<td><span class="visit-tag ' + vt.tagClass + '">' + vt.label + '</span></td>' +
+          '<td><span class="visit-tag ' + vt.tagClass + '">' + visitLabel + '</span></td>' +
           '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + a.phone + '</td>' +
           '<td>' + a.company + '</td>' +
           '<td><span class="status-badge ' + a.status + '">' + a.statusLabel + '</span></td>' +
@@ -378,6 +557,7 @@
       if (ah) ah.textContent = filtered.length + ' موعد';
       var title = document.getElementById('apptPanelTitle');
       if (title) title.textContent = '📅 مواعيد — ' + calendarView.selectedDate;
+      if (window.TablePagination) TablePagination.refreshById('appointmentsTable');
     }
 
     function renderPatients(filter) {
@@ -396,6 +576,7 @@
           '</tr>';
       }).join('');
       document.getElementById('patientsCount').textContent = filtered.length + ' مريض';
+      if (window.TablePagination) TablePagination.refreshById('patientsTable');
     }
 
     function getPatientVisits(patient) {
@@ -442,10 +623,14 @@
     }
 
     function showToast(msg) {
+      if (window.DashboardToast) {
+        window.DashboardToast.show(msg);
+        return;
+      }
       var toast = document.getElementById('toast');
       toast.textContent = '✅ ' + msg;
       toast.classList.add('show');
-      setTimeout(function() { toast.classList.remove('show'); }, 3500);
+      setTimeout(function() { toast.classList.remove('show'); }, 5000);
     }
 
     function deliverCase(caseId) {
@@ -470,6 +655,7 @@
       renderDeliveryTable();
     }
     window.deliverCase = deliverCase;
+    window.transferAppointmentToClinic = transferAppointmentToClinic;
 
     function renderDeliveryTable() {
       var tbody = document.getElementById('deliveryTable');
@@ -578,7 +764,28 @@
     }
 
     function renderReceptionAnalytics() {
-      return;
+      var dayAppts = getSelectedDayAppointments();
+      var total = dayAppts.length;
+      var inClinic = dayAppts.filter(function(a) { return a.status === 'in_clinic'; }).length;
+      var waiting = dayAppts.filter(function(a) { return a.status === 'waiting'; }).length;
+      var done = dayAppts.filter(function(a) { return a.status === 'done'; }).length;
+
+      function setStat(containerId, index, value) {
+        var root = document.getElementById(containerId);
+        if (!root) return;
+        var values = root.querySelectorAll('.ck-stat-value');
+        if (values[index]) values[index].textContent = String(value);
+      }
+
+      setStat('analytics-appointments', 0, total);
+      setStat('analytics-appointments', 1, inClinic);
+      setStat('analytics-appointments', 2, waiting);
+      setStat('analytics-appointments', 3, done);
+
+      if (calendarView.selectedDate === TODAY_DATE) {
+        setStat('analytics-reception-main', 0, total);
+        setStat('analytics-reception-main', 1, waiting);
+      }
     }
 
     function changeCalendarMonth(delta) {
@@ -590,7 +797,26 @@
         calendarView.month = 12;
         calendarView.year--;
       }
+      clampCalendarMonth();
+      syncSelectionToVisibleMonth();
       renderCalendar();
+      fetchAppointmentsForSelectedDate();
+    }
+
+    function initAppointmentsCalendar() {
+      var grid = document.getElementById('calendarGrid');
+      if (!grid) return;
+
+      TODAY_DATE = formatDateKey(now.getDate(), now.getMonth() + 1, now.getFullYear());
+      var minDateObj = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      MIN_SELECTABLE_DATE = formatDateKey(minDateObj.getDate(), minDateObj.getMonth() + 1, minDateObj.getFullYear());
+
+      calendarView.year = now.getFullYear();
+      calendarView.month = now.getMonth() + 1;
+      calendarView.selectedDate = TODAY_DATE;
+
+      renderCalendar();
+      fetchAppointmentsForSelectedDate();
     }
 
     function toggleAddPatientForm(forceOpen) {
@@ -657,57 +883,20 @@
       return meta ? meta.getAttribute('content') : '';
     }
 
-    // ── Lookup loaders ──────────────────────────────────────────────────────
-    function loadMilitaryRanks() {
-      fetch('/reception/lookup/military-ranks?all=1', {
-        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() }
-      })
-        .then(function(r) { return r.json(); })
-        .then(function(json) {
-          var sel = document.getElementById('newRankId');
-          if (!sel) return;
-          sel.innerHTML = '<option value="">— اختر الرتبة —</option>';
-          var ranks = json.data || [];
-          if (!ranks.length) {
-            var emptyOpt = document.createElement('option');
-            emptyOpt.value = '';
-            emptyOpt.textContent = '— لا توجد رتب (أضف من لوحة الإدارة) —';
-            sel.appendChild(emptyOpt);
-            return;
-          }
-          ranks.forEach(function(rank) {
-            var opt = document.createElement('option');
-            opt.value = rank.id;
-            opt.textContent = rank.name;
-            sel.appendChild(opt);
-          });
-        })
-        .catch(function() {});
+    function filterCompanyOptions(isMilitary) {
+      var sel = document.getElementById('newCompanyId');
+      if (!sel) return;
+      sel.querySelectorAll('option[data-military]').forEach(function(opt) {
+        var mil = opt.getAttribute('data-military') === '1';
+        opt.style.display = isMilitary ? (mil ? '' : 'none') : (mil ? 'none' : '');
+      });
+      sel.value = '';
     }
 
-    function loadContractCompanies(isMilitary) {
-      var url = '/reception/lookup/companies?all=1' + (isMilitary !== undefined ? '&is_military=' + (isMilitary ? '1' : '0') : '');
-      fetch(url, {
-        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() }
-      })
-        .then(function(r) { return r.json(); })
-        .then(function(json) {
-          var sel = document.getElementById('newCompanyId');
-          if (!sel) return;
-          sel.innerHTML = '<option value="">— اختر الجهة —</option>';
-          (json.data || []).forEach(function(co) {
-            var opt = document.createElement('option');
-            opt.value = co.id;
-            opt.textContent = co.name;
-            sel.appendChild(opt);
-          });
-        })
-        .catch(function() {});
+    // Initial company filter (civilian default)
+    if (document.getElementById('newCompanyId')) {
+      filterCompanyOptions(false);
     }
-
-    // Initial load
-    loadMilitaryRanks();
-    loadContractCompanies();
 
     // ── Patient-type change ─────────────────────────────────────────────────
     var patientTypeSel = document.getElementById('newPatientType');
@@ -720,7 +909,7 @@
         if (grpSovereign) grpSovereign.style.display = isMil ? '' : 'none';
         var companyRequired = document.getElementById('companyRequired');
         if (companyRequired) companyRequired.style.display = isMil ? 'none' : '';
-        loadContractCompanies(isMil);
+        filterCompanyOptions(isMil);
       });
     }
 
@@ -729,7 +918,14 @@
       var meta = CasesWorkflow.getPatientTypeMeta(data.patientType || data.patient_type);
       document.getElementById('picType').textContent = meta.icon + ' ' + meta.label;
       document.getElementById('picName').textContent = data.name;
-      document.getElementById('picId').textContent = data.patientId || data.patient_code;
+      document.getElementById('picId').textContent = data.patient_code || data.patientId || '—';
+      var queueWrap = document.getElementById('picQueueWrap');
+      var queueEl = document.getElementById('picQueue');
+      if (queueEl) {
+        var queueNo = data.queue_number || data.id || null;
+        queueEl.textContent = queueNo != null ? queueNo : '—';
+        if (queueWrap) queueWrap.style.display = queueNo != null ? '' : 'none';
+      }
       document.getElementById('picCompany').textContent = data.company || data.company_name || '—';
       var rankEl = document.getElementById('picRank');
       var rankText = data.rank || '';
@@ -739,7 +935,12 @@
       } else {
         rankEl.style.display = 'none';
       }
-      document.getElementById('picQrText').textContent = data.patientQr || data.patient_qr || '—';
+      var qrEl = document.getElementById('picQr');
+      if (qrEl) {
+        qrEl.innerHTML = data.qr_svg || '';
+        qrEl.classList.toggle('has-svg', !!data.qr_svg);
+      }
+      document.getElementById('picQrText').textContent = data.tracking_url || data.tracking_uid || data.patientQr || data.patient_qr || '—';
       var card = document.getElementById('patientIdCard');
       if (card) card.setAttribute('data-type', data.patientType || data.patient_type);
       document.getElementById('patientCardModal').classList.add('visible');
@@ -752,96 +953,6 @@
     var btnClosePCx = document.getElementById('closePatientCardModal');
     if (btnClosePC) btnClosePC.addEventListener('click', closePatientCard);
     if (btnClosePCx) btnClosePCx.addEventListener('click', closePatientCard);
-
-    // ── Save patient — real API call ────────────────────────────────────────
-    var btnSavePatient = document.getElementById('btnSavePatient');
-    if (btnSavePatient) btnSavePatient.addEventListener('click', function() {
-      var name         = document.getElementById('newPatientName').value.trim();
-      var phone        = (document.getElementById('newPhone').value || '').trim();
-      var nationalId   = (document.getElementById('newNationalId') ? document.getElementById('newNationalId').value : '').trim();
-      var patientType  = document.getElementById('newPatientType').value || 'civilian';
-      var rankId       = document.getElementById('newRankId') ? document.getElementById('newRankId').value : '';
-      var sovereign    = document.getElementById('newSovereignEntity') ? document.getElementById('newSovereignEntity').value.trim() : '';
-      var companyId    = document.getElementById('newCompanyId') ? document.getElementById('newCompanyId').value : '';
-      var errorEl      = document.getElementById('patientFormError');
-
-      // Client-side validation
-      if (!name) { showFormError(errorEl, 'اسم المريض مطلوب'); return; }
-      if (patientType === 'civilian' && !companyId) { showFormError(errorEl, 'جهة التعاقد مطلوبة للمريض المدني'); return; }
-      if (patientType === 'military' && !rankId) { showFormError(errorEl, 'الرتبة العسكرية مطلوبة للمريض العسكري'); return; }
-      if (patientType === 'military' && !sovereign) { showFormError(errorEl, 'الجهة السيادية مطلوبة للمريض العسكري'); return; }
-      if (errorEl) errorEl.style.display = 'none';
-
-      var payload = {
-        name:                 name,
-        phone:                phone || null,
-        national_id:          nationalId || null,
-        patient_type:         patientType,
-        military_rank_id:     rankId ? parseInt(rankId, 10) : null,
-        sovereign_entity:     sovereign || null,
-        contract_company_id:  companyId ? parseInt(companyId, 10) : null,
-      };
-
-      var btn = document.getElementById('btnSavePatient');
-      btn.disabled = true;
-      btn.textContent = 'جاري الحفظ...';
-
-      fetch('/reception/patients', {
-        method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Accept':        'application/json',
-          'X-CSRF-TOKEN':  getCsrfToken(),
-        },
-        body: JSON.stringify(payload),
-      })
-        .then(function(res) {
-          return res.json().then(function(json) { return { status: res.status, body: json }; });
-        })
-        .then(function(result) {
-          btn.disabled = false;
-          btn.textContent = '💾 حفظ وإضافة للجدولة';
-
-          if (result.status === 201 || result.status === 200) {
-            var p = result.body;
-            // Add to local registry from server response
-            patientsRegistry.unshift({
-              name:         p.name,
-              phone:        p.phone || '—',
-              company:      p.company_name || '—',
-              patientType:  p.patient_type,
-              patientId:    p.patient_code,
-              rank:         p.rank || '',
-              registered:   p.registered_at || calendarView.selectedDate,
-              lastVisit:    p.registered_at || calendarView.selectedDate,
-              status:       p.status || 'active',
-              statusLabel:  'نشط',
-            });
-            closeAddPatientForm();
-            renderCalendar();
-            renderReceptionAnalytics();
-            renderPatients();
-            showToast('تم تسجيل ' + p.name + ' — ' + p.patient_code);
-            showPatientCard(p);
-            resetPatientForm();
-          } else {
-            // Validation errors from Laravel
-            var msgs = [];
-            if (result.body.message) msgs.push(result.body.message);
-            if (result.body.errors) {
-              Object.values(result.body.errors).forEach(function(arr) {
-                arr.forEach(function(m) { msgs.push(m); });
-              });
-            }
-            showFormError(errorEl, msgs.join(' — ') || 'خطأ في الحفظ');
-          }
-        })
-        .catch(function() {
-          btn.disabled = false;
-          btn.textContent = '💾 حفظ وإضافة للجدولة';
-          showFormError(errorEl, 'تعذّر الاتصال بالخادم — حاول مجدداً');
-        });
-    });
 
     function showFormError(el, msg) {
       if (!el) { alert(msg); return; }
@@ -863,16 +974,25 @@
       if (errorEl) errorEl.style.display = 'none';
     }
 
-    document.getElementById('btnScanQR').addEventListener('click', function() { openQRScan(); });
-    document.getElementById('btnSimulateReturn').addEventListener('click', function() { openQRScan(); });
-    document.getElementById('closeQrModal').addEventListener('click', closeQRScanModal);
-    document.getElementById('qrModal').addEventListener('click', function(e) {
-      if (e.target === document.getElementById('qrModal')) closeQRScanModal();
-    });
+    var btnScanQR = document.getElementById('btnScanQR');
+    if (btnScanQR) btnScanQR.addEventListener('click', function() { openQRScan(); });
+    var btnSimulateReturn = document.getElementById('btnSimulateReturn');
+    if (btnSimulateReturn) btnSimulateReturn.addEventListener('click', function() { openQRScan(); });
+    var closeQrModal = document.getElementById('closeQrModal');
+    if (closeQrModal) closeQrModal.addEventListener('click', closeQRScanModal);
+    var qrModal = document.getElementById('qrModal');
+    if (qrModal) {
+      qrModal.addEventListener('click', function(e) {
+        if (e.target === qrModal) closeQRScanModal();
+      });
+    }
 
-    document.getElementById('calPrev').addEventListener('click', function() { changeCalendarMonth(-1); });
-    document.getElementById('calNext').addEventListener('click', function() { changeCalendarMonth(1); });
-    document.getElementById('calToday').addEventListener('click', function() { selectCalendarDate(TODAY_DATE); });
+    var calPrev = document.getElementById('calPrev');
+    var calNext = document.getElementById('calNext');
+    var calToday = document.getElementById('calToday');
+    if (calPrev) calPrev.addEventListener('click', function() { changeCalendarMonth(-1); });
+    if (calNext) calNext.addEventListener('click', function() { changeCalendarMonth(1); });
+    if (calToday) calToday.addEventListener('click', function() { selectCalendarDate(TODAY_DATE); });
 
     var apptSearchEl = document.getElementById('apptSearch');
     if (apptSearchEl) apptSearchEl.addEventListener('input', function() { renderAppointments(); });
@@ -883,33 +1003,38 @@
       renderPatients((document.getElementById('patientSearch') || {}).value.trim());
     });
 
-    document.getElementById('patientSearch').addEventListener('input', function(e) {
-      renderPatients(e.target.value.trim());
-    });
+    var patientSearch = document.getElementById('patientSearch');
+    if (patientSearch) {
+      patientSearch.addEventListener('input', function(e) {
+        renderPatients(e.target.value.trim());
+      });
+    }
 
     var uploadZone = document.getElementById('uploadZone');
     var fileInput = document.getElementById('fileInput');
 
-    uploadZone.addEventListener('click', function() { fileInput.click(); });
+    if (uploadZone && fileInput) {
+      uploadZone.addEventListener('click', function() { fileInput.click(); });
 
-    uploadZone.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      uploadZone.classList.add('dragover');
-    });
+      uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+      });
 
-    uploadZone.addEventListener('dragleave', function() {
-      uploadZone.classList.remove('dragover');
-    });
+      uploadZone.addEventListener('dragleave', function() {
+        uploadZone.classList.remove('dragover');
+      });
 
-    uploadZone.addEventListener('drop', function(e) {
-      e.preventDefault();
-      uploadZone.classList.remove('dragover');
-      if (e.dataTransfer.files.length) simulateOCR();
-    });
+      uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) simulateOCR();
+      });
 
-    fileInput.addEventListener('change', function() {
-      if (fileInput.files.length) simulateOCR();
-    });
+      fileInput.addEventListener('change', function() {
+        if (fileInput.files.length) simulateOCR();
+      });
+    }
 
     function simulateOCR() {
       document.getElementById('ocrLoading').classList.add('visible');
@@ -936,7 +1061,8 @@
       }, 2200);
     }
 
-    document.getElementById('btnBypass').addEventListener('click', function() {
+    var btnBypass = document.getElementById('btnBypass');
+    if (btnBypass) btnBypass.addEventListener('click', function() {
       var patientName = document.getElementById('confirmName').value || 'مريض';
       var amountStr = document.getElementById('confirmAmount').value || '0';
       var amount = parseInt(String(amountStr).replace(/\D/g, ''), 10) || 0;
@@ -970,9 +1096,11 @@
       }
     });
 
-    document.getElementById('btnResetOcr').addEventListener('click', resetOCR);
+    var btnResetOcr = document.getElementById('btnResetOcr');
+    if (btnResetOcr) btnResetOcr.addEventListener('click', resetOCR);
 
     function resetOCR() {
+      if (!uploadZone || !fileInput) return;
       uploadZone.style.display = 'block';
       document.getElementById('ocrResults').classList.remove('visible');
       document.getElementById('ocrForm').style.display = 'none';
@@ -980,15 +1108,26 @@
       fileInput.value = '';
     }
 
+    initAppointmentsCalendar();
+
     syncPricingQueueToQuotes();
-    renderReceptionAnalytics();
-    renderCalendar();
-    renderAppointments();
     renderPatients();
     renderQuoteTable();
     renderDeliveryTable();
 
-    document.getElementById('quoteSearch').addEventListener('input', function(e) {
-      quoteSearchTerm = e.target.value.trim();
-      renderQuoteTable();
-    });
+    var quoteSearch = document.getElementById('quoteSearch');
+    if (quoteSearch) {
+      quoteSearch.addEventListener('input', function(e) {
+        quoteSearchTerm = e.target.value.trim();
+        renderQuoteTable();
+      });
+    }
+
+    if (window.__SHOW_PATIENT_CARD_ID) {
+      fetch('/reception/patients/' + window.__SHOW_PATIENT_CARD_ID, {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) { if (data) showPatientCard(data); })
+        .catch(function() {});
+    }

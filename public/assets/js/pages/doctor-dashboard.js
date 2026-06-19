@@ -1,4 +1,9 @@
-    var recommendationsSelect = StockMultiSelect.create('medicalRecommendationsSelect');
+    var activePage = document.body.dataset.activePage || '';
+
+    var recommendationsSelect = null;
+    if (document.getElementById('medicalRecommendationsSelect')) {
+      recommendationsSelect = StockMultiSelect.create('medicalRecommendationsSelect');
+    }
 
     window.addEventListener('storage', function(e) {
       if (e.key === StockCatalog.STORAGE_KEY && recommendationsSelect) {
@@ -176,15 +181,26 @@
     }
 
     function closeRecordModal() {
-      document.getElementById('recordDetailModal').classList.remove('open');
+      var modal = document.getElementById('recordDetailModal');
+      if (modal) modal.classList.remove('open');
     }
 
-    document.getElementById('recordModalClose').addEventListener('click', closeRecordModal);
-    document.getElementById('recordModalCloseBtn').addEventListener('click', closeRecordModal);
-    document.getElementById('recordDetailModal').addEventListener('click', closeRecordModal);
+    bindIfPresent('recordModalClose', 'click', closeRecordModal);
+    bindIfPresent('recordModalCloseBtn', 'click', closeRecordModal);
+    bindIfPresent('recordDetailModal', 'click', closeRecordModal);
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') closeRecordModal();
     });
+
+    function getCsrfToken() {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.getAttribute('content') : '';
+    }
+
+    function bindIfPresent(id, event, handler) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
+    }
 
     var sectionTitles = {
       queue: 'العيادة الطبية — قائمة الانتظار',
@@ -224,12 +240,9 @@
 
     function getFilteredQueue() {
       var search = (document.getElementById('queueSearch') || {}).value || '';
-      var priority = (document.getElementById('queuePriorityFilter') || {}).value || 'all';
       search = search.trim();
       return queue.filter(function(p) {
-        var ms = !search || p.name.indexOf(search) !== -1 || p.company.indexOf(search) !== -1;
-        var mp = priority === 'all' || p.priority === priority;
-        return ms && mp;
+        return !search || p.name.indexOf(search) !== -1 || p.company.indexOf(search) !== -1;
       });
     }
 
@@ -255,9 +268,9 @@
 
     function exportQueue(type) {
       var data = getFilteredQueue();
-      var headers = ['#', 'اسم المريض', 'الجهة', 'الأولوية', 'الانتظار'];
+      var headers = ['#', 'اسم المريض', 'الجهة', 'تاريخ الإضافة'];
       var rows = data.map(function(p, i) {
-        return [i + 1, p.name, p.company, p.priority === 'urgent' ? 'عاجل' : 'عادي', p.wait];
+        return [i + 1, p.name, p.company, p.queuedAt || p.wait || '—'];
       });
       if (type === 'excel') ExportKit.toExcel('قائمة_الانتظار', headers, rows);
       else ExportKit.toPDF('قائمة الانتظار الرقمية', headers, rows);
@@ -284,8 +297,10 @@
     }
 
     function renderRecords() {
+      var table = document.getElementById('recordsTable');
+      if (!table) return;
       var filtered = getFilteredRecords();
-      document.getElementById('recordsTable').innerHTML = filtered.map(function(r) {
+      table.innerHTML = filtered.map(function(r) {
         var idx = medicalRecords.indexOf(r);
         return '<tr class="record-row-clickable" data-record-idx="' + idx + '" title="عرض التفاصيل">' +
           '<td><strong>' + r.name + '</strong></td>' +
@@ -312,11 +327,14 @@
 
       var rc = document.getElementById('recordsCount');
       if (rc) rc.textContent = filtered.length + ' تقارير';
+      if (window.TablePagination) TablePagination.refreshById('recordsTable');
     }
 
     function renderTransferred() {
+      var table = document.getElementById('transferredTable');
+      if (!table) return;
       var filtered = getFilteredTransferred();
-      document.getElementById('transferredTable').innerHTML = filtered.map(function(t) {
+      table.innerHTML = filtered.map(function(t) {
         var idx = transferred.indexOf(t);
         return '<tr class="record-row-clickable" data-transfer-idx="' + idx + '" title="عرض التفاصيل">' +
           '<td><strong>' + t.name + '</strong></td>' +
@@ -327,22 +345,59 @@
           '</tr>';
       }).join('');
 
-      document.getElementById('transferredTable').querySelectorAll('tr[data-transfer-idx]').forEach(function(row) {
+      table.querySelectorAll('tr[data-transfer-idx]').forEach(function(row) {
         row.addEventListener('click', function() {
           openTransferModal(parseInt(row.getAttribute('data-transfer-idx'), 10));
         });
       });
 
-      document.getElementById('transferredCount').textContent = filtered.length;
+      var transferredCount = document.getElementById('transferredCount');
+      if (transferredCount) transferredCount.textContent = filtered.length;
       var tc = document.getElementById('transferCount');
       if (tc) tc.textContent = filtered.length + ' حالة';
+      if (window.TablePagination) TablePagination.refreshById('transferredTable');
+    }
+
+    function initServerQueueRows() {
+      var tbody = document.getElementById('queueTable');
+      if (!tbody || tbody.dataset.serverRendered !== '1') return;
+
+      tbody.querySelectorAll('tr.queue-row-clickable[data-href]').forEach(function(row) {
+        row.addEventListener('click', function() {
+          window.location.href = row.getAttribute('data-href');
+        });
+      });
+
+      var searchInput = document.getElementById('queueSearch');
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          var q = searchInput.value.trim().toLowerCase();
+          var visible = 0;
+          tbody.querySelectorAll('tr.queue-row-clickable').forEach(function(row) {
+            var hay = (row.dataset.search || row.textContent || '').toLowerCase();
+            var show = !q || hay.indexOf(q) !== -1;
+            if (show) {
+              delete row.dataset.paginationSkip;
+              visible++;
+            } else {
+              row.dataset.paginationSkip = '1';
+            }
+          });
+          var badge = document.getElementById('queueBadge');
+          var count = document.getElementById('queueCount');
+          if (badge) badge.textContent = visible;
+          if (count) count.textContent = visible + ' مريض';
+          if (window.TablePagination) TablePagination.refreshById('queueTable');
+        });
+      }
     }
 
     var selectedPatient = null;
 
     function renderQueue() {
-      var filtered = getFilteredQueue();
       var tbody = document.getElementById('queueTable');
+      if (!tbody || tbody.dataset.serverRendered === '1') return;
+      var filtered = getFilteredQueue();
       tbody.innerHTML = filtered.map(function(p, i) {
         var selected = selectedPatient && selectedPatient.id === p.id ? 'selected' : '';
         var tm = ptMeta(p.patientType);
@@ -350,7 +405,6 @@
           '<td><span class="queue-num">' + (i + 1) + '</span></td>' +
           '<td><strong>' + p.name + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
           '<td>' + p.company + '</td>' +
-          '<td><span class="priority-badge ' + p.priority + '">' + (p.priority === 'urgent' ? 'عاجل' : 'عادي') + '</span></td>' +
           '<td><span class="wait-time">' + p.wait + '</span></td>' +
           '</tr>';
       }).join('');
@@ -360,13 +414,16 @@
           selectPatient(parseInt(row.getAttribute('data-id')));
         });
       });
-      document.getElementById('queueBadge').textContent = filtered.length;
-      document.getElementById('waitingCount').textContent = queue.length;
+      var queueBadge = document.getElementById('queueBadge');
+      if (queueBadge) queueBadge.textContent = filtered.length;
+      var waitingCount = document.getElementById('waitingCount');
+      if (waitingCount) waitingCount.textContent = queue.length;
       var qc = document.getElementById('queueCount');
       if (qc) qc.textContent = filtered.length + ' مريض';
+      if (window.TablePagination) TablePagination.refreshById('queueTable');
     }
 
-    ['queueSearch','queuePriorityFilter'].forEach(function(id) {
+    ['queueSearch'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) { el.addEventListener('input', renderQueue); el.addEventListener('change', renderQueue); }
     });
@@ -381,70 +438,150 @@
 
     function selectPatient(id) {
       selectedPatient = queue.find(function(p) { return p.id === id; });
+      if (!selectedPatient) return;
       var tm = ptMeta(selectedPatient.patientType);
       var typeTxt = ' | التصنيف: ' + tm.icon + ' ' + tm.label + (selectedPatient.rank ? ' (' + selectedPatient.rank + ')' : '');
-      document.getElementById('patientBar').classList.add('visible');
-      document.getElementById('patientBarQueue').classList.add('visible');
-      document.getElementById('selectedPatientName').textContent = selectedPatient.name;
-      document.getElementById('selectedPatientInfo').textContent = 'الرقم القومي: ' + selectedPatient.nationalId + ' | جهة التعاقد: ' + selectedPatient.company + typeTxt;
-      document.getElementById('selectedPatientNameQueue').textContent = selectedPatient.name;
-      document.getElementById('selectedPatientInfoQueue').textContent = 'الرقم القومي: ' + selectedPatient.nationalId + ' | جهة التعاقد: ' + selectedPatient.company + typeTxt;
+      var patientBar = document.getElementById('patientBar');
+      if (patientBar) patientBar.classList.add('visible');
+      var selectedPatientName = document.getElementById('selectedPatientName');
+      var selectedPatientInfo = document.getElementById('selectedPatientInfo');
+      if (selectedPatientName) selectedPatientName.textContent = selectedPatient.name;
+      if (selectedPatientInfo) selectedPatientInfo.textContent = 'الرقم القومي: ' + selectedPatient.nationalId + ' | جهة التعاقد: ' + selectedPatient.company + typeTxt;
       var silentNote = document.getElementById('silentClinicNote');
       if (silentNote) silentNote.style.display = selectedPatient.patientType === 'military' ? 'flex' : 'none';
-      document.getElementById('saveBtn').disabled = false;
-      document.getElementById('transferBtn').disabled = false;
-      document.getElementById('goToDiagnosis').disabled = false;
-      document.getElementById('diagnosisForm').reset();
+      var saveBtn = document.getElementById('saveBtn');
+      var transferBtn = document.getElementById('transferBtn');
+      if (saveBtn) saveBtn.disabled = false;
+      if (transferBtn) transferBtn.disabled = false;
+      var diagnosisForm = document.getElementById('diagnosisForm');
+      if (diagnosisForm) diagnosisForm.reset();
       if (recommendationsSelect) recommendationsSelect.reset();
       renderQueue();
     }
 
     function showToast(msg) {
+      if (window.DashboardToast) {
+        window.DashboardToast.show(msg);
+        return;
+      }
       var toast = document.getElementById('toast');
+      if (!toast) return;
       toast.innerHTML = '✅ ' + msg;
       toast.classList.add('show');
-      setTimeout(function() { toast.classList.remove('show'); }, 3500);
+      setTimeout(function() { toast.classList.remove('show'); }, 5000);
     }
 
-    document.getElementById('diagnosisForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      if (!selectedPatient) return;
-
-      var selectedRecs = recommendationsSelect.getSelected();
-      var diagnosis = document.getElementById('diagnosis').value;
-
-      if (!selectedRecs.length || !diagnosis.trim()) {
-        alert('يرجى اختيار توصية طبية واحدة على الأقل وتعبئة التشخيص');
+    function submitDiagnosisToServer(form) {
+      var diagnosisEl = document.getElementById('diagnosis');
+      if (!diagnosisEl || !diagnosisEl.value.trim()) {
+        alert('يرجى تعبئة التشخيص الدقيق');
         return;
       }
 
-      var prescriptionEl = document.getElementById('prescription');
-      medicalRecords.unshift({
-        name: selectedPatient.name,
-        nationalId: selectedPatient.nationalId,
-        company: selectedPatient.company,
-        patientType: selectedPatient.patientType,
-        diagnosis: diagnosis.trim(),
-        prescription: prescriptionEl ? prescriptionEl.value.trim() : '',
-        recommendations: selectedRecs.map(function(item) {
-          return { name: item.name, code: item.code, qty: item.selectedQty || 1 };
-        }),
-        doctor: 'د. سارة عبدالله',
-        date: '08/06/2026',
-        status: 'تحويل للمخزون',
-        locked: true
-      });
-      renderRecords();
-      showToast('تم حفظ التقرير — الحالة: تحويل للمخزون');
-    });
+      var saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) saveBtn.disabled = true;
 
-    document.getElementById('transferBtn').addEventListener('click', function() {
+      var formData = new FormData(form);
+      formData.set('lock', '1');
+
+      if (recommendationsSelect) {
+        var selectedRecs = recommendationsSelect.getSelected();
+        selectedRecs.forEach(function(item, index) {
+          formData.append('items[' + index + '][stock_item_code]', item.code || '');
+          formData.append('items[' + index + '][name]', item.name || '');
+          formData.append('items[' + index + '][qty]', String(item.selectedQty || 1));
+        });
+      }
+
+      fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: formData,
+        credentials: 'same-origin'
+      })
+        .then(function(res) {
+          if (!res.ok) {
+            return res.json().then(function(body) { throw body; });
+          }
+          return res.json();
+        })
+        .then(function() {
+          showToast('تم حفظ واعتماد التقرير — تحويل للتوصيف الفني');
+          setTimeout(function() {
+            window.location.href = dashboardPageUrl('queue');
+          }, 700);
+        })
+        .catch(function(err) {
+          if (saveBtn) saveBtn.disabled = false;
+          var msg = 'تعذّر حفظ التقرير';
+          if (err && err.message) msg = err.message;
+          if (err && err.errors) {
+            msg = Object.keys(err.errors).map(function(k) {
+              return err.errors[k].join(' ');
+            }).join('\n');
+          }
+          alert(msg);
+        });
+    }
+
+    function initDiagnosisForm() {
+      var form = document.getElementById('diagnosisForm');
+      if (!form) return;
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (window.DashboardValidation && !DashboardValidation.validateForm(form)) return;
+
+        if (activePage === 'diagnosis' || form.querySelector('input[name="patient_id"]')) {
+          submitDiagnosisToServer(form);
+          return;
+        }
+
+        if (!selectedPatient) return;
+
+        var selectedRecs = recommendationsSelect ? recommendationsSelect.getSelected() : [];
+        var diagnosis = document.getElementById('diagnosis').value;
+
+        if (!selectedRecs.length || !diagnosis.trim()) {
+          alert('يرجى اختيار توصية طبية واحدة على الأقل وتعبئة التشخيص');
+          return;
+        }
+
+        var prescriptionEl = document.getElementById('prescription');
+        medicalRecords.unshift({
+          name: selectedPatient.name,
+          nationalId: selectedPatient.nationalId,
+          company: selectedPatient.company,
+          patientType: selectedPatient.patientType,
+          diagnosis: diagnosis.trim(),
+          prescription: prescriptionEl ? prescriptionEl.value.trim() : '',
+          recommendations: selectedRecs.map(function(item) {
+            return { name: item.name, code: item.code, qty: item.selectedQty || 1 };
+          }),
+          doctor: 'د. سارة عبدالله',
+          date: '08/06/2026',
+          status: 'تحويل للمخزون',
+          locked: true
+        });
+        renderRecords();
+        showToast('تم حفظ التقرير — الحالة: تحويل للمخزون');
+      });
+    }
+
+    initDiagnosisForm();
+
+    bindIfPresent('transferBtn', 'click', function() {
       if (!selectedPatient) {
         alert('يرجى اختيار مريض من قائمة الانتظار أولاً');
         return;
       }
 
-      var selectedRecs = recommendationsSelect.getSelected();
+      var selectedRecs = recommendationsSelect ? recommendationsSelect.getSelected() : [];
       if (!selectedRecs.length) {
         alert('يرجى اختيار صنف واحد على الأقل من التوصيات الطبية قبل التحويل');
         return;
@@ -464,18 +601,21 @@
       renderTransferred();
       queue = queue.filter(function(p) { return p.id !== selectedPatient.id; });
       selectedPatient = null;
-      document.getElementById('patientBar').classList.remove('visible');
-      document.getElementById('patientBarQueue').classList.remove('visible');
-      document.getElementById('saveBtn').disabled = true;
-      document.getElementById('transferBtn').disabled = true;
-      document.getElementById('goToDiagnosis').disabled = true;
-      document.getElementById('diagnosisForm').reset();
+      var patientBar = document.getElementById('patientBar');
+      if (patientBar) patientBar.classList.remove('visible');
+      var saveBtn = document.getElementById('saveBtn');
+      var transferBtn = document.getElementById('transferBtn');
+      if (saveBtn) saveBtn.disabled = true;
+      if (transferBtn) transferBtn.disabled = true;
+      var diagnosisForm = document.getElementById('diagnosisForm');
+      if (diagnosisForm) diagnosisForm.reset();
       if (recommendationsSelect) recommendationsSelect.reset();
       document.getElementById('waitingCount').textContent = queue.length;
       document.getElementById('queueBadge').textContent = queue.length;
       renderQueue();
       switchSection('transfer');
     });
+
     function countRecommendedItems(source) {
       var counts = {};
       source.forEach(function(row) {
@@ -493,6 +633,7 @@
       return;
     }
     renderDoctorAnalytics();
-    renderQueue();
-    renderRecords();
-    renderTransferred();
+    initServerQueueRows();
+    if (document.getElementById('queueTable')) renderQueue();
+    if (document.getElementById('recordsTable')) renderRecords();
+    if (document.getElementById('transferredTable')) renderTransferred();

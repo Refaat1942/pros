@@ -26,20 +26,21 @@ class CreditNoteController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $notes = CreditNote::query()
-            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('credit_note_no', 'like', "%{$s}%")
-                  ->orWhere('patient_name', 'like', "%{$s}%")
-                  ->orWhere('company_name', 'like', "%{$s}%")
-                  ->orWhere('order_ref', 'like', "%{$s}%");
-            }))
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        $notes = $this->fetchForDashboard(
+            CreditNote::query()
+                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('credit_note_no', 'like', "%{$s}%")
+                      ->orWhere('patient_name', 'like', "%{$s}%")
+                      ->orWhere('company_name', 'like', "%{$s}%")
+                      ->orWhere('order_ref', 'like', "%{$s}%");
+                }))
+                ->orderByDesc('created_at')
+        );
 
         return response()->json([
-            'data'       => collect($notes->items())->map(fn ($n) => $this->formatNote($n)),
-            'pagination' => $this->paginationModel($notes),
+            'data'  => collect($notes)->map(fn ($n) => $this->formatNote($n))->values(),
+            'total' => $notes->count(),
         ]);
     }
 

@@ -5,6 +5,7 @@ namespace Tests\Feature\Pipeline;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
+use App\Models\Patient;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
 use App\Models\Quote;
@@ -260,7 +261,7 @@ class CivilianPipelineTest extends TestCase
         $patient = $this->civilianPatient($company);
         $user    = $this->userWithRole('technical');
         $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
-        $case->update(['work_order_no' => 'WO-2026-0001']);
+        $case->update(['work_order_no' => 'WO-2026-0001', 'quote_total' => 400.00]);
 
         $this->actingAs($user);
 
@@ -277,6 +278,38 @@ class CivilianPipelineTest extends TestCase
         $stock = \App\Models\StockItem::where('code', 'RM-001')->first();
         $this->assertEquals(18, $stock->qty, 'Stock must be reduced by dispensed qty=2');
         $this->assertEquals(0, $stock->reserved, 'Reserved must be cleared after dispense');
+
+        $debt = $company->debt()->first()->fresh();
+        $this->assertEquals(400.00, (float) $debt->due,
+            'Civilian dispense must post quote_total to company ledger');
+
+        $case->refresh();
+        $this->assertNotNull($case->ledger_posted_at);
+    }
+
+    public function test_civilian_dispense_posts_debt_to_contract_company(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('technical');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0001', 'quote_total' => 400.00]);
+
+        $this->actingAs($user);
+
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+
+        $debt = $company->debt()->first()->fresh();
+        $this->assertEquals(400.00, (float) $debt->due,
+            'Civilian dispense must post quote_total to company ledger');
+
+        $case->refresh();
+        $this->assertNotNull($case->ledger_posted_at);
     }
 
     // ── Stage 6: BOM close → ready_delivery → QR scan → delivered ───────────
@@ -293,7 +326,8 @@ class CivilianPipelineTest extends TestCase
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
-        app(BomService::class)->closeFinished($bom);
+        $this->advanceCaseToFinishing($case);
+        $this->finishBomAfterQuality($case->fresh());
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_READY_DELIVERY, $case->stage_key);
@@ -313,21 +347,30 @@ class CivilianPipelineTest extends TestCase
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
-        app(BomService::class)->closeFinished($bom);
+        $this->advanceCaseToFinishing($case);
+        $this->finishBomAfterQuality($case->fresh());
 
         $recepUser = $this->userWithRole('reception');
         $this->actingAs($recepUser);
 
-        app(DeliveryService::class)->close($case->fresh(), 'QR-PT-CIV-0001');
+        $debtBeforeDelivery = (float) $company->debt()->first()->fresh()->due;
+
+        app(DeliveryService::class)->close($case->fresh(), $patient->patient_qr);
 
         $case->refresh();
+        $patient->refresh();
         $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);
         $this->assertNotNull($case->delivered_at);
+        $this->assertNotNull($case->invoice_no);
+        $this->assertEquals(400.00, (float) $case->invoice_total);
+        $this->assertEquals(Patient::STATUS_DONE, $patient->status);
+        $this->assertNotNull($patient->archived_at);
 
-        // Financial posting: civilian debt must increase
+        // Debt posted on dispense — delivery must not double-post
         $debt = $company->debt()->first()->fresh();
         $this->assertEquals(400.00, (float) $debt->due,
-            'Civilian delivery must post quote_total to company debt');
+            'Civilian debt must remain quote_total (posted at dispense, not duplicated at delivery)');
+        $this->assertEquals($debtBeforeDelivery, (float) $debt->due);
     }
 
     // ── Guard: cannot deliver if BOM is not finished ──────────────────────────
@@ -351,6 +394,6 @@ class CivilianPipelineTest extends TestCase
 
         $this->expectException(\App\Exceptions\DeliveryNotReadyException::class);
 
-        app(DeliveryService::class)->close($case, 'QR-PT-CIV-0001');
+        app(DeliveryService::class)->close($case, $patient->patient_qr);
     }
 }

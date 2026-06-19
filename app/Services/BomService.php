@@ -33,6 +33,7 @@ class BomService
         private readonly BarcodeValidationService $barcodeValidation,
         private readonly StockPriceService $stockPriceService,
         private readonly WorkflowService $workflowService,
+        private readonly FinancialPostingService $financialPostingService,
     ) {
     }
 
@@ -68,6 +69,65 @@ class BomService
         }
     }
 
+    /**
+     * BOM خام من التوصيف الفني — بدون حجز مخزني وبدون تكلفة (عمى مالي للفني).
+     *
+     * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
+     */
+    public function createSpecRaw(CaseRecord $case, array $items): Bom
+    {
+        if ($items === []) {
+            abort(422, 'يجب إضافة بند واحد على الأقل.');
+        }
+
+        return DB::transaction(function () use ($case, $items) {
+            $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
+
+            if ($existing = Bom::where('case_id', $case->id)->first()) {
+                return $existing->load('items');
+            }
+
+            $case->load('patient:id,name');
+
+            $bom = Bom::create([
+                'bom_no'       => $this->nextBomNo(),
+                'case_id'      => $case->id,
+                'order_ref'    => $case->order_ref,
+                'quote_no'     => $case->quote_no,
+                'patient_name' => $case->patient?->name ?? '—',
+                'stage'        => Bom::STAGE_RAW,
+            ]);
+
+            foreach ($items as $row) {
+                $code = $row['stock_item_code'];
+                $qty  = (int) $row['qty'];
+
+                if (! StockItem::where('code', $code)->exists()) {
+                    abort(422, "الصنف غير موجود: {$code}");
+                }
+
+                BomItem::create([
+                    'bom_id'          => $bom->id,
+                    'stock_item_code' => $code,
+                    'name'            => $row['name'] ?? $code,
+                    'qty'             => $qty,
+                    'unit_cost'       => 0,
+                    'issued_qty'      => 0,
+                    'returned_qty'    => 0,
+                ]);
+            }
+
+            AuditService::log(
+                action:      'create',
+                description: "BOM خام من التوصيف — {$bom->bom_no}",
+                tag:         'spec',
+                after:       $bom->load('items')->only(['id', 'bom_no', 'case_id', 'stage']),
+            );
+
+            return $bom;
+        });
+    }
+
     private function doCreate(CaseRecord $case, array $items): Bom
     {
         return DB::transaction(function () use ($case, $items) {
@@ -81,8 +141,12 @@ class BomService
                 abort(422, 'لا يمكن إنشاء BOM — أمر الشغل غير موجود (مسار مدني).');
             }
 
-            if (Bom::where('case_id', $case->id)->exists()) {
-                abort(422, 'توجد قائمة مواد تشغيل لهذه الحالة بالفعل.');
+            if ($existing = Bom::where('case_id', $case->id)->first()) {
+                if ($existing->stage !== Bom::STAGE_RAW) {
+                    abort(422, 'توجد قائمة مواد تشغيل لهذه الحالة بالفعل.');
+                }
+
+                return $this->activateSpecRawBom($existing, $case);
             }
 
             if ($items === []) {
@@ -101,38 +165,7 @@ class BomService
             ]);
 
             foreach ($items as $row) {
-                $code = $row['stock_item_code'];
-                $qty  = (int) $row['qty'];
-
-                $stockItem = StockItem::where('code', $code)->lockForUpdate()->first();
-
-                if (! $stockItem) {
-                    abort(422, "الصنف غير موجود: {$code}");
-                }
-
-                if ($stockItem->availableQty() < $qty) {
-                    // Throw outside-transaction-safe exception; BomService::create() catches it
-                    throw new InsufficientStockException(
-                        stockItemCode:    $code,
-                        required:         $qty,
-                        available:        $stockItem->availableQty(),
-                        pricingRequestId: $case->pricing_request_id,
-                    );
-                }
-
-                $unitCost = $this->stockPriceService->highestUnitPrice($code);
-
-                BomItem::create([
-                    'bom_id'           => $bom->id,
-                    'stock_item_code'  => $code,
-                    'name'             => $row['name'] ?? $stockItem->name,
-                    'qty'              => $qty,
-                    'unit_cost'        => $unitCost,
-                    'issued_qty'       => 0,
-                    'returned_qty'     => 0,
-                ]);
-
-                $stockItem->increment('reserved', $qty);
+                $this->appendBomItemWithReservation($bom, $row, $case);
             }
 
             AuditService::log(
@@ -144,6 +177,81 @@ class BomService
 
             return $bom;
         });
+    }
+
+    private function activateSpecRawBom(Bom $bom, CaseRecord $case): Bom
+    {
+        $bom->load('items');
+
+        foreach ($bom->items as $bomItem) {
+            $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+
+            if (! $stockItem) {
+                abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
+            }
+
+            if ($stockItem->availableQty() < $bomItem->qty) {
+                throw new InsufficientStockException(
+                    stockItemCode:    $bomItem->stock_item_code,
+                    required:         $bomItem->qty,
+                    available:        $stockItem->availableQty(),
+                    pricingRequestId: $case->pricing_request_id,
+                );
+            }
+
+            $bomItem->update([
+                'unit_cost' => $this->stockPriceService->highestUnitPrice($bomItem->stock_item_code),
+            ]);
+
+            $stockItem->increment('reserved', $bomItem->qty);
+        }
+
+        AuditService::log(
+            action:      'update',
+            description: "تفعيل BOM خام للصرف — {$bom->bom_no}",
+            tag:         'warehouse',
+            after:       ['bom_id' => $bom->id, 'stage' => $bom->stage],
+        );
+
+        return $bom->fresh()->load('items');
+    }
+
+    /**
+     * @param  array{stock_item_code: string, name?: string, qty: int}  $row
+     */
+    private function appendBomItemWithReservation(Bom $bom, array $row, CaseRecord $case): void
+    {
+        $code = $row['stock_item_code'];
+        $qty  = (int) $row['qty'];
+
+        $stockItem = StockItem::where('code', $code)->lockForUpdate()->first();
+
+        if (! $stockItem) {
+            abort(422, "الصنف غير موجود: {$code}");
+        }
+
+        if ($stockItem->availableQty() < $qty) {
+            throw new InsufficientStockException(
+                stockItemCode:    $code,
+                required:         $qty,
+                available:        $stockItem->availableQty(),
+                pricingRequestId: $case->pricing_request_id,
+            );
+        }
+
+        $unitCost = $this->stockPriceService->highestUnitPrice($code);
+
+        BomItem::create([
+            'bom_id'          => $bom->id,
+            'stock_item_code' => $code,
+            'name'            => $row['name'] ?? $stockItem->name,
+            'qty'             => $qty,
+            'unit_cost'       => $unitCost,
+            'issued_qty'      => 0,
+            'returned_qty'    => 0,
+        ]);
+
+        $stockItem->increment('reserved', $qty);
     }
 
     /**
@@ -158,6 +266,13 @@ class BomService
 
             if ($bom->stage !== Bom::STAGE_RAW) {
                 abort(422, 'BOM ليست في مرحلة raw — لا يمكن الصرف.');
+            }
+
+            $case = $bom->caseRecord;
+
+            if ($case && $bom->items->contains(fn ($i) => (float) $i->unit_cost <= 0)) {
+                $this->activateSpecRawBom($bom, $case);
+                $bom->refresh()->load('items');
             }
 
             $items = $bom->items;
@@ -267,6 +382,10 @@ class BomService
                 after:       $stockAfter,
             );
 
+            if ($case) {
+                $this->financialPostingService->postOnDispense($case->fresh(), $bom->fresh(['items']));
+            }
+
             return $bom->fresh()->load('items');
         });
     }
@@ -304,6 +423,21 @@ class BomService
 
             return $case->fresh();
         });
+    }
+
+    /**
+     * فحص جودة نهائي — يُغلق BOM بعد مرحلة التشطيب (finishing).
+     */
+    public function finish(Bom $bom): Bom
+    {
+        $bom->loadMissing('caseRecord');
+        $case = $bom->caseRecord;
+
+        if (! $case || $case->manufacturing_stage !== CaseRecord::MFG_FINISHING) {
+            abort(422, 'يجب الوصول لمرحلة التشطيب قبل فحص الجودة وإغلاق BOM.');
+        }
+
+        return $this->closeFinished($bom);
     }
 
     /**

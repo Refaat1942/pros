@@ -22,7 +22,9 @@
             @endforeach
         </ul>
     </div>
+    @if ($sidebar['show_home_link'] ?? true)
     <div class="sidebar-footer">
         <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
     </div>
+    @endif
 </aside>

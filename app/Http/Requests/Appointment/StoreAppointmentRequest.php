@@ -15,6 +15,7 @@ class StoreAppointmentRequest extends BaseRequest
             'patient_id'       => ['nullable', 'integer', 'exists:patients,id'],
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['nullable', 'string', 'max:10'],
+            'visit_type_id'    => ['required', 'integer', Rule::exists('visit_types', 'id')->where('is_active', true)],
             'visit_type'       => ['nullable', 'string', Rule::in([
                 Appointment::VISIT_EXAM,
                 Appointment::VISIT_FOLLOWUP,
@@ -22,8 +23,8 @@ class StoreAppointmentRequest extends BaseRequest
                 Appointment::VISIT_DELIVERY,
                 Appointment::VISIT_REVIEW,
             ])],
-            'patient_name'     => ['required_without:patient_id', 'nullable', 'string', 'max:255'],
-            'phone'            => ['nullable', 'string', 'max:20'],
+            'patient_name'     => ['required_without:patient_id', 'nullable', ...$this->personNameRules(false)],
+            'phone'            => $this->egyptianMobileRules(),
             'company_name'     => ['nullable', 'string', 'max:255'],
             'patient_type'     => ['nullable', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
         ];

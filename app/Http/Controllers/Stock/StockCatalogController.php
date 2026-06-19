@@ -28,21 +28,22 @@ class StockCatalogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $items = StockItem::query()
-            ->when($request->category, fn ($q, $c) => $q->where('category', $c))
-            ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
-            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
-            }))
-            ->orderBy('code')
-            ->paginate(20);
+        $items = $this->fetchForDashboard(
+            StockItem::query()
+                ->when($request->category, fn ($q, $c) => $q->where('category', $c))
+                ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
+                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+                ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('code', 'like', "%{$search}%")
+                      ->orWhere('barcode', 'like', "%{$search}%");
+                }))
+                ->orderBy('code')
+        );
 
         return response()->json([
-            'data'       => $items->items(),
-            'pagination' => $this->paginationModel($items),
+            'data'  => $items,
+            'total' => $items->count(),
         ]);
     }
 

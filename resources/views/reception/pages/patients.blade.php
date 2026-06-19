@@ -26,7 +26,7 @@
           <button class="btn btn-primary" style="padding:10px 20px;" onclick="openAddPatientForm()">➕ مريض جديد</button>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>اسم المريض</th>

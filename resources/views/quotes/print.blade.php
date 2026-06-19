@@ -68,7 +68,7 @@
     </div>
 </div>
 
-<table>
+<table data-paginate="10">
     <thead>
         <tr>
             <th>#</th>

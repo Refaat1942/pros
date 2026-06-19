@@ -16,7 +16,7 @@ class UpdateSupplierRequest extends BaseRequest
                 'sometimes', 'required', 'string', 'max:255',
                 Rule::unique('suppliers', 'name')->ignore($supplierId),
             ],
-            'phone'   => ['nullable', 'string', 'max:20'],
+            'phone'   => $this->egyptianMobileRules(),
             'email'   => ['nullable', 'email', 'max:191'],
             'address' => ['nullable', 'string', 'max:500'],
             'notes'   => ['nullable', 'string', 'max:1000'],

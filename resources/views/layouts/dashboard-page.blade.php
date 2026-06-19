@@ -36,6 +36,8 @@
             </div>
         </div>
 
+        @include('partials.flash-messages')
+
         @yield('page-content')
     </main>
 
@@ -43,6 +45,9 @@
 @endsection
 
 @push('scripts')
+    <script src="{{ asset('assets/js/shared/toast.js') }}"></script>
+    <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
+    <script src="{{ asset('assets/js/shared/table-pagination.js') }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)
         <script src="{{ asset($script) }}"></script>
     @endforeach

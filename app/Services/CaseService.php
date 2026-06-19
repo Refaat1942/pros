@@ -32,6 +32,7 @@ class CaseService
             $case = CaseRecord::create([
                 'case_no'              => $caseNo,
                 'order_ref'            => $orderRef,
+                'tracking_uid'         => $patient->tracking_uid,
                 'patient_id'           => $patient->id,
                 'contract_company_id'  => $patient->contract_company_id,
                 'company_name'         => $patient->company_name,
@@ -71,15 +72,13 @@ class CaseService
         $year   = now()->year;
         $prefix = "CASE-{$year}-";
 
-        $lastCode = CaseRecord::where('case_no', 'like', $prefix . '%')
+        $lastNum = CaseRecord::where('case_no', 'like', $prefix . '%')
             ->lockForUpdate()
-            ->orderByDesc('case_no')
-            ->value('case_no');
+            ->pluck('case_no')
+            ->map(fn (string $code) => (int) substr($code, strlen($prefix)))
+            ->max();
 
-        $num = $lastCode
-            ? ((int) substr($lastCode, strlen($prefix)) + 1)
-            : 1;
-
+        $num = ($lastNum ?? 0) + 1;
         $seq = sprintf('%04d', $num);
 
         return ["CASE-{$year}-{$seq}", "ORD-{$year}-{$seq}"];

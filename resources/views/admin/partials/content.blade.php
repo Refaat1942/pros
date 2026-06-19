@@ -66,7 +66,7 @@
           <span class="badge" id="employeesOverviewBadge">0 موظف</span>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>الاسم</th>
@@ -88,7 +88,7 @@
           <span class="badge" id="debtsOverviewBadge">0 جهة</span>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>جهة التعاقد</th>
@@ -194,7 +194,7 @@
         </div>
 
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>الكود</th>
@@ -240,7 +240,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>#</th>
@@ -302,7 +302,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead id="casesTableHead"></thead>
             <tbody id="casesTableBody"></tbody>
           </table>
@@ -345,7 +345,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>الاسم</th>
@@ -388,7 +388,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th style="width:48px">#</th>
@@ -427,7 +427,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>جهة التعاقد</th>
@@ -451,7 +451,7 @@
           <button type="button" class="btn-action" id="btnNewCreditNote">➕ إنشاء إشعار دائن</button>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>رقم CN</th>
@@ -544,7 +544,7 @@
             </div>
           </div>
           <div class="bom-admin-table-wrap">
-            <table class="data-table bom-admin-table">
+            <table data-paginate="10" class="data-table bom-admin-table">
               <thead>
                 <tr>
                   <th>المريض</th>
@@ -593,7 +593,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>المورد</th>
@@ -623,7 +623,7 @@
       <div class="catalog-modal-body">
         <div class="catalog-detail-grid" id="pricingApprovalModalMeta"></div>
         <h4 style="font-size:14px;font-weight:800;margin:16px 0 10px;color:var(--secondary);">📦 البنود والأسعار</h4>
-        <table>
+        <table data-paginate="10">
           <thead>
             <tr>
               <th>الصنف</th>

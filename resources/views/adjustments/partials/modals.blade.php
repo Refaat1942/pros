@@ -7,15 +7,18 @@
       <div class="modal-body">
         <div class="form-group">
           <label>تاريخ التجربة الأولى</label>
-          <input type="text" class="form-control" id="fittingTrial1" placeholder="مثال: 08/06/2026">
+          <input type="date" class="form-control" id="fittingTrial1"
+                 data-v-rules="date,dateFuture" max="{{ now()->toDateString() }}">
         </div>
         <div class="form-group">
           <label>تاريخ التجربة الثانية</label>
-          <input type="text" class="form-control" id="fittingTrial2" placeholder="مثال: 12/06/2026">
+          <input type="date" class="form-control" id="fittingTrial2"
+                 data-v-rules="date,dateFuture" max="{{ now()->toDateString() }}">
         </div>
         <div class="form-group">
           <label>ملاحظات المقاسات والتعديلات</label>
-          <textarea class="form-control" id="fittingNotes" rows="4" placeholder="مثال: تعديل بطانة الساق — ضغط خفيف عند الركبة"></textarea>
+          <textarea class="form-control" id="fittingNotes" rows="4"
+                    data-v-rules="max:2000" maxlength="2000"></textarea>
         </div>
         <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
           <button type="button" class="btn-view" id="btnCancelFitting">إلغاء</button>

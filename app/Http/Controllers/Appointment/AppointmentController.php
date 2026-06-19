@@ -27,18 +27,22 @@ class AppointmentController extends Controller
     {
         $date = $request->date ?? now()->toDateString();
 
-        $appointments = Appointment::with('patient:id,patient_code,name,patient_type')
+        $query = Appointment::with([
+            'patient:id,patient_code,name,patient_type',
+            'visitTypeRecord:id,name',
+        ])
             ->whereDate('appointment_date', $date)
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->visit_type, fn ($q, $t) => $q->where('visit_type', $t))
-            ->orderBy('appointment_time')
-            ->orderBy('id')
-            ->paginate(50);
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+
+        $appointments = $this->fetchForDashboard($query);
 
         return response()->json([
-            'date'       => $date,
-            'data'       => $appointments->items(),
-            'pagination' => $this->paginationModel($appointments),
+            'date'  => $date,
+            'data'  => $appointments,
+            'total' => $appointments->count(),
         ]);
     }
 

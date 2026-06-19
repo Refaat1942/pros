@@ -1,0 +1,297 @@
+/**
+ * Warehouse BOM page — barcode dispense to workshop (Axios + Tailwind alarm).
+ */
+(function () {
+  if (document.body.dataset.activePage !== 'bom') return;
+
+  var csrf = document.querySelector('meta[name="csrf-token"]');
+  if (csrf && window.axios) {
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrf.getAttribute('content');
+    axios.defaults.headers.common['Accept'] = 'application/json';
+    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+  }
+
+  var state = { bomId: null, items: [], scanned: [], blocked: false };
+
+  var STAGE_META = {
+    raw: { label: '📦 خام', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+    wip: { label: '🏭 WIP', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+    finished: { label: '✅ تام', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  function toast(msg, isError) {
+    if (window.DashboardToast) {
+      window.DashboardToast.show(msg, {
+        id: 'bomToast',
+        prefix: '',
+        isError: isError,
+        render: function (el, text, opts) {
+          el.textContent = text;
+          el.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] rounded-xl px-6 py-3 text-sm font-bold shadow-lg ' +
+            (opts.isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
+        },
+      });
+      return;
+    }
+    var el = $('bomToast');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] rounded-xl px-6 py-3 text-sm font-bold shadow-lg ' +
+      (isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
+    el.classList.remove('hidden');
+    setTimeout(function () { el.classList.add('hidden'); }, 5000);
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
+
+  function playAlarm() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [880, 660, 880].forEach(function (freq, i) {
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.type = 'square';
+        o.frequency.value = freq;
+        o.connect(g);
+        g.connect(ctx.destination);
+        g.gain.value = 0.1;
+        o.start(ctx.currentTime + i * 0.15);
+        o.stop(ctx.currentTime + i * 0.15 + 0.12);
+      });
+      setTimeout(function () { ctx.close(); }, 600);
+    } catch (e) { /* ignore */ }
+  }
+
+  function showAlarm(text) {
+    state.blocked = true;
+    var alarm = $('dispenseAlarm');
+    var alarmText = $('dispenseAlarmText');
+    if (alarmText) alarmText.textContent = text;
+    if (alarm) {
+      alarm.classList.remove('hidden');
+      alarm.classList.add('animate-pulse');
+    }
+    var confirm = $('confirmDispense');
+    if (confirm) confirm.disabled = true;
+    playAlarm();
+  }
+
+  function hideAlarm() {
+    state.blocked = false;
+    var alarm = $('dispenseAlarm');
+    if (alarm) alarm.classList.add('hidden');
+    var confirm = $('confirmDispense');
+    if (confirm) confirm.disabled = false;
+  }
+
+  function expectedBarcodes() {
+    return state.items.map(function (it) {
+      return (it.expected_barcode || ('BC-' + String(it.stock_item_code).replace(/\D/g, ''))).toUpperCase();
+    });
+  }
+
+  function renderRequired() {
+    var el = $('dispenseRequired');
+    if (!el) return;
+    el.innerHTML = '<p class="font-bold text-slate-700 mb-2">أكواد مطلوبة (' + state.items.length + '):</p>' +
+      state.items.map(function (it) {
+        var bc = it.expected_barcode || ('BC-' + String(it.stock_item_code).replace(/\D/g, ''));
+        return '<div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0">' +
+          '<span>' + esc(it.name || it.stock_item_code) + ' ×' + it.qty + '</span>' +
+          '<code class="font-mono text-xs bg-white px-2 py-0.5 rounded border">' + esc(bc) + '</code></div>';
+      }).join('');
+  }
+
+  function renderScanned() {
+    var el = $('scannedList');
+    if (!el) return;
+    if (!state.scanned.length) {
+      el.innerHTML = '<span class="text-slate-400 text-xs">لم يُمسح أي باركود بعد.</span>';
+      return;
+    }
+    var expected = expectedBarcodes();
+    el.innerHTML = state.scanned.map(function (code) {
+      var ok = expected.indexOf(code) !== -1;
+      return '<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ' +
+        (ok ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') + '">' +
+        (ok ? '✓' : '✗') + ' ' + esc(code) + '</span>';
+    }).join('');
+  }
+
+  function openModal(bomId) {
+    if (!window.axios) return;
+    state = { bomId: bomId, items: [], scanned: [], blocked: false };
+    hideAlarm();
+    renderScanned();
+    if ($('barcodeInput')) $('barcodeInput').value = '';
+
+    axios.get('/technical/bom/' + bomId)
+      .then(function (res) {
+        state.items = res.data.items || [];
+        if (!state.items.length) {
+          toast('لا توجد بنود في BOM', true);
+          return;
+        }
+        renderRequired();
+        $('dispenseModal').classList.remove('hidden');
+        $('barcodeInput') && $('barcodeInput').focus();
+      })
+      .catch(function () { toast('تعذّر تحميل BOM', true); });
+  }
+
+  function closeModal() {
+    $('dispenseModal') && $('dispenseModal').classList.add('hidden');
+    state = { bomId: null, items: [], scanned: [], blocked: false };
+  }
+
+  function addScan(raw) {
+    var input = $('barcodeInput');
+    if (input && window.DashboardValidation && !DashboardValidation.validateField(input)) return;
+    var code = String(raw || (input && input.value) || '').trim().toUpperCase();
+    if (!code) return;
+    state.scanned.push(code);
+    var expected = expectedBarcodes();
+    if (expected.indexOf(code) === -1) {
+      showAlarm('باركود غير مطابق لأمر التشغيل: ' + code + ' — تم إيقاف الصرف!');
+    } else {
+      hideAlarm();
+    }
+    renderScanned();
+    if ($('barcodeInput')) { $('barcodeInput').value = ''; $('barcodeInput').focus(); }
+  }
+
+  function confirmDispense() {
+    if (state.blocked || !state.bomId || !window.axios) return;
+    if (state.scanned.length !== state.items.length) {
+      showAlarm('عدد الباركود (' + state.scanned.length + ') لا يطابق بنود BOM (' + state.items.length + ')');
+      return;
+    }
+
+    var btn = $('confirmDispense');
+    if (btn) btn.disabled = true;
+
+    axios.post('/technical/bom/' + state.bomId + '/dispense', { scanned_barcodes: state.scanned })
+      .then(function (res) {
+        closeModal();
+        toast(res.data.message || '✅ تم الصرف بنجاح');
+        refreshBoms();
+      })
+      .catch(function (err) {
+        var data = err.response && err.response.data;
+        var msg = (data && data.message) || 'تعذّر الصرف';
+        if (data && (data.blocked || data.alarm)) {
+          showAlarm(msg);
+        } else {
+          toast(msg, true);
+        }
+        if (btn) btn.disabled = state.blocked;
+      });
+  }
+
+  function finishBom(bomId) {
+    if (!window.confirm('إغلاق BOM وتحويلها إلى تام؟')) return;
+    axios.post('/technical/bom/' + bomId + '/finish')
+      .then(function (res) {
+        toast(res.data.message || '✅ تم إغلاق BOM');
+        refreshBoms();
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر الإغلاق', true);
+      });
+  }
+
+  function renderBomRow(b) {
+    var meta = STAGE_META[b.stage] || { label: b.stage, cls: 'bg-slate-100' };
+    var wo = (b.case && b.case.work_order_no) ? b.case.work_order_no : '—';
+    var itemsCount = b.items_count || 0;
+    var action = '';
+    if (b.stage === 'raw') {
+      action = '<button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm" data-bom-id="' + b.id + '">📤 صرف للورشة</button>';
+    } else if (b.stage === 'wip') {
+      action = '<button type="button" class="btn-finish rounded-xl bg-slate-700 text-white px-4 py-2 text-xs font-bold hover:bg-slate-800" data-bom-id="' + b.id + '">✅ إغلاق BOM</button>';
+    } else {
+      action = '<span class="text-xs text-slate-400">—</span>';
+    }
+    return '<tr class="bom-row hover:bg-slate-50" data-bom-id="' + b.id + '" data-stage="' + b.stage + '" data-search="' +
+      esc([b.bom_no, b.patient_name, wo].join(' ')) + '">' +
+      '<td class="px-4 py-3 font-mono font-bold">' + esc(b.bom_no) + '</td>' +
+      '<td class="px-4 py-3 font-semibold text-slate-800">' + esc(b.patient_name) + '</td>' +
+      '<td class="px-4 py-3 font-mono text-xs text-violet-700">' + esc(wo) + '</td>' +
+      '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg border ' + meta.cls + '">' + meta.label + '</span></td>' +
+      '<td class="px-4 py-3 text-center font-bold">' + itemsCount + '</td>' +
+      '<td class="px-4 py-3">' + action + '</td></tr>';
+  }
+
+  function bindBomEvents() {
+    document.querySelectorAll('.btn-dispense').forEach(function (btn) {
+      btn.addEventListener('click', function () { openModal(btn.getAttribute('data-bom-id')); });
+    });
+    document.querySelectorAll('.btn-finish').forEach(function (btn) {
+      btn.addEventListener('click', function () { finishBom(btn.getAttribute('data-bom-id')); });
+    });
+  }
+
+  function refreshBoms() {
+    axios.get('/technical/bom/list')
+      .then(function (res) {
+        var boms = res.data.data || [];
+        var tbody = $('bomTableBody');
+        if (!tbody) return;
+        if (!boms.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد قوائم مواد.</td></tr>';
+        } else {
+          tbody.innerHTML = boms.map(renderBomRow).join('');
+          bindBomEvents();
+          applyFilters();
+        }
+        if (window.TablePagination) TablePagination.refreshById('bomTableBody');
+      })
+      .catch(function () { toast('تعذّر تحديث القائمة', true); });
+  }
+
+  var activeFilter = 'all';
+
+  function applyFilters() {
+    var q = ($('bomSearch') && $('bomSearch').value || '').trim().toLowerCase();
+    document.querySelectorAll('.bom-row').forEach(function (row) {
+      var stage = row.getAttribute('data-stage');
+      var hay = (row.getAttribute('data-search') || '').toLowerCase();
+      var stageOk = activeFilter === 'all' || stage === activeFilter;
+      var searchOk = !q || hay.indexOf(q) !== -1;
+      row.style.display = stageOk && searchOk ? '' : 'none';
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    bindBomEvents();
+
+    $('btnRefreshBoms') && $('btnRefreshBoms').addEventListener('click', refreshBoms);
+    $('bomSearch') && $('bomSearch').addEventListener('input', applyFilters);
+
+    document.querySelectorAll('.bom-filter').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activeFilter = btn.getAttribute('data-filter');
+        document.querySelectorAll('.bom-filter').forEach(function (b) {
+          b.classList.remove('active', 'bg-slate-800', 'text-white');
+        });
+        btn.classList.add('active', 'bg-slate-800', 'text-white');
+        applyFilters();
+      });
+    });
+
+    $('closeDispenseModal') && $('closeDispenseModal').addEventListener('click', closeModal);
+    $('cancelDispense') && $('cancelDispense').addEventListener('click', closeModal);
+    $('dispenseBackdrop') && $('dispenseBackdrop').addEventListener('click', closeModal);
+    $('btnAddBarcode') && $('btnAddBarcode').addEventListener('click', function () {
+      addScan($('barcodeInput') && $('barcodeInput').value);
+    });
+    $('barcodeInput') && $('barcodeInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addScan(e.target.value); }
+    });
+    $('confirmDispense') && $('confirmDispense').addEventListener('click', confirmDispense);
+  });
+})();

@@ -1,0 +1,96 @@
+<?php
+
+namespace Tests\Feature\Pipeline;
+
+use App\Enums\PricingRequestStatus;
+use App\Models\Bom;
+use App\Models\CaseRecord;
+use App\Models\MedicalRecord;
+use App\Models\PricingRequest;
+use App\Models\StockItem;
+use App\Services\SpecService;
+use Tests\Support\ProstheticTestHelper;
+use Tests\TestCase;
+
+class SpecPipelineTest extends TestCase
+{
+    use ProstheticTestHelper;
+
+    public function test_spec_submit_creates_pricing_request_raw_bom_and_advances_case(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $doctor  = $this->userWithRole('doctor');
+        $specUser = $this->userWithRole('spec');
+
+        $this->actingAs($doctor);
+
+        $record = MedicalRecord::create([
+            'patient_id'     => $patient->id,
+            'patient_name'   => $patient->name,
+            'national_id'    => $patient->national_id,
+            'company_name'   => $patient->company_name,
+            'patient_type'   => $patient->patient_type,
+            'diagnosis'      => 'بتر فوق الركبة',
+            'prescription'   => 'ركبة ذكية',
+            'doctor_name'    => $doctor->name,
+            'doctor_user_id' => $doctor->id,
+            'record_date'    => now()->toDateString(),
+            'status'         => MedicalRecord::STATUS_DRAFT,
+            'locked'         => false,
+        ]);
+
+        app(\App\Services\MedicalRecordService::class)->lock($record);
+
+        $case = CaseRecord::where('patient_id', $patient->id)->first();
+        $this->assertEquals(CaseRecord::STAGE_TECHNICAL, $case->stage_key);
+
+        $this->actingAs($specUser);
+
+        $draft = app(SpecService::class)->saveDraft([
+            'case_id' => $case->id,
+            'tech_notes' => 'توصيف اختبار',
+            'items' => [
+                ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 2],
+            ],
+        ]);
+
+        $pricingRequest = app(SpecService::class)->submit($draft);
+
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $pricingRequest->request_no);
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_COST_CALC, $case->stage_key);
+        $this->assertEquals(PricingRequestStatus::AwaitingAdminApproval, $pricingRequest->fresh()->status_key);
+
+        $bom = Bom::where('case_id', $case->id)->first();
+        $this->assertNotNull($bom);
+        $this->assertEquals(Bom::STAGE_RAW, $bom->stage);
+        $this->assertEquals(1, $bom->items()->count());
+
+        $stock = StockItem::where('code', 'RM-001')->first();
+        $this->assertEquals(0, $stock->reserved, 'Spec BOM must not reserve stock before manufacturing');
+    }
+
+    public function test_spec_api_create_endpoint_returns_catalog_without_qty(): void
+    {
+        $this->stockItem('RM-002', qty: 15);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $specUser = $this->userWithRole('spec');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+
+        $response = $this->actingAs($specUser)
+            ->getJson("/spec/spec/{$case->id}");
+
+        $response->assertOk();
+        $catalog = $response->json('stock_catalog');
+        $this->assertNotEmpty($catalog);
+        $this->assertArrayNotHasKey('qty', $catalog[0]);
+        $this->assertArrayNotHasKey('wac', $catalog[0]);
+        $this->assertArrayNotHasKey('reserved', $catalog[0]);
+    }
+}

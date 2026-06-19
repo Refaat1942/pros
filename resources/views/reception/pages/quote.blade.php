@@ -16,7 +16,7 @@
           <button type="button" class="btn btn-secondary" id="btnSimulateReturn" style="padding:8px 16px;font-size:12px;white-space:nowrap;">📱 محاكاة عودة المريض (QR)</button>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>رقم العرض</th>

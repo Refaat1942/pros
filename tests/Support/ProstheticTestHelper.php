@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\StockItem;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Models\VisitType;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
 
@@ -85,13 +86,21 @@ trait ProstheticTestHelper
         return $company;
     }
 
+    protected function defaultVisitType(string $name = 'كشف أولي'): VisitType
+    {
+        return VisitType::firstOrCreate(
+            ['name' => $name],
+            ['is_active' => true],
+        );
+    }
+
     // ── Patient helpers ───────────────────────────────────────────────────────
 
     protected function civilianPatient(ContractCompany $company): Patient
     {
         return Patient::create([
-            'patient_code'        => 'PT-CIV-0001',
-            'patient_qr'          => 'QR-PT-CIV-0001',
+            'patient_code'        => '100001',
+            'patient_qr'          => 'QR-100001',
             'name'                => 'أحمد حسن',
             'phone'               => '01000000001',
             'national_id'         => '29901010100001',
@@ -106,8 +115,8 @@ trait ProstheticTestHelper
     protected function militaryPatient(ContractCompany $company): Patient
     {
         return Patient::create([
-            'patient_code'        => 'PT-MIL-0001',
-            'patient_qr'          => 'QR-PT-MIL-0001',
+            'patient_code'        => '654321',
+            'patient_qr'          => 'QR-654321',
             'name'                => 'العقيد محمود خالد',
             'phone'               => '01100000002',
             'national_id'         => '29801010200002',
@@ -170,5 +179,33 @@ trait ProstheticTestHelper
             'stage_key'            => $stage,
             'manufacturing_stage'  => $mfgStage,
         ]);
+    }
+
+    protected function advanceCaseToFinishing(CaseRecord $case): CaseRecord
+    {
+        $bomService = app(\App\Services\BomService::class);
+        $case       = $case->fresh();
+
+        foreach ([
+            CaseRecord::MFG_GENERATION,
+            CaseRecord::MFG_ASSEMBLY,
+            CaseRecord::MFG_CASTING,
+            CaseRecord::MFG_FINISHING,
+        ] as $stage) {
+            if ($case->manufacturing_stage === $stage) {
+                continue;
+            }
+
+            $case = $bomService->advanceManufacturingStage($case, $stage);
+        }
+
+        return $case->fresh();
+    }
+
+    protected function finishBomAfterQuality(CaseRecord $case): \App\Models\Bom
+    {
+        $bom = \App\Models\Bom::where('case_id', $case->id)->firstOrFail();
+
+        return app(\App\Services\BomService::class)->finish($bom);
     }
 }

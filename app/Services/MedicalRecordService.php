@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\WorkflowEvent;
 use App\Models\Appointment;
+use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\MedicalRecordItem;
 use App\Models\Patient;
@@ -40,7 +41,7 @@ class MedicalRecordService
     public function lock(MedicalRecord $record): MedicalRecord
     {
         if ($record->locked) {
-            abort(403, 'التقرير الطبي معتمد ولا يمكن تعديله.');
+            return $record->fresh()->load(['items', 'patient', 'caseRecord']);
         }
 
         return DB::transaction(function () use ($record) {
@@ -59,8 +60,24 @@ class MedicalRecordService
             }
 
             $patient = Patient::findOrFail($record->patient_id);
-            $case    = $this->caseService->initiate($patient, $record);
-            $this->caseService->advance($case, WorkflowEvent::ExamApproved->value);
+
+            if ($record->appointment_id) {
+                $alreadyLocked = MedicalRecord::where('appointment_id', $record->appointment_id)
+                    ->where('locked', true)
+                    ->where('id', '!=', $record->id)
+                    ->exists();
+
+                if ($alreadyLocked) {
+                    abort(422, 'تم اعتماد تقرير لهذا الموعد مسبقاً.');
+                }
+            }
+
+            if ($record->case_id) {
+                $case = CaseRecord::findOrFail($record->case_id);
+            } else {
+                $case = $this->caseService->initiate($patient, $record);
+                $this->caseService->advance($case, WorkflowEvent::ExamApproved->value);
+            }
 
             AuditService::log(
                 action:      'lock',
@@ -82,11 +99,21 @@ class MedicalRecordService
             : null;
 
         if ($appointment) {
-            $appointment->update([
-                'status'                => Appointment::STATUS_IN_CLINIC,
-                'status_label'          => 'في العيادة',
-                'transferred_to_clinic' => true,
-            ]);
+            if ($appointment->status !== Appointment::STATUS_IN_CLINIC || ! $appointment->transferred_to_clinic) {
+                abort(422, 'يجب تحويل المريض من الاستقبال قبل بدء الكشف.');
+            }
+
+            $existing = MedicalRecord::where('appointment_id', $appointment->id)->first();
+
+            if ($existing) {
+                if ($existing->locked) {
+                    abort(422, 'تم اعتماد تقرير لهذا الموعد مسبقاً.');
+                }
+
+                return $this->updateDraft(array_merge($data, [
+                    'medical_record_id' => $existing->id,
+                ]));
+            }
         }
 
         $record = MedicalRecord::create([

@@ -1,77 +1,100 @@
-<div class="section-view" id="section-pricing">
-      <div id="analytics-pricing">@include('partials.dashboard-analytics-empty', ['stats' => [
-        ['icon' => '📋', 'label' => 'طلبات', 'value' => '0', 'bg' => 'rgba(217,119,6,0.1)'],
-        ['icon' => '⏳', 'label' => 'انتظار موافقة الأدمن', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-        ['icon' => '✅', 'label' => 'جاهز للاستقبال', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '🔩', 'label' => 'متوسط البنود', 'value' => '0', 'bg' => 'rgba(217,119,6,0.1)'],
-      ]])</div>
-      <div class="panel pricing-wrap">
-        <div class="panel-header">
-          <h3>💰 طلبات مرسلة للتسعير</h3>
-          <span class="badge" id="pricingCount">0</span>
-        </div>
+@push('styles')
+<script src="https://cdn.tailwindcss.com"></script>
+@endpush
 
-        <div class="pricing-summary">
-          <div class="pricing-stat">
-            <div class="ps-icon" style="background:rgba(217,119,6,0.12)">📋</div>
-            <div>
-              <div class="ps-label">إجمالي الطلبات</div>
-              <div class="ps-value" id="prTotal">0</div>
-            </div>
-          </div>
-          <div class="pricing-stat">
-            <div class="ps-icon" style="background:rgba(217,119,6,0.12)">⏳</div>
-            <div>
-              <div class="ps-label">في انتظار موافقة الأدمن</div>
-              <div class="ps-value" id="prPending" style="color:#b45309">0</div>
-            </div>
-          </div>
-          <div class="pricing-stat">
-            <div class="ps-icon" style="background:rgba(5,150,105,0.12)">✅</div>
-            <div>
-              <div class="ps-label">أُرسل للاستقبال</div>
-              <div class="ps-value" id="prSent" style="color:#047857">0</div>
-            </div>
-          </div>
-        </div>
+@php
+    use App\Enums\PricingRequestStatus;
+    $requests = $spec_pricing_requests ?? collect();
+    $awaiting = $requests->filter(fn ($r) => ($r->status_key instanceof PricingRequestStatus ? $r->status_key : PricingRequestStatus::from((string) $r->status_key)) === PricingRequestStatus::AwaitingAdminApproval)->count();
+    $sent = $requests->filter(fn ($r) => ($r->status_key instanceof PricingRequestStatus ? $r->status_key : PricingRequestStatus::from((string) $r->status_key)) === PricingRequestStatus::SentToReception)->count();
+@endphp
 
-        <div class="pricing-info-banner">
-          📋 بعد حساب التكلفة يتوقف الطلب عند موافقة الأدمن — ثم يُحوَّل للاستقبال لإصدار عرض السعر
-        </div>
+<div id="analytics-pricing">
+    @include('partials.dashboard-analytics-empty', ['stats' => $spec_pricing_stats ?? []])
+</div>
 
-        <div class="pricing-toolbar">
-          <input type="text" id="pricingSearch" placeholder="بحث برقم الطلب أو اسم المريض...">
-          <div class="filter-pills" id="pricingFilters">
-            <button class="filter-pill active" data-prfilter="all">الكل</button>
-            <button class="filter-pill" data-prfilter="pending">⏳ في انتظار موافقة الأدمن</button>
-            <button class="filter-pill" data-prfilter="sent">✅ معتمد — جاهز للاستقبال</button>
-          </div>
-          <div class="export-btns">
-            <button class="btn-export excel" onclick="exportPricing('excel')">📊 Excel</button>
-            <button class="btn-export pdf" onclick="exportPricing('pdf')">📄 PDF</button>
-          </div>
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div>
+            <h3 class="font-bold text-slate-800">💰 طلبات مرسلة للتسعير</h3>
+            <p class="text-xs text-slate-500 mt-1">🔒 لا تظهر أي مبالغ — الحالة فقط</p>
         </div>
-
-        <div class="pricing-table-wrap">
-          <table class="pricing-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>رقم الطلب</th>
-                <th>المريض</th>
-                <th>التاريخ</th>
-                <th class="col-center">البنود</th>
-                <th class="col-center">الحالة / التقدم</th>
-                <th class="col-actions">إجراء</th>
-              </tr>
-            </thead>
-            <tbody id="pricingTable"></tbody>
-            <tfoot>
-              <tr>
-                <td colspan="7" id="pricingFooter">عرض 3 من 3 طلبات</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+        <span class="text-xs font-bold bg-amber-500 text-white px-3 py-1 rounded-full">{{ $requests->count() }}</span>
     </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5 border-b border-slate-100">
+        <div class="rounded-xl bg-slate-50 p-4">
+            <p class="text-xs text-slate-500">إجمالي الطلبات</p>
+            <p class="text-2xl font-bold text-slate-800">{{ $requests->count() }}</p>
+        </div>
+        <div class="rounded-xl bg-amber-50 p-4">
+            <p class="text-xs text-amber-700">بانتظار موافقة الأدمن</p>
+            <p class="text-2xl font-bold text-amber-700">{{ $awaiting }}</p>
+        </div>
+        <div class="rounded-xl bg-emerald-50 p-4">
+            <p class="text-xs text-emerald-700">أُرسل للاستقبال</p>
+            <p class="text-2xl font-bold text-emerald-700">{{ $sent }}</p>
+        </div>
+    </div>
+
+    <div class="p-4 border-b border-slate-100">
+        <input type="search" id="pricingSearch" placeholder="بحث برقم الطلب أو اسم المريض..."
+               class="w-full max-w-md rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+    </div>
+
+    <div class="overflow-x-auto">
+        <table data-paginate="10" class="min-w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600">
+                <tr>
+                    <th class="px-4 py-3 text-right font-bold">#</th>
+                    <th class="px-4 py-3 text-right font-bold">رقم الطلب</th>
+                    <th class="px-4 py-3 text-right font-bold">المريض</th>
+                    <th class="px-4 py-3 text-right font-bold">التاريخ</th>
+                    <th class="px-4 py-3 text-right font-bold">البنود</th>
+                    <th class="px-4 py-3 text-right font-bold">الحالة</th>
+                </tr>
+            </thead>
+            <tbody id="pricingTable" class="divide-y divide-slate-100">
+                @forelse ($requests as $pr)
+                    @php
+                        $status = $pr->status_key instanceof PricingRequestStatus
+                            ? $pr->status_key
+                            : PricingRequestStatus::from((string) $pr->status_key);
+                    @endphp
+                    <tr data-search="{{ $pr->request_no }} {{ $pr->patient_name }}">
+                        <td class="px-4 py-3">{{ $loop->iteration }}</td>
+                        <td class="px-4 py-3 font-mono text-xs font-bold">{{ $pr->request_no }}</td>
+                        <td class="px-4 py-3">{{ $pr->patient_name }}</td>
+                        <td class="px-4 py-3">{{ $pr->request_date?->format('Y-m-d') }}</td>
+                        <td class="px-4 py-3 text-center">{{ $pr->items_count }}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex px-2 py-1 rounded-lg text-xs font-bold
+                                @if($status === PricingRequestStatus::AwaitingAdminApproval) bg-amber-100 text-amber-800
+                                @elseif($status === PricingRequestStatus::SentToReception) bg-emerald-100 text-emerald-800
+                                @elseif($status === PricingRequestStatus::Insufficient) bg-red-100 text-red-800
+                                @else bg-slate-100 text-slate-700 @endif">
+                                {{ $status->label() }}
+                            </span>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">لا توجد طلبات بعد.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+(function() {
+  var search = document.getElementById('pricingSearch');
+  var table = document.getElementById('pricingTable');
+  if (!search || !table) return;
+  search.addEventListener('input', function() {
+    var q = search.value.trim().toLowerCase();
+    table.querySelectorAll('tr[data-search]').forEach(function(row) {
+      row.style.display = !q || row.dataset.search.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+    });
+  });
+})();
+</script>

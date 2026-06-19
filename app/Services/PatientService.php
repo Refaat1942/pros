@@ -12,8 +12,11 @@ use Illuminate\Support\Facades\DB;
  */
 class PatientService
 {
-    public function __construct(private readonly PatientQrService $patientQrService)
-    {
+    public function __construct(
+        private readonly PatientQrService $patientQrService,
+        private readonly AppointmentService $appointmentService,
+        private readonly TrackingUidService $trackingUidService,
+    ) {
     }
 
     /**
@@ -41,6 +44,7 @@ class PatientService
             $patient = Patient::create([
                 'patient_code'        => $patientCode,
                 'patient_qr'          => $patientQr,
+                'tracking_uid'        => $this->trackingUidService->generate(),
                 'name'                => $data['name'],
                 'phone'               => $data['phone'] ?? null,
                 'national_id'         => $data['national_id'] ?? null,
@@ -60,6 +64,12 @@ class PatientService
                 tag:         'patients',
                 after:       $this->auditSnapshot($patient),
             );
+
+            $this->appointmentService->book([
+                'patient_id'       => $patient->id,
+                'appointment_date' => now()->toDateString(),
+                'visit_type_id'    => $data['visit_type_id'],
+            ]);
 
             return $patient->load('contractCompany');
         });
@@ -98,18 +108,13 @@ class PatientService
 
     private function nextPatientCode(string $type): string
     {
-        $prefix = $type === Patient::TYPE_MILITARY ? 'PT-MIL-' : 'PT-CIV-';
+        unset($type);
 
-        $lastCode = Patient::where('patient_code', 'like', $prefix . '%')
-            ->lockForUpdate()
-            ->orderByDesc('patient_code')
-            ->value('patient_code');
+        do {
+            $code = (string) random_int(100000, 999999);
+        } while (Patient::where('patient_code', $code)->exists());
 
-        $num = $lastCode
-            ? ((int) substr($lastCode, strlen($prefix)) + 1)
-            : 1;
-
-        return sprintf('%s%04d', $prefix, $num);
+        return $code;
     }
 
     private function auditSnapshot(Patient $patient): array
@@ -117,6 +122,7 @@ class PatientService
         return $patient->only([
             'patient_code',
             'patient_qr',
+            'tracking_uid',
             'name',
             'phone',
             'national_id',

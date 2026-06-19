@@ -51,7 +51,7 @@
         <div class="bi-card-body">
             <div class="bi-row"><span>عدد الموردين المعتمدين</span><strong>0</strong></div>
             <div class="bi-sub">⚖️ مقارنة المتوسط المرجح (WAC) ↔ أعلى سعر شراء:
-                <table class="bi-table">
+                <table data-paginate="10" class="bi-table">
                     <thead>
                         <tr><th>الصنف</th><th>WAC</th><th>أعلى سعر</th><th>الفرق</th></tr>
                     </thead>

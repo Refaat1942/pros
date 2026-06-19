@@ -34,7 +34,7 @@
           <span class="badge">{{ ($employees_preview ?? collect())->count() }} موظف</span>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>الاسم</th>
@@ -59,7 +59,7 @@
           <span class="badge" id="debtsOverviewBadge">0 جهة</span>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>جهة التعاقد</th>

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Patient;
 
 use App\Http\Requests\BaseRequest;
 use App\Models\Patient;
+use App\Models\VisitType;
 use Illuminate\Validation\Rule;
 
 class StorePatientRequest extends BaseRequest
@@ -11,13 +12,14 @@ class StorePatientRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'name'                => ['required', 'string', 'max:255'],
-            'phone'               => ['nullable', 'string', 'max:20'],
-            'national_id'         => ['nullable', 'string', 'max:20'],
+            'name'                => $this->personNameRules(),
+            'phone'               => $this->egyptianMobileRules(),
+            'national_id'         => $this->egyptianNationalIdRules(),
             'patient_type'        => ['required', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
             'military_rank_id'    => ['nullable', 'integer', 'exists:military_ranks,id'],
-            'sovereign_entity'    => ['nullable', 'string', 'max:255'],
+            'sovereign_entity'    => ['nullable', 'string', 'min:2', 'max:255'],
             'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
+            'visit_type_id'       => ['required', 'integer', Rule::exists('visit_types', 'id')->where('is_active', true)],
         ];
     }
 
@@ -45,6 +47,8 @@ class StorePatientRequest extends BaseRequest
     {
         return [
             'patient_type.in' => 'نوع المريض يجب أن يكون مدني أو عسكري.',
+            'visit_type_id.required' => 'نوع الزيارة مطلوب.',
+            'visit_type_id.exists'   => 'نوع الزيارة غير صالح.',
         ];
     }
 }

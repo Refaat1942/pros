@@ -25,7 +25,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <table>
+          <table data-paginate="10">
             <thead>
               <tr>
                 <th>المريض</th>

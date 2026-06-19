@@ -6,7 +6,7 @@
             <h3 id="calMonthLabel"></h3>
             <button type="button" class="cal-nav-btn" id="calNext" aria-label="الشهر التالي">‹</button>
           </div>
-          <p class="calendar-hint">اضغط على أي يوم لعرض مواعيده في الجدول أدناه</p>
+          <p class="calendar-hint">اختر يوماً من اليوم أو ما قبله (حتى سنة) — الأيام المستقبلية غير متاحة</p>
           <button type="button" class="calendar-today-btn" id="calToday">📅 مواعيد اليوم</button>
         </div>
         <div class="calendar-body">
@@ -17,7 +17,7 @@
         </div>
       </div>
     </div>
-<section class="add-patient-section" id="addPatientSection">
+<section class="add-patient-section {{ old('form') === 'patient' ? 'expanded' : '' }}" id="addPatientSection">
       <button type="button" class="add-patient-toggle" id="btnAddPatient" aria-expanded="false" aria-controls="addPatientFormWrap">
         <span class="add-patient-toggle-icon">➕</span>
         <span class="add-patient-toggle-text">
@@ -26,51 +26,100 @@
         </span>
         <span class="add-patient-chevron" id="addPatientChevron">▼</span>
       </button>
-      <div class="add-patient-form-wrap" id="addPatientFormWrap">
+      <div class="add-patient-form-wrap {{ old('form') === 'patient' ? 'open' : '' }}" id="addPatientFormWrap">
         <div class="add-patient-form-body">
           <h4>➕ تسجيل مريض جديد</h4>
-          <div class="add-patient-form-grid">
-            <div class="form-group">
-              <label>اسم المريض <span style="color:red">*</span></label>
-              <input type="text" class="form-control" id="newPatientName" placeholder="الاسم الكامل">
+            <form method="POST" action="{{ route('reception.patients.store') }}" id="addPatientForm" data-validate-form>
+            @csrf
+            <input type="hidden" name="form" value="patient">
+            @if ($errors->any() && old('form') === 'patient')
+              <div class="v-error-msg" style="margin-bottom:12px;" role="alert">
+                @foreach ($errors->all() as $error)
+                  <div>{{ $error }}</div>
+                @endforeach
+              </div>
+            @endif
+            <div class="add-patient-form-grid">
+              <div class="form-group">
+                <label>اسم المريض <span style="color:red">*</span></label>
+                <input type="text" class="form-control" name="name" id="newPatientName" placeholder="الاسم الكامل"
+                       value="{{ old('name') }}" data-v-rules="required,min:2,max:255" maxlength="255">
+              </div>
+              <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="tel" class="form-control @error('phone') v-invalid @enderror" name="phone" id="newPhone" placeholder="01xxxxxxxxx"
+                       maxlength="11" inputmode="numeric" value="{{ old('phone') }}"
+                       data-v-rules="egyptian-mobile" autocomplete="tel">
+                @error('phone')<div class="v-error-msg" role="alert">{{ $message }}</div>@enderror
+              </div>
+              <div class="form-group">
+                <label>الرقم القومي</label>
+                <input type="text" class="form-control @error('national_id') v-invalid @enderror" name="national_id" id="newNationalId" placeholder="14 رقم"
+                       maxlength="14" inputmode="numeric" value="{{ old('national_id') }}"
+                       data-v-rules="egyptian-national-id" autocomplete="off">
+                @error('national_id')<div class="v-error-msg" role="alert">{{ $message }}</div>@enderror
+              </div>
+              <div class="form-group">
+                <label>تصنيف المريض <span style="color:red">*</span></label>
+                <select class="form-control" name="patient_type" id="newPatientType" data-v-rules="required,select">
+                  <option value="civilian" @selected(old('patient_type', 'civilian') === 'civilian')>🌐 مدني</option>
+                  <option value="military" @selected(old('patient_type') === 'military')>🪖 عسكري</option>
+                </select>
+              </div>
+              <div class="form-group" id="grpRank" style="display:{{ old('patient_type') === 'military' ? '' : 'none' }};">
+                <label>الرتبة العسكرية <span style="color:red">*</span></label>
+                <select class="form-control" name="military_rank_id" id="newRankId"
+                        data-v-rules="required,select" data-v-when="patient_type=military">
+                  <option value="">— اختر الرتبة —</option>
+                  @foreach ($military_ranks ?? [] as $rank)
+                    <option value="{{ $rank->id }}" @selected((string) old('military_rank_id') === (string) $rank->id)>
+                      {{ $rank->name }}
+                    </option>
+                  @endforeach
+                </select>
+              </div>
+              <div class="form-group" id="grpSovereign" style="display:{{ old('patient_type') === 'military' ? '' : 'none' }};">
+                <label>الجهة السيادية <span style="color:red">*</span></label>
+                <input type="text" class="form-control" name="sovereign_entity" id="newSovereignEntity"
+                       placeholder="مثال: القوات المسلحة / الشرطة" value="{{ old('sovereign_entity') }}"
+                       data-v-rules="required,min:2,max:255" data-v-when="patient_type=military" maxlength="255">
+              </div>
+              <div class="form-group" id="grpCompany">
+                <label>جهة التعاقد <span id="companyRequired" style="color:red">*</span></label>
+                <select class="form-control" name="contract_company_id" id="newCompanyId"
+                        data-v-rules="required,select" data-v-when="patient_type=civilian">
+                  <option value="">— اختر الجهة —</option>
+                  @foreach ($civilian_companies ?? [] as $co)
+                    <option value="{{ $co->id }}" data-military="0"
+                        @selected((string) old('contract_company_id') === (string) $co->id)>
+                      {{ $co->name }}
+                    </option>
+                  @endforeach
+                  @foreach ($military_companies ?? [] as $co)
+                    <option value="{{ $co->id }}" data-military="1" style="display:none"
+                        @selected((string) old('contract_company_id') === (string) $co->id)>
+                      {{ $co->name }}
+                    </option>
+                  @endforeach
+                </select>
+              </div>
+              <div class="form-group" id="grpVisitType">
+                <label>نوع الزيارة <span style="color:red">*</span></label>
+                <select class="form-control" name="visit_type_id" id="newVisitTypeId" data-v-rules="required,select">
+                  <option value="">— اختر نوع الزيارة —</option>
+                  @foreach ($visit_types ?? [] as $visitType)
+                    <option value="{{ $visitType->id }}" @selected((string) old('visit_type_id') === (string) $visitType->id)>
+                      {{ $visitType->name }}
+                    </option>
+                  @endforeach
+                </select>
+              </div>
             </div>
-            <div class="form-group">
-              <label>رقم الهاتف</label>
-              <input type="tel" class="form-control" id="newPhone" placeholder="01xxxxxxxxx" maxlength="11">
+            <div class="add-patient-form-actions">
+              <button class="btn btn-secondary" type="button" id="btnCancelAddPatient">إلغاء</button>
+              <button class="btn btn-primary" type="submit" id="btnSavePatient">💾 حفظ وإضافة للجدولة</button>
             </div>
-            <div class="form-group">
-              <label>الرقم القومي</label>
-              <input type="text" class="form-control" id="newNationalId" placeholder="14 رقم" maxlength="20">
-            </div>
-            <div class="form-group">
-              <label>تصنيف المريض <span style="color:red">*</span></label>
-              <select class="form-control" id="newPatientType">
-                <option value="civilian">🌐 مدني</option>
-                <option value="military">🪖 عسكري</option>
-              </select>
-            </div>
-            <div class="form-group" id="grpRank" style="display:none;">
-              <label>الرتبة العسكرية <span style="color:red">*</span></label>
-              <select class="form-control" id="newRankId">
-                <option value="">— جاري التحميل —</option>
-              </select>
-            </div>
-            <div class="form-group" id="grpSovereign" style="display:none;">
-              <label>الجهة السيادية <span style="color:red">*</span></label>
-              <input type="text" class="form-control" id="newSovereignEntity" placeholder="مثال: القوات المسلحة / الشرطة">
-            </div>
-            <div class="form-group" id="grpCompany">
-              <label>جهة التعاقد <span id="companyRequired" style="color:red">*</span></label>
-              <select class="form-control" id="newCompanyId">
-                <option value="">— اختر الجهة —</option>
-              </select>
-            </div>
-          </div>
-          <div id="patientFormError" style="color:#dc2626;font-size:13px;margin:0 0 8px;display:none;"></div>
-          <div class="add-patient-form-actions">
-            <button class="btn btn-secondary" type="button" id="btnCancelAddPatient">إلغاء</button>
-            <button class="btn btn-primary" type="button" id="btnSavePatient">💾 حفظ وإضافة للجدولة</button>
-          </div>
+          </form>
         </div>
       </div>
     </section>
@@ -110,7 +159,7 @@
             </div>
           </div>
           <div class="panel-body">
-            <table>
+            <table data-paginate="10">
               <thead>
                 <tr>
                   <th>الوقت</th>
@@ -128,3 +177,7 @@
         </div>
       </div>
     </div>
+
+@if (session('show_patient_card'))
+<script>window.__SHOW_PATIENT_CARD_ID = {{ (int) session('show_patient_card') }};</script>
+@endif

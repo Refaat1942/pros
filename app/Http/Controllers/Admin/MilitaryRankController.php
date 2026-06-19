@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreMilitaryRankRequest;
+use App\Http\Requests\Admin\UpdateMilitaryRankRequest;
 use App\Models\MilitaryRank;
 use App\Services\AuditService;
+use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -13,6 +17,8 @@ use Illuminate\Http\Request;
  */
 class MilitaryRankController extends Controller
 {
+    use PaginationTrait;
+
     /**
      * قائمة الرتب (مع pagination للأدمن، أو كل الرتب الفعّالة للـ select).
      */
@@ -27,35 +33,27 @@ class MilitaryRankController extends Controller
             return response()->json(['data' => $ranks]);
         }
 
-        $ranks = MilitaryRank::when(
-                $request->search,
-                fn ($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('rank_code', 'like', "%{$s}%")
-            )
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->paginate(20);
+        $ranks = $this->fetchForDashboard(
+            MilitaryRank::when(
+                    $request->search,
+                    fn ($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('rank_code', 'like', "%{$s}%")
+                )
+                ->orderBy('sort_order')
+                ->orderBy('name')
+        );
 
         return response()->json([
-            'data'       => $ranks->items(),
-            'pagination' => [
-                'total'        => $ranks->total(),
-                'per_page'     => $ranks->perPage(),
-                'current_page' => $ranks->currentPage(),
-                'last_page'    => $ranks->lastPage(),
-            ],
+            'data'  => $ranks,
+            'total' => $ranks->count(),
         ]);
     }
 
     /**
      * إضافة رتبة جديدة.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreMilitaryRankRequest $request): RedirectResponse|JsonResponse
     {
-        $data = $request->validate([
-            'name'       => ['required', 'string', 'max:100'],
-            'rank_code'  => ['required', 'string', 'max:30', 'unique:military_ranks,rank_code'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-        ]);
+        $data = $request->validated();
 
         $rank = MilitaryRank::create([
             'name'       => $data['name'],
@@ -71,19 +69,21 @@ class MilitaryRankController extends Controller
             after:       $rank->toArray(),
         );
 
-        return response()->json($rank, 201);
+        if ($request->expectsJson()) {
+            return response()->json($rank, 201);
+        }
+
+        return redirect()
+            ->route('admin.military-ranks')
+            ->with('success', "تم إضافة الرتبة «{$rank->name}» بنجاح.");
     }
 
     /**
      * تعديل اسم أو كود الرتبة.
      */
-    public function update(Request $request, MilitaryRank $militaryRank): JsonResponse
+    public function update(UpdateMilitaryRankRequest $request, MilitaryRank $militaryRank): JsonResponse
     {
-        $data = $request->validate([
-            'name'       => ['sometimes', 'string', 'max:100'],
-            'rank_code'  => ['sometimes', 'string', 'max:30', "unique:military_ranks,rank_code,{$militaryRank->id}"],
-            'sort_order' => ['sometimes', 'integer', 'min:0'],
-        ]);
+        $data = $request->validated();
 
         if (isset($data['rank_code'])) {
             $data['rank_code'] = strtoupper($data['rank_code']);
@@ -106,13 +106,19 @@ class MilitaryRankController extends Controller
     /**
      * تفعيل / تعطيل الرتبة.
      */
-    public function toggleActive(MilitaryRank $militaryRank): JsonResponse
+    public function toggleActive(Request $request, MilitaryRank $militaryRank): RedirectResponse|JsonResponse
     {
         $militaryRank->update(['is_active' => ! $militaryRank->is_active]);
 
-        return response()->json([
-            'id'        => $militaryRank->id,
-            'is_active' => $militaryRank->is_active,
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id'        => $militaryRank->id,
+                'is_active' => $militaryRank->is_active,
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.military-ranks')
+            ->with('success', 'تم تحديث حالة الرتبة.');
     }
 }

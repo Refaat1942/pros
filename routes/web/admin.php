@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\MilitaryRankController;
+use App\Http\Controllers\Admin\VisitTypeController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Finance\CreditNoteController;
@@ -98,6 +100,19 @@ Route::prefix('admin')
         Route::patch('military-ranks/{militaryRank}/toggle', [MilitaryRankController::class, 'toggleActive'])
             ->name('military-ranks.toggle');
 
+        // ── Visit Types — JSON API (الصفحة Blade: GET admin/visit-types) ─────
+        Route::get('visit-types/list', [VisitTypeController::class, 'index'])
+            ->name('visit-types.list');
+
+        Route::post('visit-types', [VisitTypeController::class, 'store'])
+            ->name('visit-types.store');
+
+        Route::put('visit-types/{visitType}', [VisitTypeController::class, 'update'])
+            ->name('visit-types.update');
+
+        Route::patch('visit-types/{visitType}/toggle', [VisitTypeController::class, 'toggleActive'])
+            ->name('visit-types.toggle');
+
         // ── Pricing Approval ───────────────────────────────────────────────
         Route::get('pricing/list', [PricingApprovalController::class, 'index'])
             ->name('pricing.list');
@@ -127,4 +142,14 @@ Route::prefix('admin')
 
         Route::post('debts/credit-notes/{creditNote}/reject', [CreditNoteController::class, 'reject'])
             ->name('debts.credit-notes.reject');
+
+        // ── Employees (Blade form POST) ───────────────────────────────────
+        Route::post('employees', [UserController::class, 'store'])
+            ->name('employees.store');
+
+        Route::put('employees/{user}', [UserController::class, 'update'])
+            ->name('employees.update');
+
+        Route::patch('employees/{user}/toggle', [UserController::class, 'toggleStatus'])
+            ->name('employees.toggle');
     });

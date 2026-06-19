@@ -26,19 +26,20 @@ class ReturnNoteController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $notes = ReturnNote::with(['bom:id,bom_no', 'lines'])
-            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('return_no', 'like', "%{$s}%")
-                  ->orWhere('order_ref', 'like', "%{$s}%")
-                  ->orWhere('patient_name', 'like', "%{$s}%");
-            }))
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        $notes = $this->fetchForDashboard(
+            ReturnNote::with(['bom:id,bom_no', 'lines'])
+                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('return_no', 'like', "%{$s}%")
+                      ->orWhere('order_ref', 'like', "%{$s}%")
+                      ->orWhere('patient_name', 'like', "%{$s}%");
+                }))
+                ->orderByDesc('created_at')
+        );
 
         return response()->json([
-            'data'       => collect($notes->items())->map(fn ($n) => $this->formatNote($n)),
-            'pagination' => $this->paginationModel($notes),
+            'data'  => collect($notes)->map(fn ($n) => $this->formatNote($n))->values(),
+            'total' => $notes->count(),
         ]);
     }
 

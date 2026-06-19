@@ -37,7 +37,7 @@
             </div>
           </div>
           <div class="bom-admin-table-wrap">
-            <table class="data-table bom-admin-table">
+            <table data-paginate="10" class="data-table bom-admin-table">
               <thead>
                 <tr>
                   <th>المريض</th>

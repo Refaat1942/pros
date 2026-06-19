@@ -10,7 +10,8 @@ class UpdatePatientRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'phone'               => ['sometimes', 'nullable', 'string', 'max:20'],
+            'phone'               => ['sometimes', ...$this->egyptianMobileRules()],
+            'national_id'         => ['sometimes', ...$this->egyptianNationalIdRules()],
             'contract_company_id' => ['sometimes', 'nullable', 'integer', 'exists:contract_companies,id'],
         ];
     }
