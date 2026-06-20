@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Stock;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Stock\AddPriceBatchRequest;
-use App\Http\Requests\Stock\StoreStockItemRequest;
-use App\Http\Requests\Stock\UpdateStockItemRequest;
+use App\Http\Requests\Stock\StoreCatalogItemRequest;
+use App\Http\Requests\Stock\UpdateCatalogItemRequest;
 use App\Models\StockItem;
 use App\Models\Supplier;
-use App\Services\AuditService;
+use App\Services\StockCatalogService;
 use App\Services\StockPriceService;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
@@ -19,72 +19,73 @@ class StockCatalogController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly StockPriceService $stockPriceService)
-    {
+    public function __construct(
+        private readonly StockPriceService $stockPriceService,
+        private readonly StockCatalogService $catalogService,
+    ) {
     }
 
     /**
-     * قائمة الأصناف — مرشَّحة ومُرقَّمة.
+     * قائمة الأصناف — مرشَّحة ومُنسَّقة للوحة الإدارة.
      */
     public function index(Request $request): JsonResponse
     {
-        $items = $this->fetchForDashboard(
-            StockItem::query()
-                ->with('category:id,name')
-                ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
-                ->when($request->category, fn ($q, $c) => $q->whereHas('category', fn ($q) => $q->where('name', $c)))
-                ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
-                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-                ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('code', 'like', "%{$search}%")
-                      ->orWhere('barcode', 'like', "%{$search}%");
-                }))
-                ->orderByDesc('id')
-        );
+        $query = StockItem::query()
+            ->with(['category:id,name', 'prices.supplier:id,name'])
+            ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
+            ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            }))
+            ->orderByDesc('id');
+
+        $items = $this->fetchForDashboard($query);
 
         return response()->json([
-            'data'  => $items,
+            'data'  => $items->map(fn (StockItem $item) => $this->catalogService->formatItem($item))->values(),
             'total' => $items->count(),
         ]);
     }
 
     /**
-     * إنشاء صنف جديد (بدون رصيد — الرصيد يأتي من Task 08 StockReceiveService).
+     * إنشاء صنف جديد مع أسعار الموردين.
      */
-    public function store(StoreStockItemRequest $request): JsonResponse
+    public function store(StoreCatalogItemRequest $request): JsonResponse
     {
-        $item = StockItem::create($request->validated());
+        $item = $this->catalogService->create($request->validated());
 
-        AuditService::log(
-            action:      'create',
-            description: "إضافة صنف جديد {$item->code} — {$item->name}",
-            tag:         'warehouse',
-            after:       $item->toArray(),
-        );
-
-        return response()->json($item, 201);
+        return response()->json([
+            'message' => 'تم حفظ الصنف — يظهر في لوحة الإدارة والمخزون وتوصيات الطبيب',
+            'item'    => $this->catalogService->formatItem($item),
+        ], 201);
     }
 
     /**
-     * تعديل الحقول غير المالية للصنف.
-     * code و barcode غير قابلَين للتعديل بعد الإنشاء (سلامة الباركود والتسعير).
+     * تعديل الصنف وأسعاره.
      */
-    public function update(UpdateStockItemRequest $request, StockItem $stockItem): JsonResponse
+    public function update(UpdateCatalogItemRequest $request, StockItem $stockItem): JsonResponse
     {
-        $before = $stockItem->only(['name', 'spec', 'category_id', 'store_class', 'uom']);
+        $item = $this->catalogService->update($stockItem, $request->validated());
 
-        $stockItem->update($request->validated());
+        return response()->json([
+            'message' => 'تم تحديث الصنف بنجاح',
+            'item'    => $this->catalogService->formatItem($item),
+        ]);
+    }
 
-        AuditService::log(
-            action:      'update',
-            description: "تعديل صنف {$stockItem->code}",
-            tag:         'warehouse',
-            before:      $before,
-            after:       $stockItem->only(['name', 'spec', 'category_id', 'store_class', 'uom']),
-        );
+    /**
+     * حذف صنف من الكatalog.
+     */
+    public function destroy(StockItem $stockItem): JsonResponse
+    {
+        try {
+            $this->catalogService->delete($stockItem);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
-        return response()->json($stockItem);
+        return response()->json(['message' => 'تم حذف الصنف بنجاح']);
     }
 
     /**

@@ -8,6 +8,7 @@
     var catalogSearchTerm = '';
     var catalogCategoryFilter = 'all';
     var editingCatalogCode = null;
+    var editingCatalogId = null;
     var employees = [];
     var companySearchTerm = '';
     var contractCompanies = [];
@@ -222,8 +223,8 @@
       pricing: 'اعتماد طلبات التسعير',
       cases: 'متابعة الحالات',
       employees: 'إدارة الموظفين',
-      companies: 'شركات التعاقد',
-      debts: 'مديونيات شركات التعاقد',
+      companies: 'جهات التعاقد',
+      debts: 'مديونيات جهات التعاقد',
       audit: 'سجل الرقابة الحصين — Immutable Audit Log',
       reports: 'التقارير والتحليلات',
       suppliers: 'الموردون وفواتير المشتريات'
@@ -821,7 +822,7 @@
         }
       });
       var countEl = document.getElementById('companiesCount');
-      if (countEl) countEl.textContent = visible + ' شركة';
+      if (countEl) countEl.textContent = visible + ' جهة';
       refreshPaginated('companiesTable');
     }
 
@@ -850,11 +851,11 @@
         var filtered = getFilteredCompanies();
         var badge = document.getElementById('companiesBadge');
         var countEl = document.getElementById('companiesCount');
-        if (badge) badge.textContent = contractCompanies.length + ' شركة';
-        if (countEl) countEl.textContent = filtered.length + ' شركة';
+        if (badge) badge.textContent = contractCompanies.length + ' جهة';
+        if (countEl) countEl.textContent = filtered.length + ' جهة';
 
         if (!filtered.length) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد شركات — أضف جهة تعاقد من الحقل أعلاه.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد جهات — أضف جهة تعاقد من الحقل أعلاه.</td></tr>';
         } else {
           tbody.innerHTML = filtered.map(function (c, idx) {
             return companyRowHtml(c, idx);
@@ -868,12 +869,86 @@
 
     function exportCompanies(type) {
       var data = getFilteredCompanies();
-      var headers = ['#', 'اسم الشركة'];
+      var headers = ['#', 'اسم الجهة'];
       var rows = data.map(function(c, i) { return [i + 1, c.name]; });
       if (type === 'excel') ExportKit.toExcel('contract-companies', headers, rows);
-      else ExportKit.toPDF('شركات التعاقد', headers, rows);
+      else ExportKit.toPDF('جهات التعاقد', headers, rows);
     }
 
+    function getCsrfToken() {
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      return csrfMeta ? csrfMeta.getAttribute('content') : '';
+    }
+
+    function normalizeCatalogItem(item) {
+      if (!item) return item;
+      return {
+        id: item.id,
+        code: item.code || '',
+        name: item.name || '',
+        spec: item.spec || '',
+        category_id: item.category_id || null,
+        category: item.category || '',
+        qty: item.qty || 0,
+        reserved: item.reserved || 0,
+        status: item.status || 'ok',
+        prices: (item.prices || []).map(function (p) {
+          return {
+            id: String(p.id || ''),
+            label: p.label || '',
+            supplier_id: p.supplier_id || null,
+            supplier: p.supplier || '',
+            itemCode: p.itemCode || p.supplier_item_code || '',
+            amount: Number(p.amount) || 0
+          };
+        })
+      };
+    }
+
+    function setCatalogItems(list) {
+      catalogItems = (list || []).map(normalizeCatalogItem);
+    }
+
+    function fetchCatalogFromServer(callback) {
+      fetch('/admin/catalog/items', {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(function (res) { return res.ok ? res.json() : Promise.reject(res); })
+        .then(function (payload) {
+          setCatalogItems(payload.data || []);
+          if (callback) callback();
+        })
+        .catch(function () {
+          if (callback) callback();
+        });
+    }
+
+    function loadCatalogItems() {
+      if (Array.isArray(window.__CATALOG_ITEMS)) {
+        setCatalogItems(window.__CATALOG_ITEMS);
+        return;
+      }
+      fetchCatalogFromServer(function () {
+        renderCatalog();
+      });
+    }
+
+    function findCatalogItemByCode(code) {
+      return catalogItems.find(function (i) { return i.code === code; });
+    }
+
+    function findCatalogItemById(id) {
+      return catalogItems.find(function (i) { return String(i.id) === String(id); });
+    }
+
+    function catalogActionsHtml(item) {
+      var id = item.id;
+      return '<div class="table-actions">' +
+        '<button type="button" class="btn-action" title="عرض التفاصيل" onclick="showCatalogDetail(' + id + ')">👁️ عرض</button>' +
+        '<button type="button" class="btn-action" title="تعديل الصنف" onclick="editCatalogItem(' + id + ')">✏️ تعديل</button>' +
+        '<button type="button" class="btn-action danger" title="حذف الصنف" onclick="deleteCatalogItem(' + id + ')">🗑️ حذف</button>' +
+        '</div>';
+    }
     function formatPriceRange(prices) {
       var s = StockCatalog.getPriceSummary(prices);
       if (!s.count) return '—';
@@ -901,13 +976,6 @@
       });
     }
 
-    var SUPPLIER_TYPES = [
-      { value: 'محلي', label: 'محلي', cls: 'local' },
-      { value: 'مستورد', label: 'مستورد', cls: 'import' },
-      { value: 'OEM', label: 'OEM', cls: 'oem' },
-      { value: 'موزّع', label: 'موزّع', cls: 'distributor' }
-    ];
-
     function getCatalogSuppliers() {
       return window.__CATALOG_SUPPLIERS || [];
     }
@@ -927,30 +995,11 @@
       return found ? found.name : '';
     }
 
-    function supplierTypeOptions(selected) {
-      return SUPPLIER_TYPES.map(function(t) {
-        return '<option value="' + t.value + '"' + (selected === t.value ? ' selected' : '') + '>' + t.label + '</option>';
-      }).join('');
-    }
-
-    function getSupplierTypeInfo(type) {
-      var found = SUPPLIER_TYPES.find(function(t) { return t.value === type; });
-      return found || { value: type || '—', label: type || '—', cls: 'import' };
-    }
-
-    function resolveSupplierType(price) {
-      if (price.supplierType) return price.supplierType;
-      if (price.label && price.label.indexOf('محلي') !== -1) return 'محلي';
-      return 'مستورد';
-    }
-
     function priceRowHtml(price, code) {
       var p = price || {};
-      var st = resolveSupplierType(p);
       return '<div class="price-row" data-id="' + (p.id || '') + '">' +
         '<div><label>وصف الصنف</label><input type="text" class="price-label" value="' + (p.label || '') + '" placeholder="مثال: ركبة محلية"></div>' +
         '<div><label>المورد</label><select class="price-supplier">' + supplierSelectHtml(p.supplier_id || p.supplierId, p.supplier) + '</select></div>' +
-        '<div><label>نوع المورد</label><select class="price-supplier-type">' + supplierTypeOptions(st) + '</select></div>' +
         '<div><label>كود الصنف</label><input type="text" class="price-item-code" value="' + (p.itemCode || p.batch || '') + '" placeholder="ITM-001-01"></div>' +
         '<div><label>السعر (ج.م)</label><input type="number" class="price-amount" min="0" value="' + (p.amount || '') + '" placeholder="45000"></div>' +
         '<button type="button" class="btn-remove-price" onclick="removePriceRow(this)" aria-label="حذف">&times;</button>' +
@@ -959,6 +1008,7 @@
 
     function resetCatalogForm() {
       editingCatalogCode = null;
+      editingCatalogId = null;
       document.getElementById('catalogEditCode').value = '';
       document.getElementById('catalogName').value = '';
       document.getElementById('catalogSpec').value = '';
@@ -972,6 +1022,7 @@
       document.getElementById('catalogForm').classList.add('open');
       if (item) {
         editingCatalogCode = item.code;
+        editingCatalogId = item.id;
         document.getElementById('catalogEditCode').value = item.code;
         document.getElementById('catalogName').value = item.name;
         document.getElementById('catalogSpec').value = item.spec || '';
@@ -1018,44 +1069,44 @@
     function collectPricesFromForm() {
       return Array.prototype.slice.call(document.querySelectorAll('#itemPricesList .price-row')).map(function(row) {
         var id = row.getAttribute('data-id');
-        var code = editingCatalogCode || StockCatalog.nextCode();
         var supplierSel = row.querySelector('.price-supplier');
         var supplierId = supplierSel ? supplierSel.value : '';
-        var supplierName = supplierId ? getSupplierNameById(supplierId) : '';
-        return {
-          id: id || StockCatalog.nextPriceId(code),
+        var itemCode = row.querySelector('.price-item-code').value.trim();
+        var rowData = {
           label: row.querySelector('.price-label').value.trim(),
           supplier_id: supplierId ? parseInt(supplierId, 10) : null,
-          supplier: supplierName,
-          supplierType: row.querySelector('.price-supplier-type').value,
-          itemCode: row.querySelector('.price-item-code').value.trim(),
-          amount: parseInt(row.querySelector('.price-amount').value, 10) || 0
+          supplier_item_code: itemCode,
+          itemCode: itemCode,
+          amount: parseFloat(row.querySelector('.price-amount').value) || 0
         };
+        if (id && /^\d+$/.test(String(id))) {
+          rowData.id = parseInt(id, 10);
+        }
+        return rowData;
       }).filter(function(p) { return p.label && p.itemCode && p.amount > 0 && p.supplier_id; });
     }
 
     function renderCatalog() {
-      catalogItems = StockCatalog.getAll();
+      var table = document.getElementById('catalogTable');
+      if (!table) return;
       var filtered = getFilteredCatalog();
-      document.getElementById('catalogCount').textContent = catalogItems.length + ' صنف';
-      document.getElementById('catalogFilteredCount').textContent = filtered.length + ' صنف';
-      document.getElementById('catalogTable').innerHTML = filtered.map(function(item) {
-        return '<tr class="catalog-row-clickable" data-code="' + item.code + '" title="اضغط لعرض التفاصيل">' +
+      var countEl = document.getElementById('catalogCount');
+      var filteredEl = document.getElementById('catalogFilteredCount');
+      if (countEl) countEl.textContent = catalogItems.length + ' صنف';
+      if (filteredEl) filteredEl.textContent = filtered.length + ' صنف';
+      table.innerHTML = filtered.map(function(item) {
+        return '<tr class="catalog-row-clickable" data-id="' + item.id + '" data-code="' + item.code + '" title="اضغط لعرض التفاصيل">' +
           '<td><strong>' + item.code + '</strong></td>' +
           '<td><strong>' + item.name + '</strong></td>' +
           '<td>' + item.category + '</td>' +
           '<td>' + (item.spec || '—') + '</td>' +
           '<td>' + (item.qty || 0) + '</td>' +
-          '<td onclick="event.stopPropagation()">' +
-            '<button class="btn-action" onclick="showCatalogDetail(\'' + item.code + '\')">عرض</button> ' +
-            '<button class="btn-action" onclick="editCatalogItem(\'' + item.code + '\')">تعديل</button> ' +
-            '<button class="btn-action" style="color:#b91c1c" onclick="deleteCatalogItem(\'' + item.code + '\')">حذف</button>' +
-          '</td></tr>';
+          '<td onclick="event.stopPropagation()">' + catalogActionsHtml(item) + '</td></tr>';
       }).join('');
       refreshPaginated('catalogTable');
     }
 
-    var catalogModalItemCode = null;
+    var catalogModalItemId = null;
 
     function buildPricesAccordionHtml(prices) {
       var count = prices.length;
@@ -1068,12 +1119,10 @@
 
       var panelContent = count
         ? prices.map(function(p) {
-            var st = getSupplierTypeInfo(resolveSupplierType(p));
             return '<div class="price-supplier-card">' +
               '<div class="psc-main">' +
                 '<div class="psc-supplier">' + (p.supplier || '—') + '</div>' +
                 '<div class="psc-meta">' +
-                  '<span class="supplier-type-tag ' + st.cls + '">' + st.label + '</span>' +
                   '<span class="psc-code">' + (p.itemCode || p.batch || '—') + '</span>' +
                   (p.label ? '<span>' + p.label + '</span>' : '') +
                 '</div>' +
@@ -1105,10 +1154,10 @@
       });
     }
 
-    function showCatalogDetail(code) {
-      var item = StockCatalog.getAll().find(function(i) { return i.code === code; });
+    function showCatalogDetail(id) {
+      var item = findCatalogItemById(id);
       if (!item) return;
-      catalogModalItemCode = code;
+      catalogModalItemId = item.id;
 
       var reserved = item.reserved || 0;
       var available = Math.max(0, (item.qty || 0) - reserved);
@@ -1148,30 +1197,47 @@
     function closeCatalogDetailModal() {
       document.getElementById('catalogDetailModal').classList.remove('open');
       document.body.style.overflow = '';
-      catalogModalItemCode = null;
+      catalogModalItemId = null;
     }
 
-    function editCatalogItem(code) {
-      var item = catalogItems.find(function(i) { return i.code === code; });
+    function editCatalogItem(id) {
+      var item = findCatalogItemById(id);
       if (item) openCatalogForm(item);
     }
 
-    function deleteCatalogItem(code) {
-      var item = catalogItems.find(function(i) { return i.code === code; });
+    function deleteCatalogItem(id) {
+      var item = findCatalogItemById(id);
       if (!item) return;
-      if (!confirm('حذف «' + item.name + '» من الكatalog؟')) return;
+      if (!confirm('حذف «' + item.name + '» من الأصناف؟')) return;
       closeCatalogDetailModal();
-      StockCatalog.removeItem(code);
-      catalogItems = StockCatalog.getAll();
-      renderCatalog();
-      renderAdminAnalytics();
+      fetch('/admin/catalog/' + encodeURIComponent(item.id), {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken()
+        }
+      })
+        .then(function (res) {
+          return res.json().then(function (body) {
+            if (!res.ok) throw new Error(body.message || 'تعذّر حذف الصنف');
+            return body;
+          });
+        })
+        .then(function () {
+          catalogItems = catalogItems.filter(function (i) { return String(i.id) !== String(item.id); });
+          window.__CATALOG_ITEMS = catalogItems;
+          renderCatalog();
+        })
+        .catch(function (err) {
+          alert(err.message || 'تعذّر حذف الصنف');
+        });
     }
 
     function saveCatalogItem() {
       var name = document.getElementById('catalogName').value.trim();
-      var spec = document.getElementById('catalogSpec').value.trim() || '—';
+      var spec = document.getElementById('catalogSpec').value.trim() || null;
       var categoryId = document.getElementById('catalogCategory').value;
-      var category = getCatalogCategoryNameById(categoryId);
       var qty = parseInt(document.getElementById('catalogQty').value, 10) || 0;
       var prices = collectPricesFromForm();
       if (!name) {
@@ -1186,35 +1252,68 @@
         alert('يرجى إضافة سعر واحد على الأقل مع اختيار المورد وكود الصنف');
         return;
       }
-      if (editingCatalogCode) {
-        var existing = catalogItems.find(function(i) { return i.code === editingCatalogCode; });
-        StockCatalog.updateItem(editingCatalogCode, {
-          name: name,
-          spec: spec,
-          category_id: parseInt(categoryId, 10),
-          category: category,
-          qty: qty,
-          reserved: existing ? existing.reserved : 0,
-          prices: prices
+
+      var payload = {
+        name: name,
+        spec: spec,
+        category_id: parseInt(categoryId, 10),
+        qty: qty,
+        prices: prices
+      };
+
+      var url = editingCatalogId
+        ? '/admin/catalog/' + encodeURIComponent(editingCatalogId)
+        : '/admin/catalog';
+      var method = editingCatalogId ? 'PUT' : 'POST';
+
+      var saveBtn = document.getElementById('btnSaveCatalog');
+      if (saveBtn) saveBtn.disabled = true;
+
+      fetch(url, {
+        method: method,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: JSON.stringify(payload)
+      })
+        .then(function (res) {
+          return res.json().then(function (body) {
+            if (!res.ok) {
+              var msg = body.message || (body.errors ? Object.values(body.errors).flat().join('\n') : 'تعذّر حفظ الصنف');
+              throw new Error(msg);
+            }
+            return body;
+          });
+        })
+        .then(function (body) {
+          var saved = normalizeCatalogItem(body.item);
+          if (editingCatalogId) {
+            catalogItems = catalogItems.map(function (i) {
+              return String(i.id) === String(saved.id) ? saved : i;
+            });
+          } else {
+            catalogItems = [saved].concat(catalogItems);
+          }
+          window.__CATALOG_ITEMS = catalogItems;
+          closeCatalogForm();
+          renderCatalog();
+          alert(body.message || 'تم حفظ الصنف — يظهر في لوحة الإدارة والمخزون وتوصيات الطبيب');
+        })
+        .catch(function (err) {
+          alert(err.message || 'تعذّر حفظ الصنف');
+        })
+        .finally(function () {
+          if (saveBtn) saveBtn.disabled = false;
         });
-      } else {
-        StockCatalog.addItem({
-          code: StockCatalog.nextCode(),
-          name: name,
-          spec: spec,
-          category_id: parseInt(categoryId, 10),
-          category: category,
-          qty: qty,
-          reserved: 0,
-          prices: prices
-        });
-      }
-      catalogItems = StockCatalog.getAll();
-      closeCatalogForm();
-      renderCatalog();
-      renderAdminAnalytics();
-      alert('تم حفظ الصنف — يظهر في المخزون وتوصيات الطبيب');
     }
+
+    window.showCatalogDetail = showCatalogDetail;
+    window.editCatalogItem = editCatalogItem;
+    window.deleteCatalogItem = deleteCatalogItem;
+    window.removePriceRow = removePriceRow;
 
     function exportCatalog(type) {
       var data = getFilteredCatalog();
@@ -1226,6 +1325,7 @@
       if (type === 'excel') ExportKit.toExcel('catalog-items', headers, rows);
       else ExportKit.toPDF('الأصناف والأسعار', headers, rows);
     }
+    window.exportCatalog = exportCatalog;
 
     onId('btnToggleCatalogForm', 'click', function() {
       var form = document.getElementById('catalogForm');
@@ -1251,17 +1351,17 @@
     onId('catalogTable', 'click', function(e) {
       var row = e.target.closest('.catalog-row-clickable');
       if (!row) return;
-      showCatalogDetail(row.getAttribute('data-code'));
+      showCatalogDetail(row.getAttribute('data-id'));
     });
 
     onId('catalogModalClose', 'click', closeCatalogDetailModal);
     onId('catalogModalCloseBtn', 'click', closeCatalogDetailModal);
     onId('catalogDetailModal', 'click', closeCatalogDetailModal);
     onId('catalogModalEdit', 'click', function() {
-      if (!catalogModalItemCode) return;
-      var code = catalogModalItemCode;
+      if (!catalogModalItemId) return;
+      var id = catalogModalItemId;
       closeCatalogDetailModal();
-      editCatalogItem(code);
+      editCatalogItem(id);
     });
 
     document.addEventListener('keydown', function(e) {
@@ -1376,7 +1476,7 @@
         return [d.company, formatNumber(d.due), lbl];
       });
       if (type === 'excel') ExportKit.toExcel('المديونيات', headers, rows);
-      else ExportKit.toPDF('مديونيات شركات التعاقد', headers, rows);
+      else ExportKit.toPDF('مديونيات جهات التعاقد', headers, rows);
     }
 
     function exportAudit(type) {
@@ -1666,7 +1766,7 @@
     }
 
     safePageInit(renderAdminAnalytics);
-    safePageInit(renderCatalog);
+    safePageInit(function () { loadCatalogItems(); renderCatalog(); });
     safePageInit(renderPricingApproval);
     safePageInit(renderCasesSection);
     safePageInit(renderOverviewCasesCounts);

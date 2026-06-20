@@ -69,7 +69,7 @@
                 <th>الفئة</th>
                 <th>المواصفات</th>
                 <th>الكمية</th>
-                <th>إجراء</th>
+                <th style="width:280px;white-space:nowrap">إجراء</th>
               </tr>
             </thead>
             <tbody id="catalogTable"></tbody>
@@ -79,4 +79,5 @@
     </div>
 <script>
 window.__CATALOG_SUPPLIERS = @json($catalogSuppliers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values());
+window.__CATALOG_ITEMS = @json($stock_items ?? []);
 </script>

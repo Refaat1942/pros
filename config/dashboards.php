@@ -176,7 +176,7 @@ return [
             'pricing' => ['title' => 'اعتماد طلبات التسعير', 'icon' => '✅', 'label' => 'اعتماد التسعير'],
             'cases' => ['title' => 'متابعة الحالات', 'icon' => '📁', 'label' => 'متابعة الحالات'],
             'employees' => ['title' => 'إدارة الموظفين ', 'icon' => '👥', 'label' => 'الموظفون'],
-            'companies' => ['title' => 'شركات التعاقد', 'icon' => '🏢', 'label' => 'شركات التعاقد'],
+            'companies' => ['title' => 'جهات التعاقد', 'icon' => '🏢', 'label' => 'جهات التعاقد'],
             'military-debts' => ['title' => 'مديونيات الجهات العسكرية', 'icon' => '🪖', 'label' => 'مديونيات عسكرية'],
             'audit' => ['title' => 'سجل الرقابة الحصين — Immutable Audit Log', 'icon' => '🔒', 'label' => 'سجل الرقابة'],
             'reports' => ['title' => 'التقارير والتحليلات', 'icon' => '📈', 'label' => 'التقارير'],

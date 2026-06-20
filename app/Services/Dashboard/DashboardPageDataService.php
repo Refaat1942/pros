@@ -18,6 +18,7 @@ use App\Enums\PricingRequestStatus;
 use App\Models\ApprovalContract;
 use App\Models\MilitaryDebt;
 use App\Services\BomService;
+use App\Services\StockCatalogService;
 
 /**
  * يُحمّل بيانات Eloquent لكل صفحة لوحة تحكم — يُستدعى من ShowsDashboardPage.
@@ -123,6 +124,8 @@ class DashboardPageDataService
 
     private function adminCatalog(): array
     {
+        $catalogService = app(StockCatalogService::class);
+
         return [
             'stock_categories' => StockCategory::query()
                 ->orderBy('name')
@@ -130,6 +133,7 @@ class DashboardPageDataService
             'suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'stock_items' => $catalogService->listForDashboard(),
         ];
     }
 

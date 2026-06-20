@@ -4,22 +4,22 @@
 <div class="section-view" id="section-companies">
     <div class="panel">
         <div class="panel-header">
-            <h3>🏢 شركات التعاقد</h3>
-            <span class="badge" id="companiesBadge">{{ $companyList->count() }} شركة</span>
+                <h3>🏢 جهات التعاقد</h3>
+            <span class="badge" id="companiesBadge">{{ $companyList->count() }} جهة</span>
         </div>
         <form method="POST" action="{{ route('admin.companies.store') }}" class="company-add-bar" data-validate-form>
             @csrf
             <input type="hidden" name="form" value="company">
             <input type="hidden" name="is_military" value="0">
-            <input type="text" name="name" placeholder="اسم الشركة / جهة التعاقد..." autocomplete="off"
+            <input type="text" name="name" placeholder="اسم الجهة / جهة التعاقد..." autocomplete="off"
                    data-v-rules="required,min:2,max:255" maxlength="255"
                    value="{{ old('name') }}">
-            <button type="submit" class="btn-add-company">➕ إضافة شركة</button>
+            <button type="submit" class="btn-add-company">➕ إضافة جهة</button>
             <p class="company-hint">أضف اسم جهة التعاقد — تُستخدم في الاستقبال والتقارير</p>
         </form>
         <div class="data-toolbar">
             @include('admin.partials.bulk-action-bar', ['bulkBarId' => 'companiesBulkBar'])
-            <input type="text" id="companySearch" placeholder="🔍 بحث باسم الشركة...">
+            <input type="text" id="companySearch" placeholder="🔍 بحث باسم الجهة...">
             <span class="toolbar-count" id="companiesCount">{{ $companyList->count() }} شركة</span>
         </div>
         <div class="panel-body">
@@ -28,7 +28,7 @@
                     <tr>
                         @include('admin.partials.bulk-select-th')
                         <th style="width:48px">#</th>
-                        <th>اسم الشركة</th>
+                        <th>اسم الجهة</th>
                         <th style="width:180px;white-space:nowrap">إجراء</th>
                     </tr>
                 </thead>
@@ -56,7 +56,7 @@
                     @empty
                         <tr>
                             <td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">
-                                لا توجد شركات — أضف جهة تعاقد من الحقل أعلاه.
+                                لا توجد جهات — أضف جهة تعاقد من الحقل أعلاه.
                             </td>
                         </tr>
                     @endforelse
@@ -78,7 +78,7 @@
         <input type="hidden" id="editCompanyId">
         <div class="catalog-modal-body">
             <div class="form-group" style="margin-bottom:14px;">
-                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">اسم الشركة / جهة التعاقد</label>
+                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">اسم الجهة / جهة التعاقد</label>
                 <input type="text" id="editCompanyName" maxlength="255"
                        class="form-control"
                        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">

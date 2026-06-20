@@ -31,8 +31,20 @@ var StockCatalog = (function () {
     getStagnant: empty,
     normalizeItem: function (item) { return item || {}; },
     syncStatus: noop,
-    formatPrice: function (n) { return String(n || 0); },
-    getPriceSummary: function () { return { count: 0, min: 0, max: 0 }; },
+    formatPrice: function (n) {
+      var num = Number(n) || 0;
+      return num.toLocaleString('ar-EG') + ' ج.م';
+    },
+    getPriceSummary: function (prices) {
+      var list = (prices || []).filter(function (p) { return Number(p.amount) > 0; });
+      if (!list.length) return { count: 0, min: 0, max: 0 };
+      var amounts = list.map(function (p) { return Number(p.amount) || 0; });
+      return {
+        count: list.length,
+        min: Math.min.apply(null, amounts),
+        max: Math.max.apply(null, amounts)
+      };
+    },
     DEFAULT: [],
     STORAGE_KEY: STORAGE_KEY,
     LOW_QTY_THRESHOLD: LOW_QTY_THRESHOLD

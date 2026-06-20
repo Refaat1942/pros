@@ -11,7 +11,7 @@
       <li><a href="#" data-section="pricing"><span class="nav-icon">✅</span> اعتماد التسعير</a></li>
       <li><a href="#" data-section="cases"><span class="nav-icon">📁</span> متابعة الحالات</a></li>
       <li><a href="#" data-section="employees"><span class="nav-icon">👥</span> الموظفون</a></li>
-      <li><a href="#" data-section="companies"><span class="nav-icon">🏢</span> شركات التعاقد</a></li>
+      <li><a href="#" data-section="companies"><span class="nav-icon">🏢</span> جهات التعاقد</a></li>
       <li><a href="#" data-section="debts"><span class="nav-icon">💰</span> المديونيات</a></li>
       <li><a href="#" data-section="audit"><span class="nav-icon">🔒</span> سجل الرقابة</a></li>
       <li><a href="#" data-section="reports"><span class="nav-icon">📈</span> التقارير</a></li>
@@ -82,7 +82,7 @@
 
       <div class="panel" id="debts">
         <div class="panel-header">
-          <h3>💰 مديونيات شركات التعاقد</h3>
+          <h3>💰 مديونيات جهات التعاقد</h3>
           <span class="badge" id="debtsOverviewBadge">0 جهة</span>
         </div>
         <div class="panel-body">
@@ -369,17 +369,17 @@
       ]])</div>
       <div class="panel">
         <div class="panel-header">
-          <h3>🏢 شركات التعاقد</h3>
-          <span class="badge" id="companiesBadge">0 شركة</span>
+          <h3>🏢 جهات التعاقد</h3>
+          <span class="badge" id="companiesBadge">0 جهة</span>
         </div>
         <div class="company-add-bar">
-          <input type="text" id="companyNameInput" placeholder="اسم الشركة / جهة التعاقد..." autocomplete="off">
-          <button type="button" class="btn-add-company" id="btnAddCompany">➕ إضافة شركة</button>
+          <input type="text" id="companyNameInput" placeholder="اسم الجهة / جهة التعاقد..." autocomplete="off">
+          <button type="button" class="btn-add-company" id="btnAddCompany">➕ إضافة جهة</button>
           <p class="company-hint">أضف اسم جهة التعاقد فقط — تُستخدم في قسم المديونيات والتقارير</p>
         </div>
         <div class="data-toolbar">
-          <input type="text" id="companySearch" placeholder="🔍 بحث باسم الشركة...">
-          <span class="toolbar-count" id="companiesCount">0 شركة</span>
+          <input type="text" id="companySearch" placeholder="🔍 بحث باسم الجهة...">
+          <span class="toolbar-count" id="companiesCount">0 جهة</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportCompanies('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportCompanies('pdf')">📄 PDF</button>
@@ -390,7 +390,7 @@
             <thead>
               <tr>
                 <th style="width:48px">#</th>
-                <th>اسم الشركة</th>
+                <th>اسم الجهة</th>
                 <th style="width:100px">إجراء</th>
               </tr>
             </thead>
@@ -410,7 +410,7 @@
       ]])</div>
       <div class="panel">
         <div class="panel-header">
-          <h3>💰 مديونيات شركات التعاقد</h3>
+          <h3>💰 مديونيات جهات التعاقد</h3>
           <span class="badge" id="debtsSectionBadge">0 جهة</span>
         </div>
         <div class="data-toolbar">

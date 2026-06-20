@@ -74,7 +74,7 @@
             <a href="{{ route('dashboard.login', 'admin') }}" class="role-card admin">
                 <div class="icon-wrap">⚙️</div>
                 <h2>الإدارة</h2>
-                <p>التحكم في إعدادات النظام، اعتماد التسعير، التقارير المالية، مديونيات شركات التعاقد، وسجل الرقابة.</p>
+                <p>التحكم في إعدادات النظام، اعتماد التسعير، التقارير المالية، مديونيات جهات التعاقد، وسجل الرقابة.</p>
                 <span class="enter-btn">
                     الدخول للوحة الإدارة
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

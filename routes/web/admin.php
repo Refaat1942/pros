@@ -62,6 +62,9 @@ Route::prefix('admin')
         Route::put('catalog/{stockItem}', [StockCatalogController::class, 'update'])
             ->name('catalog.update');
 
+        Route::delete('catalog/{stockItem}', [StockCatalogController::class, 'destroy'])
+            ->name('catalog.destroy');
+
         Route::post('catalog/{stockItem}/prices', [StockCatalogController::class, 'addPrice'])
             ->name('catalog.add-price');
 
