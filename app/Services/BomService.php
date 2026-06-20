@@ -33,6 +33,7 @@ class BomService
         private readonly BarcodeValidationService $barcodeValidation,
         private readonly StockPriceService $stockPriceService,
         private readonly WorkflowService $workflowService,
+        private readonly WorkOrderService $workOrderService,
         private readonly FinancialPostingService $financialPostingService,
     ) {
     }
@@ -359,8 +360,8 @@ class BomService
             ]);
 
             $case = $bom->caseRecord;
-            if ($case && $case->manufacturing_stage === CaseRecord::MFG_WAREHOUSE) {
-                $this->advanceManufacturingStage($case, CaseRecord::MFG_ISSUE);
+            if ($case) {
+                $this->promoteCaseAfterDispense($case);
             }
 
             $stockAfter = [];
@@ -388,6 +389,54 @@ class BomService
 
             return $bom->fresh()->load('items');
         });
+    }
+
+    /**
+     * بعد صرف BOM: توليد WO إن لزم، ونقل الحالة لمكتب التشغيل (manufacturing + issue).
+     */
+    public function promoteCaseAfterDispense(CaseRecord $case): CaseRecord
+    {
+        return DB::transaction(function () use ($case) {
+            $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
+
+            if (empty($case->work_order_no)) {
+                $this->workOrderService->generate($case->fresh());
+                $case->refresh();
+            }
+
+            if ($case->stage_key === CaseRecord::STAGE_MANUFACTURING) {
+                if ($case->manufacturing_stage === CaseRecord::MFG_WAREHOUSE) {
+                    return $this->advanceManufacturingStage($case, CaseRecord::MFG_ISSUE);
+                }
+
+                if ($case->manufacturing_stage === null || $case->manufacturing_stage === '') {
+                    $case->update(['manufacturing_stage' => CaseRecord::MFG_ISSUE]);
+
+                    return $case->fresh();
+                }
+
+                return $case;
+            }
+
+            if ($case->stage_key === CaseRecord::STAGE_WAITING_RETURN) {
+                $this->workflowService->advance($case, WorkflowEvent::BomDispensed->value);
+
+                return $case->fresh();
+            }
+
+            abort(422, 'لا يمكن صرف المواد — الحالة ليست جاهزة لدخول الورشة.');
+        });
+    }
+
+    /**
+     * إصلاح حالات BOM=WIP خارج مرحلة التصنيع (بيانات قديمة قبل ربط الصرف بالورشة).
+     */
+    public function repairOrphanWipCases(): void
+    {
+        CaseRecord::query()
+            ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_WIP))
+            ->where('stage_key', '!=', CaseRecord::STAGE_MANUFACTURING)
+            ->each(fn (CaseRecord $case) => $this->promoteCaseAfterDispense($case));
     }
 
     /**

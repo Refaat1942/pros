@@ -20,7 +20,7 @@
     money: 'أدخل مبلغاً صحيحاً أكبر من صفر.',
     qr: 'رمز QR غير صالح.',
     barcode: 'الباركود غير صالح.',
-    password: 'كلمة المرور يجب ألا تقل عن 8 أحرف.',
+    password: 'كلمة المرور يجب ألا تقل عن 6 أحرف.',
     passwordConfirm: 'تأكيد كلمة المرور غير متطابق.',
     date: 'أدخل تاريخاً صالحاً.',
     dateFuture: 'التاريخ لا يمكن أن يكون في المستقبل.',
@@ -74,7 +74,7 @@
     },
     password: function (value) {
       if (!trim(value)) return true;
-      return trim(value).length >= 8;
+      return trim(value).length >= 6;
     },
     rankCode: function (value) {
       if (!trim(value)) return true;
@@ -301,6 +301,9 @@
   global.DashboardValidation = {
     validateField: validateField,
     validateForm: validateForm,
+    isFieldValid: function (el, form) {
+      return validateField(el, form) === null;
+    },
     bindForm: bindForm,
     bindDashboard: bindDashboard,
     digitsOnly: digitsOnly,

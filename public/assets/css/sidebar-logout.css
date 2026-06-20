@@ -1,0 +1,72 @@
+/**
+ * Sidebar logout — loaded last so it wins over Tailwind preflight & dashboard resets.
+ */
+aside.sidebar {
+  height: 100vh;
+  min-height: 100vh;
+}
+
+aside.sidebar .sidebar-nav-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+aside.sidebar .nav-menu {
+  flex: none;
+}
+
+aside.sidebar .sidebar-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+aside.sidebar .sidebar-logout-form {
+  margin: 0;
+  width: 100%;
+}
+
+aside.sidebar .sidebar-footer .btn-sidebar-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 12px 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+aside.sidebar .sidebar-footer .btn-sidebar-logout:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+aside.sidebar .sidebar-footer .btn-sidebar-logout:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 2px;
+}
+
+aside.sidebar .sidebar-footer .btn-sidebar-logout .nav-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}

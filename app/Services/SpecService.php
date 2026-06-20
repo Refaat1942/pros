@@ -154,7 +154,7 @@ class SpecService
 
             $spec->update([
                 'locked'       => true,
-                'submitted_at' => now()->toDateString(),
+                'submitted_at' => now(),
             ]);
 
             $case->update(['pricing_request_id' => $pricingRequest->id]);
@@ -166,6 +166,12 @@ class SpecService
                 'name'            => $i->name,
                 'qty'             => $i->qty,
             ])->all());
+
+            // المسار العسكري: اعتماد تلقائي فوري — تجاوز طابور موافقة الإدارة بالكامل.
+            // تُولَّد أمر الشغل (WO-*) وتنتقل الحالة مباشرةً إلى manufacturing/warehouse.
+            if ($case->isMilitary()) {
+                $this->pricingService->silentAutoApprove($pricingRequest->fresh());
+            }
 
             AuditService::log(
                 action:      'create',

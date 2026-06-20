@@ -6,16 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Reports\Concerns\RendersAdminDashboard;
 use App\Models\AuditLog;
 use App\Models\CaseRecord;
+use App\Models\MilitaryDebt;
 use App\Models\User;
 use App\Services\BiReportService;
+use App\Services\Dashboard\DashboardPageDataService;
 use Illuminate\View\View;
 
 class AdminOverviewController extends Controller
 {
     use RendersAdminDashboard;
 
-    public function __construct(private readonly BiReportService $biReportService)
-    {
+    public function __construct(
+        private readonly BiReportService $biReportService,
+        private readonly DashboardPageDataService $pageData,
+    ) {
     }
 
     /**
@@ -25,9 +29,9 @@ class AdminOverviewController extends Controller
     {
         $board1 = $this->biReportService->boardPatients();
         $board2 = $this->biReportService->boardInventory();
-        $board4 = $this->biReportService->boardEntitiesAndCosts();
+        $ops    = $this->pageData->resolve('operations', 'operations');
 
-        return $this->adminPage('overview', [
+        return $this->adminPage('overview', array_merge($ops, [
             'open_cases'         => $board1['open_count'],
             'ready_for_delivery' => CaseRecord::where('stage_key', CaseRecord::STAGE_READY_DELIVERY)->count(),
             'sla_breached'       => $board1['sla_breached'],
@@ -58,9 +62,12 @@ class AdminOverviewController extends Controller
                     'bg'    => 'rgba(220,38,38,0.1)',
                 ],
                 [
-                    'icon'  => '💰',
-                    'label' => 'صافي المديونيات',
-                    'value' => number_format($board4['net_debts'], 0) . ' ج.م',
+                    'icon'  => '🪖',
+                    'label' => 'مديونيات عسكرية معلقة',
+                    'value' => number_format(
+                        MilitaryDebt::where('status', MilitaryDebt::STATUS_PENDING)->sum('total_cost'),
+                        0
+                    ) . ' ج.م',
                     'color' => '#7c3aed',
                     'bg'    => 'rgba(124,58,237,0.1)',
                 ],
@@ -78,9 +85,8 @@ class AdminOverviewController extends Controller
                 : 0,
             'employees_preview' => User::query()
                 ->with('role:id,slug,label_ar')
-                ->orderBy('name')
-                ->limit(5)
-                ->get(['id', 'name', 'role_id', 'status', 'last_login_at']),
-        ]);
+                ->orderByDesc('id')
+                ->get(['id', 'name', 'email', 'role_id', 'status', 'last_login_at']),
+        ]));
     }
 }

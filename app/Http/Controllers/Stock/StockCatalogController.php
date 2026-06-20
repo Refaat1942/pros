@@ -30,7 +30,9 @@ class StockCatalogController extends Controller
     {
         $items = $this->fetchForDashboard(
             StockItem::query()
-                ->when($request->category, fn ($q, $c) => $q->where('category', $c))
+                ->with('category:id,name')
+                ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
+                ->when($request->category, fn ($q, $c) => $q->whereHas('category', fn ($q) => $q->where('name', $c)))
                 ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
@@ -38,7 +40,7 @@ class StockCatalogController extends Controller
                       ->orWhere('code', 'like', "%{$search}%")
                       ->orWhere('barcode', 'like', "%{$search}%");
                 }))
-                ->orderBy('code')
+                ->orderByDesc('id')
         );
 
         return response()->json([
@@ -70,7 +72,7 @@ class StockCatalogController extends Controller
      */
     public function update(UpdateStockItemRequest $request, StockItem $stockItem): JsonResponse
     {
-        $before = $stockItem->only(['name', 'spec', 'category', 'store_class', 'uom']);
+        $before = $stockItem->only(['name', 'spec', 'category_id', 'store_class', 'uom']);
 
         $stockItem->update($request->validated());
 
@@ -79,7 +81,7 @@ class StockCatalogController extends Controller
             description: "تعديل صنف {$stockItem->code}",
             tag:         'warehouse',
             before:      $before,
-            after:       $stockItem->only(['name', 'spec', 'category', 'store_class', 'uom']),
+            after:       $stockItem->only(['name', 'spec', 'category_id', 'store_class', 'uom']),
         );
 
         return response()->json($stockItem);

@@ -1,10 +1,4 @@
 <div class="section-view" id="section-cases">
-      <div id="analytics-cases">@include('partials.dashboard-analytics-empty', ['stats' => [
-        ['icon' => '⏳', 'label' => 'بانتظار الرجوع', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-        ['icon' => '🏭', 'label' => 'تحت التنفيذ', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-        ['icon' => '✅', 'label' => 'تم التسليم', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '⏱', 'label' => 'متوسط انتظار', 'value' => '—', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
-      ]])</div>
       <div class="cases-quick-grid" id="casesQuickGrid">
         <button type="button" class="cases-quick-btn waiting active" data-cases-filter="waiting_return">
           <span class="cq-icon">⏳</span>

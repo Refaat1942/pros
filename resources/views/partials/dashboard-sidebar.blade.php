@@ -22,9 +22,12 @@
             @endforeach
         </ul>
     </div>
-    @if ($sidebar['show_home_link'] ?? true)
     <div class="sidebar-footer">
-        <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
+        <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
+            @csrf
+            <button type="submit" class="btn-sidebar-logout" title="تسجيل الخروج">
+                <span class="nav-icon">↩</span> تسجيل الخروج
+            </button>
+        </form>
     </div>
-    @endif
 </aside>

@@ -10,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 /**
  * قائمة مواد التشغيل — clinic_bom_inventory
  */
-class Bom extends Model
+
+
+class Bom extends Model /// Bill of Materials  || "الروشتة التصنيعية للمريض" أو "قائمة المقادير".
 {
     public const STAGE_RAW = 'raw';
     public const STAGE_WIP = 'wip';

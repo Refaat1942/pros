@@ -19,7 +19,7 @@ class StorePatientRequest extends BaseRequest
             'military_rank_id'    => ['nullable', 'integer', 'exists:military_ranks,id'],
             'sovereign_entity'    => ['nullable', 'string', 'min:2', 'max:255'],
             'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
-            'visit_type_id'       => ['required', 'integer', Rule::exists('visit_types', 'id')->where('is_active', true)],
+            'visit_type_id'       => ['required', 'integer', Rule::exists('visit_types', 'id')],
         ];
     }
 

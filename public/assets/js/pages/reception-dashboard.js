@@ -31,6 +31,108 @@
 
     function syncPricingQueueToQuotes() {}
 
+    /**
+     * تحميل عروض الأسعار من الخادم — يُستدعى عند تحميل صفحة "عروض الأسعار".
+     * يُعبئ مصفوفة quotations ثم يُعيد رسم الجدول.
+     */
+    function fetchServerQuotes() {
+      if (document.body.dataset.activePage !== 'quote') return;
+
+      fetch('/reception/quote/list', {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (payload) {
+          if (!payload || !Array.isArray(payload.data)) return;
+
+          quotations = payload.data.map(function (q) {
+            return {
+              id:          q.quote_no,
+              _dbId:       q.id,
+              patient:     q.patient_name,
+              company:     q.company_name,
+              orderRef:    q.order_ref,
+              date:        displayDateFromIso(q.quote_date),
+              total:       parseFloat(q.total) || 0,
+              status:      q.status,
+              statusLabel: q.status_label,
+              items:       (q.items || []).map(function (i) {
+                return { name: i.name, qty: i.qty, amount: parseFloat(i.amount) || 0 };
+              })
+            };
+          });
+
+          renderQuoteTable();
+          renderQuoteAnalytics();
+
+          var searchEl = document.getElementById('quoteSearch');
+          if (searchEl) searchEl.focus();
+        })
+        .catch(function (err) { console.error('fetchServerQuotes failed', err); });
+    }
+
+    /**
+     * إصدار عرض السعر رسمياً للجهة التعاقدية عبر API.
+     */
+    function issueQuoteToEntity(dbId) {
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+      fetch('/reception/quote/' + dbId + '/issue', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrf,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+      })
+        .then(function (r) {
+          return r.ok ? r.json() : r.json().then(function (j) { throw j; });
+        })
+        .then(function (res) {
+          var q = quotations.find(function (q) { return q._dbId === dbId; });
+          if (q && res.quote) {
+            q.status      = res.quote.status;
+            q.statusLabel = res.quote.status_label;
+          }
+          renderQuoteTable();
+          renderQuoteAnalytics();
+          showToast('تم إصدار عرض السعر للجهة بنجاح');
+        })
+        .catch(function (err) {
+          showToast((err && err.message) ? err.message : 'تعذّر إصدار العرض للجهة', true);
+        });
+    }
+    window.issueQuoteToEntity = issueQuoteToEntity;
+
+    /**
+     * تحديث بطاقات الإحصاء في صفحة عروض الأسعار.
+     */
+    function renderQuoteAnalytics() {
+      var container = document.getElementById('analytics-quote');
+      if (!container) return;
+
+      var total    = quotations.length;
+      var pending  = quotations.filter(function (q) { return q.status === 'pending'; }).length;
+      var issued   = quotations.filter(function (q) { return q.status === 'issued'; }).length;
+      var approved = quotations.filter(function (q) { return q.status === 'approved'; }).length;
+
+      function setVal(idx, val) {
+        var els = container.querySelectorAll('.ck-stat-value');
+        if (els[idx]) els[idx].textContent = String(val);
+      }
+
+      setVal(0, total);
+      setVal(1, approved);
+      setVal(2, pending + issued);
+    }
+
     function markQuoteAsIssued(quote) {
       if (!quote) return;
       CasesWorkflow.onQuoteIssued(quote.id, {
@@ -42,10 +144,51 @@
       });
     }
 
+    function normalizeScanCode(raw) {
+      return String(raw || '').trim().toUpperCase();
+    }
+
+    function findQuoteByScanCode(code) {
+      var normalized = normalizeScanCode(code);
+      if (!normalized) return null;
+      return quotations.find(function (q) {
+        return normalizeScanCode(q.id) === normalized;
+      }) || null;
+    }
+
+    /**
+     * معالجة مسح الباركود/QR — يُستدعى عند Enter من جهاز الماسح.
+     */
+    function handleQuoteBarcodeScan(raw) {
+      var code = normalizeScanCode(raw);
+      if (!code) return;
+
+      quoteSearchTerm = code;
+      renderQuoteTable();
+
+      var quote = findQuoteByScanCode(code);
+      if (!quote) {
+        showToast('لم يُعثَر على عرض سعر مطابق: ' + code);
+        return;
+      }
+
+      if (quote.status === 'issued') {
+        openOcrApprovalModal(quote);
+        return;
+      }
+
+      if (quote.status === 'pending') {
+        showToast('يجب إصدار العرض للجهة أولاً — ' + quote.id);
+      }
+
+      openQuoteModal(quote.id);
+    }
+
     function getFilteredQuotations() {
       return quotations.filter(function(q) {
         if (!quoteSearchTerm) return true;
-        return q.id.indexOf(quoteSearchTerm) !== -1 ||
+        var term = quoteSearchTerm.toUpperCase();
+        return q.id.toUpperCase().indexOf(term) !== -1 ||
           q.patient.indexOf(quoteSearchTerm) !== -1 ||
           q.company.indexOf(quoteSearchTerm) !== -1;
       });
@@ -203,7 +346,14 @@
       var filtered = getFilteredQuotations();
       var tbody = document.getElementById('quotesTable');
       if (!tbody) return;
-      tbody.innerHTML = filtered.map(function(q) {
+      tbody.innerHTML = filtered.map(function (q) {
+        var viewBtn = '<button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:12px;" onclick="openQuoteModal(\'' + q.id + '\')">عرض</button>';
+        var issueBtn = q.status === 'pending' && q._dbId
+          ? ' <button type="button" class="btn btn-primary" style="padding:6px 14px;font-size:12px;margin-right:4px;" onclick="issueQuoteToEntity(' + q._dbId + ')">إصدار للجهة</button>'
+          : '';
+        var ocrBtn = q.status === 'issued'
+          ? ' <button type="button" class="btn" style="padding:6px 14px;font-size:12px;margin-right:4px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="openOcrApprovalModal(quotations.find(function(x){return x.id===\'' + q.id + '\';}))">📄 رفع خطاب الموافقة</button>'
+          : '';
         return '<tr>' +
           '<td><strong style="color:var(--primary);">' + q.id + '</strong></td>' +
           '<td><strong>' + q.patient + '</strong></td>' +
@@ -211,7 +361,7 @@
           '<td>' + q.date + '</td>' +
           '<td><strong>' + formatQuoteAmount(q.total) + ' ج.م</strong></td>' +
           '<td><span class="quote-status-tag ' + q.status + '">' + q.statusLabel + '</span></td>' +
-          '<td><button type="button" class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="openQuoteModal(\'' + q.id + '\')">عرض السعر</button></td>' +
+          '<td>' + viewBtn + issueBtn + ocrBtn + '</td>' +
           '</tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد عروض مطابقة</td></tr>';
 
@@ -819,6 +969,13 @@
       fetchAppointmentsForSelectedDate();
     }
 
+    function syncAddPatientFormHeight() {
+      var wrap = document.getElementById('addPatientFormWrap');
+      if (!wrap || !wrap.classList.contains('open')) return;
+      wrap.style.maxHeight = 'none';
+      wrap.style.maxHeight = wrap.scrollHeight + 'px';
+    }
+
     function toggleAddPatientForm(forceOpen) {
       var wrap = document.getElementById('addPatientFormWrap');
       var section = document.getElementById('addPatientSection');
@@ -829,11 +986,15 @@
       section.classList.toggle('expanded', open);
       if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (open) {
+        requestAnimationFrame(syncAddPatientFormHeight);
+        loadContractCompanies();
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         setTimeout(function() {
           var nameEl = document.getElementById('newPatientName');
           if (nameEl) nameEl.focus();
         }, 350);
+      } else {
+        wrap.style.maxHeight = '';
       }
     }
 
@@ -889,13 +1050,51 @@
       sel.querySelectorAll('option[data-military]').forEach(function(opt) {
         var mil = opt.getAttribute('data-military') === '1';
         opt.style.display = isMilitary ? (mil ? '' : 'none') : (mil ? 'none' : '');
+        opt.disabled = isMilitary ? !mil : mil;
       });
-      sel.value = '';
+      if (sel.value) {
+        var selected = sel.querySelector('option[value="' + sel.value + '"]');
+        if (selected && selected.style.display === 'none') sel.value = '';
+      }
     }
 
-    // Initial company filter (civilian default)
+    /**
+     * تحميل جهات التعاقد من قاعدة البيانات (المضافة من الإدارة) — لا بيانات static.
+     */
+    function loadContractCompanies() {
+      var sel = document.getElementById('newCompanyId');
+      if (!sel) return Promise.resolve();
+
+      var preserved = sel.value;
+
+      return fetch('/reception/lookup/companies?all=1', {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      })
+        .then(function (r) { return r.ok ? r.json() : { data: [] }; })
+        .then(function (res) {
+          var companies = res.data || [];
+          sel.innerHTML = '<option value="">— اختر الجهة —</option>';
+          companies.forEach(function (co) {
+            var opt = document.createElement('option');
+            opt.value = String(co.id);
+            opt.textContent = co.name;
+            opt.setAttribute('data-military', co.is_military ? '1' : '0');
+            sel.appendChild(opt);
+          });
+          if (preserved && sel.querySelector('option[value="' + preserved + '"]')) {
+            sel.value = preserved;
+          }
+          var patientTypeSel = document.getElementById('newPatientType');
+          var isMil = patientTypeSel && patientTypeSel.value === 'military';
+          filterCompanyOptions(isMil);
+        })
+        .catch(function () { /* يبقى على خيارات السيرفر */ });
+    }
+
+    // Initial company filter (civilian default) + load from server
     if (document.getElementById('newCompanyId')) {
-      filterCompanyOptions(false);
+      loadContractCompanies();
     }
 
     // ── Patient-type change ─────────────────────────────────────────────────
@@ -910,7 +1109,12 @@
         var companyRequired = document.getElementById('companyRequired');
         if (companyRequired) companyRequired.style.display = isMil ? 'none' : '';
         filterCompanyOptions(isMil);
+        requestAnimationFrame(syncAddPatientFormHeight);
       });
+    }
+
+    if (document.getElementById('addPatientFormWrap')?.classList.contains('open')) {
+      requestAnimationFrame(syncAddPatientFormHeight);
     }
 
     // ── Patient card display ─────────────────────────────────────────────────
@@ -976,8 +1180,6 @@
 
     var btnScanQR = document.getElementById('btnScanQR');
     if (btnScanQR) btnScanQR.addEventListener('click', function() { openQRScan(); });
-    var btnSimulateReturn = document.getElementById('btnSimulateReturn');
-    if (btnSimulateReturn) btnSimulateReturn.addEventListener('click', function() { openQRScan(); });
     var closeQrModal = document.getElementById('closeQrModal');
     if (closeQrModal) closeQrModal.addEventListener('click', closeQRScanModal);
     var qrModal = document.getElementById('qrModal');
@@ -1108,19 +1310,236 @@
       fileInput.value = '';
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // OCR Approval Modal — رفع خطاب موافقة الجهة الضامنة (Civilian only)
+    // ══════════════════════════════════════════════════════════════════
+
+    var _ocrCurrentQuote = null;
+    var _ocrStoredPath   = null;
+
+    function ocrShowStep(step) {
+      ['ocrStep1','ocrStep2','ocrStep3','ocrStep4'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      var target = document.getElementById(step);
+      if (target) target.style.display = 'block';
+    }
+
+    function openOcrApprovalModal(quote) {
+      if (!quote) return;
+      _ocrCurrentQuote = quote;
+      _ocrStoredPath   = null;
+
+      var refEl = document.getElementById('ocrQuoteRef');
+      if (refEl) refEl.textContent = quote.id + ' — ' + quote.patient + ' / ' + quote.company;
+
+      var fi = document.getElementById('ocrFileInput');
+      if (fi) fi.value = '';
+
+      var errEl = document.getElementById('ocrError');
+      if (errEl) errEl.style.display = 'none';
+
+      ocrShowStep('ocrStep1');
+
+      var modal = document.getElementById('ocrApprovalModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeOcrApprovalModal() {
+      var modal = document.getElementById('ocrApprovalModal');
+      if (modal) modal.style.display = 'none';
+      _ocrCurrentQuote = null;
+      _ocrStoredPath   = null;
+    }
+
+    function handleOcrFileDrop(event) {
+      var files = event.dataTransfer && event.dataTransfer.files;
+      if (files && files.length > 0) processOcrFile(files[0]);
+    }
+
+    function processOcrFile(file) {
+      if (!file || !_ocrCurrentQuote) return;
+
+      var allowed = ['image/jpeg','image/png','image/jpg','application/pdf'];
+      if (allowed.indexOf(file.type) === -1) {
+        alert('نوع الملف غير مدعوم. يُرجى اختيار صورة أو PDF.');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert('حجم الملف يتجاوز 10 ميجا.');
+        return;
+      }
+
+      ocrShowStep('ocrStep2');
+
+      var formData = new FormData();
+      formData.append('quote_no',    _ocrCurrentQuote.id);
+      formData.append('letter_file', file);
+
+      var csrfInput = document.querySelector('meta[name="csrf-token"]');
+      var csrf      = csrfInput ? csrfInput.getAttribute('content') : '';
+
+      fetch('/reception/ocr/extract', {
+        method: 'POST',
+        headers: {
+          'Accept':           'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN':     csrf
+        },
+        credentials: 'same-origin',
+        body: formData
+      })
+        .then(function (r) {
+          return r.ok ? r.json() : r.json().then(function (j) { throw j; });
+        })
+        .then(function (res) {
+          _ocrStoredPath = res.stored_path || null;
+
+          var extracted = res.extracted || {};
+          var nameEl    = document.getElementById('ocrConfirmName');
+          var amountEl  = document.getElementById('ocrConfirmAmount');
+          var companyEl = document.getElementById('ocrConfirmCompany');
+          var refEl2    = document.getElementById('ocrLetterRef');
+
+          if (nameEl)    nameEl.value    = extracted.patient_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.patient : '');
+          if (amountEl)  amountEl.value  = extracted.approved_amount || (_ocrCurrentQuote ? _ocrCurrentQuote.total   : '');
+          if (companyEl) companyEl.value = extracted.company_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.company : '');
+          if (refEl2)    refEl2.value    = '';
+
+          var errEl = document.getElementById('ocrError');
+          if (errEl) errEl.style.display = 'none';
+
+          ocrShowStep('ocrStep3');
+        })
+        .catch(function (err) {
+          ocrShowStep('ocrStep1');
+          alert((err && err.message) ? err.message : 'تعذّر رفع الملف.');
+        });
+    }
+
+    function confirmOcrApproval() {
+      if (!_ocrCurrentQuote) return;
+
+      var nameEl    = document.getElementById('ocrConfirmName');
+      var amountEl  = document.getElementById('ocrConfirmAmount');
+      var companyEl = document.getElementById('ocrConfirmCompany');
+      var refEl     = document.getElementById('ocrLetterRef');
+      var errEl     = document.getElementById('ocrError');
+      var btn       = document.getElementById('btnConfirmOcr');
+
+      var name    = nameEl    ? nameEl.value.trim()    : '';
+      var amount  = amountEl  ? amountEl.value.trim()  : '';
+      var company = companyEl ? companyEl.value.trim() : '';
+      var ref     = refEl     ? refEl.value.trim()     : '';
+
+      if (!name || !amount || isNaN(parseFloat(amount))) {
+        if (errEl) { errEl.textContent = 'يرجى التحقق من اسم المريض والمبلغ المالي.'; errEl.style.display = 'block'; }
+        return;
+      }
+
+      if (errEl) errEl.style.display = 'none';
+      if (btn) { btn.disabled = true; btn.textContent = 'جاري الاعتماد...'; }
+
+      var csrfInput = document.querySelector('meta[name="csrf-token"]');
+      var csrf      = csrfInput ? csrfInput.getAttribute('content') : '';
+
+      fetch('/reception/ocr/process', {
+        method: 'POST',
+        headers: {
+          'Accept':           'application/json',
+          'Content-Type':     'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN':     csrf
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          quote_no:        _ocrCurrentQuote.id,
+          patient_name:    name,
+          approved_amount: parseFloat(amount),
+          company_name:    company,
+          letter_ref:      ref,
+          letter_path:     _ocrStoredPath || null
+        })
+      })
+        .then(function (r) {
+          return r.ok ? r.json() : r.json().then(function (j) { throw j; });
+        })
+        .then(function (res) {
+          var woText    = document.getElementById('ocrSuccessWO');
+          var succText  = document.getElementById('ocrSuccessText');
+          if (woText)   woText.textContent   = '📋 أمر التشغيل: ' + (res.work_order_no || '—');
+          if (succText) succText.textContent = 'تم اعتماد عرض السعر ' + _ocrCurrentQuote.id + ' للمريض ' + name;
+
+          var q = quotations.find(function(x) { return x.id === _ocrCurrentQuote.id; });
+          if (q) {
+            q.status      = 'approved';
+            q.statusLabel = 'معتمد — تم توليد أمر الشغل';
+          }
+          renderQuoteTable();
+          renderQuoteAnalytics();
+
+          ocrShowStep('ocrStep4');
+        })
+        .catch(function (err) {
+          var msg = (err && err.message) ? err.message : 'تعذّر إتمام الاعتماد المالي.';
+          if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+          if (btn) { btn.disabled = false; btn.textContent = '✅ تأكيد واعتماد مالي — توليد أمر الشغل'; }
+        });
+    }
+
+    window.openOcrApprovalModal = openOcrApprovalModal;
+
+    // Bind OCR modal events
+    (function () {
+      var fileInput = document.getElementById('ocrFileInput');
+      if (fileInput) {
+        fileInput.addEventListener('change', function () {
+          if (fileInput.files && fileInput.files[0]) processOcrFile(fileInput.files[0]);
+        });
+      }
+
+      var closeBtn = document.getElementById('btnCloseOcrModal');
+      if (closeBtn) closeBtn.addEventListener('click', closeOcrApprovalModal);
+
+      var resetBtn = document.getElementById('btnResetOcrModal');
+      if (resetBtn) resetBtn.addEventListener('click', function () {
+        var fi = document.getElementById('ocrFileInput');
+        if (fi) fi.value = '';
+        _ocrStoredPath = null;
+        ocrShowStep('ocrStep1');
+      });
+
+      var confirmBtn = document.getElementById('btnConfirmOcr');
+      if (confirmBtn) confirmBtn.addEventListener('click', confirmOcrApproval);
+
+      var successBtn = document.getElementById('btnCloseOcrSuccess');
+      if (successBtn) successBtn.addEventListener('click', closeOcrApprovalModal);
+    })();
+
     initAppointmentsCalendar();
 
     syncPricingQueueToQuotes();
     renderPatients();
     renderQuoteTable();
     renderDeliveryTable();
+    fetchServerQuotes();
 
     var quoteSearch = document.getElementById('quoteSearch');
     if (quoteSearch) {
-      quoteSearch.addEventListener('input', function(e) {
+      quoteSearch.addEventListener('input', function (e) {
         quoteSearchTerm = e.target.value.trim();
         renderQuoteTable();
       });
+      quoteSearch.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleQuoteBarcodeScan(e.target.value);
+        }
+      });
+      if (document.body.dataset.activePage === 'quote') {
+        quoteSearch.focus();
+      }
     }
 
     if (window.__SHOW_PATIENT_CARD_ID) {

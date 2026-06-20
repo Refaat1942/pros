@@ -1,17 +1,38 @@
 @php
     $b1 = $board1 ?? [];
+    $b2 = $board2 ?? [];
+    $b3 = $board3 ?? [];
+    $b4 = $board4 ?? [];
+    $b5 = $board5 ?? [];
     $fmt = fn ($n) => number_format((float) $n, 0);
-    $fmtMoney = fn ($n) => number_format((float) $n, 2) . ' ج.م';
+    $fmtMoney = fn ($n) => number_format((float) $n, 2);
 @endphp
 <div class="bi-grid" data-server-rendered="1">
+
+    {{-- ── 1. إدارة المرضى ─────────────────────────────────────────────── --}}
     <div class="bi-card">
         <div class="bi-card-head"><span>👥</span><h4>1. إدارة المرضى</h4></div>
         <div class="bi-card-body">
-            <div class="bi-row"><span>إجمالي الحالات</span><strong>{{ $b1['total_cases'] ?? 0 }}</strong></div>
-            <div class="bi-row"><span>🌐 مدني</span><strong style="color:#0e7490">{{ $b1['civilian_count'] ?? 0 }}</strong></div>
-            <div class="bi-row"><span>🪖 عسكري</span><strong style="color:#b45309">{{ $b1['military_count'] ?? 0 }}</strong></div>
-            <div class="bi-row">
-                <span>متوسط زمن التنفيذ (Turnaround)</span>
+            <div class="bi-kpi-grid bi-kpi-grid--4">
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">إجمالي الحالات</div>
+                    <div class="bi-kpi-value">{{ $b1['total_cases'] ?? 0 }}</div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">🌐 مدني</div>
+                    <div class="bi-kpi-value bi-tone-cyan">{{ $b1['civilian_count'] ?? 0 }}</div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">🪖 عسكري</div>
+                    <div class="bi-kpi-value bi-tone-amber">{{ $b1['military_count'] ?? 0 }}</div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">حالات مفتوحة</div>
+                    <div class="bi-kpi-value">{{ $b1['open_count'] ?? 0 }}</div>
+                </div>
+            </div>
+            <div class="bi-highlight-row">
+                <span>⏱️ متوسط زمن التنفيذ (Turnaround)</span>
                 <strong>
                     @if(isset($b1['avg_turnaround']) && $b1['avg_turnaround'] !== null)
                         {{ $b1['avg_turnaround'] }} يوم
@@ -20,104 +41,179 @@
                     @endif
                 </strong>
             </div>
-            <div class="bi-row"><span>حالات مفتوحة</span><strong>{{ $b1['open_count'] ?? 0 }}</strong></div>
-            <div class="bi-sub">⏱️ حالات متأخرة عن الـ SLA ({{ $b1['sla_days'] ?? 21 }} يوم):
+            <div class="bi-section-title">⏱️ حالات متأخرة عن الـ SLA ({{ $b1['sla_days'] ?? 21 }} يوم)</div>
+            <div class="bi-alert-box {{ empty($b1['sla_breached_cases']) ? 'bi-alert-box--ok' : 'bi-alert-box--warn' }}">
                 <ul class="bi-list">
                     @forelse($b1['sla_breached_cases'] ?? [] as $case)
-                        <li style="color:#b91c1c">
-                            {{ $case['case_no'] }} — {{ $case['patient'] }}
-                            ({{ $case['days_open'] ?? '?' }} يوم)
+                        <li>
+                            <span class="bi-case-ref">{{ $case['case_no'] }}</span>
+                            — {{ $case['patient'] }}
+                            <span class="bi-badge bi-badge--danger">{{ $case['days_open'] ?? '?' }} يوم</span>
                         </li>
                     @empty
-                        <li style="color:var(--accent,#059669)">لا توجد حالات متأخرة عن الـ SLA ✅</li>
+                        <li>لا توجد حالات متأخرة عن الـ SLA ✅</li>
                     @endforelse
                 </ul>
             </div>
         </div>
     </div>
 
-    @php $b2 = $board2 ?? []; @endphp
+    {{-- ── 2. المخازن ──────────────────────────────────────────────────── --}}
     <div class="bi-card">
         <div class="bi-card-head"><span>📦</span><h4>2. المخازن وسلاسل الإمداد</h4></div>
         <div class="bi-card-body">
-            <div class="bi-row"><span>القيمة المالية الإجمالية (WAC)</span><strong style="color:#0e7490">{{ $fmtMoney($b2['total_value'] ?? 0) }}</strong></div>
-            <div class="bi-row"><span>عدد الأصناف</span><strong>{{ $b2['item_count'] ?? 0 }}</strong></div>
-            <div class="bi-row"><span>🚨 أصناف ناقصة (قرب حد الأمان)</span><strong style="color:#b91c1c">{{ $b2['low_stock'] ?? 0 }}</strong></div>
-            <div class="bi-sub">🐌 أصناف راكدة (&gt;180 يوم):
-                <ul class="bi-list">
-                    @forelse($b2['stagnant_items'] ?? [] as $item)
-                        <li>{{ $item['code'] }} — {{ $item['name'] }} ({{ $item['qty'] }})</li>
-                    @empty
-                        <li>لا يوجد ✅</li>
-                    @endforelse
-                </ul>
+            <div class="bi-kpi-grid">
+                <div class="bi-kpi bi-kpi--wide">
+                    <div class="bi-kpi-label">القيمة المالية الإجمالية (WAC)</div>
+                    <div class="bi-kpi-value bi-tone-cyan">{{ $fmtMoney($b2['total_value'] ?? 0) }} <small>ج.م</small></div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">عدد الأصناف</div>
+                    <div class="bi-kpi-value">{{ $b2['item_count'] ?? 0 }}</div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">🚨 أصناف ناقصة</div>
+                    <div class="bi-kpi-value bi-tone-red">{{ $b2['low_stock'] ?? 0 }}</div>
+                </div>
+            </div>
+            <div class="bi-section-title">🐌 أصناف راكدة (&gt;180 يوم)</div>
+            <div class="bi-table-wrap">
+                <table class="bi-table" data-paginate="8">
+                    <thead>
+                        <tr>
+                            <th class="text">الكود</th>
+                            <th class="text">الصنف</th>
+                            <th class="num">الكمية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($b2['stagnant_items'] ?? [] as $item)
+                            <tr>
+                                <td class="text"><span class="bi-code">{{ $item['code'] }}</span></td>
+                                <td class="text">{{ $item['name'] }}</td>
+                                <td class="num">{{ $item['qty'] }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="3" class="bi-empty-cell">لا توجد أصناف راكدة ✅</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    @php $b3 = $board3 ?? []; @endphp
+    {{-- ── 3. العمليات ─────────────────────────────────────────────────── --}}
     <div class="bi-card">
         <div class="bi-card-head"><span>🏭</span><h4>3. العمليات والتشغيل</h4></div>
         <div class="bi-card-body">
-            <div class="bi-row"><span>أوامر التشغيل المفتوحة</span><strong style="color:#7c3aed">{{ $b3['open_work_orders'] ?? 0 }}</strong></div>
-            <div class="bi-row"><span>بانتظار الصرف</span><strong>{{ $b3['awaiting_dispense'] ?? 0 }}</strong></div>
-            <div class="bi-row"><span>داخل الورش حالياً</span><strong>{{ $b3['in_workshop'] ?? 0 }}</strong></div>
-            <div class="bi-row"><span>جاهز للتسليم</span><strong style="color:#059669">{{ $b3['ready_for_delivery'] ?? 0 }}</strong></div>
+            <div class="bi-ops-grid">
+                <div class="bi-op-stat bi-op-stat--purple">
+                    <div class="val">{{ $b3['open_work_orders'] ?? 0 }}</div>
+                    <div class="lbl">أوامر تشغيل مفتوحة</div>
+                </div>
+                <div class="bi-op-stat">
+                    <div class="val">{{ $b3['awaiting_dispense'] ?? 0 }}</div>
+                    <div class="lbl">بانتظار الصرف</div>
+                </div>
+                <div class="bi-op-stat">
+                    <div class="val">{{ $b3['in_workshop'] ?? 0 }}</div>
+                    <div class="lbl">داخل الورش</div>
+                </div>
+                <div class="bi-op-stat bi-op-stat--green">
+                    <div class="val">{{ $b3['ready_for_delivery'] ?? 0 }}</div>
+                    <div class="lbl">جاهز للتسليم</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    @php $b4 = $board4 ?? []; @endphp
-    <div class="bi-card">
+    {{-- ── 4. الجهات والتكاليف ─────────────────────────────────────────── --}}
+    <div class="bi-card bi-card--wide">
         <div class="bi-card-head"><span>🏢</span><h4>4. الجهات والتكاليف</h4></div>
         <div class="bi-card-body">
-            <div class="bi-row"><span>التكلفة التراكمية — الجهات المدنية</span><strong style="color:#0e7490">{{ $fmtMoney($b4['civilian_cumulative_cost'] ?? 0) }}</strong></div>
-            <div class="bi-row"><span>التكلفة المجمعة — العسكرية</span><strong style="color:#b45309">{{ $fmtMoney($b4['military_aggregated_cost'] ?? 0) }}</strong></div>
-            <div class="bi-row"><span>مديونيات الجهات (صافي)</span><strong style="color:#b91c1c">{{ $fmtMoney($b4['net_debts'] ?? 0) }}</strong></div>
+            <div class="bi-kpi-grid bi-kpi-grid--4">
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">التكلفة التراكمية — مدني</div>
+                    <div class="bi-kpi-value bi-tone-cyan">{{ $fmtMoney($b4['civilian_cumulative_cost'] ?? 0) }} <small>ج.م</small></div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">التكلفة المجمعة — عسكري</div>
+                    <div class="bi-kpi-value bi-tone-amber">{{ $fmtMoney($b4['military_aggregated_cost'] ?? 0) }} <small>ج.م</small></div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">🪖 مديونيات — بانتظار التحصيل</div>
+                    <div class="bi-kpi-value bi-tone-purple">{{ $fmtMoney($b4['military_debt_pending'] ?? 0) }} <small>ج.م</small></div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">🪖 مديونيات — محصّلة</div>
+                    <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4['military_debt_collected'] ?? 0) }} <small>ج.م</small></div>
+                </div>
+            </div>
+
             @if(!empty($b4['company_debts']))
-                <div class="bi-sub">تفصيل الجهات:
-                    <table data-paginate="10" class="bi-table">
+                <div class="bi-section-title">📋 تفصيل جهات التعاقد المدنية</div>
+                <div class="bi-table-wrap">
+                    <table class="bi-table" data-paginate="10">
                         <thead>
-                            <tr><th>الجهة</th><th>مستحق</th><th>محصَّل</th><th>متبقٍ</th></tr>
+                            <tr>
+                                <th class="text">الجهة</th>
+                                <th class="num">مستحق (ج.م)</th>
+                            </tr>
                         </thead>
                         <tbody>
-                            @foreach(array_slice($b4['company_debts'], 0, 8) as $debt)
+                            @foreach($b4['company_debts'] as $debt)
                                 <tr>
-                                    <td>{{ $debt['company_name'] ?? '—' }}</td>
-                                    <td>{{ $fmt($debt['due'] ?? 0) }}</td>
-                                    <td>{{ $fmt($debt['collected'] ?? 0) }}</td>
-                                    <td>{{ $fmt($debt['remaining'] ?? 0) }}</td>
+                                    <td class="text">{{ $debt['company_name'] ?? '—' }}</td>
+                                    <td class="num">{{ $fmtMoney($debt['due'] ?? 0) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
             @endif
-            <div class="bi-sub">🪖 التكلفة العسكرية تُرحَّل لحساب الديون السيادية (دون مطالبة دفع).</div>
         </div>
     </div>
 
-    @php $b5 = $board5 ?? []; @endphp
-    <div class="bi-card">
-        <div class="bi-card-head"><span>🏭</span><h4>5. المشتريات والموردين</h4></div>
+    {{-- ── 5. المشتريات ─────────────────────────────────────────────────── --}}
+    <div class="bi-card bi-card--wide">
+        <div class="bi-card-head"><span>🛒</span><h4>5. المشتريات والموردين</h4></div>
         <div class="bi-card-body">
-            <div class="bi-row"><span>عدد الموردين المعتمدين</span><strong>{{ $b5['supplier_count'] ?? 0 }}</strong></div>
-            <div class="bi-sub">⚖️ مقارنة المتوسط المرجح (WAC) ↔ أعلى سعر شراء:
-                <table data-paginate="10" class="bi-table">
+            <div class="bi-kpi bi-kpi--inline">
+                <div class="bi-kpi-label">عدد الموردين المعتمدين</div>
+                <div class="bi-kpi-value">{{ $b5['supplier_count'] ?? 0 }}</div>
+            </div>
+            <div class="bi-section-title">⚖️ مقارنة WAC ↔ أعلى سعر شراء</div>
+            <div class="bi-table-wrap">
+                <table class="bi-table" data-paginate="10">
                     <thead>
-                        <tr><th>الصنف</th><th>WAC</th><th>أعلى سعر</th><th>الفرق</th></tr>
+                        <tr>
+                            <th class="text">الصنف</th>
+                            <th class="num">WAC</th>
+                            <th class="num">أعلى سعر</th>
+                            <th class="num">الفرق</th>
+                        </tr>
                     </thead>
                     <tbody>
                         @forelse($b5['price_comparison'] ?? [] as $row)
-                            <tr @if($row['margin_erosion'] ?? false) style="background:rgba(220,38,38,0.06)" @endif>
-                                <td>{{ $row['code'] }}</td>
-                                <td>{{ number_format($row['wac'], 2) }}</td>
-                                <td>{{ number_format($row['highest_purchase_price'], 2) }}</td>
-                                <td @if($row['margin_erosion'] ?? false) style="color:#b91c1c;font-weight:700" @endif>
-                                    {{ number_format($row['diff'], 2) }}
+                            <tr @if($row['margin_erosion'] ?? false) class="bi-row-warn" @endif>
+                                <td class="text">
+                                    <span class="bi-code">{{ $row['code'] }}</span>
+                                    @if(!empty($row['name']))
+                                        <span class="bi-item-name">{{ $row['name'] }}</span>
+                                    @endif
+                                </td>
+                                <td class="num">{{ number_format($row['wac'], 2) }}</td>
+                                <td class="num">{{ number_format($row['highest_purchase_price'], 2) }}</td>
+                                <td class="num">
+                                    @if($row['margin_erosion'] ?? false)
+                                        <span class="bi-badge bi-badge--danger">+{{ number_format($row['diff'], 2) }}</span>
+                                    @else
+                                        {{ number_format($row['diff'], 2) }}
+                                    @endif
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" style="color:var(--text-muted)">لا توجد أصناف</td></tr>
+                            <tr><td colspan="4" class="bi-empty-cell">لا توجد أصناف للمقارنة</td></tr>
                         @endforelse
                     </tbody>
                 </table>

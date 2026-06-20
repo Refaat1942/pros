@@ -24,7 +24,7 @@
             <p>{{ $dashboardConfig['sidebar']['subtitle'] ?? 'تسجيل الدخول إلى النظام' }}</p>
         </div>
 
-        <form method="POST" action="{{ route('dashboard.login.submit', $dashboard) }}" novalidate>
+        <form method="POST" action="{{ route('dashboard.login.submit', $dashboard) }}" novalidate id="dashboardLoginForm">
             @csrf
 
             {{-- Email --}}
@@ -61,8 +61,10 @@
                 @enderror
             </div>
 
-            <button type="submit" class="btn-login">دخول</button>
+            <button type="submit" class="btn-login" id="loginSubmitBtn">دخول</button>
         </form>
+
+        <script src="{{ asset('assets/js/shared/auth-login.js') }}"></script>
 
         <div class="auth-footer">
             <a href="/" class="back-link">← العودة للصفحة الرئيسية</a>

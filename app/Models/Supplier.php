@@ -15,12 +15,7 @@ class Supplier extends Model
         'phone',
         'email',
         'address',
-        'is_active',
         'notes',
-    ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
     ];
 
     public function stockItemPrices(): HasMany

@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
     @stack('styles')
+    @stack('styles-late')
 </head>
 <body @yield('body-attributes')>
     @yield('content')

@@ -18,9 +18,7 @@
       <li><a href="#" data-section="suppliers"><span class="nav-icon">🏭</span> الموردون</a></li>
       <li><a href="#" data-section="military-ranks"><span class="nav-icon">🪖</span> الرتب العسكرية</a></li>
     </ul>
-    <div class="sidebar-footer">
-      <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
-    </div>
+
   </aside>
 
   <main class="main">

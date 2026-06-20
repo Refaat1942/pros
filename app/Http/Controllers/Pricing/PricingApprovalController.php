@@ -49,9 +49,15 @@ class PricingApprovalController extends Controller
      */
     public function show(PricingRequest $pricingRequest): JsonResponse
     {
+        if ($this->needsPriceRefresh($pricingRequest)) {
+            $this->pricingService->refreshLinePrices($pricingRequest);
+            $pricingRequest->refresh();
+        }
+
         $pricingRequest->load([
             'items',
-            'caseRecord:id,case_no,order_ref,stage_key,patient_type,company_name',
+            'caseRecord.patient:id,patient_code,name,phone,national_id,patient_type,rank,sovereign_entity,company_name',
+            'caseRecord:id,case_no,order_ref,stage_key,patient_type,company_name,patient_id,work_order_no',
             'doctor:id,name',
         ]);
 
@@ -108,8 +114,34 @@ class PricingApprovalController extends Controller
 
     private function formatDetail(PricingRequest $request): array
     {
+        $case = $request->relationLoaded('caseRecord') && $request->caseRecord
+            ? $request->caseRecord
+            : null;
+        $patient = $case && $case->relationLoaded('patient') && $case->patient
+            ? $case->patient
+            : null;
+
         return $this->formatSummary($request) + [
             'doctor_name' => $request->doctor_name,
+            'patient'     => $patient ? [
+                'patient_code'     => $patient->patient_code,
+                'name'             => $patient->name,
+                'phone'            => $patient->phone,
+                'national_id'      => $patient->national_id,
+                'patient_type'     => $patient->patient_type,
+                'rank'             => $patient->rank,
+                'sovereign_entity' => $patient->sovereign_entity,
+                'company_name'     => $patient->company_name,
+            ] : null,
+            'case' => $case ? [
+                'id'            => $case->id,
+                'case_no'       => $case->case_no,
+                'order_ref'     => $case->order_ref,
+                'stage_key'     => $case->stage_key,
+                'patient_type'  => $case->patient_type,
+                'company_name'  => $case->company_name,
+                'work_order_no' => $case->work_order_no,
+            ] : null,
             'items'       => $request->relationLoaded('items')
                 ? $request->items->map(fn ($item) => $item->only([
                     'id', 'stock_item_code', 'name', 'qty', 'unit_price', 'line_total',
@@ -119,5 +151,19 @@ class PricingApprovalController extends Controller
             'approved_by'         => $request->approved_by,
             'approved_by_user_id' => $request->approved_by_user_id,
         ];
+    }
+
+    private function needsPriceRefresh(PricingRequest $request): bool
+    {
+        if ((float) $request->computed_total > 0) {
+            return false;
+        }
+
+        return $request->items()
+            ->where(function ($q) {
+                $q->whereNull('unit_price')
+                    ->orWhere('unit_price', '<=', 0);
+            })
+            ->exists();
     }
 }

@@ -275,7 +275,23 @@
     .role-badge.doctor { background: rgba(14,116,144,0.12); color: #0e7490; }
     .role-badge.technical { background: rgba(217,119,6,0.12); color: #d97706; }
     .role-badge.reception { background: rgba(5,150,105,0.12); color: #059669; }
+    .role-badge.operations { background: rgba(79,70,229,0.12); color: #4f46e5; }
+    .role-badge.spec { background: rgba(14,116,144,0.12); color: #0e7490; }
+    .role-badge.adjustments { background: rgba(100,116,139,0.12); color: #475569; }
     .role-badge.store { background: rgba(30,58,95,0.12); color: #1e3a5f; }
+
+    .employee-role-locked {
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(124, 58, 237, 0.04);
+    }
+    .employee-role-locked-hint {
+        margin: 8px 0 0;
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
 
     .status-dot {
       display: inline-flex;
@@ -385,6 +401,69 @@
       color: white;
     }
 
+    .btn-action.danger {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+
+    .btn-action.danger:hover {
+      background: #fee2e2;
+      border-color: #f87171;
+      color: #b91c1c;
+    }
+
+    .table-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      align-items: center;
+    }
+
+    .table-actions .btn-action {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    td .table-actions {
+      min-width: 260px;
+    }
+
+    .bulk-select-col {
+      width: 42px;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .bulk-select-col input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--primary, #7c3aed);
+    }
+
+    .bulk-action-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      margin-inline-end: 12px;
+    }
+
+    .bulk-action-bar[hidden] {
+      display: none !important;
+    }
+
+    .bulk-selected-count {
+      font-size: 12px;
+      font-weight: 700;
+      color: #b91c1c;
+      white-space: nowrap;
+    }
+
     /* Audit snippet */
     .audit-panel {
       margin-top: 24px;
@@ -419,19 +498,212 @@
     }
 
     /* لوحات BI */
-    .bi-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
-    .bi-card { background: var(--card, #fff); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
-    .bi-card-head { display:flex; align-items:center; gap:8px; padding:12px 16px; background: rgba(124,58,237,0.06); border-bottom:1px solid var(--border); }
-    .bi-card-head h4 { margin:0; font-size:14px; }
-    .bi-card-head span { font-size:18px; }
-    .bi-card-body { padding:14px 16px; }
+    .bi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+        gap: 20px;
+        align-items: start;
+    }
+    .bi-card {
+        background: var(--card, #fff);
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+    .bi-card--wide { grid-column: 1 / -1; }
+    .bi-card-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 18px;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.07), rgba(79, 70, 229, 0.04));
+        border-bottom: 1px solid var(--border, #e2e8f0);
+    }
+    .bi-card-head h4 { margin: 0; font-size: 14px; font-weight: 800; color: #1e293b; }
+    .bi-card-head span { font-size: 20px; line-height: 1; }
+    .bi-card-body { padding: 16px 18px 18px; }
+
+    .bi-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .bi-kpi-grid--3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .bi-kpi-grid--4 { grid-template-columns: repeat(2, 1fr); }
+    .bi-kpi {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px 14px;
+    }
+    .bi-kpi--wide { grid-column: 1 / -1; }
+    .bi-kpi--inline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .bi-kpi--inline .bi-kpi-value { font-size: 20px; }
+    .bi-kpi-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: 6px;
+        line-height: 1.45;
+    }
+    .bi-kpi-value {
+        font-size: 18px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+    .bi-kpi-value small { font-size: 11px; font-weight: 600; color: #94a3b8; }
+
+    .bi-tone-cyan  { color: #0e7490 !important; }
+    .bi-tone-amber { color: #b45309 !important; }
+    .bi-tone-red   { color: #b91c1c !important; }
+    .bi-tone-green { color: #059669 !important; }
+    .bi-tone-purple { color: #7c3aed !important; }
+
+    .bi-highlight-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        background: rgba(124, 58, 237, 0.05);
+        border: 1px solid rgba(124, 58, 237, 0.12);
+        border-radius: 10px;
+        font-size: 13px;
+    }
+    .bi-highlight-row strong { font-size: 15px; font-weight: 800; color: #4f46e5; }
+
+    .bi-section-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+        margin: 4px 0 10px;
+    }
+
+    .bi-alert-box {
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 12px;
+        line-height: 1.75;
+    }
+    .bi-alert-box--ok  { background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.2); color: #047857; }
+    .bi-alert-box--warn { background: rgba(220, 38, 38, 0.06); border: 1px solid rgba(220, 38, 38, 0.15); }
+
+    .bi-list { margin: 0; padding-inline-start: 18px; list-style: disc; }
+    .bi-list li { margin-bottom: 4px; }
+    .bi-case-ref { font-family: ui-monospace, monospace; font-weight: 700; color: #4f46e5; }
+
+    .bi-ops-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    .bi-op-stat {
+        text-align: center;
+        padding: 16px 12px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+    }
+    .bi-op-stat--purple { background: rgba(124, 58, 237, 0.06); border-color: rgba(124, 58, 237, 0.15); }
+    .bi-op-stat--green  { background: rgba(5, 150, 105, 0.08); border-color: rgba(5, 150, 105, 0.2); }
+    .bi-op-stat .val { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; color: #0f172a; line-height: 1; }
+    .bi-op-stat--purple .val { color: #7c3aed; }
+    .bi-op-stat--green .val  { color: #059669; }
+    .bi-op-stat .lbl { font-size: 11px; font-weight: 600; color: #64748b; margin-top: 8px; line-height: 1.4; }
+
+    .bi-table-wrap {
+        overflow-x: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+    }
+    .bi-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+        font-size: 12px;
+    }
+    .bi-table th {
+        background: #f1f5f9;
+        font-weight: 700;
+        font-size: 11px;
+        color: #475569;
+        padding: 10px 14px;
+        border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+    .bi-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+    .bi-table tbody tr:last-child td { border-bottom: none; }
+    .bi-table tbody tr:hover { background: rgba(124, 58, 237, 0.03); }
+    .bi-table .text { text-align: right; }
+    .bi-table .num {
+        text-align: left;
+        direction: ltr;
+        font-variant-numeric: tabular-nums;
+        font-family: ui-monospace, 'Cascadia Code', monospace;
+        font-size: 12px;
+        color: #334155;
+    }
+    .bi-table .bi-empty-cell {
+        text-align: center;
+        color: #94a3b8;
+        padding: 20px;
+    }
+    .bi-row-warn { background: rgba(220, 38, 38, 0.04) !important; }
+    .bi-row-warn:hover { background: rgba(220, 38, 38, 0.07) !important; }
+
+    .bi-code {
+        display: inline-block;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        color: #4f46e5;
+        background: rgba(79, 70, 229, 0.08);
+        padding: 2px 7px;
+        border-radius: 6px;
+        margin-left: 6px;
+    }
+    .bi-item-name { font-size: 12px; color: #64748b; font-weight: 500; }
+
+    .bi-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .bi-badge--danger { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+
+    .bi-intro-panel { margin-bottom: 20px; }
+    .bi-intro-text {
+        padding: 0 20px 16px;
+        margin: 0;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.7;
+    }
+
+    /* legacy compat */
     .bi-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:13px; border-bottom:1px dashed var(--border); }
     .bi-row:last-child { border-bottom:none; }
     .bi-sub { margin-top:10px; font-size:12px; color: var(--text-muted); }
-    .bi-list { margin:6px 0 0; padding-inline-start:18px; font-size:12px; line-height:1.8; }
-    .bi-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; }
-    .bi-table th, .bi-table td { border:1px solid var(--border); padding:5px 8px; text-align:center; }
-    .bi-table th { background: var(--bg, #f8fafc); }
 
     .patient-type-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; }
     .patient-type-badge.civilian { background: rgba(14,116,144,0.12); color:#0e7490; }
@@ -1352,6 +1624,67 @@
 
     .bom-admin-table-wrap { overflow-x: auto; margin-top: 8px; }
     .bom-items-cell { font-size: 12px; line-height: 1.6; color: var(--text-muted); }
+
+    .ops-overview-panel { margin-bottom: 24px; }
+    .overview-employees-panel { margin-bottom: 24px; width: 100%; }
+    .ops-overview-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
+    }
+    .ops-overview-stat {
+      text-align: center;
+      padding: 12px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+    .ops-overview-stat-val {
+      display: block;
+      font-size: 22px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .ops-overview-stat-lbl {
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .ops-overview-stat--raw .ops-overview-stat-val { color: #d97706; }
+    .ops-overview-stat--wip .ops-overview-stat-val { color: #0e7490; }
+    .ops-overview-stat--done .ops-overview-stat-val { color: #059669; }
+    .ops-overview-stat--total .ops-overview-stat-val { color: #334155; }
+    .ops-wo {
+      font-family: ui-monospace, monospace;
+      font-weight: 700;
+      font-size: 12px;
+      color: #0e7490;
+    }
+    .ops-case-no { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .ops-muted { font-size: 11px; color: var(--text-muted); }
+    .ops-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .ops-badge--raw  { background: rgba(217,119,6,0.12); color: #b45309; }
+    .ops-badge--wip  { background: rgba(14,116,144,0.12); color: #0e7490; }
+    .ops-badge--done { background: rgba(5,150,105,0.12); color: #059669; }
+
+    @media (max-width: 900px) {
+      .ops-overview-summary { grid-template-columns: repeat(2, 1fr); }
+    }
 
     .overview-cases-strip {
       display: grid;

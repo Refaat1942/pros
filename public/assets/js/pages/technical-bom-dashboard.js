@@ -122,10 +122,44 @@
     }).join('');
   }
 
+  function clearBarcodeInputError() {
+    var input = $('barcodeInput');
+    if (!input) return;
+    input.classList.remove('v-invalid');
+    input.removeAttribute('aria-invalid');
+    var wrap = input.parentElement;
+    if (!wrap) return;
+    var msg = wrap.querySelector('.v-error-msg');
+    if (msg) msg.remove();
+  }
+
+  function showBarcodeInputError(message) {
+    var input = $('barcodeInput');
+    if (!input) return;
+    input.classList.add('v-invalid');
+    input.setAttribute('aria-invalid', 'true');
+    var wrap = input.parentElement;
+    if (!wrap) return;
+    var msg = wrap.querySelector('.v-error-msg');
+    if (!msg) {
+      msg = document.createElement('div');
+      msg.className = 'v-error-msg';
+      msg.setAttribute('role', 'alert');
+      wrap.appendChild(msg);
+    }
+    msg.textContent = message;
+    input.focus();
+  }
+
+  function isValidBarcode(code) {
+    return /^[A-Za-z0-9\-_]{1,100}$/.test(String(code || '').trim());
+  }
+
   function openModal(bomId) {
     if (!window.axios) return;
     state = { bomId: bomId, items: [], scanned: [], blocked: false };
     hideAlarm();
+    clearBarcodeInputError();
     renderScanned();
     if ($('barcodeInput')) $('barcodeInput').value = '';
 
@@ -150,9 +184,13 @@
 
   function addScan(raw) {
     var input = $('barcodeInput');
-    if (input && window.DashboardValidation && !DashboardValidation.validateField(input)) return;
     var code = String(raw || (input && input.value) || '').trim().toUpperCase();
     if (!code) return;
+    if (!isValidBarcode(code)) {
+      showBarcodeInputError('الباركود غير صالح.');
+      return;
+    }
+    clearBarcodeInputError();
     state.scanned.push(code);
     var expected = expectedBarcodes();
     if (expected.indexOf(code) === -1) {
@@ -166,6 +204,21 @@
 
   function confirmDispense() {
     if (state.blocked || !state.bomId || !window.axios) return;
+
+    var input = $('barcodeInput');
+    var pending = input ? String(input.value || '').trim().toUpperCase() : '';
+    clearBarcodeInputError();
+
+    if (pending) {
+      addScan(pending);
+      if (state.blocked) return;
+    }
+
+    if (!state.scanned.length) {
+      showBarcodeInputError('هذا الحقل مطلوب.');
+      return;
+    }
+
     if (state.scanned.length !== state.items.length) {
       showAlarm('عدد الباركود (' + state.scanned.length + ') لا يطابق بنود BOM (' + state.items.length + ')');
       return;

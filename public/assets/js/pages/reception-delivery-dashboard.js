@@ -77,7 +77,14 @@
   function confirmDelivery() {
     if (!window.axios) return;
     var qrInput = $('deliveryQrInput');
-    if (window.DashboardValidation && qrInput && !DashboardValidation.validateField(qrInput)) return;
+    if (window.DashboardValidation && qrInput) {
+      var qrErr = DashboardValidation.validateField(qrInput);
+      if (qrErr) {
+        showError(qrErr);
+        qrInput.focus();
+        return;
+      }
+    }
     var qr = (qrInput && qrInput.value || '').trim();
     if (!qr) { showError('يجب مسح بطاقة المريض.'); return; }
 
@@ -105,6 +112,7 @@
           }
         }
         if (modal) modal.classList.remove('hidden');
+        bumpStat('delivered', 1);
         refreshList();
       })
       .catch(function (err) {
@@ -112,6 +120,27 @@
         showError(msg);
         if (btn) btn.disabled = false;
       });
+  }
+
+  function setStat(key, value) {
+    var el = document.querySelector('#analytics-delivery [data-stat="' + key + '"]');
+    if (el) el.textContent = String(value);
+  }
+
+  function bumpStat(key, delta) {
+    var el = document.querySelector('#analytics-delivery [data-stat="' + key + '"]');
+    if (!el) return;
+    var next = Math.max(0, parseInt(el.textContent, 10) + delta);
+    el.textContent = String(isNaN(next) ? 0 : next);
+  }
+
+  function updateDeliveryStats(cases) {
+    var list = cases || [];
+    var military = list.filter(function (c) { return c.patient_type === 'military'; }).length;
+    setStat('ready', list.length);
+    setStat('military', military);
+    setStat('civilian', list.length - military);
+    setStat('bom_finished', list.length);
   }
 
   function refreshList() {
@@ -122,10 +151,11 @@
         var list = $('deliveryList');
         var count = $('deliveryCount');
         if (count) count.textContent = cases.length;
+        updateDeliveryStats(cases);
 
         if (!list) return;
         if (!cases.length) {
-          list.innerHTML = '<li class="px-5 py-10 text-center text-slate-400 text-sm">لا توجد حالات جاهزة للتسليم.</li>';
+          list.innerHTML = '<li class="pagination-empty-msg px-5 py-10 text-center text-slate-400 text-sm">لا توجد حالات جاهزة للتسليم.</li>';
           $('deliveryWorkspace') && $('deliveryWorkspace').classList.add('hidden');
           $('deliveryEmpty') && $('deliveryEmpty').classList.remove('hidden');
           if (window.TablePagination) TablePagination.refreshById('deliveryList');

@@ -39,7 +39,18 @@ class AuthController extends Controller
                 ->withErrors(['email' => 'البريد الإلكتروني أو كلمة المرور غير صحيحة.']);
         }
 
-        $userSlug = Auth::user()->role?->slug;
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (! $user->isActive()) {
+            Auth::logout();
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'هذا الحساب معطّل — تواصل مع الإدارة.']);
+        }
+
+        $userSlug = $user->role?->slug;
 
         if ($userSlug !== $dashboard) {
             Auth::logout();

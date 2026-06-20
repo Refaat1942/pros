@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
@@ -29,14 +30,20 @@ class UserService
 
     public function update(User $user, array $data): User
     {
+        $user->loadMissing('role:id,slug');
         $before = $user->only(['name', 'email', 'role_id', 'status']);
 
         $payload = [
-            'name'    => $data['name'],
-            'email'   => $data['email'],
-            'role_id' => $data['role_id'],
-            'status'  => $data['status'],
+            'name'   => $data['name'],
+            'email'  => $data['email'],
+            'status' => $data['status'],
         ];
+
+        if ($user->role?->slug === Role::SLUG_ADMIN) {
+            $payload['status'] = User::STATUS_ACTIVE;
+        } else {
+            $payload['role_id'] = $data['role_id'];
+        }
 
         if (! empty($data['password'])) {
             $payload['password'] = $data['password'];
@@ -57,6 +64,12 @@ class UserService
 
     public function toggleStatus(User $user): User
     {
+        $user->loadMissing('role:id,slug');
+
+        if ($user->role?->slug === Role::SLUG_ADMIN) {
+            throw new \InvalidArgumentException('لا يمكن تعطيل حساب مسؤول النظام.');
+        }
+
         $before = $user->only(['status']);
 
         $user->update([
@@ -74,5 +87,19 @@ class UserService
         );
 
         return $user;
+    }
+
+    public function delete(User $user): void
+    {
+        $before = $user->only(['name', 'email', 'role_id', 'status']);
+
+        $user->delete();
+
+        AuditService::log(
+            action:      'delete',
+            description: "حذف موظف: {$before['name']}",
+            tag:         'admin',
+            before:      $before,
+        );
     }
 }

@@ -15,7 +15,7 @@ class StoreAppointmentRequest extends BaseRequest
             'patient_id'       => ['nullable', 'integer', 'exists:patients,id'],
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['nullable', 'string', 'max:10'],
-            'visit_type_id'    => ['required', 'integer', Rule::exists('visit_types', 'id')->where('is_active', true)],
+            'visit_type_id'    => ['required', 'integer', Rule::exists('visit_types', 'id')],
             'visit_type'       => ['nullable', 'string', Rule::in([
                 Appointment::VISIT_EXAM,
                 Appointment::VISIT_FOLLOWUP,

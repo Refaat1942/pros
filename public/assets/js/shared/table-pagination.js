@@ -161,7 +161,7 @@
     var state = {
       mode: 'list',
       target: list,
-      insertAfter: paginationHost(list),
+      insertAfter: list,
       perPage: perPage(list),
       page: 1,
       rows: [],

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
 use Database\Seeders\Support\PrototypeSeedData;
@@ -13,18 +14,22 @@ class InventorySeeder extends Seeder
     public function run(): void
     {
         foreach (PrototypeSeedData::stockItems() as $row) {
+            $categoryId = StockCategory::query()
+                ->where('name', $row['category'])
+                ->value('id');
+
             $item = StockItem::query()->create([
-                'code' => $row['code'],
-                'name' => $row['name'],
-                'spec' => $row['spec'],
-                'category' => $row['category'],
-                'store_class' => PrototypeSeedData::deriveStoreClass($row['category']),
-                'uom' => 'قطعة',
-                'barcode' => PrototypeSeedData::deriveBarcode($row['code']),
-                'qty' => $row['qty'],
-                'reserved' => $row['reserved'],
-                'status' => $row['status'],
-                'last_moved_at' => PrototypeSeedData::parseDate($row['lastMoved'] ?? '01/06/2026'),
+                'code'         => $row['code'],
+                'name'         => $row['name'],
+                'spec'         => $row['spec'],
+                'category_id'  => $categoryId,
+                'store_class'  => PrototypeSeedData::deriveStoreClass($row['category']),
+                'uom'          => 'قطعة',
+                'barcode'      => PrototypeSeedData::deriveBarcode($row['code']),
+                'qty'          => $row['qty'],
+                'reserved'     => $row['reserved'],
+                'status'       => $row['status'],
+                'last_moved_at'=> PrototypeSeedData::parseDate($row['lastMoved'] ?? '01/06/2026'),
             ]);
 
             SeedRegistry::$stockItems[$row['code']] = $item->id;
@@ -37,13 +42,14 @@ class InventorySeeder extends Seeder
                 }
 
                 StockItemPrice::query()->create([
-                    'stock_item_id' => $item->id,
-                    'price_ref' => $price['id'],
-                    'label' => $price['label'],
-                    'supplier_id' => $supplierId,
-                    'supplier_type' => $price['supplierType'],
+                    'stock_item_id'      => $item->id,
+                    'price_ref'          => $price['id'],
+                    'label'              => $price['label'],
+                    'supplier_id'        => $supplierId,
+                    'supplier_type'      => $price['supplierType'],
                     'supplier_item_code' => $price['itemCode'],
-                    'amount' => $price['amount'],
+                    'amount'             => $price['amount'],
+                    'qty'                => max(1, (int) ($price['qty'] ?? 1)),
                 ]);
             }
         }

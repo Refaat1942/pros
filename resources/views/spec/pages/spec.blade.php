@@ -17,7 +17,7 @@
                 <summary class="cursor-pointer list-none flex items-center justify-between gap-3">
                     <div>
                         <p class="font-bold text-slate-800">{{ $spec->patient_name }}</p>
-                        <p class="text-xs text-slate-500 mt-1">{{ $spec->order_ref }} · {{ $spec->submitted_at }}</p>
+                        <p class="text-xs text-slate-500 mt-1">{{ $spec->order_ref }} · {{ $spec->updated_at?->format('d/m/Y H:i') ?? $spec->submitted_at?->format('d/m/Y') }}</p>
                     </div>
                     <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">مُرسَل</span>
                 </summary>

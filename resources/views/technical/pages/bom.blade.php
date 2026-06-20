@@ -112,7 +112,7 @@
                 <div class="flex gap-2">
                     <input type="text" id="barcodeInput" autofocus
                            placeholder="امسح الباركود ثم Enter..."
-                           data-v-rules="required,barcode" maxlength="100"
+                           maxlength="100"
                            class="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
                     <button type="button" id="btnAddBarcode"
                             class="rounded-xl bg-slate-800 text-white px-4 py-2 text-sm font-bold">إضافة</button>

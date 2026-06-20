@@ -9,9 +9,15 @@ use App\Models\MedicalRecord;
 use App\Models\MilitaryRank;
 use App\Models\PricingRequest;
 use App\Models\Role;
+use App\Models\Supplier;
+use App\Models\StockCategory;
 use App\Models\StockItem;
+use App\Models\User;
 use App\Models\VisitType;
 use App\Enums\PricingRequestStatus;
+use App\Models\ApprovalContract;
+use App\Models\MilitaryDebt;
+use App\Services\BomService;
 
 /**
  * يُحمّل بيانات Eloquent لكل صفحة لوحة تحكم — يُستدعى من ShowsDashboardPage.
@@ -23,13 +29,18 @@ class DashboardPageDataService
         return match ("{$dashboardKey}.{$page}") {
             'admin.employees'       => $this->adminEmployees(),
             'admin.companies'       => $this->adminCompanies(),
-            'admin.debts'           => $this->adminDebts(),
             'admin.military-ranks'  => $this->adminMilitaryRanks(),
             'admin.visit-types'     => $this->adminVisitTypes(),
+            'admin.stock-categories'=> $this->adminStockCategories(),
+            'admin.catalog'         => $this->adminCatalog(),
+            'admin.suppliers'       => $this->adminSuppliers(),
             'admin.pricing'         => $this->adminPricing(),
+            'admin.contracts'       => $this->contractsPage(isAdmin: true),
+            'admin.military-debts'  => $this->adminMilitaryDebts(),
             'reception.appointments'=> $this->receptionAppointments(),
             'reception.patients'    => $this->receptionPatients(),
             'reception.delivery'    => $this->receptionDelivery(),
+            'reception.contracts'   => $this->contractsPage(isAdmin: false),
             'doctor.queue'          => $this->doctorQueue(),
             'doctor.diagnosis'      => $this->doctorDiagnosis(),
             'spec.orders'           => $this->specOrders(),
@@ -45,7 +56,7 @@ class DashboardPageDataService
     {
         $employees = User::query()
             ->with('role:id,slug,label_ar')
-            ->orderBy('name')
+            ->orderByDesc('id')
             ->get(['id', 'name', 'email', 'role_id', 'status', 'last_login_at']);
 
         $roles = Role::query()
@@ -77,40 +88,17 @@ class DashboardPageDataService
     {
         $companies = ContractCompany::query()
             ->with('debt')
-            ->orderBy('name')
+            ->orderByDesc('id')
             ->get();
 
         return ['companies' => $companies];
-    }
-
-    private function adminDebts(): array
-    {
-        $companies = ContractCompany::query()
-            ->with('debt')
-            ->whereHas('debt')
-            ->orderBy('name')
-            ->get();
-
-        $totalDue       = $companies->sum(fn ($c) => (float) ($c->debt?->due ?? 0));
-        $totalCollected = $companies->sum(fn ($c) => (float) ($c->debt?->collected ?? 0));
-
-        return [
-            'debt_companies' => $companies,
-            'debt_stats'     => [
-                ['icon' => '📋', 'label' => 'جهات', 'value' => (string) $companies->count(), 'bg' => 'rgba(124,58,237,0.1)'],
-                ['icon' => '💳', 'label' => 'المستحق', 'value' => number_format($totalDue, 0), 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
-                ['icon' => '✅', 'label' => 'المحصّل', 'value' => number_format($totalCollected, 0), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '⏳', 'label' => 'المتبقي', 'value' => number_format(max(0, $totalDue - $totalCollected), 0), 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
-            ],
-        ];
     }
 
     private function adminMilitaryRanks(): array
     {
         return [
             'military_ranks' => MilitaryRank::query()
-                ->orderBy('sort_order')
-                ->orderBy('name')
+                ->orderByDesc('id')
                 ->get(),
         ];
     }
@@ -119,7 +107,37 @@ class DashboardPageDataService
     {
         return [
             'visit_types' => VisitType::query()
+                ->orderByDesc('id')
+                ->get(),
+        ];
+    }
+
+    private function adminStockCategories(): array
+    {
+        return [
+            'stock_categories' => StockCategory::query()
+                ->orderByDesc('id')
+                ->get(),
+        ];
+    }
+
+    private function adminCatalog(): array
+    {
+        return [
+            'stock_categories' => StockCategory::query()
                 ->orderBy('name')
+                ->get(['id', 'name']),
+            'suppliers' => Supplier::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+        ];
+    }
+
+    private function adminSuppliers(): array
+    {
+        return [
+            'suppliers' => Supplier::query()
+                ->orderByDesc('id')
                 ->get(),
         ];
     }
@@ -144,7 +162,7 @@ class DashboardPageDataService
     private function receptionAppointments(): array
     {
         return [
-            'military_ranks' => MilitaryRank::active()
+            'military_ranks' => MilitaryRank::query()
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -156,7 +174,7 @@ class DashboardPageDataService
                 ->where('is_military', true)
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'visit_types' => VisitType::active()
+            'visit_types' => VisitType::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
         ];
@@ -185,13 +203,18 @@ class DashboardPageDataService
             ->orderByDesc('updated_at')
             ->get();
 
+        $deliveredCount = CaseRecord::query()
+            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
+            ->count();
+
         return [
             'delivery_cases' => $cases,
             'delivery_stats' => [
-                ['icon' => '✅', 'label' => 'جاهز للتسليم', 'value' => (string) $cases->count(), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '🪖', 'label' => 'عسكري', 'value' => (string) $cases->filter(fn ($c) => $c->isMilitary())->count(), 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
-                ['icon' => '🌐', 'label' => 'مدني', 'value' => (string) $cases->filter(fn ($c) => ! $c->isMilitary())->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-                ['icon' => '📋', 'label' => 'BOM تام', 'value' => (string) $cases->count(), 'bg' => 'rgba(5,150,105,0.1)'],
+                ['key' => 'delivered', 'icon' => '🎉', 'label' => 'تم التسليم', 'value' => (string) $deliveredCount, 'color' => '#047857', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['key' => 'ready', 'icon' => '✅', 'label' => 'جاهز للتسليم', 'value' => (string) $cases->count(), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['key' => 'military', 'icon' => '🪖', 'label' => 'عسكري', 'value' => (string) $cases->filter(fn ($c) => $c->isMilitary())->count(), 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
+                ['key' => 'civilian', 'icon' => '🌐', 'label' => 'مدني', 'value' => (string) $cases->filter(fn ($c) => ! $c->isMilitary())->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['key' => 'bom_finished', 'icon' => '📋', 'label' => 'BOM تام', 'value' => (string) $cases->count(), 'bg' => 'rgba(5,150,105,0.1)'],
             ],
         ];
     }
@@ -260,7 +283,8 @@ class DashboardPageDataService
                 'techOrderSpec:id,case_id,locked,submitted_at',
             ])
             ->where('stage_key', CaseRecord::STAGE_TECHNICAL)
-            ->orderByDesc('created_at')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->get();
 
         return [
@@ -302,7 +326,8 @@ class DashboardPageDataService
         $specs = \App\Models\TechOrderSpec::query()
             ->where('locked', true)
             ->with(['items', 'caseRecord:id,case_no,order_ref'])
-            ->orderByDesc('submitted_at')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->limit(50)
             ->get();
 
@@ -311,6 +336,8 @@ class DashboardPageDataService
 
     private function operationsDesk(): array
     {
+        app(BomService::class)->repairOrphanWipCases();
+
         $cases = CaseRecord::query()
             ->with([
                 'patient:id,patient_code,name',
@@ -349,6 +376,7 @@ class DashboardPageDataService
                 'caseRecord:id,case_no,work_order_no,patient_type,manufacturing_stage',
                 'items:id,bom_id,stock_item_code,name,qty,issued_qty',
             ])
+            ->whereHas('caseRecord', fn ($q) => $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING))
             ->orderByDesc('created_at')
             ->limit(100)
             ->get();
@@ -364,6 +392,48 @@ class DashboardPageDataService
                 ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '✅', 'label' => 'تام', 'value' => (string) $finCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📋', 'label' => 'إجمالي القوائم', 'value' => (string) $boms->count(), 'bg' => 'rgba(124,58,237,0.1)'],
+            ],
+        ];
+    }
+
+    private function adminMilitaryDebts(): array
+    {
+        $debts   = MilitaryDebt::query()->orderBy('status')->orderByDesc('delivered_at')->orderByDesc('id')->get();
+        $pending   = $debts->where('status', MilitaryDebt::STATUS_PENDING)->count();
+        $collected = $debts->where('status', MilitaryDebt::STATUS_COLLECTED)->count();
+        $pendingAmt   = $debts->where('status', MilitaryDebt::STATUS_PENDING)->sum(fn ($d) => (float) $d->total_cost);
+        $collectedAmt = $debts->where('status', MilitaryDebt::STATUS_COLLECTED)->sum(fn ($d) => (float) $d->total_cost);
+
+        return [
+            'military_debts'       => $debts,
+            'military_debts_stats' => [
+                ['icon' => '📋', 'label' => 'إجمالي السجلات', 'value' => (string) $debts->count(), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5', 'key' => 'total'],
+                ['icon' => '🔴', 'label' => 'بانتظار التحصيل', 'value' => (string) $pending, 'bg' => 'rgba(220,38,38,0.1)', 'color' => '#dc2626', 'key' => 'pending_count'],
+                ['icon' => '🟢', 'label' => 'تم التحصيل', 'value' => (string) $collected, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'collected_count'],
+                ['icon' => '💰', 'label' => 'المبالغ المعلقة', 'value' => number_format($pendingAmt, 0), 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706', 'key' => 'pending_amount'],
+                ['icon' => '✅', 'label' => 'المبالغ المستحقة', 'value' => number_format($collectedAmt, 0), 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'collected_amount'],
+            ],
+        ];
+    }
+
+    private function contractsPage(bool $isAdmin): array
+    {
+        $contracts = ApprovalContract::query()
+            ->orderByDesc('approval_date')
+            ->orderByDesc('id')
+            ->limit(500)
+            ->get();
+
+        $totalAmount = $contracts->sum(fn ($c) => (float) $c->approved_amount);
+
+        return [
+            'contracts'    => $contracts,
+            'is_admin'     => $isAdmin,
+            'contracts_stats' => [
+                ['icon' => '📑', 'label' => 'إجمالي العقود', 'value' => (string) $contracts->count(), 'bg' => 'rgba(124,58,237,0.1)'],
+                ['icon' => '💰', 'label' => 'إجمالي المبالغ', 'value' => number_format($totalAmount, 0), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '📅', 'label' => 'هذا الشهر', 'value' => (string) $contracts->filter(fn ($c) => $c->approval_date?->isCurrentMonth())->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['icon' => '📎', 'label' => 'لها مستندات', 'value' => (string) $contracts->filter(fn ($c) => $c->letter_path)->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
         ];
     }

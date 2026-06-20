@@ -1,17 +1,4 @@
 <div class="section-view" id="section-overview">
-    <div id="analytics-overview">
-      @isset($overview_stats)
-        @include('partials.dashboard-analytics-empty', ['stats' => $overview_stats])
-      @else
-        @include('partials.dashboard-analytics-empty', ['stats' => [
-          ['icon' => '💵', 'label' => 'إيرادات', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-          ['icon' => '👤', 'label' => 'مرضى', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-          ['icon' => '📦', 'label' => 'صحة المخزون', 'value' => '0%', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-          ['icon' => '💰', 'label' => 'مديونيات', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
-        ]])
-      @endisset
-    </div>
-
     <div class="overview-cases-strip" id="overviewCasesStrip">
       <button type="button" class="overview-case-link" data-goto-cases="waiting_return">
         <strong>⏳ بانتظار رجوع العميل</strong>
@@ -27,8 +14,9 @@
       </button>
     </div>
 
-    <div class="panels-grid">
-      <div class="panel" id="employees">
+    @include('partials.operations-overview-panel')
+
+    <div class="panel overview-employees-panel" id="employees">
         <div class="panel-header">
           <h3>👥 إدارة الموظفين</h3>
           <span class="badge">{{ ($employees_preview ?? collect())->count() }} موظف</span>
@@ -38,6 +26,7 @@
             <thead>
               <tr>
                 <th>الاسم</th>
+                <th>البريد</th>
                 <th>الدور</th>
                 <th>الحالة</th>
                 <th>آخر دخول</th>
@@ -46,33 +35,15 @@
             </thead>
             <tbody id="employeesTable" data-server-rendered="1">
               @isset($employees_preview)
-                @include('partials.employees-table-rows', ['employees' => $employees_preview])
+                @include('partials.employees-table-rows', [
+                    'employees' => $employees_preview,
+                    'show_bulk' => false,
+                ])
               @endisset
             </tbody>
           </table>
         </div>
       </div>
-
-      <div class="panel" id="debts">
-        <div class="panel-header">
-          <h3>💰 مديونيات شركات التعاقد</h3>
-          <span class="badge" id="debtsOverviewBadge">0 جهة</span>
-        </div>
-        <div class="panel-body">
-          <table data-paginate="10">
-            <thead>
-              <tr>
-                <th>جهة التعاقد</th>
-                <th>المستحق</th>
-                <th>الحالة</th>
-              </tr>
-            </thead>
-            <tbody id="debtsTable">
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
 
     <div class="panel audit-panel">
       <div class="panel-header">

@@ -22,7 +22,7 @@ class VisitTypeController extends Controller
     public function index(Request $request): JsonResponse
     {
         if ($request->boolean('all')) {
-            $types = VisitType::active()
+            $types = VisitType::query()
                 ->orderBy('name')
                 ->get(['id', 'name']);
 
@@ -34,7 +34,7 @@ class VisitTypeController extends Controller
                 $request->search,
                 fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
             )
-                ->orderBy('name')
+                ->orderByDesc('id')
         );
 
         return response()->json([
@@ -48,8 +48,7 @@ class VisitTypeController extends Controller
         $data = $request->validated();
 
         $type = VisitType::create([
-            'name'      => $data['name'],
-            'is_active' => true,
+            'name' => $data['name'],
         ]);
 
         AuditService::log(
@@ -77,28 +76,36 @@ class VisitTypeController extends Controller
 
         AuditService::log(
             action:      'update',
-            description: "تعديل نوع زيارة #{$visitType->id}",
+            description: "تعديل نوع زيارة: {$visitType->name}",
             tag:         'admin',
             before:      $before,
             after:       $visitType->fresh()->only(['name']),
         );
 
-        return response()->json($visitType->fresh());
+        return response()->json([
+            'message'    => 'تم تحديث نوع الزيارة بنجاح.',
+            'visit_type' => $visitType->fresh(),
+        ]);
     }
 
-    public function toggleActive(Request $request, VisitType $visitType): RedirectResponse|JsonResponse
+    public function destroy(VisitType $visitType): JsonResponse
     {
-        $visitType->update(['is_active' => ! $visitType->is_active]);
-
-        if ($request->expectsJson()) {
+        if ($visitType->appointments()->exists()) {
             return response()->json([
-                'id'        => $visitType->id,
-                'is_active' => $visitType->is_active,
-            ]);
+                'message' => 'لا يمكن حذف نوع الزيارة — مرتبط بمواعيد مسجّلة.',
+            ], 422);
         }
 
-        return redirect()
-            ->route('admin.visit-types')
-            ->with('success', 'تم تحديث حالة نوع الزيارة.');
+        $before = $visitType->only(['name']);
+        $visitType->delete();
+
+        AuditService::log(
+            action:      'delete',
+            description: "حذف نوع زيارة: {$before['name']}",
+            tag:         'admin',
+            before:      $before,
+        );
+
+        return response()->json(['message' => 'تم حذف نوع الزيارة بنجاح.']);
     }
 }

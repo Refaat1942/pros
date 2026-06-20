@@ -42,8 +42,7 @@
         <div class="bi-card-body">
             <div class="bi-row"><span>التكلفة التراكمية — الجهات المدنية</span><strong style="color:#0e7490">0 ج.م</strong></div>
             <div class="bi-row"><span>التكلفة المجمعة الافتراضية — العسكرية</span><strong style="color:#b45309">0 ج.م</strong></div>
-            <div class="bi-row"><span>مديونيات الجهات (صافي)</span><strong style="color:#b91c1c">0 ج.م</strong></div>
-            <div class="bi-sub">🪖 التكلفة العسكرية تُرحَّل لحساب الديون السيادية (دون مطالبة دفع).</div>
+            {{-- <div class="bi-sub">🪖 التكلفة العسكرية تُرحَّل لحساب الديون السيادية (دون مطالبة دفع).</div> --}}
         </div>
     </div>
     <div class="bi-card">

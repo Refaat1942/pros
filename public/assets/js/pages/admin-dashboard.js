@@ -46,6 +46,102 @@
       });
     }
 
+    function bindEmployeeModal() {
+      var modal = document.getElementById('employeeModal');
+      var form = document.getElementById('employeeForm');
+      if (!modal || !form) return;
+
+      function closeEmployeeModal() {
+        modal.classList.remove('open');
+      }
+
+      function setEmployeeAddMode() {
+        var url = new URL(window.location.href);
+        if (url.searchParams.has('edit')) {
+          url.searchParams.delete('edit');
+          window.history.replaceState({}, '', url.pathname + url.search);
+        }
+
+        var methodInput = form.querySelector('input[name="_method"]');
+        if (methodInput) methodInput.remove();
+
+        form.action = form.dataset.storeUrl || form.getAttribute('action');
+        form.reset();
+
+        var title = document.getElementById('employeeModalTitle');
+        if (title) title.textContent = form.dataset.addTitle || '➕ إضافة موظف';
+
+        var pwRequired = document.getElementById('employeePasswordRequired');
+        var pwHint = document.getElementById('employeePasswordHint');
+        if (pwRequired) pwRequired.style.display = '';
+        if (pwHint) pwHint.style.display = 'none';
+
+        var pw = form.querySelector('[name="password"]');
+        if (pw) pw.setAttribute('data-v-rules', 'required,password');
+
+        var roleSelectWrap = document.getElementById('employeeRoleSelectWrap');
+        var roleLockedWrap = document.getElementById('employeeRoleLockedWrap');
+        if (roleSelectWrap) roleSelectWrap.style.display = '';
+        if (roleLockedWrap) roleLockedWrap.style.display = 'none';
+
+        var lockedRoleInput = roleLockedWrap
+          ? roleLockedWrap.querySelector('[name="role_id"]')
+          : null;
+        if (lockedRoleInput) lockedRoleInput.removeAttribute('name');
+
+        var roleSelect = document.getElementById('employeeRoleSelect');
+        if (roleSelect) {
+          roleSelect.disabled = false;
+          roleSelect.setAttribute('name', 'role_id');
+          roleSelect.value = '';
+        }
+
+        var statusSelect = form.querySelector('[name="status"]');
+        if (statusSelect) statusSelect.value = 'active';
+      }
+
+      var addBtn = document.getElementById('btnAddEmployee');
+      if (addBtn) {
+        addBtn.addEventListener('click', function() {
+          setEmployeeAddMode();
+          modal.classList.add('open');
+        });
+      }
+
+      ['closeEmployeeModal', 'cancelEmployeeModal'].forEach(function(id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', closeEmployeeModal);
+      });
+
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeEmployeeModal();
+      });
+    }
+
+    window.deleteEmployee = function (id, name) {
+      if (!confirm('حذف الموظف «' + name + '»؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+      fetch('/admin/employees/' + encodeURIComponent(id), {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': csrf,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+      })
+        .then(function (r) {
+          return r.ok ? r.json() : r.json().then(function (j) { throw j; });
+        })
+        .then(function () {
+          window.location.reload();
+        })
+        .catch(function (err) {
+          alert((err && err.message) ? err.message : 'تعذّر حذف الموظف.');
+        });
+    };
+
     function bindTableFilter(inputId, tableId, countId, suffix) {
       var input = document.getElementById(inputId);
       var el = document.getElementById(tableId);
@@ -75,11 +171,15 @@
       });
     }
 
-    bindModal('employeeModal', 'btnAddEmployee', ['closeEmployeeModal', 'cancelEmployeeModal']);
     bindModal('rankModal', 'btnAddRank', ['closeRankModal', 'cancelRankModal']);
+    bindEmployeeModal();
     bindModal('visitTypeModal', 'btnAddVisitType', ['closeVisitTypeModal', 'cancelVisitTypeModal']);
+    bindModal('stockCategoryModal', 'btnAddStockCategory', ['closeStockCategoryModal', 'cancelStockCategoryModal']);
+    bindModal('supplierModal', 'btnAddSupplier', ['closeSupplierModal', 'cancelSupplierModal']);
     bindTableFilter('rankSearch', 'ranksTable', 'rankCount', 'رتبة');
     bindTableFilter('visitTypeSearch', 'visitTypesTable', 'visitTypeCount', 'نوع');
+    bindTableFilter('stockCategorySearch', 'stockCategoriesTable', 'stockCategoryCount', 'فئة');
+    bindTableFilter('supplierSearch', 'suppliersTable', 'supplierCount', 'مورد');
 
     function loadCompanies() {
       return contractCompanies.slice();
@@ -87,6 +187,28 @@
 
     function saveCompanies(list) {
       contractCompanies = list.slice();
+    }
+
+    function fetchContractCompaniesFromServer(callback) {
+      fetch('/admin/companies/list?all=1', {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      })
+        .then(function (r) { return r.ok ? r.json() : { data: [] }; })
+        .then(function (res) {
+          contractCompanies = (res.data || []).map(function (c) {
+            return {
+              id: c.id,
+              name: c.name,
+              company_code: c.company_code,
+              is_military: !!c.is_military,
+            };
+          });
+          if (callback) callback();
+        })
+        .catch(function () {
+          if (callback) callback();
+        });
     }
 
     function reloadDebts() {
@@ -367,7 +489,51 @@
       });
     }
 
+    function filterServerPricingApprovalRows() {
+      var tbody = document.getElementById('pricingApprovalTable');
+      if (!tbody || tbody.dataset.serverRendered !== '1') return;
+
+      var searchEl = document.getElementById('pricingApprovalSearch');
+      var filterEl = document.getElementById('pricingApprovalFilter');
+      var search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+      var status = filterEl ? filterEl.value : pricingApprovalFilter;
+      var visible = 0;
+      var pendingCount = 0;
+
+      tbody.querySelectorAll('tr[data-status]').forEach(function(row) {
+        var rowStatus = row.dataset.status || '';
+        if (rowStatus === 'awaiting_admin_approval') pendingCount++;
+
+        var hay = (row.dataset.search || row.textContent || '').toLowerCase();
+        var show = (status === 'all' || rowStatus === status)
+          && (!search || hay.indexOf(search) !== -1);
+
+        if (show) {
+          delete row.dataset.paginationSkip;
+          row.style.display = '';
+          visible++;
+        } else {
+          row.dataset.paginationSkip = '1';
+          row.style.display = 'none';
+        }
+      });
+
+      var badge = document.getElementById('pricingApprovalBadge');
+      if (badge) badge.textContent = pendingCount + ' بانتظار';
+
+      var countEl = document.getElementById('pricingApprovalCount');
+      if (countEl) countEl.textContent = visible + ' طلب';
+
+      refreshPaginated('pricingApprovalTable');
+    }
+
     function renderPricingApproval() {
+      var tbody = document.getElementById('pricingApprovalTable');
+      if (tbody && tbody.dataset.serverRendered === '1') {
+        filterServerPricingApprovalRows();
+        return;
+      }
+
       var all = PricingQueue.getAll();
       var filtered = getFilteredPricingApproval();
       var pendingCount = all.filter(function(p) { return p.statusKey === 'awaiting_admin_approval'; }).length;
@@ -377,15 +543,14 @@
 
       if (!filtered.length) {
         document.getElementById('pricingApprovalTable').innerHTML =
-          '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px;">لا توجد طلبات مطابقة</td></tr>';
+          '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px;">لا توجد طلبات مطابقة</td></tr>';
         refreshPaginated('pricingApprovalTable');
         return;
       }
 
       document.getElementById('pricingApprovalTable').innerHTML = filtered.map(function(p, idx) {
-        var total = PricingQueue.estimateTotal(p.recommendations);
         var actions = '<div class="approval-actions">' +
-          '<button type="button" class="btn-action" onclick="openPricingApprovalModal(\'' + p.id + '\')">عرض التفاصيل</button>';
+          '<button type="button" class="btn-action" onclick="openPricingApprovalModal(\'' + p.id + '\')">عرض</button>';
         if (p.statusKey === 'awaiting_admin_approval') {
           actions += '<button type="button" class="btn-action approve" onclick="approvePricingRequest(\'' + p.id + '\')">✅ اعتماد</button>';
         }
@@ -397,7 +562,6 @@
           '<br><span style="font-size:11px;color:var(--text-muted);">' + p.company + '</span></td>' +
           '<td>' + p.date + '</td>' +
           '<td style="text-align:center;font-weight:700;">' + p.items + '</td>' +
-          '<td class="pricing-total-cell">' + PricingQueue.formatMoney(total) + '</td>' +
           '<td><span class="pricing-approval-status ' + p.statusKey + '">' + p.statusLabel + '</span></td>' +
           '<td>' + actions + '</td>' +
           '</tr>';
@@ -405,7 +569,118 @@
       refreshPaginated('pricingApprovalTable');
     }
 
+    function pricingDetailBox(label, value) {
+      return '<div class="catalog-detail-box"><div class="dl">' + label + '</div><div class="dv">' + value + '</div></div>';
+    }
+
+    function formatPricingDate(value) {
+      if (!value) return '—';
+      return String(value).slice(0, 10);
+    }
+
+    function renderPricingDetailModal(p) {
+      selectedPricingId = p.id;
+      var statusKey = p.status_key || '';
+      var patient = p.patient || {};
+      var caseInfo = p.case || {};
+
+      document.getElementById('pricingApprovalModalTitle').textContent = '🧾 ' + (p.request_no || '—');
+      document.getElementById('pricingApprovalModalRef').textContent =
+        (p.order_ref || caseInfo.order_ref || '—') + ' · ' + (p.patient_name || patient.name || '—');
+
+      var meta = [
+        pricingDetailBox('رقم الطلب', p.request_no || '—'),
+        pricingDetailBox('أمر التشغيل', p.order_ref || caseInfo.order_ref || '—'),
+        pricingDetailBox('رقم الحالة', caseInfo.case_no || '—'),
+        pricingDetailBox('المريض', p.patient_name || patient.name || '—'),
+        pricingDetailBox('رقم المريض', patient.patient_code || '—'),
+        pricingDetailBox('الهوية الوطنية', patient.national_id || '—'),
+        pricingDetailBox('الهاتف', patient.phone || '—'),
+        pricingDetailBox('تصنيف المريض', pricingTypeBadge(p.patient_type || patient.patient_type || caseInfo.patient_type)),
+        pricingDetailBox('جهة التعاقد', p.company_name || patient.company_name || caseInfo.company_name || '—'),
+      ];
+
+      if (patient.rank) {
+        meta.push(pricingDetailBox('الرتبة', patient.rank));
+      }
+      if (patient.sovereign_entity) {
+        meta.push(pricingDetailBox('الجهة السيادية', patient.sovereign_entity));
+      }
+
+      meta.push(
+        pricingDetailBox('الطبيب', p.doctor_name || '—'),
+        pricingDetailBox('تاريخ الطلب', formatPricingDate(p.request_date)),
+        pricingDetailBox('الحالة', p.status_label || '—')
+      );
+
+      if (p.approved_by) {
+        meta.push(pricingDetailBox('اعتمد بواسطة', p.approved_by));
+      }
+      if (p.approved_at) {
+        meta.push(pricingDetailBox('تاريخ الاعتماد', formatPricingDate(p.approved_at)));
+      }
+
+      document.getElementById('pricingApprovalModalMeta').innerHTML = meta.join('');
+
+      var rows = (p.items || []).map(function(item) {
+        return '<tr>' +
+          '<td><strong>' + (item.name || '—') + '</strong></td>' +
+          '<td>' + (item.stock_item_code || '—') + '</td>' +
+          '<td>' + (item.qty || 0) + '</td>' +
+          '<td>' + PricingQueue.formatMoney(item.unit_price) + '</td>' +
+          '<td>' + PricingQueue.formatMoney(item.line_total) + '</td>' +
+          '</tr>';
+      }).join('');
+
+      document.getElementById('pricingApprovalModalItems').innerHTML = rows ||
+        '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">لا توجد بنود</td></tr>';
+      document.getElementById('pricingApprovalModalTotal').textContent =
+        PricingQueue.formatMoney(p.computed_total || 0);
+
+      var approveBtn = document.getElementById('btnApprovePricingModal');
+      approveBtn.style.display = statusKey === 'awaiting_admin_approval' ? 'inline-flex' : 'none';
+    }
+
+    function openPricingApprovalModalFromServer(id) {
+      var modal = document.getElementById('pricingApprovalModal');
+      if (!modal) return;
+
+      selectedPricingId = id;
+      document.getElementById('pricingApprovalModalTitle').textContent = '🧾 جاري التحميل...';
+      document.getElementById('pricingApprovalModalRef').textContent = '';
+      document.getElementById('pricingApprovalModalMeta').innerHTML =
+        '<p style="text-align:center;color:var(--text-muted);padding:16px;">جاري تحميل التفاصيل...</p>';
+      document.getElementById('pricingApprovalModalItems').innerHTML = '';
+      document.getElementById('pricingApprovalModalTotal').textContent = '—';
+      document.getElementById('btnApprovePricingModal').style.display = 'none';
+      modal.classList.add('open');
+
+      fetch('/admin/pricing/' + id, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+        .then(function(res) {
+          if (!res.ok) throw new Error('load failed');
+          return res.json();
+        })
+        .then(function(data) {
+          renderPricingDetailModal(data);
+        })
+        .catch(function() {
+          document.getElementById('pricingApprovalModalMeta').innerHTML =
+            '<p style="color:#dc2626;text-align:center;padding:16px;">تعذّر تحميل تفاصيل الطلب</p>';
+        });
+    }
+
     function openPricingApprovalModal(id) {
+      var tbody = document.getElementById('pricingApprovalTable');
+      if (tbody && tbody.dataset.serverRendered === '1') {
+        openPricingApprovalModalFromServer(id);
+        return;
+      }
+
       var p = PricingQueue.getById(id);
       if (!p) return;
       selectedPricingId = id;
@@ -452,6 +727,33 @@
     }
 
     function approvePricingRequest(id) {
+      var tbody = document.getElementById('pricingApprovalTable');
+      if (tbody && tbody.dataset.serverRendered === '1') {
+        if (!confirm('موافقة الأدمن على الطلب وإرساله للاستقبال لإصدار عرض السعر؟')) return;
+        var csrf = document.querySelector('meta[name="csrf-token"]');
+        fetch('/admin/pricing/' + id + '/approve', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrf ? csrf.content : '',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+          .then(function(res) {
+            if (!res.ok) throw new Error('approve failed');
+            return res.json();
+          })
+          .then(function() {
+            closePricingApprovalModal();
+            window.location.reload();
+          })
+          .catch(function() {
+            alert('⚠️ تعذّر اعتماد الطلب');
+          });
+        return;
+      }
+
       var p = PricingQueue.getById(id);
       if (!p || p.statusKey !== 'awaiting_admin_approval') return;
       if (!confirm('موافقة الأدمن على طلب ' + p.id + ' وإرساله للاستقبال لإصدار عرض السعر؟')) return;
@@ -466,14 +768,17 @@
 
     function exportPricingApproval(type) {
       var data = getFilteredPricingApproval();
-      var headers = ['رقم الطلب', 'أمر التشغيل', 'المريض', 'التصنيف', 'جهة التعاقد', 'التاريخ', 'البنود', 'التقدير', 'الحالة'];
+      var headers = ['رقم الطلب', 'أمر التشغيل', 'المريض', 'التصنيف', 'جهة التعاقد', 'التاريخ', 'البنود', 'الحالة'];
       var rows = data.map(function(p) {
         var typeLabel = p.patientType === 'military' ? 'عسكري' : 'مدني';
-        return [p.id, p.orderRef, p.patient, typeLabel, p.company, p.date, p.items, PricingQueue.estimateTotal(p.recommendations), p.statusLabel];
+        return [p.id, p.orderRef, p.patient, typeLabel, p.company, p.date, p.items, p.statusLabel];
       });
       if (type === 'excel') ExportKit.toExcel('pricing-approval', headers, rows);
       else ExportKit.toPDF('اعتماد التسعير', headers, rows);
     }
+
+    window.openPricingApprovalModal = openPricingApprovalModal;
+    window.approvePricingRequest = approvePricingRequest;
 
     onId('pricingApprovalSearch', 'input', function(e) {
       pricingApprovalSearch = e.target.value.trim();
@@ -500,57 +805,66 @@
       });
     }
 
-    function renderCompanies() {
-      contractCompanies = loadCompanies();
-      var filtered = getFilteredCompanies();
-      document.getElementById('companiesBadge').textContent = contractCompanies.length + ' شركة';
-      document.getElementById('companiesCount').textContent = filtered.length + ' شركة';
-      document.getElementById('companiesTable').innerHTML = filtered.map(function(c, idx) {
-        return '<tr>' +
-          '<td style="color:var(--text-muted);font-weight:600">' + (idx + 1) + '</td>' +
-          '<td><strong>' + c.name + '</strong></td>' +
-          '<td><button class="btn-action" style="color:#b91c1c" onclick="deleteCompany(\'' + c.id + '\')">حذف</button></td>' +
-          '</tr>';
-      }).join('');
+    function filterServerCompanyRows() {
+      var tbody = document.getElementById('companiesTable');
+      if (!tbody || tbody.dataset.serverRendered !== '1') return;
+      var search = ((document.getElementById('companySearch') || {}).value || '').trim().toLowerCase();
+      var visible = 0;
+      tbody.querySelectorAll('tr[data-name]').forEach(function (row) {
+        var name = (row.dataset.name || '').toLowerCase();
+        var show = !search || name.indexOf(search) !== -1;
+        if (show) {
+          delete row.dataset.paginationSkip;
+          visible++;
+        } else {
+          row.dataset.paginationSkip = '1';
+        }
+      });
+      var countEl = document.getElementById('companiesCount');
+      if (countEl) countEl.textContent = visible + ' شركة';
       refreshPaginated('companiesTable');
     }
 
-    function addCompany() {
-      var name = document.getElementById('companyNameInput').value.trim();
-      if (!name) {
-        alert('يرجى إدخال اسم الشركة');
-        return;
-      }
-      contractCompanies = loadCompanies();
-      if (contractCompanies.some(function(c) { return c.name === name; })) {
-        alert('هذه الشركة مسجلة مسبقاً');
-        return;
-      }
-      var maxNum = contractCompanies.reduce(function(m, c) {
-        var n = parseInt(String(c.id || '').replace(/\D/g, ''), 10);
-        return isNaN(n) ? m : Math.max(m, n);
-      }, 0);
-      contractCompanies.push({ id: 'CO-' + String(maxNum + 1).padStart(3, '0'), name: name });
-      saveCompanies(contractCompanies);
-      document.getElementById('companyNameInput').value = '';
-      renderCompanies();
-      renderAdminAnalytics();
+    function companyRowHtml(c, idx) {
+      var safeName = String(c.name).replace(/"/g, '&quot;');
+      return '<tr data-id="' + c.id + '" data-name="' + safeName + '">' +
+        '<td class="bulk-select-col"><input type="checkbox" class="bulk-row-select" value="' + c.id + '" aria-label="تحديد"></td>' +
+        '<td>' + (idx + 1) + '</td>' +
+        '<td><strong>' + c.name + '</strong></td>' +
+        '<td><div class="table-actions">' +
+        '<button type="button" class="btn-action" onclick="openCompanyEditModal(' + c.id + ', ' + JSON.stringify(c.name) + ')">✏️ تعديل</button>' +
+        '<button type="button" class="btn-action danger" onclick="deleteCompany(' + c.id + ', ' + JSON.stringify(c.name) + ')">🗑️ حذف</button>' +
+        '</div></td></tr>';
     }
 
-    function deleteCompany(id) {
-      var company = contractCompanies.find(function(c) { return c.id === id; });
-      if (!company) return;
-      var inDebts = debts.some(function(d) { return d.company === company.name; });
-      if (inDebts) {
-        alert('لا يمكن حذف «' + company.name + '» — مرتبطة بسجل مديونيات');
+    function renderCompanies() {
+      var tbody = document.getElementById('companiesTable');
+      if (!tbody) return;
+
+      if (tbody.dataset.serverRendered === '1') {
+        filterServerCompanyRows();
         return;
       }
-      if (!confirm('حذف «' + company.name + '»؟')) return;
-      contractCompanies = loadCompanies().filter(function(c) { return c.id !== id; });
-      saveCompanies(contractCompanies);
-      renderCompanies();
-      renderAdminAnalytics();
+
+      fetchContractCompaniesFromServer(function () {
+        var filtered = getFilteredCompanies();
+        var badge = document.getElementById('companiesBadge');
+        var countEl = document.getElementById('companiesCount');
+        if (badge) badge.textContent = contractCompanies.length + ' شركة';
+        if (countEl) countEl.textContent = filtered.length + ' شركة';
+
+        if (!filtered.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد شركات — أضف جهة تعاقد من الحقل أعلاه.</td></tr>';
+        } else {
+          tbody.innerHTML = filtered.map(function (c, idx) {
+            return companyRowHtml(c, idx);
+          }).join('');
+        }
+        refreshPaginated('companiesTable');
+      });
     }
+
+    window.renderCompanies = renderCompanies;
 
     function exportCompanies(type) {
       var data = getFilteredCompanies();
@@ -560,15 +874,6 @@
       else ExportKit.toPDF('شركات التعاقد', headers, rows);
     }
 
-    onId('btnAddCompany', 'click', addCompany);
-    onId('companyNameInput', 'keydown', function(e) {
-      if (e.key === 'Enter') { e.preventDefault(); addCompany(); }
-    });
-    onId('companySearch', 'input', function(e) {
-      companySearchTerm = e.target.value.trim();
-      renderCompanies();
-    });
-
     function formatPriceRange(prices) {
       var s = StockCatalog.getPriceSummary(prices);
       if (!s.count) return '—';
@@ -576,9 +881,18 @@
       return s.count + ' أسعار · ' + StockCatalog.formatPrice(s.min) + ' – ' + StockCatalog.formatPrice(s.max);
     }
 
+    function getCatalogCategoryNameById(id) {
+      var sel = document.getElementById('catalogCategory');
+      if (!sel || !id) return '';
+      var opt = sel.querySelector('option[value="' + id + '"]');
+      return opt ? opt.textContent.trim() : '';
+    }
+
     function getFilteredCatalog() {
       return catalogItems.filter(function(item) {
-        var matchCat = catalogCategoryFilter === 'all' || item.category === catalogCategoryFilter;
+        var matchCat = catalogCategoryFilter === 'all' ||
+          String(item.category_id || '') === String(catalogCategoryFilter) ||
+          item.category === getCatalogCategoryNameById(catalogCategoryFilter);
         var matchSearch = !catalogSearchTerm ||
           item.name.indexOf(catalogSearchTerm) !== -1 ||
           item.code.indexOf(catalogSearchTerm) !== -1 ||
@@ -593,6 +907,25 @@
       { value: 'OEM', label: 'OEM', cls: 'oem' },
       { value: 'موزّع', label: 'موزّع', cls: 'distributor' }
     ];
+
+    function getCatalogSuppliers() {
+      return window.__CATALOG_SUPPLIERS || [];
+    }
+
+    function supplierSelectHtml(selectedId, selectedName) {
+      var html = '<option value="">— اختر المورد —</option>';
+      getCatalogSuppliers().forEach(function (s) {
+        var selected = (selectedId && String(selectedId) === String(s.id)) ||
+          (!selectedId && selectedName && selectedName === s.name);
+        html += '<option value="' + s.id + '"' + (selected ? ' selected' : '') + '>' + s.name + '</option>';
+      });
+      return html;
+    }
+
+    function getSupplierNameById(id) {
+      var found = getCatalogSuppliers().find(function (s) { return String(s.id) === String(id); });
+      return found ? found.name : '';
+    }
 
     function supplierTypeOptions(selected) {
       return SUPPLIER_TYPES.map(function(t) {
@@ -616,7 +949,7 @@
       var st = resolveSupplierType(p);
       return '<div class="price-row" data-id="' + (p.id || '') + '">' +
         '<div><label>وصف الصنف</label><input type="text" class="price-label" value="' + (p.label || '') + '" placeholder="مثال: ركبة محلية"></div>' +
-        '<div><label>المورد</label><input type="text" class="price-supplier" value="' + (p.supplier || '') + '" placeholder="Ottobock Egypt"></div>' +
+        '<div><label>المورد</label><select class="price-supplier">' + supplierSelectHtml(p.supplier_id || p.supplierId, p.supplier) + '</select></div>' +
         '<div><label>نوع المورد</label><select class="price-supplier-type">' + supplierTypeOptions(st) + '</select></div>' +
         '<div><label>كود الصنف</label><input type="text" class="price-item-code" value="' + (p.itemCode || p.batch || '') + '" placeholder="ITM-001-01"></div>' +
         '<div><label>السعر (ج.م)</label><input type="number" class="price-amount" min="0" value="' + (p.amount || '') + '" placeholder="45000"></div>' +
@@ -629,7 +962,8 @@
       document.getElementById('catalogEditCode').value = '';
       document.getElementById('catalogName').value = '';
       document.getElementById('catalogSpec').value = '';
-      document.getElementById('catalogCategory').value = 'مفاصل';
+      var catSel = document.getElementById('catalogCategory');
+      if (catSel) catSel.selectedIndex = catSel.options.length > 1 ? 1 : 0;
       document.getElementById('catalogQty').value = '0';
       document.getElementById('itemPricesList').innerHTML = priceRowHtml({}, 'NEW');
     }
@@ -641,7 +975,20 @@
         document.getElementById('catalogEditCode').value = item.code;
         document.getElementById('catalogName').value = item.name;
         document.getElementById('catalogSpec').value = item.spec || '';
-        document.getElementById('catalogCategory').value = item.category;
+        var catSel = document.getElementById('catalogCategory');
+        if (catSel) {
+          if (item.category_id) {
+            catSel.value = String(item.category_id);
+          } else if (item.category) {
+            Array.prototype.slice.call(catSel.options).some(function(opt) {
+              if (opt.textContent.trim() === item.category) {
+                catSel.value = opt.value;
+                return true;
+              }
+              return false;
+            });
+          }
+        }
         document.getElementById('catalogQty').value = item.qty || 0;
         document.getElementById('itemPricesList').innerHTML = (item.prices && item.prices.length)
           ? item.prices.map(function(p) { return priceRowHtml(p, item.code); }).join('')
@@ -672,15 +1019,19 @@
       return Array.prototype.slice.call(document.querySelectorAll('#itemPricesList .price-row')).map(function(row) {
         var id = row.getAttribute('data-id');
         var code = editingCatalogCode || StockCatalog.nextCode();
+        var supplierSel = row.querySelector('.price-supplier');
+        var supplierId = supplierSel ? supplierSel.value : '';
+        var supplierName = supplierId ? getSupplierNameById(supplierId) : '';
         return {
           id: id || StockCatalog.nextPriceId(code),
           label: row.querySelector('.price-label').value.trim(),
-          supplier: row.querySelector('.price-supplier').value.trim(),
+          supplier_id: supplierId ? parseInt(supplierId, 10) : null,
+          supplier: supplierName,
           supplierType: row.querySelector('.price-supplier-type').value,
           itemCode: row.querySelector('.price-item-code').value.trim(),
           amount: parseInt(row.querySelector('.price-amount').value, 10) || 0
         };
-      }).filter(function(p) { return p.label && p.itemCode && p.amount > 0; });
+      }).filter(function(p) { return p.label && p.itemCode && p.amount > 0 && p.supplier_id; });
     }
 
     function renderCatalog() {
@@ -819,15 +1170,20 @@
     function saveCatalogItem() {
       var name = document.getElementById('catalogName').value.trim();
       var spec = document.getElementById('catalogSpec').value.trim() || '—';
-      var category = document.getElementById('catalogCategory').value;
+      var categoryId = document.getElementById('catalogCategory').value;
+      var category = getCatalogCategoryNameById(categoryId);
       var qty = parseInt(document.getElementById('catalogQty').value, 10) || 0;
       var prices = collectPricesFromForm();
       if (!name) {
         alert('يرجى إدخال اسم الصنف');
         return;
       }
+      if (!categoryId) {
+        alert('يرجى اختيار الفئة');
+        return;
+      }
       if (!prices.length) {
-        alert('يرجى إضافة سعر واحد على الأقل مع كود الصنف');
+        alert('يرجى إضافة سعر واحد على الأقل مع اختيار المورد وكود الصنف');
         return;
       }
       if (editingCatalogCode) {
@@ -835,6 +1191,7 @@
         StockCatalog.updateItem(editingCatalogCode, {
           name: name,
           spec: spec,
+          category_id: parseInt(categoryId, 10),
           category: category,
           qty: qty,
           reserved: existing ? existing.reserved : 0,
@@ -845,6 +1202,7 @@
           code: StockCatalog.nextCode(),
           name: name,
           spec: spec,
+          category_id: parseInt(categoryId, 10),
           category: category,
           qty: qty,
           reserved: 0,
@@ -982,8 +1340,7 @@
 
     function getFilteredSuppliers() {
       var search = document.getElementById('supplierSearch') ? document.getElementById('supplierSearch').value.trim() : '';
-      var status = document.getElementById('supplierStatusFilter') ? document.getElementById('supplierStatusFilter').value : 'all';
-      return ExportKit.filterItems(suppliers, { search: search, searchKeys: ['name', 'specialty'], filterField: 'status', filterValue: status });
+      return ExportKit.filterItems(suppliers, { search: search, searchKeys: ['name', 'phone', 'email'] });
     }
 
     function exportEmployees(type) {
@@ -1031,14 +1388,27 @@
     }
 
     function exportSuppliers(type) {
-      var data = getFilteredSuppliers();
-      var headers = ['المورد', 'التخصص', 'آخر فاتورة', 'القيمة', 'الحالة'];
-      var rows = data.map(function(s) {
-        var lbl = s.status === 'paid' ? 'مسددة' : s.status === 'partial' ? 'جزئية' : 'معلقة';
-        return [s.name, s.specialty, s.lastInvoice, formatNumber(s.amount), lbl];
-      });
+      var tbody = document.getElementById('suppliersTable');
+      var headers = ['اسم المورد', 'الهاتف', 'البريد'];
+      var rows = [];
+      if (tbody && tbody.dataset.serverRendered === '1') {
+        tbody.querySelectorAll('tr').forEach(function(row) {
+          if (row.style.display === 'none') return;
+          var cells = row.querySelectorAll('td');
+          if (cells.length < 5) return;
+          rows.push([
+            (cells[2].querySelector('strong') || cells[2]).textContent.trim(),
+            cells[3].textContent.trim(),
+            cells[4].textContent.trim(),
+          ]);
+        });
+      } else {
+        rows = getFilteredSuppliers().map(function(s) {
+          return [s.name, s.phone || '—', s.email || '—'];
+        });
+      }
       if (type === 'excel') ExportKit.toExcel('الموردون', headers, rows);
-      else ExportKit.toPDF('الموردون وفواتير المشتريات', headers, rows);
+      else ExportKit.toPDF('الموردون', headers, rows);
     }
 
     function formatNumber(n) {
@@ -1223,15 +1593,14 @@
     }
 
     function renderSuppliers() {
+      var tbody = document.getElementById('suppliersTable');
+      if (tbody && tbody.dataset.serverRendered === '1') return;
       var filtered = getFilteredSuppliers();
-      document.getElementById('suppliersTable').innerHTML = filtered.map(function(s) {
-        var statusLabel = s.status === 'paid' ? 'مسددة' : s.status === 'partial' ? 'جزئية' : 'معلقة';
+      tbody.innerHTML = filtered.map(function(s) {
         return '<tr>' +
           '<td><strong>' + s.name + '</strong></td>' +
-          '<td>' + s.specialty + '</td>' +
-          '<td>' + s.lastInvoice + '</td>' +
-          '<td>' + formatNumber(s.amount) + ' ج.م</td>' +
-          '<td><span class="role-badge ' + (s.status === 'paid' ? 'reception' : s.status === 'pending' ? 'technical' : 'doctor') + '">' + statusLabel + '</span></td>' +
+          '<td>' + (s.phone || '—') + '</td>' +
+          '<td>' + (s.email || '—') + '</td>' +
           '</tr>';
       }).join('');
       var sc = document.getElementById('supplierCount');
@@ -1261,7 +1630,7 @@
       var el = document.getElementById(id);
       if (el) { el.addEventListener('input', renderAuditFull); el.addEventListener('change', renderAuditFull); }
     });
-    ['supplierSearch','supplierStatusFilter'].forEach(function(id) {
+    ['supplierSearch'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) { el.addEventListener('input', renderSuppliers); el.addEventListener('change', renderSuppliers); }
     });
@@ -1330,20 +1699,3 @@
     })();
 
     bindTableFilter('companySearch', 'companiesTable', 'companiesCount', 'شركة');
-    bindTableFilter('pricingApprovalSearch', 'pricingApprovalTable', 'pricingApprovalCount', 'طلب');
-
-    var pricingFilter = document.getElementById('pricingApprovalFilter');
-    var pricingTable = document.getElementById('pricingApprovalTable');
-    if (pricingFilter && pricingTable && pricingTable.dataset.serverRendered === '1') {
-      pricingFilter.addEventListener('change', function() {
-        var val = pricingFilter.value;
-        var visible = 0;
-        pricingTable.querySelectorAll('tbody tr[data-status]').forEach(function(row) {
-          var show = val === 'all' || row.dataset.status === val;
-          row.style.display = show ? '' : 'none';
-          if (show) visible++;
-        });
-        var countEl = document.getElementById('pricingApprovalCount');
-        if (countEl) countEl.textContent = visible + ' طلب';
-      });
-    }

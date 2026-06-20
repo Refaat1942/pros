@@ -10,7 +10,7 @@ class StoreMilitaryRankRequest extends BaseRequest
     {
         return [
             'name'       => $this->personNameRules(),
-            'rank_code'  => ['required', 'string', 'min:2', 'max:30', 'regex:/^[A-Za-z0-9_\-]+$/', 'unique:military_ranks,rank_code'],
+            'rank_code'  => ['nullable', 'string', 'min:2', 'max:30', 'regex:/^[A-Za-z0-9_\-]+$/', 'unique:military_ranks,rank_code'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
         ];
     }
@@ -28,7 +28,8 @@ class StoreMilitaryRankRequest extends BaseRequest
         parent::prepareForValidation();
 
         if ($this->has('rank_code') && is_string($this->rank_code)) {
-            $this->merge(['rank_code' => strtoupper(trim($this->rank_code))]);
+            $code = strtoupper(trim($this->rank_code));
+            $this->merge(['rank_code' => $code !== '' ? $code : null]);
         }
     }
 }

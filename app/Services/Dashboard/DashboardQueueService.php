@@ -66,6 +66,23 @@ class DashboardQueueService
     {
         return Bom::query()
             ->where('stage', Bom::STAGE_RAW)
+            ->whereHas('caseRecord', fn ($q) => $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Civilian cases in waiting_return — need quote issuance + OCR approval scan.
+     * Military cases never reach this stage; they skip directly to manufacturing.
+     *
+     * @return list<int>
+     */
+    public function receptionApprovalPendingCaseIds(): array
+    {
+        return CaseRecord::query()
+            ->where('stage_key', CaseRecord::STAGE_WAITING_RETURN)
+            ->where('patient_type', \App\Models\Patient::TYPE_CIVILIAN)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();

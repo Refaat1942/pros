@@ -12,6 +12,7 @@ enum WorkflowEvent: string
     case PricingCompletedCivilian  = 'pricing_completed_civilian';
     case PricingCompletedMilitary  = 'pricing_completed_military';
     case ApprovalScanned           = 'approval_scanned';
+    case BomDispensed              = 'bom_dispensed';
     case BomFinished               = 'bom_finished';
     case Delivered                 = 'delivered';
 }

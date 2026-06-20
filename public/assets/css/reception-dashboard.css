@@ -212,7 +212,7 @@
       transition: max-height 0.35s ease;
     }
 
-    .add-patient-form-wrap.open { max-height: 520px; }
+    .add-patient-form-wrap.open { max-height: 960px; }
 
     .add-patient-form-body {
       padding: 24px;

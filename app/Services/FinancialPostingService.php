@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\ContractCompany;
+use App\Models\MilitaryDebt;
 use App\Models\Patient;
 
 /**
@@ -98,11 +99,34 @@ class FinancialPostingService
 
     private function postMilitary(CaseRecord $case): void
     {
+        $totalCost = (float) ($case->total_cost ?? 0);
+
+        // إنشاء قيد المديونية في سجل الجهات العسكرية — مرة واحدة لكل حالة.
+        if (! MilitaryDebt::where('case_id', $case->id)->exists()) {
+            $case->loadMissing('patient');
+
+            MilitaryDebt::create([
+                'case_id'             => $case->id,
+                'work_order_no'       => $case->work_order_no,
+                'patient_name'        => $case->patient?->name ?? $case->company_name ?? '—',
+                'patient_national_id' => $case->patient?->national_id ?? null,
+                'sovereign_entity'    => $case->sovereign_entity ?? $case->company_name ?? '—',
+                'total_cost'          => $totalCost,
+                'delivered_at'        => $case->delivered_at ? (string) $case->delivered_at : now()->toDateString(),
+                'status'              => MilitaryDebt::STATUS_PENDING,
+            ]);
+        }
+
         AuditService::log(
             action:      'post',
-            description: 'ترحيل تكلفة عسكري',
+            description: 'ترحيل تكلفة عسكري — قيد مديونية سيادية',
             tag:         'financial',
-            after:       ['total_cost' => (float) ($case->total_cost ?? 0)],
+            after:       [
+                'case_id'          => $case->id,
+                'work_order_no'    => $case->work_order_no,
+                'sovereign_entity' => $case->sovereign_entity,
+                'total_cost'       => $totalCost,
+            ],
         );
     }
 }

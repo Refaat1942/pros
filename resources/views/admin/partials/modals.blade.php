@@ -24,7 +24,7 @@
           <tbody id="pricingApprovalModalItems"></tbody>
           <tfoot>
             <tr>
-              <td colspan="4" style="text-align:left;font-weight:700;">الإجمالي التقديري</td>
+              <td colspan="4" style="text-align:left;font-weight:700;">الإجمالي</td>
               <td id="pricingApprovalModalTotal" style="font-weight:800;color:var(--primary-dark);"></td>
             </tr>
           </tfoot>

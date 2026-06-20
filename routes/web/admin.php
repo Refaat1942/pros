@@ -1,12 +1,13 @@
 <?php
 
+use App\Http\Controllers\Contracts\ContractController;
+use App\Http\Controllers\Finance\MilitaryDebtController;
 use App\Http\Controllers\Admin\MilitaryRankController;
+use App\Http\Controllers\Admin\StockCategoryController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\ContractCompanyController;
-use App\Http\Controllers\Finance\CreditNoteController;
-use App\Http\Controllers\Finance\DebtController;
 use App\Http\Controllers\Pricing\PricingApprovalController;
 use App\Http\Controllers\Reports\AdminOverviewController;
 use App\Http\Controllers\Reports\AuditLogController;
@@ -74,6 +75,9 @@ Route::prefix('admin')
         Route::put('companies/{company}', [ContractCompanyController::class, 'update'])
             ->name('companies.update');
 
+        Route::delete('companies/{company}', [ContractCompanyController::class, 'destroy'])
+            ->name('companies.destroy');
+
         // ── Suppliers ──────────────────────────────────────────────────────
         Route::get('suppliers/list', [SupplierController::class, 'index'])
             ->name('suppliers.list');
@@ -84,8 +88,8 @@ Route::prefix('admin')
         Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])
             ->name('suppliers.update');
 
-        Route::patch('suppliers/{supplier}/toggle', [SupplierController::class, 'toggleActive'])
-            ->name('suppliers.toggle');
+        Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])
+            ->name('suppliers.destroy');
 
         // ── Military Ranks — JSON API (الصفحة Blade: GET admin/military-ranks) ──
         Route::get('military-ranks/list', [MilitaryRankController::class, 'index'])
@@ -97,8 +101,8 @@ Route::prefix('admin')
         Route::put('military-ranks/{militaryRank}', [MilitaryRankController::class, 'update'])
             ->name('military-ranks.update');
 
-        Route::patch('military-ranks/{militaryRank}/toggle', [MilitaryRankController::class, 'toggleActive'])
-            ->name('military-ranks.toggle');
+        Route::delete('military-ranks/{militaryRank}', [MilitaryRankController::class, 'destroy'])
+            ->name('military-ranks.destroy');
 
         // ── Visit Types — JSON API (الصفحة Blade: GET admin/visit-types) ─────
         Route::get('visit-types/list', [VisitTypeController::class, 'index'])
@@ -110,8 +114,21 @@ Route::prefix('admin')
         Route::put('visit-types/{visitType}', [VisitTypeController::class, 'update'])
             ->name('visit-types.update');
 
-        Route::patch('visit-types/{visitType}/toggle', [VisitTypeController::class, 'toggleActive'])
-            ->name('visit-types.toggle');
+        Route::delete('visit-types/{visitType}', [VisitTypeController::class, 'destroy'])
+            ->name('visit-types.destroy');
+
+        // ── Stock Categories — JSON API (الصفحة Blade: GET admin/stock-categories) ─
+        Route::get('stock-categories/list', [StockCategoryController::class, 'index'])
+            ->name('stock-categories.list');
+
+        Route::post('stock-categories', [StockCategoryController::class, 'store'])
+            ->name('stock-categories.store');
+
+        Route::put('stock-categories/{stockCategory}', [StockCategoryController::class, 'update'])
+            ->name('stock-categories.update');
+
+        Route::delete('stock-categories/{stockCategory}', [StockCategoryController::class, 'destroy'])
+            ->name('stock-categories.destroy');
 
         // ── Pricing Approval ───────────────────────────────────────────────
         Route::get('pricing/list', [PricingApprovalController::class, 'index'])
@@ -123,25 +140,31 @@ Route::prefix('admin')
         Route::post('pricing/{pricingRequest}/approve', [PricingApprovalController::class, 'approve'])
             ->name('pricing.approve');
 
-        // ── Contract debts & payments ────────────────────────────────────
-        Route::get('debts/list', [DebtController::class, 'index'])
-            ->name('debts.list');
+        // ── Military sovereign debts ──────────────────────────────────────
+        Route::get('military-debts/list', [MilitaryDebtController::class, 'index'])
+            ->name('military-debts.list');
 
-        Route::post('debts/{company}/payment', [DebtController::class, 'recordPayment'])
-            ->name('debts.payment');
+        Route::patch('military-debts/{militaryDebt}/status', [MilitaryDebtController::class, 'updateStatus'])
+            ->name('military-debts.status');
 
-        // ── Credit notes ─────────────────────────────────────────────────
-        Route::get('debts/credit-notes/list', [CreditNoteController::class, 'index'])
-            ->name('debts.credit-notes.list');
+        Route::delete('military-debts/{militaryDebt}', [MilitaryDebtController::class, 'destroy'])
+            ->name('military-debts.destroy');
 
-        Route::post('debts/credit-notes', [CreditNoteController::class, 'store'])
-            ->name('debts.credit-notes.store');
+        // ── Contracts archive — Admin full CRUD ──────────────────────────
+        Route::get('contracts/list', [ContractController::class, 'index'])
+            ->name('contracts.list');
 
-        Route::post('debts/credit-notes/{creditNote}/approve', [CreditNoteController::class, 'approve'])
-            ->name('debts.credit-notes.approve');
+        Route::get('contracts/{contract}', [ContractController::class, 'show'])
+            ->name('contracts.show');
 
-        Route::post('debts/credit-notes/{creditNote}/reject', [CreditNoteController::class, 'reject'])
-            ->name('debts.credit-notes.reject');
+        Route::get('contracts/{contract}/download', [ContractController::class, 'download'])
+            ->name('contracts.download');
+
+        Route::put('contracts/{contract}', [ContractController::class, 'update'])
+            ->name('contracts.update');
+
+        Route::delete('contracts/{contract}', [ContractController::class, 'destroy'])
+            ->name('contracts.destroy');
 
         // ── Employees (Blade form POST) ───────────────────────────────────
         Route::post('employees', [UserController::class, 'store'])
@@ -152,4 +175,7 @@ Route::prefix('admin')
 
         Route::patch('employees/{user}/toggle', [UserController::class, 'toggleStatus'])
             ->name('employees.toggle');
+
+        Route::delete('employees/{user}', [UserController::class, 'destroy'])
+            ->name('employees.destroy');
     });

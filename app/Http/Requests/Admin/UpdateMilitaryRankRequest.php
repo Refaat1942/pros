@@ -16,7 +16,7 @@ class UpdateMilitaryRankRequest extends BaseRequest
         return [
             'name'       => ['sometimes', 'string', 'min:2', 'max:100'],
             'rank_code'  => [
-                'sometimes',
+                'nullable',
                 'string',
                 'min:2',
                 'max:30',
@@ -32,7 +32,8 @@ class UpdateMilitaryRankRequest extends BaseRequest
         parent::prepareForValidation();
 
         if ($this->has('rank_code') && is_string($this->rank_code)) {
-            $this->merge(['rank_code' => strtoupper(trim($this->rank_code))]);
+            $code = strtoupper(trim($this->rank_code));
+            $this->merge(['rank_code' => $code !== '' ? $code : null]);
         }
     }
 }

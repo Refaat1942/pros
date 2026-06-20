@@ -5,12 +5,17 @@ namespace Database\Seeders;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
+use App\Services\PricingService;
 use Database\Seeders\Support\PrototypeSeedData;
 use Database\Seeders\Support\SeedRegistry;
 use Illuminate\Database\Seeder;
 
 class PricingSeeder extends Seeder
 {
+    public function __construct(private readonly PricingService $pricingService)
+    {
+    }
+
     public function run(): void
     {
         foreach (PrototypeSeedData::pricingRequests() as $row) {
@@ -54,6 +59,8 @@ class PricingSeeder extends Seeder
                     'pricing_request_id' => $pricing->id,
                 ]);
             }
+
+            $this->pricingService->refreshLinePrices($pricing);
         }
     }
 }

@@ -875,7 +875,7 @@
       if (!window.DashboardValidation) return true;
       for (var i = 0; i < ids.length; i++) {
         var el = document.getElementById(ids[i]);
-        if (el && !DashboardValidation.validateField(el)) return false;
+        if (el && !DashboardValidation.isFieldValid(el)) return false;
       }
       return true;
     }

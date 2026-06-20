@@ -16,7 +16,7 @@ class UpdateStockItemRequest extends BaseRequest
         return [
             'name'        => ['sometimes', 'required', 'string', 'max:255'],
             'spec'        => ['nullable', 'string', 'max:500'],
-            'category'    => ['nullable', 'string', 'max:100'],
+            'category_id' => ['nullable', 'integer', 'exists:stock_categories,id'],
             'store_class' => ['nullable', 'string', 'in:' . implode(',', StockStoreClass::values())],
             'uom'         => ['sometimes', 'required', 'string', 'in:' . implode(',', StockUom::values())],
             // code and barcode are immutable after creation — financial / barcode integrity

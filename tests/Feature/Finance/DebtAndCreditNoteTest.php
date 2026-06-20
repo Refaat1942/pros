@@ -38,14 +38,7 @@ class DebtAndCreditNoteTest extends TestCase
         $debt    = $company->debt()->first();
         $debt->update(['due' => 2000.00]);
 
-        $admin = $this->userWithRole('admin');
-        $this->actingAs($admin);
-
-        $this->postJson("/admin/debts/{$company->id}/payment", [
-            'amount'     => 500.00,
-            'receipt_no' => 'REC-001',
-            'paid_at'    => now()->toDateString(),
-        ])->assertOk();
+        app(ContractDebtService::class)->recordPayment($company, 500.00);
 
         $debt->refresh();
         // due does NOT decrease from a payment — it reflects total owed from contract
@@ -53,34 +46,12 @@ class DebtAndCreditNoteTest extends TestCase
         $this->assertEquals(500.00, (float) $debt->collected);
     }
 
-    public function test_payment_amount_must_be_greater_than_zero(): void
-    {
-        $company = $this->civilianCompany('شركة ج');
-        $company->debt()->first()->update(['due' => 200.00]);
-
-        $admin = $this->userWithRole('admin');
-        $this->actingAs($admin);
-
-        $this->postJson("/admin/debts/{$company->id}/payment", [
-            'amount'     => 0,
-            'receipt_no' => 'REC-002',
-            'paid_at'    => now()->toDateString(),
-        ])->assertUnprocessable()->assertJsonValidationErrors('amount');
-    }
-
-    public function test_payment_audit_log_written(): void
+    public function test_record_payment_writes_audit_log(): void
     {
         $company = $this->civilianCompany('شركة د');
         $company->debt()->first()->update(['due' => 1000.00]);
 
-        $admin = $this->userWithRole('admin');
-        $this->actingAs($admin);
-
-        $this->postJson("/admin/debts/{$company->id}/payment", [
-            'amount'     => 300.00,
-            'receipt_no' => 'REC-003',
-            'paid_at'    => now()->toDateString(),
-        ])->assertOk();
+        app(ContractDebtService::class)->recordPayment($company, 300.00);
 
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'payment',

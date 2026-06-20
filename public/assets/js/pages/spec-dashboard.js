@@ -18,6 +18,7 @@
     items: [],
     locked: false,
     submitting: false,
+    loadingCase: false,
   };
 
   function $(id) { return document.getElementById(id); }
@@ -91,10 +92,45 @@
       return {
         stock_item_code: i.stock_item_code,
         name: i.name,
-        qty: i.qty,
+        qty: i.qty || 1,
         category: cat ? cat.category : '',
         uom: cat ? cat.uom : '',
       };
+    });
+  }
+
+  function seedItemsFromMedical(data) {
+    if (!data.medical_record || !data.medical_record.items || !data.medical_record.items.length) {
+      return [];
+    }
+
+    return data.medical_record.items.map(function (i) {
+      var cat = state.catalog.find(function (s) { return s.code === i.stock_item_code; });
+      return {
+        stock_item_code: i.stock_item_code,
+        name: i.name,
+        qty: i.qty || 1,
+        category: cat ? cat.category : '',
+        uom: cat ? cat.uom : '',
+      };
+    });
+  }
+
+  function syncQtyFromInputs() {
+    var tbody = $('specItemsBody');
+    if (!tbody) return;
+    tbody.querySelectorAll('[data-qty-idx]').forEach(function (input) {
+      var idx = parseInt(input.getAttribute('data-qty-idx'), 10);
+      if (!isNaN(idx) && state.items[idx]) {
+        state.items[idx].qty = Math.max(1, parseInt(input.value, 10) || 1);
+      }
+    });
+  }
+
+  function resolveItemsForSubmit() {
+    syncQtyFromInputs();
+    return state.items.filter(function (item) {
+      return item && item.stock_item_code && item.name;
     });
   }
 
@@ -145,6 +181,7 @@
     state.items = [];
     state.locked = false;
     state.submitting = false;
+    state.loadingCase = false;
     var workspace = $('specWorkspace');
     var empty = $('emptyState');
     if (workspace) workspace.classList.add('hidden');
@@ -192,7 +229,12 @@
     state.items = [];
     state.locked = false;
     state.submitting = false;
+    state.loadingCase = true;
     setLockedUI(false);
+    renderItemsTable();
+
+    var submitBtn = $('btnSubmitSpec');
+    if (submitBtn) submitBtn.disabled = true;
 
     document.querySelectorAll('.order-item').forEach(function (li) {
       li.classList.toggle('bg-amber-50', li.dataset.caseId === String(caseId));
@@ -217,18 +259,6 @@
           medBox.classList.remove('hidden');
           $('medDiagnosis').textContent = data.medical_record.diagnosis || '—';
           $('medPrescription').textContent = data.medical_record.prescription || '—';
-          if (data.medical_record.items && data.medical_record.items.length && !data.draft && !data.submitted_spec) {
-            state.items = data.medical_record.items.map(function (i) {
-              var cat = state.catalog.find(function (s) { return s.code === i.stock_item_code; });
-              return {
-                stock_item_code: i.stock_item_code,
-                name: i.name,
-                qty: i.qty || 1,
-                category: cat ? cat.category : '',
-                uom: cat ? cat.uom : '',
-              };
-            });
-          }
         } else {
           medBox.classList.add('hidden');
         }
@@ -246,12 +276,12 @@
         if (data.draft) {
           state.specId = data.draft.id;
           $('techNotes').value = data.draft.tech_notes || '';
-          if (data.draft.items && data.draft.items.length) {
-            state.items = mapSpecItems(data.draft.items);
-          }
         } else {
           $('techNotes').value = '';
         }
+
+        var draftItems = data.draft?.items?.length ? mapSpecItems(data.draft.items) : [];
+        state.items = draftItems.length ? draftItems : seedItemsFromMedical(data);
 
         renderItemsTable();
         openWorkspace();
@@ -260,21 +290,29 @@
       .catch(function (err) {
         var msg = err.response?.data?.message || 'تعذّر تحميل بيانات الحالة';
         showError(msg);
+      })
+      .finally(function () {
+        state.loadingCase = false;
+        var submitBtnDone = $('btnSubmitSpec');
+        if (submitBtnDone && !state.locked) {
+          submitBtnDone.disabled = state.submitting;
+        }
       });
   }
 
   function payloadItems() {
-    return state.items.map(function (i) {
+    return resolveItemsForSubmit().map(function (i) {
       return { stock_item_code: i.stock_item_code, name: i.name, qty: i.qty };
     });
   }
 
   function saveDraft() {
     if (!state.caseId || state.locked) return Promise.reject();
+    var items = payloadItems();
     var body = {
       case_id: state.caseId,
       tech_notes: $('techNotes').value.trim() || null,
-      items: payloadItems(),
+      items: items,
     };
     if (state.specId) {
       return axios.put('/spec/spec/' + state.specId, body);
@@ -347,6 +385,7 @@
           uom: item.uom,
         });
         renderItemsTable();
+        clearError();
         $('catalogModal').classList.add('hidden');
       });
     });
@@ -374,12 +413,37 @@
     var submitBtn = $('btnSubmitSpec');
 
     if (submitBtn) submitBtn.addEventListener('click', function () {
-      if (state.locked || state.submitting) return;
-      if (!state.items.length) { showError('أضف بنداً واحداً على الأقل'); return; }
+      if (state.locked || state.submitting || state.loadingCase) return;
+
+      var items = resolveItemsForSubmit();
+      if (!items.length) {
+        showError('أضف بنداً واحداً على الأقل');
+        return;
+      }
+
+      state.items = items;
+
       var notes = $('techNotes');
-      if (window.DashboardValidation && notes && !DashboardValidation.validateField(notes)) return;
+      if (window.DashboardValidation && notes) {
+        var notesErr = DashboardValidation.validateField(notes);
+        if (notesErr) {
+          showError(notesErr);
+          notes.focus();
+          return;
+        }
+      }
+
+      clearError();
       state.submitting = true;
       submitBtn.disabled = true;
+
+      if (!window.axios) {
+        state.submitting = false;
+        submitBtn.disabled = false;
+        showError('تعذّر الاتصال بالخادم — أعد تحميل الصفحة.');
+        return;
+      }
+
       saveDraft()
         .then(function () { return axios.post('/spec/spec/' + state.specId + '/submit'); })
         .then(function (res) {

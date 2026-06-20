@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\ContractCompanyDebt;
+use App\Models\MilitaryDebt;
 use App\Models\Patient;
 use App\Models\StockItem;
 use App\Models\Supplier;
@@ -75,10 +76,8 @@ class BiReportService
             ->value('total');
 
         $stagnantItems = StockItem::query()
-            ->where(function ($q) use ($stagnantCutoff) {
-                $q->whereNull('last_moved_at')
-                  ->orWhere('last_moved_at', '<', $stagnantCutoff);
-            })
+            ->whereNotNull('last_moved_at')
+            ->where('last_moved_at', '<', $stagnantCutoff)
             ->orderBy('code')
             ->limit(50)
             ->get(['code', 'name', 'qty', 'last_moved_at'])
@@ -105,14 +104,12 @@ class BiReportService
     {
         return [
             'open_work_orders'   => CaseRecord::where('stage_key', CaseRecord::STAGE_MANUFACTURING)->count(),
-            'awaiting_dispense'  => CaseRecord::whereHas(
-                'bom',
-                fn ($q) => $q->where('stage', Bom::STAGE_RAW)
-            )->count(),
-            'in_workshop'        => CaseRecord::whereHas(
-                'bom',
-                fn ($q) => $q->where('stage', Bom::STAGE_WIP)
-            )->count(),
+            'awaiting_dispense'  => CaseRecord::where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+                ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_RAW))
+                ->count(),
+            'in_workshop'        => CaseRecord::where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+                ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_WIP))
+                ->count(),
             'ready_for_delivery' => CaseRecord::where('stage_key', CaseRecord::STAGE_READY_DELIVERY)->count(),
         ];
     }
@@ -130,7 +127,16 @@ class BiReportService
             ->where('patient_type', Patient::TYPE_MILITARY)
             ->sum('total_cost');
 
+        $militaryDebtPending = (float) MilitaryDebt::query()
+            ->where('status', MilitaryDebt::STATUS_PENDING)
+            ->sum('total_cost');
+
+        $militaryDebtCollected = (float) MilitaryDebt::query()
+            ->where('status', MilitaryDebt::STATUS_COLLECTED)
+            ->sum('total_cost');
+
         $debts = ContractCompanyDebt::with('contractCompany:id,company_code,name,is_military')
+            ->whereHas('contractCompany', fn ($q) => $q->where('is_military', false))
             ->orderByDesc('due')
             ->get();
 
@@ -154,6 +160,8 @@ class BiReportService
         return [
             'civilian_cumulative_cost' => round($civilianCumulative, 2),
             'military_aggregated_cost' => round($militaryAggregated, 2),
+            'military_debt_pending'    => round($militaryDebtPending, 2),
+            'military_debt_collected'  => round($militaryDebtCollected, 2),
             'net_debts'                => round($netDebts, 2),
             'company_debts'            => $companyDebts,
         ];
@@ -189,7 +197,7 @@ class BiReportService
             ->all();
 
         return [
-            'supplier_count'   => Supplier::where('is_active', true)->count(),
+            'supplier_count'   => Supplier::count(),
             'price_comparison' => $comparison,
         ];
     }

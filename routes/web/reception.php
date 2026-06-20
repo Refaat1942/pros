@@ -7,7 +7,9 @@ use App\Http\Controllers\Dashboard\ReceptionDashboardController;
 use App\Http\Controllers\Delivery\DeliveryController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Patient\PatientController;
+use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Quote\ApprovalScanController;
+use App\Http\Controllers\Quote\OcrExtractController;
 use App\Http\Controllers\Quote\QuoteController;
 use Illuminate\Support\Facades\Route;
 
@@ -75,11 +77,24 @@ Route::prefix('reception')
             ->name('quote.print');
 
         // ── Approval scan (OCR / QR) ───────────────────────────────────────
+        Route::post('ocr/extract', [OcrExtractController::class, 'extract'])
+            ->name('ocr.extract');
+
         Route::post('ocr/process', [\App\Http\Controllers\Quote\OcrApprovalController::class, 'process'])
             ->name('ocr.process');
 
         Route::post('ocr/scan', [ApprovalScanController::class, 'scan'])
             ->name('ocr.scan');
+
+        // ── Contracts archive (read-only) ──────────────────────────────────
+        Route::get('contracts/list', [ContractController::class, 'index'])
+            ->name('contracts.list');
+
+        Route::get('contracts/{contract}', [ContractController::class, 'show'])
+            ->name('contracts.show');
+
+        Route::get('contracts/{contract}/download', [ContractController::class, 'download'])
+            ->name('contracts.download');
 
         // ── Delivery (QR scan close) ───────────────────────────────────────
         Route::get('delivery/list', [DeliveryController::class, 'index'])

@@ -20,15 +20,15 @@ class MilitaryRankController extends Controller
     use PaginationTrait;
 
     /**
-     * قائمة الرتب (مع pagination للأدمن، أو كل الرتب الفعّالة للـ select).
+     * قائمة الرتب (مع pagination للأدمن، أو كل الرتب للـ select).
      */
     public function index(Request $request): JsonResponse
     {
         if ($request->boolean('all')) {
-            $ranks = MilitaryRank::active()
+            $ranks = MilitaryRank::query()
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'name', 'rank_code', 'sort_order']);
+                ->get(['id', 'name', 'sort_order']);
 
             return response()->json(['data' => $ranks]);
         }
@@ -36,10 +36,9 @@ class MilitaryRankController extends Controller
         $ranks = $this->fetchForDashboard(
             MilitaryRank::when(
                     $request->search,
-                    fn ($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('rank_code', 'like', "%{$s}%")
+                    fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
                 )
-                ->orderBy('sort_order')
-                ->orderBy('name')
+                ->orderByDesc('id')
         );
 
         return response()->json([
@@ -57,14 +56,13 @@ class MilitaryRankController extends Controller
 
         $rank = MilitaryRank::create([
             'name'       => $data['name'],
-            'rank_code'  => strtoupper($data['rank_code']),
+            'rank_code'  => null,
             'sort_order' => $data['sort_order'] ?? 0,
-            'is_active'  => true,
         ]);
 
         AuditService::log(
             action:      'create',
-            description: "إضافة رتبة عسكرية: {$rank->name} ({$rank->rank_code})",
+            description: "إضافة رتبة عسكرية: {$rank->name}",
             tag:         'admin',
             after:       $rank->toArray(),
         );
@@ -79,46 +77,47 @@ class MilitaryRankController extends Controller
     }
 
     /**
-     * تعديل اسم أو كود الرتبة.
+     * تعديل اسم أو ترتيب الرتبة.
      */
     public function update(UpdateMilitaryRankRequest $request, MilitaryRank $militaryRank): JsonResponse
     {
         $data = $request->validated();
 
-        if (isset($data['rank_code'])) {
-            $data['rank_code'] = strtoupper($data['rank_code']);
-        }
-
-        $before = $militaryRank->only(['name', 'rank_code', 'sort_order']);
+        $before = $militaryRank->only(['name', 'sort_order']);
         $militaryRank->update($data);
 
         AuditService::log(
             action:      'update',
-            description: "تعديل رتبة عسكرية: {$militaryRank->rank_code}",
+            description: "تعديل رتبة عسكرية: {$militaryRank->name}",
             tag:         'admin',
             before:      $before,
-            after:       $militaryRank->fresh()->only(['name', 'rank_code', 'sort_order']),
+            after:       $militaryRank->fresh()->only(['name', 'sort_order']),
         );
 
-        return response()->json($militaryRank->fresh());
+        return response()->json([
+            'message' => 'تم تحديث الرتبة بنجاح.',
+            'rank'    => $militaryRank->fresh(),
+        ]);
     }
 
-    /**
-     * تفعيل / تعطيل الرتبة.
-     */
-    public function toggleActive(Request $request, MilitaryRank $militaryRank): RedirectResponse|JsonResponse
+    public function destroy(MilitaryRank $militaryRank): JsonResponse
     {
-        $militaryRank->update(['is_active' => ! $militaryRank->is_active]);
-
-        if ($request->expectsJson()) {
+        if ($militaryRank->patients()->exists()) {
             return response()->json([
-                'id'        => $militaryRank->id,
-                'is_active' => $militaryRank->is_active,
-            ]);
+                'message' => 'لا يمكن حذف الرتبة — مرتبطة بمرضى مسجّلين.',
+            ], 422);
         }
 
-        return redirect()
-            ->route('admin.military-ranks')
-            ->with('success', 'تم تحديث حالة الرتبة.');
+        $before = $militaryRank->only(['name', 'sort_order']);
+        $militaryRank->delete();
+
+        AuditService::log(
+            action:      'delete',
+            description: "حذف رتبة عسكرية: {$before['name']}",
+            tag:         'admin',
+            before:      $before,
+        );
+
+        return response()->json(['message' => 'تم حذف الرتبة بنجاح.']);
     }
 }

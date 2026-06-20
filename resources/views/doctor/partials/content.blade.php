@@ -14,9 +14,7 @@
       <li><a href="#" data-section="records"><span class="nav-icon">📁</span> السجل الطبي</a></li>
       <li><a href="#" data-section="transfer"><span class="nav-icon">📦</span> المحولون للمخزون</a></li>
     </ul>
-    <div class="sidebar-footer">
-      <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
-    </div>
+
   </aside>
 
   <main class="main">

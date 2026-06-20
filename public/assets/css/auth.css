@@ -177,6 +177,21 @@ body {
 
 .btn-login:active { transform: translateY(0); }
 
+.btn-login:disabled,
+.btn-login[aria-busy="true"] {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none;
+  pointer-events: none;
+}
+
+.btn-login:disabled:hover,
+.btn-login[aria-busy="true"]:hover {
+  opacity: 0.7;
+  transform: none;
+  box-shadow: 0 4px 16px var(--auth-glow);
+}
+
 /* ── Footer ── */
 .auth-footer {
   display: flex;

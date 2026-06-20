@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -19,7 +20,7 @@ class StockItem extends Model
         'code',
         'name',
         'spec',
-        'category',
+        'category_id',
         'store_class',
         'uom',
         'barcode',
@@ -37,6 +38,11 @@ class StockItem extends Model
         'wac'          => 'decimal:4',
         'last_moved_at' => 'date',
     ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(StockCategory::class, 'category_id');
+    }
 
     public function prices(): HasMany
     {

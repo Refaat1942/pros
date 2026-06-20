@@ -1,10 +1,11 @@
 <div class="section-view" id="section-bi">
-      <div class="panel" style="margin-bottom:16px;">
+      <div class="panel bi-intro-panel">
         <div class="panel-header">
-          <h3>📡 لوحات القيادة وذكاء الأعمال — 5 لوحات لحظية</h3>
+          <h3>📡 لوحات القيادة وذكاء الأعمال</h3>
+          <span class="badge">5 لوحات لحظية</span>
         </div>
-        <p style="padding:0 20px 14px;margin:0;color:var(--text-muted);font-size:13px;">
-          مؤشرات إستراتيجية لحظية: توزيع مدني/عسكري، زمن التنفيذ (SLA)، قيمة المخزون (WAC)، أوامر التشغيل، تكاليف الجهات، ومقارنة WAC ↔ أعلى سعر.
+        <p class="bi-intro-text">
+          مؤشرات إستراتيجية مباشرة من قاعدة البيانات: توزيع مدني/عسكري، SLA، قيمة المخزون (WAC)، أوامر التشغيل، تكاليف الجهات، ومقارنة أسعار الشراء.
         </p>
       </div>
       <div id="biContent" data-server-rendered="1">

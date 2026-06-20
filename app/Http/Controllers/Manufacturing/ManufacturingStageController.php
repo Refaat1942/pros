@@ -23,6 +23,8 @@ class ManufacturingStageController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->bomService->repairOrphanWipCases();
+
         $cases = $this->fetchForDashboard(
             CaseRecord::with([
                 'patient:id,patient_code,name',

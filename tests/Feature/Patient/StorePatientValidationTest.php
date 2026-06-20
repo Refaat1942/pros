@@ -14,7 +14,7 @@ class StorePatientValidationTest extends TestCase
     {
         $user = $this->userWithRole('reception');
         $company = $this->civilianCompany();
-        $visitType = VisitType::create(['name' => 'كشف أولي', 'is_active' => true]);
+        $visitType = VisitType::create(['name' => 'كشف أولي']);
 
         $response = $this->actingAs($user)->post(route('reception.patients.store'), [
             'form'                => 'patient',

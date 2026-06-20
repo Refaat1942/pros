@@ -12,10 +12,7 @@ class SupplierSeeder extends Seeder
     public function run(): void
     {
         foreach (PrototypeSeedData::supplierNamesFromStock() as $name) {
-            $supplier = Supplier::query()->firstOrCreate(
-                ['name' => $name],
-                ['is_active' => true]
-            );
+            $supplier = Supplier::query()->firstOrCreate(['name' => $name]);
 
             SeedRegistry::$suppliers[$name] = $supplier->id;
         }
@@ -27,7 +24,7 @@ class SupplierSeeder extends Seeder
 
             $supplier = Supplier::query()->firstOrCreate(
                 ['name' => $name],
-                ['is_active' => true, 'notes' => 'مورد إضافي من لوحة الإدارة']
+                ['notes' => 'مورد إضافي من لوحة الإدارة']
             );
 
             SeedRegistry::$suppliers[$name] = $supplier->id;

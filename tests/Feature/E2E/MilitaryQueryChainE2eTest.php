@@ -33,7 +33,7 @@ class MilitaryQueryChainE2eTest extends TestCase
     {
         $this->seedStock();
         $company = $this->militaryCompany();
-        $rank    = MilitaryRank::create(['name' => 'عقيد', 'rank_code' => 'COL', 'sort_order' => 1, 'is_active' => true]);
+        $rank    = MilitaryRank::create(['name' => 'عقيد', 'rank_code' => 'COL', 'sort_order' => 1]);
         $recep   = $this->userWithRole('reception');
         $doctor  = $this->userWithRole('doctor');
         $spec    = $this->userWithRole('spec');

@@ -9,9 +9,7 @@
       <li><a href="#" data-section="spec"><span class="nav-icon">👁️</span> معاينة التوصيف</a></li>
       <li><a href="#" data-section="pricing"><span class="nav-icon">💰</span> إرسال للتسعير</a></li>
     </ul>
-    <div class="sidebar-footer">
-      <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
-    </div>
+
   </aside>
 
   <main class="main">

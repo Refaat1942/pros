@@ -13,9 +13,7 @@
       <li><a href="#" data-section="bom"><span class="nav-icon">📋</span> BOM — خام / تشغيل / تام</a></li>
       <li><a href="#" data-section="returns"><span class="nav-icon">↩️</span> إذن ارتجاع</a></li>
     </ul>
-    <div class="sidebar-footer">
-      <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
-    </div>
+
   </aside>
 
   <main class="main">

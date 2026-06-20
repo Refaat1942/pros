@@ -12,14 +12,65 @@
     }
   }
 </script>
+<style>
+  #deliveryRoot .table-pagination-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 0;
+    padding: 12px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 0 0 1rem 1rem;
+  }
+  #deliveryRoot .table-pagination-info {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+  }
+  #deliveryRoot .table-pagination-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #059669;
+    min-width: 88px;
+  }
+  #deliveryRoot .table-pagination-btn:hover:not(:disabled) {
+    background: #ecfdf5;
+    border-color: #059669;
+  }
+  #deliveryRoot .table-pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+</style>
 @endpush
 
 @php
     $cases = $delivery_cases ?? collect();
 @endphp
 
-<div id="analytics-delivery">
-    @include('partials.dashboard-analytics-empty', ['stats' => $delivery_stats ?? []])
+<div id="analytics-delivery" class="ck-analytics" data-static-ui="1">
+    <div class="ck-stats">
+        @foreach ($delivery_stats ?? [] as $stat)
+            <div class="ck-stat">
+                <div class="ck-stat-icon" style="background:{{ $stat['bg'] ?? 'rgba(100,116,139,0.1)' }}">{{ $stat['icon'] }}</div>
+                <div>
+                    <div class="ck-stat-label">{{ $stat['label'] }}</div>
+                    <div class="ck-stat-value" @if(!empty($stat['color'])) style="color:{{ $stat['color'] }}" @endif @if(!empty($stat['key'])) data-stat="{{ $stat['key'] }}" @endif>{{ $stat['value'] }}</div>
+                </div>
+            </div>
+        @endforeach
+    </div>
 </div>
 
 <div class="space-y-6" id="deliveryRoot">
@@ -30,18 +81,18 @@
         </p>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {{-- قائمة جاهزة للتسليم --}}
-        <div class="xl:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="xl:col-span-5 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[520px]">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
                 <h3 class="font-bold text-slate-800">✅ جاهز للتسليم</h3>
                 <span class="text-xs font-bold bg-recv text-white px-3 py-1 rounded-full" id="deliveryCount">{{ $cases->count() }}</span>
             </div>
-            <div class="p-4 border-b border-slate-100">
+            <div class="p-4 border-b border-slate-100 shrink-0">
                 <input type="search" id="deliverySearch" placeholder="🔍 بحث بالمريض أو WO..."
                        class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-recv/40">
             </div>
-            <ul class="max-h-[480px] overflow-y-auto divide-y divide-slate-100" id="deliveryList" data-paginate="10">
+            <ul class="flex-1 overflow-y-auto divide-y divide-slate-100 min-h-0" id="deliveryList" data-paginate="10">
                 @forelse ($cases as $case)
                     <li class="delivery-item cursor-pointer px-5 py-4 hover:bg-emerald-50 transition-colors"
                         data-case-id="{{ $case->id }}"
@@ -53,28 +104,28 @@
                                 <p class="text-xs text-slate-500 mt-1">{{ $case->case_no }} · {{ $case->work_order_no ?? '—' }}</p>
                                 <p class="text-xs text-slate-400">{{ $case->company_name ?? '—' }}</p>
                             </div>
-                            <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">BOM تام</span>
+                            <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">BOM تام</span>
                         </div>
                     </li>
                 @empty
-                    <li class="px-5 py-10 text-center text-slate-400 text-sm">لا توجد حالات جاهزة للتسليم.</li>
+                    <li class="pagination-empty-msg px-5 py-10 text-center text-slate-400 text-sm">لا توجد حالات جاهزة للتسليم.</li>
                 @endforelse
             </ul>
         </div>
 
         {{-- مسح QR --}}
-        <div class="xl:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white">
+        <div class="xl:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[520px] flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white shrink-0">
                 <h3 class="font-bold text-lg">📱 مسح QR — التسليم الختامي</h3>
                 <p class="text-sm opacity-90 mt-1">يُغلق الملف الطبي ويُصدر مرجع الفاتورة (مدني)</p>
             </div>
 
-            <div id="deliveryEmpty" class="p-10 text-center text-slate-400">
+            <div id="deliveryEmpty" class="flex-1 flex flex-col items-center justify-center p-10 text-center text-slate-400">
                 <div class="text-5xl mb-3">📦</div>
                 <p>اختر حالة من القائمة أو امسح QR مباشرة</p>
             </div>
 
-            <div id="deliveryWorkspace" class="hidden p-6 space-y-5">
+            <div id="deliveryWorkspace" class="hidden flex-1 p-6 space-y-5 overflow-y-auto">
                 <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
                     <h4 class="font-bold text-slate-800 text-lg" id="delPatientName">—</h4>
                     <div class="grid grid-cols-2 gap-3 mt-3 text-sm text-slate-600">
@@ -87,12 +138,12 @@
 
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-2">رمز QR لبطاقة المريض</label>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
                         <input type="text" id="deliveryQrInput" placeholder="امسح أو أدخل QR..."
                                data-v-rules="required,qr" maxlength="100"
                                class="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-recv/50">
                         <button type="button" id="btnConfirmDelivery"
-                                class="rounded-xl bg-recv text-white px-6 py-3 text-sm font-bold hover:bg-recv-dark shadow-sm disabled:opacity-40">
+                                class="rounded-xl bg-recv text-white px-6 py-3 text-sm font-bold hover:bg-recv-dark shadow-sm disabled:opacity-40 shrink-0">
                             ✓ تأكيد التسليم
                         </button>
                     </div>

@@ -7,7 +7,9 @@ use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\User;
 use App\Services\UserService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -35,6 +37,14 @@ class UserController extends Controller
 
     public function toggleStatus(User $user): RedirectResponse
     {
+        $user->loadMissing('role:id,slug');
+
+        if ($user->role?->slug === \App\Models\Role::SLUG_ADMIN) {
+            return redirect()
+                ->route('admin.employees')
+                ->with('error', 'لا يمكن تعطيل حساب مسؤول النظام.');
+        }
+
         $user = $this->userService->toggleStatus($user);
 
         $label = $user->status === User::STATUS_ACTIVE ? 'تفعيل' : 'تعطيل';
@@ -42,5 +52,22 @@ class UserController extends Controller
         return redirect()
             ->route('admin.employees')
             ->with('success', "تم {$label} حساب {$user->name}.");
+    }
+
+    public function destroy(User $user): JsonResponse
+    {
+        if (Auth::id() === $user->id) {
+            return response()->json(['message' => 'لا يمكن حذف حسابك الحالي.'], 422);
+        }
+
+        $user->loadMissing('role:id,slug');
+
+        if ($user->role?->slug === \App\Models\Role::SLUG_ADMIN) {
+            return response()->json(['message' => 'لا يمكن حذف حساب مسؤول النظام.'], 422);
+        }
+
+        $this->userService->delete($user);
+
+        return response()->json(['message' => 'تم حذف الموظف بنجاح.']);
     }
 }

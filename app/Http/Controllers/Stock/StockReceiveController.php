@@ -32,7 +32,9 @@ class StockReceiveController extends Controller
     {
         $items = $this->fetchForDashboard(
             StockItem::query()
-                ->when($request->category, fn ($q, $c) => $q->where('category', $c))
+                ->with('category:id,name')
+                ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
+                ->when($request->category, fn ($q, $c) => $q->whereHas('category', fn ($q) => $q->where('name', $c)))
                 ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
@@ -104,7 +106,7 @@ class StockReceiveController extends Controller
             'code',
             'name',
             'spec',
-            'category',
+            'category_id',
             'store_class',
             'uom',
             'barcode',
@@ -113,6 +115,7 @@ class StockReceiveController extends Controller
             'status',
             'last_moved_at',
         ]) + [
+            'category'  => $item->category?->name,
             'available' => $item->availableQty(),
         ];
     }

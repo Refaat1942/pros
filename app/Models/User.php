@@ -45,6 +45,11 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
     public function medicalRecords(): HasMany
     {
         return $this->hasMany(MedicalRecord::class, 'doctor_user_id');

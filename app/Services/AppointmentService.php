@@ -152,10 +152,10 @@ class AppointmentService
      */
     private function resolveVisitTypeFields(array $data): array
     {
-        $visitType = VisitType::active()->find($data['visit_type_id'] ?? null);
+        $visitType = VisitType::query()->find($data['visit_type_id'] ?? null);
 
         if (! $visitType) {
-            abort(422, 'نوع الزيارة غير صالح أو غير مفعّل.');
+            abort(422, 'نوع الزيارة غير صالح.');
         }
 
         return [

@@ -1,19 +1,39 @@
 <div class="tab-content" id="tab-quote">
-      <div id="analytics-quote">@include('partials.dashboard-analytics-empty', ['stats' => [
-        ['icon' => '🧾', 'label' => 'عروض', 'value' => '0', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '💰', 'label' => 'إجمالي', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '✅', 'label' => 'معتمد', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '⏳', 'label' => 'بانتظار', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-      ]])</div>
+      <div id="analytics-quote" class="ck-analytics" data-static-ui="1">
+        <div class="ck-stats">
+          <div class="ck-stat">
+            <div class="ck-stat-icon" style="background:rgba(5,150,105,0.1)">🧾</div>
+            <div>
+              <div class="ck-stat-label">عروض</div>
+              <div class="ck-stat-value">…</div>
+            </div>
+          </div>
+          <div class="ck-stat">
+            <div class="ck-stat-icon" style="background:rgba(5,150,105,0.1)">✅</div>
+            <div>
+              <div class="ck-stat-label">معتمد</div>
+              <div class="ck-stat-value" style="color:#059669">…</div>
+            </div>
+          </div>
+          <div class="ck-stat">
+            <div class="ck-stat-icon" style="background:rgba(217,119,6,0.1)">⏳</div>
+            <div>
+              <div class="ck-stat-label">بانتظار</div>
+              <div class="ck-stat-value" style="color:#d97706">…</div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="panel">
         <div class="panel-header">
           <h3>🧾 عروض الأسعار</h3>
           <span class="badge" id="quoteListCount">0</span>
         </div>
         <div class="data-toolbar">
-          <input type="text" id="quoteSearch" placeholder="🔍 بحث برقم العرض أو اسم المريض...">
+          <input type="text" id="quoteSearch"
+                 placeholder="امسح باركود/QR عرض السعر أو ابحث بالمريض..."
+                 autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="100">
           <span class="toolbar-count" id="quoteFilterCount">0 عروض</span>
-          <button type="button" class="btn btn-secondary" id="btnSimulateReturn" style="padding:8px 16px;font-size:12px;white-space:nowrap;">📱 محاكاة عودة المريض (QR)</button>
         </div>
         <div class="panel-body">
           <table data-paginate="10">

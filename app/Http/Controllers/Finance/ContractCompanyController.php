@@ -50,7 +50,7 @@ class ContractCompanyController extends Controller
                     fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
                                       ->orWhere('company_code', 'like', "%{$s}%")
                 )
-                ->orderBy('company_code')
+                ->orderByDesc('id')
         );
 
         return response()->json([
@@ -118,7 +118,37 @@ class ContractCompanyController extends Controller
             after:       $company->only(['name', 'is_military']),
         );
 
-        return response()->json($company->load('debt'));
+        return response()->json([
+            'message' => 'تم تحديث جهة التعاقد بنجاح.',
+            'company' => $company->load('debt'),
+        ]);
+    }
+
+    /**
+     * حذف جهة تعاقد — ممنوع إن وُجدت حالات أو مرضى مرتبطون.
+     */
+    public function destroy(ContractCompany $company): JsonResponse
+    {
+        if ($company->patients()->exists() || $company->cases()->exists()) {
+            return response()->json([
+                'message' => 'لا يمكن حذف الجهة — مرتبطة بمرضى أو حالات مسجّلة.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($company) {
+            $before = $company->only(['company_code', 'name', 'is_military']);
+
+            $company->delete();
+
+            AuditService::log(
+                action:      'delete',
+                description: "حذف جهة تعاقد {$before['name']}",
+                tag:         'financial',
+                before:      $before,
+            );
+        });
+
+        return response()->json(['message' => 'تم حذف جهة التعاقد بنجاح.']);
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────────

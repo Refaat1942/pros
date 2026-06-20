@@ -24,6 +24,19 @@ class DatabaseSeeder extends Seeder
      * and status transitions are verified from scratch.
      * Re-enable by uncommenting $this->call([...]) when the
      * test phase is complete.
+     *
+     * ── /admin/bi (لوحات القيادة) ──────────────────────────────────────
+     * البيانات التالية معطّلة حتى تختبر مؤشرات BI يدوياً:
+     *   PatientSeeder            → لوحة 1 (حالات مدني/عسكري، SLA)
+     *   CaseSeeder               → لوحات 1، 3، 4 (تكاليف، أوامر تشغيل)
+     *   BomSeeder                → لوحة 3 (صرف / ورش)
+     *   ContractCompanyDebtSeeder → لوحة 4 (جدول جهات التعاقد)
+     *   InventorySeeder          → لوحات 2 و 5 (WAC، مقارنة أسعار)
+     *   SupplierSeeder           → لوحة 5 (عدد الموردين)
+     *   PricingSeeder / QuoteSeeder → بيانات مساندة للحالات (اختياري)
+     *   ReturnNoteSeeder / CreditNoteSeeder → تعتمد على الحالات (اختياري)
+     *
+     * ملاحظة: MilitaryDebt (لوحة 4) لا seeder لها — تُنشأ عند تسليم حالة عسكرية.
      */
     public function run(): void
     {
@@ -32,16 +45,21 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndAdminSeeder::class,
             ContractCompanySeeder::class,
-            ContractCompanyDebtSeeder::class,
-            SupplierSeeder::class,
-            InventorySeeder::class,
-            PatientSeeder::class,
-            CaseSeeder::class,
-            PricingSeeder::class,
-            QuoteSeeder::class,
-            BomSeeder::class,
-            ReturnNoteSeeder::class,
-            CreditNoteSeeder::class,
+            MilitaryRankSeeder::class,
+            VisitTypeSeeder::class,
+            StockCategorySeeder::class,
+
+            // ── BI dashboard — معطّل للاختبار اليدوي على /admin/bi ──────────
+            // ContractCompanyDebtSeeder::class,
+            // SupplierSeeder::class,
+            // InventorySeeder::class,
+            // PatientSeeder::class,
+            // CaseSeeder::class,
+            // PricingSeeder::class,
+            // QuoteSeeder::class,
+            // BomSeeder::class,
+            // ReturnNoteSeeder::class,
+            // CreditNoteSeeder::class,
         ]);
     }
 }

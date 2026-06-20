@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\CaseRecord;
+use App\Models\User;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -68,6 +69,35 @@ class DashboardGuardTest extends TestCase
             'password' => 'wrong-password',
         ]);
 
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_inactive_user_cannot_login(): void
+    {
+        $user = $this->userWithRole('reception');
+        $user->update(['status' => User::STATUS_INACTIVE]);
+
+        $response = $this->post('/reception/login', [
+            'email'    => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_inactive_user_is_logged_out_on_dashboard_access(): void
+    {
+        $user = $this->userWithRole('reception');
+        $this->actingAs($user);
+
+        $user->update(['status' => User::STATUS_INACTIVE]);
+
+        $response = $this->get(route('reception.dashboard'));
+
+        $response->assertRedirect('/reception/login');
         $response->assertSessionHasErrors('email');
         $this->assertGuest();
     }

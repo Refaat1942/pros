@@ -14,12 +14,10 @@ class MilitaryRank extends Model
         'name',
         'rank_code',
         'sort_order',
-        'is_active',
     ];
 
     protected $casts = [
-        'is_active'   => 'boolean',
-        'sort_order'  => 'integer',
+        'sort_order' => 'integer',
     ];
 
     public function patients(): HasMany
@@ -27,8 +25,4 @@ class MilitaryRank extends Model
         return $this->hasMany(Patient::class);
     }
 
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
 }

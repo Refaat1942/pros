@@ -99,7 +99,47 @@ class PricingService
     }
 
     /**
-     * اعتماد طلب التسعير من الأدمن.
+     * إعادة احتساب أسطر الطلب من أعلى سعر شراء — بدون تغيير status_key.
+     * يُستخدم عند عرض طلب قديم أو بعد تصحيح دفعات الأسعار.
+     */
+    public function refreshLinePrices(PricingRequest $request): float
+    {
+        return DB::transaction(function () use ($request) {
+            $request = PricingRequest::lockForUpdate()->findOrFail($request->id);
+            $request->load('items');
+
+            $total = 0.0;
+
+            foreach ($request->items as $item) {
+                $unitPrice = $this->stockPriceService->highestUnitPrice($item->stock_item_code ?? '');
+
+                if ($unitPrice <= 0) {
+                    Log::warning('Pricing refresh: no valid price batch for item', [
+                        'pricing_request_id' => $request->id,
+                        'stock_item_code'    => $item->stock_item_code,
+                    ]);
+                }
+
+                $lineTotal = round($item->qty * $unitPrice, 2);
+
+                $item->update([
+                    'unit_price' => $unitPrice,
+                    'line_total' => $lineTotal,
+                ]);
+
+                $total += $lineTotal;
+            }
+
+            $total = round($total, 2);
+
+            $request->update(['computed_total' => $total]);
+
+            return $total;
+        });
+    }
+
+    /**
+     * اعتماد طلب التسعير من الأدmin.
      *
      * الشرط: status_key === awaiting_admin_approval
      * النتيجة: status_key → sent_to_reception + workflow advance
@@ -149,6 +189,54 @@ class PricingService
                 tag:         'pricing',
                 before:      $before,
                 after:       $request->fresh()->only(['status_key', 'step', 'approved_at', 'approved_by']),
+            );
+        });
+    }
+
+    /**
+     * اعتماد تلقائي صامت للمسار العسكري — بدون تدخل أدمن.
+     *
+     * يُستدعى مباشرةً من SpecService::submit() فور إرسال التوصيف الفني
+     * للحالة العسكرية، مما يُلغي انتظار طابور الاعتماد الإداري بالكامل.
+     */
+    public function silentAutoApprove(PricingRequest $request): void
+    {
+        DB::transaction(function () use ($request) {
+            $request = PricingRequest::lockForUpdate()->findOrFail($request->id);
+
+            // Guard: يُطبَّق على العسكريين فقط
+            if ($request->patient_type !== Patient::TYPE_MILITARY) {
+                return;
+            }
+
+            $before = $request->only(['status_key', 'step']);
+
+            $request->update([
+                'approved_at'  => now(),
+                'approved_by'  => 'النظام — اعتماد تلقائي عسكري',
+                'step'         => PricingRequest::STEP_QUOTE_READY,
+                'status_key'   => PricingRequestStatus::SentToReception->value,
+            ]);
+
+            $case  = CaseRecord::lockForUpdate()->findOrFail($request->case_id);
+            $total = (float) $request->computed_total;
+
+            $case->update(['total_cost' => $total]);
+            $this->workflowService->advance($case, WorkflowEvent::PricingCompletedMilitary->value);
+            $this->workOrderService->generate($case->fresh());
+
+            AuditService::log(
+                action:      'auto_approve',
+                description: "اعتماد تلقائي (مسار عسكري) — {$request->request_no} — تجاوز طابور الإدارة",
+                tag:         'pricing',
+                before:      $before,
+                after:       [
+                    'request_no'     => $request->request_no,
+                    'status_key'     => PricingRequestStatus::SentToReception->value,
+                    'computed_total' => $total,
+                    'auto'           => true,
+                    'patient_type'   => 'military',
+                ],
             );
         });
     }

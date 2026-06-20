@@ -31,14 +31,37 @@ class ContractDebtService
     }
 
     /**
+     * يُرجع صف المديونية — يُنشئه تلقائياً إن لم يكن موجوداً.
+     */
+    public function forCompany(ContractCompany $company, bool $lock = false): ContractCompanyDebt
+    {
+        $query = ContractCompanyDebt::where('contract_company_id', $company->id);
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        $debt = $query->first();
+        if ($debt) {
+            return $debt;
+        }
+
+        $this->initialise($company);
+
+        $query = ContractCompanyDebt::where('contract_company_id', $company->id);
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->firstOrFail();
+    }
+
+    /**
      * يزيد المبلغ المستحق على الجهة (عند تسليم طرف للمريض — Task 10).
      */
     public function increaseDue(ContractCompany $company, float $amount): void
     {
         DB::transaction(function () use ($company, $amount) {
-            $debt = ContractCompanyDebt::where('contract_company_id', $company->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $debt = $this->forCompany($company, lock: true);
 
             $before = $this->snapshot($debt);
 
@@ -62,9 +85,7 @@ class ContractDebtService
     public function recordPayment(ContractCompany $company, float $amount): void
     {
         DB::transaction(function () use ($company, $amount) {
-            $debt = ContractCompanyDebt::where('contract_company_id', $company->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $debt = $this->forCompany($company, lock: true);
 
             $before = $this->snapshot($debt);
 
@@ -88,9 +109,7 @@ class ContractDebtService
     public function decreaseDue(ContractCompany $company, float $amount): void
     {
         DB::transaction(function () use ($company, $amount) {
-            $debt = ContractCompanyDebt::where('contract_company_id', $company->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $debt = $this->forCompany($company, lock: true);
 
             $before = $this->snapshot($debt);
 

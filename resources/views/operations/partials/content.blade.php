@@ -7,9 +7,7 @@
     <ul class="nav-menu">
       <li><a href="#" class="active" data-section="operations"><span class="nav-icon">🎯</span> أوامر التشغيل</a></li>
     </ul>
-    <div class="sidebar-footer">
-      <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
-    </div>
+
   </aside>
 
   <main class="main">

@@ -43,6 +43,11 @@ class WorkflowService
             'to'   => CaseRecord::STAGE_MANUFACTURING,
             'mfg'  => CaseRecord::MFG_WAREHOUSE,
         ],
+        WorkflowEvent::BomDispensed->value => [
+            'from' => [CaseRecord::STAGE_WAITING_RETURN, CaseRecord::STAGE_MANUFACTURING],
+            'to'   => CaseRecord::STAGE_MANUFACTURING,
+            'mfg'  => CaseRecord::MFG_ISSUE,
+        ],
         WorkflowEvent::BomFinished->value => [
             'from' => [CaseRecord::STAGE_MANUFACTURING],
             'to'   => CaseRecord::STAGE_READY_DELIVERY,

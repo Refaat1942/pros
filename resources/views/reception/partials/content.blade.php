@@ -12,9 +12,7 @@
       <li><a href="#" data-tab="selfservice"><span class="nav-icon">📱</span> متابعة الحالة (خدمة ذاتية)</a></li>
       <li><a href="#" data-tab="patients"><span class="nav-icon">👤</span> المرضى</a></li>
     </ul>
-    <div class="sidebar-footer">
-      <a href="{{ route('home') }}" class="btn-back">← العودة للصفحة الرئيسية</a>
-    </div>
+
   </aside>
 
   <main class="main">

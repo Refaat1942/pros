@@ -17,12 +17,14 @@ class ContractCompanyDebtSeeder extends Seeder
                 continue;
             }
 
-            ContractCompanyDebt::query()->create([
-                'contract_company_id' => $companyId,
-                'due' => $row['due'],
-                'collected' => $row['collected'],
-                'status' => $row['status'],
-            ]);
+            ContractCompanyDebt::query()->updateOrCreate(
+                ['contract_company_id' => $companyId],
+                [
+                    'due'       => $row['due'],
+                    'collected' => $row['collected'],
+                    'status'    => $row['status'],
+                ]
+            );
         }
     }
 }

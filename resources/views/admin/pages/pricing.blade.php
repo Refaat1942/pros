@@ -2,19 +2,12 @@
     use App\Enums\PricingRequestStatus;
     $requests = $pricing_requests ?? collect();
     $awaiting = $requests->filter(fn ($r) => $r->status_key === PricingRequestStatus::AwaitingAdminApproval)->count();
-    $sent = $requests->filter(fn ($r) => $r->status_key === PricingRequestStatus::SentToReception)->count();
 @endphp
 <div class="section-view" id="section-pricing">
-    <div id="analytics-pricing">@include('partials.dashboard-analytics-empty', ['stats' => [
-        ['icon' => '⏳', 'label' => 'انتظار موافقة الأدمن', 'value' => (string) $awaiting, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-        ['icon' => '✅', 'label' => 'جاهز لعرض السعر', 'value' => (string) $sent, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '📋', 'label' => 'إجمالي الطلبات', 'value' => (string) $requests->count(), 'bg' => 'rgba(124,58,237,0.1)'],
-        ['icon' => '💰', 'label' => 'قيمة معلقة', 'value' => number_format($requests->sum('computed_total'), 0), 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
-    ]])</div>
     <div class="panel">
         <div class="panel-header">
             <h3>✅ اعتماد طلبات التسعير</h3>
-            <span class="badge" id="pricingApprovalBadge">{{ $requests->count() }}</span>
+            <span class="badge" id="pricingApprovalBadge">{{ $awaiting }} بانتظار</span>
         </div>
         <div class="data-toolbar">
             <input type="text" id="pricingApprovalSearch" placeholder="🔍 بحث برقم الطلب أو اسم المريض...">
@@ -25,7 +18,7 @@
                 <option value="insufficient">غير كافٍ</option>
                 <option value="all">الكل</option>
             </select>
-            <span class="toolbar-count" id="pricingApprovalCount">{{ $requests->count() }} طلب</span>
+            <span class="toolbar-count" id="pricingApprovalCount">{{ $awaiting }} طلب</span>
         </div>
         <div class="panel-body">
             <table data-paginate="10">
@@ -36,7 +29,6 @@
                         <th>المريض</th>
                         <th>التاريخ</th>
                         <th>البنود</th>
-                        <th>التقدير</th>
                         <th>الحالة</th>
                         <th>إجراء</th>
                     </tr>
@@ -48,29 +40,45 @@
                                 ? $pr->status_key
                                 : PricingRequestStatus::from((string) $pr->status_key);
                         @endphp
+                        @php
+                            $isMilitaryAutoApproved = $pr->patient_type === 'military'
+                                && $status === PricingRequestStatus::SentToReception
+                                && str_contains((string) ($pr->approved_by ?? ''), 'تلقائي');
+                        @endphp
                         <tr data-status="{{ $status->value }}"
-                            data-search="{{ $pr->request_no }} {{ $pr->patient_name }} {{ $pr->order_ref }}">
+                            data-search="{{ $pr->request_no }} {{ $pr->patient_name }} {{ $pr->order_ref }}"
+                            @if($isMilitaryAutoApproved) style="background:rgba(79,70,229,0.04);" @endif>
                             <td>{{ $loop->iteration }}</td>
-                            <td><strong>{{ $pr->request_no }}</strong></td>
+                            <td>
+                                <strong>{{ $pr->request_no }}</strong>
+                                @if($isMilitaryAutoApproved)
+                                    <span style="display:inline-block;margin-right:4px;padding:1px 6px;font-size:10px;font-weight:700;background:#ede9fe;color:#4f46e5;border-radius:4px;">🪖 تلقائي</span>
+                                @endif
+                            </td>
                             <td>{{ $pr->patient_name }}</td>
                             <td>{{ $pr->request_date?->format('Y-m-d') ?? '—' }}</td>
                             <td>{{ $pr->items_count }}</td>
-                            <td>{{ number_format((float) $pr->computed_total, 2) }}</td>
-                            <td><span class="{{ $status->badgeClass() }}">{{ $status->label() }}</span></td>
                             <td>
-                                @if ($status->isApprovable())
-                                    <form method="POST" action="{{ route('admin.pricing.approve', $pr) }}" style="display:inline;">
-                                        @csrf
-                                        <button type="submit" class="btn-action approve">✅ اعتماد</button>
-                                    </form>
-                                @else
-                                    —
+                                <span class="{{ $status->badgeClass() }}">{{ $status->label() }}</span>
+                                @if($isMilitaryAutoApproved)
+                                    <span style="display:block;font-size:10px;color:#4f46e5;margin-top:2px;">مسار عسكري — تجاوز الاعتماد</span>
                                 @endif
+                            </td>
+                            <td>
+                                <div class="approval-actions">
+                                    <button type="button" class="btn-action" onclick="openPricingApprovalModal({{ $pr->id }})">عرض</button>
+                                    @if ($status->isApprovable())
+                                        <form method="POST" action="{{ route('admin.pricing.approve', $pr) }}" style="display:inline;">
+                                            @csrf
+                                            <button type="submit" class="btn-action approve">✅ اعتماد</button>
+                                        </form>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">
+                            <td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">
                                 لا توجد طلبات تسعير معلقة.
                             </td>
                         </tr>

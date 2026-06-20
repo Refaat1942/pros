@@ -90,7 +90,6 @@ trait ProstheticTestHelper
     {
         return VisitType::firstOrCreate(
             ['name' => $name],
-            ['is_active' => true],
         );
     }
 
@@ -135,9 +134,8 @@ trait ProstheticTestHelper
     protected function makeSupplier(): Supplier
     {
         return Supplier::create([
-            'name'      => 'مورد الأطراف العالمية',
-            'phone'     => '0100000000',
-            'is_active' => true,
+            'name'  => 'مورد الأطراف العالمية',
+            'phone' => '0100000000',
         ]);
     }
 
@@ -147,7 +145,6 @@ trait ProstheticTestHelper
             'code'          => $code,
             'name'          => "صنف {$code}",
             'spec'          => 'مواصفات قياسية',
-            'category'      => 'raw',
             'store_class'   => 'A',
             'uom'           => 'piece',
             'barcode'       => "BC-{$code}",

@@ -40,7 +40,8 @@ class TechOrderSpecController extends Controller
                     fn ($q) => $q->where('name', 'like', "%{$s}%")
                         ->orWhere('patient_code', 'like', "%{$s}%")
                 ))
-                ->orderByDesc('created_at')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
         );
 
         return response()->json([
@@ -75,8 +76,17 @@ class TechOrderSpecController extends Controller
             ->first();
 
         $stockCatalog = StockItem::query()
+            ->with('category:id,name')
             ->orderBy('code')
-            ->get(['code', 'name', 'spec', 'category', 'uom']);
+            ->get(['id', 'code', 'name', 'spec', 'category_id', 'uom'])
+            ->map(fn ($item) => [
+                'code'        => $item->code,
+                'name'        => $item->name,
+                'spec'        => $item->spec,
+                'category'    => $item->category?->name,
+                'category_id' => $item->category_id,
+                'uom'         => $item->uom,
+            ]);
 
         return response()->json([
             'case'           => $this->formatCase($case),

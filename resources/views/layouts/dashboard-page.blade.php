@@ -6,12 +6,16 @@
 
 @section('viewport', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
 @section('title', ($pageTitle ?? $dashboardConfig['title']) . ' — مركز الأطراف الصناعية')
-@section('body-attributes'){!! $dashboardConfig['body_attributes'] !!} data-dashboard="{{ $dashboardKey }}" data-active-page="{{ $activePage ?? '' }}"@endsection
+@section('body-attributes'){!! $dashboardConfig['body_attributes'] ?? '' !!} data-dashboard="{{ $dashboardKey }}" data-active-page="{{ $activePage ?? '' }}"@endsection
 
 @push('styles')
     @foreach ($dashboardConfig['styles'] as $style)
-        <link rel="stylesheet" href="{{ asset($style) }}">
+        <link rel="stylesheet" href="{{ str_starts_with($style, 'http') ? $style : asset($style) }}">
     @endforeach
+@endpush
+
+@push('styles-late')
+    <link rel="stylesheet" href="{{ asset('assets/css/sidebar-logout.css') }}">
 @endpush
 
 @section('content')
@@ -49,6 +53,6 @@
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)
-        <script src="{{ asset($script) }}"></script>
+        <script src="{{ str_starts_with($script, 'http') ? $script : asset($script) }}"></script>
     @endforeach
 @endpush
