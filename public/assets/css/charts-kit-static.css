@@ -1,11 +1,9 @@
 /* ChartKit layout — static empty-state dashboards (no JS mount required) */
 
-/* ── User chip + logout (shared across all dashboards) ── */
+/* ── User chip (shared across all dashboards) ── */
 .user-chip { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; color: var(--text-muted, #64748b); }
 .user-chip .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary, #0e7490), var(--primary-light, #06b6d4)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; }
 .user-chip span { font-weight: 600; color: var(--text, #0f172a); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.logout-btn { background: none; border: 1.5px solid var(--border, #e2e8f0); border-radius: 8px; padding: 5px 10px; font-size: 0.875rem; cursor: pointer; color: var(--text-muted, #64748b); transition: background 0.15s, color 0.15s; }
-.logout-btn:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 
 
 .ck-analytics { margin-bottom: 20px; }

@@ -169,6 +169,13 @@
       overflow: hidden;
     }
 
+    .add-patient-section--inline:not(.expanded) {
+      margin-bottom: 0;
+      border: none;
+      box-shadow: none;
+      background: transparent;
+    }
+
     .add-patient-toggle {
       width: 100%;
       display: flex;
@@ -1194,6 +1201,24 @@
     .selfservice-row { display:flex; justify-content:space-between; padding:6px 0; font-size:14px; border-bottom:1px dashed var(--border); }
     .selfservice-row:last-child { border-bottom:none; }
     .selfservice-row strong { color: var(--primary); }
+    .selfservice-section { margin-top:16px; padding-top:12px; border-top:1px solid var(--border); }
+    .selfservice-section h4 { margin:0 0 10px; font-size:14px; color:var(--text); }
+    .ss-progress-wrap { margin:12px 0 16px; }
+    .ss-progress-bar { height:10px; background:#e2e8f0; border-radius:999px; overflow:hidden; }
+    .ss-progress-fill { height:100%; background:linear-gradient(90deg, var(--primary), #10b981); border-radius:999px; transition:width 0.4s ease; }
+    .ss-progress-label { font-size:12px; color:var(--text-muted); margin-top:6px; text-align:center; }
+    .ss-steps { list-style:none; margin:0; padding:0; }
+    .ss-step { display:flex; gap:10px; align-items:flex-start; padding:8px 0; }
+    .ss-step-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; background:#f1f5f9; color:#94a3b8; }
+    .ss-step.done .ss-step-dot { background:var(--primary); color:#fff; }
+    .ss-step.current .ss-step-dot { background:#d1fae5; color:var(--primary); box-shadow:0 0 0 2px var(--primary); }
+    .ss-step-label { font-size:13px; font-weight:600; padding-top:4px; }
+    .ss-step.current .ss-step-label { color:var(--primary); }
+    .ss-step-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .ss-case-card { background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:8px; font-size:13px; }
+    .ss-case-card strong { display:block; margin-bottom:4px; }
+    .ss-loading { text-align:center; padding:24px; color:var(--text-muted); }
+    .ss-error { text-align:center; padding:16px; color:#b91c1c; background:#fef2f2; border-radius:8px; border:1px solid #fecaca; }
 
     @media (max-width: 768px) {
       .form-row { grid-template-columns: 1fr; }

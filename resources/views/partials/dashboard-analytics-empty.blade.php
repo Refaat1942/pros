@@ -18,10 +18,12 @@
             </div>
         @endforeach
     </div>
+    @if (empty($hide_charts))
     <div class="ck-charts">
         <div class="ck-chart-card">
             <h4>📈 التحليلات</h4>
             <div class="ck-empty-chart">لا توجد بيانات بعد — سيتم ربطها من الخادم لاحقاً</div>
         </div>
     </div>
+    @endif
 </div>

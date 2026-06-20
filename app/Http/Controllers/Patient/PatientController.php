@@ -35,10 +35,11 @@ class PatientController extends Controller
                 ->when($request->contract_company_id, fn ($q, $id) => $q->where('contract_company_id', $id))
                 ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%")
                       ->orWhere('patient_code', 'like', "%{$search}%")
                       ->orWhere('national_id', 'like', "%{$search}%");
                 }))
-                ->orderByDesc('registered_at')
+                ->orderByDesc('id')
         );
 
         return response()->json([
@@ -59,7 +60,7 @@ class PatientController extends Controller
         }
 
         return redirect()
-            ->route('reception.appointments')
+            ->back()
             ->with('success', "تم تسجيل المريض «{$patient->name}» — {$patient->patient_code}.")
             ->with('show_patient_card', $patient->id);
     }

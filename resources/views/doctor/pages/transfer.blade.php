@@ -1,5 +1,7 @@
 <div class="section-view" id="section-transfer">
-      <div id="analytics-transfer">@include('partials.dashboard-analytics-empty', ['stats' => [
+      <div id="analytics-transfer">@include('partials.dashboard-analytics-empty', [
+        'hide_charts' => true,
+        'stats' => [
         ['icon' => '🔧', 'label' => 'محول', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
         ['icon' => '⚙️', 'label' => 'قيد التوصيف', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
         ['icon' => '🏭', 'label' => 'في الورشة', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],

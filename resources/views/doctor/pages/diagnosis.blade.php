@@ -4,12 +4,6 @@
     $draft = $draft_record ?? null;
 @endphp
 <div class="section-view" id="section-diagnosis">
-      <div id="analytics-diagnosis">@include('partials.dashboard-analytics-empty', ['stats' => [
-        ['icon' => '📝', 'label' => 'تقارير اليوم', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '📦', 'label' => 'أصناف المخزون', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
-        ['icon' => '💊', 'label' => 'توصيات', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
-        ['icon' => '📦', 'label' => 'محول للمخزون', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-      ]])</div>
       <div class="panel form-panel">
         <div class="panel-header">
           <h3>📝 التشخيص الطبي</h3>

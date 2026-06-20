@@ -33,6 +33,45 @@
     return String(v || '').replace(/\D+/g, '');
   }
 
+  function shouldDigitsOnly(el) {
+    if (!el) return false;
+    if (el.getAttribute('data-v-digits-only') === '1' || el.getAttribute('data-v-digits-only') === 'true') {
+      return true;
+    }
+    var rules = parseRules(el);
+    return rules.some(function (rule) {
+      return rule === 'egyptian-mobile' || rule === 'egyptian-national-id' || rule === 'integer';
+    });
+  }
+
+  function sanitizeDigitsValue(el) {
+    if (!el) return;
+    var max = el.maxLength > 0 ? el.maxLength : null;
+    var cleaned = digitsOnly(el.value);
+    if (max) cleaned = cleaned.slice(0, max);
+    if (cleaned !== el.value) el.value = cleaned;
+  }
+
+  function bindDigitsOnly(el) {
+    if (!el || el.dataset.vDigitsBound) return;
+    el.dataset.vDigitsBound = '1';
+
+    el.addEventListener('keydown', function (e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      var allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+      if (allowed.indexOf(e.key) !== -1) return;
+      if (e.key.length === 1 && !/\d/.test(e.key)) e.preventDefault();
+    });
+
+    el.addEventListener('paste', function (e) {
+      e.preventDefault();
+      var pasted = (e.clipboardData || window.clipboardData).getData('text') || '';
+      var max = el.maxLength > 0 ? el.maxLength : 32;
+      el.value = digitsOnly(String(el.value) + pasted).slice(0, max);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
   function trim(v) {
     return String(v || '').trim();
   }
@@ -177,8 +216,9 @@
     el.removeAttribute('aria-invalid');
     var wrap = el.closest('.form-group') || el.parentElement;
     if (!wrap) return;
-    var msg = wrap.querySelector('.v-error-msg');
-    if (msg) msg.remove();
+    wrap.querySelectorAll('.v-error-msg').forEach(function (msg) {
+      msg.remove();
+    });
   }
 
   function validateField(el, form) {
@@ -231,33 +271,73 @@
     return valid;
   }
 
-  function bindField(el) {
-    if (!el || el.dataset.vBound) return;
-    el.dataset.vBound = '1';
-    ['input', 'change', 'blur'].forEach(function (evt) {
-      el.addEventListener(evt, function () {
-        validateField(el, el.form);
-      });
+  function clearFormSummaryErrors(form) {
+    if (!form) return;
+    form.querySelectorAll(':scope > .v-error-msg').forEach(function (el) {
+      el.remove();
     });
   }
 
+  function handleFieldEvent(el, form) {
+    if (!el || el.disabled || el.type === 'hidden' || el.type === 'submit' || el.type === 'button') {
+      return;
+    }
+    if (shouldDigitsOnly(el)) sanitizeDigitsValue(el);
+    if (parseRules(el).length) {
+      validateField(el, form || el.form);
+      if (!el.classList.contains('v-invalid')) {
+        clearFormSummaryErrors(form || el.form);
+      }
+    }
+  }
+
+  function bindField(el) {
+    if (!el || el.dataset.vBound) return;
+    el.dataset.vBound = '1';
+    if (shouldDigitsOnly(el)) bindDigitsOnly(el);
+  }
+
   function bindForm(form) {
-    if (!form || form.dataset.vFormBound) return;
-    form.dataset.vFormBound = '1';
-    form.setAttribute('novalidate', 'novalidate');
+    if (!form) return;
+
+    if (!form.dataset.vFormBound) {
+      form.dataset.vFormBound = '1';
+      form.setAttribute('novalidate', 'novalidate');
+
+      form.addEventListener('input', function (e) {
+        handleFieldEvent(e.target, form);
+      }, true);
+
+      form.addEventListener('change', function (e) {
+        handleFieldEvent(e.target, form);
+      }, true);
+
+      form.addEventListener('blur', function (e) {
+        handleFieldEvent(e.target, form);
+      }, true);
+
+      form.addEventListener('submit', function (e) {
+        if (!validateForm(form)) e.preventDefault();
+      });
+
+      form.querySelectorAll('[data-v-when]').forEach(function (dep) {
+        var when = dep.getAttribute('data-v-when');
+        if (!when) return;
+        var fieldName = when.split('=')[0];
+        var trigger = form.querySelector('[name="' + fieldName + '"]');
+        if (trigger) {
+          trigger.addEventListener('change', function () {
+            validateField(dep, form);
+          });
+        }
+      });
+    }
+
     form.querySelectorAll('input, select, textarea').forEach(bindField);
-    form.addEventListener('submit', function (e) {
-      if (!validateForm(form)) e.preventDefault();
-    });
-    form.querySelectorAll('[data-v-when]').forEach(function (dep) {
-      var when = dep.getAttribute('data-v-when');
-      if (!when) return;
-      var fieldName = when.split('=')[0];
-      var trigger = form.querySelector('[name="' + fieldName + '"]');
-      if (trigger) {
-        trigger.addEventListener('change', function () {
-          validateField(dep, form);
-        });
+
+    form.querySelectorAll('[data-v-rules]').forEach(function (el) {
+      if (el.classList.contains('v-invalid') || (el.closest('.form-group') && el.closest('.form-group').querySelector('.v-error-msg'))) {
+        validateField(el, form);
       }
     });
   }
@@ -301,10 +381,12 @@
   global.DashboardValidation = {
     validateField: validateField,
     validateForm: validateForm,
+    clearInvalid: clearInvalid,
     isFieldValid: function (el, form) {
       return validateField(el, form) === null;
     },
     bindForm: bindForm,
+    bindField: bindField,
     bindDashboard: bindDashboard,
     digitsOnly: digitsOnly,
     validators: validators,

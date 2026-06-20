@@ -614,6 +614,64 @@
       });
     }
 
+    function mapPatientFromApi(row) {
+      var statusLabels = {
+        active: 'نشط',
+        inactive: 'غير نشط',
+        quoted: 'عرض سعر',
+        done: 'مكتمل'
+      };
+      var company = row.company_name ||
+        (row.contract_company && row.contract_company.name) ||
+        '—';
+      return {
+        id: row.id,
+        name: row.name || '—',
+        phone: row.phone || '—',
+        company: company,
+        registered: displayDateFromIso(row.registered_at) || '—',
+        lastVisit: displayDateFromIso(row.last_visit_at) || '—',
+        status: row.status || 'active',
+        statusLabel: statusLabels[row.status] || row.status || 'نشط',
+        patient_code: row.patient_code,
+        patient_type: row.patient_type
+      };
+    }
+
+    function fetchPatientsFromServer(callback) {
+      return fetch('/reception/patients/list', {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('patients list failed');
+          return res.json();
+        })
+        .then(function (payload) {
+          patientsRegistry = (payload.data || []).map(mapPatientFromApi);
+          window.__PATIENTS = payload.data || [];
+          if (callback) callback();
+        })
+        .catch(function (err) {
+          console.error('fetchPatientsFromServer', err);
+          if (callback) callback();
+        });
+    }
+
+    function loadPatients() {
+      if (Array.isArray(window.__PATIENTS)) {
+        patientsRegistry = window.__PATIENTS.map(mapPatientFromApi);
+        renderPatients();
+        return;
+      }
+      fetchPatientsFromServer(function () {
+        renderPatients();
+      });
+    }
+
     function getFilteredPatients(filter) {
       filter = filter || '';
       var status = (document.getElementById('patientStatusFilter') || {}).value || 'all';
@@ -637,9 +695,9 @@
 
     function exportPatients(type) {
       var data = getFilteredPatients((document.getElementById('patientSearch') || {}).value.trim());
-      var headers = ['اسم المريض', 'رقم الهاتف', 'جهة التعاقد', 'تاريخ التسجيل', 'آخر زيارة', 'الحالة'];
+      var headers = ['اسم المريض', 'رقم الهاتف', 'جهة التعاقد', 'تاريخ التسجيل', 'آخر زيارة'];
       var rows = data.map(function(p) {
-        return [p.name, p.phone, p.company, p.registered, p.lastVisit, p.statusLabel];
+        return [p.name, p.phone, p.company, p.registered, p.lastVisit];
       });
       if (type === 'excel') ExportKit.toExcel('سجل_المرضى', headers, rows);
       else ExportKit.toPDF('سجل المرضى المسجلين', headers, rows);
@@ -714,18 +772,20 @@
       var filtered = getFilteredPatients(filter);
       var tbody = document.getElementById('patientsTable');
       if (!tbody) return;
-      tbody.innerHTML = filtered.map(function(p) {
-        return '<tr>' +
-          '<td><strong>' + p.name + '</strong></td>' +
-          '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + p.phone + '</td>' +
-          '<td>' + p.company + '</td>' +
-          '<td>' + p.registered + '</td>' +
-          '<td>' + p.lastVisit + '</td>' +
-          '<td><span class="status-badge ' + p.status + '">' + p.statusLabel + '</span></td>' +
-          '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="openPatientFile(\'' + p.phone + '\')">عرض الملف</button></td>' +
-          '</tr>';
-      }).join('');
-      document.getElementById('patientsCount').textContent = filtered.length + ' مريض';
+      tbody.innerHTML = filtered.length
+        ? filtered.map(function(p) {
+            return '<tr>' +
+              '<td><strong>' + p.name + '</strong></td>' +
+              '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + p.phone + '</td>' +
+              '<td>' + p.company + '</td>' +
+              '<td>' + p.registered + '</td>' +
+              '<td>' + p.lastVisit + '</td>' +
+              '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="openPatientFile(\'' + p.phone + '\')">عرض الملف</button></td>' +
+              '</tr>';
+          }).join('')
+        : '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">لا يوجد مرضى مسجّلون</td></tr>';
+      var countEl = document.getElementById('patientsCount');
+      if (countEl) countEl.textContent = filtered.length + ' مريض';
       if (window.TablePagination) TablePagination.refreshById('patientsTable');
     }
 
@@ -830,36 +890,106 @@
       }).join('');
     }
 
+    function escapeHtml(text) {
+      if (text == null) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderSelfServiceSteps(steps) {
+      return (steps || []).map(function (step, index) {
+        var cls = step.status === 'done' ? 'done' : (step.status === 'current' ? 'current' : '');
+        var dot = step.status === 'done' ? '✓' : String(index + 1);
+        var sub = step.status === 'current' ? '← المرحلة الحالية' : (step.status === 'done' ? 'مكتمل' : '');
+        return '<li class="ss-step ' + cls + '">' +
+          '<span class="ss-step-dot">' + dot + '</span>' +
+          '<div><div class="ss-step-label">' + escapeHtml(step.label) + '</div>' +
+          (sub ? '<div class="ss-step-sub">' + sub + '</div>' : '') +
+          '</div></li>';
+      }).join('');
+    }
+
+    function renderSelfServiceCases(cases) {
+      if (!cases || !cases.length) {
+        return '<p style="font-size:13px;color:var(--text-muted)">لا توجد حالات مسجّلة بعد — المريض في مرحلة التسجيل فقط.</p>';
+      }
+      return cases.map(function (c) {
+        return '<div class="ss-case-card">' +
+          '<strong>' + escapeHtml(c.case_no || '—') + ' — ' + escapeHtml(c.stage_label) + '</strong>' +
+          '<div>مرجع الطلب: ' + escapeHtml(c.order_ref || '—') + '</div>' +
+          (c.work_order_no ? '<div>أمر الشغل: ' + escapeHtml(c.work_order_no) + '</div>' : '') +
+          (c.bom_stage_label ? '<div>مرحلة BOM: ' + escapeHtml(c.bom_stage_label) + '</div>' : '') +
+          (c.delivered_at ? '<div>تاريخ التسليم: ' + escapeHtml(c.delivered_at) + '</div>' : '') +
+          '</div>';
+      }).join('');
+    }
+
+    function renderSelfServiceResult(data) {
+      var p = data.patient || {};
+      var tracking = data.tracking || {};
+      var active = data.active_case;
+      var typeBadge = p.patient_type === 'military'
+        ? '<span class="patient-type-badge military">🪖 عسكري</span>'
+        : '<span class="patient-type-badge civilian">🌐 مدني</span>';
+      var pathwayLabel = tracking.pathway === 'military' ? 'مسار عسكري' : 'مسار مدني';
+
+      return '<div class="selfservice-result">' +
+        '<div class="selfservice-row"><span>المريض</span><strong>' + escapeHtml(p.name) + ' ' + typeBadge + '</strong></div>' +
+        '<div class="selfservice-row"><span>الهاتف</span><strong dir="ltr">' + escapeHtml(p.phone || '—') + '</strong></div>' +
+        '<div class="selfservice-row"><span>كود المريض</span><strong>' + escapeHtml(p.patient_code || '—') + '</strong></div>' +
+        '<div class="selfservice-row"><span>جهة التعاقد</span><strong>' + escapeHtml(p.company_name || '—') + '</strong></div>' +
+        (p.rank ? '<div class="selfservice-row"><span>الرتبة</span><strong>' + escapeHtml(p.rank) + '</strong></div>' : '') +
+        (p.sovereign_entity ? '<div class="selfservice-row"><span>الجهة السيادية</span><strong>' + escapeHtml(p.sovereign_entity) + '</strong></div>' : '') +
+        '<div class="selfservice-row"><span>تاريخ التسجيل</span><strong>' + escapeHtml(p.registered_at || '—') + '</strong></div>' +
+        '<div class="selfservice-section">' +
+          '<h4>📍 الحالة الحالية</h4>' +
+          '<div class="selfservice-row"><span>المرحلة</span><strong>' + escapeHtml(tracking.stage_label || '—') + '</strong></div>' +
+          (active && active.case_no ? '<div class="selfservice-row"><span>رقم الحالة</span><strong>' + escapeHtml(active.case_no) + '</strong></div>' : '') +
+          (data.queue_position ? '<div class="selfservice-row"><span>ترتيبك في الطابور</span><strong>' + data.queue_position + '</strong></div>' : '') +
+          '<div class="selfservice-row"><span>التسليم المتوقع</span><strong>' + escapeHtml(data.expected_delivery || '—') + '</strong></div>' +
+          '<div class="selfservice-row"><span>المسار</span><strong>' + pathwayLabel + '</strong></div>' +
+        '</div>' +
+        '<div class="selfservice-section">' +
+          '<h4>📊 تقدّم الرحلة</h4>' +
+          '<div class="ss-progress-wrap">' +
+            '<div class="ss-progress-bar"><div class="ss-progress-fill" style="width:' + (data.progress_percent || 0) + '%"></div></div>' +
+            '<div class="ss-progress-label">' + (data.progress_percent || 0) + '% مكتمل</div>' +
+          '</div>' +
+          '<ul class="ss-steps">' + renderSelfServiceSteps(tracking.steps) + '</ul>' +
+        '</div>' +
+        '<div class="selfservice-section">' +
+          '<h4>📁 سجل الحالات</h4>' +
+          renderSelfServiceCases(data.cases) +
+        '</div>' +
+      '</div>';
+    }
+
     function renderSelfService(query) {
       var resultEl = document.getElementById('ssResult');
       if (!resultEl) return;
       var q = (query || '').trim();
       if (!q) { resultEl.innerHTML = ''; return; }
-      var all = CasesWorkflow.getAll();
-      var c = CasesWorkflow.getByPatientId(q) ||
-        CasesWorkflow.getByPatientQr(q) ||
-        all.find(function(x){ return x.patient && x.patient.indexOf(q) !== -1; });
-      if (!c) {
-        resultEl.innerHTML = '<div class="selfservice-result" style="text-align:center;color:var(--text-muted)">لا توجد حالة مطابقة لـ «' + q + '»</div>';
-        return;
-      }
-      var queueAhead = all.filter(function(x){
-        return x.stageKey === c.stageKey && x.stageIndex === c.stageIndex &&
-          (x.createdAt < c.createdAt) && x.id !== c.id;
-      }).length;
-      var tmeta = CasesWorkflow.getPatientTypeMeta(c.patientType);
-      var bom = (typeof BomInventory !== 'undefined') ? BomInventory.getByCaseId(c.id) : null;
-      var expected = c.stageKey === 'delivered' ? (c.deliveredAt || '—')
-        : (c.stageKey === 'manufacturing' ? 'خلال 3–5 أيام عمل' : 'بعد اعتماد الطلب');
-      resultEl.innerHTML =
-        '<div class="selfservice-result">' +
-          '<div class="selfservice-row"><span>المريض</span><strong>' + c.patient + ' <span class="patient-type-badge ' + tmeta.badge + '">' + tmeta.icon + ' ' + tmeta.label + '</span></strong></div>' +
-          '<div class="selfservice-row"><span>Patient ID</span><strong>' + c.patientId + '</strong></div>' +
-          '<div class="selfservice-row"><span>حالة الطلب الحالية</span><strong>' + (c.stageLabel || CasesWorkflow.getStageLabel(c.stageKey)) + '</strong></div>' +
-          (bom ? '<div class="selfservice-row"><span>مرحلة التصنيع</span><strong>' + BomInventory.getStageLabel(bom.stage) + '</strong></div>' : '') +
-          '<div class="selfservice-row"><span>أمامك في الطابور</span><strong>' + queueAhead + ' حالة</strong></div>' +
-          '<div class="selfservice-row"><span>الموعد المتوقع للتسليم</span><strong>' + expected + '</strong></div>' +
-        '</div>';
+
+      resultEl.innerHTML = '<div class="ss-loading">جاري البحث...</div>';
+
+      fetch('/reception/selfservice/lookup?q=' + encodeURIComponent(q), {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(function (res) {
+          return res.json().then(function (body) {
+            if (!res.ok) throw new Error(body.message || 'تعذّر الاستعلام');
+            return body;
+          });
+        })
+        .then(function (data) {
+          resultEl.innerHTML = renderSelfServiceResult(data);
+        })
+        .catch(function (err) {
+          resultEl.innerHTML = '<div class="ss-error">' + escapeHtml(err.message || 'تعذّر الاستعلام') + '</div>';
+        });
     }
 
     var btnSS = document.getElementById('btnSelfService');
@@ -918,7 +1048,6 @@
       var total = dayAppts.length;
       var inClinic = dayAppts.filter(function(a) { return a.status === 'in_clinic'; }).length;
       var waiting = dayAppts.filter(function(a) { return a.status === 'waiting'; }).length;
-      var done = dayAppts.filter(function(a) { return a.status === 'done'; }).length;
 
       function setStat(containerId, index, value) {
         var root = document.getElementById(containerId);
@@ -930,12 +1059,6 @@
       setStat('analytics-appointments', 0, total);
       setStat('analytics-appointments', 1, inClinic);
       setStat('analytics-appointments', 2, waiting);
-      setStat('analytics-appointments', 3, done);
-
-      if (calendarView.selectedDate === TODAY_DATE) {
-        setStat('analytics-reception-main', 0, total);
-        setStat('analytics-reception-main', 1, waiting);
-      }
     }
 
     function changeCalendarMonth(delta) {
@@ -978,17 +1101,22 @@
 
     function toggleAddPatientForm(forceOpen) {
       var wrap = document.getElementById('addPatientFormWrap');
+      if (!wrap) return;
       var section = document.getElementById('addPatientSection');
       var btn = document.getElementById('btnAddPatient');
       var isOpen = wrap.classList.contains('open');
       var open = forceOpen === true ? true : (forceOpen === false ? false : !isOpen);
       wrap.classList.toggle('open', open);
-      section.classList.toggle('expanded', open);
+      if (section) section.classList.toggle('expanded', open);
       if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (open) {
         requestAnimationFrame(syncAddPatientFormHeight);
         loadContractCompanies();
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var patientForm = document.getElementById('addPatientForm');
+        if (patientForm && window.DashboardValidation) {
+          window.DashboardValidation.bindForm(patientForm);
+        }
+        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         setTimeout(function() {
           var nameEl = document.getElementById('newPatientName');
           if (nameEl) nameEl.focus();
@@ -1005,6 +1133,7 @@
     function openAddPatientForm() {
       toggleAddPatientForm(true);
     }
+    window.openAddPatientForm = openAddPatientForm;
 
     var closeQuoteModalBtn = document.getElementById('closeQuoteModal');
     if (closeQuoteModalBtn) closeQuoteModalBtn.addEventListener('click', closeQuoteModal);
@@ -1520,7 +1649,7 @@
     initAppointmentsCalendar();
 
     syncPricingQueueToQuotes();
-    renderPatients();
+    if (document.getElementById('patientsTable')) loadPatients();
     renderQuoteTable();
     renderDeliveryTable();
     fetchServerQuotes();

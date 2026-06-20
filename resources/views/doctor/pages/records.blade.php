@@ -1,10 +1,4 @@
 <div class="section-view" id="section-records">
-      <div id="analytics-records">@include('partials.dashboard-analytics-empty', ['stats' => [
-        ['icon' => '📁', 'label' => 'تقارير', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
-        ['icon' => '✅', 'label' => 'معتمد', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '💊', 'label' => 'متوسط التوصيات', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
-        ['icon' => '📦', 'label' => 'أصناف مختلفة', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
-      ]])</div>
       <div class="panel">
         <div class="panel-header">
           <h3>📁 السجل الطبي — التقارير المعتمدة</h3>

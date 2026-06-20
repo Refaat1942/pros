@@ -33,10 +33,6 @@
             <div class="user-chip">
                 <div class="avatar">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
                 <span>{{ auth()->user()->name }}</span>
-                <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-                    @csrf
-                    <button type="submit" class="logout-btn" title="تسجيل الخروج">↩</button>
-                </form>
             </div>
         </div>
 

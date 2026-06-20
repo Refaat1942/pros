@@ -17,6 +17,7 @@ use App\Models\VisitType;
 use App\Enums\PricingRequestStatus;
 use App\Models\ApprovalContract;
 use App\Models\MilitaryDebt;
+use App\Models\Patient;
 use App\Services\BomService;
 use App\Services\StockCatalogService;
 
@@ -165,6 +166,11 @@ class DashboardPageDataService
 
     private function receptionAppointments(): array
     {
+        return $this->receptionPatientFormData();
+    }
+
+    private function receptionPatientFormData(): array
+    {
         return [
             'military_ranks' => MilitaryRank::query()
                 ->orderBy('sort_order')
@@ -186,13 +192,13 @@ class DashboardPageDataService
 
     private function receptionPatients(): array
     {
-        return [
-            'patients' => \App\Models\Patient::query()
+        return array_merge($this->receptionPatientFormData(), [
+            'patients' => Patient::query()
                 ->with('contractCompany:id,name')
-                ->orderByDesc('registered_at')
-                ->limit(100)
+                ->orderByDesc('id')
+                ->limit((int) config('dashboards.table_fetch_limit', 1000))
                 ->get(),
-        ];
+        ]);
     }
 
     private function receptionDelivery(): array

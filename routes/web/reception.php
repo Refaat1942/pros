@@ -7,6 +7,7 @@ use App\Http\Controllers\Dashboard\ReceptionDashboardController;
 use App\Http\Controllers\Delivery\DeliveryController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Patient\PatientController;
+use App\Http\Controllers\Patient\ReceptionSelfServiceController;
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Quote\ApprovalScanController;
 use App\Http\Controllers\Quote\OcrExtractController;
@@ -105,4 +106,8 @@ Route::prefix('reception')
 
         Route::get('delivery/{case}', [DeliveryController::class, 'show'])
             ->name('delivery.show');
+
+        // ── Self-service lookup (reception staff — full patient journey) ───
+        Route::get('selfservice/lookup', [ReceptionSelfServiceController::class, 'lookup'])
+            ->name('selfservice.lookup');
     });
