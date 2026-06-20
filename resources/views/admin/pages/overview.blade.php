@@ -50,7 +50,7 @@
         <h3>🔒 آخر حركات — سجل الرقابة</h3>
         <span class="badge">آخر ٥</span>
       </div>
-      <div class="panel-body" id="auditPreview">
+      <div class="panel-body" id="auditPreview" data-server-rendered="1">
         @include('partials.audit-log-preview', ['audit_preview' => $audit_preview ?? collect()])
       </div>
     </div>

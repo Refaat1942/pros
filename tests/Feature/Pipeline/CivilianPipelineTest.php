@@ -363,6 +363,8 @@ class CivilianPipelineTest extends TestCase
         $this->assertNotNull($case->delivered_at);
         $this->assertNotNull($case->invoice_no);
         $this->assertEquals(400.00, (float) $case->invoice_total);
+        $this->assertEquals(400.00, (float) $case->total_cost);
+        $this->assertEquals(400.00, (float) $case->paid);
         $this->assertEquals(Patient::STATUS_DONE, $patient->status);
         $this->assertNotNull($patient->archived_at);
 

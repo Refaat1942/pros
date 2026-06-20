@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\WorkflowEvent;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
+use App\Models\CaseRecommendation;
 use App\Models\MedicalRecord;
 use App\Models\MedicalRecordItem;
 use App\Models\Patient;
@@ -87,7 +88,12 @@ class MedicalRecordService
                 after:       $record->fresh()->only(['locked', 'status', 'case_id']),
             );
 
-            return $record->fresh()->load(['items', 'patient', 'caseRecord']);
+            $record = $record->fresh()->load(['items', 'patient', 'caseRecord']);
+            if ($record->caseRecord) {
+                $this->syncCaseRecommendations($record->caseRecord, $record);
+            }
+
+            return $record;
         });
     }
 
@@ -185,6 +191,24 @@ class MedicalRecordService
                 'stock_item_code'   => $item['stock_item_code'],
                 'name'              => $item['name'],
                 'qty'               => $item['qty'],
+            ]);
+        }
+    }
+
+    private function syncCaseRecommendations(CaseRecord $case, MedicalRecord $record): void
+    {
+        if ($record->items->isEmpty()) {
+            return;
+        }
+
+        $case->recommendations()->delete();
+
+        foreach ($record->items as $item) {
+            CaseRecommendation::create([
+                'case_id'           => $case->id,
+                'stock_item_code'   => $item->stock_item_code,
+                'name'              => $item->name,
+                'qty'               => $item->qty,
             ]);
         }
     }

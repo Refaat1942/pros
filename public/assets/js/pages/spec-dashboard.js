@@ -138,7 +138,7 @@
     var tbody = $('specItemsBody');
     if (!tbody) return;
     if (!state.items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">أضف أصنافاً من الكatalog</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">أضف أصنافاً من الكاتلوج</td></tr>';
       return;
     }
     tbody.innerHTML = state.items.map(function (item, idx) {

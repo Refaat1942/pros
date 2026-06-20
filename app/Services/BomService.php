@@ -483,7 +483,7 @@ class BomService
         $case = $bom->caseRecord;
 
         if (! $case || $case->manufacturing_stage !== CaseRecord::MFG_FINISHING) {
-            abort(422, 'يجب الوصول لمرحلة التشطيب قبل فحص الجودة وإغلاق BOM.');
+            abort(422, 'يجب الوصول لمرحلة التشغيل قبل فحص الجودة وإغلاق BOM.');
         }
 
         return $this->closeFinished($bom);

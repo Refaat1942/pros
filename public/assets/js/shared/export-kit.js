@@ -8,6 +8,20 @@ var ExportKit = (function () {
     return '"' + String(val == null ? '' : val).replace(/"/g, '""') + '"';
   }
 
+  /** يمنع Excel من تحويل التاريخ لرقم serial — صيغة dd/mm/yyyy كنص */
+  function formatDateForExport(val) {
+    if (val == null || val === '' || val === '—') return '—';
+    var s = String(val).trim();
+    var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+      return '\t' + iso[3] + '/' + iso[2] + '/' + iso[1];
+    }
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+      return '\t' + s;
+    }
+    return '\t' + s;
+  }
+
   function download(content, filename, mime) {
     var blob = new Blob([content], { type: mime });
     var a = document.createElement('a');
@@ -113,6 +127,7 @@ var ExportKit = (function () {
   return {
     toExcel: toExcel,
     toPDF: toPDF,
-    filterItems: filterItems
+    filterItems: filterItems,
+    formatDateForExport: formatDateForExport
   };
 })();

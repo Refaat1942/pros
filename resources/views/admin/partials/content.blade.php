@@ -224,13 +224,11 @@
         </div>
         <div class="data-toolbar">
           <input type="text" id="pricingApprovalSearch" placeholder="🔍 بحث برقم الطلب أو اسم المريض...">
-          <select id="pricingApprovalFilter">
-            <option value="awaiting_admin_approval">بانتظار الاعتماد</option>
-            <option value="sent_to_reception">تم الإرسال للاستقبال</option>
-            <option value="processing">جاري الاحتساب</option>
-            <option value="insufficient">غير كافٍ</option>
-            <option value="all">الكل</option>
-          </select>
+            <select id="pricingApprovalFilter">
+                <option value="awaiting_admin_approval">بانتظار الاعتماد</option>
+                <option value="sent_to_reception">تم الإرسال للاستقبال</option>
+                <option value="all">الكل</option>
+            </select>
           <span class="toolbar-count" id="pricingApprovalCount">0 طلب</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportPricingApproval('excel')">📊 Excel</button>

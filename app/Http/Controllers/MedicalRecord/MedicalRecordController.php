@@ -7,6 +7,7 @@ use App\Http\Requests\MedicalRecord\StoreMedicalRecordRequest;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
+use App\Services\DoctorTransferService;
 use App\Services\MedicalRecordService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -17,8 +18,10 @@ class MedicalRecordController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly MedicalRecordService $medicalRecordService)
-    {
+    public function __construct(
+        private readonly MedicalRecordService $medicalRecordService,
+        private readonly DoctorTransferService $doctorTransferService,
+    ) {
     }
 
     /**
@@ -94,8 +97,8 @@ class MedicalRecordController extends Controller
         }
 
         return redirect()
-            ->route('doctor.queue')
-            ->with('success', 'تم حفظ واعتماد التقرير الطبي وتحويل الحالة للتوصيف الفني.');
+            ->route('doctor.records')
+            ->with('success', 'تم التحويل للتوصيف.');
     }
 
     /**
@@ -117,11 +120,12 @@ class MedicalRecordController extends Controller
     public function index(Request $request): JsonResponse
     {
         $records = $this->fetchForDashboard(
-            MedicalRecord::with('items')
+            MedicalRecord::with(['items', 'patient:id,phone'])
                 ->where('locked', true)
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('patient_name', 'like', "%{$s}%")
-                      ->orWhere('national_id', 'like', "%{$s}%");
+                      ->orWhere('national_id', 'like', "%{$s}%")
+                      ->orWhereHas('patient', fn ($q) => $q->where('phone', 'like', "%{$s}%"));
                 }))
                 ->orderByDesc('record_date')
         );
@@ -137,22 +141,11 @@ class MedicalRecordController extends Controller
      */
     public function transfers(Request $request): JsonResponse
     {
-        $cases = $this->fetchForDashboard(
-            CaseRecord::with([
-                'patient:id,patient_code,name,patient_type',
-                'medicalRecords' => fn ($q) => $q->where('locked', true)->latest()->limit(1),
-            ])
-                ->where('stage_key', CaseRecord::STAGE_TECHNICAL)
-                ->when($request->search, fn ($q, $s) => $q->whereHas(
-                    'patient',
-                    fn ($q) => $q->where('name', 'like', "%{$s}%")
-                ))
-                ->orderByDesc('created_at')
-        );
+        $rows = $this->doctorTransferService->list($request->search);
 
         return response()->json([
-            'data'  => collect($cases)->map(fn ($c) => $this->formatCaseForDoctor($c))->values(),
-            'total' => $cases->count(),
+            'data'  => $rows->values(),
+            'total' => $rows->count(),
         ]);
     }
 
@@ -174,6 +167,7 @@ class MedicalRecordController extends Controller
             'status',
             'locked',
         ]) + [
+            'phone' => $record->relationLoaded('patient') ? $record->patient?->phone : null,
             'items' => $record->relationLoaded('items')
                 ? $record->items->map->only(['stock_item_code', 'name', 'qty'])
                 : [],

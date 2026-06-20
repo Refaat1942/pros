@@ -1,0 +1,136 @@
+<?php
+
+namespace Tests\Feature\Pipeline;
+
+use App\Models\Bom;
+use App\Models\BomItem;
+use App\Models\CaseRecord;
+use App\Models\PricingRequest;
+use App\Services\AdminCaseTrackingService;
+use App\Services\Dashboard\DashboardPageDataService;
+use Tests\Support\ProstheticTestHelper;
+use Tests\TestCase;
+
+class AdminCaseTrackingTest extends TestCase
+{
+    use ProstheticTestHelper;
+
+    public function test_manufacturing_case_appears_in_in_progress_bucket(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_CASTING);
+        $case->update([
+            'approval_date' => now()->toDateString(),
+            'work_order_no' => 'WO-2026-0822',
+        ]);
+
+        Bom::create([
+            'case_id'      => $case->id,
+            'bom_no'       => 'BOM-0099',
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'stage'        => Bom::STAGE_WIP,
+        ]);
+
+        $buckets = app(AdminCaseTrackingService::class)->buckets();
+
+        $this->assertSame(1, $buckets['counts']['in_progress']);
+        $this->assertCount(1, $buckets['in_progress']);
+
+        $row = $buckets['in_progress']->first();
+        $this->assertSame($patient->name, $row['patient']);
+        $this->assertSame('casting', $row['manufacturingStage']);
+        $this->assertSame('صب', $row['manufacturingLabel']);
+        $this->assertSame(Bom::STAGE_WIP, $row['bom']['stage']);
+        $this->assertMatchesRegularExpression('/^\d{2}\/\d{2}\/\d{4}$/', $row['approvalDate']);
+    }
+
+    public function test_approval_date_falls_back_to_confirmed_at(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_CASTING);
+        $case->update([
+            'approval_date'         => null,
+            'approval_confirmed_at' => '2026-05-21 08:30:00',
+        ]);
+
+        $row = app(AdminCaseTrackingService::class)->buckets()['in_progress']->first();
+
+        $this->assertSame('21/05/2026', $row['approvalDate']);
+    }
+
+    public function test_admin_cases_page_data_includes_buckets(): void
+    {
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_CASTING);
+
+        $data = app(DashboardPageDataService::class)->resolve('admin', 'cases');
+
+        $this->assertArrayHasKey('admin_case_buckets', $data);
+        $this->assertGreaterThanOrEqual(1, count($data['admin_case_buckets']['in_progress']));
+        $this->assertGreaterThanOrEqual(1, $data['admin_case_counts']['in_progress']);
+    }
+
+    public function test_delivered_bucket_shows_cost_from_bom_when_case_fields_empty(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case->update([
+            'total_cost'    => 0,
+            'quote_total'   => 0,
+            'invoice_total' => 0,
+            'paid'          => 0,
+            'delivered_at'  => now()->toDateString(),
+        ]);
+
+        $bom = Bom::create([
+            'case_id'      => $case->id,
+            'bom_no'       => 'BOM-DEL-01',
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'stage'        => Bom::STAGE_FINISHED,
+        ]);
+
+        BomItem::create([
+            'bom_id'          => $bom->id,
+            'stock_item_code' => 'RM-001',
+            'name'            => 'صنف RM-001',
+            'qty'             => 3,
+            'unit_cost'       => 200.00,
+        ]);
+
+        $row = app(AdminCaseTrackingService::class)->buckets()['delivered']->first();
+
+        $this->assertSame(600.0, $row['totalCost']);
+        $this->assertSame(600.0, $row['paid']);
+    }
+
+    public function test_delivered_bucket_shows_cost_from_pricing_request(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case->update([
+            'total_cost'    => 0,
+            'quote_total'   => 0,
+            'invoice_total' => 0,
+            'paid'          => 0,
+            'delivered_at'  => now()->toDateString(),
+        ]);
+
+        PricingRequest::create([
+            'case_id'        => $case->id,
+            'request_no'     => 'PR-2026-0100',
+            'computed_total' => 1800.00,
+            'status_key'     => 'awaiting_admin_approval',
+            'patient_type'   => 'civilian',
+            'order_ref'      => $case->order_ref,
+            'patient_name'   => $patient->name,
+            'request_date'   => now()->toDateString(),
+        ]);
+
+        $row = app(AdminCaseTrackingService::class)->buckets()['delivered']->first();
+
+        $this->assertSame(1800.0, $row['totalCost']);
+        $this->assertSame(1800.0, $row['paid']);
+    }
+}

@@ -1,15 +1,16 @@
 <form method="GET" action="{{ route('admin.audit') }}" class="data-toolbar" style="margin-bottom:12px">
+    @php use App\Support\AuditLogLabel; @endphp
     <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="🔍 بحث بالمستخدم أو الوصف...">
     <select name="tag">
         <option value="">كل الوسوم</option>
         @foreach($filterTags ?? [] as $tag)
-            <option value="{{ $tag }}" @selected(($filters['tag'] ?? '') === $tag)>{{ $tag }}</option>
+            <option value="{{ $tag }}" @selected(($filters['tag'] ?? '') === $tag)>{{ AuditLogLabel::tag($tag) }}</option>
         @endforeach
     </select>
     <select name="action">
         <option value="">كل العمليات</option>
         @foreach($filterActions ?? [] as $action)
-            <option value="{{ $action }}" @selected(($filters['action'] ?? '') === $action)>{{ $action }}</option>
+            <option value="{{ $action }}" @selected(($filters['action'] ?? '') === $action)>{{ AuditLogLabel::action($action) }}</option>
         @endforeach
     </select>
     <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" title="من تاريخ">
@@ -28,7 +29,7 @@
                     <div class="audit-meta"><span>🖥️ IP: {{ $log->ip_address }}</span></div>
                 @endif
             </div>
-            <span class="audit-tag">{{ $log->action }} · {{ $log->tag }}</span>
+            <span class="audit-tag">{{ AuditLogLabel::badge($log->action, $log->tag) }}</span>
         </div>
     @empty
         <p style="color:var(--text-muted);padding:12px 0">لا توجد حركات مطابقة للفلتر.</p>

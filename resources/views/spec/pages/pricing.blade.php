@@ -3,10 +3,10 @@
 @endpush
 
 @php
-    use App\Enums\PricingRequestStatus;
+    use App\Support\CaseDisplayStatus;
     $requests = $spec_pricing_requests ?? collect();
-    $awaiting = $requests->filter(fn ($r) => ($r->status_key instanceof PricingRequestStatus ? $r->status_key : PricingRequestStatus::from((string) $r->status_key)) === PricingRequestStatus::AwaitingAdminApproval)->count();
-    $sent = $requests->filter(fn ($r) => ($r->status_key instanceof PricingRequestStatus ? $r->status_key : PricingRequestStatus::from((string) $r->status_key)) === PricingRequestStatus::SentToReception)->count();
+    $inPricing = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [\App\Models\CaseRecord::STAGE_COST_CALC, \App\Models\CaseRecord::STAGE_ADMIN_APPROVAL], true))->count();
+    $inProduction = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [\App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::STAGE_READY_DELIVERY], true))->count();
 @endphp
 
 <div id="analytics-pricing">
@@ -28,12 +28,12 @@
             <p class="text-2xl font-bold text-slate-800">{{ $requests->count() }}</p>
         </div>
         <div class="rounded-xl bg-amber-50 p-4">
-            <p class="text-xs text-amber-700">بانتظار موافقة الأدمن</p>
-            <p class="text-2xl font-bold text-amber-700">{{ $awaiting }}</p>
+            <p class="text-xs text-amber-700">في التسعير / الاعتماد</p>
+            <p class="text-2xl font-bold text-amber-700">{{ $inPricing }}</p>
         </div>
-        <div class="rounded-xl bg-emerald-50 p-4">
-            <p class="text-xs text-emerald-700">أُرسل للاستقبال</p>
-            <p class="text-2xl font-bold text-emerald-700">{{ $sent }}</p>
+        <div class="rounded-xl bg-cyan-50 p-4">
+            <p class="text-xs text-cyan-700">في الإنتاج</p>
+            <p class="text-2xl font-bold text-cyan-700">{{ $inProduction }}</p>
         </div>
     </div>
 
@@ -57,9 +57,8 @@
             <tbody id="pricingTable" class="divide-y divide-slate-100">
                 @forelse ($requests as $pr)
                     @php
-                        $status = $pr->status_key instanceof PricingRequestStatus
-                            ? $pr->status_key
-                            : PricingRequestStatus::from((string) $pr->status_key);
+                        $display = CaseDisplayStatus::forPricingRequest($pr);
+                        $specBadge = \App\Enums\CaseStage::specBadgeFor($pr->caseRecord?->stage_key);
                     @endphp
                     <tr data-search="{{ $pr->request_no }} {{ $pr->patient_name }}">
                         <td class="px-4 py-3">{{ $loop->iteration }}</td>
@@ -68,12 +67,8 @@
                         <td class="px-4 py-3">{{ $pr->request_date?->format('Y-m-d') }}</td>
                         <td class="px-4 py-3 text-center">{{ $pr->items_count }}</td>
                         <td class="px-4 py-3">
-                            <span class="inline-flex px-2 py-1 rounded-lg text-xs font-bold
-                                @if($status === PricingRequestStatus::AwaitingAdminApproval) bg-amber-100 text-amber-800
-                                @elseif($status === PricingRequestStatus::SentToReception) bg-emerald-100 text-emerald-800
-                                @elseif($status === PricingRequestStatus::Insufficient) bg-red-100 text-red-800
-                                @else bg-slate-100 text-slate-700 @endif">
-                                {{ $status->label() }}
+                            <span class="inline-flex px-2 py-1 rounded-lg text-xs font-bold {{ $specBadge['class'] }}">
+                                {{ $display->label }}
                             </span>
                         </td>
                     </tr>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Reports;
 
+use App\Models\AuditLog;
 use App\Models\CaseRecord;
 use App\Models\User;
 use App\Services\BiReportService;
@@ -77,5 +78,33 @@ class AdminOverviewOperationsTest extends TestCase
         $response->assertSee('موظف استقبال');
         $response->assertSee('مكتب عمليات');
         $response->assertSee('7 موظف');
+    }
+
+    public function test_overview_shows_audit_log_preview_from_database(): void
+    {
+        $mock = $this->mock(BiReportService::class);
+        $mock->shouldReceive('boardPatients')->once()->andReturn([
+            'open_count' => 0, 'sla_breached' => 0, 'sla_breached_cases' => [],
+        ]);
+        $mock->shouldReceive('boardInventory')->once()->andReturn([
+            'item_count' => 0, 'low_stock' => 0,
+        ]);
+
+        $admin = $this->userWithRole('admin');
+
+        AuditLog::create([
+            'user_id'     => $admin->id,
+            'user_name'   => $admin->name,
+            'action'      => 'create',
+            'description' => 'اختبار سجل الرقابة في النظرة العامة',
+            'tag'         => 'system',
+            'logged_at'   => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->get('/admin/overview');
+
+        $response->assertOk();
+        $response->assertSee('اختبار سجل الرقابة في النظرة العامة', false);
+        $response->assertSee('data-server-rendered="1"', false);
     }
 }

@@ -4,6 +4,7 @@
     var selectedPricingId = null;
     var casesFilter = 'waiting_return';
     var casesSearchTerm = '';
+    var adminCaseBuckets = window.__ADMIN_CASE_BUCKETS || { waiting_return: [], in_progress: [], delivered: [] };
     var catalogItems = [];
     var catalogSearchTerm = '';
     var catalogCategoryFilter = 'all';
@@ -300,12 +301,19 @@
       }
     });
 
+    function getAdminCaseBucket(key) {
+      if (adminCaseBuckets && Array.isArray(adminCaseBuckets[key])) {
+        return adminCaseBuckets[key];
+      }
+      return [];
+    }
+
     function renderOverviewCasesCounts() {
       if (document.getElementById('overviewWaitingCount') &&
           document.getElementById('overviewWaitingCount').dataset.serverRendered === '1') return;
-      var waiting = CasesWorkflow.getBucket('waiting_return').length;
-      var progress = CasesWorkflow.getBucket('in_progress').length;
-      var delivered = CasesWorkflow.getBucket('delivered').length;
+      var waiting = getAdminCaseBucket('waiting_return').length;
+      var progress = getAdminCaseBucket('in_progress').length;
+      var delivered = getAdminCaseBucket('delivered').length;
       var ow = document.getElementById('overviewWaitingCount');
       var op = document.getElementById('overviewProgressCount');
       var od = document.getElementById('overviewDeliveredCount');
@@ -315,21 +323,23 @@
     }
 
     function getFilteredCases() {
-      var list = CasesWorkflow.getBucket(casesFilter);
+      var list = getAdminCaseBucket(casesFilter);
       if (!casesSearchTerm) return list;
+      var term = casesSearchTerm.toLowerCase();
       return list.filter(function(c) {
-        return (c.patient || '').indexOf(casesSearchTerm) !== -1 ||
-          (c.quoteId || '').indexOf(casesSearchTerm) !== -1 ||
-          (CasesWorkflow.getPricingRef(c) || '').indexOf(casesSearchTerm) !== -1 ||
-          (c.company || '').indexOf(casesSearchTerm) !== -1 ||
-          (c.orderRef || '').indexOf(casesSearchTerm) !== -1;
+        return (c.patient || '').toLowerCase().indexOf(term) !== -1 ||
+          (c.quoteId || '').toLowerCase().indexOf(term) !== -1 ||
+          (c.pricingRef || '').toLowerCase().indexOf(term) !== -1 ||
+          (c.company || '').toLowerCase().indexOf(term) !== -1 ||
+          (c.orderRef || '').toLowerCase().indexOf(term) !== -1 ||
+          (c.caseNo || '').toLowerCase().indexOf(term) !== -1;
       });
     }
 
     function renderCasesSection() {
-      var waiting = CasesWorkflow.getBucket('waiting_return');
-      var progress = CasesWorkflow.getBucket('in_progress');
-      var delivered = CasesWorkflow.getBucket('delivered');
+      var waiting = getAdminCaseBucket('waiting_return');
+      var progress = getAdminCaseBucket('in_progress');
+      var delivered = getAdminCaseBucket('delivered');
       document.getElementById('casesWaitingCount').textContent = waiting.length;
       document.getElementById('casesProgressCount').textContent = progress.length;
       document.getElementById('casesDeliveredCount').textContent = delivered.length;
@@ -354,7 +364,7 @@
           hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/الورشة. التسليم للمريض يتم بعد BOM «تام» فقط.';
           hintEl.style.display = 'block';
         } else {
-          hintEl.innerHTML = 'تقرير مالي: إجمالي التكلفة، المدفوع، والمديونية المتبقية.';
+          hintEl.innerHTML = 'تقرير مالي: إجمالي التكلفة والمدفوع للحالات المسلّمة.';
           hintEl.style.display = 'block';
         }
       }
@@ -366,54 +376,52 @@
       if (casesFilter === 'waiting_return') {
         head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>رقم عرض السعر</th><th>تاريخ العرض</th><th>أيام الانتظار</th>' + pipelineCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
-          var days = CasesWorkflow.daysBetween(c.quoteDate);
+          var days = c.quoteDaysWaiting || 0;
           var daysCls = days >= 14 ? ' days-wait-badge urgent' : ' days-wait-badge';
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
             '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
             '<td>' + c.company + '</td>' +
-            '<td>' + CasesWorkflow.renderQuoteRefCell(c) + '</td>' +
+            '<td>' + (c.quoteRefHtml || c.quoteId || '—') + '</td>' +
             '<td>' + (c.quoteDate || '—') + '</td>' +
             '<td><span class="' + daysCls.trim() + '">⏱ ' + days + ' يوم</span></td>' +
-            '<td><div class="wf-pipeline">' + CasesWorkflow.renderPipeline(c) + '</div></td>' +
+            '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       } else if (casesFilter === 'in_progress') {
         head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>مرحلة الشغل</th><th>BOM</th><th>تاريخ الموافقة</th><th>إجراء</th>' + pipelineCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
-          var bom = BomInventory.getByCaseId(c.id);
-          var bomLabel = bom ? BomInventory.getStageLabel(bom.stage) : '—';
-          var bomCls = bom ? BomInventory.getStageBadgeClass(bom.stage) : 'default';
-          var canDel = BomInventory.canDeliver(c.id);
-          var actionBtn = canDel.ok
+          var bom = c.bom || null;
+          var bomLabel = bom ? bom.stageLabel : '—';
+          var bomCls = bom ? bom.badgeClass : 'default';
+          var canDel = !!c.canDeliver;
+          var actionBtn = canDel
             ? '<button type="button" class="btn-action success" onclick="deliverCase(\'' + c.id + '\')">✅ تسليم</button>'
-            : '<span class="stage-badge ' + bomCls + '" title="' + (canDel.reason || '') + '">' + bomLabel + '</span>';
+            : '<span class="stage-badge ' + bomCls + '" title="' + (c.deliverBlockReason || '') + '">' + bomLabel + '</span>';
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
             '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
             '<td>' + c.company + '</td>' +
-            '<td><span class="stage-badge progress">' + CasesWorkflow.getManufacturingLabel(c.manufacturingStage) + '</span></td>' +
+            '<td><span class="stage-badge progress">' + (c.manufacturingLabel || '—') + '</span></td>' +
             '<td><span class="stage-badge ' + bomCls + '">' + bomLabel + '</span></td>' +
             '<td>' + (c.approvalDate || '—') + '</td>' +
             '<td>' + actionBtn + '</td>' +
-            '<td><div class="wf-pipeline">' + CasesWorkflow.renderPipeline(c) + '</div></td>' +
+            '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       } else {
-        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>المدفوع</th><th>الباقي (مديونية)</th><th>تاريخ التسليم</th>' + pipelineCol + '</tr>';
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>المدفوع</th><th>تاريخ التسليم</th>' + pipelineCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
-          var remaining = Math.max(0, (c.totalCost || 0) - (c.paid || 0));
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
             '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
             '<td>' + c.company + '</td>' +
             '<td class="pricing-total-cell">' + CasesWorkflow.formatMoney(c.totalCost) + '</td>' +
             '<td style="color:#059669;font-weight:700">' + CasesWorkflow.formatMoney(c.paid) + '</td>' +
-            '<td style="color:' + (remaining > 0 ? '#dc2626' : '#059669') + ';font-weight:700">' + CasesWorkflow.formatMoney(remaining) + '</td>' +
             '<td>' + (c.deliveredAt || '—') + '</td>' +
-            '<td><div class="wf-pipeline">' + CasesWorkflow.renderPipeline(c) + '</div></td>' +
+            '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
             '</tr>';
-        }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
+        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       }
 
       refreshPaginated('casesTableBody');
@@ -426,21 +434,19 @@
         title = 'حالات بانتظار رجوع العميل';
         headers = ['المريض', 'جهة التعاقد', 'رقم عرض السعر', 'مرجع التسعير', 'تاريخ العرض', 'أيام الانتظار', 'الحالة'];
         rows = filtered.map(function(c) {
-          return [c.patient, c.company, c.quoteId, CasesWorkflow.getPricingRef(c), c.quoteDate, CasesWorkflow.daysBetween(c.quoteDate), c.stageLabel];
+          return [c.patient, c.company, c.quoteId, c.pricingRef || '—', ExportKit.formatDateForExport(c.quoteDate), c.quoteDaysWaiting || 0, c.stageLabel];
         });
       } else if (casesFilter === 'in_progress') {
         title = 'حالات تحت التنفيذ';
         headers = ['المريض', 'جهة التعاقد', 'مرحلة الشغل', 'BOM', 'تاريخ الموافقة'];
         rows = filtered.map(function(c) {
-          var bom = BomInventory.getByCaseId(c.id);
-          return [c.patient, c.company, CasesWorkflow.getManufacturingLabel(c.manufacturingStage), bom ? BomInventory.getStageLabel(bom.stage) : '—', c.approvalDate];
+          return [c.patient, c.company, c.manufacturingLabel || '—', c.bom ? c.bom.stageLabel : '—', ExportKit.formatDateForExport(c.approvalDate)];
         });
       } else {
         title = 'تقرير الحالات المسلّمة';
-        headers = ['المريض', 'جهة التعاقد', 'إجمالي التكلفة', 'المدفوع', 'الباقي', 'تاريخ التسليم'];
+        headers = ['المريض', 'جهة التعاقد', 'إجمالي التكلفة', 'المدفوع', 'تاريخ التسليم'];
         rows = filtered.map(function(c) {
-          var rem = Math.max(0, (c.totalCost || 0) - (c.paid || 0));
-          return [c.patient, c.company, c.totalCost, c.paid, rem, c.deliveredAt];
+          return [c.patient, c.company, c.totalCost, c.paid, ExportKit.formatDateForExport(c.deliveredAt)];
         });
       }
       if (type === 'excel') ExportKit.toExcel('cases-' + casesFilter, headers, rows);
@@ -448,24 +454,15 @@
     }
 
     function deliverCase(caseId) {
-      var check = BomInventory.canDeliver(caseId);
-      if (!check.ok) {
-        alert('⚠️ ' + check.reason);
-        return;
-      }
-      var c = CasesWorkflow.getById(caseId);
-      if (!c || !confirm('تأكيد تسليم الطرف للمريض:\n' + c.patient + '؟')) return;
-      var result = CasesWorkflow.onDelivered(caseId, {
-        paid: c.paid,
-        totalCost: c.totalCost
+      var c = getAdminCaseBucket('in_progress').concat(getAdminCaseBucket('delivered')).find(function(row) {
+        return String(row.id) === String(caseId);
       });
-      if (result && result.error) {
-        alert('⚠️ ' + result.error);
+      if (!c || !c.canDeliver) {
+        alert('⚠️ ' + (c && c.deliverBlockReason ? c.deliverBlockReason : 'الحالة غير جاهزة للتسليم — استخدم لوحة الاستقبال'));
         return;
       }
-      renderCasesSection();
-      renderOverviewCasesCounts();
-      renderAdminAnalytics();
+      if (!confirm('تأكيد تسليم الطرف للمريض:\n' + c.patient + '؟')) return;
+      alert('التسليم يتم من لوحة الاستقبال — مسح QR المريض.');
     }
     window.deliverCase = deliverCase;
 
@@ -611,7 +608,7 @@
       meta.push(
         pricingDetailBox('الطبيب', p.doctor_name || '—'),
         pricingDetailBox('تاريخ الطلب', formatPricingDate(p.request_date)),
-        pricingDetailBox('الحالة', p.status_label || '—')
+        pricingDetailBox('الحالة', p.display_status_label || p.status_label || '—')
       );
 
       if (p.approved_by) {
@@ -1372,6 +1369,10 @@
       var logs = filtered || (limit ? auditLogs.slice(0, limit) : auditLogs);
       var container = document.getElementById(containerId);
       if (!container || container.dataset.serverRendered === '1') return;
+      if (!logs.length) {
+        container.innerHTML = '<p style="color:var(--text-muted);padding:8px 0">لا توجد حركات مسجَّلة بعد.</p>';
+        return;
+      }
       container.innerHTML = logs.map(function(log) {
         var meta = (log.ip || log.before)
           ? '<div class="audit-meta">' +

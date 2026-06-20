@@ -12,6 +12,7 @@ use App\Models\PricingRequest;
 use App\Models\StockItem;
 use App\Models\TechOrderSpec;
 use App\Services\SpecService;
+use App\Support\CaseDisplayStatus;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -152,7 +153,7 @@ class TechOrderSpecController extends Controller
     {
         $requests = $this->fetchForDashboard(
             PricingRequest::with([
-                'caseRecord:id,case_no,order_ref,stage_key,patient_type',
+                'caseRecord:id,case_no,order_ref,stage_key,patient_type,manufacturing_stage',
                 'items',
             ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
@@ -210,6 +211,8 @@ class TechOrderSpecController extends Controller
 
     private function formatPricingRequest(PricingRequest $request, bool $forSpec = false): array
     {
+        $display = CaseDisplayStatus::forPricingRequest($request);
+
         $data = $request->only([
             'id',
             'request_no',
@@ -224,12 +227,15 @@ class TechOrderSpecController extends Controller
             'status_key',
             'step',
             'status_label',
+            'display_status_label',
+            'display_status_badge_class',
         ]) + [
+            'display_status' => $display->toArray(),
             'items' => $request->relationLoaded('items')
                 ? $request->items->map->only(['stock_item_code', 'name', 'qty'])
                 : [],
             'case' => $request->relationLoaded('caseRecord') && $request->caseRecord
-                ? $request->caseRecord->only(['id', 'case_no', 'order_ref', 'stage_key', 'patient_type'])
+                ? $request->caseRecord->only(['id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'manufacturing_stage'])
                 : null,
         ];
 

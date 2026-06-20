@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\WorkflowEvent;
 use App\Exceptions\DeliveryNotReadyException;
 use App\Models\CaseRecord;
+use App\Support\CaseFinancialSummary;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -57,6 +58,10 @@ class DeliveryService
             $this->financialPostingService->post($case->fresh());
 
             $this->patientArchiveService->archiveOnDelivery($case->patient);
+
+            CaseFinancialSummary::syncOnDelivery($case->fresh());
+
+            $case->refresh();
 
             AuditService::log(
                 action:      'deliver',

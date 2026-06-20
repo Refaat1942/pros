@@ -50,16 +50,16 @@ class DatabaseSeeder extends Seeder
             StockCategorySeeder::class,
 
             // ── BI dashboard — معطّل للاختبار اليدوي على /admin/bi ──────────
-            // ContractCompanyDebtSeeder::class,
-            // SupplierSeeder::class,
-            // InventorySeeder::class,
-            // PatientSeeder::class,
-            // CaseSeeder::class,
-            // PricingSeeder::class,
-            // QuoteSeeder::class,
-            // BomSeeder::class,
-            // ReturnNoteSeeder::class,
-            // CreditNoteSeeder::class,
+            ContractCompanyDebtSeeder::class,
+            SupplierSeeder::class,
+            InventorySeeder::class,
+            PatientSeeder::class,
+            CaseSeeder::class,
+            PricingSeeder::class,
+            QuoteSeeder::class,
+            BomSeeder::class,
+            ReturnNoteSeeder::class,
+            CreditNoteSeeder::class,
         ]);
     }
 }

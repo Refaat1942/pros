@@ -6,6 +6,7 @@ use App\Enums\PricingRequestStatus;
 use App\Http\Controllers\Controller;
 use App\Models\PricingRequest;
 use App\Services\PricingService;
+use App\Support\CaseDisplayStatus;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +27,7 @@ class PricingApprovalController extends Controller
     public function index(Request $request): JsonResponse
     {
         $requests = $this->fetchForDashboard(
-            PricingRequest::with(['caseRecord:id,case_no,stage_key'])
+            PricingRequest::with(['caseRecord:id,case_no,stage_key,manufacturing_stage'])
                 ->where('status_key', PricingRequestStatus::AwaitingAdminApproval->value)
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('request_no', 'like', "%{$s}%")
@@ -57,7 +58,7 @@ class PricingApprovalController extends Controller
         $pricingRequest->load([
             'items',
             'caseRecord.patient:id,patient_code,name,phone,national_id,patient_type,rank,sovereign_entity,company_name',
-            'caseRecord:id,case_no,order_ref,stage_key,patient_type,company_name,patient_id,work_order_no',
+            'caseRecord:id,case_no,order_ref,stage_key,patient_type,company_name,patient_id,work_order_no,manufacturing_stage',
             'doctor:id,name',
         ]);
 
@@ -94,6 +95,8 @@ class PricingApprovalController extends Controller
 
     private function formatSummary(PricingRequest $request): array
     {
+        $display = CaseDisplayStatus::forPricingRequest($request);
+
         return $request->only([
             'id',
             'request_no',
@@ -107,7 +110,10 @@ class PricingApprovalController extends Controller
             'status_key',
             'step',
             'status_label',
+            'display_status_label',
+            'display_status_badge_class',
         ]) + [
+            'display_status' => $display->toArray(),
             'case' => $request->relationLoaded('caseRecord') ? $request->caseRecord : null,
         ];
     }

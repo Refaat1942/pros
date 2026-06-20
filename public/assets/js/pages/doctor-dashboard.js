@@ -23,7 +23,11 @@
 
     function normalizeRec(item) {
       if (typeof item === 'string') return { name: item, qty: 1 };
-      return { name: item.name, qty: item.qty || item.selectedQty || 1, code: item.code };
+      return {
+        name: item.name,
+        qty: item.qty || item.selectedQty || 1,
+        code: item.code || item.stock_item_code || ''
+      };
     }
 
     function resolveRecCode(name, code) {
@@ -109,9 +113,11 @@
       }).join('');
     }
 
-    function formatTransferStatusMeta(status) {
-      if (status === 'مكتمل') return '<span class="record-status-done">✅ مكتمل</span>';
-      if (status.indexOf('ورشة') !== -1) return '<span class="record-status-transfer" style="color:var(--primary)">🏭 في الورشة</span>';
+    function formatTransferStatusMeta(status, statusGroup) {
+      if (statusGroup === 'مكتمل' || status === 'مكتمل') return '<span class="record-status-done">✅ مكتمل</span>';
+      if (statusGroup === 'في الورشة' || (status && status.indexOf('التصنيع') !== -1)) {
+        return '<span class="record-status-transfer" style="color:var(--primary)">🏭 في الورشة</span>';
+      }
       return '<span class="record-status-transfer">⚙️ قيد التوصيف</span>';
     }
 
@@ -120,15 +126,23 @@
       if (!item) return;
 
       var linkedRecord = medicalRecords.find(function(r) { return r.name === item.name; });
+      var diagnosis = item.diagnosis || (linkedRecord && linkedRecord.diagnosis) || '';
+      var prescription = item.prescription || (linkedRecord && linkedRecord.prescription) || '';
 
       document.getElementById('recordModalTitle').textContent = item.name;
-      document.getElementById('recordModalMeta').innerHTML = formatTransferStatusMeta(item.status);
+      document.getElementById('recordModalMeta').innerHTML = formatTransferStatusMeta(item.status, item.statusGroup);
 
       var recRows = buildRecommendationRows(item.recommendations);
-      var diagnosisBlock = linkedRecord && linkedRecord.diagnosis
+      var diagnosisBlock = diagnosis
         ? '<div class="record-modal-section">' +
             '<h4>التشخيص الدقيق</h4>' +
-            '<div class="record-diagnosis-text">' + escHtml(linkedRecord.diagnosis) + '</div>' +
+            '<div class="record-diagnosis-text">' + escHtml(diagnosis) + '</div>' +
+          '</div>'
+        : '';
+      var prescriptionBlock = prescription
+        ? '<div class="record-modal-section">' +
+            '<h4>الروشتة الطبية</h4>' +
+            '<div class="record-diagnosis-text">' + escHtml(prescription) + '</div>' +
           '</div>'
         : '';
 
@@ -139,8 +153,9 @@
           '<div class="record-detail-item"><div class="label">الحالة</div><div class="value">' + escHtml(item.status) + '</div></div>' +
         '</div>' +
         diagnosisBlock +
+        prescriptionBlock +
         '<div class="record-modal-section">' +
-          '<h4>الأصناف المحولة</h4>' +
+          '<h4>التوصيات الطبية</h4>' +
           '<table class="record-rec-table">' +
             '<thead><tr><th>الصنف</th><th>الكود</th><th>الكمية</th></tr></thead>' +
             '<tbody>' + (recRows || '<tr><td colspan="3">—</td></tr>') + '</tbody>' +
@@ -150,31 +165,34 @@
       document.getElementById('recordDetailModal').classList.add('open');
     }
 
+    function formatRecordViewButton(recordIdx) {
+      return '<button type="button" class="btn btn-secondary btn-record-view" style="padding:6px 12px;font-size:12px;" data-record-idx="' + recordIdx + '">عرض</button>';
+    }
+
     function openRecordModal(recordIdx) {
       var record = medicalRecords[recordIdx];
       if (!record) return;
 
+      var tm = ptMeta(record.patientType);
       document.getElementById('recordModalTitle').textContent = record.name;
-      document.getElementById('recordModalMeta').innerHTML = formatRecordStatusMeta(record);
-
-      var recRows = buildRecommendationRows(record.recommendations);
+      document.getElementById('recordModalMeta').innerHTML =
+        '<span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span> · ' + escHtml(record.date);
 
       document.getElementById('recordModalBody').innerHTML =
         '<div class="record-detail-grid">' +
-          '<div class="record-detail-item"><div class="label">الطبيب</div><div class="value">' + escHtml(record.doctor) + '</div></div>' +
-          '<div class="record-detail-item"><div class="label">التاريخ</div><div class="value">' + escHtml(record.date) + '</div></div>' +
+          '<div class="record-detail-item"><div class="label">رقم الهاتف</div><div class="value" style="direction:ltr;text-align:right;">' + escHtml(record.phone || '—') + '</div></div>' +
+          '<div class="record-detail-item"><div class="label">الرقم القومي</div><div class="value" style="direction:ltr;text-align:right;">' + escHtml(record.nationalId || '—') + '</div></div>' +
           '<div class="record-detail-item"><div class="label">جهة التعاقد</div><div class="value">' + escHtml(record.company || '—') + '</div></div>' +
+          '<div class="record-detail-item"><div class="label">الطبيب المعالج</div><div class="value">' + escHtml(record.doctor) + '</div></div>' +
+          '<div class="record-detail-item"><div class="label">تاريخ التقرير</div><div class="value">' + escHtml(record.date) + '</div></div>' +
         '</div>' +
         '<div class="record-modal-section">' +
           '<h4>التشخيص الدقيق</h4>' +
           '<div class="record-diagnosis-text">' + escHtml(record.diagnosis || '—') + '</div>' +
         '</div>' +
         '<div class="record-modal-section">' +
-          '<h4>التوصيات الطبية</h4>' +
-          '<table class="record-rec-table">' +
-            '<thead><tr><th>الصنف</th><th>الكود</th><th>الكمية</th></tr></thead>' +
-            '<tbody>' + (recRows || '<tr><td colspan="3">—</td></tr>') + '</tbody>' +
-          '</table>' +
+          '<h4>الروشتة الطبية</h4>' +
+          '<div class="record-diagnosis-text">' + escHtml(record.prescription || '—') + '</div>' +
         '</div>';
 
       document.getElementById('recordDetailModal').classList.add('open');
@@ -246,12 +264,94 @@
       });
     }
 
+    function formatRecordSummary(record) {
+      if (record.recommendations && record.recommendations.length) {
+        return formatRecommendations(record.recommendations);
+      }
+      if (record.diagnosis) {
+        var d = record.diagnosis.trim();
+        return '<span>' + escHtml(d.length > 80 ? d.slice(0, 80) + '…' : d) + '</span>';
+      }
+      return '—';
+    }
+
+    function displayDateFromIso(iso) {
+      if (!iso) return '—';
+      var parts = String(iso).split('T')[0].split('-');
+      if (parts.length !== 3) return String(iso);
+      return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+
+    function mapRecordFromApi(row) {
+      var items = (row.items || []).map(function(item) {
+        return {
+          name: item.name,
+          code: item.stock_item_code,
+          qty: item.qty || 1
+        };
+      });
+
+      return {
+        id: row.id,
+        name: row.patient_name || '—',
+        phone: row.phone || '—',
+        nationalId: row.national_id || '',
+        company: row.company_name || '—',
+        patientType: row.patient_type || 'civilian',
+        diagnosis: row.diagnosis || '',
+        prescription: row.prescription || '',
+        recommendations: items,
+        doctor: row.doctor_name || '—',
+        date: displayDateFromIso(row.record_date),
+        status: row.status || 'معتمد',
+        locked: !!row.locked
+      };
+    }
+
+    function fetchRecordsFromServer(callback) {
+      return fetch('/doctor/records/list', {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      })
+        .then(function(res) {
+          if (!res.ok) throw new Error('records list failed');
+          return res.json();
+        })
+        .then(function(payload) {
+          medicalRecords = (payload.data || []).map(mapRecordFromApi);
+          window.__MEDICAL_RECORDS = payload.data || [];
+          if (callback) callback();
+        })
+        .catch(function(err) {
+          console.error('fetchRecordsFromServer', err);
+          if (callback) callback();
+        });
+    }
+
+    function loadRecords() {
+      if (Array.isArray(window.__MEDICAL_RECORDS)) {
+        medicalRecords = window.__MEDICAL_RECORDS.map(mapRecordFromApi);
+        renderRecords();
+      }
+
+      fetchRecordsFromServer(function () {
+        renderRecords();
+      });
+    }
+
     function getFilteredRecords() {
       var search = (document.getElementById('recordsSearch') || {}).value || '';
       search = search.trim();
       return medicalRecords.filter(function(r) {
         var recText = recommendationsText(r.recommendations);
-        return !search || r.name.indexOf(search) !== -1 || recText.indexOf(search) !== -1;
+        return !search
+          || r.name.indexOf(search) !== -1
+          || (r.phone && r.phone.indexOf(search) !== -1)
+          || recText.indexOf(search) !== -1
+          || (r.diagnosis && r.diagnosis.indexOf(search) !== -1);
       });
     }
 
@@ -261,7 +361,7 @@
       search = search.trim();
       return transferred.filter(function(t) {
         var ms = !search || t.name.indexOf(search) !== -1 || t.company.indexOf(search) !== -1;
-        var mst = status === 'all' || t.status === status;
+        var mst = status === 'all' || t.statusGroup === status;
         return ms && mst;
       });
     }
@@ -276,11 +376,29 @@
       else ExportKit.toPDF('قائمة الانتظار الرقمية', headers, rows);
     }
 
+    function bindRecordViewButtons(root) {
+      root = root || document.getElementById('recordsTable');
+      if (!root) return;
+      root.querySelectorAll('.btn-record-view').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var idx = parseInt(btn.getAttribute('data-record-idx'), 10);
+          if (!isNaN(idx) && idx >= 0) {
+            openRecordModal(idx);
+            return;
+          }
+          var id = parseInt(btn.getAttribute('data-record-id'), 10);
+          var found = medicalRecords.findIndex(function(r) { return r.id === id; });
+          if (found !== -1) openRecordModal(found);
+        });
+      });
+    }
+
     function exportRecords(type) {
       var data = getFilteredRecords();
-      var headers = ['المريض', 'التوصيات الطبية', 'الطبيب', 'التاريخ', 'الحالة'];
+      var headers = ['المريض', 'رقم الهاتف', 'التشخيص', 'الروشتة', 'الطبيب', 'التاريخ'];
       var rows = data.map(function(r) {
-        return [r.name, recommendationsText(r.recommendations), r.doctor, r.date, getRecordStatus(r)];
+        return [r.name, r.phone || '—', r.diagnosis || '—', r.prescription || '—', r.doctor, r.date];
       });
       if (type === 'excel') ExportKit.toExcel('السجل_الطبي', headers, rows);
       else ExportKit.toPDF('السجل الطبي — التقارير المعتمدة', headers, rows);
@@ -300,50 +418,132 @@
       var table = document.getElementById('recordsTable');
       if (!table) return;
       var filtered = getFilteredRecords();
-      table.innerHTML = filtered.map(function(r) {
+      table.innerHTML = filtered.length
+        ? filtered.map(function(r) {
         var idx = medicalRecords.indexOf(r);
-        return '<tr class="record-row-clickable" data-record-idx="' + idx + '" title="عرض التفاصيل">' +
-          '<td><strong>' + r.name + '</strong></td>' +
-          '<td><div class="rec-list">' + formatRecommendations(r.recommendations) + '</div></td>' +
-          '<td>' + r.doctor + '</td>' +
-          '<td>' + r.date + '</td>' +
-          '<td>' + formatRecordStatusBadge(r, idx) + '</td>' +
+        return '<tr data-record-id="' + (r.id || '') + '">' +
+          '<td><strong>' + escHtml(r.name) + '</strong></td>' +
+          '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + escHtml(r.phone || '—') + '</td>' +
+          '<td><div class="rec-list">' + formatRecordSummary(r) + '</div></td>' +
+          '<td>' + escHtml(r.doctor) + '</td>' +
+          '<td>' + escHtml(r.date) + '</td>' +
+          '<td>' + formatRecordViewButton(idx) + '</td>' +
           '</tr>';
-      }).join('');
+      }).join('')
+        : '<tr class="pagination-empty-row"><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد تقارير معتمدة بعد — سيظهر المريض هنا بعد حفظ واعتماد التشخيص.</td></tr>';
 
-      document.getElementById('recordsTable').querySelectorAll('tr[data-record-idx]').forEach(function(row) {
-        row.addEventListener('click', function(e) {
-          if (e.target.closest('.btn-record-transfer')) return;
-          openRecordModal(parseInt(row.getAttribute('data-record-idx'), 10));
-        });
-      });
-
-      document.getElementById('recordsTable').querySelectorAll('.btn-record-transfer').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          transferRecordToInventory(parseInt(btn.getAttribute('data-record-idx'), 10));
-        });
-      });
+      bindRecordViewButtons(table);
 
       var rc = document.getElementById('recordsCount');
-      if (rc) rc.textContent = filtered.length + ' تقارير';
+      if (rc) rc.textContent = filtered.length + ' تقرير';
+      var rhc = document.getElementById('recordsHeaderCount');
+      if (rhc) rhc.textContent = filtered.length + ' تقرير';
       if (window.TablePagination) TablePagination.refreshById('recordsTable');
+    }
+
+    function initServerRecordsRows() {
+      bindRecordViewButtons(document.getElementById('recordsTable'));
+    }
+
+    function mapTransferFromApi(row) {
+      return {
+        id: row.id,
+        caseNo: row.case_no || '',
+        name: row.name || '—',
+        company: row.company || '—',
+        patientType: row.patient_type || 'civilian',
+        date: row.date || '—',
+        status: row.status || '—',
+        statusGroup: row.status_group || 'قيد التوصيف',
+        diagnosis: row.diagnosis || '',
+        prescription: row.prescription || '',
+        diagnosis: row.diagnosis || '',
+        prescription: row.prescription || '',
+        recommendations: (row.recommendations || []).map(function(item) {
+          return { name: item.name, code: item.code, qty: item.qty || 1 };
+        })
+      };
+    }
+
+    function fetchTransfersFromServer(callback) {
+      return fetch('/doctor/transfer/list', {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      })
+        .then(function(res) {
+          if (!res.ok) throw new Error('transfer list failed');
+          return res.json();
+        })
+        .then(function(payload) {
+          transferred = (payload.data || []).map(mapTransferFromApi);
+          window.__TRANSFERRED_CASES = payload.data || [];
+          if (callback) callback();
+        })
+        .catch(function(err) {
+          console.error('fetchTransfersFromServer', err);
+          if (callback) callback();
+        });
+    }
+
+    function updateTransferAnalytics() {
+      var root = document.getElementById('analytics-transfer');
+      if (!root) return;
+      var values = root.querySelectorAll('.ck-stat-value');
+      var total = transferred.length;
+      var spec = transferred.filter(function(t) { return t.statusGroup === 'قيد التوصيف'; }).length;
+      var workshop = transferred.filter(function(t) { return t.statusGroup === 'في الورشة'; }).length;
+      var done = transferred.filter(function(t) { return t.statusGroup === 'مكتمل'; }).length;
+      if (values[0]) values[0].textContent = String(total);
+      if (values[1]) values[1].textContent = String(spec);
+      if (values[2]) values[2].textContent = String(workshop);
+      if (values[3]) values[3].textContent = String(done);
+    }
+
+    function loadTransfers() {
+      if (Array.isArray(window.__TRANSFERRED_CASES)) {
+        transferred = window.__TRANSFERRED_CASES.map(mapTransferFromApi);
+        renderTransferred();
+        updateTransferAnalytics();
+      }
+
+      fetchTransfersFromServer(function() {
+        renderTransferred();
+        updateTransferAnalytics();
+      });
+    }
+
+    function initServerTransferRows() {
+      var tbody = document.getElementById('transferredTable');
+      if (!tbody || tbody.dataset.serverRendered !== '1') return;
+
+      tbody.querySelectorAll('tr.record-row-clickable[data-transfer-id]').forEach(function(row) {
+        row.addEventListener('click', function() {
+          var id = parseInt(row.getAttribute('data-transfer-id'), 10);
+          var idx = transferred.findIndex(function(t) { return t.id === id; });
+          if (idx !== -1) openTransferModal(idx);
+        });
+      });
     }
 
     function renderTransferred() {
       var table = document.getElementById('transferredTable');
       if (!table) return;
       var filtered = getFilteredTransferred();
-      table.innerHTML = filtered.map(function(t) {
+      table.innerHTML = filtered.length
+        ? filtered.map(function(t) {
         var idx = transferred.indexOf(t);
-        return '<tr class="record-row-clickable" data-transfer-idx="' + idx + '" title="عرض التفاصيل">' +
-          '<td><strong>' + t.name + '</strong></td>' +
-          '<td><div class="rec-list">' + formatRecommendations(t.recommendations) + '</div></td>' +
-          '<td>' + t.company + '</td>' +
-          '<td>' + t.date + '</td>' +
-          '<td><span class="priority-badge normal">' + t.status + '</span></td>' +
+        return '<tr class="record-row-clickable" data-transfer-idx="' + idx + '" data-transfer-id="' + (t.id || '') + '" title="عرض التفاصيل">' +
+          '<td><strong>' + escHtml(t.name) + '</strong></td>' +
+          '<td><div class="rec-list">' + formatTransferSummary(t) + '</div></td>' +
+          '<td>' + escHtml(t.company) + '</td>' +
+          '<td>' + escHtml(t.date) + '</td>' +
+          '<td><span class="priority-badge normal">' + escHtml(t.status) + '</span></td>' +
           '</tr>';
-      }).join('');
+      }).join('')
+        : '<tr class="pagination-empty-row"><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد حالات محوّلة بعد — تظهر هنا بعد اعتماد التشخيص وتحويل الحالة للتوصيف الفني.</td></tr>';
 
       table.querySelectorAll('tr[data-transfer-idx]').forEach(function(row) {
         row.addEventListener('click', function() {
@@ -356,6 +556,14 @@
       var tc = document.getElementById('transferCount');
       if (tc) tc.textContent = filtered.length + ' حالة';
       if (window.TablePagination) TablePagination.refreshById('transferredTable');
+      updateTransferAnalytics();
+    }
+
+    function formatTransferSummary(item) {
+      if (item.recommendations && item.recommendations.length) {
+        return formatRecommendations(item.recommendations);
+      }
+      return '—';
     }
 
     function initServerQueueRows() {
@@ -510,9 +718,9 @@
           return res.json();
         })
         .then(function() {
-          showToast('تم حفظ واعتماد التقرير — تحويل للتوصيف الفني');
+          showToast('تم التحويل للتوصيف');
           setTimeout(function() {
-            window.location.href = dashboardPageUrl('queue');
+            window.location.href = dashboardPageUrl('records');
           }, 700);
         })
         .catch(function(err) {
@@ -634,6 +842,8 @@
     }
     renderDoctorAnalytics();
     initServerQueueRows();
+    initServerRecordsRows();
+    initServerTransferRows();
     if (document.getElementById('queueTable')) renderQueue();
-    if (document.getElementById('recordsTable')) renderRecords();
-    if (document.getElementById('transferredTable')) renderTransferred();
+    if (document.getElementById('recordsTable')) loadRecords();
+    if (document.getElementById('transferredTable')) loadTransfers();

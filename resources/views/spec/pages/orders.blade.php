@@ -135,7 +135,7 @@
 <div id="catalogModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="font-bold text-slate-800">🔍 اختيار صنف من الكatalog</h3>
+            <h3 class="font-bold text-slate-800">🔍 اختيار صنف من الكاتلوج</h3>
             <button type="button" id="closeCatalogModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
         </div>
         <div class="p-4 border-b border-slate-100">

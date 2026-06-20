@@ -1,5 +1,6 @@
 @php
     use App\Enums\PricingRequestStatus;
+    use App\Support\CaseDisplayStatus;
     $requests = $pricing_requests ?? collect();
     $awaiting = $requests->filter(fn ($r) => $r->status_key === PricingRequestStatus::AwaitingAdminApproval)->count();
 @endphp
@@ -14,8 +15,6 @@
             <select id="pricingApprovalFilter">
                 <option value="awaiting_admin_approval">بانتظار الاعتماد</option>
                 <option value="sent_to_reception">تم الإرسال للاستقبال</option>
-                <option value="processing">جاري الاحتساب</option>
-                <option value="insufficient">غير كافٍ</option>
                 <option value="all">الكل</option>
             </select>
             <span class="toolbar-count" id="pricingApprovalCount">{{ $awaiting }} طلب</span>
@@ -39,6 +38,7 @@
                             $status = $pr->status_key instanceof PricingRequestStatus
                                 ? $pr->status_key
                                 : PricingRequestStatus::from((string) $pr->status_key);
+                            $display = CaseDisplayStatus::forPricingRequest($pr);
                         @endphp
                         @php
                             $isMilitaryAutoApproved = $pr->patient_type === 'military'
@@ -59,7 +59,7 @@
                             <td>{{ $pr->request_date?->format('Y-m-d') ?? '—' }}</td>
                             <td>{{ $pr->items_count }}</td>
                             <td>
-                                <span class="{{ $status->badgeClass() }}">{{ $status->label() }}</span>
+                                <span class="{{ $display->badgeClass }}">{{ $display->label }}</span>
                                 @if($isMilitaryAutoApproved)
                                     <span style="display:block;font-size:10px;color:#4f46e5;margin-top:2px;">مسار عسكري — تجاوز الاعتماد</span>
                                 @endif

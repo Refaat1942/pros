@@ -18,7 +18,9 @@ use App\Enums\PricingRequestStatus;
 use App\Models\ApprovalContract;
 use App\Models\MilitaryDebt;
 use App\Models\Patient;
+use App\Services\AdminCaseTrackingService;
 use App\Services\BomService;
+use App\Services\DoctorTransferService;
 use App\Services\StockCatalogService;
 
 /**
@@ -37,6 +39,7 @@ class DashboardPageDataService
             'admin.catalog'         => $this->adminCatalog(),
             'admin.suppliers'       => $this->adminSuppliers(),
             'admin.pricing'         => $this->adminPricing(),
+            'admin.cases'           => $this->adminCases(),
             'admin.contracts'       => $this->contractsPage(isAdmin: true),
             'admin.military-debts'  => $this->adminMilitaryDebts(),
             'reception.appointments'=> $this->receptionAppointments(),
@@ -45,6 +48,8 @@ class DashboardPageDataService
             'reception.contracts'   => $this->contractsPage(isAdmin: false),
             'doctor.queue'          => $this->doctorQueue(),
             'doctor.diagnosis'      => $this->doctorDiagnosis(),
+            'doctor.records'        => $this->doctorRecords(),
+            'doctor.transfer'       => $this->doctorTransfers(),
             'spec.orders'           => $this->specOrders(),
             'spec.pricing'          => $this->specPricing(),
             'spec.spec'             => $this->specPreview(),
@@ -151,7 +156,7 @@ class DashboardPageDataService
     {
         return [
             'pricing_requests' => PricingRequest::query()
-                ->with(['caseRecord:id,case_no,stage_key'])
+                ->with(['caseRecord:id,case_no,stage_key,manufacturing_stage'])
                 ->whereIn('status_key', [
                     PricingRequestStatus::AwaitingAdminApproval->value,
                     PricingRequestStatus::SentToReception->value,
@@ -161,6 +166,20 @@ class DashboardPageDataService
                 ->orderByDesc('request_date')
                 ->orderByDesc('id')
                 ->get(),
+        ];
+    }
+
+    private function adminCases(): array
+    {
+        $buckets = app(AdminCaseTrackingService::class)->buckets();
+
+        return [
+            'admin_case_buckets' => [
+                'waiting_return' => $buckets['waiting_return']->all(),
+                'in_progress'    => $buckets['in_progress']->all(),
+                'delivered'      => $buckets['delivered']->all(),
+            ],
+            'admin_case_counts' => $buckets['counts'],
         ];
     }
 
@@ -285,6 +304,51 @@ class DashboardPageDataService
         ];
     }
 
+    private function doctorRecords(): array
+    {
+        $records = MedicalRecord::query()
+            ->with(['items', 'patient:id,phone'])
+            ->where('locked', true)
+            ->orderByDesc('record_date')
+            ->orderByDesc('id')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get()
+            ->map(fn (MedicalRecord $record) => [
+                'id'             => $record->id,
+                'patient_id'     => $record->patient_id,
+                'appointment_id' => $record->appointment_id,
+                'case_id'        => $record->case_id,
+                'patient_name'   => $record->patient_name,
+                'phone'          => $record->patient?->phone,
+                'national_id'    => $record->national_id,
+                'company_name'   => $record->company_name,
+                'patient_type'   => $record->patient_type,
+                'diagnosis'      => $record->diagnosis,
+                'prescription'   => $record->prescription,
+                'doctor_name'    => $record->doctor_name,
+                'record_date'    => $record->record_date?->toDateString(),
+                'status'         => $record->status,
+                'locked'         => $record->locked,
+                'items'          => $record->items->map(fn ($item) => $item->only([
+                    'stock_item_code', 'name', 'qty',
+                ]))->values(),
+            ]);
+
+        return ['medical_records' => $records];
+    }
+
+    private function doctorTransfers(): array
+    {
+        $service = app(DoctorTransferService::class);
+        $rows    = $service->list();
+        $stats   = $service->stats($rows);
+
+        return [
+            'transferred_cases' => $rows,
+            'transfer_stats'    => $stats,
+        ];
+    }
+
     private function specOrders(): array
     {
         $cases = CaseRecord::query()
@@ -311,21 +375,21 @@ class DashboardPageDataService
     private function specPricing(): array
     {
         $requests = PricingRequest::query()
-            ->with('caseRecord:id,case_no,order_ref,stage_key')
+            ->with('caseRecord:id,case_no,order_ref,stage_key,manufacturing_stage')
             ->orderByDesc('request_date')
             ->orderByDesc('id')
             ->limit(100)
             ->get();
 
-        $awaiting = $requests->filter(fn ($r) => $r->status_key === PricingRequestStatus::AwaitingAdminApproval)->count();
-        $sent     = $requests->filter(fn ($r) => $r->status_key === PricingRequestStatus::SentToReception)->count();
+        $inPricing = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [CaseRecord::STAGE_COST_CALC, CaseRecord::STAGE_ADMIN_APPROVAL], true))->count();
+        $inProduction = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [CaseRecord::STAGE_MANUFACTURING, CaseRecord::STAGE_READY_DELIVERY], true))->count();
 
         return [
             'spec_pricing_requests' => $requests,
             'spec_pricing_stats'    => [
                 ['icon' => '📋', 'label' => 'طلبات', 'value' => (string) $requests->count(), 'bg' => 'rgba(217,119,6,0.1)'],
-                ['icon' => '⏳', 'label' => 'انتظار موافقة الأدمن', 'value' => (string) $awaiting, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-                ['icon' => '✅', 'label' => 'جاهز للاستقبال', 'value' => (string) $sent, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '⏳', 'label' => 'في التسعير / الاعتماد', 'value' => (string) $inPricing, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => '🏭', 'label' => 'في الإنتاج', 'value' => (string) $inProduction, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '🔩', 'label' => 'متوسط البنود', 'value' => $requests->count() ? (string) round($requests->avg('items_count')) : '0', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
         ];

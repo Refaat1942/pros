@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PricingRequestStatus;
+use App\Support\CaseDisplayStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,6 +48,8 @@ class PricingRequest extends Model
 
     protected $appends = [
         'status_label',
+        'display_status_label',
+        'display_status_badge_class',
     ];
 
     /**
@@ -58,6 +61,20 @@ class PricingRequest extends Model
             fn (): string => $this->status_key instanceof PricingRequestStatus
                 ? $this->status_key->label()
                 : PricingRequestStatus::from((string) $this->status_key)->label()
+        );
+    }
+
+    protected function displayStatusLabel(): Attribute
+    {
+        return Attribute::get(
+            fn (): string => CaseDisplayStatus::forPricingRequest($this)->label
+        );
+    }
+
+    protected function displayStatusBadgeClass(): Attribute
+    {
+        return Attribute::get(
+            fn (): string => CaseDisplayStatus::forPricingRequest($this)->badgeClass
         );
     }
 

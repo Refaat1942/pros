@@ -42,4 +42,57 @@ enum CaseStage: string
 
         return self::tryFrom($key)?->label() ?? $key;
     }
+
+    public function badgeClass(): string
+    {
+        return self::badgeClassFor($this->value);
+    }
+
+    public static function badgeClassFor(?string $key): string
+    {
+        return match ($key) {
+            self::Reception->value,
+            self::Exam->value       => 'badge-info',
+            self::Technical->value  => 'badge-info',
+            self::CostCalc->value   => 'badge-warning',
+            self::AdminApproval->value => 'badge-warning',
+            self::Quote->value,
+            self::WaitingReturn->value => 'badge-warning',
+            self::Manufacturing->value => 'badge-info',
+            self::ReadyDelivery->value => 'badge-success',
+            self::Delivered->value  => 'badge-success',
+            default                 => 'badge-secondary',
+        };
+    }
+
+    /** @return array{class: string, bg: string, text: string} */
+    public static function specBadgeFor(?string $key): array
+    {
+        return match ($key) {
+            self::CostCalc->value,
+            self::AdminApproval->value,
+            self::Quote->value,
+            self::WaitingReturn->value => [
+                'class' => 'bg-amber-100 text-amber-800',
+                'bg'    => 'bg-amber-100',
+                'text'  => 'text-amber-800',
+            ],
+            self::Manufacturing->value => [
+                'class' => 'bg-cyan-100 text-cyan-800',
+                'bg'    => 'bg-cyan-100',
+                'text'  => 'text-cyan-800',
+            ],
+            self::ReadyDelivery->value,
+            self::Delivered->value => [
+                'class' => 'bg-emerald-100 text-emerald-800',
+                'bg'    => 'bg-emerald-100',
+                'text'  => 'text-emerald-800',
+            ],
+            default => [
+                'class' => 'bg-slate-100 text-slate-700',
+                'bg'    => 'bg-slate-100',
+                'text'  => 'text-slate-700',
+            ],
+        };
+    }
 }

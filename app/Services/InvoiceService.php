@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CaseRecord;
 use App\Models\Patient;
+use App\Support\CaseFinancialSummary;
 
 /**
  * إصدار الفاتورة التجارية الختامية عند التسليم — مدني فقط.
@@ -29,7 +30,7 @@ class InvoiceService
             ];
         }
 
-        $total = (float) ($case->quote_total ?? 0);
+        $total = CaseFinancialSummary::totalCost($case->loadMissing(['pricingRequest', 'bom.items']));
 
         if ($total <= 0) {
             abort(422, 'لا يمكن إصدار فاتورة — مبلغ العرض غير صالح.');
@@ -40,6 +41,7 @@ class InvoiceService
         CaseRecord::where('id', $case->id)->update([
             'invoice_no'    => $invoiceNo,
             'invoice_total' => $total,
+            'total_cost'    => $total,
         ]);
 
         AuditService::log(
