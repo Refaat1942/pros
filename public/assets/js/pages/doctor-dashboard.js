@@ -102,17 +102,6 @@
       showToast('تم تحويل ' + record.name + ' إلى المخزون');
     }
 
-    function buildRecommendationRows(recommendations) {
-      return (recommendations || []).map(function(item) {
-        var n = normalizeRec(item);
-        return '<tr>' +
-          '<td><strong>' + escHtml(n.name) + '</strong></td>' +
-          '<td>' + escHtml(resolveRecCode(n.name, n.code)) + '</td>' +
-          '<td>' + n.qty + '</td>' +
-          '</tr>';
-      }).join('');
-    }
-
     function formatTransferStatusMeta(status, statusGroup) {
       if (statusGroup === 'مكتمل' || status === 'مكتمل') return '<span class="record-status-done">✅ مكتمل</span>';
       if (statusGroup === 'في الورشة' || (status && status.indexOf('التصنيع') !== -1)) {
@@ -132,7 +121,6 @@
       document.getElementById('recordModalTitle').textContent = item.name;
       document.getElementById('recordModalMeta').innerHTML = formatTransferStatusMeta(item.status, item.statusGroup);
 
-      var recRows = buildRecommendationRows(item.recommendations);
       var diagnosisBlock = diagnosis
         ? '<div class="record-modal-section">' +
             '<h4>التشخيص الدقيق</h4>' +
@@ -153,14 +141,7 @@
           '<div class="record-detail-item"><div class="label">الحالة</div><div class="value">' + escHtml(item.status) + '</div></div>' +
         '</div>' +
         diagnosisBlock +
-        prescriptionBlock +
-        '<div class="record-modal-section">' +
-          '<h4>التوصيات الطبية</h4>' +
-          '<table class="record-rec-table">' +
-            '<thead><tr><th>الصنف</th><th>الكود</th><th>الكمية</th></tr></thead>' +
-            '<tbody>' + (recRows || '<tr><td colspan="3">—</td></tr>') + '</tbody>' +
-          '</table>' +
-        '</div>';
+        prescriptionBlock;
 
       document.getElementById('recordDetailModal').classList.add('open');
     }
@@ -224,7 +205,7 @@
       queue: 'العيادة الطبية — قائمة الانتظار',
       diagnosis: 'التشخيص الطبي — إدخال التقرير',
       records: 'السجل الطبي — التقارير المعتمدة',
-      transfer: 'الحالات المحولة للمخزون'
+      transfer: 'الحالات المحولة للتوصيف'
     };
 
     function dashboardPageUrl(page) {
@@ -406,12 +387,12 @@
 
     function exportTransferred(type) {
       var data = getFilteredTransferred();
-      var headers = ['المريض', 'التوصيات الطبية', 'الجهة', 'تاريخ التحويل', 'الحالة'];
+      var headers = ['المريض', 'الجهة', 'تاريخ التحويل', 'الحالة'];
       var rows = data.map(function(t) {
-        return [t.name, recommendationsText(t.recommendations), t.company, t.date, t.status];
+        return [t.name, t.company, t.date, t.status];
       });
-      if (type === 'excel') ExportKit.toExcel('المحولون_للمخزون', headers, rows);
-      else ExportKit.toPDF('الحالات المحولة للمخزون', headers, rows);
+      if (type === 'excel') ExportKit.toExcel('المحولون_للتوصيف', headers, rows);
+      else ExportKit.toPDF('الحالات المحولة للتوصيف', headers, rows);
     }
 
     function renderRecords() {
@@ -537,13 +518,12 @@
         var idx = transferred.indexOf(t);
         return '<tr class="record-row-clickable" data-transfer-idx="' + idx + '" data-transfer-id="' + (t.id || '') + '" title="عرض التفاصيل">' +
           '<td><strong>' + escHtml(t.name) + '</strong></td>' +
-          '<td><div class="rec-list">' + formatTransferSummary(t) + '</div></td>' +
           '<td>' + escHtml(t.company) + '</td>' +
           '<td>' + escHtml(t.date) + '</td>' +
           '<td><span class="priority-badge normal">' + escHtml(t.status) + '</span></td>' +
           '</tr>';
       }).join('')
-        : '<tr class="pagination-empty-row"><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد حالات محوّلة بعد — تظهر هنا بعد اعتماد التشخيص وتحويل الحالة للتوصيف الفني.</td></tr>';
+        : '<tr class="pagination-empty-row"><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد حالات محوّلة بعد — تظهر هنا بعد اعتماد التشخيص وتحويل الحالة للتوصيف الفني.</td></tr>';
 
       table.querySelectorAll('tr[data-transfer-idx]').forEach(function(row) {
         row.addEventListener('click', function() {
@@ -557,13 +537,6 @@
       if (tc) tc.textContent = filtered.length + ' حالة';
       if (window.TablePagination) TablePagination.refreshById('transferredTable');
       updateTransferAnalytics();
-    }
-
-    function formatTransferSummary(item) {
-      if (item.recommendations && item.recommendations.length) {
-        return formatRecommendations(item.recommendations);
-      }
-      return '—';
     }
 
     function initServerQueueRows() {

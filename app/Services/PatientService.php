@@ -30,9 +30,17 @@ class PatientService
             $patientQr   = $this->patientQrService->generate($patientCode);
 
             $companyName = null;
-            if (! empty($data['contract_company_id'])) {
-                $companyName = ContractCompany::where('id', $data['contract_company_id'])
-                    ->value('name');
+            $contractCompanyId = null;
+            $sovereignEntity = null;
+
+            if ($type === Patient::TYPE_MILITARY) {
+                $sovereignEntity = Patient::MILITARY_SOVEREIGN_ENTITY;
+            } else {
+                $contractCompanyId = $data['contract_company_id'] ?? null;
+                if ($contractCompanyId) {
+                    $companyName = ContractCompany::where('id', $contractCompanyId)
+                        ->value('name');
+                }
             }
 
             // Resolve rank name from FK for denormalized display field
@@ -51,8 +59,8 @@ class PatientService
                 'patient_type'        => $type,
                 'military_rank_id'    => $data['military_rank_id'] ?? null,
                 'rank'                => $rankName,
-                'sovereign_entity'    => $data['sovereign_entity'] ?? null,
-                'contract_company_id' => $data['contract_company_id'] ?? null,
+                'sovereign_entity'    => $sovereignEntity,
+                'contract_company_id' => $contractCompanyId,
                 'company_name'        => $companyName,
                 'registered_at'       => now()->toDateString(),
                 'status'              => Patient::STATUS_ACTIVE,

@@ -12,7 +12,7 @@
       <li><a href="#" class="active" data-section="queue"><span class="nav-icon">📋</span> قائمة الانتظار</a></li>
       <li><a href="#" data-section="diagnosis"><span class="nav-icon">📝</span> التشخيص الطبي</a></li>
       <li><a href="#" data-section="records"><span class="nav-icon">📁</span> السجل الطبي</a></li>
-      <li><a href="#" data-section="transfer"><span class="nav-icon">📦</span> المحولون للمخزون</a></li>
+      <li><a href="#" data-section="transfer"><span class="nav-icon">📦</span> المحولون للتوصيف</a></li>
     </ul>
 
   </aside>
@@ -201,7 +201,7 @@
       ]])</div>
       <div class="panel">
         <div class="panel-header">
-          <h3>📦 الحالات المحولة للمخزون</h3>
+          <h3>📦 الحالات المحولة للتوصيف</h3>
           <span class="count-badge" id="transferredCount">0</span>
         </div>
         <div class="data-toolbar">
@@ -223,7 +223,6 @@
             <thead>
               <tr>
                 <th>المريض</th>
-                <th>التوصيات الطبية</th>
                 <th>الجهة</th>
                 <th>تاريخ التحويل</th>
                 <th>الحالة</th>

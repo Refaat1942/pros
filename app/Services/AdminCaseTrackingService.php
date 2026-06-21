@@ -6,6 +6,7 @@ use App\Enums\CaseStage;
 use App\Enums\ManufacturingStage;
 use App\Models\Bom;
 use App\Models\CaseRecord;
+use App\Models\Quote;
 use App\Support\CaseDisplayStatus;
 use App\Support\CaseFinancialSummary;
 use Carbon\Carbon;
@@ -29,6 +30,7 @@ class AdminCaseTrackingService
                 'bom:id,case_id,stage,bom_no',
                 'bom.items:id,bom_id,qty,unit_cost',
                 'pricingRequest:id,case_id,request_no,computed_total',
+                'quotes:id,case_id,status',
             ])
             ->whereIn('stage_key', [
                 CaseRecord::STAGE_WAITING_RETURN,
@@ -41,7 +43,10 @@ class AdminCaseTrackingService
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();
 
-        $waiting = $cases->where('stage_key', CaseRecord::STAGE_WAITING_RETURN)->values();
+        $waiting = $cases
+            ->where('stage_key', CaseRecord::STAGE_WAITING_RETURN)
+            ->filter(fn (CaseRecord $c) => $c->quotes->contains('status', Quote::STATUS_ISSUED))
+            ->values();
         $progress = $cases->whereIn('stage_key', [
             CaseRecord::STAGE_MANUFACTURING,
             CaseRecord::STAGE_READY_DELIVERY,

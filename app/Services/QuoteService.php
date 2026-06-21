@@ -2,18 +2,22 @@
 
 namespace App\Services;
 
+use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\Quote;
 use App\Models\QuoteItem;
+use Illuminate\Support\Facades\DB;
 
 /**
  * إصدار عرض السعر للمسار المدني — 1:1 مع PricingRequest.
  */
 class QuoteService
 {
-    public function __construct(private readonly StockPriceService $stockPriceService)
-    {
+    public function __construct(
+        private readonly StockPriceService $stockPriceService,
+        private readonly WorkflowService $workflowService,
+    ) {
     }
 
     /**
@@ -80,20 +84,28 @@ class QuoteService
 
         $before = $quote->only(['status', 'status_label']);
 
-        $quote->update([
-            'status'       => Quote::STATUS_ISSUED,
-            'status_label' => 'صادر للجهة',
-        ]);
+        return DB::transaction(function () use ($quote, $before) {
+            $quote->update([
+                'status'       => Quote::STATUS_ISSUED,
+                'status_label' => 'صادر للجهة',
+            ]);
 
-        AuditService::log(
-            action:      'issue',
-            description: "إصدار عرض السعر {$quote->quote_no}",
-            tag:         'quotes',
-            before:      $before,
-            after:       $quote->only(['status', 'status_label']),
-        );
+            $case = CaseRecord::lockForUpdate()->find($quote->case_id);
 
-        return $quote->fresh()->load('items');
+            if ($case?->stage_key === CaseRecord::STAGE_COST_CALC) {
+                $this->workflowService->advance($case, WorkflowEvent::PricingCompletedCivilian->value);
+            }
+
+            AuditService::log(
+                action:      'issue',
+                description: "إصدار عرض السعر {$quote->quote_no}",
+                tag:         'quotes',
+                before:      $before,
+                after:       $quote->only(['status', 'status_label']),
+            );
+
+            return $quote->fresh()->load('items');
+        });
     }
 
     private function nextQuoteNo(): string

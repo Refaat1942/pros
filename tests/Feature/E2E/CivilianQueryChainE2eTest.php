@@ -167,7 +167,7 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
-        $this->assertContains($case->id, $queues->operationsManufacturingCaseIds());
+        $this->assertNotContains($case->id, $queues->operationsManufacturingCaseIds());
 
         // ── Step 6: Warehouse — barcode dispense + debt ──────────────────────
         $this->actingAs($tech);
@@ -184,6 +184,7 @@ class CivilianQueryChainE2eTest extends TestCase
         ]);
         $dispense->assertOk();
         $this->assertEquals(Bom::STAGE_WIP, $bom->fresh()->stage);
+        $this->assertContains($case->id, $queues->operationsManufacturingCaseIds());
 
         // ── Step 7: Operations — sub-stages + quality finish ─────────────────
         $this->actingAs($ops);

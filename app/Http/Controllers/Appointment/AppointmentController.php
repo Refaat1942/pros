@@ -28,7 +28,7 @@ class AppointmentController extends Controller
         $date = $request->date ?? now()->toDateString();
 
         $query = Appointment::with([
-            'patient:id,patient_code,name,patient_type',
+            'patient:id,patient_code,name,patient_type,rank',
             'visitTypeRecord:id,name',
         ])
             ->whereDate('appointment_date', $date)

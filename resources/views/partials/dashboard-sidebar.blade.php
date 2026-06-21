@@ -13,10 +13,15 @@
     <div class="sidebar-nav-scroll">
         <ul class="nav-menu">
             @foreach ($pages as $slug => $page)
+                @php $badgeCount = (int) (($sidebarBadges ?? [])[$slug] ?? 0); @endphp
                 <li>
                     <a href="{{ route($routePrefix . $slug) }}"
                        class="{{ ($activePage ?? '') === $slug ? 'active' : '' }}">
-                        <span class="nav-icon">{{ $page['icon'] }}</span> {{ $page['label'] }}
+                        <span class="nav-icon">{{ $page['icon'] }}</span>
+                        <span class="nav-label">{{ $page['label'] }}</span>
+                        @if ($badgeCount > 0)
+                            <span class="nav-badge" id="{{ $slug === 'pricing' ? 'sidebarPricingBadge' : '' }}" title="بانتظار الاعتماد">{{ $badgeCount }}</span>
+                        @endif
                     </a>
                 </li>
             @endforeach

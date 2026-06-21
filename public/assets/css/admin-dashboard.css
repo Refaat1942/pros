@@ -1634,7 +1634,7 @@
     .overview-employees-panel { margin-bottom: 24px; width: 100%; }
     .ops-overview-summary {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 12px;
       padding: 16px 20px;
       border-bottom: 1px solid var(--border);
@@ -1686,6 +1686,303 @@
     .ops-badge--raw  { background: rgba(217,119,6,0.12); color: #b45309; }
     .ops-badge--wip  { background: rgba(14,116,144,0.12); color: #0e7490; }
     .ops-badge--done { background: rgba(5,150,105,0.12); color: #059669; }
+
+    /* ── متابعة الحالات — زر العرض + نافذة التفاصيل ───────────────────── */
+    .case-view-cell { text-align: center; white-space: nowrap; }
+
+    .btn-case-view {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border: 1px solid rgba(124,58,237,0.35);
+      background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(14,116,144,0.06));
+      color: #6d28d9;
+      border-radius: 10px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+    }
+    .btn-case-view:hover {
+      background: linear-gradient(135deg, #7c3aed, #0e7490);
+      border-color: transparent;
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(124,58,237,0.25);
+    }
+    .btn-case-view__icon { font-size: 13px; line-height: 1; }
+
+    .case-detail-modal__dialog {
+      width: min(920px, 100%);
+      max-height: 92vh;
+    }
+    .case-detail-modal__head-text { min-width: 0; flex: 1; }
+    .case-detail-modal__head-text h3 { margin: 0; }
+    .case-detail-modal__body { padding: 0; background: #f8fafc; }
+
+    .case-detail-section {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+    }
+    .case-detail-section:last-child { border-bottom: none; }
+
+    .case-detail-section .catalog-detail-grid {
+      margin-bottom: 0;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .case-detail-paid { color: #059669; font-weight: 800; }
+
+    .case-detail-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0 4px;
+    }
+
+    .btn-case-doc {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid var(--primary);
+      background: #fff;
+      color: var(--primary-dark);
+      border-radius: 10px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-case-doc:hover {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .btn-case-doc--muted {
+      border-color: var(--border);
+      color: var(--text-muted);
+      background: #fff;
+    }
+    .btn-case-doc--muted:hover {
+      background: #f1f5f9;
+      color: var(--secondary);
+      border-color: #cbd5e1;
+    }
+
+    .case-doc-panel {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+    }
+    .case-doc-panel__head {
+      padding: 10px 14px;
+      background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(14,116,144,0.04));
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .case-doc-panel__body {
+      background: #f1f5f9;
+      min-height: 120px;
+    }
+    .case-doc-panel__body iframe {
+      display: block;
+      width: 100%;
+      height: 340px;
+      border: none;
+      background: #fff;
+    }
+    .case-doc-panel__body img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+      padding: 12px;
+    }
+
+    .case-detail-table-wrap {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .case-detail-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .case-detail-table th,
+    .case-detail-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+    }
+    .case-detail-table th {
+      background: #f8fafc;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .case-detail-table .num { text-align: center; font-variant-numeric: tabular-nums; }
+    .case-detail-table tr:last-child td { border-bottom: none; }
+
+    .case-detail-empty,
+    .case-detail-loading,
+    .case-detail-error {
+      text-align: center;
+      padding: 28px 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .case-detail-error { color: #dc2626; font-weight: 600; }
+
+    .btn-action.primary {
+      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      color: #fff;
+      border-color: #6d28d9;
+      padding: 8px 20px;
+      font-size: 13px;
+    }
+    .btn-action.primary:hover {
+      background: linear-gradient(135deg, #6d28d9, #5b21b6);
+      color: #fff;
+      border-color: #5b21b6;
+    }
+
+    /* ── أزرار جداول الإدارة (عقود، إلخ) ─────────────────────────────── */
+    .contract-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .admin-table-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.2;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      box-shadow: 0 1px 2px rgba(15,23,42,0.05);
+    }
+
+    .admin-table-btn--view {
+      border-color: rgba(124,58,237,0.35);
+      background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(14,116,144,0.06));
+      color: #6d28d9;
+    }
+    .admin-table-btn--view:hover {
+      background: linear-gradient(135deg, #7c3aed, #0e7490);
+      border-color: transparent;
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(124,58,237,0.22);
+    }
+
+    .admin-table-btn--download {
+      border-color: rgba(14,116,144,0.35);
+      background: rgba(14,116,144,0.08);
+      color: #0e7490;
+    }
+    .admin-table-btn--download:hover {
+      background: #0e7490;
+      border-color: #0e7490;
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(14,116,144,0.22);
+    }
+
+    .admin-table-btn--edit {
+      border-color: var(--border);
+      background: #fff;
+      color: var(--secondary);
+    }
+    .admin-table-btn--edit:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: #334155;
+    }
+
+    .admin-table-btn--delete {
+      padding: 7px 10px;
+      min-width: 36px;
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #dc2626;
+      font-size: 14px;
+    }
+    .admin-table-btn--delete:hover {
+      background: #fee2e2;
+      border-color: #f87171;
+      color: #b91c1c;
+    }
+
+    .contract-doc-missing {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .contract-edit-modal { width: min(480px, 100%); }
+    .contract-edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .contract-edit-label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--secondary);
+    }
+    .contract-edit-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .contract-edit-input:focus {
+      outline: none;
+      border-color: rgba(124,58,237,0.5);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+    }
+    .contract-edit-error {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      color: #dc2626;
+      font-size: 13px;
+      font-weight: 600;
+    }
 
     @media (max-width: 900px) {
       .ops-overview-summary { grid-template-columns: repeat(2, 1fr); }

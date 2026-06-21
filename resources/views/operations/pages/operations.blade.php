@@ -33,15 +33,17 @@
 @endphp
 
 <div id="analytics-operations">
-    @include('partials.dashboard-analytics-empty', ['stats' => $ops_stats ?? []])
+    @include('partials.dashboard-analytics-empty', ['stats' => $ops_stats ?? [], 'hide_charts' => true])
 </div>
 
 <div class="space-y-6" id="opsDeskRoot" data-cases-count="{{ $cases->count() }}">
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p class="text-sm text-slate-600 leading-relaxed">
-            يلتقي هنا المساران: <strong class="text-indigo-700">عسكري</strong> (يتخطى العروض والموافقات) و
-            <strong class="text-emerald-700">مدني</strong> (بعد فك تجميد OCR). عند الدخول يُولَّد
-            <strong>رقم أمر تشغيل مركزي WO-*</strong> تلقائياً.
+            تظهر هنا فقط الحالات التي <strong>صُرفت موادها من المخزن</strong> (تحويل للورشة).
+            قبل الصرف تبقى الحالة في <strong>لوحة المخزون</strong> فقط.
+            يلتقي هنا المساران: <strong class="text-indigo-700">عسكري</strong> و
+            <strong class="text-emerald-700">مدني</strong> — كل حالة لها
+            <strong>رقم أمر تشغيل مركزي WO-*</strong>.
         </p>
         <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-center text-sm">
             <div class="rounded-xl bg-amber-50 border border-amber-100 py-3">
@@ -146,7 +148,3 @@
 </div>
 
 <div id="opsToast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] hidden rounded-xl px-6 py-3 text-sm font-bold shadow-lg"></div>
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-@endpush

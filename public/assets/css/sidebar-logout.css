@@ -70,3 +70,27 @@ aside.sidebar .sidebar-footer .btn-sidebar-logout .nav-icon {
   text-align: center;
   flex-shrink: 0;
 }
+
+aside.sidebar .nav-menu li a .nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+aside.sidebar .nav-menu li a .nav-badge {
+  flex-shrink: 0;
+  min-width: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.15);
+}
+
+aside.sidebar .nav-menu li a.active .nav-badge {
+  background: #fde68a;
+  color: #78350f;
+}

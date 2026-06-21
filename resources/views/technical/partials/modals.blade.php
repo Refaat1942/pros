@@ -49,8 +49,9 @@
                    data-v-rules="required,money">
           </div>
           <div class="form-group"><label>المورد</label>
-            <input type="text" class="form-control" id="rcvSupplier" placeholder="اسم المورد"
-                   data-v-rules="required,min:2,max:255" maxlength="255">
+            <select class="form-control" id="rcvSupplier" data-v-rules="required,select">
+              <option value="">— اختر المورد —</option>
+            </select>
           </div>
           <div class="form-group"><label>رقم فاتورة الشراء</label>
             <input type="text" class="form-control" id="rcvInvoice" placeholder="INV-..."

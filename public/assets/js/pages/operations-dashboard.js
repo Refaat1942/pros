@@ -104,8 +104,9 @@
   }
 
   function updateSummary(cases) {
-    var raw = 0, wip = 0, done = 0;
+    var raw = 0, wip = 0, done = 0, mil = 0;
     cases.forEach(function (c) {
+      if (c.patient_type === 'military' || c.path === 'military') mil++;
       if (!c.bom) return;
       if (c.bom.stage === 'raw') raw++;
       else if (c.bom.stage === 'wip') wip++;
@@ -115,6 +116,15 @@
     if ($('sumWip')) $('sumWip').textContent = wip;
     if ($('sumDone')) $('sumDone').textContent = done;
     if ($('sumTotal')) $('sumTotal').textContent = cases.length;
+
+    var analytics = document.getElementById('analytics-operations');
+    if (!analytics) return;
+    var values = analytics.querySelectorAll('.ck-stat-value');
+    if (values.length < 4) return;
+    values[0].textContent = cases.length;
+    values[1].textContent = mil;
+    values[2].textContent = cases.length - mil;
+    values[3].textContent = raw;
   }
 
   function bindTableEvents() {
@@ -145,8 +155,27 @@
       });
   }
 
-  function refreshList() {
-    if (!window.axios) return;
+  var refreshInFlight = false;
+
+  function setRefreshBusy(busy) {
+    var btn = $('btnRefreshOps');
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+    btn.textContent = busy ? '↻ جاري التحديث...' : '↻ تحديث';
+  }
+
+  function refreshList(ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    if (!window.axios) {
+      toast('تعذّر التحديث — axios غير متاح', true);
+      return;
+    }
+    if (refreshInFlight) return;
+
+    refreshInFlight = true;
+    setRefreshBusy(true);
+
     axios.get('/operations/operations/list')
       .then(function (res) {
         var cases = res.data.data || [];
@@ -160,8 +189,16 @@
         }
         updateSummary(cases);
         if (window.TablePagination) TablePagination.refreshById('opsTableBody');
+        filterSearch();
       })
-      .catch(function () { toast('تعذّر تحديث القائمة', true); });
+      .catch(function (err) {
+        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر تحديث القائمة';
+        toast(msg, true);
+      })
+      .finally(function () {
+        refreshInFlight = false;
+        setRefreshBusy(false);
+      });
   }
 
   function advanceStage(ev) {
@@ -197,5 +234,6 @@
     if (search) search.addEventListener('input', filterSearch);
     var refresh = $('btnRefreshOps');
     if (refresh) refresh.addEventListener('click', refreshList);
+    else if (window.console && console.warn) console.warn('operations-dashboard: #btnRefreshOps not found');
   });
 })();

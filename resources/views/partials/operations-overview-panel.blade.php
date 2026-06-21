@@ -21,10 +21,6 @@
         <span class="badge">{{ $cases->count() }} أمر</span>
     </div>
     <div class="ops-overview-summary">
-        <div class="ops-overview-stat ops-overview-stat--raw">
-            <span class="ops-overview-stat-val">{{ $summary['raw'] ?? 0 }}</span>
-            <span class="ops-overview-stat-lbl">📦 بانتظار الصرف</span>
-        </div>
         <div class="ops-overview-stat ops-overview-stat--wip">
             <span class="ops-overview-stat-val">{{ $summary['wip'] ?? 0 }}</span>
             <span class="ops-overview-stat-lbl">🏭 تحت التشغيل</span>
@@ -32,10 +28,6 @@
         <div class="ops-overview-stat ops-overview-stat--done">
             <span class="ops-overview-stat-val">{{ $summary['done'] ?? 0 }}</span>
             <span class="ops-overview-stat-lbl">✅ BOM تام</span>
-        </div>
-        <div class="ops-overview-stat ops-overview-stat--total">
-            <span class="ops-overview-stat-val">{{ $cases->count() }}</span>
-            <span class="ops-overview-stat-lbl">🎯 إجمالي الأوامر</span>
         </div>
     </div>
     <div class="panel-body">

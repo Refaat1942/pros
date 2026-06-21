@@ -51,11 +51,18 @@ class DashboardQueueService
             ->all();
     }
 
+    public function adminPricingAwaitingCount(): int
+    {
+        return PricingRequest::query()
+            ->where('status_key', PricingRequestStatus::AwaitingAdminApproval->value)
+            ->count();
+    }
+
     /** @return list<int> */
     public function operationsManufacturingCaseIds(): array
     {
         return CaseRecord::query()
-            ->where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+            ->releasedToWorkshop()
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();

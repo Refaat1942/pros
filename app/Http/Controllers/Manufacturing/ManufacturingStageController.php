@@ -26,12 +26,12 @@ class ManufacturingStageController extends Controller
         $this->bomService->repairOrphanWipCases();
 
         $cases = $this->fetchForDashboard(
-            CaseRecord::with([
-                'patient:id,patient_code,name',
-                'bom:id,case_id,bom_no,stage',
-                'bom.items:id,bom_id,stock_item_code,qty',
-            ])
-                ->where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+            CaseRecord::releasedToWorkshop()
+                ->with([
+                    'patient:id,patient_code,name',
+                    'bom:id,case_id,bom_no,stage',
+                    'bom.items:id,bom_id,stock_item_code,qty',
+                ])
                 ->when($request->manufacturing_stage, fn ($q, $s) => $q->where('manufacturing_stage', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")

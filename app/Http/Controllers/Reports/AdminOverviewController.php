@@ -73,7 +73,7 @@ class AdminOverviewController extends Controller
                 ],
             ],
             'case_strip' => [
-                'waiting_return' => CaseRecord::where('stage_key', CaseRecord::STAGE_WAITING_RETURN)->count(),
+                'waiting_return' => CaseRecord::waitingReturnIssued()->count(),
                 'in_progress'    => CaseRecord::whereIn('stage_key', [
                     CaseRecord::STAGE_MANUFACTURING,
                     CaseRecord::STAGE_READY_DELIVERY,

@@ -16,7 +16,7 @@ class StoreCatalogItemRequest extends BaseRequest
             'prices'                      => ['required', 'array', 'min:1'],
             'prices.*.label'              => ['required', 'string', 'max:255'],
             'prices.*.supplier_id'        => ['required', 'integer', 'exists:suppliers,id'],
-            'prices.*.supplier_item_code' => ['required', 'string', 'max:100'],
+            'prices.*.supplier_item_code' => ['nullable', 'string', 'max:100'],
             'prices.*.amount'             => ['required', 'numeric', 'min:0.01'],
         ];
     }
@@ -28,6 +28,11 @@ class StoreCatalogItemRequest extends BaseRequest
         foreach ($prices as $i => $row) {
             if (empty($row['supplier_item_code']) && ! empty($row['itemCode'])) {
                 $prices[$i]['supplier_item_code'] = $row['itemCode'];
+            }
+
+            if (array_key_exists('supplier_item_code', $prices[$i])
+                && trim((string) $prices[$i]['supplier_item_code']) === '') {
+                $prices[$i]['supplier_item_code'] = null;
             }
         }
 
@@ -42,7 +47,6 @@ class StoreCatalogItemRequest extends BaseRequest
             'prices.required'                 => 'يرجى إضافة سعر واحد على الأقل.',
             'prices.min'                      => 'يرجى إضافة سعر واحد على الأقل.',
             'prices.*.supplier_id.required'   => 'يرجى اختيار المورد لكل سعر.',
-            'prices.*.supplier_item_code.required' => 'يرجى إدخال كود الصنف لكل سعر.',
             'prices.*.amount.required'        => 'يرجى إدخال السعر.',
         ];
     }

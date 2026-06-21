@@ -4,9 +4,11 @@ namespace Tests\Feature\Reports;
 
 use App\Models\AuditLog;
 use App\Models\CaseRecord;
+use App\Models\Quote;
 use App\Models\User;
 use App\Services\BiReportService;
 use App\Services\BomService;
+use App\Services\QuoteService;
 use App\Services\StockPriceService;
 use Database\Seeders\RolesAndAdminSeeder;
 use Tests\Support\ProstheticTestHelper;
@@ -106,5 +108,43 @@ class AdminOverviewOperationsTest extends TestCase
         $response->assertOk();
         $response->assertSee('اختبار سجل الرقابة في النظرة العامة', false);
         $response->assertSee('data-server-rendered="1"', false);
+    }
+
+    public function test_overview_waiting_return_count_increases_after_quote_issued_to_entity(): void
+    {
+        $mock = $this->mock(BiReportService::class);
+        $mock->shouldReceive('boardPatients')->twice()->andReturn([
+            'open_count' => 1, 'sla_breached' => 0, 'sla_breached_cases' => [],
+        ]);
+        $mock->shouldReceive('boardInventory')->twice()->andReturn([
+            'item_count' => 0, 'low_stock' => 0,
+        ]);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $quote   = Quote::create([
+            'quote_no'     => 'QT-2026-0099',
+            'case_id'      => $case->id,
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
+            'quote_date'   => now()->toDateString(),
+            'status'       => Quote::STATUS_PENDING,
+            'total'        => 500.00,
+        ]);
+
+        $admin = $this->userWithRole('admin');
+        $this->actingAs($admin);
+
+        $this->get('/admin/overview')
+            ->assertOk()
+            ->assertSee('id="overviewWaitingCount" style="color:#d97706" data-server-rendered="1">0</span>', false);
+
+        app(QuoteService::class)->markIssued($quote);
+
+        $this->get('/admin/overview')
+            ->assertOk()
+            ->assertSee('id="overviewWaitingCount" style="color:#d97706" data-server-rendered="1">1</span>', false);
     }
 }

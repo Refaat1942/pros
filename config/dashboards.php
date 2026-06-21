@@ -60,7 +60,7 @@ return [
             'queue' => ['title' => 'العيادة الطبية — قائمة الانتظار', 'icon' => '📋', 'label' => 'قائمة الانتظار'],
             'diagnosis' => ['title' => 'التشخيص الطبي', 'icon' => '📝', 'label' => 'التشخيص الطبي'],
             'records' => ['title' => 'السجل الطبي — التقارير المعتمدة', 'icon' => '📁', 'label' => 'السجل الطبي'],
-            'transfer' => ['title' => 'الحالات المحولة للمخزون', 'icon' => '📦', 'label' => 'المحولون للمخزون'],
+            'transfer' => ['title' => 'الحالات المحولة للتوصيف', 'icon' => '📦', 'label' => 'المحولون للتوصيف'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/doctor-dashboard.css'],
         'scripts' => [

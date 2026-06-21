@@ -478,13 +478,18 @@
       var patient = row.patient || {};
       var visitTypeRel = row.visit_type_record || null;
       var visitTypeName = visitTypeRel && visitTypeRel.name ? visitTypeRel.name : null;
+      var isMilitary = (row.patient_type || patient.patient_type) === 'military';
+      var affiliation = isMilitary
+        ? (patient.rank || row.company_name || '—')
+        : (row.company_name || '—');
       return {
         id: row.id,
         date: displayDateFromIso(row.appointment_date),
         time: row.appointment_time ? String(row.appointment_time).substring(0, 5) : '—',
         name: row.patient_name || patient.name || '—',
         phone: row.phone || '—',
-        company: row.company_name || '—',
+        company: affiliation,
+        patient_type: row.patient_type || patient.patient_type || 'civilian',
         visitType: row.visit_type_id ? String(row.visit_type_id) : 'exam',
         visitTypeLabel: visitTypeName || getVisitMeta('exam').label,
         status: row.status || 'waiting',
@@ -624,11 +629,15 @@
       var company = row.company_name ||
         (row.contract_company && row.contract_company.name) ||
         '—';
+      if (row.patient_type === 'military') {
+        company = row.rank || company;
+      }
       return {
         id: row.id,
         name: row.name || '—',
         phone: row.phone || '—',
         company: company,
+        rank: row.rank || '',
         registered: displayDateFromIso(row.registered_at) || '—',
         lastVisit: displayDateFromIso(row.last_visit_at) || '—',
         status: row.status || 'active',
@@ -684,7 +693,7 @@
 
     function exportAppointments(type) {
       var data = getFilteredAppointments();
-      var headers = ['التاريخ', 'الوقت', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد', 'الحالة'];
+      var headers = ['التاريخ', 'الوقت', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة', 'الحالة'];
       var rows = data.map(function(a) {
         var vt = getVisitMeta(a.visitType);
         return [a.date, a.time, a.name, vt.label, a.phone, a.company, a.statusLabel];
@@ -695,7 +704,7 @@
 
     function exportPatients(type) {
       var data = getFilteredPatients((document.getElementById('patientSearch') || {}).value.trim());
-      var headers = ['اسم المريض', 'رقم الهاتف', 'جهة التعاقد', 'تاريخ التسجيل', 'آخر زيارة'];
+      var headers = ['اسم المريض', 'رقم الهاتف', 'جهة التعاقد / الرتبة', 'تاريخ التسجيل', 'آخر زيارة'];
       var rows = data.map(function(p) {
         return [p.name, p.phone, p.company, p.registered, p.lastVisit];
       });
@@ -816,7 +825,9 @@
 
       document.getElementById('patientFileMeta').innerHTML =
         '<div class="item"><div class="lbl">رقم الهاتف</div><div class="val" style="direction:ltr;text-align:right;">' + patient.phone + '</div></div>' +
-        '<div class="item"><div class="lbl">جهة التعاقد</div><div class="val">' + patient.company + '</div></div>' +
+        (patient.patient_type === 'military'
+          ? '<div class="item"><div class="lbl">الرتبة العسكرية</div><div class="val">' + (patient.rank || '—') + '</div></div>'
+          : '<div class="item"><div class="lbl">جهة التعاقد</div><div class="val">' + patient.company + '</div></div>') +
         '<div class="item"><div class="lbl">تاريخ التسجيل</div><div class="val">' + patient.registered + '</div></div>' +
         '<div class="item"><div class="lbl">آخر زيارة</div><div class="val">' + patient.lastVisit + '</div></div>' +
         '<div class="item"><div class="lbl">مسجل بواسطة</div><div class="val">نورهان علي — الاستقبال</div></div>';
@@ -940,9 +951,9 @@
         '<div class="selfservice-row"><span>المريض</span><strong>' + escapeHtml(p.name) + ' ' + typeBadge + '</strong></div>' +
         '<div class="selfservice-row"><span>الهاتف</span><strong dir="ltr">' + escapeHtml(p.phone || '—') + '</strong></div>' +
         '<div class="selfservice-row"><span>كود المريض</span><strong>' + escapeHtml(p.patient_code || '—') + '</strong></div>' +
-        '<div class="selfservice-row"><span>جهة التعاقد</span><strong>' + escapeHtml(p.company_name || '—') + '</strong></div>' +
-        (p.rank ? '<div class="selfservice-row"><span>الرتبة</span><strong>' + escapeHtml(p.rank) + '</strong></div>' : '') +
-        (p.sovereign_entity ? '<div class="selfservice-row"><span>الجهة السيادية</span><strong>' + escapeHtml(p.sovereign_entity) + '</strong></div>' : '') +
+        (p.patient_type === 'military'
+          ? (p.rank ? '<div class="selfservice-row"><span>الرتبة</span><strong>' + escapeHtml(p.rank) + '</strong></div>' : '')
+          : '<div class="selfservice-row"><span>جهة التعاقد</span><strong>' + escapeHtml(p.company_name || '—') + '</strong></div>') +
         '<div class="selfservice-row"><span>تاريخ التسجيل</span><strong>' + escapeHtml(p.registered_at || '—') + '</strong></div>' +
         '<div class="selfservice-section">' +
           '<h4>📍 الحالة الحالية</h4>' +
@@ -1174,12 +1185,18 @@
     }
 
     function filterCompanyOptions(isMilitary) {
+      var grpCompany = document.getElementById('grpCompany');
+      if (grpCompany) grpCompany.style.display = isMilitary ? 'none' : '';
       var sel = document.getElementById('newCompanyId');
       if (!sel) return;
+      if (isMilitary) {
+        sel.value = '';
+        return;
+      }
       sel.querySelectorAll('option[data-military]').forEach(function(opt) {
         var mil = opt.getAttribute('data-military') === '1';
-        opt.style.display = isMilitary ? (mil ? '' : 'none') : (mil ? 'none' : '');
-        opt.disabled = isMilitary ? !mil : mil;
+        opt.style.display = mil ? 'none' : '';
+        opt.disabled = mil;
       });
       if (sel.value) {
         var selected = sel.querySelector('option[value="' + sel.value + '"]');
@@ -1232,14 +1249,11 @@
       patientTypeSel.addEventListener('change', function() {
         var isMil = patientTypeSel.value === 'military';
         var grpRank = document.getElementById('grpRank');
-        var grpSovereign = document.getElementById('grpSovereign');
         if (grpRank) grpRank.style.display = isMil ? '' : 'none';
-        if (grpSovereign) grpSovereign.style.display = isMil ? '' : 'none';
-        var companyRequired = document.getElementById('companyRequired');
-        if (companyRequired) companyRequired.style.display = isMil ? 'none' : '';
         filterCompanyOptions(isMil);
         requestAnimationFrame(syncAddPatientFormHeight);
       });
+      filterCompanyOptions(patientTypeSel.value === 'military');
     }
 
     if (document.getElementById('addPatientFormWrap')?.classList.contains('open')) {
@@ -1259,7 +1273,16 @@
         queueEl.textContent = queueNo != null ? queueNo : '—';
         if (queueWrap) queueWrap.style.display = queueNo != null ? '' : 'none';
       }
-      document.getElementById('picCompany').textContent = data.company || data.company_name || '—';
+      var picCompany = document.getElementById('picCompany');
+      if (picCompany) {
+        if ((data.patientType || data.patient_type) === 'military') {
+          picCompany.style.display = 'none';
+          picCompany.textContent = '';
+        } else {
+          picCompany.style.display = '';
+          picCompany.textContent = data.company || data.company_name || '—';
+        }
+      }
       var rankEl = document.getElementById('picRank');
       var rankText = data.rank || '';
       if ((data.patientType || data.patient_type) === 'military' && rankText) {
@@ -1298,11 +1321,10 @@
       if (document.getElementById('newPhone')) document.getElementById('newPhone').value = '';
       if (document.getElementById('newNationalId')) document.getElementById('newNationalId').value = '';
       if (document.getElementById('newRankId')) document.getElementById('newRankId').value = '';
-      if (document.getElementById('newSovereignEntity')) document.getElementById('newSovereignEntity').value = '';
       if (document.getElementById('newCompanyId')) document.getElementById('newCompanyId').value = '';
       document.getElementById('newPatientType').value = 'civilian';
       document.getElementById('grpRank').style.display = 'none';
-      document.getElementById('grpSovereign').style.display = 'none';
+      filterCompanyOptions(false);
       var errorEl = document.getElementById('patientFormError');
       if (errorEl) errorEl.style.display = 'none';
     }

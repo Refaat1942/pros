@@ -23,6 +23,19 @@
         if (el) TablePagination.refresh(el);
       });
     }
+
+    function syncSidebarPricingBadge(count) {
+      var el = document.getElementById('sidebarPricingBadge');
+      if (!el) return;
+      var n = typeof count === 'number' ? count : 0;
+      if (n > 0) {
+        el.textContent = String(n);
+        el.style.display = '';
+      } else {
+        el.textContent = '';
+        el.style.display = 'none';
+      }
+    }
     var suppliers = [];
 
     var COMPANIES_STORAGE_KEY = 'clinic_contract_companies';
@@ -372,9 +385,10 @@
       var head = document.getElementById('casesTableHead');
       var body = document.getElementById('casesTableBody');
       var pipelineCol = '<th style="min-width:320px">مسار الحالة</th>';
+      var viewCol = '<th style="width:90px">عرض</th>';
 
       if (casesFilter === 'waiting_return') {
-        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>رقم عرض السعر</th><th>تاريخ العرض</th><th>أيام الانتظار</th>' + pipelineCol + '</tr>';
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>رقم عرض السعر</th><th>تاريخ العرض</th><th>أيام الانتظار</th>' + pipelineCol + viewCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var days = c.quoteDaysWaiting || 0;
           var daysCls = days >= 14 ? ' days-wait-badge urgent' : ' days-wait-badge';
@@ -386,10 +400,11 @@
             '<td>' + (c.quoteDate || '—') + '</td>' +
             '<td><span class="' + daysCls.trim() + '">⏱ ' + days + ' يوم</span></td>' +
             '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
+            caseViewCell(c.id) +
             '</tr>';
-        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
+        }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       } else if (casesFilter === 'in_progress') {
-        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>مرحلة الشغل</th><th>BOM</th><th>تاريخ الموافقة</th><th>إجراء</th>' + pipelineCol + '</tr>';
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>مرحلة الشغل</th><th>BOM</th><th>تاريخ الموافقة</th><th>إجراء</th>' + pipelineCol + viewCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var bom = c.bom || null;
           var bomLabel = bom ? bom.stageLabel : '—';
@@ -407,10 +422,11 @@
             '<td>' + (c.approvalDate || '—') + '</td>' +
             '<td>' + actionBtn + '</td>' +
             '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
+            caseViewCell(c.id) +
             '</tr>';
-        }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
+        }).join('') : '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       } else {
-        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>المدفوع</th><th>تاريخ التسليم</th>' + pipelineCol + '</tr>';
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>المدفوع</th><th>تاريخ التسليم</th>' + pipelineCol + viewCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
@@ -420,8 +436,9 @@
             '<td style="color:#059669;font-weight:700">' + CasesWorkflow.formatMoney(c.paid) + '</td>' +
             '<td>' + (c.deliveredAt || '—') + '</td>' +
             '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
+            caseViewCell(c.id) +
             '</tr>';
-        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
+        }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       }
 
       refreshPaginated('casesTableBody');
@@ -465,6 +482,179 @@
       alert('التسليم يتم من لوحة الاستقبال — مسح QR المريض.');
     }
     window.deliverCase = deliverCase;
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    }
+
+    function caseViewCell(caseId) {
+      return '<td class="case-view-cell"><button type="button" class="btn-case-view" onclick="openCaseDetail(\'' + caseId + '\')">' +
+        '<span class="btn-case-view__icon" aria-hidden="true">👁️</span><span>عرض</span></button></td>';
+    }
+
+    function caseDetailBox(label, value) {
+      return '<div class="catalog-detail-box"><div class="dl">' + escapeHtml(label) + '</div><div class="dv">' + (value || '—') + '</div></div>';
+    }
+
+    function caseDocPanel(title, innerHtml) {
+      return '<div class="case-doc-panel">' +
+        '<div class="case-doc-panel__head"><span>' + title + '</span></div>' +
+        '<div class="case-doc-panel__body">' + innerHtml + '</div></div>';
+    }
+
+    function closeCaseDetailModal() {
+      var modal = document.getElementById('caseDetailModal');
+      var body = document.getElementById('caseDetailModalBody');
+      if (modal) modal.classList.remove('open');
+      if (body) body.innerHTML = '<p class="case-detail-loading">جاري التحميل...</p>';
+      document.body.style.overflow = '';
+    }
+
+    function renderCaseDetailModal(data) {
+      var body = document.getElementById('caseDetailModalBody');
+      var title = document.getElementById('caseDetailModalTitle');
+      var ref = document.getElementById('caseDetailModalRef');
+      if (!body) return;
+
+      var c = data.case || {};
+      var p = data.patient || {};
+      var q = data.quote;
+      var a = data.approval;
+
+      if (title) title.textContent = 'تفاصيل الحالة';
+      if (ref) ref.textContent = [p.name || c.case_no, c.case_no, c.work_order_no].filter(Boolean).join(' · ');
+
+      var metaGrid = '<div class="case-detail-section">' +
+        '<h4 class="catalog-modal-section-title">👤 بيانات المريض والحالة</h4>' +
+        '<div class="catalog-detail-grid">' +
+        caseDetailBox('المريض', escapeHtml(p.name)) +
+        caseDetailBox('كود المريض', escapeHtml(p.patient_code)) +
+        caseDetailBox('الهاتف', escapeHtml(p.phone)) +
+        caseDetailBox('الرقم القومي', escapeHtml(p.national_id)) +
+        caseDetailBox('المسار', escapeHtml(p.type_label)) +
+        (data.is_military
+          ? caseDetailBox('الرتبة العسكرية', escapeHtml(p.rank)) +
+            caseDetailBox('الجهة السيادية', escapeHtml(p.sovereign || 'القوات المسلحة'))
+          : caseDetailBox('جهة التعاقد', escapeHtml(p.company))) +
+        caseDetailBox('رقم الحالة', escapeHtml(c.case_no)) +
+        caseDetailBox('أمر التشغيل', escapeHtml(c.work_order_no)) +
+        caseDetailBox('مرحلة الحالة', escapeHtml(c.stage_label)) +
+        caseDetailBox('تاريخ التسليم', escapeHtml(c.delivered_at)) +
+        caseDetailBox('إجمالي التكلفة', c.total_cost != null ? CasesWorkflow.formatMoney(c.total_cost) : '—') +
+        caseDetailBox('المدفوع', c.paid != null ? '<span class="case-detail-paid">' + CasesWorkflow.formatMoney(c.paid) + '</span>' : '—') +
+        '</div></div>';
+
+      var quoteSection = '';
+      if (q) {
+        var itemsRows = (q.items || []).map(function(it) {
+          return '<tr><td>' + escapeHtml(it.name) + '</td><td>' + escapeHtml(it.stock_item_code || '—') + '</td>' +
+            '<td class="num">' + it.qty + '</td><td class="num case-detail-paid">' +
+            CasesWorkflow.formatMoney(it.amount) + '</td></tr>';
+        }).join('');
+        quoteSection =
+          '<div class="case-detail-section">' +
+          '<h4 class="catalog-modal-section-title">📄 عرض السعر — ' + escapeHtml(q.quote_no) + '</h4>' +
+          '<div class="catalog-detail-grid">' +
+          caseDetailBox('التاريخ', escapeHtml(q.quote_date)) +
+          caseDetailBox('الحالة', escapeHtml(q.status_label || q.status)) +
+          caseDetailBox('الإجمالي', CasesWorkflow.formatMoney(q.total)) +
+          caseDetailBox('الجهة', escapeHtml(q.company_name)) +
+          '</div>' +
+          '<div class="case-detail-actions">' +
+          '<a href="' + escapeHtml(q.print_url) + '" target="_blank" rel="noopener" class="btn-case-doc">🖨️ فتح للطباعة / PDF</a>' +
+          '</div>' +
+          caseDocPanel('معاينة عرض السعر', '<iframe src="' + escapeHtml(q.print_url) + '" title="عرض السعر"></iframe>') +
+          (itemsRows
+            ? '<div class="case-detail-table-wrap"><table class="case-detail-table" data-paginate="6"><thead><tr>' +
+              '<th>البند</th><th>الكود</th><th class="num">الكمية</th><th class="num">المبلغ</th></tr></thead><tbody>' +
+              itemsRows + '</tbody></table></div>'
+            : '') +
+          '</div>';
+      } else if (!data.is_military) {
+        quoteSection = '<div class="case-detail-empty">لا يوجد عرض سعر مرتبط بهذه الحالة.</div>';
+      }
+
+      var approvalSection = '';
+      if (a) {
+        var letterPreview = '';
+        if (a.has_letter && a.letter_url) {
+          var ext = (a.letter_ext || '').toLowerCase();
+          if (ext === 'pdf') {
+            letterPreview = '<iframe src="' + escapeHtml(a.letter_url) + '" title="خطاب الموافقة"></iframe>';
+          } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].indexOf(ext) !== -1) {
+            letterPreview = '<img src="' + escapeHtml(a.letter_url) + '" alt="خطاب الموافقة">';
+          } else {
+            letterPreview = '<iframe src="' + escapeHtml(a.letter_url) + '" title="خطاب الموافقة"></iframe>';
+          }
+        }
+        approvalSection =
+          '<div class="case-detail-section">' +
+          '<h4 class="catalog-modal-section-title">📑 خطاب موافقة الجهة — ' + escapeHtml(a.contract_no) + '</h4>' +
+          '<div class="catalog-detail-grid">' +
+          caseDetailBox('تاريخ الموافقة', escapeHtml(a.approval_date)) +
+          caseDetailBox('رقم الخطاب', escapeHtml(a.letter_ref)) +
+          caseDetailBox('المبلغ المعتمد', CasesWorkflow.formatMoney(a.approved_amount)) +
+          '</div>';
+        if (a.has_letter && a.letter_url) {
+          approvalSection +=
+            '<div class="case-detail-actions">' +
+            '<button type="button" class="btn-case-doc" onclick="openContractLetterView(\'' + escapeHtml(a.letter_url) + '\', \'' +
+              escapeHtml(a.contract_no) + '\', \'' + escapeHtml(a.letter_ext || '') + '\')">👁️ عرض بملء الشاشة</button>' +
+            (a.download_url
+              ? '<a href="' + escapeHtml(a.download_url) + '" target="_blank" class="btn-case-doc btn-case-doc--muted" download>📎 تحميل</a>'
+              : '') +
+            '</div>' +
+            caseDocPanel('معاينة خطاب الموافقة', letterPreview);
+        } else {
+          approvalSection += '<div class="case-detail-empty">لم يُرفع ملف خطاب الموافقة.</div>';
+        }
+        approvalSection += '</div>';
+      } else if (!data.is_military) {
+        approvalSection = '<div class="case-detail-empty">لا يوجد عقد موافقة مسجّل بعد (يُنشأ عند مسح OCR).</div>';
+      }
+
+      body.innerHTML = metaGrid + quoteSection + approvalSection;
+      if (window.TablePagination) TablePagination.refresh(body);
+    }
+
+    function openCaseDetail(caseId) {
+      var modal = document.getElementById('caseDetailModal');
+      var body = document.getElementById('caseDetailModalBody');
+      if (!modal || !body) return;
+
+      body.innerHTML = '<p class="case-detail-loading">جاري التحميل...</p>';
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      fetch('/admin/cases/' + encodeURIComponent(caseId) + '/detail', {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(function(res) {
+          if (!res.ok) throw new Error('تعذّر تحميل التفاصيل');
+          return res.json();
+        })
+        .then(renderCaseDetailModal)
+        .catch(function() {
+          body.innerHTML = '<p class="case-detail-error">تعذّر تحميل تفاصيل الحالة.</p>';
+        });
+    }
+    window.openCaseDetail = openCaseDetail;
+
+    function bindCaseDetailModal() {
+      var modal = document.getElementById('caseDetailModal');
+      var closeBtn = document.getElementById('closeCaseDetailModal');
+      var footerClose = document.getElementById('btnCloseCaseDetailModal');
+      if (closeBtn) closeBtn.addEventListener('click', closeCaseDetailModal);
+      if (footerClose) footerClose.addEventListener('click', closeCaseDetailModal);
+      if (modal) {
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeCaseDetailModal();
+        });
+      }
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && modal.classList.contains('open')) closeCaseDetailModal();
+      });
+    }
 
     function pricingTypeBadge(patientType) {
       if (typeof CasesWorkflow !== 'undefined' && CasesWorkflow.getPatientTypeMeta) {
@@ -518,6 +708,7 @@
 
       var badge = document.getElementById('pricingApprovalBadge');
       if (badge) badge.textContent = pendingCount + ' بانتظار';
+      syncSidebarPricingBadge(pendingCount);
 
       var countEl = document.getElementById('pricingApprovalCount');
       if (countEl) countEl.textContent = visible + ' طلب';
@@ -537,6 +728,7 @@
       var pendingCount = all.filter(function(p) { return p.statusKey === 'awaiting_admin_approval'; }).length;
 
       document.getElementById('pricingApprovalBadge').textContent = pendingCount + ' بانتظار';
+      syncSidebarPricingBadge(pendingCount);
       document.getElementById('pricingApprovalCount').textContent = filtered.length + ' طلب';
 
       if (!filtered.length) {
@@ -997,7 +1189,7 @@
       return '<div class="price-row" data-id="' + (p.id || '') + '">' +
         '<div><label>وصف الصنف</label><input type="text" class="price-label" value="' + (p.label || '') + '" placeholder="مثال: ركبة محلية"></div>' +
         '<div><label>المورد</label><select class="price-supplier">' + supplierSelectHtml(p.supplier_id || p.supplierId, p.supplier) + '</select></div>' +
-        '<div><label>كود الصنف</label><input type="text" class="price-item-code" value="' + (p.itemCode || p.batch || '') + '" placeholder="ITM-001-01"></div>' +
+        '<div><label>كود الصنف <span style="font-weight:400;color:var(--text-muted)">(اختياري)</span></label><input type="text" class="price-item-code" value="' + (p.itemCode || p.batch || '') + '" placeholder="ITM-001-01"></div>' +
         '<div><label>السعر (ج.م)</label><input type="number" class="price-amount" min="0" value="' + (p.amount || '') + '" placeholder="45000"></div>' +
         '<button type="button" class="btn-remove-price" onclick="removePriceRow(this)" aria-label="حذف">&times;</button>' +
         '</div>';
@@ -1080,7 +1272,7 @@
           rowData.id = parseInt(id, 10);
         }
         return rowData;
-      }).filter(function(p) { return p.label && p.itemCode && p.amount > 0 && p.supplier_id; });
+      }).filter(function(p) { return p.label && p.amount > 0 && p.supplier_id; });
     }
 
     function renderCatalog() {
@@ -1246,7 +1438,7 @@
         return;
       }
       if (!prices.length) {
-        alert('يرجى إضافة سعر واحد على الأقل مع اختيار المورد وكود الصنف');
+        alert('يرجى إضافة سعر واحد على الأقل مع اختيار المورد والسعر');
         return;
       }
 
@@ -1770,6 +1962,7 @@
     safePageInit(function () { loadCatalogItems(); renderCatalog(); });
     safePageInit(renderPricingApproval);
     safePageInit(renderCasesSection);
+    safePageInit(bindCaseDetailModal);
     safePageInit(renderOverviewCasesCounts);
     safePageInit(renderCompanies);
     safePageInit(renderEmployees);

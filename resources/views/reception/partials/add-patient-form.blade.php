@@ -65,25 +65,13 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="form-group" id="grpSovereign" style="display:{{ old('patient_type') === 'military' ? '' : 'none' }};">
-                        <label>الجهة السيادية <span style="color:red">*</span></label>
-                        <input type="text" class="form-control" name="sovereign_entity" id="newSovereignEntity"
-                               placeholder="مثال: القوات المسلحة / الشرطة" value="{{ old('sovereign_entity') }}"
-                               data-v-rules="required,min:2,max:255" data-v-when="patient_type=military" maxlength="255">
-                    </div>
-                    <div class="form-group" id="grpCompany">
+                    <div class="form-group" id="grpCompany" style="display:{{ old('patient_type') === 'military' ? 'none' : '' }};">
                         <label>جهة التعاقد <span id="companyRequired" style="color:red">*</span></label>
                         <select class="form-control" name="contract_company_id" id="newCompanyId"
                                 data-v-rules="required,select" data-v-when="patient_type=civilian">
                             <option value="">— اختر الجهة —</option>
                             @foreach ($civilian_companies ?? [] as $co)
-                                <option value="{{ $co->id }}" data-military="0"
-                                    @selected((string) old('contract_company_id') === (string) $co->id)>
-                                    {{ $co->name }}
-                                </option>
-                            @endforeach
-                            @foreach ($military_companies ?? [] as $co)
-                                <option value="{{ $co->id }}" data-military="1" style="display:none"
+                                <option value="{{ $co->id }}"
                                     @selected((string) old('contract_company_id') === (string) $co->id)>
                                     {{ $co->name }}
                                 </option>

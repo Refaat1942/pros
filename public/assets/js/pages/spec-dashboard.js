@@ -14,12 +14,41 @@
   var state = {
     caseId: null,
     specId: null,
+    patientType: 'civilian',
     catalog: [],
     items: [],
     locked: false,
     submitting: false,
     loadingCase: false,
   };
+
+  function isMilitaryPatient(type) {
+    return (type || state.patientType) === 'military';
+  }
+
+  function submitSuccessMessage(type, requestNo) {
+    var suffix = requestNo ? ' — ' + requestNo : '';
+    return isMilitaryPatient(type)
+      ? 'تم اعتماد التوصيف — جاهز للتشغيل' + suffix
+      : 'تم الإرسال للتسعير' + suffix;
+  }
+
+  function updateSubmitLabels(type) {
+    var patientType = type || state.patientType;
+    var submitBtn = $('btnSubmitSpec');
+    var banner = $('specSubmittedBanner');
+    if (submitBtn) {
+      submitBtn.textContent = isMilitaryPatient(patientType)
+        ? '📤 اعتماد وإرسال للتشغيل'
+        : '📤 اعتماد وإرسال للتسعير';
+    }
+    var bannerText = $('specSubmittedBannerText');
+    if (bannerText) {
+      bannerText.textContent = isMilitaryPatient(patientType)
+        ? '✅ تم اعتماد التوصيف — جاهز للتشغيل'
+        : '✅ تم الإرسال للتسعير';
+    }
+  }
 
   function $(id) { return document.getElementById(id); }
 
@@ -80,7 +109,7 @@
       banner.classList.toggle('hidden', !locked);
     }
     if (requestEl) {
-      requestEl.textContent = requestNo ? '— ' + requestNo : '';
+      requestEl.textContent = requestNo ? ' — ' + requestNo : '';
     }
     if (addBtn) addBtn.disabled = locked || state.submitting;
     if (notes) notes.disabled = locked;
@@ -178,6 +207,7 @@
   function resetWorkspace() {
     state.caseId = null;
     state.specId = null;
+    state.patientType = 'civilian';
     state.items = [];
     state.locked = false;
     state.submitting = false;
@@ -246,13 +276,23 @@
       .then(function (res) {
         var data = res.data;
         var c = data.case;
+        if (c.patient_type) {
+          state.patientType = c.patient_type;
+        } else if (c.path === 'military') {
+          state.patientType = 'military';
+        } else {
+          state.patientType = 'civilian';
+        }
+        updateSubmitLabels(state.patientType);
         state.catalog = data.stock_catalog || [];
 
         $('bannerName').textContent = c.patient?.name || data.medical_record?.patient_name || '—';
         $('bannerCaseNo').textContent = c.case_no || '—';
         $('bannerOrderRef').textContent = c.order_ref || '—';
         $('bannerDoctor').textContent = data.medical_record?.doctor_name || '—';
-        $('bannerCompany').textContent = c.company_name || '—';
+        $('bannerCompany').textContent = state.patientType === 'military'
+          ? (c.rank || 'القوات المسلحة')
+          : (c.company_name || '—');
 
         var medBox = $('medicalSummary');
         if (data.medical_record) {
@@ -448,9 +488,11 @@
         .then(function () { return axios.post('/spec/spec/' + state.specId + '/submit'); })
         .then(function (res) {
           state.submitting = false;
-          var requestNo = res.data.pricing_request?.request_no || '';
+          var pricing = res.data.pricing_request || {};
+          var patientType = pricing.patient_type || state.patientType;
+          var requestNo = pricing.request_no || '';
           var submittedCaseId = state.caseId;
-          showToast('تم الإرسال للتسعير — ' + requestNo);
+          showToast(submitSuccessMessage(patientType, requestNo));
           removeCaseFromOrdersList(submittedCaseId);
           resetWorkspace();
         })
@@ -468,6 +510,7 @@
   bindOrdersList();
   bindCatalogModal();
   bindActions();
+  updateSubmitLabels('civilian');
 
   var params = new URLSearchParams(window.location.search);
   if (params.get('case')) {

@@ -15,6 +15,9 @@ class Patient extends Model
     public const TYPE_CIVILIAN = 'civilian';
     public const TYPE_MILITARY = 'military';
 
+    /** الجهة السيادية الافتراضية لكل مريض عسكري — لا يُدخلها الاستقبال. */
+    public const MILITARY_SOVEREIGN_ENTITY = 'القوات المسلحة';
+
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
     public const STATUS_QUOTED = 'quoted';

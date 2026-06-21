@@ -13,7 +13,7 @@
       ]])</div>
       <div class="panel">
         <div class="panel-header">
-          <h3>📦 الحالات المحولة للمخزون</h3>
+          <h3>📦 الحالات المحولة للتوصيف</h3>
           <span class="count-badge" id="transferredCount">{{ $stats['total'] ?? 0 }}</span>
         </div>
         <div class="data-toolbar">
@@ -35,7 +35,6 @@
             <thead>
               <tr>
                 <th>المريض</th>
-                <th>التوصيات الطبية</th>
                 <th>الجهة</th>
                 <th>تاريخ التحويل</th>
                 <th>الحالة</th>
@@ -43,25 +42,18 @@
             </thead>
             <tbody id="transferredTable" data-server-rendered="1">
               @forelse ($cases as $case)
-                @php
-                    $recText = collect($case['recommendations'] ?? [])->map(function ($item) {
-                        $qty = (int) ($item['qty'] ?? 1);
-                        return $qty > 1 ? ($item['name'] . ' (' . $qty . ')') : ($item['name'] ?? '');
-                    })->filter()->implode('، ');
-                @endphp
                 <tr class="record-row-clickable"
                     data-transfer-id="{{ $case['id'] }}"
                     data-search="{{ $case['name'] }} {{ $case['company'] }} {{ $case['status'] }}"
                     title="عرض التفاصيل">
                   <td><strong>{{ $case['name'] }}</strong></td>
-                  <td><div class="rec-list"><span>{{ $recText ?: '—' }}</span></div></td>
                   <td>{{ $case['company'] }}</td>
                   <td>{{ $case['date'] }}</td>
                   <td><span class="priority-badge normal">{{ $case['status'] }}</span></td>
                 </tr>
               @empty
                 <tr class="pagination-empty-row">
-                  <td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted);">
+                  <td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted);">
                     لا توجد حالات محوّلة بعد — تظهر هنا بعد اعتماد التشخيص وتحويل الحالة للتوصيف الفني.
                   </td>
                 </tr>

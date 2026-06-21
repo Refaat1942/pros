@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -149,5 +150,21 @@ class CaseRecord extends Model
     public function isMilitary(): bool
     {
         return $this->patient_type === Patient::TYPE_MILITARY;
+    }
+
+    /** حالات صُدر لها عرض السعر للجهة وبانتظار رجوع خطاب الموافقة. */
+    public function scopeWaitingReturnIssued(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_WAITING_RETURN)
+            ->whereHas('quotes', fn (Builder $q) => $q->where('status', Quote::STATUS_ISSUED));
+    }
+
+    /** حالات دخلت الورشة فعلياً بعد صرف/تحويل BOM من المخزن. */
+    public function scopeReleasedToWorkshop(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_MANUFACTURING)
+            ->whereHas('bom', fn (Builder $q) => $q->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED]));
     }
 }

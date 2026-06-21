@@ -85,10 +85,6 @@
                 <option value="">— اختر الرتبة —</option>
               </select>
             </div>
-            <div class="form-group" id="grpSovereign" style="display:none;">
-              <label>الجهة السيادية <span style="color:red">*</span></label>
-              <input type="text" class="form-control" id="newSovereignEntity" placeholder="مثال: القوات المسلحة / الشرطة">
-            </div>
             <div class="form-group" id="grpCompany">
               <label>جهة التعاقد <span id="companyRequired" style="color:red">*</span></label>
               <select class="form-control" id="newCompanyId">
@@ -149,7 +145,7 @@
                   <th>اسم المريض</th>
                   <th>نوع الزيارة</th>
                   <th>رقم الهاتف</th>
-                  <th>جهة التعاقد</th>
+                  <th>جهة التعاقد / الرتبة</th>
                   <th>الحالة</th>
                   <th>إجراء</th>
                 </tr>

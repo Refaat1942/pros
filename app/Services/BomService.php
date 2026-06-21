@@ -440,16 +440,31 @@ class BomService
     }
 
     /**
+     * يمنع إجراءات الورشة قبل صرف المواد من المخزن (BOM خام).
+     */
+    public function assertReleasedToWorkshop(CaseRecord $case): void
+    {
+        $case->loadMissing('bom');
+        $bomStage = $case->bom?->stage;
+
+        if (! in_array($bomStage, [Bom::STAGE_WIP, Bom::STAGE_FINISHED], true)) {
+            abort(422, 'لا يمكن تنفيذ إجراءات الورشة قبل صرف المواد وتحويلها من المخزن.');
+        }
+    }
+
+    /**
      * تقدم مرحلة التصنيع الفرعية — تسلسل ثابت.
      */
     public function advanceManufacturingStage(CaseRecord $case, string $newStage): CaseRecord
     {
         return DB::transaction(function () use ($case, $newStage) {
-            $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
+            $case = CaseRecord::lockForUpdate()->with('bom')->findOrFail($case->id);
 
             if ($case->stage_key !== CaseRecord::STAGE_MANUFACTURING) {
                 abort(422, 'الحالة ليست في مرحلة التصنيع.');
             }
+
+            $this->assertReleasedToWorkshop($case);
 
             $current = $case->manufacturing_stage;
             $allowed = self::MFG_SEQUENCE[$current] ?? null;
@@ -481,6 +496,10 @@ class BomService
     {
         $bom->loadMissing('caseRecord');
         $case = $bom->caseRecord;
+
+        if ($case) {
+            $this->assertReleasedToWorkshop($case);
+        }
 
         if (! $case || $case->manufacturing_stage !== CaseRecord::MFG_FINISHING) {
             abort(422, 'يجب الوصول لمرحلة التشغيل قبل فحص الجودة وإغلاق BOM.');

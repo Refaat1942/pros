@@ -65,33 +65,33 @@
                                     $letterUrl = asset('storage/' . $contract->letter_path);
                                     $letterExt = strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION));
                                 @endphp
-                                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <div class="contract-actions">
                                     <button type="button"
-                                            class="btn btn-secondary"
-                                            style="padding:4px 12px;font-size:11px;"
+                                            class="admin-table-btn admin-table-btn--view"
                                             onclick="openContractLetterView('{{ $letterUrl }}', '{{ addslashes($contract->contract_no) }}', '{{ $letterExt }}')">
-                                        👁️ عرض
+                                        <span aria-hidden="true">👁️</span><span>عرض</span>
                                     </button>
                                     <a href="{{ route('admin.contracts.download', $contract) }}"
-                                       class="btn btn-secondary"
-                                       style="padding:4px 12px;font-size:11px;"
-                                       target="_blank">📎 تحميل</a>
+                                       class="admin-table-btn admin-table-btn--download"
+                                       target="_blank" rel="noopener">
+                                        <span aria-hidden="true">📎</span><span>تحميل</span>
+                                    </a>
                                 </div>
                             @else
-                                <span style="color:var(--text-muted);font-size:12px;">لا يوجد</span>
+                                <span class="contract-doc-missing">لا يوجد</span>
                             @endif
                         </td>
                         <td>
-                            <div style="display:flex;gap:6px;align-items:center;">
+                            <div class="contract-actions">
                                 <button type="button"
-                                        class="btn btn-secondary"
-                                        style="padding:4px 10px;font-size:11px;"
+                                        class="admin-table-btn admin-table-btn--edit"
                                         onclick="openContractEditModal({{ $contract->id }}, {{ $contract->approved_amount }}, '{{ addslashes($contract->company_name) }}', '{{ $contract->letter_ref ?? '' }}')">
-                                    ✏️ تعديل
+                                    <span aria-hidden="true">✏️</span><span>تعديل</span>
                                 </button>
                                 <button type="button"
-                                        class="btn"
-                                        style="padding:4px 10px;font-size:11px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;"
+                                        class="admin-table-btn admin-table-btn--delete"
+                                        title="حذف العقد"
+                                        aria-label="حذف العقد"
                                         onclick="deleteContract({{ $contract->id }}, '{{ addslashes($contract->contract_no) }}')">
                                     🗑️
                                 </button>
@@ -113,37 +113,34 @@
 @include('partials.contract-letter-modal')
 
 {{-- Edit Contract Modal --}}
-<div class="modal-overlay" id="contractEditModal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
-    <div class="modal" style="max-width:460px;width:100%;background:#fff;border-radius:16px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-        <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-            <h3 style="font-size:16px;font-weight:700;">✏️ تعديل بيانات العقد</h3>
-            <button type="button" onclick="closeContractEditModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;">×</button>
+<div class="catalog-modal-overlay" id="contractEditModal" role="dialog" aria-modal="true">
+    <div class="catalog-modal contract-edit-modal" onclick="event.stopPropagation()">
+        <div class="catalog-modal-header">
+            <h3>✏️ تعديل بيانات العقد</h3>
+            <button type="button" class="catalog-modal-close" onclick="closeContractEditModal()" aria-label="إغلاق">&times;</button>
         </div>
-        <input type="hidden" id="editContractId">
-        <div style="display:flex;flex-direction:column;gap:14px;">
-            <div>
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">المبلغ المعتمد (ج.م)</label>
-                <input type="number" id="editContractAmount" step="0.01" min="0"
-                       class="form-control" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:14px;">
+        <div class="catalog-modal-body">
+            <input type="hidden" id="editContractId">
+            <div class="contract-edit-form">
+                <label class="contract-edit-label">
+                    <span>المبلغ المعتمد (ج.م)</span>
+                    <input type="number" id="editContractAmount" step="0.01" min="0" class="contract-edit-input">
+                </label>
+                <label class="contract-edit-label">
+                    <span>جهة التعاقد</span>
+                    <input type="text" id="editContractCompany" class="contract-edit-input">
+                </label>
+                <label class="contract-edit-label">
+                    <span>رقم خطاب الموافقة</span>
+                    <input type="text" id="editContractLetterRef" class="contract-edit-input">
+                </label>
             </div>
-            <div>
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">جهة التعاقد</label>
-                <input type="text" id="editContractCompany"
-                       class="form-control" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:14px;">
-            </div>
-            <div>
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">رقم خطاب الموافقة</label>
-                <input type="text" id="editContractLetterRef"
-                       class="form-control" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:14px;">
-            </div>
+            <div id="contractEditError" class="contract-edit-error" style="display:none"></div>
         </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-            <button type="button" onclick="closeContractEditModal()"
-                    class="btn btn-secondary" style="padding:10px 20px;">إلغاء</button>
-            <button type="button" id="btnSaveContract" onclick="saveContractEdit()"
-                    class="btn btn-primary" style="padding:10px 20px;">💾 حفظ التعديلات</button>
+        <div class="catalog-modal-footer">
+            <button type="button" class="btn-action" onclick="closeContractEditModal()">إلغاء</button>
+            <button type="button" class="btn-action primary" id="btnSaveContract" onclick="saveContractEdit()">💾 حفظ التعديلات</button>
         </div>
-        <div id="contractEditError" style="display:none;margin-top:12px;padding:10px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:13px;"></div>
     </div>
 </div>
 
@@ -173,6 +170,16 @@
     if (searchEl) searchEl.addEventListener('input', applyFilters);
     if (filterEl) filterEl.addEventListener('change', applyFilters);
 
+    var editModal = document.getElementById('contractEditModal');
+    if (editModal) {
+        editModal.addEventListener('click', function (e) {
+            if (e.target === editModal) closeContractEditModal();
+        });
+    }
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && editModal && editModal.classList.contains('open')) closeContractEditModal();
+    });
+
     function getCsrf() {
         var m = document.querySelector('meta[name="csrf-token"]');
         return m ? m.getAttribute('content') : '';
@@ -184,12 +191,13 @@
         document.getElementById('editContractCompany').value = company;
         document.getElementById('editContractLetterRef').value = ref || '';
         document.getElementById('contractEditError').style.display = 'none';
-        var modal = document.getElementById('contractEditModal');
-        modal.style.display = 'flex';
+        document.getElementById('contractEditModal').classList.add('open');
+        document.body.style.overflow = 'hidden';
     };
 
     window.closeContractEditModal = function () {
-        document.getElementById('contractEditModal').style.display = 'none';
+        document.getElementById('contractEditModal').classList.remove('open');
+        document.body.style.overflow = '';
     };
 
     window.saveContractEdit = function () {

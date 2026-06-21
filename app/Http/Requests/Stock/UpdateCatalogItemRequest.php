@@ -17,7 +17,7 @@ class UpdateCatalogItemRequest extends BaseRequest
             'prices.*.id'                 => ['nullable', 'integer'],
             'prices.*.label'              => ['required', 'string', 'max:255'],
             'prices.*.supplier_id'        => ['required', 'integer', 'exists:suppliers,id'],
-            'prices.*.supplier_item_code' => ['required', 'string', 'max:100'],
+            'prices.*.supplier_item_code' => ['nullable', 'string', 'max:100'],
             'prices.*.amount'             => ['required', 'numeric', 'min:0.01'],
         ];
     }
@@ -29,6 +29,11 @@ class UpdateCatalogItemRequest extends BaseRequest
         foreach ($prices as $i => $row) {
             if (empty($row['supplier_item_code']) && ! empty($row['itemCode'])) {
                 $prices[$i]['supplier_item_code'] = $row['itemCode'];
+            }
+
+            if (array_key_exists('supplier_item_code', $prices[$i])
+                && trim((string) $prices[$i]['supplier_item_code']) === '') {
+                $prices[$i]['supplier_item_code'] = null;
             }
         }
 

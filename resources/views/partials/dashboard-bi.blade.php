@@ -141,11 +141,11 @@
                     <div class="bi-kpi-value bi-tone-amber">{{ $fmtMoney($b4['military_aggregated_cost'] ?? 0) }} <small>ج.م</small></div>
                 </div>
                 <div class="bi-kpi">
-                    <div class="bi-kpi-label">🪖 مديونيات — بانتظار التحصيل</div>
+                    <div class="bi-kpi-label">🪖 مديونيات عسكرية بانتظار التحصيل</div>
                     <div class="bi-kpi-value bi-tone-purple">{{ $fmtMoney($b4['military_debt_pending'] ?? 0) }} <small>ج.م</small></div>
                 </div>
                 <div class="bi-kpi">
-                    <div class="bi-kpi-label">🪖 مديونيات — محصّلة</div>
+                    <div class="bi-kpi-label">🪖 مديونيات عسكرية محصّلة</div>
                     <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4['military_debt_collected'] ?? 0) }} <small>ج.م</small></div>
                 </div>
             </div>

@@ -32,13 +32,8 @@ class StorePatientRequest extends BaseRequest
                 $validator->errors()->add('contract_company_id', 'جهة التعاقد مطلوبة للمريض المدني.');
             }
 
-            if ($type === Patient::TYPE_MILITARY) {
-                if (! $this->filled('military_rank_id')) {
-                    $validator->errors()->add('military_rank_id', 'الرتبة العسكرية مطلوبة للمريض العسكري.');
-                }
-                if (! $this->filled('sovereign_entity')) {
-                    $validator->errors()->add('sovereign_entity', 'الجهة السيادية مطلوبة للمريض العسكري.');
-                }
+            if ($type === Patient::TYPE_MILITARY && ! $this->filled('military_rank_id')) {
+                $validator->errors()->add('military_rank_id', 'الرتبة العسكرية مطلوبة للمريض العسكري.');
             }
         });
     }

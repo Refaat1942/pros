@@ -171,7 +171,7 @@ class StockCatalogService
             $label      = trim((string) ($row['label'] ?? ''));
             $itemCode   = trim((string) ($row['supplier_item_code'] ?? $row['itemCode'] ?? ''));
 
-            if (! $supplierId || $amount <= 0 || $label === '' || $itemCode === '') {
+            if (! $supplierId || $amount <= 0 || $label === '') {
                 continue;
             }
 
@@ -179,7 +179,7 @@ class StockCatalogService
             $payload = [
                 'label'              => $label,
                 'supplier_id'        => $supplierId,
-                'supplier_item_code' => $itemCode,
+                'supplier_item_code' => $itemCode !== '' ? $itemCode : null,
                 'amount'             => $amount,
                 'qty'                => 1,
             ];

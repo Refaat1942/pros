@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Pricing\PricingApprovalController;
+use App\Http\Controllers\Reports\AdminCaseController;
 use App\Http\Controllers\Reports\AdminOverviewController;
 use App\Http\Controllers\Reports\AuditLogController;
 use App\Http\Controllers\Reports\BiController;
@@ -28,6 +29,9 @@ Route::prefix('admin')
         Route::get('overview', [AdminOverviewController::class, 'index'])->name('overview');
         Route::get('bi', [BiController::class, 'index'])->name('bi');
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit');
+
+        Route::get('cases/{case}/detail', [AdminCaseController::class, 'show'])->name('cases.detail');
+        Route::get('cases/{case}/quote', [AdminCaseController::class, 'quotePrint'])->name('cases.quote');
     });
 
 registerDashboardPages(

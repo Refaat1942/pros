@@ -54,6 +54,7 @@ class DashboardPageDataService
             'spec.pricing'          => $this->specPricing(),
             'spec.spec'             => $this->specPreview(),
             'operations.operations' => $this->operationsDesk(),
+            'technical.inventory'   => $this->technicalInventory(),
             'technical.bom'         => $this->technicalBom(),
             default                 => [],
         };
@@ -413,17 +414,17 @@ class DashboardPageDataService
         app(BomService::class)->repairOrphanWipCases();
 
         $cases = CaseRecord::query()
+            ->releasedToWorkshop()
             ->with([
                 'patient:id,patient_code,name',
                 'bom:id,case_id,bom_no,stage',
                 'bom.items:id,bom_id',
             ])
-            ->where('stage_key', CaseRecord::STAGE_MANUFACTURING)
             ->orderByDesc('updated_at')
             ->get();
 
-        $rawCount  = $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_RAW)->count();
         $wipCount  = $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_WIP)->count();
+        $doneCount = $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_FINISHED)->count();
         $milCount  = $cases->filter(fn ($c) => $c->isMilitary())->count();
         $civCount  = $cases->count() - $milCount;
 
@@ -433,14 +434,70 @@ class DashboardPageDataService
                 ['icon' => '🎯', 'label' => 'أوامر نشطة', 'value' => (string) $cases->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '🪖', 'label' => 'مسار عسكري', 'value' => (string) $milCount, 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
                 ['icon' => '🌐', 'label' => 'مسار مدني', 'value' => (string) $civCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '📦', 'label' => 'بانتظار الصرف', 'value' => (string) $rawCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
             'ops_summary' => [
-                'raw'  => $rawCount,
+                'raw'  => 0,
                 'wip'  => $wipCount,
-                'done' => $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_FINISHED)->count(),
+                'done' => $doneCount,
             ],
         ];
+    }
+
+    private function technicalInventory(): array
+    {
+        $items = StockItem::query()
+            ->with('category:id,name')
+            ->orderBy('code')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
+
+        $okCount    = $items->where('status', StockItem::STATUS_OK)->count();
+        $lowCount   = $items->where('status', StockItem::STATUS_LOW)->count();
+        $reserved   = (int) $items->sum('reserved');
+
+        return [
+            'inventory_items' => $items->map(fn (StockItem $item) => [
+                'id'            => $item->id,
+                'code'          => $item->code,
+                'name'          => $item->name,
+                'spec'          => $item->spec ?? '',
+                'category'      => $item->category?->name ?? '',
+                'category_id'   => $item->category_id,
+                'qty'           => (int) $item->qty,
+                'reserved'      => (int) $item->reserved,
+                'available'     => $item->availableQty(),
+                'status'        => $item->status,
+                'barcode'       => $item->barcode,
+                'last_moved_at' => $item->last_moved_at?->format('d/m/Y'),
+            ])->values()->all(),
+            'inventory_suppliers' => Supplier::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'inventory_stats' => [
+                ['icon' => '💚', 'label' => 'صحة المخزون', 'value' => $this->inventoryHealthLabel($items), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '✅', 'label' => 'متوفر', 'value' => (string) $okCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '⚠️', 'label' => 'منخفض', 'value' => (string) $lowCount, 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+                ['icon' => '🔒', 'label' => 'محجوز', 'value' => (string) $reserved, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+            ],
+        ];
+    }
+
+    /** @param \Illuminate\Support\Collection<int, StockItem> $items */
+    private function inventoryHealthLabel($items): string
+    {
+        if ($items->isEmpty()) {
+            return '0/100';
+        }
+
+        $total      = $items->count();
+        $okPct      = (int) round($items->where('status', StockItem::STATUS_OK)->count() / $total * 100);
+        $sufficient = $items->filter(fn (StockItem $i) => $i->qty > StockItem::LOW_QTY_THRESHOLD)->count();
+        $suffPct    = (int) round($sufficient / $total * 100);
+        $coverPct   = min(100, (int) round(($total - $items->where('status', StockItem::STATUS_LOW)->count()) / $total * 100 + 15));
+        $score      = (int) round($okPct * 0.4 + $suffPct * 0.35 + $coverPct * 0.25);
+
+        return $score . '/100';
     }
 
     private function technicalBom(): array

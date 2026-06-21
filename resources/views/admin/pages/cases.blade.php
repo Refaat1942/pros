@@ -48,3 +48,23 @@
 <script>
 window.__ADMIN_CASE_BUCKETS = @json($buckets);
 </script>
+
+@include('partials.contract-letter-modal')
+
+<div class="catalog-modal-overlay case-detail-modal" id="caseDetailModal" role="dialog" aria-modal="true" aria-labelledby="caseDetailModalTitle">
+  <div class="catalog-modal case-detail-modal__dialog" onclick="event.stopPropagation()">
+    <div class="catalog-modal-header">
+      <div class="case-detail-modal__head-text">
+        <h3 id="caseDetailModalTitle">📋 تفاصيل الحالة</h3>
+        <div class="modal-code" id="caseDetailModalRef"></div>
+      </div>
+      <button type="button" class="catalog-modal-close" id="closeCaseDetailModal" aria-label="إغلاق">&times;</button>
+    </div>
+    <div class="catalog-modal-body case-detail-modal__body" id="caseDetailModalBody">
+      <p class="case-detail-loading">جاري التحميل...</p>
+    </div>
+    <div class="catalog-modal-footer">
+      <button type="button" class="btn-action primary" id="btnCloseCaseDetailModal">إغلاق</button>
+    </div>
+  </div>
+</div>

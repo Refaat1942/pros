@@ -119,4 +119,41 @@ class OperationsDispenseVisibilityTest extends TestCase
 
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
     }
+
+    public function test_operations_desk_hidden_until_warehouse_dispense(): void
+    {
+        $this->prepareStock();
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $ops     = $this->userWithRole('operations');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0200']);
+
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        $data = app(DashboardPageDataService::class)->resolve('operations', 'operations');
+        $ids  = collect($data['ops_cases'])->pluck('id');
+
+        $this->assertFalse(
+            $ids->contains($case->id),
+            'الحالة لا يجب أن تظهر في الورشة قبل صرف المواد من المخزن'
+        );
+
+        $this->actingAs($ops);
+        $this->postJson("/operations/operations/{$case->id}/advance", [
+            'manufacturing_stage' => CaseRecord::MFG_ISSUE,
+        ])->assertStatus(422);
+
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+
+        $data = app(DashboardPageDataService::class)->resolve('operations', 'operations');
+        $ids  = collect($data['ops_cases'])->pluck('id');
+
+        $this->assertTrue(
+            $ids->contains($case->id),
+            'الحالة يجب أن تظهر في الورشة بعد صرف المواد من المخزن'
+        );
+    }
 }

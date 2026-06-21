@@ -8,35 +8,11 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * بيانات العرض التجريبي — من DEFAULT arrays في assets/js/shared/*.js
+     * بعد migrate:fresh — قاعدة البيانات فارغة ما عدا:
+     *   - roles
+     *   - users (حساب اختبار لكل لوحة: {slug}@clinic.local)
      *
-     * سيناريوهات مغطاة:
-     * - مدني كامل: CASE-2026-003 (تسعير → عرض → انتظار رجوع)
-     * - مدني مبكر: CASE-2026-001/002 (انتظار موافقة أدمن)
-     * - مدني تصنيع: CASE-2026-005/006 (BOM raw/wip)
-     * - مدني مُسلّم: CASE-2026-007/008 + credit note
-     * - عسكري bypass: CASE-2026-004 (path=military, pricingQueueId=null)
-     * - BOM: raw (001,005) → wip (002,006,008) → finished (003,004,007)
-     */
-    /**
-     * ⚠️  TEST PHASE — Seeders are disabled.
-     * Tables start empty so that validation, data injection,
-     * and status transitions are verified from scratch.
-     * Re-enable by uncommenting $this->call([...]) when the
-     * test phase is complete.
-     *
-     * ── /admin/bi (لوحات القيادة) ──────────────────────────────────────
-     * البيانات التالية معطّلة حتى تختبر مؤشرات BI يدوياً:
-     *   PatientSeeder            → لوحة 1 (حالات مدني/عسكري، SLA)
-     *   CaseSeeder               → لوحات 1، 3، 4 (تكاليف، أوامر تشغيل)
-     *   BomSeeder                → لوحة 3 (صرف / ورش)
-     *   ContractCompanyDebtSeeder → لوحة 4 (جدول جهات التعاقد)
-     *   InventorySeeder          → لوحات 2 و 5 (WAC، مقارنة أسعار)
-     *   SupplierSeeder           → لوحة 5 (عدد الموردين)
-     *   PricingSeeder / QuoteSeeder → بيانات مساندة للحالات (اختياري)
-     *   ReturnNoteSeeder / CreditNoteSeeder → تعتمد على الحالات (اختياري)
-     *
-     * ملاحظة: MilitaryDebt (لوحة 4) لا seeder لها — تُنشأ عند تسليم حالة عسكرية.
+     * باقي الجداول تُملأ يدوياً من التطبيق أو بإلغاء التعليق على seeders أدناه.
      */
     public function run(): void
     {
@@ -44,22 +20,26 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             RolesAndAdminSeeder::class,
-            ContractCompanySeeder::class,
-            MilitaryRankSeeder::class,
-            VisitTypeSeeder::class,
-            StockCategorySeeder::class,
 
-            // ── BI dashboard — معطّل للاختبار اليدوي على /admin/bi ──────────
-            ContractCompanyDebtSeeder::class,
-            SupplierSeeder::class,
-            InventorySeeder::class,
-            PatientSeeder::class,
-            CaseSeeder::class,
-            PricingSeeder::class,
-            QuoteSeeder::class,
-            BomSeeder::class,
-            ReturnNoteSeeder::class,
-            CreditNoteSeeder::class,
+            // ── بيانات أساسية (معطّلة — فعّل عند الحاجة) ─────────────────────
+            // ContractCompanySeeder::class,
+            // MilitaryRankSeeder::class,
+            // VisitTypeSeeder::class,
+            // StockCategorySeeder::class,
+
+            // ── موردون ومخزون ───────────────────────────────────────────────
+            // ContractCompanyDebtSeeder::class,
+            // SupplierSeeder::class,
+            // InventorySeeder::class,
+
+            // ── مسار المريض والحالات ────────────────────────────────────────
+            // PatientSeeder::class,
+            // CaseSeeder::class,
+            // PricingSeeder::class,
+            // QuoteSeeder::class,
+            // BomSeeder::class,
+            // ReturnNoteSeeder::class,
+            // CreditNoteSeeder::class,
         ]);
     }
 }
