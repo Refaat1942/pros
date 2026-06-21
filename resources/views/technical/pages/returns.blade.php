@@ -2,10 +2,15 @@
       <div class="panel inventory-wrap">
         <div class="panel-header">
           <h3>↩️ إذن ارتجاع — ورشة → مخزن</h3>
-          <span class="badge" id="returnsBadge">0</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button type="button" class="btn-view" id="btnRefreshReturns">↻ تحديث</button>
+            <span class="badge" id="returnsBadge">0</span>
+          </div>
         </div>
-        <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;">
-          ارتجاع داخلي مرتبط بـ <strong>BOM وأمر التشغيل</strong> — كامل أو جزئي. متاح فقط أثناء «تحت التشغيل». لا يؤثر على مديونية الجهة.
+        <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;line-height:1.7;">
+          ارتجاع داخلي مرتبط بـ <strong>BOM وأمر التشغيل</strong> — كامل أو جزئي.
+          متاح فقط لـ <strong>BOM في «تحت التشغيل» (WIP)</strong> وبنود <strong>اتصرفت فعلاً</strong> للورشة.
+          لا يؤثر على مديونية الجهة.
         </p>
         <div class="bom-summary" id="returnsSummary"></div>
         <div class="inventory-toolbar bom-toolbar">
@@ -23,7 +28,9 @@
                 <th class="col-actions">إجراء</th>
               </tr>
             </thead>
-            <tbody id="returnsTable"></tbody>
+            <tbody id="returnsTable">
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);">جاري تحميل الأذونات…</td></tr>
+            </tbody>
           </table>
         </div>
       </div>

@@ -17,6 +17,9 @@ use App\Models\VisitType;
 use App\Enums\PricingRequestStatus;
 use App\Models\ApprovalContract;
 use App\Models\MilitaryDebt;
+use App\Models\ReturnNote;
+use App\Models\ReturnNoteLine;
+use App\Models\StockMovement;
 use App\Models\Patient;
 use App\Services\AdminCaseTrackingService;
 use App\Services\BomService;
@@ -42,6 +45,7 @@ class DashboardPageDataService
             'admin.cases'           => $this->adminCases(),
             'admin.contracts'       => $this->contractsPage(isAdmin: true),
             'admin.military-debts'  => $this->adminMilitaryDebts(),
+            'admin.returns'         => $this->adminReturns(),
             'reception.appointments'=> $this->receptionAppointments(),
             'reception.patients'    => $this->receptionPatients(),
             'reception.delivery'    => $this->receptionDelivery(),
@@ -543,6 +547,50 @@ class DashboardPageDataService
                 ['icon' => '🟢', 'label' => 'تم التحصيل', 'value' => (string) $collected, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'collected_count'],
                 ['icon' => '💰', 'label' => 'المبالغ المعلقة', 'value' => number_format($pendingAmt, 0), 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706', 'key' => 'pending_amount'],
                 ['icon' => '✅', 'label' => 'المبالغ المستحقة', 'value' => number_format($collectedAmt, 0), 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'collected_amount'],
+            ],
+        ];
+    }
+
+    private function adminReturns(): array
+    {
+        $notes = ReturnNote::query()
+            ->with([
+                'lines',
+                'bom:id,bom_no',
+                'createdByUser:id,name',
+            ])
+            ->orderByDesc('created_at')
+            ->limit(500)
+            ->get();
+
+        $itemSummary = ReturnNoteLine::query()
+            ->selectRaw('stock_item_code, MAX(name) as name, SUM(qty_requested) as total_requested, SUM(qty_returned) as total_returned')
+            ->groupBy('stock_item_code')
+            ->havingRaw('SUM(qty_returned) > 0')
+            ->orderByDesc('total_returned')
+            ->get();
+
+        $returnMovements = StockMovement::query()
+            ->where('movement_type', StockMovement::TYPE_RETURN)
+            ->get(['quantity', 'unit_cost']);
+
+        $totalReturnedQty = (int) ReturnNoteLine::query()->sum('qty_returned');
+        $totalReturnedValue = $returnMovements->sum(fn ($m) => (float) $m->quantity * (float) $m->unit_cost);
+
+        $authorized = $notes->where('status', ReturnNote::STATUS_AUTHORIZED)->count();
+        $partial    = $notes->where('status', ReturnNote::STATUS_PARTIAL)->count();
+        $completed  = $notes->where('status', ReturnNote::STATUS_COMPLETED)->count();
+
+        return [
+            'return_notes'         => $notes,
+            'return_items_summary' => $itemSummary,
+            'return_notes_stats'   => [
+                ['icon' => '📋', 'label' => 'إجمالي الأذونات', 'value' => (string) $notes->count(), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5'],
+                ['icon' => '⏳', 'label' => 'مصرّح / بانتظار المسح', 'value' => (string) $authorized, 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706'],
+                ['icon' => '🔄', 'label' => 'جزئي', 'value' => (string) $partial, 'bg' => 'rgba(14,116,144,0.1)', 'color' => '#0e7490'],
+                ['icon' => '✅', 'label' => 'مكتمل', 'value' => (string) $completed, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669'],
+                ['icon' => '📦', 'label' => 'وحدات مرتجعة', 'value' => (string) $totalReturnedQty, 'bg' => 'rgba(124,58,237,0.1)', 'color' => '#7c3aed'],
+                ['icon' => '💰', 'label' => 'قيمة WAC المستعادة', 'value' => number_format($totalReturnedValue, 0) . ' ج.م', 'bg' => 'rgba(5,150,105,0.08)', 'color' => '#059669'],
             ],
         ];
     }

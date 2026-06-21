@@ -167,4 +167,30 @@ class CaseRecord extends Model
             ->where('stage_key', self::STAGE_MANUFACTURING)
             ->whereHas('bom', fn (Builder $q) => $q->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED]));
     }
+
+    /** حالات مؤهلة لتجارب التركيب — بعد خروج BOM للورشة أو جاهزة للتسليم. */
+    public function scopeEligibleForAdjustments(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->where('stage_key', self::STAGE_READY_DELIVERY)
+                ->orWhere(function (Builder $q2) {
+                    $q2->where('stage_key', self::STAGE_MANUFACTURING)
+                        ->whereHas('bom', fn (Builder $bom) => $bom->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED]));
+                });
+        });
+    }
+
+    public function isEligibleForAdjustments(): bool
+    {
+        if ($this->stage_key === self::STAGE_READY_DELIVERY) {
+            return true;
+        }
+
+        if ($this->stage_key !== self::STAGE_MANUFACTURING) {
+            return false;
+        }
+
+        return $this->bom !== null
+            && in_array($this->bom->stage, [Bom::STAGE_WIP, Bom::STAGE_FINISHED], true);
+    }
 }

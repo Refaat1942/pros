@@ -73,50 +73,82 @@
 
   <!-- Create Return Note Modal -->
   <div class="modal-overlay" id="returnCreateModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>➕ إنشاء إذن ارتجاع</h3>
-        <button type="button" class="modal-close" id="closeReturnCreateModal">&times;</button>
+    <div class="modal modal-return">
+      <div class="modal-header return-modal-header">
+        <div class="return-modal-title-wrap">
+          <h3>↩️ إنشاء إذن ارتجاع</h3>
+          <p class="modal-subtitle">ارتجاع مواد من الورشة إلى المخزن — مرتبط بـ BOM في مرحلة «تحت التشغيل»</p>
+        </div>
+        <button type="button" class="modal-close" id="closeReturnCreateModal" aria-label="إغلاق">&times;</button>
       </div>
-      <div class="modal-body">
-        <div class="form-group"><label>BOM (تحت التشغيل فقط)</label>
-          <select class="form-control" id="returnBomSelect" data-v-rules="required,select"></select>
+      <div class="modal-body return-modal-body">
+        <div class="form-group return-bom-field">
+          <label for="returnBomSelect">BOM <span class="label-hint">(تحت التشغيل فقط)</span></label>
+          <select class="form-control return-bom-select" id="returnBomSelect" data-v-rules="required,select"></select>
+          <div id="returnBomMeta" class="return-bom-meta" hidden></div>
         </div>
-        <div id="returnLinesPicker"></div>
-        <div class="form-group"><label>سبب الارتجاع</label>
-          <input type="text" class="form-control" id="returnReason" placeholder="مثال: فائض عن الحاجة في الورشة"
-                 data-v-rules="required,min:3,max:500" maxlength="500">
+
+        <div class="return-lines-section">
+          <div class="return-lines-header">
+            <span class="return-lines-title">البنود القابلة للارتجاع</span>
+            <div class="return-lines-actions">
+              <button type="button" class="return-lines-action" id="returnSelectAll">تحديد الكل</button>
+              <span class="return-lines-divider">|</span>
+              <button type="button" class="return-lines-action" id="returnDeselectAll">إلغاء التحديد</button>
+            </div>
+          </div>
+          <div id="returnLinesPicker" class="return-lines-list">
+            <p class="return-lines-empty">اختر BOM لعرض البنود</p>
+          </div>
         </div>
-        <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
-          <button type="button" class="btn-view" id="btnCancelReturnCreate">إلغاء</button>
-          <button type="button" class="btn-action success" id="btnConfirmReturnCreate">إصدار الإذن</button>
+
+        <div class="form-group return-reason-field">
+          <label for="returnReason">سبب الارتجاع <span class="required">*</span></label>
+          <textarea class="form-control return-reason-input" id="returnReason" rows="2"
+                    placeholder="مثال: فائض عن الحاجة في الورشة، أو تغيير في المواصفات"
+                    data-v-rules="required,min:3,max:500" maxlength="500"></textarea>
         </div>
+      </div>
+      <div class="modal-footer return-modal-footer">
+        <button type="button" class="btn-view" id="btnCancelReturnCreate">إلغاء</button>
+        <button type="button" class="btn-action success" id="btnConfirmReturnCreate">✓ إصدار الإذن</button>
       </div>
     </div>
   </div>
 
   <!-- Return Barcode Scan Modal -->
   <div class="modal-overlay" id="returnScanModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>↩️ مسح باركود الارتجاع — استعادة للمخزن</h3>
-        <button type="button" class="modal-close" id="closeReturnScanModal">&times;</button>
+    <div class="modal modal-return modal-return-scan">
+      <div class="modal-header return-modal-header">
+        <div class="return-modal-title-wrap">
+          <h3>📷 مسح باركود الارتجاع</h3>
+          <p class="modal-subtitle">امسح باركود كل صنف لاستعادته إلى المخزن</p>
+        </div>
+        <button type="button" class="modal-close" id="closeReturnScanModal" aria-label="إغلاق">&times;</button>
       </div>
-      <div class="modal-body">
-        <div id="returnScanInfo"></div>
-        <div class="barcode-scan-row">
-          <input type="text" id="returnBarcodeInput" placeholder="امسح باركود الصنف (مثل BC-005)"
-                 data-v-rules="required,barcode" maxlength="100">
-          <input type="number" id="returnQtyInput" min="1" max="999999" value="1" style="width:80px;" title="الكمية"
-                 data-v-rules="required,integer,minValue:1,maxValue:999999">
-          <button type="button" class="btn-view" id="btnReturnScan">تسجيل ارتجاع</button>
+      <div class="modal-body return-modal-body">
+        <div id="returnScanInfo" class="return-scan-info"></div>
+        <div class="return-scan-field">
+          <label for="returnBarcodeInput">باركود الصنف</label>
+          <div class="barcode-scan-row return-barcode-row">
+            <input type="text" id="returnBarcodeInput" class="form-control"
+                   placeholder="امسح أو اكتب الباركود (مثل BC-008) ثم Enter"
+                   data-v-rules="required,barcode" maxlength="100" autocomplete="off">
+            <div class="return-qty-inline">
+              <label for="returnQtyInput">الكمية</label>
+              <input type="number" id="returnQtyInput" class="form-control return-qty-input"
+                     min="1" max="999999" value="1"
+                     data-v-rules="required,integer,minValue:1,maxValue:999999">
+            </div>
+            <button type="button" class="btn-action success" id="btnReturnScan">تسجيل</button>
+          </div>
         </div>
         <div class="barcode-alarm" id="returnScanAlarm" style="display:none;">
           ⛔ <span id="returnScanAlarmText">باركود غير مطابق!</span>
         </div>
-        <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
-          <button type="button" class="btn-view" id="btnCloseReturnScan">إغلاق</button>
-        </div>
+      </div>
+      <div class="modal-footer return-modal-footer">
+        <button type="button" class="btn-view" id="btnCloseReturnScan">إغلاق</button>
       </div>
     </div>
   </div>

@@ -8,10 +8,17 @@
       <div class="panel inventory-wrap">
         <div class="panel-header">
           <h3>📏 جدول المعدلات والتجارب</h3>
-          <span class="badge" id="adjBadge">0</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="search" id="adjSearch" placeholder="🔍 بحث WO / مريض / حالة..."
+                   class="form-control" style="max-width:220px;">
+            <button type="button" class="btn-action primary" id="btnRefreshAdj">↻ تحديث</button>
+            <span class="badge" id="adjBadge">0</span>
+          </div>
         </div>
-        <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;">
-          تسجيل مواعيد <strong>التجربة الأولى والثانية</strong>، ملاحظات المقاسات، ومتابعة إذن الشغل بعد خروج الحالة من الورشة.
+        <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;line-height:1.7;">
+          تظهر الحالة هنا بعد <strong>صرف BOM للورشة</strong> (BOM تحت التشغيل أو تام) — أي بعد خروجها من لوحة المخزون.
+          يلتقي هنا المساران: <strong>مدني</strong> (بعد موافقة العقد) و<strong>عسكري</strong> (بعد التسعير الخلفي).
+          تبقى الحالة ظاهرة حتى <strong>جاهزة للتسليم</strong> لتسجيل التجربة الأولى والثانية وملاحظات المقاسات.
         </p>
         <div class="bom-summary" id="adjSummary"></div>
         <div class="bom-table-wrap">
@@ -27,7 +34,9 @@
                 <th class="col-actions">إجراء</th>
               </tr>
             </thead>
-            <tbody id="adjustmentsTable"></tbody>
+            <tbody id="adjustmentsTable">
+              <tr><td colspan="7" class="empty-cell">جاري تحميل الحالات…</td></tr>
+            </tbody>
           </table>
         </div>
       </div>

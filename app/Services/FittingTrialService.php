@@ -17,14 +17,19 @@ class FittingTrialService
      */
     public function save(CaseRecord $case, array $data): FittingTrial
     {
-        if (! in_array($case->stage_key, [
-            CaseRecord::STAGE_MANUFACTURING,
-            CaseRecord::STAGE_READY_DELIVERY,
-        ], true)) {
-            abort(422, 'الحالة ليست في مرحلة التصنيع أو التركيب.');
+        $case->loadMissing('bom');
+
+        if (! $case->isEligibleForAdjustments()) {
+            abort(422, 'الحالة غير مؤهلة لتجربة التركيب — يجب أن تكون في الورشة أو جاهزة للتسليم.');
         }
 
         $before = FittingTrial::where('case_id', $case->id)->first()?->toArray();
+
+        $status = $data['status'] ?? match (true) {
+            ! empty($data['trial2_date']) => FittingTrial::STATUS_COMPLETED,
+            ! empty($data['trial1_date']) => FittingTrial::STATUS_TRIAL1,
+            default => FittingTrial::STATUS_PENDING,
+        };
 
         $trial = FittingTrial::updateOrCreate(
             ['case_id' => $case->id],
@@ -32,7 +37,7 @@ class FittingTrialService
                 'trial1_date' => $data['trial1_date'] ?? null,
                 'trial2_date' => $data['trial2_date'] ?? null,
                 'notes'       => $data['notes'] ?? null,
-                'status'      => $data['status'] ?? FittingTrial::STATUS_PENDING,
+                'status'      => $status,
             ], fn ($v) => $v !== null),
         );
 

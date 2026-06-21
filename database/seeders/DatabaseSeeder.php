@@ -12,7 +12,7 @@ class DatabaseSeeder extends Seeder
      *   - roles
      *   - users (حساب اختبار لكل لوحة: {slug}@clinic.local)
      *
-     * باقي الجداول تُملأ يدوياً من التطبيق أو بإلغاء التعليق على seeders أدناه.
+     * باقي الجداول تُملأ من seeders أدناه.
      */
     public function run(): void
     {
@@ -21,25 +21,25 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndAdminSeeder::class,
 
-            // ── بيانات أساسية (معطّلة — فعّل عند الحاجة) ─────────────────────
-            // ContractCompanySeeder::class,
-            // MilitaryRankSeeder::class,
-            // VisitTypeSeeder::class,
-            // StockCategorySeeder::class,
+            // ── بيانات أساسية ───────────────────────────────────────────────
+            ContractCompanySeeder::class,
+            MilitaryRankSeeder::class,
+            VisitTypeSeeder::class,
+            StockCategorySeeder::class,
 
             // ── موردون ومخزون ───────────────────────────────────────────────
-            // ContractCompanyDebtSeeder::class,
-            // SupplierSeeder::class,
-            // InventorySeeder::class,
+            ContractCompanyDebtSeeder::class,
+            SupplierSeeder::class,
+            InventorySeeder::class,
 
             // ── مسار المريض والحالات ────────────────────────────────────────
-            // PatientSeeder::class,
-            // CaseSeeder::class,
-            // PricingSeeder::class,
-            // QuoteSeeder::class,
-            // BomSeeder::class,
-            // ReturnNoteSeeder::class,
-            // CreditNoteSeeder::class,
+            PatientSeeder::class,
+            CaseSeeder::class,
+            PricingSeeder::class,
+            QuoteSeeder::class,
+            BomSeeder::class,
+            ReturnNoteSeeder::class,
+            CreditNoteSeeder::class,
         ]);
     }
 }

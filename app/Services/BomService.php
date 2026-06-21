@@ -312,10 +312,6 @@ class BomService
                 if ($stockItem->qty < $bomItem->qty) {
                     abort(422, "رصيد غير كافٍ للصنف {$stockItem->code}");
                 }
-
-                if ($stockItem->qty - $stockItem->reserved < 0) {
-                    abort(422, "رصيد متاح سالب للصنف {$stockItem->code}");
-                }
             }
 
             $performedById = Auth::id();
@@ -341,7 +337,12 @@ class BomService
                 ]);
 
                 $stockItem->decrement('qty', $qty);
-                $stockItem->decrement('reserved', $qty);
+
+                // BOM خام من التوصيف/seed قد يُصرف بدون حجز مسبق — لا ننقص reserved تحت الصفر.
+                $reservedRelease = min($stockItem->reserved, $qty);
+                if ($reservedRelease > 0) {
+                    $stockItem->decrement('reserved', $reservedRelease);
+                }
 
                 $newQty = $stockItem->fresh()->qty;
                 $stockItem->update([

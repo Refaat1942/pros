@@ -1010,10 +1010,11 @@ function confirmReceive() {
   ['rcvItem', 'rcvQty', 'rcvAmount'].forEach(function (id) { var e = document.getElementById(id); if (e) e.addEventListener('input', updateWacPreview); if (e) e.addEventListener('change', updateWacPreview); });
 })();
 
-/* ===== إذن ارتجاع ===== */
+/* ===== إذن ارتجاع (legacy stub — صفحة returns تستخدم returns-dashboard.js) ===== */
 var returnScanState = { returnId: null };
 
 function renderReturnsSection() {
+  if (document.body.dataset.activePage === 'returns') return;
   if (typeof InventoryReturns === 'undefined') return;
   var summary = InventoryReturns.getSummary();
   var sumEl = document.getElementById('returnsSummary');
@@ -1180,6 +1181,7 @@ function confirmReturnScan() {
 }
 
 (function bindReturns() {
+  if (document.body.dataset.activePage === 'returns') return;
   var btnNew = document.getElementById('btnNewReturn');
   if (btnNew) btnNew.addEventListener('click', openReturnCreateModal);
   var bomSel = document.getElementById('returnBomSelect');
@@ -1279,7 +1281,7 @@ if (document.getElementById('inventoryTable')) {
 if (document.getElementById('pricingTable')) renderPricing();
 if (document.getElementById('bomTable')) renderBomSection();
 if (document.getElementById('opsTable')) renderOperations();
-if (document.getElementById('returnsTable')) renderReturnsSection();
+if (document.getElementById('returnsTable') && document.body.dataset.activePage !== 'returns') renderReturnsSection();
 if (document.getElementById('adjustmentsTable')) renderAdjustments();
 
 var defaultSection = dashboardDefaults[dashboardMode] || 'inventory';

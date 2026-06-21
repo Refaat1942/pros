@@ -169,6 +169,29 @@ class BomLifecycleTest extends TestCase
         app(BomService::class)->finish($bom);
     }
 
+    public function test_dispense_succeeds_when_bom_was_not_pre_reserved(): void
+    {
+        ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
+        $this->actingAs($user);
+
+        // يحاكي BOM من التوصيف/seed: unit_cost موجود لكن reserved = 0
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
+        ]);
+        $bom->items()->update(['unit_cost' => 200.00]);
+
+        $item->update(['reserved' => 0]);
+
+        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+
+        $bom->refresh();
+        $item->refresh();
+
+        $this->assertEquals(Bom::STAGE_WIP, $bom->stage);
+        $this->assertEquals(18, $item->qty);
+        $this->assertEquals(0, $item->reserved);
+    }
+
     // ── Return note ───────────────────────────────────────────────────────────
 
     public function test_return_note_restores_stock_qty(): void

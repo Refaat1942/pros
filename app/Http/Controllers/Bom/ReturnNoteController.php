@@ -44,28 +44,43 @@ class ReturnNoteController extends Controller
     }
 
     /**
-     * BOMs المتاحة لإنشاء إذن ارتجاع (wip / finished).
+     * BOMs المتاحة لإنشاء إذن ارتجاع (wip فقط + بنود قابلة للارتجاع).
      */
     public function create(Request $request): JsonResponse
     {
-        $boms = Bom::with('items')
-            ->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED])
-            ->when($request->search, fn ($q, $s) => $q->where('bom_no', 'like', "%{$s}%"))
-            ->orderByDesc('created_at')
+        $boms = Bom::with(['items', 'caseRecord:id,work_order_no'])
+            ->where('stage', Bom::STAGE_WIP)
+            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                $q->where('bom_no', 'like', "%{$s}%")
+                    ->orWhere('patient_name', 'like', "%{$s}%")
+                    ->orWhere('order_ref', 'like', "%{$s}%");
+            }))
+            ->orderByDesc('updated_at')
             ->limit(50)
-            ->get();
+            ->get()
+            ->filter(fn (Bom $b) => $b->items->contains(fn ($i) => $i->returnableQty() > 0))
+            ->values();
+
+        $barcodes = \App\Models\StockItem::whereIn(
+            'code',
+            $boms->flatMap(fn (Bom $b) => $b->items->pluck('stock_item_code'))->unique()->all()
+        )->pluck('barcode', 'code');
 
         return response()->json([
             'boms' => $boms->map(fn (Bom $b) => [
-                'id'           => $b->id,
-                'bom_no'       => $b->bom_no,
-                'patient_name' => $b->patient_name,
-                'order_ref'    => $b->order_ref,
-                'items'        => $b->items->map(fn ($i) => [
-                    'stock_item_code' => $i->stock_item_code,
-                    'name'            => $i->name,
-                    'returnable_qty'  => $i->returnableQty(),
-                ]),
+                'id'            => $b->id,
+                'bom_no'        => $b->bom_no,
+                'patient_name'  => $b->patient_name,
+                'order_ref'     => $b->order_ref,
+                'work_order_no' => $b->caseRecord?->work_order_no,
+                'items'         => $b->items
+                    ->filter(fn ($i) => $i->returnableQty() > 0)
+                    ->map(fn ($i) => [
+                        'stock_item_code' => $i->stock_item_code,
+                        'name'            => $i->name,
+                        'returnable_qty'  => $i->returnableQty(),
+                        'barcode'         => $barcodes[$i->stock_item_code] ?? null,
+                    ])->values(),
             ]),
         ]);
     }
