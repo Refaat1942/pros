@@ -118,6 +118,29 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+        | قناة التلجرام: تجمع تخزيناً على القرص (telegram_file) + إرسال فوري
+        | للبوت (telegram_bot). استخدمها عبر: Log::channel('telegram')->error(...)
+        */
+        'telegram' => [
+            'driver' => 'stack',
+            'channels' => ['telegram_file', 'telegram_bot'],
+            'ignore_exceptions' => false,
+        ],
+
+        'telegram_file' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/telegram.log'),
+            'level' => env('LOG_LEVEL', 'error'),
+            'replace_placeholders' => true,
+        ],
+
+        'telegram_bot' => [
+            'driver' => 'custom',
+            'via' => \App\Logging\TelegramLogChannel::class,
+            'level' => env('TELEGRAM_LOG_LEVEL', 'error'),
+        ],
+
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,

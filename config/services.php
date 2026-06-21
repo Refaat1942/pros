@@ -31,4 +31,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'telegram' => [
+        'token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+        'timeout' => env('TELEGRAM_TIMEOUT', 8),
+        // عند false لا تُرسَل إشعارات الأخطاء للتلجرام (يبقى التخزين في الملف فقط)
+        'notify_errors' => env('TELEGRAM_ERROR_NOTIFY', true),
+    ],
+
 ];
