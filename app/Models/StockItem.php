@@ -26,6 +26,8 @@ class StockItem extends Model
         'barcode',
         'qty',
         'reserved',
+        'price',
+        'expiry_date',
         'wac',
         'status',
         'last_moved_at',
@@ -33,9 +35,11 @@ class StockItem extends Model
     ];
 
     protected $casts = [
-        'qty'          => 'integer',
-        'reserved'     => 'integer',
-        'wac'          => 'decimal:4',
+        'qty'           => 'integer',
+        'reserved'      => 'integer',
+        'price'         => 'decimal:2',
+        'expiry_date'   => 'date',
+        'wac'           => 'decimal:4',
         'last_moved_at' => 'date',
     ];
 

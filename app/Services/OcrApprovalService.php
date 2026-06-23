@@ -43,8 +43,8 @@ class OcrApprovalService
             abort(422, 'المسار العسكري لا يتطلب خطاب موافقة OCR.');
         }
 
-        if ($case->stage_key !== CaseRecord::STAGE_WAITING_RETURN) {
-            abort(422, 'الحالة ليست في مرحلة انتظار رجوع الموافقة.');
+        if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
+            abort(422, 'الحالة ليست في مكتب التشغيل (بانتظار اعتماد الموافقة).');
         }
 
         if ($quote->status !== Quote::STATUS_ISSUED) {

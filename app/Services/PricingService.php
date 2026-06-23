@@ -3,56 +3,118 @@
 namespace App\Services;
 
 use App\Enums\PricingRequestStatus;
-use App\Enums\WorkflowEvent;
+use App\Models\Bom;
 use App\Models\CaseRecord;
-use App\Models\Patient;
+use App\Models\MedicalRecord;
 use App\Models\PricingRequest;
-use App\Models\User;
+use App\Models\PricingRequestItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * محرك التسعير — أعلى سعر شراء (Highest Purchase Price) وليس WAC.
+ * محرك التكاليف (الخطوة 5 — التكاليف).
  *
- * دورة الحياة الكاملة:
- *   PricingRequest يُنشأ بحالة processing
- *   → calculate() يحتسب المجموع ثم يُحوِّل إلى awaiting_admin_approval
- *   → approve()   يُرسل للاستقبال ويُحوِّل إلى sent_to_reception
+ * يحتسب رقمين لكل حالة من BOM النهائي (بنود الفني + بنود مستشار المعدلات):
+ *   - computed_total : أعلى سعر شراء (Highest Purchase Price) — أساس عرض السعر للعميل،
+ *                      يحمي المركز من تقلبات السوق والتضخم.
+ *   - internal_total : متوسط التكلفة المرجح (WAC) — التكلفة الحقيقية لحساب الربح،
+ *                      تظهر للأدمن فقط.
+ *
+ * الاحتساب تلقائي وللعرض فقط (read-only) — لا اعتماد يدوي هنا؛ القرار في مكتب التشغيل.
  */
 class PricingService
 {
     public function __construct(
         private readonly StockPriceService $stockPriceService,
-        private readonly WorkflowService $workflowService,
-        private readonly QuoteService $quoteService,
-        private readonly WorkOrderService $workOrderService,
     ) {
     }
 
     /**
-     * احتساب تكلفة طلب التسعير.
-     *
-     * يبدأ بـ processing ثم يُحوِّل إلى awaiting_admin_approval عند الانتهاء.
+     * بناء طلب تسعير من BOM النهائي للحالة ثم احتساب التكلفة فوراً.
+     * يُستدعى من AdjustmentsService عند إغلاق مرحلة المعدلات.
+     */
+    public function createAndCalculateForCase(CaseRecord $case): PricingRequest
+    {
+        return DB::transaction(function () use ($case) {
+            $case = CaseRecord::with('patient:id,name')->lockForUpdate()->findOrFail($case->id);
+
+            if ($case->pricing_request_id) {
+                $existing = PricingRequest::with('items')->find($case->pricing_request_id);
+                if ($existing) {
+                    $this->calculate($existing);
+
+                    return $existing->fresh()->load('items');
+                }
+            }
+
+            $bom = Bom::with('items')->where('case_id', $case->id)->first();
+
+            if (! $bom || $bom->items->isEmpty()) {
+                abort(422, 'لا توجد قائمة مواد (BOM) لاحتساب تكلفتها.');
+            }
+
+            $doctor = MedicalRecord::where('case_id', $case->id)
+                ->where('locked', true)
+                ->latest()
+                ->first();
+
+            $pricingRequest = PricingRequest::create([
+                'request_no'     => $this->nextRequestNo(),
+                'order_ref'      => $case->order_ref,
+                'case_id'        => $case->id,
+                'patient_name'   => $case->patient?->name ?? '—',
+                'company_name'   => $case->company_name,
+                'request_date'   => now()->toDateString(),
+                'items_count'    => $bom->items->count(),
+                'doctor_name'    => $doctor?->doctor_name,
+                'doctor_user_id' => $doctor?->doctor_user_id,
+                'patient_type'   => $case->patient_type,
+                'status_key'     => PricingRequestStatus::Processing->value,
+                'step'           => PricingRequest::STEP_ADMIN,
+            ]);
+
+            foreach ($bom->items as $item) {
+                PricingRequestItem::create([
+                    'pricing_request_id' => $pricingRequest->id,
+                    'stock_item_code'    => $item->stock_item_code,
+                    'name'               => $item->name,
+                    'qty'                => $item->qty,
+                ]);
+            }
+
+            $pricingRequest->load('items');
+            $this->calculate($pricingRequest);
+
+            $case->update(['pricing_request_id' => $pricingRequest->id]);
+
+            return $pricingRequest->fresh()->load('items');
+        });
+    }
+
+    /**
+     * احتساب تكلفة طلب التسعير — أعلى سعر شراء (عرض السعر) + WAC (داخلي).
      */
     public function calculate(PricingRequest $request): float
     {
         return DB::transaction(function () use ($request) {
             $request = PricingRequest::lockForUpdate()->findOrFail($request->id);
 
-            // Mark as "engine is running"
             $request->update(['status_key' => PricingRequestStatus::Processing->value]);
 
             $request->load('items');
             $total = 0.0;
+            $internal = 0.0;
             $lines = [];
 
             foreach ($request->items as $item) {
-                $unitPrice = $this->stockPriceService->highestUnitPrice($item->stock_item_code ?? '');
+                $code      = $item->stock_item_code ?? '';
+                $unitPrice = $this->stockPriceService->highestUnitPrice($code);
+                $wacUnit   = $this->stockPriceService->wacUnitPrice($code);
 
                 if ($unitPrice <= 0) {
                     Log::warning('Pricing: no valid price batch for item', [
                         'pricing_request_id' => $request->id,
-                        'stock_item_code'    => $item->stock_item_code,
+                        'stock_item_code'    => $code,
                     ]);
                 }
 
@@ -64,20 +126,25 @@ class PricingService
                 ]);
 
                 $lines[] = [
-                    'stock_item_code' => $item->stock_item_code,
+                    'stock_item_code' => $code,
                     'qty'             => $item->qty,
                     'unit_price'      => $unitPrice,
                     'line_total'      => $lineTotal,
+                    'wac_unit'        => $wacUnit,
                 ];
 
-                $total += $lineTotal;
+                $total    += $lineTotal;
+                $internal += round($item->qty * $wacUnit, 2);
             }
 
-            $total = round($total, 2);
-            $before = ['status_key' => PricingRequestStatus::Processing->value, 'computed_total' => 0];
+            $total    = round($total, 2);
+            $internal = round($internal, 2);
+
+            $before = $request->only(['status_key', 'computed_total', 'internal_total']);
 
             $request->update([
                 'computed_total' => $total,
+                'internal_total' => $internal,
                 'status_key'     => PricingRequestStatus::AwaitingAdminApproval->value,
             ]);
 
@@ -90,6 +157,7 @@ class PricingService
                     'request_no'     => $request->request_no,
                     'status_key'     => PricingRequestStatus::AwaitingAdminApproval->value,
                     'computed_total' => $total,
+                    'internal_total' => $internal,
                     'lines'          => $lines,
                 ],
             );
@@ -99,8 +167,7 @@ class PricingService
     }
 
     /**
-     * إعادة احتساب أسطر الطلب من أعلى سعر شراء — بدون تغيير status_key.
-     * يُستخدم عند عرض طلب قديم أو بعد تصحيح دفعات الأسعار.
+     * إعادة احتساب الأسطر من أعلى سعر شراء + WAC — بدون تغيير status_key.
      */
     public function refreshLinePrices(PricingRequest $request): float
     {
@@ -109,14 +176,17 @@ class PricingService
             $request->load('items');
 
             $total = 0.0;
+            $internal = 0.0;
 
             foreach ($request->items as $item) {
-                $unitPrice = $this->stockPriceService->highestUnitPrice($item->stock_item_code ?? '');
+                $code      = $item->stock_item_code ?? '';
+                $unitPrice = $this->stockPriceService->highestUnitPrice($code);
+                $wacUnit   = $this->stockPriceService->wacUnitPrice($code);
 
                 if ($unitPrice <= 0) {
                     Log::warning('Pricing refresh: no valid price batch for item', [
                         'pricing_request_id' => $request->id,
-                        'stock_item_code'    => $item->stock_item_code,
+                        'stock_item_code'    => $code,
                     ]);
                 }
 
@@ -127,126 +197,28 @@ class PricingService
                     'line_total' => $lineTotal,
                 ]);
 
-                $total += $lineTotal;
+                $total    += $lineTotal;
+                $internal += round($item->qty * $wacUnit, 2);
             }
 
-            $total = round($total, 2);
+            $total    = round($total, 2);
+            $internal = round($internal, 2);
 
-            $request->update(['computed_total' => $total]);
+            $request->update([
+                'computed_total' => $total,
+                'internal_total' => $internal,
+            ]);
 
             return $total;
         });
     }
 
-    /**
-     * اعتماد طلب التسعير من الأدmin.
-     *
-     * الشرط: status_key === awaiting_admin_approval
-     * النتيجة: status_key → sent_to_reception + workflow advance
-     */
-    public function approve(PricingRequest $request, User $approver): void
+    public function nextRequestNo(): string
     {
-        $status = $this->resolveStatus($request);
+        do {
+            $requestNo = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
+        } while (PricingRequest::where('request_no', $requestNo)->lockForUpdate()->exists());
 
-        if (! $status->isApprovable()) {
-            abort(422, 'طلب التسعير ليس في مرحلة الاعتماد — الحالة الحالية: ' . $status->label());
-        }
-
-        DB::transaction(function () use ($request, $approver) {
-            $request = PricingRequest::lockForUpdate()->findOrFail($request->id);
-
-            $lockedStatus = $this->resolveStatus($request);
-
-            if (! $lockedStatus->isApprovable()) {
-                abort(422, 'طلب التسعير ليس في مرحلة الاعتماد.');
-            }
-
-            $before = $request->only(['status_key', 'step', 'approved_at']);
-
-            $request->update([
-                'approved_at'         => now(),
-                'approved_by'         => $approver->name,
-                'approved_by_user_id' => $approver->id,
-                'step'                => PricingRequest::STEP_QUOTE_READY,
-                'status_key'          => PricingRequestStatus::SentToReception->value,
-            ]);
-
-            $case  = CaseRecord::lockForUpdate()->findOrFail($request->case_id);
-            $total = (float) $request->computed_total;
-
-            if ($request->patient_type === Patient::TYPE_MILITARY) {
-                $case->update(['total_cost' => $total]);
-                $this->workflowService->advance($case, WorkflowEvent::PricingCompletedMilitary->value);
-                $this->workOrderService->generate($case->fresh());
-            } else {
-                $this->quoteService->issue($request, $total);
-                $this->workflowService->advance($case->fresh(), WorkflowEvent::PricingCompletedCivilian->value);
-            }
-
-            AuditService::log(
-                action:      'approve',
-                description: "اعتماد طلب التسعير — {$request->request_no}",
-                tag:         'pricing',
-                before:      $before,
-                after:       $request->fresh()->only(['status_key', 'step', 'approved_at', 'approved_by']),
-            );
-        });
-    }
-
-    /**
-     * اعتماد تلقائي صامت للمسار العسكري — بدون تدخل أدمن.
-     *
-     * يُستدعى مباشرةً من SpecService::submit() فور إرسال التوصيف الفني
-     * للحالة العسكرية، مما يُلغي انتظار طابور الاعتماد الإداري بالكامل.
-     */
-    public function silentAutoApprove(PricingRequest $request): void
-    {
-        DB::transaction(function () use ($request) {
-            $request = PricingRequest::lockForUpdate()->findOrFail($request->id);
-
-            // Guard: يُطبَّق على العسكريين فقط
-            if ($request->patient_type !== Patient::TYPE_MILITARY) {
-                return;
-            }
-
-            $before = $request->only(['status_key', 'step']);
-
-            $request->update([
-                'approved_at'  => now(),
-                'approved_by'  => 'النظام — اعتماد تلقائي عسكري',
-                'step'         => PricingRequest::STEP_QUOTE_READY,
-                'status_key'   => PricingRequestStatus::SentToReception->value,
-            ]);
-
-            $case  = CaseRecord::lockForUpdate()->findOrFail($request->case_id);
-            $total = (float) $request->computed_total;
-
-            $case->update(['total_cost' => $total]);
-            $this->workflowService->advance($case, WorkflowEvent::PricingCompletedMilitary->value);
-            $this->workOrderService->generate($case->fresh());
-
-            AuditService::log(
-                action:      'auto_approve',
-                description: "اعتماد تلقائي (مسار عسكري) — {$request->request_no} — تجاوز طابور الإدارة",
-                tag:         'pricing',
-                before:      $before,
-                after:       [
-                    'request_no'     => $request->request_no,
-                    'status_key'     => PricingRequestStatus::SentToReception->value,
-                    'computed_total' => $total,
-                    'auto'           => true,
-                    'patient_type'   => 'military',
-                ],
-            );
-        });
-    }
-
-    // ── Helper ────────────────────────────────────────────────────────────────
-
-    private function resolveStatus(PricingRequest $request): PricingRequestStatus
-    {
-        return $request->status_key instanceof PricingRequestStatus
-            ? $request->status_key
-            : PricingRequestStatus::from((string) $request->status_key);
+        return $requestNo;
     }
 }

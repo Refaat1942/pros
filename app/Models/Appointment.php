@@ -103,4 +103,23 @@ class Appointment extends Model
     {
         return $this->belongsTo(VisitType::class, 'visit_type_id');
     }
+
+    public function isMilitary(): bool
+    {
+        return $this->patient_type === Patient::TYPE_MILITARY;
+    }
+
+    /** الجهة المعروضة في قائمة الانتظار والتقارير. */
+    public function displayEntity(): string
+    {
+        if ($this->isMilitary()) {
+            return $this->relationLoaded('patient') && $this->patient
+                ? $this->patient->displayEntity()
+                : Patient::MILITARY_SOVEREIGN_ENTITY;
+        }
+
+        return $this->company_name
+            ?? ($this->relationLoaded('patient') ? $this->patient?->displayEntity() : null)
+            ?? '—';
+    }
 }

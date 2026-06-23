@@ -27,6 +27,7 @@ class PricingRequest extends Model
         'request_date',
         'items_count',
         'computed_total',
+        'internal_total',
         'doctor_name',
         'doctor_user_id',
         'patient_type',
@@ -42,6 +43,7 @@ class PricingRequest extends Model
         'approved_at' => 'datetime',
         'items_count' => 'integer',
         'computed_total' => 'decimal:2',
+        'internal_total' => 'decimal:2',
         'step' => 'integer',
         'status_key' => PricingRequestStatus::class,
     ];

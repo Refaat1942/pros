@@ -20,7 +20,7 @@ class OcrAndQrSecurityTest extends TestCase
         $this->stockItem('RM-001', qty: 5);
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
         $case->update(['quote_total' => 500.00, 'company_name' => $company->name]);
 
         Quote::create([
@@ -45,7 +45,7 @@ class OcrAndQrSecurityTest extends TestCase
         ])->assertStatus(422)->assertJsonPath('blocked', true);
 
         $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_WAITING_RETURN, $case->stage_key);
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
         $this->assertNull($case->work_order_no);
     }
 

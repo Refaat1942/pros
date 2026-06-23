@@ -228,6 +228,9 @@
     .role-card.adjustments { --card-accent: #7c3aed; }
     .role-card.adjustments .icon-wrap { background: rgba(124, 58, 237, 0.12); color: #7c3aed; }
 
+    .role-card.costing { --card-accent: #ca8a04; }
+    .role-card.costing .icon-wrap { background: rgba(202, 138, 4, 0.12); color: #ca8a04; }
+
     .role-card.operations { --card-accent: #0e7490; }
     .role-card.operations .icon-wrap { background: rgba(14, 116, 144, 0.12); color: #0e7490; }
 

@@ -7,6 +7,7 @@
  *   doctor      → guard:doctor
  *   spec        → guard:spec
  *   adjustments → guard:adjustments
+ *   costing     → guard:costing
  *   operations  → guard:operations
  *   technical   → guard:technical
  *   admin       → guard:admin
@@ -35,6 +36,7 @@ return [
             'contracts' => ['title' => 'العقود والاتفاقيات', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
             'selfservice' => ['title' => 'متابعة حالة الطلب (خدمة ذاتية)', 'icon' => '📱', 'label' => 'متابعة الحالة (خدمة ذاتية)'],
             'patients' => ['title' => 'سجل المرضى المسجلين', 'icon' => '👤', 'label' => 'المرضى'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/reception-dashboard.css'],
         'scripts' => [
@@ -61,6 +63,7 @@ return [
             'diagnosis' => ['title' => 'التشخيص الطبي', 'icon' => '📝', 'label' => 'التشخيص الطبي'],
             'records' => ['title' => 'السجل الطبي — التقارير المعتمدة', 'icon' => '📁', 'label' => 'السجل الطبي'],
             'transfer' => ['title' => 'الحالات المحولة للتوصيف', 'icon' => '📦', 'label' => 'المحولون للتوصيف'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/doctor-dashboard.css'],
         'scripts' => [
@@ -83,6 +86,7 @@ return [
             'orders' => ['title' => 'طلبات التوصيف', 'icon' => '📥', 'label' => 'طلبات التوصيف'],
             'spec' => ['title' => 'معاينة التوصيف', 'icon' => '👁️', 'label' => 'معاينة التوصيف'],
             'pricing' => ['title' => 'إرسال للتسعير', 'icon' => '💰', 'label' => 'إرسال للتسعير'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -102,6 +106,7 @@ return [
         'sidebar' => ['icon' => '📏', 'title' => 'لوحة المعدلات', 'subtitle' => 'تجارب التركيب والمقاسات'],
         'pages' => [
             'adjustments' => ['title' => 'المعدلات — تجارب التركيب والمقاسات', 'icon' => '📏', 'label' => 'جدول المعدلات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -112,21 +117,41 @@ return [
         'body_attributes' => 'data-dashboard="adjustments"',
         'guard' => 'adjustments',
     ],
+    'costing' => [
+        'title' => 'لوحة التكاليف — مركز الأطراف الصناعية',
+        'layout' => 'layouts.costing',
+        'default_page' => 'costing',
+        'sidebar' => ['icon' => '💰', 'title' => 'لوحة التكاليف', 'subtitle' => 'مراجعة وإصدار العرض'],
+        'pages' => [
+            'costing' => ['title' => 'طابور التكاليف', 'icon' => '💰', 'label' => 'طابور التكاليف'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/technical-dashboard.css'],
+        'scripts' => [
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
+            'assets/js/pages/costing-dashboard.js',
+            'assets/js/shared/dashboard-mobile.js',
+        ],
+        'body_attributes' => 'data-dashboard="costing"',
+        'guard' => 'costing',
+    ],
     'operations' => [
         'title' => 'لوحة التشغيل — مركز الأطراف الصناعية',
         'layout' => 'layouts.operations',
-        'default_page' => 'operations',
-        'sidebar' => ['icon' => '🎯', 'title' => 'مكتب التشغيل', 'subtitle' => 'أوامر الإنتاج والصرف'],
+        'default_page' => 'pending',
+        'sidebar' => ['icon' => '🎯', 'title' => 'مكتب التشغيل', 'subtitle' => 'الموافقات والإنتاج والصرف'],
         'pages' => [
+            'pending' => ['title' => 'مكتب التشغيل — موافقات وعروض الأسعار', 'icon' => '✅', 'label' => 'موافقات التشغيل'],
             'operations' => ['title' => 'مكتب التشغيل — أوامر الصرف والإنتاج', 'icon' => '🎯', 'label' => 'أوامر التشغيل'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
             'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
+            'assets/js/pages/operations-pending-dashboard.js',
             'assets/js/pages/operations-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
-        'body_attributes' => '',
+        'body_attributes' => 'data-dashboard="operations"',
         'guard' => 'operations',
     ],
     'technical' => [
@@ -138,6 +163,7 @@ return [
             'inventory' => ['title' => 'المخزون — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزون'],
             'bom' => ['title' => 'BOM — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'BOM — خام / تشغيل / تام'],
             'returns' => ['title' => 'إذن ارتجاع', 'icon' => '↩️', 'label' => 'إذن ارتجاع'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -167,10 +193,12 @@ return [
             'overview' => ['title' => 'لوحة المعلومات — الإدارة العليا', 'icon' => '📊', 'label' => 'نظرة عامة'],
             'bi' => ['title' => 'لوحات القيادة (BI) — 5 لوحات', 'icon' => '📡', 'label' => 'لوحات القيادة (BI)'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
+            'inventory-overview' => ['title' => 'لوحة المخزون التفصيلية', 'icon' => '🔬', 'label' => 'المخزون التفصيلي'],
             'stock-categories' => ['title' => 'فئات الأصناف', 'icon' => '🏷️', 'label' => 'فئات الأصناف'],
             'pricing' => ['title' => 'اعتماد طلبات التسعير', 'icon' => '✅', 'label' => 'اعتماد التسعير'],
             'cases' => ['title' => 'متابعة الحالات', 'icon' => '📁', 'label' => 'متابعة الحالات'],
             'employees' => ['title' => 'إدارة الموظفين ', 'icon' => '👥', 'label' => 'الموظفون'],
+            'permissions' => ['title' => 'مصفوفة الصلاحيات', 'icon' => '🛡️', 'label' => 'الصلاحيات'],
             'companies' => ['title' => 'جهات التعاقد', 'icon' => '🏢', 'label' => 'جهات التعاقد'],
             'military-debts' => ['title' => 'مديونيات الجهات العسكرية', 'icon' => '🪖', 'label' => 'مديونيات عسكرية'],
             'returns' => ['title' => 'مراقبة ارتجاع المواد — ورشة → مخزن', 'icon' => '↩️', 'label' => 'ارتجاع المواد'],
@@ -180,6 +208,7 @@ return [
             'contracts' => ['title' => 'العقود والاتفاقيات — أرشيف الاعتمادات المالية', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
             'military-ranks' => ['title' => 'الرتب العسكرية', 'icon' => '🪖', 'label' => 'الرتب العسكرية'],
             'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css'],
         'scripts' => [

@@ -97,6 +97,47 @@ class MedicalRecordService
         });
     }
 
+    /**
+     * تخطّي الكشف الطبي (الكشف اختياري) — دفع الحالة مباشرةً للتوصيف.
+     *
+     * يُستخدم عندما يكون الطبيب مستعجلاً: لا يُنشأ تقرير طبي، تُنشأ الحالة
+     * من الاستقبال وتقفز للتوصيف، ويُغلق الموعد.
+     */
+    public function skipExam(Appointment $appointment): CaseRecord
+    {
+        abort_unless(
+            $appointment->status === Appointment::STATUS_IN_CLINIC && $appointment->transferred_to_clinic,
+            422,
+            'يجب تحويل المريض من الاستقبال قبل تخطّي الكشف.'
+        );
+
+        $lockedExists = MedicalRecord::where('appointment_id', $appointment->id)
+            ->where('locked', true)
+            ->exists();
+
+        abort_if($lockedExists, 422, 'تم اعتماد تقرير لهذا الموعد مسبقاً — لا يمكن التخطّي.');
+
+        return DB::transaction(function () use ($appointment) {
+            $patient = Patient::findOrFail($appointment->patient_id);
+
+            $case = $this->caseService->initiateFromReception($patient);
+
+            Appointment::where('id', $appointment->id)->update([
+                'status'       => Appointment::STATUS_DONE,
+                'status_label' => 'منتهٍ',
+            ]);
+
+            AuditService::log(
+                action:      'skip',
+                description: "تخطّي الكشف الطبي — {$patient->name} (موعد #{$appointment->id})",
+                tag:         'medical',
+                after:       ['case_id' => $case->id, 'appointment_id' => $appointment->id],
+            );
+
+            return $case;
+        });
+    }
+
     private function createDraft(array $data): MedicalRecord
     {
         $patient     = Patient::findOrFail($data['patient_id']);

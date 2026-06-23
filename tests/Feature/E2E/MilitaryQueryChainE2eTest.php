@@ -73,20 +73,28 @@ class MilitaryQueryChainE2eTest extends TestCase
             'items'   => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1]],
         ])->assertCreated();
 
+        // المسار العسكري: الإرسال يُكمل المعدلات → التكاليف → تأكيد → اعتماد تلقائي → مخزن.
         $this->postJson('/spec/spec/' . $specRes->json('id') . '/submit')->assertOk();
 
-        $pricingId = PricingRequest::where('case_id', $case->id)->value('id');
-        $this->assertContains($pricingId, $queues->adminPricingAwaitingIds());
-        $this->assertDatabaseMissing('quotes', ['case_id' => $case->id]);
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_COST_CALC, $case->stage_key);
 
-        $this->actingAs($admin);
-        $this->postJson("/admin/pricing/{$pricingId}/approve")->assertOk();
+        $costing = $this->userWithRole('costing');
+        $this->actingAs($costing)
+            ->postJson("/costing/queue/{$case->id}/confirm")
+            ->assertOk();
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
+        $this->assertEquals(CaseRecord::MFG_WAREHOUSE, $case->manufacturing_stage);
         $this->assertNotNull($case->work_order_no);
         $this->assertMatchesRegularExpression('/^WO-\d{4}-\d{4}$/', $case->work_order_no);
         $this->assertDatabaseMissing('quotes', ['case_id' => $case->id]);
+
+        // التكلفة احتُسبت صامتاً واعتُمدت تلقائياً — لا بوابة اعتماد بشرية للعسكري.
+        $pricingId = PricingRequest::where('case_id', $case->id)->value('id');
+        $this->assertNotNull($pricingId);
+        $this->assertNotContains($pricingId, $queues->adminPricingAwaitingIds());
 
         $this->actingAs($recep);
         $this->postJson('/reception/ocr/process', [

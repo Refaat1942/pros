@@ -1,0 +1,159 @@
+<?php
+
+namespace Tests\Feature\Notifications;
+
+use App\Enums\WorkflowEvent;
+use App\Models\AppNotification;
+use App\Models\CaseRecord;
+use App\Models\Role;
+use App\Models\UserDevice;
+use App\Services\WorkflowService;
+use Tests\Support\ProstheticTestHelper;
+use Tests\TestCase;
+
+/**
+ * إشعارات بين اللوحات (Firebase/FCM + جرس داخلي).
+ *
+ * Firebase معطّل في بيئة الاختبار (firebase.enabled=false) فلا إرسال شبكي،
+ * لكن الإشعارات الداخلية تُحفظ وتُختبر، وبيانات الجهاز تُسجَّل عند الدخول.
+ */
+class NotificationsFeatureTest extends TestCase
+{
+    use ProstheticTestHelper;
+
+    public function test_spec_submit_notifies_adjustments_dashboard(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+
+        app(WorkflowService::class)->advance($case, WorkflowEvent::SpecSaved->value);
+
+        $notification = AppNotification::forRole(Role::SLUG_ADJUSTMENTS)->first();
+
+        $this->assertNotNull($notification);
+        $this->assertSame($case->id, $notification->case_id);
+        $this->assertSame(WorkflowEvent::SpecSaved->value, $notification->event);
+        $this->assertStringContainsString($patient->name, $notification->body);
+        $this->assertStringContainsString('المعدلات', $notification->title);
+    }
+
+    public function test_operations_approval_notifies_warehouse(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+
+        app(WorkflowService::class)->advance($case, WorkflowEvent::OperationsApproved->value);
+
+        $this->assertSame(
+            1,
+            AppNotification::forRole(Role::SLUG_TECHNICAL)
+                ->where('event', WorkflowEvent::OperationsApproved->value)
+                ->count(),
+        );
+    }
+
+    public function test_login_registers_device_id_and_type(): void
+    {
+        $this->userWithRole('reception');
+
+        $this->post('/reception/login', [
+            'email'       => 'reception@test.local',
+            'password'    => 'password',
+            'device_id'   => 'fcm-token-abc-123',
+            'device_type' => 'web',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('user_devices', [
+            'device_id'   => 'fcm-token-abc-123',
+            'device_type' => 'web',
+        ]);
+    }
+
+    public function test_login_without_device_still_succeeds(): void
+    {
+        $this->userWithRole('doctor');
+
+        $this->post('/doctor/login', [
+            'email'    => 'doctor@test.local',
+            'password' => 'password',
+        ])->assertRedirect(route('doctor.dashboard'));
+
+        $this->assertSame(0, UserDevice::count());
+    }
+
+    public function test_device_register_endpoint_upserts_token(): void
+    {
+        $user = $this->userWithRole('technical');
+
+        $this->actingAs($user)
+            ->postJson('/devices', ['device_id' => 'tok-1', 'device_type' => 'web'])
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+
+        // نفس التوكن مرة أخرى → تحديث لا تكرار.
+        $this->actingAs($user)
+            ->postJson('/devices', ['device_id' => 'tok-1', 'device_type' => 'android']);
+
+        $this->assertSame(1, UserDevice::where('device_id', 'tok-1')->count());
+        $this->assertSame('android', UserDevice::where('device_id', 'tok-1')->value('device_type'));
+    }
+
+    public function test_notifications_page_renders_with_pagination(): void
+    {
+        $user = $this->userWithRole('adjustments');
+
+        for ($i = 1; $i <= 12; $i++) {
+            AppNotification::create([
+                'role_slug' => Role::SLUG_ADJUSTMENTS,
+                'title'     => "إشعار {$i}",
+                'body'      => "نص الإشعار رقم {$i}",
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->get('/adjustments/notifications')
+            ->assertOk()
+            ->assertSee('سجل الإشعارات')
+            ->assertSee('notif-feed', false)
+            ->assertSee('dash-pagination', false)
+            ->assertSee('إشعار 1')
+            ->assertSee('تعليم الكل كمقروء');
+    }
+
+    public function test_notifications_page_filters_unread_only(): void
+    {
+        $user = $this->userWithRole('spec');
+
+        AppNotification::create([
+            'role_slug' => Role::SLUG_SPEC,
+            'title'     => 'مقروء',
+            'body'      => 'قديم',
+            'read_at'   => now(),
+        ]);
+        AppNotification::create([
+            'role_slug' => Role::SLUG_SPEC,
+            'title'     => 'جديد',
+            'body'      => 'غير مقروء',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/spec/notifications?filter=unread')
+            ->assertOk()
+            ->assertSee('جديد')
+            ->assertDontSee('>مقروء<', false);
+    }
+
+    public function test_mark_all_read_clears_unread_for_role(): void
+    {
+        $user = $this->userWithRole('operations');
+
+        AppNotification::create(['role_slug' => Role::SLUG_OPERATIONS, 'title' => 'أ', 'body' => 'ب']);
+        AppNotification::create(['role_slug' => Role::SLUG_OPERATIONS, 'title' => 'ج', 'body' => 'د']);
+
+        $this->actingAs($user)
+            ->post('/notifications/read-all')
+            ->assertRedirect();
+
+        $this->assertSame(0, AppNotification::forRole(Role::SLUG_OPERATIONS)->unread()->count());
+    }
+}

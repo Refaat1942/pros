@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\Quote;
@@ -10,18 +9,18 @@ use App\Models\QuoteItem;
 use Illuminate\Support\Facades\DB;
 
 /**
- * إصدار عرض السعر للمسار المدني — 1:1 مع PricingRequest.
+ * إصدار عرض السعر (الخطوة 6) — مبني على BOM المجمّع النهائي وبأعلى سعر شراء.
+ * العرض يُصدر مباشرةً ويهبط في مكتب التشغيل (الخطوة 7) لاتخاذ القرار.
  */
 class QuoteService
 {
     public function __construct(
         private readonly StockPriceService $stockPriceService,
-        private readonly WorkflowService $workflowService,
     ) {
     }
 
     /**
-     * إنشاء Quote من طلب تسعير معتمد — يُستدعى داخل transaction الاعتماد.
+     * إنشاء Quote صادر من طلب تسعير محتسَب — يُستدعى داخل transaction المعدلات.
      */
     public function issue(PricingRequest $request, float $total): Quote
     {
@@ -37,8 +36,8 @@ class QuoteService
             'patient_name'       => $request->patient_name,
             'company_name'       => $request->company_name,
             'quote_date'         => now()->toDateString(),
-            'status'             => Quote::STATUS_PENDING,
-            'status_label'       => 'في انتظار موافقة الجهة',
+            'status'             => Quote::STATUS_ISSUED,
+            'status_label'       => 'صادر — بمكتب التشغيل',
             'total'              => $total,
         ]);
 
@@ -74,11 +73,11 @@ class QuoteService
     }
 
     /**
-     * تسجيل إصدار العرض رسمياً للجهة — قبل مسح الموافقة.
+     * إعادة تأكيد إصدار العرض للجهة (طباعة/QR) — العرض صادر أصلاً من محرك التكاليف.
      */
     public function markIssued(Quote $quote): Quote
     {
-        if ($quote->status !== Quote::STATUS_PENDING) {
+        if (! in_array($quote->status, [Quote::STATUS_PENDING, Quote::STATUS_ISSUED], true)) {
             abort(422, 'لا يمكن إصدار عرض السعر — الحالة الحالية: ' . $quote->status);
         }
 
@@ -89,12 +88,6 @@ class QuoteService
                 'status'       => Quote::STATUS_ISSUED,
                 'status_label' => 'صادر للجهة',
             ]);
-
-            $case = CaseRecord::lockForUpdate()->find($quote->case_id);
-
-            if ($case?->stage_key === CaseRecord::STAGE_COST_CALC) {
-                $this->workflowService->advance($case, WorkflowEvent::PricingCompletedCivilian->value);
-            }
 
             AuditService::log(
                 action:      'issue',

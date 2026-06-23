@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
+use App\Models\Permission;
+use App\Models\User;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -18,9 +20,17 @@ class AuthServiceProvider extends ServiceProvider
 
     /**
      * Register any authentication / authorization services.
+     *
+     * طبقة صلاحيات تفصيلية أصلية فوق نظام الأدوار المخصص:
+     *  - الأدمن (السوبر أدمن) يمتلك كل الصلاحيات عبر Gate::before.
+     *  - كل صلاحية في Permission::CATALOG تُسجَّل كـ Gate يفوّض إلى User::hasPermission.
      */
     public function boot(): void
     {
-        //
+        Gate::before(fn (User $user, string $ability) => $user->isAdmin() ? true : null);
+
+        foreach (array_keys(Permission::CATALOG) as $slug) {
+            Gate::define($slug, fn (User $user) => $user->hasPermission($slug));
+        }
     }
 }

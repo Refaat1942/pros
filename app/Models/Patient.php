@@ -77,4 +77,29 @@ class Patient extends Model
     {
         return $this->patient_type === self::TYPE_MILITARY;
     }
+
+    /** الجهة المعروضة في الواجهات — للعسكري دائماً القوات المسلحة. */
+    public function displayEntity(): string
+    {
+        if ($this->isMilitary()) {
+            return $this->sovereign_entity ?: self::MILITARY_SOVEREIGN_ENTITY;
+        }
+
+        return $this->company_name
+            ?? ($this->relationLoaded('contractCompany') ? $this->contractCompany?->name : null)
+            ?? '—';
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Patient $patient) {
+            if ($patient->patient_type !== self::TYPE_MILITARY) {
+                return;
+            }
+
+            $patient->sovereign_entity = $patient->sovereign_entity ?: self::MILITARY_SOVEREIGN_ENTITY;
+            $patient->contract_company_id = null;
+            $patient->company_name = null;
+        });
+    }
 }

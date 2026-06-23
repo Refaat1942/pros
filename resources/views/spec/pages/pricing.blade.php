@@ -5,7 +5,7 @@
 @php
     use App\Support\CaseDisplayStatus;
     $requests = $spec_pricing_requests ?? collect();
-    $inPricing = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [\App\Models\CaseRecord::STAGE_COST_CALC, \App\Models\CaseRecord::STAGE_ADMIN_APPROVAL], true))->count();
+    $inPricing = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [\App\Models\CaseRecord::STAGE_COST_CALC, \App\Models\CaseRecord::STAGE_QUOTE, \App\Models\CaseRecord::STAGE_OPERATIONS], true))->count();
     $inProduction = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [\App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::STAGE_READY_DELIVERY], true))->count();
 @endphp
 

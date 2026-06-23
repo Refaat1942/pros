@@ -778,6 +778,9 @@
       document.getElementById('pricingApprovalModalRef').textContent =
         (p.order_ref || caseInfo.order_ref || '—') + ' · ' + (p.patient_name || patient.name || '—');
 
+      var patientType = p.patient_type || patient.patient_type || caseInfo.patient_type;
+      var isMilitaryPatient = patientType === 'military';
+
       var meta = [
         pricingDetailBox('رقم الطلب', p.request_no || '—'),
         pricingDetailBox('أمر التشغيل', p.order_ref || caseInfo.order_ref || '—'),
@@ -786,15 +789,16 @@
         pricingDetailBox('رقم المريض', patient.patient_code || '—'),
         pricingDetailBox('الهوية الوطنية', patient.national_id || '—'),
         pricingDetailBox('الهاتف', patient.phone || '—'),
-        pricingDetailBox('تصنيف المريض', pricingTypeBadge(p.patient_type || patient.patient_type || caseInfo.patient_type)),
-        pricingDetailBox('جهة التعاقد', p.company_name || patient.company_name || caseInfo.company_name || '—'),
+        pricingDetailBox('تصنيف المريض', pricingTypeBadge(patientType)),
       ];
 
-      if (patient.rank) {
-        meta.push(pricingDetailBox('الرتبة', patient.rank));
-      }
-      if (patient.sovereign_entity) {
-        meta.push(pricingDetailBox('الجهة السيادية', patient.sovereign_entity));
+      if (isMilitaryPatient) {
+        meta.push(pricingDetailBox('الجهة السيادية', patient.sovereign_entity || caseInfo.sovereign_entity || 'القوات المسلحة'));
+        if (patient.rank) {
+          meta.push(pricingDetailBox('الرتبة', patient.rank));
+        }
+      } else {
+        meta.push(pricingDetailBox('جهة التعاقد', p.company_name || patient.company_name || caseInfo.company_name || '—'));
       }
 
       meta.push(

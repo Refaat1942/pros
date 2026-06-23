@@ -19,9 +19,11 @@ foreach ([
     'doctor',
     'spec',
     'adjustments',
+    'costing',
     'operations',
     'technical',
     'admin',
+    'notifications',
     'fallback',
 ] as $routeFile) {
     Route::group([], base_path("routes/web/{$routeFile}.php"));

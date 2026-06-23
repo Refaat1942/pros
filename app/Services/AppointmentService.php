@@ -123,8 +123,8 @@ class AppointmentService
                 ...$visitFields,
                 'patient_name'      => $patient->name,
                 'phone'             => $patient->phone,
-                'company_name'      => $patient->patient_type === Patient::TYPE_MILITARY
-                    ? ($patient->rank ?? '—')
+                'company_name'      => $patient->isMilitary()
+                    ? $patient->displayEntity()
                     : $patient->company_name,
                 'patient_type'      => $patient->patient_type,
                 'status'            => Appointment::STATUS_WAITING,

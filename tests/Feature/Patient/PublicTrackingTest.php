@@ -58,7 +58,7 @@ class PublicTrackingTest extends TestCase
         $response->assertSee('مسار مدني');
     }
 
-    public function test_civilian_waiting_return_shows_approval_step_not_manufacturing(): void
+    public function test_civilian_operations_shows_approval_step_not_manufacturing(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -73,13 +73,13 @@ class PublicTrackingTest extends TestCase
             'company_name'        => $company->name,
             'patient_type'        => Patient::TYPE_CIVILIAN,
             'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_WAITING_RETURN,
+            'stage_key'           => CaseRecord::STAGE_OPERATIONS,
         ]);
 
         $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
 
         $response->assertOk();
-        $response->assertSee('بانتظار موافقة الجهة الضامنة');
+        $response->assertSee('بمكتب التشغيل — بانتظار الاعتماد');
         $response->assertSee('اعتماد عروض الأسعار والموافقات');
         $response->assertSee('← أنت هنا');
         $response->assertDontSee('جاري التصنيع بالورشة</p>');

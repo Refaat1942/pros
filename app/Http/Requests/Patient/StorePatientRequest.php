@@ -13,7 +13,7 @@ class StorePatientRequest extends BaseRequest
     {
         return [
             'name'                => $this->personNameRules(),
-            'phone'               => $this->egyptianMobileRules(),
+            'phone'               => $this->egyptianMobileRules(required: false),
             'national_id'         => $this->egyptianNationalIdRules(),
             'patient_type'        => ['required', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
             'military_rank_id'    => ['nullable', 'integer', 'exists:military_ranks,id'],

@@ -88,8 +88,28 @@ class DashboardQueueService
     public function receptionApprovalPendingCaseIds(): array
     {
         return CaseRecord::query()
-            ->where('stage_key', CaseRecord::STAGE_WAITING_RETURN)
+            ->where('stage_key', CaseRecord::STAGE_OPERATIONS)
             ->where('patient_type', \App\Models\Patient::TYPE_CIVILIAN)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /** @return list<int> */
+    public function adjustmentsCaseIds(): array
+    {
+        return CaseRecord::query()
+            ->where('stage_key', CaseRecord::STAGE_ADJUSTMENTS)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /** @return list<int> */
+    public function operationsPendingCaseIds(): array
+    {
+        return CaseRecord::query()
+            ->where('stage_key', CaseRecord::STAGE_OPERATIONS)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();

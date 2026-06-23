@@ -48,7 +48,14 @@
     <script src="{{ asset('assets/js/shared/toast.js') }}"></script>
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}"></script>
+    @include('partials.firebase-web')
+    <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)
-        <script src="{{ str_starts_with($script, 'http') ? $script : asset($script) }}"></script>
+        @php
+            $scriptSrc = str_starts_with($script, 'http')
+                ? $script
+                : asset($script) . (is_file(public_path($script)) ? '?v=' . filemtime(public_path($script)) : '');
+        @endphp
+        <script src="{{ $scriptSrc }}"></script>
     @endforeach
 @endpush

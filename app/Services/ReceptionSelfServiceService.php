@@ -159,11 +159,12 @@ class ReceptionSelfServiceService
         }
 
         if (in_array($case->stage_key, [
+            CaseRecord::STAGE_ADJUSTMENTS,
+            CaseRecord::STAGE_COST_CALC,
             CaseRecord::STAGE_QUOTE,
-            CaseRecord::STAGE_WAITING_RETURN,
-            CaseRecord::STAGE_ADMIN_APPROVAL,
+            CaseRecord::STAGE_OPERATIONS,
         ], true)) {
-            return 'بعد اعتماد الجهة الضامنة';
+            return 'بعد اعتماد مكتب التشغيل';
         }
 
         return 'بعد اعتماد الطلب وبدء التصنيع';

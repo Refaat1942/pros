@@ -10,10 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BomItem extends Model
 {
+    public const SOURCE_SPEC = 'spec';
+    public const SOURCE_ADJUSTMENT = 'adjustment';
+
     protected $fillable = [
         'bom_id',
         'stock_item_code',
         'name',
+        'source',
         'qty',
         'unit_cost',
         'issued_qty',

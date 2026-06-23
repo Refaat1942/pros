@@ -27,6 +27,10 @@
         <form method="POST" action="{{ route('dashboard.login.submit', $dashboard) }}" novalidate id="dashboardLoginForm">
             @csrf
 
+            {{-- بيانات الجهاز للإشعارات (FCM) — تُملأ تلقائياً --}}
+            <input type="hidden" name="device_id" id="device_id" value="">
+            <input type="hidden" name="device_type" id="device_type" value="web">
+
             {{-- Email --}}
             <div class="form-group">
                 <label for="email">البريد الإلكتروني</label>
@@ -64,6 +68,16 @@
             <button type="submit" class="btn-login" id="loginSubmitBtn">دخول</button>
         </form>
 
+        @include('partials.firebase-web')
+        <script>
+            // استخراج device_id (FCM token) وتعبئته في النموذج قبل الإرسال — اختياري.
+            (function () {
+                if (typeof window.getFcmToken !== 'function') return;
+                window.getFcmToken().then(function (token) {
+                    if (token) document.getElementById('device_id').value = token;
+                }).catch(function () { /* صامت */ });
+            })();
+        </script>
         <script src="{{ asset('assets/js/shared/auth-login.js') }}"></script>
 
         <div class="auth-footer">

@@ -30,6 +30,9 @@ Route::prefix('doctor')
         Route::post('diagnosis', [MedicalRecordController::class, 'store'])
             ->name('diagnosis.store');
 
+        Route::post('diagnosis/{appointment}/skip', [MedicalRecordController::class, 'skip'])
+            ->name('diagnosis.skip');
+
         Route::post('records/{record}/lock', [MedicalRecordController::class, 'lock'])
             ->name('records.lock');
 

@@ -43,7 +43,7 @@
                         <div>
                             <p class="font-bold text-slate-800">{{ $case->patient?->name ?? '—' }}</p>
                             <p class="text-xs text-slate-500 mt-1">{{ $case->case_no }} · {{ $case->order_ref }}</p>
-                            <p class="text-xs text-slate-400 mt-1">{{ $case->company_name ?? '—' }}</p>
+                            <p class="text-xs text-slate-400 mt-1">{{ $case->displayEntity() }}</p>
                         </div>
                         <span class="text-[11px] font-semibold px-2 py-1 rounded-lg {{ $case->patient_type === 'military' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700' }}">
                             {{ $case->patient_type === 'military' ? '🪖 عسكري' : '🌐 مدني' }}

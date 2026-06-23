@@ -2,6 +2,7 @@
 
 namespace App\Services\Dashboard;
 
+use App\Models\AppNotification;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\ContractCompany;
@@ -33,6 +34,10 @@ class DashboardPageDataService
 {
     public function resolve(string $dashboardKey, string $page): array
     {
+        if ($page === 'notifications') {
+            return $this->notificationsInbox();
+        }
+
         return match ("{$dashboardKey}.{$page}") {
             'admin.employees'       => $this->adminEmployees(),
             'admin.companies'       => $this->adminCompanies(),
@@ -40,6 +45,8 @@ class DashboardPageDataService
             'admin.visit-types'     => $this->adminVisitTypes(),
             'admin.stock-categories'=> $this->adminStockCategories(),
             'admin.catalog'         => $this->adminCatalog(),
+            'admin.inventory-overview' => $this->adminInventoryOverview(),
+            'admin.permissions'     => $this->adminPermissions(),
             'admin.suppliers'       => $this->adminSuppliers(),
             'admin.pricing'         => $this->adminPricing(),
             'admin.cases'           => $this->adminCases(),
@@ -145,6 +152,56 @@ class DashboardPageDataService
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'stock_items' => $catalogService->listForDashboard(),
+        ];
+    }
+
+    /**
+     * لوحة المخزون التفصيلية للأدمن — الأرصدة، الأسعار، WAC، الصلاحية، وتاريخ الأسعار.
+     */
+    private function adminInventoryOverview(): array
+    {
+        $items = StockItem::query()
+            ->with(['category:id,name', 'prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id')])
+            ->orderBy('code')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
+
+        $totalValue = $items->sum(fn (StockItem $i) => (int) $i->qty * (float) $i->price);
+        $soon = now()->addDays(60);
+
+        return [
+            'inventory_items' => $items,
+            'inventory_overview_stats' => [
+                ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $items->count(), 'bg' => 'rgba(37,99,235,0.1)'],
+                ['icon' => '🔻', 'label' => 'أصناف منخفضة', 'value' => (string) $items->where('status', StockItem::STATUS_LOW)->count(), 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+                ['icon' => '⏰', 'label' => 'قاربت الصلاحية', 'value' => (string) $items->filter(fn ($i) => $i->expiry_date && $i->expiry_date->lte($soon))->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => '💰', 'label' => 'قيمة المخزون', 'value' => number_format($totalValue, 2), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+            ],
+        ];
+    }
+
+    /**
+     * مصفوفة الصلاحيات — الأدوار (عدا الأدمن) × الصلاحيات.
+     */
+    private function adminPermissions(): array
+    {
+        $roles = Role::query()
+            ->with('permissions:id,slug')
+            ->where('slug', '!=', Role::SLUG_ADMIN)
+            ->orderBy('label_ar')
+            ->get(['id', 'slug', 'label_ar']);
+
+        $permissions = \App\Models\Permission::query()
+            ->orderBy('group')
+            ->orderBy('id')
+            ->get(['id', 'slug', 'label_ar', 'group']);
+
+        return [
+            'perm_roles'       => $roles,
+            'perm_permissions' => $permissions->groupBy('group'),
+            'perm_matrix'      => $roles->mapWithKeys(fn (Role $r) => [
+                $r->id => $r->permissions->pluck('slug')->all(),
+            ]),
         ];
     }
 
@@ -262,7 +319,7 @@ class DashboardPageDataService
             ->where('transferred_to_clinic', true);
 
         $appointments = (clone $baseQuery)
-            ->with('patient:id,patient_code,name,patient_type,company_name,created_at')
+            ->with('patient:id,patient_code,name,patient_type,company_name,sovereign_entity,created_at')
             ->where('status', Appointment::STATUS_IN_CLINIC)
             ->orderByDesc('transferred_to_clinic_at')
             ->orderByDesc('id')
@@ -327,6 +384,7 @@ class DashboardPageDataService
                 'phone'          => $record->patient?->phone,
                 'national_id'    => $record->national_id,
                 'company_name'   => $record->company_name,
+                'display_entity' => $record->displayEntity(),
                 'patient_type'   => $record->patient_type,
                 'diagnosis'      => $record->diagnosis,
                 'prescription'   => $record->prescription,
@@ -386,7 +444,7 @@ class DashboardPageDataService
             ->limit(100)
             ->get();
 
-        $inPricing = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [CaseRecord::STAGE_COST_CALC, CaseRecord::STAGE_ADMIN_APPROVAL], true))->count();
+        $inPricing = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [CaseRecord::STAGE_COST_CALC, CaseRecord::STAGE_QUOTE, CaseRecord::STAGE_OPERATIONS], true))->count();
         $inProduction = $requests->filter(fn ($r) => in_array($r->caseRecord?->stage_key, [CaseRecord::STAGE_MANUFACTURING, CaseRecord::STAGE_READY_DELIVERY], true))->count();
 
         return [
@@ -613,6 +671,41 @@ class DashboardPageDataService
                 ['icon' => '💰', 'label' => 'إجمالي المبالغ', 'value' => number_format($totalAmount, 0), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📅', 'label' => 'هذا الشهر', 'value' => (string) $contracts->filter(fn ($c) => $c->approval_date?->isCurrentMonth())->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '📎', 'label' => 'لها مستندات', 'value' => (string) $contracts->filter(fn ($c) => $c->letter_path)->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+            ],
+        ];
+    }
+
+    /**
+     * صفحة الإشعارات — أرشيف كامل مع pagination من السيرفر (بلا polling).
+     */
+    private function notificationsInbox(): array
+    {
+        $roleSlug = auth()->user()?->role?->slug ?? '';
+
+        $base = AppNotification::query()->forRole($roleSlug);
+
+        $filter = request()->query('filter', 'all');
+        $query  = (clone $base)
+            ->with(['caseRecord:id,case_no,order_ref'])
+            ->latest();
+
+        if ($filter === 'unread') {
+            $query->unread();
+        }
+
+        $notifications = $query->paginate((int) config('dashboards.table_per_page', 10))->withQueryString();
+
+        $unread = (clone $base)->unread()->count();
+        $today  = (clone $base)->whereDate('created_at', today())->count();
+
+        return [
+            'notifications'        => $notifications,
+            'notifications_filter' => $filter,
+            'notifications_stats'  => [
+                ['icon' => '🔔', 'label' => 'إجمالي الإشعارات', 'value' => (string) $base->count(), 'bg' => 'rgba(37,99,235,0.1)', 'color' => '#2563eb'],
+                ['icon' => '📬', 'label' => 'غير مقروء', 'value' => (string) $unread, 'bg' => 'rgba(220,38,38,0.1)', 'color' => '#dc2626'],
+                ['icon' => '📅', 'label' => 'اليوم', 'value' => (string) $today, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669'],
+                ['icon' => '📄', 'label' => 'هذه الصفحة', 'value' => (string) $notifications->count(), 'bg' => 'rgba(100,116,139,0.1)'],
             ],
         ];
     }

@@ -65,8 +65,8 @@
               <input type="text" class="form-control" id="newPatientName" placeholder="الاسم الكامل">
             </div>
             <div class="form-group">
-              <label>رقم الهاتف</label>
-              <input type="tel" class="form-control" id="newPhone" placeholder="01xxxxxxxxx" maxlength="11">
+              <label>رقم الهاتف <span class="field-optional">(اختياري)</span></label>
+              <input type="tel" class="form-control" id="newPhone" placeholder="01xxxxxxxxx — يمكن تركه فارغاً" maxlength="11">
             </div>
             <div class="form-group">
               <label>الرقم القومي</label>

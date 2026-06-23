@@ -1,5 +1,5 @@
 /**
- * Adjustments Desk — fitting trials queue (Axios + DB).
+ * Adjustments Desk (المعدلات) — review spec BOM (read-only) + add items, then push to costing.
  */
 (function () {
   if (document.body.dataset.dashboard !== 'adjustments') return;
@@ -13,87 +13,88 @@
   }
 
   var LIST_URL = '/adjustments/adjustments/list';
-  var STORE_URL = '/adjustments/adjustments';
+  var SHOW_URL = function (id) { return '/adjustments/adjustments/' + id; };
+  var ADD_URL = function (id) { return '/adjustments/adjustments/' + id + '/items'; };
+  var COMPLETE_URL = function (id) { return '/adjustments/adjustments/' + id + '/complete'; };
 
   var casesCache = [];
-  var activeCaseId = null;
+  var catalogCache = [];
+  var activeCase = null;
   var refreshInFlight = false;
 
   function $(id) { return document.getElementById(id); }
 
   function esc(s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
+
+  function apiMessage(err, fallback) {
+    var data = err && err.response && err.response.data;
+    if (data && data.message) return data.message;
+    if (data && data.errors) {
+      var first = Object.values(data.errors)[0];
+      if (first && first[0]) return first[0];
+    }
+    return fallback || 'حدث خطأ غير متوقع.';
+  }
+
+  function clearFormError() {
+    var el = $('adjFormError');
+    if (el) { el.textContent = ''; el.style.display = 'none'; }
+  }
+
+  function showError(msg) {
+    clearFormError();
+    var el = $('adjFormError');
+    if (el) {
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    window.alert(msg);
   }
 
   function toast(msg, isError) {
+    if (isError) {
+      showError(msg);
+      return;
+    }
+    clearFormError();
     if (window.DashboardToast) {
-      window.DashboardToast.show(msg, {
-        id: 'toast',
-        prefix: '',
-        isError: isError,
-      });
+      window.DashboardToast.show(msg, { id: 'toast', prefix: '✅ ', isError: false });
       return;
     }
     var el = $('toast');
     if (!el) return;
     el.textContent = msg;
-    el.className = 'toast visible' + (isError ? ' error' : '');
-    setTimeout(function () { el.classList.remove('visible'); }, 4500);
+    el.className = 'toast show';
+    setTimeout(function () { el.classList.remove('show'); }, 4500);
   }
 
-  function isoDate(value) {
-    if (!value) return '';
-    return String(value).slice(0, 10);
-  }
-
-  function displayDate(value) {
-    var iso = isoDate(value);
-    if (!iso) return '—';
-    var parts = iso.split('-');
-    if (parts.length !== 3) return iso;
-    return parts[2] + '/' + parts[1] + '/' + parts[0];
-  }
-
-  function trialStatusMeta(trial) {
-    if (!trial || (!trial.trial1_date && !trial.trial2_date)) {
-      return { cls: 'waiting', label: 'بانتظار' };
-    }
-    if (trial.trial2_date || trial.status === 'completed') {
-      return { cls: 'done', label: 'مكتمل' };
-    }
-    return { cls: 'progress', label: 'تجربة 1' };
+  function bomItemsOf(c) {
+    return (c.bom && c.bom.items) || [];
   }
 
   function renderRow(c) {
-    var trial = c.fitting_trial || {};
-    var status = trialStatusMeta(trial);
     var isMil = c.patient_type === 'military' || c.path === 'military';
-    var wo = c.work_order_no || c.order_ref || c.case_no || '—';
-    var stageLine = c.stage_key === 'ready_delivery'
-      ? esc(c.stage_label || 'جاهزة للتسليم')
-      : esc(c.manufacturing_label || c.stage_label || '—');
-    var search = [wo, c.case_no, c.patient && c.patient.name].join(' ');
+    var items = bomItemsOf(c);
+    var search = [c.case_no, c.order_ref, c.patient && c.patient.name].join(' ');
 
     return '<tr class="adj-row" data-case-id="' + c.id + '" data-search="' + esc(search) + '">' +
-      '<td><strong>' + esc(wo) + '</strong><div class="text-xs text-muted">' + esc(c.case_no) + '</div></td>' +
-      '<td><div>' + esc(c.patient && c.patient.name) + '</div>' +
-        '<span class="patient-type-badge ' + (isMil ? 'military' : 'civilian') + '">' +
+      '<td><strong>' + esc(c.case_no) + '</strong><div class="text-xs text-muted">' + esc(c.order_ref) + '</div></td>' +
+      '<td>' + esc(c.patient && c.patient.name) + '</td>' +
+      '<td><span class="patient-type-badge ' + (isMil ? 'military' : 'civilian') + '">' +
         (isMil ? '🪖 عسكري' : '🌐 مدني') + '</span></td>' +
-      '<td>' + stageLine + '</td>' +
-      '<td>' + displayDate(trial.trial1_date) + '</td>' +
-      '<td>' + displayDate(trial.trial2_date) + '</td>' +
-      '<td style="max-width:180px;font-size:13px;color:var(--text-muted);">' + esc(trial.notes || '—') + '</td>' +
+      '<td>' + items.length + '</td>' +
       '<td class="col-actions">' +
-        '<button type="button" class="btn-action primary btn-open-fitting" data-case-id="' + c.id + '">تسجيل تجربة</button> ' +
-        '<span class="badge ' + status.cls + '">' + status.label + '</span>' +
+        '<button type="button" class="btn-action primary btn-open-adj" data-case-id="' + c.id + '">مراجعة وإضافة</button>' +
       '</td></tr>';
   }
 
   function updateAnalytics(cases) {
     var total = cases.length;
-    var trial1 = cases.filter(function (c) { return c.fitting_trial && c.fitting_trial.trial1_date; }).length;
-    var trial2 = cases.filter(function (c) { return c.fitting_trial && c.fitting_trial.trial2_date; }).length;
-    var pending = total - trial1;
+    var mil = cases.filter(function (c) { return c.patient_type === 'military' || c.path === 'military'; }).length;
+    var civ = total - mil;
+    var avg = total ? Math.round(cases.reduce(function (s, c) { return s + bomItemsOf(c).length; }, 0) / total) : 0;
 
     if ($('adjBadge')) $('adjBadge').textContent = total;
 
@@ -102,30 +103,16 @@
       var values = analytics.querySelectorAll('.ck-stat-value');
       if (values.length >= 4) {
         values[0].textContent = total;
-        values[1].textContent = trial1;
-        values[2].textContent = trial2;
-        values[3].textContent = pending;
+        values[1].textContent = mil;
+        values[2].textContent = civ;
+        values[3].textContent = avg;
       }
-    }
-
-    var sumEl = $('adjSummary');
-    if (sumEl) {
-      sumEl.innerHTML = [
-        { cls: 'wip', icon: '📏', label: 'حالات نشطة', val: total },
-        { cls: 'raw', icon: '1️⃣', label: 'تجربة أولى', val: trial1 },
-        { cls: 'finished', icon: '2️⃣', label: 'تجربة ثانية', val: trial2 },
-      ].map(function (s) {
-        return '<div class="bom-stat ' + s.cls + '"><div class="bom-stat-icon">' + s.icon + '</div>' +
-          '<div><div class="bom-stat-label">' + s.label + '</div><div class="bom-stat-value">' + s.val + '</div></div></div>';
-      }).join('');
     }
   }
 
   function bindTableEvents() {
-    document.querySelectorAll('.btn-open-fitting').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        openFittingModal(btn.getAttribute('data-case-id'));
-      });
+    document.querySelectorAll('.btn-open-adj').forEach(function (btn) {
+      btn.addEventListener('click', function () { openModal(btn.getAttribute('data-case-id')); });
     });
   }
 
@@ -146,10 +133,7 @@
 
   function refreshList(ev) {
     if (ev && ev.preventDefault) ev.preventDefault();
-    if (!window.axios) {
-      toast('تعذّر التحديث — axios غير متاح', true);
-      return;
-    }
+    if (!window.axios) { toast('تعذّر التحديث — axios غير متاح', true); return; }
     if (refreshInFlight) return;
 
     refreshInFlight = true;
@@ -162,7 +146,7 @@
         if (!tbody) return;
 
         if (!casesCache.length) {
-          tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">لا توجد حالات للمعدلات حالياً — تظهر بعد صرف BOM للورشة.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد حالات بالمعدلات حالياً — تظهر بعد إرسال التوصيف الفني.</td></tr>';
         } else {
           tbody.innerHTML = casesCache.map(renderRow).join('');
           bindTableEvents();
@@ -182,70 +166,117 @@
       });
   }
 
-  function openFittingModal(caseId) {
-    var c = casesCache.find(function (row) { return String(row.id) === String(caseId); });
-    if (!c) return;
-
-    activeCaseId = c.id;
-    var trial = c.fitting_trial || {};
-    var modal = $('fittingModal');
-    if (!modal) return;
-
-    var title = $('fittingModalTitle');
-    if (title) {
-      title.textContent = '📏 ' + (c.patient && c.patient.name || '—') + ' — ' + (c.work_order_no || c.order_ref || c.case_no);
+  function renderBomItems(items) {
+    var tbody = $('adjBomItems');
+    if (!tbody) return;
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">لا توجد بنود بعد.</td></tr>';
+      return;
     }
-
-    if ($('fittingTrial1')) $('fittingTrial1').value = isoDate(trial.trial1_date);
-    if ($('fittingTrial2')) $('fittingTrial2').value = isoDate(trial.trial2_date);
-    if ($('fittingNotes')) $('fittingNotes').value = trial.notes || '';
-
-    modal.classList.add('visible');
+    tbody.innerHTML = items.map(function (it) {
+      var ro = it.read_only || it.source === 'spec';
+      return '<tr>' +
+        '<td>' + esc(it.stock_item_code) + '</td>' +
+        '<td>' + esc(it.name) + '</td>' +
+        '<td>' + esc(it.qty) + '</td>' +
+        '<td>' + (ro
+          ? '<span class="badge">🔒 الفني</span>'
+          : '<span class="badge done">معدّلات</span>') + '</td>' +
+        '</tr>';
+    }).join('');
   }
 
-  function closeFittingModal() {
-    var modal = $('fittingModal');
+  function openModal(caseId) {
+    if (!window.axios) return;
+    axios.get(SHOW_URL(caseId))
+      .then(function (res) {
+        activeCase = res.data.case;
+        var modal = $('adjModal');
+        if (!modal) return;
+
+        var title = $('adjModalTitle');
+        if (title) {
+          title.textContent = '🧩 ' + ((activeCase.patient && activeCase.patient.name) || '—') + ' — ' + activeCase.case_no;
+        }
+
+        renderBomItems((activeCase.bom && activeCase.bom.items) || []);
+
+        catalogCache = res.data.stock_catalog || [];
+        var datalist = $('adjCatalog');
+        if (datalist) {
+          datalist.innerHTML = catalogCache.map(function (i) {
+            return '<option value="' + esc(i.code) + '">' + esc(i.name) + '</option>';
+          }).join('');
+        }
+
+        if ($('adjItemCode')) $('adjItemCode').value = '';
+        if ($('adjItemName')) $('adjItemName').value = '';
+        if ($('adjItemQty')) $('adjItemQty').value = '1';
+        clearFormError();
+
+        modal.classList.add('visible');
+      })
+      .catch(function (err) {
+        showError(apiMessage(err, 'تعذّر فتح الحالة'));
+      });
+  }
+
+  function closeModal() {
+    var modal = $('adjModal');
     if (modal) modal.classList.remove('visible');
-    activeCaseId = null;
+    activeCase = null;
   }
 
-  function validateModalFields() {
-    if (!window.DashboardValidation) return true;
-    var ids = ['fittingTrial1', 'fittingTrial2', 'fittingNotes'];
-    for (var i = 0; i < ids.length; i++) {
-      var el = $(ids[i]);
-      if (el && !DashboardValidation.isFieldValid(el)) return false;
-    }
-    return true;
+  function autofillName() {
+    var codeEl = $('adjItemCode');
+    var nameEl = $('adjItemName');
+    if (!codeEl || !nameEl) return;
+    var code = codeEl.value.trim().toLowerCase();
+    var match = catalogCache.filter(function (i) { return String(i.code).toLowerCase() === code; })[0];
+    if (match) nameEl.value = match.name || '';
   }
 
-  function saveFitting() {
-    if (!validateModalFields()) return;
-    if (!activeCaseId || !window.axios) return;
+  function addItem() {
+    if (!activeCase || !window.axios) return;
+    var code = ($('adjItemCode') && $('adjItemCode').value.trim()) || '';
+    var name = ($('adjItemName') && $('adjItemName').value.trim()) || '';
+    var qty = parseInt(($('adjItemQty') && $('adjItemQty').value) || '0', 10);
 
-    var payload = {
-      case_id: activeCaseId,
-      trial1_date: ($('fittingTrial1') && $('fittingTrial1').value.trim()) || null,
-      trial2_date: ($('fittingTrial2') && $('fittingTrial2').value.trim()) || null,
-      notes: ($('fittingNotes') && $('fittingNotes').value.trim()) || null,
-    };
+    if (!code || !qty || qty < 1) { showError('أدخل كود الصنف وكمية صحيحة'); return; }
 
-    var btn = $('btnSaveFitting');
+    var btn = $('btnAddAdjItem');
     if (btn) btn.disabled = true;
 
-    axios.post(STORE_URL, payload)
+    axios.post(ADD_URL(activeCase.id), { items: [{ stock_item_code: code, name: name || code, qty: qty }] })
+      .then(function (res) {
+        clearFormError();
+        toast('تمت إضافة البند');
+        renderBomItems((res.data.bom && res.data.bom.items) || []);
+        if ($('adjItemCode')) $('adjItemCode').value = '';
+        if ($('adjItemName')) $('adjItemName').value = '';
+        if ($('adjItemQty')) $('adjItemQty').value = '1';
+      })
+      .catch(function (err) {
+        showError(apiMessage(err, 'تعذّر إضافة البند'));
+      })
+      .finally(function () { if (btn) btn.disabled = false; });
+  }
+
+  function completeAdjustments() {
+    if (!activeCase || !window.axios) return;
+    var btn = $('btnCompleteAdj');
+    if (btn) btn.disabled = true;
+
+    axios.post(COMPLETE_URL(activeCase.id), {})
       .then(function () {
-        toast('✅ تم حفظ بيانات المعد');
-        closeFittingModal();
+        toast('✅ تم إغلاق المعدلات ودفع الحالة للتكاليف');
+        closeModal();
         refreshList();
       })
       .catch(function (err) {
-        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر حفظ التجربة';
-        toast(msg, true);
+        showError(apiMessage(err, 'تعذّر إغلاق المعدلات'));
       })
-      .finally(function () {
-        if (btn) btn.disabled = false;
-      });
+      .finally(function () { if (btn) btn.disabled = false; });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -255,18 +286,23 @@
     var search = $('adjSearch');
     if (search) search.addEventListener('input', filterSearch);
 
-    var closeBtn = $('closeFittingModal');
-    var cancelBtn = $('btnCancelFitting');
-    var saveBtn = $('btnSaveFitting');
-    var modal = $('fittingModal');
+    var closeBtn = $('closeAdjModal');
+    var cancelBtn = $('btnCancelAdj');
+    var addBtn = $('btnAddAdjItem');
+    var completeBtn = $('btnCompleteAdj');
+    var modal = $('adjModal');
+    var codeInput = $('adjItemCode');
+    if (codeInput) {
+      codeInput.addEventListener('change', autofillName);
+      codeInput.addEventListener('input', autofillName);
+    }
 
-    if (closeBtn) closeBtn.addEventListener('click', closeFittingModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeFittingModal);
-    if (saveBtn) saveBtn.addEventListener('click', saveFitting);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (addBtn) addBtn.addEventListener('click', addItem);
+    if (completeBtn) completeBtn.addEventListener('click', completeAdjustments);
     if (modal) {
-      modal.addEventListener('click', function (ev) {
-        if (ev.target === modal) closeFittingModal();
-      });
+      modal.addEventListener('click', function (ev) { if (ev.target === modal) closeModal(); });
     }
 
     refreshList();

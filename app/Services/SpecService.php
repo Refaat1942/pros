@@ -2,27 +2,25 @@
 
 namespace App\Services;
 
-use App\Enums\PricingRequestStatus;
 use App\Enums\WorkflowEvent;
 use App\Exceptions\InvalidSpecItemException;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
-use App\Models\PricingRequest;
-use App\Models\PricingRequestItem;
 use App\Models\StockItem;
 use App\Models\TechOrderSpec;
 use App\Models\TechOrderSpecItem;
 use Illuminate\Support\Facades\DB;
 
 /**
- * حفظ وإرسال التوصيف الفني — يُنشئ PricingRequest ويُحرِّك الـ workflow.
+ * حفظ وإرسال التوصيف الفني (الخطوة 3) — بنود وكميات فقط، بلا أسعار.
+ * عند الإرسال يُنشئ BOM خام (source=spec) ويُحوّل الحالة إلى المعدلات (الخطوة 4).
  */
 class SpecService
 {
     public function __construct(
         private readonly WorkflowService $workflowService,
-        private readonly PricingService $pricingService,
         private readonly BomService $bomService,
+        private readonly AdjustmentsService $adjustmentsService,
     ) {
     }
 
@@ -96,9 +94,10 @@ class SpecService
     }
 
     /**
-     * إرسال التوصيف للتسعير — يُنشئ PricingRequest ويُحرِّك الحالة إلى cost_calc.
+     * إرسال التوصيف — يُنشئ BOM خام (بنود الفني) ويُحوّل الحالة إلى المعدلات.
+     * لا تسعير هنا (عمى مالي للفني). المسار العسكري يُكمل تلقائياً حتى المخزن.
      */
-    public function submit(TechOrderSpec $spec): PricingRequest
+    public function submit(TechOrderSpec $spec): CaseRecord
     {
         if ($spec->locked) {
             abort(422, 'تم إرسال التوصيف لهذه الحالة مسبقاً.');
@@ -112,78 +111,43 @@ class SpecService
 
         $this->validateStockCodes($spec);
 
-        return DB::transaction(function () use ($spec) {
+        $case = DB::transaction(function () use ($spec) {
             $case = CaseRecord::lockForUpdate()->findOrFail($spec->case_id);
 
-            if ($case->pricing_request_id) {
-                abort(422, 'تم إرسال التوصيف لهذه الحالة مسبقاً.');
+            if ($case->stage_key !== CaseRecord::STAGE_TECHNICAL) {
+                abort(422, 'الحالة ليست في مرحلة التوصيف الفني.');
             }
 
-            $requestNo = $this->nextRequestNo();
-            $doctor    = MedicalRecord::where('case_id', $case->id)
-                ->where('locked', true)
-                ->latest()
-                ->first();
-
-            $pricingRequest = PricingRequest::create([
-                'request_no'        => $requestNo,
-                'order_ref'         => $case->order_ref,
-                'case_id'           => $case->id,
-                'patient_name'      => $spec->patient_name,
-                'company_name'      => $spec->company_name,
-                'request_date'      => now()->toDateString(),
-                'items_count'       => $spec->items->count(),
-                'doctor_name'       => $spec->doctor_name,
-                'doctor_user_id'    => $doctor?->doctor_user_id,
-                'patient_type'      => $case->patient_type,
-                'status_key'        => PricingRequestStatus::Processing->value,
-                'step'              => PricingRequest::STEP_ADMIN,
-            ]);
-
-            foreach ($spec->items as $item) {
-                PricingRequestItem::create([
-                    'pricing_request_id' => $pricingRequest->id,
-                    'stock_item_code'    => $item->stock_item_code,
-                    'name'               => $item->name,
-                    'qty'                => $item->qty,
-                ]);
-            }
-
-            $pricingRequest->load('items');
-            $this->pricingService->calculate($pricingRequest);
+            $this->bomService->createSpecRaw($case, $spec->items->map(fn ($i) => [
+                'stock_item_code' => $i->stock_item_code,
+                'name'            => $i->name,
+                'qty'             => $i->qty,
+            ])->all());
 
             $spec->update([
                 'locked'       => true,
                 'submitted_at' => now(),
             ]);
 
-            $case->update(['pricing_request_id' => $pricingRequest->id]);
-
+            // التوصيف الفني → المعدلات
             $this->workflowService->advance($case, WorkflowEvent::SpecSaved->value);
 
-            $this->bomService->createSpecRaw($case->fresh(), $spec->items->map(fn ($i) => [
-                'stock_item_code' => $i->stock_item_code,
-                'name'            => $i->name,
-                'qty'             => $i->qty,
-            ])->all());
-
-            // المسار العسكري: اعتماد تلقائي فوري — تجاوز طابور موافقة الإدارة بالكامل.
-            // تُولَّد أمر الشغل (WO-*) وتنتقل الحالة مباشرةً إلى manufacturing/warehouse.
-            if ($case->isMilitary()) {
-                $this->pricingService->silentAutoApprove($pricingRequest->fresh());
-            }
-
             AuditService::log(
-                action:      'create',
-                description: "إرسال التوصيف للتسعير — {$requestNo} — {$case->case_no}",
+                action:      'submit',
+                description: "إرسال التوصيف للمعدلات — {$case->case_no}",
                 tag:         'spec',
-                after:       $pricingRequest->only([
-                    'id', 'request_no', 'case_id', 'items_count', 'status_key',
-                ]),
+                after:       ['case_id' => $case->id, 'items_count' => $spec->items->count()],
             );
 
-            return $pricingRequest->load('items');
+            return $case->fresh();
         });
+
+        // المسار العسكري: تكملة تلقائية صامتة (معدلات → تكاليف → عرض → تشغيل → مخزن).
+        if ($case->isMilitary()) {
+            $case = $this->adjustmentsService->complete($case);
+        }
+
+        return $case;
     }
 
     /**
@@ -233,14 +197,5 @@ class SpecService
             ->where('locked', true)
             ->latest()
             ->value('doctor_name');
-    }
-
-    private function nextRequestNo(): string
-    {
-        do {
-            $requestNo = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
-        } while (PricingRequest::where('request_no', $requestNo)->lockForUpdate()->exists());
-
-        return $requestNo;
     }
 }

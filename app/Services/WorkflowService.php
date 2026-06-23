@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\WorkflowEvent;
 use App\Exceptions\InvalidWorkflowTransitionException;
 use App\Models\CaseRecord;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -12,39 +13,73 @@ use Illuminate\Support\Facades\DB;
  */
 class WorkflowService
 {
+    public function __construct(private readonly NotificationService $notifications)
+    {
+    }
+
     /**
      * خريطة الانتقالات: الحدث → [المراحل المسموحة, المرحلة الهدف, manufacturing_stage|null]
      *
      * @var array<string, array{from: list<string>, to: string, mfg: ?string}>
      */
     private const TRANSITIONS = [
+        // الكشف تم واعتُمد — قد تكون الحالة في الاستقبال (أُنشئت الآن) أو في الكشف.
         WorkflowEvent::ExamApproved->value => [
             'from' => [CaseRecord::STAGE_RECEPTION, CaseRecord::STAGE_EXAM],
             'to'   => CaseRecord::STAGE_TECHNICAL,
             'mfg'  => null,
         ],
+        // الكشف اختياري — يقفز من الاستقبال مباشرةً للتوصيف.
+        WorkflowEvent::ExamSkipped->value => [
+            'from' => [CaseRecord::STAGE_RECEPTION],
+            'to'   => CaseRecord::STAGE_TECHNICAL,
+            'mfg'  => null,
+        ],
+        // التوصيف الفني → المعدلات (مراجعة وإضافة بنود قبل التسعير).
         WorkflowEvent::SpecSaved->value => [
             'from' => [CaseRecord::STAGE_TECHNICAL],
+            'to'   => CaseRecord::STAGE_ADJUSTMENTS,
+            'mfg'  => null,
+        ],
+        // المعدلات → التكاليف (تشغيل محرك الاحتساب).
+        WorkflowEvent::AdjustmentsCompleted->value => [
+            'from' => [CaseRecord::STAGE_ADJUSTMENTS],
             'to'   => CaseRecord::STAGE_COST_CALC,
             'mfg'  => null,
         ],
-        WorkflowEvent::PricingCompletedCivilian->value => [
+        // التكاليف → عرض السعر.
+        WorkflowEvent::CostingCompleted->value => [
             'from' => [CaseRecord::STAGE_COST_CALC],
-            'to'   => CaseRecord::STAGE_WAITING_RETURN,
+            'to'   => CaseRecord::STAGE_QUOTE,
             'mfg'  => null,
         ],
-        WorkflowEvent::PricingCompletedMilitary->value => [
-            'from' => [CaseRecord::STAGE_COST_CALC],
+        // عرض السعر → مكتب التشغيل (مركز القرار).
+        WorkflowEvent::QuoteIssued->value => [
+            'from' => [CaseRecord::STAGE_QUOTE],
+            'to'   => CaseRecord::STAGE_OPERATIONS,
+            'mfg'  => null,
+        ],
+        // مكتب التشغيل: اعتماد → المخزن للصرف (حجز فوري في الخلفية).
+        WorkflowEvent::OperationsApproved->value => [
+            'from' => [CaseRecord::STAGE_OPERATIONS],
             'to'   => CaseRecord::STAGE_MANUFACTURING,
             'mfg'  => CaseRecord::MFG_WAREHOUSE,
         ],
-        WorkflowEvent::ApprovalScanned->value => [
-            'from' => [CaseRecord::STAGE_WAITING_RETURN],
-            'to'   => CaseRecord::STAGE_MANUFACTURING,
-            'mfg'  => CaseRecord::MFG_WAREHOUSE,
+        // مكتب التشغيل: رفض/تعديل → إعادة للمعدلات.
+        WorkflowEvent::ReturnedToAdjustments->value => [
+            'from' => [CaseRecord::STAGE_OPERATIONS],
+            'to'   => CaseRecord::STAGE_ADJUSTMENTS,
+            'mfg'  => null,
         ],
+        // مكتب التشغيل/المعدلات: رفض جذري → إعادة للتوصيف.
+        WorkflowEvent::ReturnedToTechnical->value => [
+            'from' => [CaseRecord::STAGE_OPERATIONS, CaseRecord::STAGE_ADJUSTMENTS],
+            'to'   => CaseRecord::STAGE_TECHNICAL,
+            'mfg'  => null,
+        ],
+        // المخزن: صرف المواد بالباركود → دخول الورشة.
         WorkflowEvent::BomDispensed->value => [
-            'from' => [CaseRecord::STAGE_WAITING_RETURN, CaseRecord::STAGE_MANUFACTURING],
+            'from' => [CaseRecord::STAGE_MANUFACTURING],
             'to'   => CaseRecord::STAGE_MANUFACTURING,
             'mfg'  => CaseRecord::MFG_ISSUE,
         ],
@@ -62,7 +97,7 @@ class WorkflowService
 
     public function advance(CaseRecord $case, string $event): void
     {
-        DB::transaction(function () use ($case, $event) {
+        $updated = DB::transaction(function () use ($case, $event) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             $rule = self::TRANSITIONS[$event] ?? null;
@@ -98,6 +133,15 @@ class WorkflowService
                     'manufacturing_stage' => $case->manufacturing_stage,
                 ],
             );
+
+            return $case;
         });
+
+        // إشعار اللوحة التالية بعد نجاح الانتقال — لا يُعطّل التدفق إن فشل الإرسال.
+        try {
+            $this->notifications->notifyTransition($updated, $event);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

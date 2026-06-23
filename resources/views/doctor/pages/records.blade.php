@@ -45,7 +45,8 @@
                     <button type="button"
                             class="btn btn-secondary btn-record-view"
                             style="padding:6px 12px;font-size:12px;"
-                            data-record-id="{{ $record['id'] }}">
+                            data-record-id="{{ $record['id'] }}"
+                            data-record='@json($record, JSON_HEX_APOS | JSON_HEX_QUOT)'>
                       عرض
                     </button>
                   </td>
@@ -63,5 +64,6 @@
       </div>
     </div>
 <script>
+window.__DOCTOR_CONFIG = { militaryEntity: @json(\App\Models\Patient::MILITARY_SOVEREIGN_ENTITY) };
 window.__MEDICAL_RECORDS = @json($records->values());
 </script>

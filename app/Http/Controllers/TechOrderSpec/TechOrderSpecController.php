@@ -58,7 +58,7 @@ class TechOrderSpecController extends Controller
     {
         abort_unless($case->stage_key === CaseRecord::STAGE_TECHNICAL, 422, 'الحالة ليست في مرحلة التوصيف الفني.');
 
-        $case->load('patient:id,patient_code,name,patient_type,company_name');
+        $case->load('patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank');
 
         $medicalRecord = MedicalRecord::where('case_id', $case->id)
             ->where('locked', true)
@@ -120,7 +120,7 @@ class TechOrderSpecController extends Controller
     public function submit(TechOrderSpec $spec): JsonResponse
     {
         try {
-            $pricingRequest = $this->specService->submit($spec);
+            $case = $this->specService->submit($spec);
         } catch (InvalidSpecItemException $e) {
             return response()->json([
                 'message'          => $e->getMessage(),
@@ -129,8 +129,9 @@ class TechOrderSpecController extends Controller
         }
 
         return response()->json([
-            'pricing_request' => $this->formatPricingRequest($pricingRequest, forSpec: false),
-            'spec'            => $this->formatSpec($spec->fresh()->load('items')),
+            'message' => 'تم إرسال التوصيف إلى مرحلة المعدلات.',
+            'case'    => $this->formatCase($case->load('patient')),
+            'spec'    => $this->formatSpec($spec->fresh()->load('items')),
         ]);
     }
 
@@ -185,6 +186,7 @@ class TechOrderSpecController extends Controller
             'sovereign_entity',
             'created_at',
         ]) + [
+            'display_entity' => $case->displayEntity(),
             'patient' => $case->relationLoaded('patient') ? $case->patient : null,
             'spec'    => $case->relationLoaded('techOrderSpec') ? $case->techOrderSpec : null,
         ];

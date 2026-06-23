@@ -24,24 +24,17 @@ class OperationsDispenseVisibilityTest extends TestCase
         app(StockPriceService::class)->addBatch($item, 20, 200.00, $supplier, 'INV-001', now());
     }
 
-    public function test_civilian_spec_raw_dispense_promotes_to_operations_with_work_order(): void
+    public function test_civilian_dispense_after_operations_approval_advances_to_issue(): void
     {
         $this->prepareStock();
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $this->actingAs($this->userWithRole('technical'));
 
-        $this->actingAs($user);
+        // توصيف → معدلات → تكاليف → عرض → تشغيل (اعتماد) → مخزن (صرف).
+        $case = $this->dispensedManufacturingCase($patient);
 
-        $bom = app(BomService::class)->createSpecRaw($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 1],
-        ]);
-
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
-
-        $case->refresh();
-        $bom->refresh();
+        $bom = Bom::where('case_id', $case->id)->firstOrFail();
 
         $this->assertEquals(Bom::STAGE_WIP, $bom->stage);
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
@@ -56,7 +49,8 @@ class OperationsDispenseVisibilityTest extends TestCase
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
         $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0501']);
 
         $this->actingAs($user);
 
@@ -64,13 +58,14 @@ class OperationsDispenseVisibilityTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
-        // محاكاة البيانات القديمة: BOM=WIP لكن الحالة لم تُنقل للتصنيع
+        // محاكاة بيانات عالقة: BOM=WIP لكن المرحلة الفرعية ظلّت في المخزن (لم تتقدم للإصدار).
         $bom->update(['stage' => Bom::STAGE_WIP, 'released_at' => now()]);
 
         app(BomService::class)->repairOrphanWipCases();
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
+        $this->assertEquals(CaseRecord::MFG_ISSUE, $case->manufacturing_stage);
         $this->assertNotEmpty($case->work_order_no);
 
         $data = app(DashboardPageDataService::class)->resolve('operations', 'operations');

@@ -11,20 +11,19 @@ use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
 /**
- * Dual-pathway visibility rules:
+ * Dual-pathway visibility rules (new pipeline):
  *
- * CIVILIAN:  spec → cost_calc → waiting_return (reception OCR queue)
- *                                     ↓ ApprovalScanned
+ * CIVILIAN:  spec → adjustments → cost_calc → quote → operations (decision hub)
+ *                                     ↓ OperationsApproved / OCR / QR
  *                              manufacturing (MFG_WAREHOUSE) → technicalBom
  *
- * MILITARY:  spec → cost_calc → manufacturing (MFG_WAREHOUSE) → technicalBom
- *                   (immediate — bypasses waiting_return entirely)
+ * MILITARY:  spec → adjustments → cost_calc → operations (silent auto-approve)
+ *                              → manufacturing (MFG_WAREHOUSE) → technicalBom
  *
  * Dashboard rules under test:
  *   - technicalBom      → ONLY shows BOMs for cases in `manufacturing`
- *   - receptionDelivery → surfaces `approval_pending_cases` (waiting_return, civilian)
  *   - queueService      → technicalBomRawIds excludes pre-manufacturing BOMs
- *   - queueService      → receptionApprovalPendingCaseIds returns waiting_return civilians only
+ *   - queueService      → receptionApprovalPendingCaseIds returns civilian operations cases only
  */
 class DualPathwayDashboardVisibilityTest extends TestCase
 {
@@ -47,11 +46,11 @@ class DualPathwayDashboardVisibilityTest extends TestCase
 
     // ── Technical BOM queue ───────────────────────────────────────────────────
 
-    public function test_technical_bom_excludes_civilian_case_in_waiting_return(): void
+    public function test_technical_bom_excludes_civilian_case_in_operations(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $this->makeBom($case, 'BOM-0001');
 
@@ -60,7 +59,7 @@ class DualPathwayDashboardVisibilityTest extends TestCase
 
         $this->assertFalse(
             $ids->contains($case->id),
-            'حالة مدنية في waiting_return يجب ألا تظهر في لوحة المخزن قبل مسح QR الموافقة'
+            'حالة مدنية في مكتب التشغيل يجب ألا تظهر في لوحة المخزن قبل اعتماد التشغيل'
         );
     }
 
@@ -102,11 +101,11 @@ class DualPathwayDashboardVisibilityTest extends TestCase
 
     // ── Queue service — technicalBomRawIds ────────────────────────────────────
 
-    public function test_queue_service_excludes_raw_bom_for_waiting_return_case(): void
+    public function test_queue_service_excludes_raw_bom_for_operations_case(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $bom = $this->makeBom($case, 'BOM-0010');
 
@@ -134,18 +133,18 @@ class DualPathwayDashboardVisibilityTest extends TestCase
      * Civilian waiting_return cases surface via the queue service (feeds the quote page badge).
      * The delivery page no longer carries approval_pending_cases — those live on reception/quote.
      */
-    public function test_reception_quote_queue_surfaces_civilian_waiting_return_cases(): void
+    public function test_reception_quote_queue_surfaces_civilian_operations_cases(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 
         $this->assertContains(
             (int) $case->id,
             $ids,
-            'حالة مدنية في waiting_return يجب أن تظهر في طابور الموافقة بالاستقبال'
+            'حالة مدنية في مكتب التشغيل يجب أن تظهر في طابور الموافقة بالاستقبال'
         );
     }
 
@@ -153,7 +152,7 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $data = app(DashboardPageDataService::class)->resolve('reception', 'delivery');
 
@@ -170,8 +169,8 @@ class DualPathwayDashboardVisibilityTest extends TestCase
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
 
-        // Military goes straight to manufacturing — waiting_return should never appear for them.
-        $case = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        // Military is auto-approved at operations — civilian approval queue must skip them.
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 
@@ -182,11 +181,11 @@ class DualPathwayDashboardVisibilityTest extends TestCase
         );
     }
 
-    public function test_queue_service_approval_pending_returns_civilian_waiting_return(): void
+    public function test_queue_service_approval_pending_returns_civilian_operations(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 

@@ -50,6 +50,19 @@ class User extends Authenticatable
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->role?->slug === Role::SLUG_ADMIN;
+    }
+
+    /**
+     * هل يملك المستخدم الصلاحية التفصيلية (عبر دوره)؟
+     */
+    public function hasPermission(string $slug): bool
+    {
+        return (bool) $this->role?->loadMissing('permissions')->hasPermission($slug);
+    }
+
     public function medicalRecords(): HasMany
     {
         return $this->hasMany(MedicalRecord::class, 'doctor_user_id');
@@ -68,5 +81,10 @@ class User extends Authenticatable
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(UserDevice::class);
     }
 }

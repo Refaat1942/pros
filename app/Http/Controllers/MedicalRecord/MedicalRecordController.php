@@ -13,6 +13,7 @@ use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class MedicalRecordController extends Controller
 {
@@ -37,7 +38,7 @@ class MedicalRecordController extends Controller
 
         $appointments = $this->fetchForDashboard(
             (clone $baseQuery)
-                ->with('patient:id,patient_code,name,national_id,patient_type,company_name,created_at')
+                ->with('patient:id,patient_code,name,national_id,patient_type,company_name,sovereign_entity,created_at')
                 ->where('status', Appointment::STATUS_IN_CLINIC)
                 ->orderByDesc('transferred_to_clinic_at')
                 ->orderByDesc('id')
@@ -68,7 +69,7 @@ class MedicalRecordController extends Controller
             'يجب تحويل المريض من الاستقبال قبل بدء الكشف.'
         );
 
-        $appointment->load('patient:id,patient_code,name,national_id,patient_type,company_name,phone');
+        $appointment->load('patient:id,patient_code,name,national_id,patient_type,company_name,sovereign_entity,phone');
 
         $draft = MedicalRecord::where('appointment_id', $appointment->id)
             ->where('locked', false)
@@ -99,6 +100,21 @@ class MedicalRecordController extends Controller
         return redirect()
             ->route('doctor.records')
             ->with('success', 'تم التحويل للتوصيف.');
+    }
+
+    /**
+     * تخطّي الكشف الطبي (اختياري) — دفع الحالة مباشرةً للتوصيف بضغطة واحدة.
+     */
+    public function skip(Appointment $appointment): JsonResponse
+    {
+        abort_unless(Gate::allows('skip-diagnosis'), 403, 'لا تملك صلاحية تخطّي الكشف.');
+
+        $case = $this->medicalRecordService->skipExam($appointment);
+
+        return response()->json([
+            'message' => 'تم تخطّي الكشف وتحويل الحالة للتوصيف.',
+            'case'    => $this->formatCaseForDoctor($case),
+        ]);
     }
 
     /**
@@ -167,8 +183,9 @@ class MedicalRecordController extends Controller
             'status',
             'locked',
         ]) + [
-            'phone' => $record->relationLoaded('patient') ? $record->patient?->phone : null,
-            'items' => $record->relationLoaded('items')
+            'phone'          => $record->relationLoaded('patient') ? $record->patient?->phone : null,
+            'display_entity' => $record->displayEntity(),
+            'items'          => $record->relationLoaded('items')
                 ? $record->items->map->only(['stock_item_code', 'name', 'qty'])
                 : [],
         ];
@@ -211,10 +228,12 @@ class MedicalRecordController extends Controller
             'transferred_to_clinic',
             'transferred_to_clinic_at',
         ]) + [
+            'display_entity' => $appointment->displayEntity(),
             'transferred_at' => $appointment->transferredAt()?->toIso8601String(),
             'wait_label'     => $appointment->receptionWaitLabel(),
             'patient'        => $appointment->relationLoaded('patient') && $appointment->patient
-                ? $appointment->patient->only(['id', 'patient_code', 'name', 'national_id', 'patient_type', 'company_name'])
+                ? $appointment->patient->only(['id', 'patient_code', 'name', 'national_id', 'patient_type', 'company_name', 'sovereign_entity'])
+                    + ['display_entity' => $appointment->patient->displayEntity()]
                 : null,
         ];
     }

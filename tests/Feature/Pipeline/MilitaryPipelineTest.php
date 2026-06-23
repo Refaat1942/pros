@@ -107,18 +107,15 @@ class MilitaryPipelineTest extends TestCase
 
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $admin   = $this->userWithRole('admin');
 
-        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
-        $req  = $this->makeMilitaryPricingRequest($case);
+        // المعدلات تُغلق → تكلفة صامتة → اعتماد تلقائي → مباشرةً للمخزن (manufacturing/warehouse).
+        $case = $this->operationsReadyCase($patient);
 
-        app(PricingService::class)->approve($req, $admin);
-
-        $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key,
             'Military case must jump directly to manufacturing without quotes');
+        $this->assertEquals(CaseRecord::MFG_WAREHOUSE, $case->manufacturing_stage);
         $this->assertEquals(CaseRecord::PATH_MILITARY, $case->path);
-        $this->assertNotNull($case->work_order_no, 'Military path must auto-generate WO on manufacturing entry');
+        $this->assertNotNull($case->work_order_no, 'Military path must auto-generate WO on operations approval');
         $this->assertMatchesRegularExpression('/^WO-\d{4}-\d{4}$/', $case->work_order_no);
     }
 
@@ -129,12 +126,8 @@ class MilitaryPipelineTest extends TestCase
 
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $admin   = $this->userWithRole('admin');
 
-        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
-        $req  = $this->makeMilitaryPricingRequest($case);
-
-        app(PricingService::class)->approve($req, $admin);
+        $case = $this->operationsReadyCase($patient);
 
         $this->assertDatabaseMissing('quotes', ['case_id' => $case->id]);
     }

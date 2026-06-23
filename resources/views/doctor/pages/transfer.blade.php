@@ -46,8 +46,15 @@
                     data-transfer-id="{{ $case['id'] }}"
                     data-search="{{ $case['name'] }} {{ $case['company'] }} {{ $case['status'] }}"
                     title="عرض التفاصيل">
-                  <td><strong>{{ $case['name'] }}</strong></td>
-                  <td>{{ $case['company'] }}</td>
+                  <td>
+                    <strong>{{ $case['name'] }}</strong>
+                    @if (($case['patient_type'] ?? 'civilian') === 'military')
+                      <span class="patient-type-badge military">🪖 عسكري</span>
+                    @else
+                      <span class="patient-type-badge civilian">🌐 مدني</span>
+                    @endif
+                  </td>
+                  <td>{{ $case['display_entity'] ?? $case['company'] }}</td>
                   <td>{{ $case['date'] }}</td>
                   <td><span class="priority-badge normal">{{ $case['status'] }}</span></td>
                 </tr>

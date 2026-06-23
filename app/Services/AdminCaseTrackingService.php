@@ -33,7 +33,7 @@ class AdminCaseTrackingService
                 'quotes:id,case_id,status',
             ])
             ->whereIn('stage_key', [
-                CaseRecord::STAGE_WAITING_RETURN,
+                CaseRecord::STAGE_OPERATIONS,
                 CaseRecord::STAGE_MANUFACTURING,
                 CaseRecord::STAGE_READY_DELIVERY,
                 CaseRecord::STAGE_DELIVERED,
@@ -44,7 +44,7 @@ class AdminCaseTrackingService
             ->get();
 
         $waiting = $cases
-            ->where('stage_key', CaseRecord::STAGE_WAITING_RETURN)
+            ->where('stage_key', CaseRecord::STAGE_OPERATIONS)
             ->filter(fn (CaseRecord $c) => $c->quotes->contains('status', Quote::STATUS_ISSUED))
             ->values();
         $progress = $cases->whereIn('stage_key', [
@@ -77,7 +77,7 @@ class AdminCaseTrackingService
             'id'                  => (string) $case->id,
             'caseNo'              => $case->case_no,
             'patient'             => $case->patient?->name ?? '—',
-            'company'             => $case->company_name ?? '—',
+            'company'             => $case->displayEntity(),
             'patientType'         => $case->patient_type,
             'orderRef'            => $case->order_ref,
             'quoteId'             => $case->quote_no,

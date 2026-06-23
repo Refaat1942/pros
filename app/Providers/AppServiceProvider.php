@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\AppNotification;
 use App\Models\Bom;
 use App\Models\ReturnNote;
 use App\Services\Dashboard\DashboardQueueService;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,14 +33,19 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('partials.dashboard-sidebar', function ($view) {
             $dashboardKey = $view->getData()['dashboardKey'] ?? '';
+            $roleSlug     = Auth::user()?->role?->slug;
 
-            if ($dashboardKey !== 'admin') {
-                return;
+            $badges = $view->getData()['sidebarBadges'] ?? [];
+
+            if ($roleSlug) {
+                $badges['notifications'] = AppNotification::forRole($roleSlug)->unread()->count();
             }
 
-            $view->with('sidebarBadges', [
-                'pricing' => app(DashboardQueueService::class)->adminPricingAwaitingCount(),
-            ]);
+            if ($dashboardKey === 'admin') {
+                $badges['pricing'] = app(DashboardQueueService::class)->adminPricingAwaitingCount();
+            }
+
+            $view->with('sidebarBadges', $badges);
         });
     }
 }

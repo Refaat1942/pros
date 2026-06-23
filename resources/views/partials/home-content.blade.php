@@ -43,10 +43,20 @@
 
             <a href="{{ route('dashboard.login', 'adjustments') }}" class="role-card adjustments">
                 <div class="icon-wrap">📏</div>
-                <h2>المعدلات</h2>
-                <p>جدولة تجارب التركيب الأولى والثانية، تسجيل ملاحظات المقاسات، ومتابعة حالات إذن الشغل بعد الورشة.</p>
+                <h2>مكتب المعدلات الفنية / الاستشاري</h2>
+                <p>مراجعة بنود التوصيف الفني (للقراءة فقط)، وإضافة مكوّنات استشارية إلى قائمة المواد قبل دفع الحالة لمحرّك التكاليف.</p>
                 <span class="enter-btn">
-                    الدخول للوحة المعدلات
+                    الدخول لمكتب المعدلات
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+            </a>
+
+            <a href="{{ route('dashboard.login', 'costing') }}" class="role-card costing">
+                <div class="icon-wrap">💰</div>
+                <h2>التكاليف</h2>
+                <p>لوحة بسيطة ومستقلة — مراجعة تكلفة الحالات الواردة من المعدلات (للقراءة فقط) ثم تأكيد وإصدار عرض السعر.</p>
+                <span class="enter-btn">
+                    الدخول للوحة التكاليف
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </span>
             </a>
@@ -54,7 +64,7 @@
             <a href="{{ route('dashboard.login', 'operations') }}" class="role-card operations">
                 <div class="icon-wrap">🎯</div>
                 <h2>التشغيل</h2>
-                <p>مكتب التشغيل المركزي — إصدار أوامر الإنتاج، متابعة مراحل BOM، وصرف الخامات بالباركود للمخزن.</p>
+                <p>مكتب التشغيل — موافقات عروض الأسعار، طباعة وتسليم العروض للعميل، ومتابعة أوامر الإنتاج والصرف.</p>
                 <span class="enter-btn">
                     الدخول لمكتب التشغيل
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

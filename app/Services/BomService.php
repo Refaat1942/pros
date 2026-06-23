@@ -111,6 +111,7 @@ class BomService
                     'bom_id'          => $bom->id,
                     'stock_item_code' => $code,
                     'name'            => $row['name'] ?? $code,
+                    'source'          => BomItem::SOURCE_SPEC,
                     'qty'             => $qty,
                     'unit_cost'       => 0,
                     'issued_qty'      => 0,
@@ -127,6 +128,106 @@ class BomService
 
             return $bom;
         });
+    }
+
+    /**
+     * إضافة بنود مستشار المعدلات إلى نفس الـ BOM — بدون مساس بالبنود الأصلية (الفني).
+     * البنود الأصلية source=spec للقراءة فقط؛ المضافة source=adjustment.
+     *
+     * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
+     */
+    public function appendAdjustmentItems(CaseRecord $case, array $items): Bom
+    {
+        if ($items === []) {
+            abort(422, 'يجب إضافة بند واحد على الأقل.');
+        }
+
+        return DB::transaction(function () use ($case, $items) {
+            $bom = Bom::where('case_id', $case->id)->lockForUpdate()->first();
+
+            if (! $bom) {
+                abort(422, 'لا توجد قائمة مواد لهذه الحالة بعد.');
+            }
+
+            if ($bom->stage !== Bom::STAGE_RAW) {
+                abort(422, 'لا يمكن إضافة بنود — قائمة المواد لم تعد في مرحلة الإعداد.');
+            }
+
+            foreach ($items as $row) {
+                $code = $row['stock_item_code'];
+                $qty  = (int) $row['qty'];
+
+                $stockItem = StockItem::where('code', $code)->first();
+
+                if (! $stockItem) {
+                    abort(422, "الصنف غير موجود: {$code}");
+                }
+
+                BomItem::create([
+                    'bom_id'          => $bom->id,
+                    'stock_item_code' => $code,
+                    'name'            => $row['name'] ?? $stockItem->name,
+                    'source'          => BomItem::SOURCE_ADJUSTMENT,
+                    'qty'             => $qty,
+                    'unit_cost'       => 0,
+                    'issued_qty'      => 0,
+                    'returned_qty'    => 0,
+                ]);
+            }
+
+            AuditService::log(
+                action:      'update',
+                description: "إضافة بنود مستشار المعدلات — {$bom->bom_no}",
+                tag:         'spec',
+                after:       ['bom_id' => $bom->id, 'added' => count($items)],
+            );
+
+            return $bom->fresh()->load('items');
+        });
+    }
+
+    /**
+     * حجز كميات BOM في سجل المخزون عند اعتماد مكتب التشغيل (الخطوة 7).
+     * يضبط تكلفة الوحدة على WAC (أساس التكلفة الداخلية) ويزيد reserved.
+     * يرمي InsufficientStockException عند نقص الرصيد — يتعامل معها المنادي.
+     */
+    public function reserveForCase(CaseRecord $case): void
+    {
+        $bom = Bom::with('items')->where('case_id', $case->id)->lockForUpdate()->first();
+
+        if (! $bom || $bom->items->isEmpty()) {
+            abort(422, 'لا توجد قائمة مواد لحجزها.');
+        }
+
+        foreach ($bom->items as $bomItem) {
+            $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+
+            if (! $stockItem) {
+                abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
+            }
+
+            if ($stockItem->availableQty() < $bomItem->qty) {
+                throw new InsufficientStockException(
+                    stockItemCode:    $bomItem->stock_item_code,
+                    required:         $bomItem->qty,
+                    available:        $stockItem->availableQty(),
+                    pricingRequestId: $case->pricing_request_id,
+                );
+            }
+
+            $bomItem->update([
+                'unit_cost' => $this->stockPriceService->wacUnitPrice($bomItem->stock_item_code),
+            ]);
+
+            $stockItem->increment('reserved', $bomItem->qty);
+        }
+
+        AuditService::log(
+            action:      'reserve',
+            description: "حجز مواد فوري عند اعتماد التشغيل — {$bom->bom_no}",
+            tag:         'warehouse',
+            after:       ['bom_id' => $bom->id, 'case_id' => $case->id],
+        );
     }
 
     private function doCreate(CaseRecord $case, array $items): Bom
@@ -218,6 +319,24 @@ class BomService
     }
 
     /**
+     * ضبط تكلفة الوحدة (WAC) لبنود BOM بدون أي حجز إضافي — الحجز يتم في مكتب التشغيل.
+     */
+    private function ensureUnitCosts(Bom $bom): void
+    {
+        $bom->loadMissing('items');
+
+        foreach ($bom->items as $bomItem) {
+            if ((float) $bomItem->unit_cost > 0) {
+                continue;
+            }
+
+            $bomItem->update([
+                'unit_cost' => $this->stockPriceService->wacUnitPrice($bomItem->stock_item_code),
+            ]);
+        }
+    }
+
+    /**
      * @param  array{stock_item_code: string, name?: string, qty: int}  $row
      */
     private function appendBomItemWithReservation(Bom $bom, array $row, CaseRecord $case): void
@@ -271,8 +390,9 @@ class BomService
 
             $case = $bom->caseRecord;
 
-            if ($case && $bom->items->contains(fn ($i) => (float) $i->unit_cost <= 0)) {
-                $this->activateSpecRawBom($bom, $case);
+            // الحجز تم مسبقاً في مكتب التشغيل — هنا نضمن فقط ضبط تكلفة الوحدة (WAC).
+            if ($bom->items->contains(fn ($i) => (float) $i->unit_cost <= 0)) {
+                $this->ensureUnitCosts($bom);
                 $bom->refresh()->load('items');
             }
 
@@ -407,7 +527,9 @@ class BomService
 
             if ($case->stage_key === CaseRecord::STAGE_MANUFACTURING) {
                 if ($case->manufacturing_stage === CaseRecord::MFG_WAREHOUSE) {
-                    return $this->advanceManufacturingStage($case, CaseRecord::MFG_ISSUE);
+                    $this->workflowService->advance($case, WorkflowEvent::BomDispensed->value);
+
+                    return $case->fresh();
                 }
 
                 if ($case->manufacturing_stage === null || $case->manufacturing_stage === '') {
@@ -419,24 +541,21 @@ class BomService
                 return $case;
             }
 
-            if ($case->stage_key === CaseRecord::STAGE_WAITING_RETURN) {
-                $this->workflowService->advance($case, WorkflowEvent::BomDispensed->value);
-
-                return $case->fresh();
-            }
-
             abort(422, 'لا يمكن صرف المواد — الحالة ليست جاهزة لدخول الورشة.');
         });
     }
 
     /**
-     * إصلاح حالات BOM=WIP خارج مرحلة التصنيع (بيانات قديمة قبل ربط الصرف بالورشة).
+     * إصلاح حالات BOM=WIP العالقة في مرحلة المخزن (صُرفت لكن لم تتقدم لمرحلة الإصدار).
+     * في الهيكلة الجديدة الصرف لا يتم إلا بعد اعتماد مكتب التشغيل (manufacturing/warehouse).
      */
     public function repairOrphanWipCases(): void
     {
         CaseRecord::query()
             ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_WIP))
-            ->where('stage_key', '!=', CaseRecord::STAGE_MANUFACTURING)
+            ->where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+            ->where(fn ($q) => $q->where('manufacturing_stage', CaseRecord::MFG_WAREHOUSE)
+                ->orWhereNull('manufacturing_stage'))
             ->each(fn (CaseRecord $case) => $this->promoteCaseAfterDispense($case));
     }
 

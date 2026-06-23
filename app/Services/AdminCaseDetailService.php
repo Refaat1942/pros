@@ -36,7 +36,7 @@ class AdminCaseDetailService
         $patient   = $case->patient;
         $isMil     = $case->isMilitary();
         $sovereign = $isMil
-            ? Patient::MILITARY_SOVEREIGN_ENTITY
+            ? ($patient?->displayEntity() ?? Patient::MILITARY_SOVEREIGN_ENTITY)
             : ($patient?->sovereign_entity ?? $case->sovereign_entity);
 
         return [

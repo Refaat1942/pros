@@ -4,12 +4,34 @@ namespace App\Support;
 
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * ملخص مالي للحالة — للعرض بعد التسليم وفي تقارير الأدمن.
  */
 final class CaseFinancialSummary
 {
+    /**
+     * التكلفة الداخلية (WAC) تظهر لمن يملك صلاحية "view-costs" (الأدمن دائماً).
+     */
+    public static function canSeeInternalCost(): bool
+    {
+        return Gate::allows('view-costs');
+    }
+
+    /**
+     * نِسَب الربحية العسكرية — للسوبر أدمن فقط (صلاحية view-military-profit).
+     */
+    public static function canSeeMilitaryProfit(): bool
+    {
+        return Gate::allows('view-military-profit');
+    }
+
+    /** التكلفة الحقيقية (WAC) للحالة — لمن يملك صلاحية رؤية التكاليف. */
+    public static function internalCost(CaseRecord $case): float
+    {
+        return (float) $case->internal_cost;
+    }
     public static function totalCost(CaseRecord $case): float
     {
         foreach ([

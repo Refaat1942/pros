@@ -6,6 +6,7 @@ use App\Models\CaseRecord;
 use App\Models\ContractCompany;
 use App\Models\ContractCompanyDebt;
 use App\Models\Patient;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\StockItem;
 use App\Models\Supplier;
@@ -29,6 +30,7 @@ trait ProstheticTestHelper
             'doctor'      => 'طبيب',
             'spec'        => 'فني مواصفات',
             'adjustments' => 'فني تعديلات',
+            'costing'     => 'فني تكاليف',
             'operations'  => 'مكتب عمليات',
             'technical'   => 'مسؤول مخزن',
         ];
@@ -39,6 +41,7 @@ trait ProstheticTestHelper
     protected function userWithRole(string $slug): User
     {
         $role = $this->makeRole($slug);
+        $this->seedDefaultPermissions($role);
 
         return User::factory()->create([
             'role_id'  => $role->id,
@@ -46,6 +49,32 @@ trait ProstheticTestHelper
             'password' => Hash::make('password'),
             'status'   => User::STATUS_ACTIVE,
         ]);
+    }
+
+    private function seedDefaultPermissions(Role $role): void
+    {
+        foreach (Permission::CATALOG as $permSlug => [$label, $group]) {
+            Permission::firstOrCreate(
+                ['slug' => $permSlug],
+                ['label_ar' => $label, 'group' => $group],
+            );
+        }
+
+        $defaults = [
+            Role::SLUG_COSTING     => ['view-costs'],
+            Role::SLUG_OPERATIONS  => ['approve-pricing', 'view-costs', 'print-quote'],
+            Role::SLUG_DOCTOR      => ['skip-diagnosis'],
+            Role::SLUG_TECHNICAL   => ['manage-inventory', 'import-inventory', 'print-barcode', 'view-inventory-overview'],
+            Role::SLUG_RECEPTION   => ['print-quote'],
+        ];
+
+        $slugs = $defaults[$role->slug] ?? [];
+        if ($slugs === []) {
+            return;
+        }
+
+        $ids = Permission::whereIn('slug', $slugs)->pluck('id');
+        $role->permissions()->syncWithoutDetaching($ids);
     }
 
     // ── ContractCompany helpers ───────────────────────────────────────────────
@@ -160,7 +189,7 @@ trait ProstheticTestHelper
 
     private static int $caseSeq = 0;
 
-    protected function caseAtStage(Patient $patient, string $stage, string $mfgStage = null): CaseRecord
+    protected function caseAtStage(Patient $patient, string $stage, ?string $mfgStage = null): CaseRecord
     {
         self::$caseSeq++;
         $seq = str_pad((string) self::$caseSeq, 4, '0', STR_PAD_LEFT);
@@ -176,6 +205,76 @@ trait ProstheticTestHelper
             'stage_key'            => $stage,
             'manufacturing_stage'  => $mfgStage,
         ]);
+    }
+
+    /**
+     * يقود الحالة عبر خط الأنابيب الجديد حتى مكتب التشغيل (الخطوة 7):
+     * توصيف (BOM خام) → معدلات → تكاليف → عرض السعر → مكتب التشغيل.
+     *
+     * المدني يتوقف في STAGE_OPERATIONS بانتظار الاعتماد.
+     * العسكري يُعتمَد صامتاً تلقائياً ويصل STAGE_MANUFACTURING/MFG_WAREHOUSE.
+     *
+     * @param  list<string>  $codes
+     */
+    protected function operationsReadyCase(Patient $patient, array $codes = ['RM-001']): CaseRecord
+    {
+        foreach ($codes as $code) {
+            if (! StockItem::where('code', $code)->exists()) {
+                $this->stockItem($code, 20, 100.00);
+            }
+        }
+
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+
+        app(\App\Services\BomService::class)->createSpecRaw(
+            $case,
+            array_map(fn (string $c) => [
+                'stock_item_code' => $c,
+                'name'            => "صنف {$c}",
+                'qty'             => 1,
+            ], $codes),
+        );
+
+        app(\App\Services\WorkflowService::class)->advance(
+            $case,
+            \App\Enums\WorkflowEvent::SpecSaved->value,
+        );
+
+        $case = app(\App\Services\AdjustmentsService::class)->complete($case->fresh());
+
+        return $this->costingConfirmedCase($case);
+    }
+
+    /**
+     * يُكمّل مسار التكاليف ويُصدر العرض ويُحوّل لمكتب التشغيل (أو المخزن للعسكري).
+     */
+    protected function costingConfirmedCase(CaseRecord $case): CaseRecord
+    {
+        return app(\App\Services\CostingService::class)->confirmAndIssueQuote($case->fresh());
+    }
+
+    /**
+     * يقود الحالة حتى دخول الورشة (manufacturing/issue) بعد صرف المخزن:
+     * مكتب التشغيل (اعتماد) → المخزن (صرف) → الورشة.
+     *
+     * @param  list<string>  $codes
+     */
+    protected function dispensedManufacturingCase(Patient $patient, array $codes = ['RM-001']): CaseRecord
+    {
+        $case = $this->operationsReadyCase($patient, $codes);
+
+        if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
+            $case = app(\App\Services\OperationsService::class)->approve($case, 'اختبار');
+        }
+
+        $bom = \App\Models\Bom::with('items')->where('case_id', $case->id)->firstOrFail();
+
+        app(\App\Services\BomService::class)->releaseToWip(
+            $bom,
+            $bom->items->map(fn ($i) => 'BC-' . $i->stock_item_code)->all(),
+        );
+
+        return $case->fresh();
     }
 
     protected function advanceCaseToFinishing(CaseRecord $case): CaseRecord

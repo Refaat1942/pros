@@ -14,14 +14,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class CaseRecord extends Model
 {
-    // مراحل المسار الرئيسية — STAGES في cases-workflow.js
+    // مراحل المسار الرئيسية — التسلسل الصارم الجديد
     public const STAGE_RECEPTION = 'reception';
     public const STAGE_EXAM = 'exam';
     public const STAGE_TECHNICAL = 'technical';
+    public const STAGE_ADJUSTMENTS = 'adjustments';
     public const STAGE_COST_CALC = 'cost_calc';
-    public const STAGE_ADMIN_APPROVAL = 'admin_approval';
     public const STAGE_QUOTE = 'quote';
-    public const STAGE_WAITING_RETURN = 'waiting_return';
+    public const STAGE_OPERATIONS = 'operations';
     public const STAGE_MANUFACTURING = 'manufacturing';
     public const STAGE_READY_DELIVERY = 'ready_delivery';
     public const STAGE_DELIVERED = 'delivered';
@@ -63,6 +63,9 @@ class CaseRecord extends Model
         'invoice_no',
         'invoice_total',
         'total_cost',
+        'internal_cost',
+        'military_selling_price',
+        'military_markup_pct',
         'paid',
         'approval_date',
         'approval_confirmed_at',
@@ -79,6 +82,9 @@ class CaseRecord extends Model
         'quote_total' => 'decimal:2',
         'invoice_total' => 'decimal:2',
         'total_cost' => 'decimal:2',
+        'internal_cost' => 'decimal:2',
+        'military_selling_price' => 'decimal:2',
+        'military_markup_pct' => 'decimal:2',
         'paid' => 'decimal:2',
         'approval_date' => 'date',
         'approval_confirmed_at' => 'datetime',
@@ -137,11 +143,6 @@ class CaseRecord extends Model
         return $this->hasMany(CreditNote::class, 'case_id');
     }
 
-    public function fittingTrial(): HasOne
-    {
-        return $this->hasOne(FittingTrial::class, 'case_id');
-    }
-
     public function remainingAmount(): float
     {
         return max(0, (float) $this->total_cost - (float) $this->paid);
@@ -152,12 +153,43 @@ class CaseRecord extends Model
         return $this->patient_type === Patient::TYPE_MILITARY;
     }
 
-    /** حالات صُدر لها عرض السعر للجهة وبانتظار رجوع خطاب الموافقة. */
-    public function scopeWaitingReturnIssued(Builder $query): Builder
+    /** الجهة المعروضة — مدني: جهة التعاقد، عسكري: القوات المسلحة. */
+    public function displayEntity(): string
     {
-        return $query
-            ->where('stage_key', self::STAGE_WAITING_RETURN)
-            ->whereHas('quotes', fn (Builder $q) => $q->where('status', Quote::STATUS_ISSUED));
+        if ($this->isMilitary()) {
+            return $this->sovereign_entity ?: Patient::MILITARY_SOVEREIGN_ENTITY;
+        }
+
+        return $this->company_name ?? '—';
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (CaseRecord $case) {
+            if ($case->patient_type !== Patient::TYPE_MILITARY) {
+                return;
+            }
+
+            $case->sovereign_entity = $case->sovereign_entity ?: Patient::MILITARY_SOVEREIGN_ENTITY;
+        });
+    }
+
+    /** حالات في مرحلة المعدلات — مراجعة وإضافة بنود قبل التسعير. */
+    public function scopeInAdjustments(Builder $query): Builder
+    {
+        return $query->where('stage_key', self::STAGE_ADJUSTMENTS);
+    }
+
+    /** حالات في مرحلة التكاليف — بانتظار التأكيد اليدوي. */
+    public function scopeInCostCalc(Builder $query): Builder
+    {
+        return $query->where('stage_key', self::STAGE_COST_CALC);
+    }
+
+    /** حالات وصلت لمكتب التشغيل (مركز القرار) — بانتظار الاعتماد أو الإعادة. */
+    public function scopeAtOperations(Builder $query): Builder
+    {
+        return $query->where('stage_key', self::STAGE_OPERATIONS);
     }
 
     /** حالات دخلت الورشة فعلياً بعد صرف/تحويل BOM من المخزن. */
@@ -168,29 +200,18 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $q) => $q->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED]));
     }
 
-    /** حالات مؤهلة لتجارب التركيب — بعد خروج BOM للورشة أو جاهزة للتسليم. */
-    public function scopeEligibleForAdjustments(Builder $query): Builder
+    public function isAtOperations(): bool
     {
-        return $query->where(function (Builder $q) {
-            $q->where('stage_key', self::STAGE_READY_DELIVERY)
-                ->orWhere(function (Builder $q2) {
-                    $q2->where('stage_key', self::STAGE_MANUFACTURING)
-                        ->whereHas('bom', fn (Builder $bom) => $bom->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED]));
-                });
-        });
+        return $this->stage_key === self::STAGE_OPERATIONS;
     }
 
-    public function isEligibleForAdjustments(): bool
+    public function isInAdjustments(): bool
     {
-        if ($this->stage_key === self::STAGE_READY_DELIVERY) {
-            return true;
-        }
+        return $this->stage_key === self::STAGE_ADJUSTMENTS;
+    }
 
-        if ($this->stage_key !== self::STAGE_MANUFACTURING) {
-            return false;
-        }
-
-        return $this->bom !== null
-            && in_array($this->bom->stage, [Bom::STAGE_WIP, Bom::STAGE_FINISHED], true);
+    public function isInCostCalc(): bool
+    {
+        return $this->stage_key === self::STAGE_COST_CALC;
     }
 }

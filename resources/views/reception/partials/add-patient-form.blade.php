@@ -33,9 +33,9 @@
                                value="{{ old('name') }}" data-v-rules="required,min:2,max:255" maxlength="255">
                     </div>
                     <div class="form-group">
-                        <label>رقم الهاتف</label>
-                        <input type="tel" class="form-control @error('phone') v-invalid @enderror" name="phone" id="newPhone" placeholder="01xxxxxxxxx"
-                               maxlength="11" inputmode="numeric" pattern="[0-9]*" value="{{ old('phone') }}"
+                        <label>رقم الهاتف <span class="field-optional">(اختياري)</span></label>
+                        <input type="tel" class="form-control @error('phone') v-invalid @enderror" name="phone" id="newPhone" placeholder="01xxxxxxxxx — يمكن تركه فارغاً"
+                               maxlength="11" inputmode="numeric" value="{{ old('phone') }}"
                                data-v-digits-only="1" data-v-rules="egyptian-mobile" autocomplete="tel">
                         @error('phone')<div class="v-error-msg" role="alert">{{ $message }}</div>@enderror
                     </div>

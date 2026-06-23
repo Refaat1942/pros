@@ -40,7 +40,7 @@ class WorkflowTransitionTest extends TestCase
         $this->assertEquals(CaseRecord::STAGE_TECHNICAL, $case->fresh()->stage_key);
     }
 
-    public function test_spec_saved_moves_to_cost_calc(): void
+    public function test_spec_saved_moves_to_adjustments(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -48,60 +48,75 @@ class WorkflowTransitionTest extends TestCase
 
         $this->workflow->advance($case, WorkflowEvent::SpecSaved->value);
 
+        $this->assertEquals(CaseRecord::STAGE_ADJUSTMENTS, $case->fresh()->stage_key);
+    }
+
+    public function test_adjustments_completed_moves_to_cost_calc(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        $this->workflow->advance($case, WorkflowEvent::AdjustmentsCompleted->value);
+
         $this->assertEquals(CaseRecord::STAGE_COST_CALC, $case->fresh()->stage_key);
     }
 
-    public function test_civilian_pricing_moves_to_waiting_return(): void
+    public function test_costing_completed_moves_to_quote(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
         $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
 
-        $this->workflow->advance($case, WorkflowEvent::PricingCompletedCivilian->value);
+        $this->workflow->advance($case, WorkflowEvent::CostingCompleted->value);
 
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_WAITING_RETURN, $case->stage_key);
-        $this->assertNull($case->manufacturing_stage);
+        $this->assertEquals(CaseRecord::STAGE_QUOTE, $case->fresh()->stage_key);
     }
 
-    /** الفصل الرابع — المسار العسكري: تخطي كامل مباشرة للتصنيع */
-    public function test_military_pricing_bypasses_to_manufacturing(): void
+    public function test_quote_issued_moves_to_operations(): void
     {
-        $company = $this->militaryCompany();
-        $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_QUOTE);
 
-        $this->workflow->advance($case, WorkflowEvent::PricingCompletedMilitary->value);
+        $this->workflow->advance($case, WorkflowEvent::QuoteIssued->value);
+
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->fresh()->stage_key);
+    }
+
+    public function test_operations_approved_moves_to_manufacturing_warehouse(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+
+        $this->workflow->advance($case, WorkflowEvent::OperationsApproved->value);
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
         $this->assertEquals(CaseRecord::MFG_WAREHOUSE, $case->manufacturing_stage);
     }
 
-    public function test_approval_scanned_moves_civilian_to_manufacturing(): void
+    public function test_operations_can_return_to_adjustments(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
-        $this->workflow->advance($case, WorkflowEvent::ApprovalScanned->value);
+        $this->workflow->advance($case, WorkflowEvent::ReturnedToAdjustments->value);
 
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
-        $this->assertEquals(CaseRecord::MFG_WAREHOUSE, $case->manufacturing_stage);
+        $this->assertEquals(CaseRecord::STAGE_ADJUSTMENTS, $case->fresh()->stage_key);
     }
 
-    public function test_bom_dispensed_moves_waiting_return_to_manufacturing_issue(): void
+    public function test_operations_can_return_to_technical(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
-        $this->workflow->advance($case, WorkflowEvent::BomDispensed->value);
+        $this->workflow->advance($case, WorkflowEvent::ReturnedToTechnical->value);
 
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
-        $this->assertEquals(CaseRecord::MFG_ISSUE, $case->manufacturing_stage);
+        $this->assertEquals(CaseRecord::STAGE_TECHNICAL, $case->fresh()->stage_key);
     }
 
     public function test_bom_dispensed_from_manufacturing_warehouse_sets_issue(): void
@@ -155,63 +170,28 @@ class WorkflowTransitionTest extends TestCase
         $this->workflow->advance($case, WorkflowEvent::BomFinished->value);
     }
 
-    /** BOM_FINISHED must not apply on a waiting_return case */
+    /** BOM_FINISHED must not apply on an operations-stage case */
     public function test_bom_finished_on_wrong_stage_throws(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $this->expectException(InvalidWorkflowTransitionException::class);
 
         $this->workflow->advance($case, WorkflowEvent::BomFinished->value);
     }
 
-    /** Military path must never go through waiting_return */
-    public function test_military_never_reaches_waiting_return(): void
+    /** OperationsApproved must not skip the operations gate. */
+    public function test_operations_approved_on_wrong_stage_throws(): void
     {
-        $company = $this->militaryCompany();
-        $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
-        $this->workflow->advance($case, WorkflowEvent::PricingCompletedMilitary->value);
+        $this->expectException(InvalidWorkflowTransitionException::class);
 
-        $this->assertNotEquals(CaseRecord::STAGE_WAITING_RETURN, $case->fresh()->stage_key);
-    }
-
-    /**
-     * المسار العسكري السريع: PricingCompletedMilitary يقفز من cost_calc مباشرةً لـ manufacturing/warehouse
-     * ولا يجوز أن يمر بـ waiting_return أبداً — يتم التحقق من مرحلتين معاً.
-     */
-    public function test_military_fast_track_cost_calc_to_manufacturing_warehouse(): void
-    {
-        $company = $this->militaryCompany();
-        $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
-
-        $this->workflow->advance($case, WorkflowEvent::PricingCompletedMilitary->value);
-
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
-        $this->assertEquals(CaseRecord::MFG_WAREHOUSE, $case->manufacturing_stage);
-        $this->assertNotEquals(CaseRecord::STAGE_WAITING_RETURN, $case->stage_key);
-    }
-
-    /**
-     * المسار العسكري: لا يجوز تطبيق PricingCompletedCivilian على حالة عسكرية.
-     * الحدث المدني من cost_calc يُعيد إلى waiting_return — حتى لو كان المريض عسكرياً
-     * (فصل الأحداث هو مسؤولية SpecService/PricingService، وليس WorkflowService).
-     */
-    public function test_military_cannot_receive_approval_scanned_event(): void
-    {
-        $company = $this->militaryCompany();
-        $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
-
-        // PricingCompletedCivilian من cost_calc ينتهي بـ waiting_return حتى للعسكري
-        // — WorkflowService لا يميز بالـ patient_type، المسؤولية على الطبقة الأعلى
-        $this->workflow->advance($case, WorkflowEvent::PricingCompletedCivilian->value);
-        $this->assertEquals(CaseRecord::STAGE_WAITING_RETURN, $case->fresh()->stage_key);
+        $this->workflow->advance($case, WorkflowEvent::OperationsApproved->value);
     }
 
     public function test_audit_log_written_on_transition(): void

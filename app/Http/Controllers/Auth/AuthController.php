@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\Notifications\DeviceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,10 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
+    public function __construct(private readonly DeviceService $deviceService)
+    {
+    }
+
     /**
      * عرض صفحة تسجيل الدخول الخاصة بالداشبورد المطلوب.
      */
@@ -66,6 +71,13 @@ class AuthController extends Controller
 
         /** @var \App\Models\User $authUser */
         $authUser = Auth::user();
+
+        // استلام بيانات الجهاز (device_id, device_type) وتسجيلها لإشعارات FCM.
+        $this->deviceService->register(
+            $authUser,
+            $request->input('device_id'),
+            $request->input('device_type'),
+        );
 
         AuditService::log(
             action:      'login',

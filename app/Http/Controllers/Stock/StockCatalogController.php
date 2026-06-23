@@ -9,11 +9,16 @@ use App\Http\Requests\Stock\UpdateCatalogItemRequest;
 use App\Models\StockItem;
 use App\Models\Supplier;
 use App\Services\StockCatalogService;
+use App\Services\StockImportService;
 use App\Services\StockPriceService;
+use App\Support\Barcode\Code128;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StockCatalogController extends Controller
 {
@@ -110,5 +115,53 @@ class StockCatalogController extends Controller
             'batch'    => $batch,
             'item_wac' => $stockItem->wac,
         ], 201);
+    }
+
+    /**
+     * تنزيل قالب CSV للرفع الجماعي (السمات الأساسية فقط).
+     */
+    public function template(StockImportService $importService): StreamedResponse
+    {
+        $contents = $importService->templateContents();
+        $filename = 'stock-items-template.csv';
+
+        return response()->streamDownload(function () use ($contents) {
+            echo $contents;
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * الرفع الجماعي بالإكسيل/CSV — upsert حسب الكود.
+     */
+    public function import(Request $request, StockImportService $importService): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ], [
+            'file.required' => 'يرجى اختيار ملف CSV.',
+            'file.mimes'    => 'الملف يجب أن يكون بصيغة CSV.',
+        ]);
+
+        $summary = $importService->import($request->file('file'));
+
+        $message = "تم الاستيراد: {$summary['created']} صنف جديد، {$summary['updated']} محدَّث، {$summary['skipped']} متخطّى.";
+
+        return back()->with('status', $message)->with('import_errors', $summary['errors']);
+    }
+
+    /**
+     * صفحة طباعة باركود حراري — ملصقان جنباً إلى جنب (38mm × 25mm).
+     */
+    public function labels(StockItem $stockItem, Request $request): Response
+    {
+        $copies = max(1, min(200, (int) $request->integer('copies', 2)));
+
+        return response()->view('admin.print.barcode-labels', [
+            'item'      => $stockItem,
+            'copies'    => $copies,
+            'barcodeSvg' => Code128::svg($stockItem->barcode, height: 44, moduleWidth: 1.1),
+        ]);
     }
 }

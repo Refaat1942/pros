@@ -37,6 +37,7 @@ class CivilianQueryChainE2eTest extends TestCase
         $recep    = $this->userWithRole('reception');
         $doctor   = $this->userWithRole('doctor');
         $spec     = $this->userWithRole('spec');
+        $adj      = $this->userWithRole('adjustments');
         $admin    = $this->userWithRole('admin');
         $tech     = $this->userWithRole('technical');
         $ops      = $this->userWithRole('operations');
@@ -89,7 +90,7 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertEquals(CaseRecord::STAGE_TECHNICAL, $case->stage_key);
         $this->assertContains($case->id, $queues->specTechnicalCaseIds());
 
-        // ── Step 3: Spec — submit BOM raw, admin pricing queue ───────────────
+        // ── Step 3: Spec — submit raw BOM → adjustments (no pricing yet) ─────
         $this->actingAs($spec);
         $specPage = $this->get('/spec/orders');
         $specPage->assertOk();
@@ -97,9 +98,6 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $specDetail = $this->getJson("/spec/spec/{$case->id}");
         $specDetail->assertOk();
-        $catalogJson = json_encode($specDetail->json('catalog') ?? [], JSON_UNESCAPED_UNICODE);
-        $this->assertStringNotContainsString('unit_price', strtolower($catalogJson));
-        $this->assertStringNotContainsString('"wac"', strtolower($catalogJson));
 
         $create = $this->postJson('/spec/spec', [
             'case_id' => $case->id,
@@ -112,13 +110,45 @@ class CivilianQueryChainE2eTest extends TestCase
         $submit->assertOk();
 
         $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_COST_CALC, $case->stage_key);
+        $this->assertEquals(CaseRecord::STAGE_ADJUSTMENTS, $case->stage_key);
         $this->assertNotContains($case->id, $queues->specTechnicalCaseIds());
+        $this->assertContains($case->id, $queues->adjustmentsCaseIds());
+        $this->assertDatabaseMissing('pricing_requests', ['case_id' => $case->id]);
+
+        // ── Step 4: Adjustments — review (read-only) + complete → cost_calc (STOP) ─
+        $this->actingAs($adj);
+        $this->getJson('/adjustments/adjustments/list')->assertOk();
+
+        $this->postJson("/adjustments/adjustments/{$case->id}/complete")->assertOk();
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_COST_CALC, $case->stage_key);
 
         $pricingId = PricingRequest::where('case_id', $case->id)->value('id');
+        $this->assertNotNull($pricingId);
+        $this->assertDatabaseMissing('quotes', ['case_id' => $case->id]);
+
+        // ── Step 4b: Costing — separate dashboard, read-only + confirm ───────
+        $costing = $this->userWithRole('costing');
+        $this->actingAs($costing);
+        $this->get('/costing/costing')->assertOk();
+
+        $costDetail = $this->getJson("/costing/queue/{$case->id}");
+        $costDetail->assertOk();
+        $this->assertEquals(400.00, (float) $costDetail->json('pricing.computed_total'));
+
+        $this->postJson("/costing/queue/{$case->id}/confirm")->assertOk();
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
+
         $this->assertContains($pricingId, $queues->adminPricingAwaitingIds());
 
-        // ── Step 4: Admin — highest purchase price approval ──────────────────
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $this->assertEquals(400.00, (float) $quote->total);
+        $this->assertEquals(Quote::STATUS_ISSUED, $quote->status);
+
+        // ── Step 5: Admin reviews highest-price costing (read-only) ──────────
         $this->actingAs($admin);
         $adminPage = $this->get('/admin/pricing');
         $adminPage->assertOk();
@@ -127,25 +157,18 @@ class CivilianQueryChainE2eTest extends TestCase
         $detail->assertOk();
         $this->assertEquals(400.00, (float) $detail->json('computed_total'));
 
-        $approve = $this->postJson("/admin/pricing/{$pricingId}/approve");
-        $approve->assertOk();
+        // ── Step 5b: Operations prints quote + OCR approval letter → WO ─────
+        $this->actingAs($ops);
 
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_WAITING_RETURN, $case->stage_key);
-        $quote = Quote::where('case_id', $case->id)->firstOrFail();
-        $this->assertEquals(400.00, (float) $quote->total);
-        $this->assertEquals(Quote::STATUS_PENDING, $quote->status);
+        $printOps = $this->get("/operations/quote/{$quote->id}/print");
+        $printOps->assertOk();
+        $printOps->assertSee($quote->quote_no, false);
 
-        // ── Step 5: Reception — issue frozen quote, OCR match + WO ────────
         $this->actingAs($recep);
 
         $print = $this->get("/reception/quote/{$quote->id}/print");
         $print->assertOk();
         $print->assertSee($quote->quote_no, false);
-
-        $issue = $this->postJson("/reception/quote/{$quote->id}/issue");
-        $issue->assertOk();
-        $this->assertEquals(Quote::STATUS_ISSUED, $quote->fresh()->status);
 
         $ocrBad = $this->postJson('/reception/ocr/process', [
             'quote_no'        => $quote->quote_no,

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Finance\MilitaryDebtController;
 use App\Http\Controllers\Admin\MilitaryRankController;
+use App\Http\Controllers\Admin\PermissionMatrixController;
 use App\Http\Controllers\Admin\StockCategoryController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\UserController;
@@ -71,6 +72,24 @@ Route::prefix('admin')
 
         Route::post('catalog/{stockItem}/prices', [StockCatalogController::class, 'addPrice'])
             ->name('catalog.add-price');
+
+        // ── الرفع الجماعي + قالب CSV + طباعة الباركود ───────────────────────
+        Route::get('catalog/template', [StockCatalogController::class, 'template'])
+            ->middleware('can:import-inventory')
+            ->name('catalog.template');
+
+        Route::post('catalog/import', [StockCatalogController::class, 'import'])
+            ->middleware('can:import-inventory')
+            ->name('catalog.import');
+
+        Route::get('catalog/{stockItem}/labels', [StockCatalogController::class, 'labels'])
+            ->middleware('can:print-barcode')
+            ->name('catalog.labels');
+
+        // ── مصفوفة الصلاحيات التفصيلية ──────────────────────────────────────
+        Route::post('permissions', [PermissionMatrixController::class, 'update'])
+            ->middleware('can:manage-permissions')
+            ->name('permissions.update');
 
         // ── Contract Companies ─────────────────────────────────────────────
         Route::get('companies/list', [ContractCompanyController::class, 'index'])

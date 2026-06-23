@@ -60,4 +60,19 @@ class MedicalRecord extends Model
     {
         return $this->hasMany(MedicalRecordItem::class);
     }
+
+    public function isMilitary(): bool
+    {
+        return $this->patient_type === Patient::TYPE_MILITARY;
+    }
+
+    /** الجهة المعروضة — للعسكري القوات المسلحة حتى لو company_name فارغ. */
+    public function displayEntity(): string
+    {
+        if ($this->isMilitary()) {
+            return Patient::MILITARY_SOVEREIGN_ENTITY;
+        }
+
+        return $this->company_name ?? '—';
+    }
 }

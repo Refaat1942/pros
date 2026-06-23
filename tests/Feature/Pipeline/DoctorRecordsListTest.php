@@ -4,6 +4,8 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\Appointment;
 use App\Models\MedicalRecord;
+use App\Models\MilitaryRank;
+use App\Models\Patient;
 use Tests\Support\DashboardQueueAssertions;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -75,5 +77,33 @@ class DoctorRecordsListTest extends TestCase
         $this->actingAs($doctor)->getJson('/doctor/records/list')
             ->assertOk()
             ->assertJsonMissing(['diagnosis' => 'مسودة غير معتمدة']);
+    }
+
+    public function test_military_locked_record_includes_display_entity(): void
+    {
+        $recep   = $this->userWithRole('reception');
+        $doctor  = $this->userWithRole('doctor');
+        $company = $this->militaryCompany();
+        $rank    = MilitaryRank::create(['name' => 'نقيب', 'rank_code' => 'CAP', 'sort_order' => 1]);
+        $patient = $this->registerMilitaryPatientHttp($recep, $company, $rank, 'مريض عسكري السجل');
+
+        $this->transferPatientToClinicHttp($recep, $patient);
+
+        $appointmentId = Appointment::where('patient_id', $patient->id)->value('id');
+
+        $this->actingAs($doctor)->postJson('/doctor/diagnosis', [
+            'patient_id'     => $patient->id,
+            'appointment_id' => $appointmentId,
+            'diagnosis'      => 'تشخيص عسكري',
+            'lock'           => true,
+        ])->assertCreated();
+
+        $this->actingAs($doctor)->getJson('/doctor/records/list')
+            ->assertOk()
+            ->assertJsonFragment([
+                'patient_name'   => 'مريض عسكري السجل',
+                'patient_type'   => 'military',
+                'display_entity' => Patient::MILITARY_SOVEREIGN_ENTITY,
+            ]);
     }
 }

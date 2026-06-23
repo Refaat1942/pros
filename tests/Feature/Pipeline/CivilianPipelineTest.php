@@ -71,7 +71,7 @@ class CivilianPipelineTest extends TestCase
         return $req;
     }
 
-    private function makeQuote(CaseRecord $case, ContractCompany $company = null): Quote
+    private function makeQuote(CaseRecord $case, ?ContractCompany $company = null): Quote
     {
         static $qSeq = 0;
         $qSeq++;
@@ -152,36 +152,33 @@ class CivilianPipelineTest extends TestCase
             'Quote pricing must use highest purchase price, NOT WAC');
     }
 
-    // ── Stage 4a: Admin approves pricing → civilian: quote + freeze ───────────
+    // ── Stage 4a: Adjustments completion → issued quote + operations gate ─────
 
-    public function test_civilian_pricing_approval_generates_quote_and_waiting_return(): void
+    public function test_civilian_adjustments_completion_generates_quote_and_lands_at_operations(): void
     {
         $this->seedStockWithPriceBatch();
 
         $company  = $this->civilianCompany();
         $patient  = $this->civilianPatient($company);
-        $approver = $this->userWithRole('admin');
-        $case     = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
-        $req      = $this->makePricingRequest($case, 'civilian');
 
-        app(PricingService::class)->approve($req, $approver);
+        // التوصيف → معدلات → تكاليف → عرض السعر → مكتب التشغيل (للقرار).
+        $case = $this->operationsReadyCase($patient);
 
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_WAITING_RETURN, $case->stage_key,
-            'Civilian must be frozen at waiting_return after pricing approval');
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key,
+            'Civilian must land at the operations desk after costing/quote');
 
         $quote = Quote::where('case_id', $case->id)->first();
         $this->assertNotNull($quote, 'A Quote must be generated for civilian cases');
-        $this->assertEquals(Quote::STATUS_PENDING, $quote->status);
+        $this->assertEquals(Quote::STATUS_ISSUED, $quote->status);
     }
 
-    // ── Stage 4b: Reception issues quote ─────────────────────────────────────
+    // ── Stage 4b: Quote re-issue helper ──────────────────────────────────────
 
     public function test_quote_is_issued_and_transitions_to_issued_status(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $quote = Quote::create([
             'quote_no'    => 'QT-2026-0001',
@@ -200,14 +197,16 @@ class CivilianPipelineTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'issue', 'tag' => 'quotes']);
     }
 
-    // ── Stage 4c: OCR scan → work order ──────────────────────────────────────
+    // ── Stage 4c: QR approval scan at operations → reserve + work order ───────
 
     public function test_ocr_approval_scan_generates_work_order_and_unlocks_manufacturing(): void
     {
+        $this->seedStockWithPriceBatch();
+
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
-        $quote   = $this->makeQuote($case, $company);
+        $case    = $this->operationsReadyCase($patient);
+        $quote   = Quote::where('case_id', $case->id)->firstOrFail();
 
         app(ApprovalService::class)->confirm($case, $quote->quote_no);
 
@@ -221,10 +220,11 @@ class CivilianPipelineTest extends TestCase
 
     public function test_scanning_wrong_qr_does_not_unlock_case(): void
     {
+        $this->seedStockWithPriceBatch();
+
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
-        $this->makeQuote($case, $company);
+        $case    = $this->operationsReadyCase($patient);
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
 

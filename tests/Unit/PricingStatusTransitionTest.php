@@ -121,9 +121,9 @@ class PricingStatusTransitionTest extends TestCase
         ]);
     }
 
-    // ── DB value written on approve() → sent_to_reception ────────────────────
+    // ── DB value written on operations approval → sent_to_reception ──────────
 
-    public function test_approve_writes_sent_to_reception_in_db(): void
+    public function test_operations_approval_writes_sent_to_reception_in_db(): void
     {
         $supplier = $this->makeSupplier();
         $item     = $this->stockItem('RM-001', qty: 10);
@@ -131,84 +131,39 @@ class PricingStatusTransitionTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $admin   = $this->userWithRole('admin');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+        $case    = $this->operationsReadyCase($patient);
 
-        $request = PricingRequest::create([
-            'request_no'   => 'PR-TEST-002',
-            'case_id'      => $case->id,
-            'patient_type' => 'civilian',
-            'order_ref'    => $case->order_ref,
-            'patient_name' => $patient->name,
-            'request_date' => now()->toDateString(),
-            'status_key'   => PricingRequestStatus::AwaitingAdminApproval->value,
-            'computed_total' => 200.00,
-        ]);
-
-        $case->update(['pricing_request_id' => $request->id]);
-
-        PricingRequestItem::create([
-            'pricing_request_id' => $request->id,
-            'stock_item_code'    => 'RM-001',
-            'name'               => 'صنف RM-001',
-            'qty'                => 1,
-            'unit_price'         => 200.00,
-            'line_total'         => 200.00,
-        ]);
-
-        app(PricingService::class)->approve($request, $admin);
+        app(\App\Services\OperationsService::class)->approve($case, 'مكتب التشغيل');
 
         // DB must show 'sent_to_reception'
         $this->assertDatabaseHas('pricing_requests', [
-            'id'         => $request->id,
+            'case_id'    => $case->id,
             'status_key' => 'sent_to_reception',
         ]);
     }
 
-    // ── Guard: approve() rejects non-awaiting status ──────────────────────────
+    // ── Guard: operations approval rejects cases not at the operations gate ────
 
-    public function test_approve_rejects_already_sent_request(): void
+    public function test_operations_approval_rejects_case_at_cost_calc(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $admin   = $this->userWithRole('admin');
         $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
-
-        $request = PricingRequest::create([
-            'request_no'   => 'PR-TEST-003',
-            'case_id'      => $case->id,
-            'patient_type' => 'civilian',
-            'order_ref'    => $case->order_ref,
-            'patient_name' => $patient->name,
-            'request_date' => now()->toDateString(),
-            'status_key'   => PricingRequestStatus::SentToReception->value,  // already approved
-        ]);
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
 
-        app(PricingService::class)->approve($request, $admin);
+        app(\App\Services\OperationsService::class)->approve($case, 'مكتب التشغيل');
     }
 
-    public function test_approve_rejects_processing_status(): void
+    public function test_operations_approval_rejects_case_at_technical(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $admin   = $this->userWithRole('admin');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
-
-        $request = PricingRequest::create([
-            'request_no'   => 'PR-TEST-004',
-            'case_id'      => $case->id,
-            'patient_type' => 'civilian',
-            'order_ref'    => $case->order_ref,
-            'patient_name' => $patient->name,
-            'request_date' => now()->toDateString(),
-            'status_key'   => PricingRequestStatus::Processing->value,  // not ready yet
-        ]);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
 
-        app(PricingService::class)->approve($request, $admin);
+        app(\App\Services\OperationsService::class)->approve($case, 'مكتب التشغيل');
     }
 
     // ── DB value written when BOM stock check fails → insufficient ────────────
@@ -280,40 +235,20 @@ class PricingStatusTransitionTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $admin   = $this->userWithRole('admin');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
 
-        // Step 1: SpecService creates request as 'processing'
-        $request = PricingRequest::create([
-            'request_no'   => 'PR-TEST-CYCLE',
-            'case_id'      => $case->id,
-            'patient_type' => 'civilian',
-            'order_ref'    => $case->order_ref,
-            'patient_name' => $patient->name,
-            'request_date' => now()->toDateString(),
-            'status_key'   => PricingRequestStatus::Processing->value,
+        // المعدلات تُغلق فتُنشأ التكلفة وتُحتسب → awaiting_admin_approval، والحالة تصل مكتب التشغيل.
+        $case = $this->operationsReadyCase($patient);
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
+        $this->assertDatabaseHas('pricing_requests', [
+            'case_id'    => $case->id,
+            'status_key' => 'awaiting_admin_approval',
         ]);
 
-        PricingRequestItem::create([
-            'pricing_request_id' => $request->id,
-            'stock_item_code'    => 'RM-001',
-            'name'               => 'صنف RM-001',
-            'qty'                => 1,
+        // اعتماد مكتب التشغيل → sent_to_reception
+        app(\App\Services\OperationsService::class)->approve($case, 'مكتب التشغيل');
+        $this->assertDatabaseHas('pricing_requests', [
+            'case_id'    => $case->id,
+            'status_key' => 'sent_to_reception',
         ]);
-
-        $case->update(['pricing_request_id' => $request->id]);
-
-        $this->assertDatabaseHas('pricing_requests', ['id' => $request->id, 'status_key' => 'processing']);
-
-        // Step 2: calculate() → 'awaiting_admin_approval'
-        app(PricingService::class)->calculate($request);
-        $this->assertDatabaseHas('pricing_requests', ['id' => $request->id, 'status_key' => 'awaiting_admin_approval']);
-
-        // Reload to get updated status_key after calculate
-        $request->refresh();
-
-        // Step 3: admin approve() → 'sent_to_reception'
-        app(PricingService::class)->approve($request, $admin);
-        $this->assertDatabaseHas('pricing_requests', ['id' => $request->id, 'status_key' => 'sent_to_reception']);
     }
 }

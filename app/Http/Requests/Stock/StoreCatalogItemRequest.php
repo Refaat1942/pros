@@ -4,50 +4,38 @@ namespace App\Http\Requests\Stock;
 
 use App\Http\Requests\BaseRequest;
 
+/**
+ * إنشاء صنف — السمات الأساسية فقط: الكود (اختياري — يُولَّد تلقائياً)،
+ * الاسم، الكمية، والسعر (مع دعم أكثر من سعر عبر prices[]).
+ */
 class StoreCatalogItemRequest extends BaseRequest
 {
     public function rules(): array
     {
         return [
-            'name'                        => ['required', 'string', 'max:255'],
-            'spec'                        => ['nullable', 'string', 'max:500'],
-            'category_id'                 => ['required', 'integer', 'exists:stock_categories,id'],
-            'qty'                         => ['nullable', 'integer', 'min:0'],
-            'prices'                      => ['required', 'array', 'min:1'],
-            'prices.*.label'              => ['required', 'string', 'max:255'],
-            'prices.*.supplier_id'        => ['required', 'integer', 'exists:suppliers,id'],
-            'prices.*.supplier_item_code' => ['nullable', 'string', 'max:100'],
-            'prices.*.amount'             => ['required', 'numeric', 'min:0.01'],
+            'code'           => ['nullable', 'string', 'max:100', 'unique:stock_items,code'],
+            'name'           => ['required', 'string', 'max:255'],
+            'qty'            => ['nullable', 'integer', 'min:0'],
+            'price'          => ['nullable', 'numeric', 'min:0'],
+            'expiry_date'    => ['nullable', 'date'],
+
+            // أسعار إضافية (صنف بأكثر من سعر) — اختيارية.
+            'prices'         => ['nullable', 'array'],
+            'prices.*.id'    => ['nullable'],
+            'prices.*.label' => ['nullable', 'string', 'max:255'],
+            'prices.*.amount'=> ['required_with:prices', 'numeric', 'min:0'],
+
+            // سمات قديمة اختيارية (توافق خلفي — غير مطلوبة في النموذج المبسّط).
+            'spec'           => ['nullable', 'string', 'max:500'],
+            'category_id'    => ['nullable', 'integer', 'exists:stock_categories,id'],
         ];
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $prices = $this->input('prices', []);
-
-        foreach ($prices as $i => $row) {
-            if (empty($row['supplier_item_code']) && ! empty($row['itemCode'])) {
-                $prices[$i]['supplier_item_code'] = $row['itemCode'];
-            }
-
-            if (array_key_exists('supplier_item_code', $prices[$i])
-                && trim((string) $prices[$i]['supplier_item_code']) === '') {
-                $prices[$i]['supplier_item_code'] = null;
-            }
-        }
-
-        $this->merge(['prices' => $prices]);
     }
 
     public function messages(): array
     {
         return [
-            'name.required'                   => 'يرجى إدخال اسم الصنف.',
-            'category_id.required'            => 'يرجى اختيار الفئة.',
-            'prices.required'                 => 'يرجى إضافة سعر واحد على الأقل.',
-            'prices.min'                      => 'يرجى إضافة سعر واحد على الأقل.',
-            'prices.*.supplier_id.required'   => 'يرجى اختيار المورد لكل سعر.',
-            'prices.*.amount.required'        => 'يرجى إدخال السعر.',
+            'name.required' => 'يرجى إدخال اسم الصنف.',
+            'code.unique'   => 'كود الصنف مستخدم مسبقاً.',
         ];
     }
 }

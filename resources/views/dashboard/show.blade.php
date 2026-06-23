@@ -5,5 +5,9 @@
 ])
 
 @section('page-content')
-    @include("{$dashboardKey}.pages.{$activePage}")
+    @if (($activePage ?? '') === 'notifications')
+        @include('notifications.pages.inbox')
+    @else
+        @include("{$dashboardKey}.pages.{$activePage}")
+    @endif
 @endsection

@@ -19,7 +19,21 @@
       civilian: { label: 'مدني', icon: '🌐', badge: 'civilian' },
       military: { label: 'عسكري', icon: '🪖', badge: 'military' }
     };
+    var MILITARY_ENTITY = (window.__DOCTOR_CONFIG && window.__DOCTOR_CONFIG.militaryEntity) || 'القوات المسلحة';
     function ptMeta(t) { return PT_META[t] || PT_META.civilian; }
+    function isMilitaryType(t) { return t === 'military'; }
+
+    function entityLabel(patientType) {
+      return isMilitaryType(patientType) ? 'الجهة السيادية' : 'جهة التعاقد';
+    }
+
+    function resolveEntity(row) {
+      var type = row.patientType || row.patient_type;
+      if (isMilitaryType(type)) {
+        return MILITARY_ENTITY;
+      }
+      return row.displayEntity || row.display_entity || row.company || row.company_name || '—';
+    }
 
     function normalizeRec(item) {
       if (typeof item === 'string') return { name: item, qty: 1 };
@@ -118,9 +132,6 @@
       var diagnosis = item.diagnosis || (linkedRecord && linkedRecord.diagnosis) || '';
       var prescription = item.prescription || (linkedRecord && linkedRecord.prescription) || '';
 
-      document.getElementById('recordModalTitle').textContent = item.name;
-      document.getElementById('recordModalMeta').innerHTML = formatTransferStatusMeta(item.status, item.statusGroup);
-
       var diagnosisBlock = diagnosis
         ? '<div class="record-modal-section">' +
             '<h4>التشخيص الدقيق</h4>' +
@@ -134,9 +145,15 @@
           '</div>'
         : '';
 
+      document.getElementById('recordModalTitle').textContent = item.name;
+      var tm = ptMeta(item.patientType);
+      document.getElementById('recordModalMeta').innerHTML =
+        '<span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span> · ' +
+        formatTransferStatusMeta(item.status, item.statusGroup);
+
       document.getElementById('recordModalBody').innerHTML =
         '<div class="record-detail-grid">' +
-          '<div class="record-detail-item"><div class="label">جهة التعاقد</div><div class="value">' + escHtml(item.company) + '</div></div>' +
+          '<div class="record-detail-item"><div class="label">' + entityLabel(item.patientType) + '</div><div class="value">' + escHtml(resolveEntity(item)) + '</div></div>' +
           '<div class="record-detail-item"><div class="label">تاريخ التحويل</div><div class="value">' + escHtml(item.date) + '</div></div>' +
           '<div class="record-detail-item"><div class="label">الحالة</div><div class="value">' + escHtml(item.status) + '</div></div>' +
         '</div>' +
@@ -151,7 +168,7 @@
     }
 
     function openRecordModal(recordIdx) {
-      var record = medicalRecords[recordIdx];
+      var record = typeof recordIdx === 'object' ? recordIdx : medicalRecords[recordIdx];
       if (!record) return;
 
       var tm = ptMeta(record.patientType);
@@ -163,7 +180,7 @@
         '<div class="record-detail-grid">' +
           '<div class="record-detail-item"><div class="label">رقم الهاتف</div><div class="value" style="direction:ltr;text-align:right;">' + escHtml(record.phone || '—') + '</div></div>' +
           '<div class="record-detail-item"><div class="label">الرقم القومي</div><div class="value" style="direction:ltr;text-align:right;">' + escHtml(record.nationalId || '—') + '</div></div>' +
-          '<div class="record-detail-item"><div class="label">جهة التعاقد</div><div class="value">' + escHtml(record.company || '—') + '</div></div>' +
+          '<div class="record-detail-item"><div class="label">' + entityLabel(record.patientType) + '</div><div class="value">' + escHtml(resolveEntity(record)) + '</div></div>' +
           '<div class="record-detail-item"><div class="label">الطبيب المعالج</div><div class="value">' + escHtml(record.doctor) + '</div></div>' +
           '<div class="record-detail-item"><div class="label">تاريخ التقرير</div><div class="value">' + escHtml(record.date) + '</div></div>' +
         '</div>' +
@@ -277,7 +294,8 @@
         name: row.patient_name || '—',
         phone: row.phone || '—',
         nationalId: row.national_id || '',
-        company: row.company_name || '—',
+        company: resolveEntity(row),
+        displayEntity: resolveEntity(row),
         patientType: row.patient_type || 'civilian',
         diagnosis: row.diagnosis || '',
         prescription: row.prescription || '',
@@ -363,6 +381,15 @@
       root.querySelectorAll('.btn-record-view').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
           e.stopPropagation();
+          var payload = btn.getAttribute('data-record');
+          if (payload) {
+            try {
+              openRecordModal(mapRecordFromApi(JSON.parse(payload)));
+              return;
+            } catch (err) {
+              console.error('record modal payload', err);
+            }
+          }
           var idx = parseInt(btn.getAttribute('data-record-idx'), 10);
           if (!isNaN(idx) && idx >= 0) {
             openRecordModal(idx);
@@ -431,7 +458,8 @@
         id: row.id,
         caseNo: row.case_no || '',
         name: row.name || '—',
-        company: row.company || '—',
+        company: row.display_entity || row.company || '—',
+        displayEntity: row.display_entity || row.company || '—',
         patientType: row.patient_type || 'civilian',
         date: row.date || '—',
         status: row.status || '—',
@@ -627,7 +655,10 @@
       var selectedPatientName = document.getElementById('selectedPatientName');
       var selectedPatientInfo = document.getElementById('selectedPatientInfo');
       if (selectedPatientName) selectedPatientName.textContent = selectedPatient.name;
-      if (selectedPatientInfo) selectedPatientInfo.textContent = 'الرقم القومي: ' + selectedPatient.nationalId + ' | جهة التعاقد: ' + selectedPatient.company + typeTxt;
+      if (selectedPatientInfo) {
+        var entityTxt = entityLabel(selectedPatient.patientType) + ': ' + resolveEntity(selectedPatient);
+        selectedPatientInfo.textContent = 'الرقم القومي: ' + selectedPatient.nationalId + ' | ' + entityTxt + typeTxt;
+      }
       var silentNote = document.getElementById('silentClinicNote');
       if (silentNote) silentNote.style.display = selectedPatient.patientType === 'military' ? 'flex' : 'none';
       var saveBtn = document.getElementById('saveBtn');

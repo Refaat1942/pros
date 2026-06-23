@@ -57,13 +57,22 @@
           </thead>
           <tbody id="queueTable" data-server-rendered="1">
             @forelse ($queue as $appt)
-              @php $diagnosisUrl = route('doctor.diagnosis', ['appointment' => $appt->id]); @endphp
+              @php
+                  $diagnosisUrl = route('doctor.diagnosis', ['appointment' => $appt->id]);
+                  $pt = $appt->patient_type ?? 'civilian';
+                  $entity = $appt->displayEntity();
+              @endphp
               <tr class="queue-row-clickable"
                   data-href="{{ $diagnosisUrl }}"
-                  data-search="{{ $appt->patient_name }} {{ $appt->company_name }}">
+                  data-search="{{ $appt->patient_name }} {{ $entity }}">
                 <td>{{ $loop->iteration }}</td>
-                <td><strong>{{ $appt->patient_name }}</strong></td>
-                <td>{{ $appt->company_name ?? '—' }}</td>
+                <td>
+                  <strong>{{ $appt->patient_name }}</strong>
+                  <span class="patient-type-badge {{ $pt === 'military' ? 'military' : 'civilian' }}">
+                    {{ $pt === 'military' ? '🪖 عسكري' : '🌐 مدني' }}
+                  </span>
+                </td>
+                <td>{{ $entity }}</td>
                 <td><span class="wait-time">{{ $appt->receptionWaitLabel() }}</span></td>
                 <td>{{ $appt->transferredAt()?->format('d/m/Y H:i') ?? '—' }}</td>
                 <td>

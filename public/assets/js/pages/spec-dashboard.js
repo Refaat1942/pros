@@ -290,9 +290,10 @@
         $('bannerCaseNo').textContent = c.case_no || '—';
         $('bannerOrderRef').textContent = c.order_ref || '—';
         $('bannerDoctor').textContent = data.medical_record?.doctor_name || '—';
-        $('bannerCompany').textContent = state.patientType === 'military'
-          ? (c.rank || 'القوات المسلحة')
-          : (c.company_name || '—');
+        $('bannerCompany').textContent = c.display_entity
+          || (state.patientType === 'military'
+            ? (c.sovereign_entity || c.patient?.sovereign_entity || 'القوات المسلحة')
+            : (c.company_name || '—'));
 
         var medBox = $('medicalSummary');
         if (data.medical_record) {

@@ -116,7 +116,8 @@ class SpecOrdersSubmitTest extends TestCase
 
         $this->postJson("/spec/spec/{$draft->id}/submit")
             ->assertOk()
-            ->assertJsonStructure(['pricing_request' => ['request_no']]);
+            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS)
+            ->assertJsonStructure(['case' => ['id', 'stage_key'], 'spec' => ['items']]);
 
         $this->assertNotContains($case->id, app(\App\Services\Dashboard\DashboardQueueService::class)->specTechnicalCaseIds());
     }

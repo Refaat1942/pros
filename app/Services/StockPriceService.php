@@ -85,11 +85,22 @@ class StockPriceService
             return 0.0;
         }
 
-        $max = $item->prices()
-            ->where('qty', '>', 0)
-            ->max('amount');
+        $maxBatch = (float) ($item->prices()->where('qty', '>', 0)->max('amount') ?? 0.0);
 
-        return (float) ($max ?? 0.0);
+        // أعلى سعر = الأعلى بين السعر الأساسي والأسعار الإضافية (صنف بأكثر من سعر).
+        return max((float) $item->price, $maxBatch);
+    }
+
+    /**
+     * متوسط التكلفة المرجح (WAC) للصنف — للتكلفة الداخلية وحساب الربح الحقيقي.
+     * يُستخدم من محرك التكاليف (للأدمن فقط) وليس لبناء عرض السعر.
+     */
+    public function wacUnitPrice(string $stockItemCode): float
+    {
+        $wac = (float) (StockItem::where('code', $stockItemCode)->value('wac') ?? 0.0);
+
+        // إن لم يُحتسب WAC بعد، نرجع لأعلى سعر شراء كأساس تكلفة آمن.
+        return $wac > 0 ? $wac : $this->highestUnitPrice($stockItemCode);
     }
 
     /**

@@ -17,3 +17,7 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Firebase service-account credentials — secret, never commit
+/firebase/*.json
+firebase-adminsdk-*.json

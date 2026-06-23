@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Pricing;
 
 use App\Enums\PricingRequestStatus;
 use App\Http\Controllers\Controller;
+use App\Models\CaseRecord;
 use App\Models\PricingRequest;
+use App\Services\OperationsService;
 use App\Services\PricingService;
 use App\Support\CaseDisplayStatus;
 use App\Traits\PaginationTrait;
@@ -17,8 +19,10 @@ class PricingApprovalController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly PricingService $pricingService)
-    {
+    public function __construct(
+        private readonly PricingService $pricingService,
+        private readonly OperationsService $operationsService,
+    ) {
     }
 
     /**
@@ -40,7 +44,7 @@ class PricingApprovalController extends Controller
         );
 
         return response()->json([
-            'data'  => collect($requests)->map(fn ($r) => $this->formatSummary($r))->values(),
+            'data'  => collect($requests)->map(fn (PricingRequest $r) => $this->formatSummary($r))->values(),
             'total' => $requests->count(),
         ]);
     }
@@ -58,7 +62,7 @@ class PricingApprovalController extends Controller
         $pricingRequest->load([
             'items',
             'caseRecord.patient:id,patient_code,name,phone,national_id,patient_type,rank,sovereign_entity,company_name',
-            'caseRecord:id,case_no,order_ref,stage_key,patient_type,company_name,patient_id,work_order_no,manufacturing_stage',
+            'caseRecord:id,case_no,order_ref,stage_key,patient_type,company_name,sovereign_entity,patient_id,work_order_no,manufacturing_stage',
             'doctor:id,name',
         ]);
 
@@ -66,14 +70,17 @@ class PricingApprovalController extends Controller
     }
 
     /**
-     * اعتماد طلب التسعير — مسار مدني أو عسكري.
+     * اعتماد الحالة من شاشة التكاليف — يُفوَّض لمكتب التشغيل (حجز فوري + تحويل للمخزن).
+     * التكلفة نفسها للقراءة فقط؛ القرار من مكتب التشغيل.
      */
     public function approve(Request $request, PricingRequest $pricingRequest): RedirectResponse|JsonResponse
     {
         /** @var \App\Models\User $approver */
         $approver = Auth::user();
 
-        $this->pricingService->approve($pricingRequest, $approver);
+        $case = CaseRecord::findOrFail($pricingRequest->case_id);
+
+        $this->operationsService->approve($case, $approver->name);
 
         if ($request->expectsJson()) {
             $pricingRequest->refresh()->load(['items', 'quote', 'caseRecord']);
@@ -136,17 +143,20 @@ class PricingApprovalController extends Controller
                 'national_id'      => $patient->national_id,
                 'patient_type'     => $patient->patient_type,
                 'rank'             => $patient->rank,
-                'sovereign_entity' => $patient->sovereign_entity,
-                'company_name'     => $patient->company_name,
+                'sovereign_entity' => $patient->displayEntity(),
+                'company_name'     => $patient->isMilitary() ? null : $patient->company_name,
+                'display_entity'   => $patient->displayEntity(),
             ] : null,
             'case' => $case ? [
-                'id'            => $case->id,
-                'case_no'       => $case->case_no,
-                'order_ref'     => $case->order_ref,
-                'stage_key'     => $case->stage_key,
-                'patient_type'  => $case->patient_type,
-                'company_name'  => $case->company_name,
-                'work_order_no' => $case->work_order_no,
+                'id'             => $case->id,
+                'case_no'        => $case->case_no,
+                'order_ref'      => $case->order_ref,
+                'stage_key'      => $case->stage_key,
+                'patient_type'   => $case->patient_type,
+                'company_name'   => $case->isMilitary() ? null : $case->company_name,
+                'sovereign_entity' => $case->displayEntity(),
+                'display_entity' => $case->displayEntity(),
+                'work_order_no'  => $case->work_order_no,
             ] : null,
             'items'       => $request->relationLoaded('items')
                 ? $request->items->map(fn ($item) => $item->only([

@@ -16,7 +16,7 @@ class SpecPipelineTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_spec_submit_creates_pricing_request_raw_bom_and_advances_case(): void
+    public function test_spec_submit_creates_raw_bom_and_advances_case_to_adjustments(): void
     {
         $this->stockItem('RM-001', qty: 10);
 
@@ -57,13 +57,13 @@ class SpecPipelineTest extends TestCase
             ],
         ]);
 
-        $pricingRequest = app(SpecService::class)->submit($draft);
+        // الإرسال الآن يُحوّل التوصيف إلى المعدلات (لا تسعير هنا — عمى مالي للفني).
+        $updatedCase = app(SpecService::class)->submit($draft);
 
-        $this->assertMatchesRegularExpression('/^\d{6}$/', $pricingRequest->request_no);
+        $this->assertEquals(CaseRecord::STAGE_ADJUSTMENTS, $updatedCase->stage_key);
 
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_COST_CALC, $case->stage_key);
-        $this->assertEquals(PricingRequestStatus::AwaitingAdminApproval, $pricingRequest->fresh()->status_key);
+        // لا يُنشأ طلب تسعير في مرحلة التوصيف/المعدلات قبل إغلاق المعدلات.
+        $this->assertDatabaseMissing('pricing_requests', ['case_id' => $case->id]);
 
         $bom = Bom::where('case_id', $case->id)->first();
         $this->assertNotNull($bom);
@@ -71,7 +71,7 @@ class SpecPipelineTest extends TestCase
         $this->assertEquals(1, $bom->items()->count());
 
         $stock = StockItem::where('code', 'RM-001')->first();
-        $this->assertEquals(0, $stock->reserved, 'Spec BOM must not reserve stock before manufacturing');
+        $this->assertEquals(0, $stock->reserved, 'Spec BOM must not reserve stock before operations approval');
     }
 
     public function test_spec_api_create_endpoint_returns_catalog_without_qty(): void

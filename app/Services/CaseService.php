@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\Patient;
@@ -17,10 +18,46 @@ class CaseService
     }
 
     /**
+     * إنشاء حالة من الاستقبال مع تخطّي الكشف (اختياري) — تقفز مباشرةً للتوصيف.
+     */
+    public function initiateFromReception(Patient $patient): CaseRecord
+    {
+        $case = $this->createCase($patient, null);
+
+        $this->workflowService->advance($case, WorkflowEvent::ExamSkipped->value);
+
+        AuditService::log(
+            action:      'create',
+            description: "إنشاء حالة بتخطّي الكشف {$case->case_no} — {$patient->patient_code}",
+            tag:         'medical',
+            after:       $this->caseAuditSnapshot($case->fresh()),
+        );
+
+        return $case->fresh();
+    }
+
+    /**
      * يُنشئ CaseRecord من تقرير طبي معتمد.
      * يُستدعى حصراً بعد اعتماد الكشف (MedicalRecordService::lock).
      */
     public function initiate(Patient $patient, MedicalRecord $record): CaseRecord
+    {
+        $case = $this->createCase($patient, $record);
+
+        AuditService::log(
+            action:      'create',
+            description: "إنشاء حالة جديدة {$case->case_no} للمريض {$patient->patient_code}",
+            tag:         'medical',
+            after:       $this->caseAuditSnapshot($case),
+        );
+
+        return $case->fresh();
+    }
+
+    /**
+     * إنشاء سجل الحالة الأساسي عند الاستقبال (stage_key = reception).
+     */
+    private function createCase(Patient $patient, ?MedicalRecord $record): CaseRecord
     {
         return DB::transaction(function () use ($patient, $record) {
             [$caseNo, $orderRef] = $this->nextCaseNumbers();
@@ -34,23 +71,18 @@ class CaseService
                 'order_ref'            => $orderRef,
                 'tracking_uid'         => $patient->tracking_uid,
                 'patient_id'           => $patient->id,
-                'contract_company_id'  => $patient->contract_company_id,
-                'company_name'         => $patient->company_name,
+                'contract_company_id'  => $patient->isMilitary() ? null : $patient->contract_company_id,
+                'company_name'         => $patient->isMilitary() ? null : $patient->company_name,
                 'patient_type'         => $patient->patient_type,
                 'path'                 => $path,
                 'stage_key'            => CaseRecord::STAGE_RECEPTION,
                 'rank'                 => $patient->rank,
-                'sovereign_entity'     => $patient->sovereign_entity,
+                'sovereign_entity'     => $patient->isMilitary()
+                    ? ($patient->sovereign_entity ?? Patient::MILITARY_SOVEREIGN_ENTITY)
+                    : null,
             ]);
 
-            $record->update(['case_id' => $case->id]);
-
-            AuditService::log(
-                action:      'create',
-                description: "إنشاء حالة جديدة {$case->case_no} للمريض {$patient->patient_code}",
-                tag:         'medical',
-                after:       $this->caseAuditSnapshot($case),
-            );
+            $record?->update(['case_id' => $case->id]);
 
             return $case->fresh();
         });

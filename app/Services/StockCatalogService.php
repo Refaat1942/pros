@@ -7,7 +7,6 @@ use App\Enums\StockUom;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
-use Database\Seeders\Support\PrototypeSeedData;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +18,7 @@ class StockCatalogService
     public function listForDashboard(): Collection
     {
         return StockItem::query()
-            ->with(['category:id,name', 'prices.supplier:id,name'])
+            ->with(['category:id,name', 'prices:id,stock_item_id,label,amount'])
             ->orderByDesc('id')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get()
@@ -28,25 +27,27 @@ class StockCatalogService
 
     public function formatItem(StockItem $item): array
     {
-        $item->loadMissing(['category:id,name', 'prices.supplier:id,name']);
+        $item->loadMissing(['category:id,name', 'prices:id,stock_item_id,label,amount']);
 
         return [
             'id'          => $item->id,
             'code'        => $item->code,
+            'barcode'     => $item->barcode,
             'name'        => $item->name,
             'spec'        => $item->spec,
             'category_id' => $item->category_id,
             'category'    => $item->category?->name ?? '',
             'qty'         => (int) $item->qty,
             'reserved'    => (int) $item->reserved,
+            'price'       => (float) $item->price,
+            'expiry_date' => $item->expiry_date?->toDateString(),
+            'wac'         => (float) $item->wac,
             'status'      => $item->status,
+            // الأسعار الإضافية (إن وُجدت — صنف بأكثر من سعر).
             'prices'      => $item->prices->map(fn (StockItemPrice $p) => [
-                'id'          => (string) $p->id,
-                'label'       => $p->label,
-                'supplier_id' => $p->supplier_id,
-                'supplier'    => $p->supplier?->name ?? '',
-                'itemCode'    => $p->supplier_item_code,
-                'amount'      => (float) $p->amount,
+                'id'     => (string) $p->id,
+                'label'  => $p->label,
+                'amount' => (float) $p->amount,
             ])->values()->all(),
         ];
     }
@@ -54,34 +55,42 @@ class StockCatalogService
     public function create(array $data): StockItem
     {
         return DB::transaction(function () use ($data) {
-            $category = StockCategory::find($data['category_id']);
-            $code     = $this->nextCode();
+            $code     = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $this->nextCode();
+            $category = ! empty($data['category_id']) ? StockCategory::find($data['category_id']) : null;
+            $qty      = (int) ($data['qty'] ?? 0);
+            $price    = (float) ($data['price'] ?? 0);
 
             $item = StockItem::create([
                 'code'        => $code,
                 'name'        => $data['name'],
                 'spec'        => $data['spec'] ?? null,
-                'category_id' => $data['category_id'],
+                'category_id' => $data['category_id'] ?? null,
                 'store_class' => $this->deriveStoreClass($category),
                 'uom'         => StockUom::Piece->value,
-                'barcode'     => PrototypeSeedData::deriveBarcode($code),
-                'qty'         => (int) ($data['qty'] ?? 0),
+                'barcode'     => 'BC-' . $code,
+                'qty'         => $qty,
                 'reserved'    => 0,
+                'price'       => $price,
+                'expiry_date' => $data['expiry_date'] ?? null,
+                'wac'         => $qty > 0 ? $price : 0,
                 'status'      => StockItem::STATUS_OK,
             ]);
 
-            $this->syncPrices($item, $data['prices'] ?? []);
-            $this->applyInitialWac($item, (int) ($data['qty'] ?? 0), $data['prices'] ?? []);
+            // أسعار إضافية (صنف بأكثر من سعر).
+            if (! empty($data['prices'])) {
+                $this->syncPrices($item, $data['prices']);
+            }
+
             $this->syncStatus($item);
 
             AuditService::log(
                 action:      'create',
                 description: "إضافة صنف {$item->code} — {$item->name}",
                 tag:         'admin',
-                after:       $this->formatItem($item->fresh(['category', 'prices.supplier'])),
+                after:       $this->formatItem($item->fresh(['category', 'prices'])),
             );
 
-            return $item->fresh(['category', 'prices.supplier']);
+            return $item->fresh(['category', 'prices']);
         });
     }
 
@@ -89,20 +98,28 @@ class StockCatalogService
     {
         return DB::transaction(function () use ($item, $data) {
             $before = $this->formatItem($item);
+            $price  = array_key_exists('price', $data) ? (float) $data['price'] : (float) $item->price;
 
             $item->update([
                 'name'        => $data['name'],
-                'spec'        => $data['spec'] ?? null,
-                'category_id' => $data['category_id'],
+                'spec'        => $data['spec'] ?? $item->spec,
                 'qty'         => (int) ($data['qty'] ?? $item->qty),
+                'price'       => $price,
+                'expiry_date' => $data['expiry_date'] ?? $item->expiry_date,
             ]);
 
-            if (isset($data['category_id'])) {
+            if (! empty($data['category_id'])) {
                 $category = StockCategory::find($data['category_id']);
-                $item->update(['store_class' => $this->deriveStoreClass($category)]);
+                $item->update([
+                    'category_id' => $data['category_id'],
+                    'store_class' => $this->deriveStoreClass($category),
+                ]);
             }
 
-            $this->syncPrices($item, $data['prices'] ?? []);
+            if (array_key_exists('prices', $data)) {
+                $this->syncPrices($item, $data['prices'] ?? []);
+            }
+
             $this->syncStatus($item->fresh());
 
             AuditService::log(
@@ -110,10 +127,10 @@ class StockCatalogService
                 description: "تعديل صنف {$item->code}",
                 tag:         'admin',
                 before:      $before,
-                after:       $this->formatItem($item->fresh(['category', 'prices.supplier'])),
+                after:       $this->formatItem($item->fresh(['category', 'prices'])),
             );
 
-            return $item->fresh(['category', 'prices.supplier']);
+            return $item->fresh(['category', 'prices']);
         });
     }
 
@@ -161,27 +178,28 @@ class StockCatalogService
         };
     }
 
+    /**
+     * مزامنة الأسعار الإضافية للصنف (صنف بأكثر من سعر) — سعر + تسمية اختيارية.
+     *
+     * @param  array<int, array{id?:mixed, label?:string, amount?:mixed}>  $prices
+     */
     private function syncPrices(StockItem $item, array $prices): void
     {
         $keepIds = [];
 
         foreach ($prices as $index => $row) {
-            $supplierId = (int) ($row['supplier_id'] ?? 0);
-            $amount     = (float) ($row['amount'] ?? 0);
-            $label      = trim((string) ($row['label'] ?? ''));
-            $itemCode   = trim((string) ($row['supplier_item_code'] ?? $row['itemCode'] ?? ''));
+            $amount = (float) ($row['amount'] ?? 0);
+            $label  = trim((string) ($row['label'] ?? ''));
 
-            if (! $supplierId || $amount <= 0 || $label === '') {
+            if ($amount <= 0) {
                 continue;
             }
 
             $priceId = isset($row['id']) && is_numeric($row['id']) ? (int) $row['id'] : null;
             $payload = [
-                'label'              => $label,
-                'supplier_id'        => $supplierId,
-                'supplier_item_code' => $itemCode !== '' ? $itemCode : null,
-                'amount'             => $amount,
-                'qty'                => 1,
+                'label'  => $label !== '' ? $label : null,
+                'amount' => $amount,
+                'qty'    => 1,
             ];
 
             if ($priceId && $existing = $item->prices()->whereKey($priceId)->first()) {
@@ -190,11 +208,8 @@ class StockCatalogService
                 continue;
             }
 
-            $seq      = $index + 1;
-            $priceRef = sprintf('PR-%s-%d', $item->code, $seq);
-
             $created = $item->prices()->create(array_merge($payload, [
-                'price_ref' => $priceRef,
+                'price_ref' => sprintf('PR-%s-%d', $item->code, $index + 1),
             ]));
             $keepIds[] = $created->id;
         }
@@ -203,20 +218,6 @@ class StockCatalogService
             $item->prices()->whereNotIn('id', $keepIds)->delete();
         } else {
             $item->prices()->delete();
-        }
-    }
-
-    private function applyInitialWac(StockItem $item, int $qty, array $prices): void
-    {
-        if ($qty <= 0 || ! $prices) {
-            return;
-        }
-
-        $amounts = array_map(fn ($p) => (float) ($p['amount'] ?? 0), $prices);
-        $amounts = array_filter($amounts, fn ($a) => $a > 0);
-
-        if ($amounts) {
-            $item->update(['wac' => max($amounts)]);
         }
     }
 

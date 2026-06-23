@@ -22,6 +22,12 @@ return new class extends Migration
             $table->string('barcode')->unique(); // BC-1 — للمسح بالباركود
             $table->unsignedInteger('qty')->default(0); // الرصيد الحالي
             $table->unsignedInteger('reserved')->default(0); // الكمية المحجوزة
+
+            // ── السعر الأساسي (CRUD مبسّط + الرفع الجماعي) ────────────────────
+            // السعر العادي للصنف؛ الأسعار الإضافية (إن وُجدت) في stock_item_prices.
+            $table->decimal('price', 15, 2)->default(0);
+            $table->date('expiry_date')->nullable(); // تاريخ انتهاء الصلاحية (اختياري)
+
             $table->string('status')->default('ok'); // ok | low — syncStatus()
             $table->date('last_moved_at')->nullable(); // آخر حركة مخزنية
             $table->string('last_return_ref')->nullable(); // مرجع آخر ارتجاع

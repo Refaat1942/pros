@@ -37,17 +37,10 @@ class AdminOverviewOperationsTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $tech    = $this->userWithRole('technical');
         $admin   = $this->userWithRole('admin');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
 
-        $this->actingAs($tech);
-        $bom = app(BomService::class)->createSpecRaw($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 1],
-        ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
-
-        $case->refresh();
+        // اعتماد مكتب التشغيل ثم صرف المخزن → حالة نشطة بأمر شغل.
+        $case = $this->dispensedManufacturingCase($patient);
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
 
         $this->actingAs($admin);
@@ -56,7 +49,7 @@ class AdminOverviewOperationsTest extends TestCase
         $response->assertOk();
         $response->assertSee('مكتب التشغيل — أوامر نشطة');
         $response->assertSee($case->work_order_no);
-        $response->assertSee($case->patient->name);
+        $response->assertSee($patient->name);
     }
 
     public function test_overview_lists_all_employees_including_reception_and_operations(): void
@@ -79,7 +72,8 @@ class AdminOverviewOperationsTest extends TestCase
         $response->assertOk();
         $response->assertSee('موظف استقبال');
         $response->assertSee('مكتب عمليات');
-        $response->assertSee('7 موظف');
+        $response->assertSee('فني تكاليف');
+        $response->assertSee('8 موظف');
     }
 
     public function test_overview_shows_audit_log_preview_from_database(): void
@@ -110,7 +104,7 @@ class AdminOverviewOperationsTest extends TestCase
         $response->assertSee('data-server-rendered="1"', false);
     }
 
-    public function test_overview_waiting_return_count_increases_after_quote_issued_to_entity(): void
+    public function test_overview_operations_count_increases_when_case_enters_operations_desk(): void
     {
         $mock = $this->mock(BiReportService::class);
         $mock->shouldReceive('boardPatients')->twice()->andReturn([
@@ -122,26 +116,17 @@ class AdminOverviewOperationsTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_WAITING_RETURN);
-        $quote   = Quote::create([
-            'quote_no'     => 'QT-2026-0099',
-            'case_id'      => $case->id,
-            'order_ref'    => $case->order_ref,
-            'patient_name' => $patient->name,
-            'company_name' => $company->name,
-            'quote_date'   => now()->toDateString(),
-            'status'       => Quote::STATUS_PENDING,
-            'total'        => 500.00,
-        ]);
 
         $admin = $this->userWithRole('admin');
         $this->actingAs($admin);
 
+        // لا توجد حالات في مكتب التشغيل بعد.
         $this->get('/admin/overview')
             ->assertOk()
             ->assertSee('id="overviewWaitingCount" style="color:#d97706" data-server-rendered="1">0</span>', false);
 
-        app(QuoteService::class)->markIssued($quote);
+        // دخول حالة لمكتب التشغيل يزيد العدّاد.
+        $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $this->get('/admin/overview')
             ->assertOk()
