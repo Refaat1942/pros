@@ -26,15 +26,28 @@ Route::prefix('operations')
         Route::get('pending/list', [OperationsDeskController::class, 'pending'])
             ->name('pending.list');
 
+        Route::get('quotes-awaiting/list', [OperationsDeskController::class, 'quotesAwaitingApproval'])
+            ->name('quotes-awaiting.list');
+
+        Route::post('pending/{case}/release-quote', [OperationsDeskController::class, 'releaseQuote'])
+            ->middleware('can:approve-pricing')
+            ->name('pending.release-quote');
+
         Route::post('pending/{case}/approve', [OperationsDeskController::class, 'approve'])
+            ->middleware('can:approve-pricing')
             ->name('pending.approve');
 
         Route::post('pending/{case}/return', [OperationsDeskController::class, 'returnForRework'])
+            ->middleware('can:approve-pricing')
             ->name('pending.return');
 
         // ── طباعة عرض السعر من مكتب التشغيل ────────────────────────────────
         Route::get('quote/{quote}/print', [\App\Http\Controllers\Quote\QuoteController::class, 'print'])
             ->name('quote.print');
+
+        // ── إذن شغل الورشة ───────────────────────────────────────────────
+        Route::get('case/{case}/print-work-order', [ManufacturingStageController::class, 'printWorkOrder'])
+            ->name('work-order.print');
 
         // ── متابعة التصنيع بعد الصرف ───────────────────────────────────────
         Route::get('operations/list', [ManufacturingStageController::class, 'index'])

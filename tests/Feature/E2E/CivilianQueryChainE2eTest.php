@@ -142,22 +142,21 @@ class CivilianQueryChainE2eTest extends TestCase
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
 
-        $this->assertContains($pricingId, $queues->adminPricingAwaitingIds());
+        $this->assertContains($case->id, $queues->operationsPendingCaseIds());
 
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $this->assertEquals(400.00, (float) $quote->total);
+        $this->assertEquals(Quote::STATUS_PENDING, $quote->status);
+
+        // ── Step 5: مكتب التشغيل — إصدار عرض السعر للاستقبال ───────────────
+        $this->actingAs($ops);
+        $this->postJson("/operations/pending/{$case->id}/release-quote")->assertOk();
+        $quote->refresh();
+        $case->refresh();
         $this->assertEquals(Quote::STATUS_ISSUED, $quote->status);
+        $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
 
-        // ── Step 5: Admin reviews highest-price costing (read-only) ──────────
-        $this->actingAs($admin);
-        $adminPage = $this->get('/admin/pricing');
-        $adminPage->assertOk();
-
-        $detail = $this->getJson("/admin/pricing/{$pricingId}");
-        $detail->assertOk();
-        $this->assertEquals(400.00, (float) $detail->json('computed_total'));
-
-        // ── Step 5b: Operations prints quote + OCR approval letter → WO ─────
+        // ── Step 5c: Operations prints quote + OCR approval letter → WO ─────
         $this->actingAs($ops);
 
         $printOps = $this->get("/operations/quote/{$quote->id}/print");

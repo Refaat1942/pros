@@ -39,7 +39,7 @@
           <table data-paginate="10">
             <thead>
               <tr>
-                <th>رقم العرض</th>
+                <th>رمز QR</th>
                 <th>المريض</th>
                 <th>جهة التعاقد</th>
                 <th>التاريخ</th>

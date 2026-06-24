@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\ContractCompanyController;
-use App\Http\Controllers\Pricing\PricingApprovalController;
 use App\Http\Controllers\Reports\AdminCaseController;
 use App\Http\Controllers\Reports\AdminOverviewController;
 use App\Http\Controllers\Reports\AuditLogController;
@@ -155,16 +154,6 @@ Route::prefix('admin')
 
         Route::delete('stock-categories/{stockCategory}', [StockCategoryController::class, 'destroy'])
             ->name('stock-categories.destroy');
-
-        // ── Pricing Approval ───────────────────────────────────────────────
-        Route::get('pricing/list', [PricingApprovalController::class, 'index'])
-            ->name('pricing.list');
-
-        Route::get('pricing/{pricingRequest}', [PricingApprovalController::class, 'show'])
-            ->name('pricing.show');
-
-        Route::post('pricing/{pricingRequest}/approve', [PricingApprovalController::class, 'approve'])
-            ->name('pricing.approve');
 
         // ── Military sovereign debts ──────────────────────────────────────
         Route::get('military-debts/list', [MilitaryDebtController::class, 'index'])

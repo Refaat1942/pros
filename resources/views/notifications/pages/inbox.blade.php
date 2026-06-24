@@ -3,10 +3,12 @@
 @endpush
 
 @php
+    use App\Support\ArabicDate;
+
     /** @var \Illuminate\Pagination\LengthAwarePaginator $notifications */
-    $items  = $notifications ?? null;
+    $items = $notifications ?? null;
     $filter = $notifications_filter ?? 'all';
-    $stats  = $notifications_stats ?? [];
+    $stats = $notifications_stats ?? [];
     $inboxRoute = route("{$dashboardKey}.notifications");
 @endphp
 
@@ -19,7 +21,8 @@
                     <span class="notif-stat-icon">{{ $stat['icon'] }}</span>
                     <div>
                         <div class="notif-stat-label">{{ $stat['label'] }}</div>
-                        <div class="notif-stat-value" @if(!empty($stat['color'])) style="color:{{ $stat['color'] }}" @endif>
+                        <div class="notif-stat-value"
+                            @if (!empty($stat['color'])) style="color:{{ $stat['color'] }}" @endif>
                             {{ $stat['value'] }}
                         </div>
                     </div>
@@ -32,17 +35,18 @@
         <div class="notif-panel-head">
             <div>
                 <h3>🔔 سجل الإشعارات</h3>
-                <p>كل الإشعارات الواردة للوحة — تُحدَّث عند فتح الصفحة فقط (بلا استعلام دوري).</p>
+                <p>كل الإشعارات الواردة (بلا استعلام دوري).</p>
             </div>
             <div class="notif-panel-actions">
                 <div class="notif-tabs">
                     <a href="{{ $inboxRoute }}" class="notif-tab {{ $filter === 'all' ? 'active' : '' }}">الكل</a>
-                    <a href="{{ $inboxRoute }}?filter=unread" class="notif-tab {{ $filter === 'unread' ? 'active' : '' }}">غير مقروء</a>
+                    <a href="{{ $inboxRoute }}?filter=unread"
+                        class="notif-tab {{ $filter === 'unread' ? 'active' : '' }}">غير مقروء</a>
                 </div>
                 @if ($items && $items->total() > 0)
                     <form method="POST" action="{{ route('notifications.read-all') }}" class="notif-mark-all-form">
                         @csrf
-                        <button type="submit" class="btn-action">✓ تعليم الكل كمقروء</button>
+                        <button type="submit" class="notif-btn notif-btn-outline">✓ تعليم الكل كمقروء</button>
                     </form>
                 @endif
             </div>
@@ -59,8 +63,7 @@
                                 <div class="notif-card-meta">
                                     <h4>{{ $notification->title }}</h4>
                                     <time datetime="{{ $notification->created_at?->toIso8601String() }}">
-                                        {{ $notification->created_at?->diffForHumans() }}
-                                        · {{ $notification->created_at?->format('Y-m-d H:i') }}
+                                        {{ ArabicDate::relative($notification->created_at) }}
                                     </time>
                                 </div>
                                 @unless ($notification->read_at)
@@ -79,9 +82,10 @@
                             @endif
                         </div>
                         @unless ($notification->read_at)
-                            <form method="POST" action="{{ route('notifications.read', $notification) }}" class="notif-card-action">
+                            <form method="POST" action="{{ route('notifications.read', $notification) }}"
+                                class="notif-card-action">
                                 @csrf
-                                <button type="submit" class="btn-action primary">✓ مقروء</button>
+                                <button type="submit" class="notif-btn notif-btn-read">✓ مقروء</button>
                             </form>
                         @endunless
                     </li>

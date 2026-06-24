@@ -5,6 +5,13 @@
         <button type="button" class="modal-close" id="closeAdjModal">&times;</button>
       </div>
       <div class="modal-body">
+        <div id="adjReworkBanner" class="adj-rework-banner" hidden
+             style="margin:0 0 14px;padding:12px 14px;border-radius:10px;border:1px solid #fecaca;background:#fef2f2;">
+          <p class="adj-rework-title" id="adjReworkTitle" style="margin:0 0 6px;font-weight:700;color:#991b1b;">↩️ إرجاع من مكتب التشغيل</p>
+          <p class="adj-rework-meta" id="adjReworkMeta" style="margin:0 0 8px;font-size:12px;color:#b91c1c;"></p>
+          <p class="adj-rework-text" id="adjReworkReason" style="margin:0;font-size:13px;color:#7f1d1d;white-space:pre-wrap;line-height:1.6;"></p>
+        </div>
+
         <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px;">
           البنود الأصلية (الفني) للقراءة فقط. أضف بنوداً إضافية ثم أغلق المعدلات.
         </p>

@@ -1,80 +1,153 @@
 @php
-    /** @var \Illuminate\Support\Collection $perm_roles */
-    /** @var \Illuminate\Support\Collection $perm_permissions */ // grouped by group
-    /** @var \Illuminate\Support\Collection $perm_matrix */      // [role_id => [slug,...]]
-    $roles = $perm_roles ?? collect();
-    $groups = $perm_permissions ?? collect();
-    $matrix = $perm_matrix ?? collect();
-
-    $groupLabels = [
-        'financial' => '💰 المالية والتكاليف',
-        'inventory' => '📦 المخزون',
-        'printing'  => '🖨️ الطباعة',
-        'clinical'  => '🩺 الإكلينيكي',
-        'admin'     => '⚙️ الإدارة',
-        'general'   => '🔹 عام',
-    ];
+    /** @var \Illuminate\Support\Collection $roles */
+    /** @var array $dashboards */
+    /** @var \Illuminate\Support\Collection $matrix */
+    /** @var \Illuminate\Support\Collection $permission_ids */
+    $roles = $roles ?? collect();
+    $dashboards = $dashboards ?? [];
+    $matrix = $matrix ?? collect();
+    $permissionIds = $permission_ids ?? collect();
+    $catalog = \App\Models\Permission::catalog();
 @endphp
-<div class="panel">
-    <div class="panel-header">
-        <h3>🛡️ مصفوفة الصلاحيات التفصيلية</h3>
-        <span style="font-size:13px;color:var(--text-muted)">
-            مسؤول النظام (الأدمن) يملك كل الصلاحيات تلقائياً ولا يظهر في الجدول.
-        </span>
+
+<div class="perm-page">
+    <div class="perm-page-header">
+        <div>
+            <h3 class="perm-page-title">🛡️ إدارة الصلاحيات</h3>
+            <p class="perm-page-subtitle">
+                تحكّم في صلاحيات العرض والإجراءات لكل دور. مسؤول النظام يصل تلقائياً للوحة الإدارة،
+                ويمكنه زيارة اللوحات الأخرى حسب الصلاحيات الممنوحة هنا.
+            </p>
+        </div>
+        <div class="perm-header-actions">
+            <div class="perm-role-picker">
+                <label for="permRoleSelect">الدور المُعدَّل</label>
+                <select id="permRoleSelect" class="perm-role-select">
+                    @foreach ($roles as $role)
+                        <option value="{{ $role->id }}" data-slug="{{ $role->slug }}">
+                            {{ $role->label_ar }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="button" id="permCheckAllBtn" class="perm-check-all-btn">
+                ✅ تحديد الكل
+            </button>
+        </div>
+    </div>
+
+    <div class="perm-role-banner" id="permRoleBanner">
+        تعدّل صلاحيات: <strong id="permRoleBannerName">{{ $roles->first()?->label_ar }}</strong>
+        <span class="perm-role-banner-hint">— التغييرات تُطبَّق على هذا الدور فقط عند الحفظ</span>
     </div>
 
     @if (session('status'))
-        <div style="margin:12px 16px;padding:10px 14px;background:#dcfce7;border:1px solid #86efac;border-radius:8px;color:#166534;font-size:13px;">
-            ✅ {{ session('status') }}
-        </div>
+        <div class="perm-flash-success">✅ {{ session('status') }}</div>
     @endif
 
-    <form method="POST" action="{{ route('admin.permissions.update') }}">
+    <form method="POST" action="{{ route('admin.permissions.update') }}" id="permMatrixForm">
         @csrf
-        <div class="panel-body" style="overflow-x:auto;">
-            @forelse ($groups as $group => $permissions)
-                <h4 style="margin:18px 0 8px;font-size:14px;font-weight:800;color:var(--text);">
-                    {{ $groupLabels[$group] ?? $group }}
-                </h4>
-                <table class="data-table" style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-                    <thead>
-                        <tr>
-                            <th style="text-align:right;padding:10px;min-width:260px;">الصلاحية</th>
-                            @foreach ($roles as $role)
-                                <th style="padding:10px;text-align:center;white-space:nowrap;">{{ $role->label_ar }}</th>
-                            @endforeach
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($permissions as $permission)
-                            <tr style="border-top:1px solid var(--border);">
-                                <td style="padding:10px;">
-                                    <strong style="font-size:13px;">{{ $permission->label_ar }}</strong>
-                                    <div style="font-size:11px;color:var(--text-muted);direction:ltr;text-align:right;">{{ $permission->slug }}</div>
-                                </td>
-                                @foreach ($roles as $role)
-                                    @php $checked = in_array($permission->slug, (array) ($matrix[$role->id] ?? []), true); @endphp
-                                    <td style="padding:10px;text-align:center;">
-                                        <input type="checkbox"
-                                               name="matrix[{{ $role->id }}][]"
-                                               value="{{ $permission->id }}"
-                                               style="width:18px;height:18px;cursor:pointer;"
-                                               {{ $checked ? 'checked' : '' }}>
-                                    </td>
-                                @endforeach
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @empty
-                <p style="text-align:center;color:var(--text-muted);padding:24px;">
-                    لا توجد صلاحيات مُعرّفة. شغّل seeder الأدوار والصلاحيات.
-                </p>
-            @endforelse
+
+        {{-- مصفوفة كاملة مخفية — تُحدَّث عبر JS عند التبديل بين الأدوار --}}
+        <div id="permHiddenMatrix" class="perm-hidden-matrix" aria-hidden="true">
+            @foreach ($roles as $role)
+                @php $slugs = (array) ($matrix[$role->id] ?? []); @endphp
+                <div class="perm-role-store" data-role-id="{{ $role->id }}" data-slugs="{{ json_encode($slugs) }}">
+                    @foreach ($catalog as $slug => $meta)
+                        @continue(($meta['dashboard'] ?? '') === 'admin')
+                        @php $permId = $permissionIds[$slug] ?? null; @endphp
+                        @if ($permId)
+                            <input type="checkbox"
+                                   class="perm-hidden-cb"
+                                   data-role="{{ $role->id }}"
+                                   data-slug="{{ $slug }}"
+                                   name="matrix[{{ $role->id }}][]"
+                                   value="{{ $permId }}"
+                                   {{ in_array($slug, $slugs, true) ? 'checked' : '' }}>
+                        @endif
+                    @endforeach
+                </div>
+            @endforeach
         </div>
 
-        <div class="catalog-modal-footer" style="padding:16px;border-top:1px solid var(--border);">
-            <button type="submit" class="btn-action success">💾 حفظ مصفوفة الصلاحيات</button>
+        <div class="perm-cards-grid">
+            @foreach ($dashboards as $dash)
+                @if ($dash['views']->isEmpty() && $dash['actions']->isEmpty())
+                    @continue
+                @endif
+                <article class="perm-card" data-dashboard="{{ $dash['key'] }}">
+                    <header class="perm-card-header">
+                        <span class="perm-card-icon">{{ $dash['icon'] }}</span>
+                        <div>
+                            <h4 class="perm-card-title">{{ $dash['label'] }}</h4>
+                            <span class="perm-card-meta">
+                                {{ $dash['views']->count() }} صفحة
+                                @if ($dash['actions']->isNotEmpty())
+                                    · {{ $dash['actions']->count() }} إجراء
+                                @endif
+                            </span>
+                        </div>
+                    </header>
+
+                    @if ($dash['views']->isNotEmpty())
+                        <section class="perm-card-section">
+                            <h5 class="perm-section-label">
+                                <span class="perm-badge perm-badge-view">عرض</span>
+                                الصفحات
+                            </h5>
+                            <ul class="perm-toggle-list">
+                                @foreach ($dash['views'] as $perm)
+                                    <li class="perm-toggle-item">
+                                        <label class="perm-toggle">
+                                            <input type="checkbox"
+                                                   class="perm-visible-cb"
+                                                   data-perm-id="{{ $perm->id }}"
+                                                   data-slug="{{ $perm->slug }}">
+                                            <span class="perm-toggle-track"><span class="perm-toggle-thumb"></span></span>
+                                            <span class="perm-toggle-text">
+                                                <strong>{{ $perm->label_ar }}</strong>
+                                            </span>
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </section>
+                    @endif
+
+                    @if ($dash['actions']->isNotEmpty())
+                        <section class="perm-card-section">
+                            <h5 class="perm-section-label">
+                                <span class="perm-badge perm-badge-action">إجراء</span>
+                                الصلاحيات
+                            </h5>
+                            <ul class="perm-toggle-list">
+                                @foreach ($dash['actions'] as $perm)
+                                    <li class="perm-toggle-item">
+                                        <label class="perm-toggle">
+                                            <input type="checkbox"
+                                                   class="perm-visible-cb"
+                                                   data-perm-id="{{ $perm->id }}"
+                                                   data-slug="{{ $perm->slug }}">
+                                            <span class="perm-toggle-track"><span class="perm-toggle-thumb"></span></span>
+                                            <span class="perm-toggle-text">
+                                                <strong>{{ $perm->label_ar }}</strong>
+                                            </span>
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </section>
+                    @endif
+                </article>
+            @endforeach
         </div>
+
+        <footer class="perm-page-footer">
+            <button type="submit" class="btn-action success perm-save-btn">💾 حفظ الصلاحيات</button>
+        </footer>
     </form>
 </div>
+
+@push('scripts')
+    <script src="{{ asset('assets/js/pages/admin-permissions.js') }}?v={{ filemtime(public_path('assets/js/pages/admin-permissions.js')) }}"></script>
+@endpush

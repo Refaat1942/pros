@@ -123,7 +123,7 @@ return [
         'default_page' => 'costing',
         'sidebar' => ['icon' => '💰', 'title' => 'لوحة التكاليف', 'subtitle' => 'مراجعة وإصدار العرض'],
         'pages' => [
-            'costing' => ['title' => 'طابور التكاليف', 'icon' => '💰', 'label' => 'طابور التكاليف'],
+            'costing' => ['title' => 'التكاليف', 'icon' => '💰', 'label' => 'التكاليف'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -141,6 +141,7 @@ return [
         'sidebar' => ['icon' => '🎯', 'title' => 'مكتب التشغيل', 'subtitle' => 'الموافقات والإنتاج والصرف'],
         'pages' => [
             'pending' => ['title' => 'مكتب التشغيل — موافقات وعروض الأسعار', 'icon' => '✅', 'label' => 'موافقات التشغيل'],
+            'quotes-awaiting' => ['title' => 'عروض الأسعار — بانتظار موافقة الجهة', 'icon' => '💰', 'label' => 'عروض بانتظار الموافقة'],
             'operations' => ['title' => 'مكتب التشغيل — أوامر الصرف والإنتاج', 'icon' => '🎯', 'label' => 'أوامر التشغيل'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
@@ -148,6 +149,7 @@ return [
         'scripts' => [
             'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/pages/operations-pending-dashboard.js',
+            'assets/js/pages/operations-quotes-awaiting-dashboard.js',
             'assets/js/pages/operations-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
@@ -195,7 +197,6 @@ return [
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
             'inventory-overview' => ['title' => 'لوحة المخزون التفصيلية', 'icon' => '🔬', 'label' => 'المخزون التفصيلي'],
             'stock-categories' => ['title' => 'فئات الأصناف', 'icon' => '🏷️', 'label' => 'فئات الأصناف'],
-            'pricing' => ['title' => 'اعتماد طلبات التسعير', 'icon' => '✅', 'label' => 'اعتماد التسعير'],
             'cases' => ['title' => 'متابعة الحالات', 'icon' => '📁', 'label' => 'متابعة الحالات'],
             'employees' => ['title' => 'إدارة الموظفين ', 'icon' => '👥', 'label' => 'الموظفون'],
             'permissions' => ['title' => 'مصفوفة الصلاحيات', 'icon' => '🛡️', 'label' => 'الصلاحيات'],
@@ -216,7 +217,6 @@ return [
             'assets/js/shared/charts-kit.js',
             'assets/js/shared/stock-catalog.js',
             'assets/js/shared/cases-workflow.js',
-            'assets/js/shared/pricing-queue.js',
             'assets/js/shared/bom-inventory.js',
             'assets/js/shared/operations-desk.js',
             'assets/js/shared/bulk-table-select.js',

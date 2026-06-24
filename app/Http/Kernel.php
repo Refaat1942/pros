@@ -67,6 +67,7 @@ class Kernel extends HttpKernel
         'verified'         => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         // ─── Custom ERP middleware ────────────────────────────────────────────
         'dashboard.guard'  => \App\Http\Middleware\DashboardGuardMiddleware::class,
+        'dashboard.page'   => \App\Http\Middleware\DashboardPagePermissionMiddleware::class,
         'audit.context'    => \App\Http\Middleware\AuditContextMiddleware::class,
     ];
 }

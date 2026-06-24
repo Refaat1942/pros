@@ -170,6 +170,16 @@
           toast('لا توجد بنود في BOM', true);
           return;
         }
+        var printLink = $('printIssueVoucherLink');
+        if (printLink) {
+          if (res.data.issue_voucher_print_url) {
+            printLink.href = res.data.issue_voucher_print_url;
+            printLink.classList.remove('hidden');
+          } else {
+            printLink.classList.add('hidden');
+            printLink.removeAttribute('href');
+          }
+        }
         renderRequired();
         $('dispenseModal').classList.remove('hidden');
         $('barcodeInput') && $('barcodeInput').focus();
@@ -261,13 +271,17 @@
     var meta = STAGE_META[b.stage] || { label: b.stage, cls: 'bg-slate-100' };
     var wo = (b.case && b.case.work_order_no) ? b.case.work_order_no : '—';
     var itemsCount = b.items_count || 0;
+    var printBtn = b.issue_voucher_print_url
+      ? '<a href="' + esc(b.issue_voucher_print_url) + '" target="_blank" rel="noopener" ' +
+        'class="btn-print-voucher rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1">🖨️ طباعة إذن الصرف</a>'
+      : '';
     var action = '';
     if (b.stage === 'raw') {
-      action = '<button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm" data-bom-id="' + b.id + '">📤 صرف للورشة</button>';
+      action = '<button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm" data-bom-id="' + b.id + '">📤 صرف للورشة</button>' + printBtn;
     } else if (b.stage === 'wip') {
-      action = '<button type="button" class="btn-finish rounded-xl bg-slate-700 text-white px-4 py-2 text-xs font-bold hover:bg-slate-800" data-bom-id="' + b.id + '">✅ إغلاق BOM</button>';
+      action = '<button type="button" class="btn-finish rounded-xl bg-slate-700 text-white px-4 py-2 text-xs font-bold hover:bg-slate-800" data-bom-id="' + b.id + '">✅ إغلاق BOM</button>' + printBtn;
     } else {
-      action = '<span class="text-xs text-slate-400">—</span>';
+      action = printBtn || '<span class="text-xs text-slate-400">—</span>';
     }
     return '<tr class="bom-row hover:bg-slate-50" data-bom-id="' + b.id + '" data-stage="' + b.stage + '" data-search="' +
       esc([b.bom_no, b.patient_name, wo].join(' ')) + '">' +

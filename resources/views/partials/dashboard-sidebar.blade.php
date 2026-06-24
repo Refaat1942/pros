@@ -13,6 +13,7 @@
     <div class="sidebar-nav-scroll">
         <ul class="nav-menu">
             @foreach ($pages as $slug => $page)
+                @continue(! auth()->user()?->canViewDashboardPage($dashboardKey, $slug))
                 @php $badgeCount = (int) (($sidebarBadges ?? [])[$slug] ?? 0); @endphp
                 <li>
                     <a href="{{ route($routePrefix . $slug) }}"

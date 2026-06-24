@@ -54,7 +54,7 @@ class PublicTrackingTest extends TestCase
         $response->assertOk();
         $response->assertSee('تم التسجيل — في انتظار الكشف الطبي');
         $response->assertSee('تسجيل واستقبال');
-        $response->assertSee('اعتماد عروض الأسعار والموافقات');
+        $response->assertSee('التسعير واعتماد التشغيل');
         $response->assertSee('مسار مدني');
     }
 
@@ -80,12 +80,39 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('بمكتب التشغيل — بانتظار الاعتماد');
-        $response->assertSee('اعتماد عروض الأسعار والموافقات');
+        $response->assertSee('التسعير واعتماد التشغيل');
         $response->assertSee('← أنت هنا');
         $response->assertDontSee('جاري التصنيع بالورشة</p>');
     }
 
-    public function test_military_pathway_shows_six_steps_without_approval_gate(): void
+    public function test_civilian_cost_calc_stays_on_preparation_step_not_pricing(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $patient->update(['tracking_uid' => 'case-civcost01']);
+
+        CaseRecord::create([
+            'case_no'             => 'C-2026-0100',
+            'order_ref'           => 'ORD-0100',
+            'tracking_uid'        => $patient->tracking_uid,
+            'patient_id'          => $patient->id,
+            'contract_company_id' => $company->id,
+            'company_name'        => $company->name,
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'path'                => CaseRecord::PATH_STANDARD,
+            'stage_key'           => CaseRecord::STAGE_COST_CALC,
+        ]);
+
+        $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
+
+        $response->assertOk();
+        $response->assertSee('جاري احتساب التكاليف');
+        $response->assertSee('التوصيف الفني والتحضير');
+        $response->assertSee('← أنت هنا');
+        $response->assertDontSee('التسعير واعتماد التشغيل</p>');
+    }
+
+    public function test_military_pathway_shows_six_steps_without_pricing_gate(): void
     {
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
@@ -95,7 +122,74 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('مسار عسكري');
-        $response->assertDontSee('اعتماد عروض الأسعار والموافقات');
+        $response->assertDontSee('التسعير واعتماد التشغيل');
+    }
+
+    public function test_military_pre_manufacturing_shows_preparation_label(): void
+    {
+        $company = $this->militaryCompany();
+        $patient = $this->militaryPatient($company);
+        $patient->update(['tracking_uid' => 'case-milprep01']);
+
+        CaseRecord::create([
+            'case_no'             => 'M-2026-0101',
+            'order_ref'           => 'ORD-0101',
+            'tracking_uid'        => $patient->tracking_uid,
+            'patient_id'          => $patient->id,
+            'contract_company_id' => $company->id,
+            'company_name'        => $company->name,
+            'patient_type'        => Patient::TYPE_MILITARY,
+            'path'                => CaseRecord::PATH_MILITARY,
+            'stage_key'           => CaseRecord::STAGE_COST_CALC,
+        ]);
+
+        $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
+
+        $response->assertOk();
+        $response->assertSee('جاري التحضير للتصنيع');
+        $response->assertSee('التوصيف الفني والتحضير');
+        $response->assertSee('← أنت هنا');
+        $response->assertDontSee('التسعير واعتماد التشغيل');
+    }
+
+    public function test_civilian_issued_quote_at_warehouse_shows_entity_approval_wait(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $patient->update(['tracking_uid' => 'case-civissued1']);
+
+        $case = CaseRecord::create([
+            'case_no'              => 'C-2026-0102',
+            'order_ref'            => '793536',
+            'tracking_uid'         => $patient->tracking_uid,
+            'patient_id'           => $patient->id,
+            'contract_company_id'  => $company->id,
+            'company_name'         => $company->name,
+            'patient_type'         => Patient::TYPE_CIVILIAN,
+            'path'                 => CaseRecord::PATH_STANDARD,
+            'stage_key'            => CaseRecord::STAGE_MANUFACTURING,
+            'manufacturing_stage'  => CaseRecord::MFG_WAREHOUSE,
+        ]);
+
+        \App\Models\Quote::create([
+            'quote_no'     => 'QT-2026-0862',
+            'order_ref'    => $case->order_ref,
+            'case_id'      => $case->id,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
+            'quote_date'   => now()->toDateString(),
+            'status'       => \App\Models\Quote::STATUS_ISSUED,
+            'status_label' => 'صادر للاستقبال',
+            'total'        => 95000,
+        ]);
+
+        $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
+
+        $response->assertOk();
+        $response->assertSee('بانتظار موافقة الجهة');
+        $response->assertSee('التسعير واعتماد التشغيل');
+        $response->assertSee('← أنت هنا');
+        $response->assertDontSee('جاري التصنيع بالورشة</p>');
     }
 
     public function test_invalid_tracking_uid_returns_404(): void

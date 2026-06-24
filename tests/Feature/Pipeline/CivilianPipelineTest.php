@@ -169,7 +169,7 @@ class CivilianPipelineTest extends TestCase
 
         $quote = Quote::where('case_id', $case->id)->first();
         $this->assertNotNull($quote, 'A Quote must be generated for civilian cases');
-        $this->assertEquals(Quote::STATUS_ISSUED, $quote->status);
+        $this->assertEquals(Quote::STATUS_PENDING, $quote->status);
     }
 
     // ── Stage 4b: Quote re-issue helper ──────────────────────────────────────
@@ -207,6 +207,13 @@ class CivilianPipelineTest extends TestCase
         $patient = $this->civilianPatient($company);
         $case    = $this->operationsReadyCase($patient);
         $quote   = Quote::where('case_id', $case->id)->firstOrFail();
+        $ops     = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->postJson("/operations/pending/{$case->id}/release-quote")
+            ->assertOk();
+
+        $case->refresh();
 
         app(ApprovalService::class)->confirm($case, $quote->quote_no);
 

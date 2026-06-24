@@ -135,7 +135,7 @@ class StockCatalogController extends Controller
     /**
      * الرفع الجماعي بالإكسيل/CSV — upsert حسب الكود.
      */
-    public function import(Request $request, StockImportService $importService): RedirectResponse
+    public function import(Request $request, StockImportService $importService): RedirectResponse|JsonResponse
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
@@ -147,6 +147,14 @@ class StockCatalogController extends Controller
         $summary = $importService->import($request->file('file'));
 
         $message = "تم الاستيراد: {$summary['created']} صنف جديد، {$summary['updated']} محدَّث، {$summary['skipped']} متخطّى.";
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'summary' => $summary,
+                'items'   => $this->catalogService->listForDashboard()->values(),
+            ]);
+        }
 
         return back()->with('status', $message)->with('import_errors', $summary['errors']);
     }

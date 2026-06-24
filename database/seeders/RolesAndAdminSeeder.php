@@ -51,33 +51,6 @@ class RolesAndAdminSeeder extends Seeder
      */
     private function seedPermissions(): void
     {
-        foreach (Permission::CATALOG as $slug => [$label, $group]) {
-            Permission::firstOrCreate(
-                ['slug' => $slug],
-                ['label_ar' => $label, 'group' => $group],
-            );
-        }
-
-        // الإسناد الافتراضي لكل دور (قابل للتعديل من مصفوفة الصلاحيات).
-        $defaults = [
-            Role::SLUG_COSTING     => ['view-costs'],
-            Role::SLUG_OPERATIONS  => ['approve-pricing', 'view-costs', 'print-quote'],
-            Role::SLUG_DOCTOR      => ['skip-diagnosis'],
-            Role::SLUG_TECHNICAL   => ['manage-inventory', 'import-inventory', 'print-barcode', 'view-inventory-overview'],
-            Role::SLUG_RECEPTION   => ['print-quote'],
-            Role::SLUG_SPEC        => [],
-            Role::SLUG_ADJUSTMENTS => [],
-        ];
-
-        foreach ($defaults as $slug => $permissionSlugs) {
-            $role = Role::where('slug', $slug)->first();
-
-            if (! $role) {
-                continue;
-            }
-
-            $ids = Permission::whereIn('slug', $permissionSlugs)->pluck('id');
-            $role->permissions()->syncWithoutDetaching($ids);
-        }
+        app(\App\Services\PermissionCatalogService::class)->seedRoleDefaults();
     }
 }

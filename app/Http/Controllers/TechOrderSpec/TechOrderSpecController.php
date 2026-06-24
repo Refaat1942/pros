@@ -58,6 +58,8 @@ class TechOrderSpecController extends Controller
     {
         abort_unless($case->stage_key === CaseRecord::STAGE_TECHNICAL, 422, 'الحالة ليست في مرحلة التوصيف الفني.');
 
+        app(SpecService::class)->reopenForRework($case);
+
         $case->load('patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank');
 
         $medicalRecord = MedicalRecord::where('case_id', $case->id)
@@ -187,6 +189,7 @@ class TechOrderSpecController extends Controller
             'created_at',
         ]) + [
             'display_entity' => $case->displayEntity(),
+            'rework'         => $case->reworkNoticeFor(CaseRecord::STAGE_TECHNICAL),
             'patient' => $case->relationLoaded('patient') ? $case->patient : null,
             'spec'    => $case->relationLoaded('techOrderSpec') ? $case->techOrderSpec : null,
         ];

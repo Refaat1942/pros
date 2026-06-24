@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Quote;
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use App\Models\Quote;
+use App\Services\QuoteQrService;
 use App\Services\QuoteService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -15,12 +16,14 @@ class QuoteController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly QuoteService $quoteService)
-    {
+    public function __construct(
+        private readonly QuoteService $quoteService,
+        private readonly QuoteQrService $quoteQrService,
+    ) {
     }
 
     /**
-     * قائمة عروض الأسعار — مدني فقط (pending / issued / approved).
+     * قائمة عروض الأسعار — مدني فقط، بعد إصدار مكتب التشغيل (issued / approved).
      */
     public function index(Request $request): JsonResponse
     {
@@ -30,6 +33,7 @@ class QuoteController extends Controller
                 'items',
             ])
                 ->whereHas('caseRecord', fn ($q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
+                ->whereIn('status', [Quote::STATUS_ISSUED, Quote::STATUS_APPROVED])
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('quote_no', 'like', "%{$s}%")
@@ -61,9 +65,10 @@ class QuoteController extends Controller
     }
 
     /**
-     * صفحة طباعة العرض مع QR يُرمِز quote_no.
+     * صفحة طباعة العرض — النموذج الرسمي (وزارة الدفاع).
+     * ?embed=1 للمعاينة داخل مودال الاستقبال بدون طباعة تلقائية.
      */
-    public function print(Quote $quote): View
+    public function print(Request $request, Quote $quote): View
     {
         $quote->load(['items', 'caseRecord']);
 
@@ -72,7 +77,27 @@ class QuoteController extends Controller
             404
         );
 
-        return view('quotes.print', compact('quote'));
+        return view('quotes.print', [
+            'quote'      => $quote,
+            'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
+            'embed'      => $request->boolean('embed'),
+            'autoPrint'  => ! $request->boolean('embed'),
+        ]);
+    }
+
+    /**
+     * إذن صرف المخازن — النموذج الرسمي (3.jpeg).
+     */
+    public function printIssueVoucher(Quote $quote): View
+    {
+        $quote->load(['caseRecord.bom.items', 'caseRecord.patient']);
+
+        abort_unless($quote->caseRecord?->bom, 404, 'لا توجد BOM مرتبطة بهذا الطلب.');
+
+        return view('prints.issue-voucher', [
+            'quote'     => $quote,
+            'autoPrint' => true,
+        ]);
     }
 
     private function formatQuote(Quote $quote): array
@@ -95,6 +120,7 @@ class QuoteController extends Controller
             'case' => $quote->relationLoaded('caseRecord') && $quote->caseRecord
                 ? $quote->caseRecord->only(['id', 'case_no', 'stage_key', 'work_order_no'])
                 : null,
+            'print_url' => route('reception.quote.print', ['quote' => $quote, 'embed' => 1]),
         ];
     }
 }

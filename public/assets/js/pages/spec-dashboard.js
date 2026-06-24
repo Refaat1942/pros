@@ -87,6 +87,25 @@
     if (el) el.classList.add('hidden');
   }
 
+  function renderReworkBanner(rework) {
+    var banner = $('specReworkBanner');
+    if (!banner) return;
+    if (!rework) {
+      banner.classList.add('hidden');
+      return;
+    }
+    banner.classList.remove('hidden');
+    if ($('specReworkTitle')) {
+      $('specReworkTitle').textContent = '↩️ ' + (rework.target_label || 'إرجاع من مكتب التشغيل');
+    }
+    if ($('specReworkMeta')) {
+      $('specReworkMeta').textContent = rework.returned_by ? ('بواسطة: ' + rework.returned_by) : '';
+    }
+    if ($('specReworkReason')) {
+      $('specReworkReason').textContent = rework.reason || '';
+    }
+  }
+
   function setLockedUI(locked, requestNo) {
     state.locked = !!locked;
     var submitBtn = $('btnSubmitSpec');
@@ -217,6 +236,7 @@
     if (workspace) workspace.classList.add('hidden');
     if (empty) empty.classList.remove('hidden');
     setLockedUI(false);
+    renderReworkBanner(null);
     clearError();
   }
 
@@ -295,6 +315,8 @@
             ? (c.sovereign_entity || c.patient?.sovereign_entity || 'القوات المسلحة')
             : (c.company_name || '—'));
 
+        renderReworkBanner(c.rework || null);
+
         var medBox = $('medicalSummary');
         if (data.medical_record) {
           medBox.classList.remove('hidden');
@@ -304,13 +326,23 @@
           medBox.classList.add('hidden');
         }
 
-        if (data.submitted_spec) {
+        if (data.submitted_spec && c.stage_key !== 'technical') {
           state.specId = data.submitted_spec.id;
           $('techNotes').value = data.submitted_spec.tech_notes || '';
           state.items = mapSpecItems(data.submitted_spec.items);
           renderItemsTable();
           openWorkspace();
           setLockedUI(true);
+          return;
+        }
+
+        if (data.submitted_spec && c.stage_key === 'technical') {
+          state.specId = data.submitted_spec.id;
+          $('techNotes').value = data.submitted_spec.tech_notes || '';
+          state.items = mapSpecItems(data.submitted_spec.items);
+          renderItemsTable();
+          openWorkspace();
+          setLockedUI(false);
           return;
         }
 

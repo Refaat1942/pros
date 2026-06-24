@@ -53,12 +53,24 @@ trait ProstheticTestHelper
 
     private function seedDefaultPermissions(Role $role): void
     {
-        foreach (Permission::CATALOG as $permSlug => [$label, $group]) {
-            Permission::firstOrCreate(
-                ['slug' => $permSlug],
-                ['label_ar' => $label, 'group' => $group],
-            );
+        app(\App\Services\PermissionCatalogService::class)->syncToDatabase();
+
+        if ($role->slug === Role::SLUG_ADMIN) {
+            $viewIds = Permission::query()
+                ->where('type', Permission::TYPE_VIEW)
+                ->where('dashboard', '!=', Role::SLUG_ADMIN)
+                ->pluck('id');
+            $role->permissions()->syncWithoutDetaching($viewIds);
+
+            return;
         }
+
+        $viewIds = Permission::query()
+            ->where('type', Permission::TYPE_VIEW)
+            ->where('dashboard', $role->slug)
+            ->pluck('id');
+
+        $role->permissions()->syncWithoutDetaching($viewIds);
 
         $defaults = [
             Role::SLUG_COSTING     => ['view-costs'],
@@ -69,12 +81,10 @@ trait ProstheticTestHelper
         ];
 
         $slugs = $defaults[$role->slug] ?? [];
-        if ($slugs === []) {
-            return;
+        if ($slugs !== []) {
+            $ids = Permission::whereIn('slug', $slugs)->pluck('id');
+            $role->permissions()->syncWithoutDetaching($ids);
         }
-
-        $ids = Permission::whereIn('slug', $slugs)->pluck('id');
-        $role->permissions()->syncWithoutDetaching($ids);
     }
 
     // ── ContractCompany helpers ───────────────────────────────────────────────
@@ -196,7 +206,7 @@ trait ProstheticTestHelper
 
         return CaseRecord::create([
             'case_no'              => 'CASE-' . now()->year . '-' . $seq,
-            'order_ref'            => 'ORD-' . $seq,
+            'order_ref'            => str_pad((string) self::$caseSeq, 6, '0', STR_PAD_LEFT),
             'patient_id'           => $patient->id,
             'contract_company_id'  => $patient->contract_company_id,
             'company_name'         => $patient->company_name,

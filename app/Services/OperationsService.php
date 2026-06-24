@@ -7,6 +7,7 @@ use App\Enums\WorkflowEvent;
 use App\Exceptions\InsufficientStockException;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -134,6 +135,17 @@ class OperationsService
             $before = ['stage_key' => $case->stage_key];
 
             $this->workflowService->advance($case, $event);
+
+            CaseRecord::where('id', $case->id)->update([
+                'rework_reason'      => $reason,
+                'rework_target'      => $target,
+                'rework_returned_at' => now(),
+                'rework_returned_by' => Auth::user()?->name ?? 'مكتب التشغيل',
+            ]);
+
+            if ($target === CaseRecord::STAGE_TECHNICAL) {
+                app(SpecService::class)->reopenForRework($case->fresh());
+            }
 
             AuditService::log(
                 action:      'return',

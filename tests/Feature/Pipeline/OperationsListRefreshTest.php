@@ -48,6 +48,28 @@ class OperationsListRefreshTest extends TestCase
         $response->assertJsonPath('data.0.patient.name', $patient->name);
     }
 
+    public function test_operations_list_endpoint_returns_bom_items_for_view_modal(): void
+    {
+        $this->seedStockWithPriceBatch();
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('operations');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0100']);
+
+        $this->actingAs($user);
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'خام اختبار', 'qty' => 2],
+        ]);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+
+        $this->getJson('/operations/operations/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.bom.items.0.name', 'خام اختبار')
+            ->assertJsonPath('data.0.bom.items.0.qty', 2);
+    }
+
     private function seedStockWithPriceBatch(): void
     {
         $item = $this->stockItem('RM-001', qty: 20);

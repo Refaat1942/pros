@@ -40,6 +40,7 @@ class StockCatalogService
             'qty'         => (int) $item->qty,
             'reserved'    => (int) $item->reserved,
             'price'       => (float) $item->price,
+            'highest_price' => $this->highestPrice($item),
             'expiry_date' => $item->expiry_date?->toDateString(),
             'wac'         => (float) $item->wac,
             'status'      => $item->status,
@@ -230,5 +231,16 @@ class StockCatalogService
         if ($item->status !== $status) {
             $item->update(['status' => $status]);
         }
+    }
+
+    private function highestPrice(StockItem $item): float
+    {
+        $amounts = [(float) $item->price];
+
+        foreach ($item->prices as $price) {
+            $amounts[] = (float) $price->amount;
+        }
+
+        return $amounts ? max($amounts) : 0.0;
     }
 }

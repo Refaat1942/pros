@@ -94,7 +94,6 @@ class MilitaryQueryChainE2eTest extends TestCase
         // التكلفة احتُسبت صامتاً واعتُمدت تلقائياً — لا بوابة اعتماد بشرية للعسكري.
         $pricingId = PricingRequest::where('case_id', $case->id)->value('id');
         $this->assertNotNull($pricingId);
-        $this->assertNotContains($pricingId, $queues->adminPricingAwaitingIds());
 
         $this->actingAs($recep);
         $this->postJson('/reception/ocr/process', [

@@ -75,11 +75,20 @@
                         </td>
                         <td class="px-4 py-3 text-center font-bold">{{ $bom->items->count() }}</td>
                         <td class="px-4 py-3">
+                            @php
+                                $quoteForVoucher = \App\Models\Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
+                            @endphp
                             @if ($bom->stage === 'raw')
                                 <button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm"
                                         data-bom-id="{{ $bom->id }}">
                                     📤 صرف للورشة
                                 </button>
+                                @if ($quoteForVoucher)
+                                    <a href="{{ route('technical.quote.print-issue-voucher', $quoteForVoucher) }}" target="_blank" rel="noopener"
+                                       class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1 inline-block">
+                                        🖨️ طباعة إذن الصرف
+                                    </a>
+                                @endif
                             @elseif ($bom->stage === 'wip')
                                 <button type="button" class="btn-finish rounded-xl bg-slate-700 text-white px-4 py-2 text-xs font-bold hover:bg-slate-800"
                                         data-bom-id="{{ $bom->id }}">
@@ -103,9 +112,15 @@
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" id="dispenseBackdrop"></div>
     <div class="relative flex min-h-full items-center justify-center p-4">
         <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden animate-[fadeIn_0.15s_ease]">
-            <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white flex items-center justify-between">
+            <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white flex items-center justify-between gap-3">
                 <h3 class="font-bold">📤 صرف للورشة — مسح الباركود</h3>
-                <button type="button" id="closeDispenseModal" class="text-2xl leading-none opacity-80 hover:opacity-100">&times;</button>
+                <div class="flex items-center gap-2">
+                    <a id="printIssueVoucherLink" href="#" target="_blank" rel="noopener"
+                       class="hidden rounded-lg bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 text-xs font-bold">
+                        🖨️ طباعة إذن الصرف
+                    </a>
+                    <button type="button" id="closeDispenseModal" class="text-2xl leading-none opacity-80 hover:opacity-100">&times;</button>
+                </div>
             </div>
             <div class="p-5 space-y-4">
                 <div id="dispenseRequired" class="rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm space-y-2"></div>

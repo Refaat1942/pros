@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Operations;
 
 use App\Http\Controllers\Controller;
 use App\Models\CaseRecord;
+use App\Models\Patient;
+use App\Models\Quote;
 use App\Services\OperationsService;
+use App\Services\QuoteService;
 use App\Support\CaseFinancialSummary;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -19,8 +22,39 @@ class OperationsDeskController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly OperationsService $operationsService)
+    public function __construct(
+        private readonly OperationsService $operationsService,
+        private readonly QuoteService $quoteService,
+    ) {
+    }
+
+    /**
+     * عروض الأسعار المُصدَرة للاستقبال/العميل — بانتظار موافقة الجهة (OCR).
+     */
+    public function quotesAwaitingApproval(Request $request): JsonResponse
     {
+        $quotes = $this->fetchForDashboard(
+            Quote::with([
+                'caseRecord:id,case_no,order_ref,stage_key,manufacturing_stage,work_order_no,patient_type,company_name,approval_date',
+                'caseRecord.patient:id,patient_code,name',
+            ])
+                ->where('status', Quote::STATUS_ISSUED)
+                ->whereHas('caseRecord', fn ($q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('quote_no', 'like', "%{$s}%")
+                      ->orWhere('order_ref', 'like', "%{$s}%")
+                      ->orWhere('patient_name', 'like', "%{$s}%")
+                      ->orWhere('company_name', 'like', "%{$s}%")
+                      ->orWhereHas('caseRecord', fn ($q) => $q->where('case_no', 'like', "%{$s}%"));
+                }))
+                ->orderByDesc('quote_date')
+                ->orderByDesc('id')
+        );
+
+        return response()->json([
+            'data'  => collect($quotes)->map(fn (Quote $q) => $this->formatIssuedQuote($q))->values(),
+            'total' => $quotes->count(),
+        ]);
     }
 
     /**
@@ -48,6 +82,35 @@ class OperationsDeskController extends Controller
         return response()->json([
             'data'  => collect($cases)->map(fn (CaseRecord $c) => $this->formatPending($c))->values(),
             'total' => $cases->count(),
+        ]);
+    }
+
+    /**
+     * إصدار عرض السعر للاستقبال — يظهر في قسم عروض الأسعار بعد الموافقة الداخلية.
+     */
+    public function releaseQuote(CaseRecord $case): JsonResponse
+    {
+        if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
+            abort(422, 'الحالة ليست في مكتب التشغيل — لا يمكن إصدار العرض.');
+        }
+
+        if ($case->patient_type === Patient::TYPE_MILITARY) {
+            abort(422, 'المسار العسكري لا يتطلب إصدار عرض سعر للاستقبال.');
+        }
+
+        $quote = Quote::where('case_id', $case->id)->orderByDesc('id')->firstOrFail();
+        $quote = $this->quoteService->releaseToReception($quote);
+        $case  = $this->operationsService->approve($case->fresh(), Auth::user()?->name);
+
+        return response()->json([
+            'message' => 'تم إصدار عرض السعر للاستقبال — حُجزت المواد وحُوّلت الحالة للمخزن.',
+            'quote'   => [
+                'id'           => $quote->id,
+                'quote_no'     => $quote->quote_no,
+                'status'       => $quote->status,
+                'status_label' => $quote->status_label,
+            ],
+            'case' => $case->only(['id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no']),
         ]);
     }
 
@@ -87,6 +150,44 @@ class OperationsDeskController extends Controller
             'message' => 'تمت إعادة الحالة للتعديل.',
             'case'    => $case->only(['id', 'case_no', 'stage_key']),
         ]);
+    }
+
+    private function formatIssuedQuote(Quote $quote): array
+    {
+        $case = $quote->relationLoaded('caseRecord') ? $quote->caseRecord : null;
+
+        return $quote->only([
+            'id', 'quote_no', 'order_ref', 'case_id', 'patient_name', 'company_name',
+            'quote_date', 'status', 'status_label', 'total',
+        ]) + [
+            'issued_at'      => $quote->updated_at?->toIso8601String(),
+            'print_url'      => route('operations.quote.print', $quote),
+            'stage_label'    => $this->issuedQuoteStageLabel($case),
+            'case'           => $case ? $case->only([
+                'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage', 'work_order_no',
+            ]) : null,
+            'patient'        => $case && $case->relationLoaded('patient') && $case->patient
+                ? $case->patient->only(['id', 'patient_code', 'name'])
+                : null,
+        ];
+    }
+
+    private function issuedQuoteStageLabel(?CaseRecord $case): string
+    {
+        if (! $case) {
+            return '—';
+        }
+
+        if ($case->stage_key === CaseRecord::STAGE_MANUFACTURING
+            && $case->manufacturing_stage === CaseRecord::MFG_WAREHOUSE) {
+            return 'بالمخزن — بانتظار موافقة الجهة';
+        }
+
+        if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
+            return 'بمكتب التشغيل';
+        }
+
+        return $case->stage_key;
     }
 
     private function formatPending(CaseRecord $case): array

@@ -75,6 +75,10 @@ class CaseRecord extends Model
         'sovereign_entity',
         'credit_note_no',
         'credit_note_amount',
+        'rework_reason',
+        'rework_target',
+        'rework_returned_at',
+        'rework_returned_by',
     ];
 
     protected $casts = [
@@ -91,6 +95,7 @@ class CaseRecord extends Model
         'ledger_posted_at'      => 'datetime',
         'delivered_at' => 'date',
         'credit_note_amount' => 'decimal:2',
+        'rework_returned_at' => 'datetime',
     ];
 
     public function patient(): BelongsTo
@@ -213,5 +218,41 @@ class CaseRecord extends Model
     public function isInCostCalc(): bool
     {
         return $this->stage_key === self::STAGE_COST_CALC;
+    }
+
+    public function clearReworkNotice(): void
+    {
+        $this->forceFill([
+            'rework_reason'       => null,
+            'rework_target'       => null,
+            'rework_returned_at'  => null,
+            'rework_returned_by'  => null,
+        ])->save();
+    }
+
+    /** @return array{reason: string, target: string, target_label: string, returned_at: ?string, returned_by: ?string}|null */
+    public function reworkNoticeFor(?string $stage = null): ?array
+    {
+        if ($stage !== null && $this->rework_target !== $stage) {
+            return null;
+        }
+
+        if (! $this->rework_returned_at) {
+            return null;
+        }
+
+        return [
+            'reason'        => filled($this->rework_reason)
+                ? $this->rework_reason
+                : 'لم تُذكر ملاحظات من مكتب التشغيل.',
+            'target'        => $this->rework_target,
+            'target_label'  => match ($this->rework_target) {
+                self::STAGE_ADJUSTMENTS => 'إرجاع من مكتب التشغيل — المعدلات الفنية',
+                self::STAGE_TECHNICAL   => 'إرجاع من مكتب التشغيل — التوصيف الفني',
+                default                 => 'إرجاع من مكتب التشغيل',
+            },
+            'returned_at'   => $this->rework_returned_at?->toIso8601String(),
+            'returned_by'   => $this->rework_returned_by,
+        ];
     }
 }

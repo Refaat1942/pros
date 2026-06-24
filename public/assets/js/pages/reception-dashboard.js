@@ -53,6 +53,7 @@
             return {
               id:          q.quote_no,
               _dbId:       q.id,
+              printUrl:    q.print_url || null,
               patient:     q.patient_name,
               company:     q.company_name,
               orderRef:    q.order_ref,
@@ -323,12 +324,44 @@
       document.getElementById('qrModal').classList.remove('visible');
     }
 
+    function quotePrintUrl(quote) {
+      if (!quote) return null;
+      if (quote.printUrl) return quote.printUrl;
+      if (quote._dbId) return '/reception/quote/' + quote._dbId + '/print?embed=1';
+      return null;
+    }
+
+    function printQuoteModal() {
+      var iframe = document.querySelector('#quoteModalBody iframe.quote-print-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        return;
+      }
+      showToast('تعذّر فتح معاينة الطباعة', true);
+    }
+    window.printQuoteModal = printQuoteModal;
+
     function openQuoteModal(id) {
       var quote = quotations.find(function(q) { return q.id === id; });
       if (!quote) return;
-      document.getElementById('quoteModalTitle').textContent = '🧾 ' + quote.id + ' — ' + quote.patient;
-      document.getElementById('quoteModalBody').innerHTML = getQuoteDocumentHtml(quote);
-      drawQR(quote.id);
+
+      var printUrl = quotePrintUrl(quote);
+      if (!printUrl) {
+        showToast('تعذّر تحميل نموذج عرض السعر', true);
+        return;
+      }
+
+      document.getElementById('quoteModalTitle').textContent = quote.id + ' — ' + quote.patient;
+
+      var body = document.getElementById('quoteModalBody');
+      body.innerHTML = '';
+      var iframe = document.createElement('iframe');
+      iframe.className = 'quote-print-frame';
+      iframe.setAttribute('title', 'عرض سعر ' + quote.id);
+      iframe.src = printUrl;
+      body.appendChild(iframe);
+
       document.getElementById('quoteModal').classList.add('visible');
       if (quote.status === 'approved') {
         markQuoteAsIssued(quote);
@@ -1150,6 +1183,8 @@
     if (closeQuoteModalBtn) closeQuoteModalBtn.addEventListener('click', closeQuoteModal);
     var btnCloseQuoteModal = document.getElementById('btnCloseQuoteModal');
     if (btnCloseQuoteModal) btnCloseQuoteModal.addEventListener('click', closeQuoteModal);
+    var btnPrintQuoteModal = document.getElementById('btnPrintQuoteModal');
+    if (btnPrintQuoteModal) btnPrintQuoteModal.addEventListener('click', printQuoteModal);
     var quoteModal = document.getElementById('quoteModal');
     if (quoteModal) {
       quoteModal.addEventListener('click', function(e) {
@@ -1467,6 +1502,7 @@
 
     var _ocrCurrentQuote = null;
     var _ocrStoredPath   = null;
+    var _ocrLetterDate   = null;
 
     function ocrShowStep(step) {
       ['ocrStep1','ocrStep2','ocrStep3','ocrStep4'].forEach(function(id) {
@@ -1481,6 +1517,7 @@
       if (!quote) return;
       _ocrCurrentQuote = quote;
       _ocrStoredPath   = null;
+      _ocrLetterDate   = null;
 
       var refEl = document.getElementById('ocrQuoteRef');
       if (refEl) refEl.textContent = quote.id + ' — ' + quote.patient + ' / ' + quote.company;
@@ -1502,6 +1539,7 @@
       if (modal) modal.style.display = 'none';
       _ocrCurrentQuote = null;
       _ocrStoredPath   = null;
+      _ocrLetterDate   = null;
     }
 
     function handleOcrFileDrop(event) {
@@ -1554,9 +1592,11 @@
           var refEl2    = document.getElementById('ocrLetterRef');
 
           if (nameEl)    nameEl.value    = extracted.patient_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.patient : '');
-          if (amountEl)  amountEl.value  = extracted.approved_amount || (_ocrCurrentQuote ? _ocrCurrentQuote.total   : '');
+          if (amountEl)  amountEl.value  = extracted.approved_amount != null ? extracted.approved_amount : (_ocrCurrentQuote ? _ocrCurrentQuote.total : '');
           if (companyEl) companyEl.value = extracted.company_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.company : '');
-          if (refEl2)    refEl2.value    = '';
+          if (refEl2)    refEl2.value    = extracted.letter_ref      || '';
+
+          _ocrLetterDate = extracted.letter_date || null;
 
           var errEl = document.getElementById('ocrError');
           if (errEl) errEl.style.display = 'none';
@@ -1565,7 +1605,12 @@
         })
         .catch(function (err) {
           ocrShowStep('ocrStep1');
-          alert((err && err.message) ? err.message : 'تعذّر رفع الملف.');
+          var msg = (err && err.message) ? err.message : 'تعذّر قراءة الملف — تأكد من وضوح الصورة أو جرّب PDF.';
+          if (window.DashboardToast) {
+            window.DashboardToast.show(msg, { isError: true });
+          } else {
+            alert(msg);
+          }
         });
     }
 
@@ -1610,6 +1655,7 @@
           approved_amount: parseFloat(amount),
           company_name:    company,
           letter_ref:      ref,
+          letter_date:     _ocrLetterDate || null,
           letter_path:     _ocrStoredPath || null
         })
       })
@@ -1658,6 +1704,7 @@
         var fi = document.getElementById('ocrFileInput');
         if (fi) fi.value = '';
         _ocrStoredPath = null;
+        _ocrLetterDate = null;
         ocrShowStep('ocrStep1');
       });
 

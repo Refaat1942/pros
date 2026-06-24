@@ -9,6 +9,7 @@ use App\Services\BomService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class ManufacturingStageController extends Controller
 {
@@ -30,7 +31,7 @@ class ManufacturingStageController extends Controller
                 ->with([
                     'patient:id,patient_code,name',
                     'bom:id,case_id,bom_no,stage',
-                    'bom.items:id,bom_id,stock_item_code,qty',
+                    'bom.items:id,bom_id,stock_item_code,name,qty,source',
                 ])
                 ->when($request->manufacturing_stage, fn ($q, $s) => $q->where('manufacturing_stage', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
@@ -64,7 +65,7 @@ class ManufacturingStageController extends Controller
     }
 
     /**
-     * فحص جودة نهائي — إغلاق BOM بعد مرحلة التشطيب.
+     * إتمام التصنيع — إغلاق BOM وتحويل الحالة للتسليم.
      */
     public function finishQuality(CaseRecord $case): JsonResponse
     {
@@ -79,29 +80,56 @@ class ManufacturingStageController extends Controller
         $case->refresh()->load(['patient:id,patient_code,name', 'bom']);
 
         return response()->json([
-            'message' => 'تم فحص الجودة — BOM تام والحالة جاهزة للتسليم.',
+            'message' => 'تم التصنيع — الحالة جاهزة للتسليم.',
             'case'    => $this->formatCase($case),
             'bom'     => $bom->only(['id', 'bom_no', 'stage', 'finished_at']),
         ]);
     }
 
+    /**
+     * إذن شغل / أمر الإنتاج — النموذج الرسمي (1.jpeg).
+     */
+    public function printWorkOrder(CaseRecord $case): View
+    {
+        abort_unless($case->work_order_no, 404, 'لا يوجد أمر تشغيل لهذه الحالة.');
+
+        $case->load(['patient', 'bom.items']);
+
+        abort_unless($case->bom, 404, 'لا توجد BOM مرتبطة بهذه الحالة.');
+
+        return view('prints.work-order', [
+            'case'      => $case,
+            'autoPrint' => true,
+        ]);
+    }
+
     private function formatCase(CaseRecord $case): array
     {
-        $bomItemsCount = $case->relationLoaded('bom') && $case->bom?->relationLoaded('items')
-            ? $case->bom->items->count()
-            : 0;
+        $bom = null;
+        if ($case->relationLoaded('bom') && $case->bom) {
+            $bom = $case->bom->only(['id', 'bom_no', 'stage']) + [
+                'items_count' => $case->bom->relationLoaded('items') ? $case->bom->items->count() : 0,
+                'items'       => $case->bom->relationLoaded('items')
+                    ? $case->bom->items->map(fn ($item) => [
+                        'stock_item_code' => $item->stock_item_code,
+                        'name'            => $item->name,
+                        'qty'             => $item->qty,
+                        'source'          => $item->source,
+                    ])->values()->all()
+                    : [],
+            ];
+        }
 
         return $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage',
             'work_order_no', 'patient_type', 'path', 'quote_no', 'company_name',
         ]) + [
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
+            'work_order_print_url' => route('operations.work-order.print', $case),
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name'])
                 : null,
-            'bom' => $case->relationLoaded('bom') && $case->bom
-                ? $case->bom->only(['id', 'bom_no', 'stage']) + ['items_count' => $bomItemsCount]
-                : null,
+            'bom' => $bom,
         ];
     }
 }

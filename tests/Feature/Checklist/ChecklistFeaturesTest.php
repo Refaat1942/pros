@@ -7,6 +7,7 @@ use App\Models\CaseRecord;
 use App\Models\Permission;
 use App\Models\StockItem;
 use App\Services\MedicalRecordService;
+use App\Services\StockCatalogService;
 use App\Services\StockImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -77,6 +78,84 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertSame(40, (int) StockItem::where('code', 'RM-900')->value('qty'));
     }
 
+    public function test_csv_import_parses_multiple_prices_separated_by_semicolon(): void
+    {
+        $csv = StockImportService::HEADERS;
+        $contents = implode(',', $csv) . "\r\n"
+            . "RM-901,صنف متعدد الأسعار,5,1000;2000;2200\r\n";
+
+        $summary = app(StockImportService::class)->import(
+            UploadedFile::fake()->createWithContent('multi.csv', $contents),
+        );
+
+        $this->assertSame(1, $summary['created']);
+
+        $item = StockItem::where('code', 'RM-901')->with('prices')->firstOrFail();
+        $this->assertEquals(1000.0, (float) $item->price);
+        $this->assertCount(2, $item->prices);
+        $this->assertEquals(2200.0, app(StockCatalogService::class)->formatItem($item)['highest_price']);
+    }
+
+    public function test_csv_import_handles_excel_semicolon_delimiter(): void
+    {
+        $contents = "كود الصنف;اسم الصنف;الكمية;السعر\r\n"
+            . "RM-902;صنف اكسيل;3;500;1000\r\n";
+
+        $summary = app(StockImportService::class)->import(
+            UploadedFile::fake()->createWithContent('excel.csv', $contents),
+        );
+
+        $this->assertSame(1, $summary['created']);
+
+        $item = StockItem::where('code', 'RM-902')->with('prices')->firstOrFail();
+        $this->assertEquals(500.0, (float) $item->price);
+        $this->assertCount(1, $item->prices);
+        $this->assertEquals(1000.0, (float) $item->prices->first()->amount);
+    }
+
+    public function test_csv_import_converts_windows_1256_arabic_to_utf8(): void
+    {
+        $arabicName = 'مفصل ركبة ميكانيكي';
+        $encodedName = iconv('UTF-8', 'CP1256', $arabicName);
+        $this->assertNotFalse($encodedName);
+        $contents = "RM-903,{$encodedName},5,1000;2000\r\n";
+
+        $summary = app(StockImportService::class)->import(
+            UploadedFile::fake()->createWithContent('win1256.csv', $contents),
+        );
+
+        $this->assertSame(1, $summary['created']);
+        $this->assertDatabaseHas('stock_items', [
+            'code' => 'RM-903',
+            'name' => $arabicName,
+            'qty'  => 5,
+        ]);
+    }
+
+    public function test_csv_import_prefers_cp1256_over_false_utf8_for_arabic_excel(): void
+    {
+        $arabicName = 'مفصل ركبه عرفه';
+        $encodedName = iconv('UTF-8', 'CP1256', $arabicName);
+        $this->assertNotFalse($encodedName);
+
+        $header = iconv('UTF-8', 'CP1256', implode(';', StockImportService::HEADERS));
+        $this->assertNotFalse($header);
+
+        $contents = $header . "\r\n"
+            . 'RM-560;' . $encodedName . ';3;1000;2000' . "\r\n";
+
+        $summary = app(StockImportService::class)->import(
+            UploadedFile::fake()->createWithContent('excel-ar.csv', $contents),
+        );
+
+        $this->assertSame(1, $summary['created']);
+        $this->assertDatabaseHas('stock_items', [
+            'code' => 'RM-560',
+            'name' => $arabicName,
+        ]);
+        $this->assertStringNotContainsString('?', StockItem::where('code', 'RM-560')->value('name'));
+    }
+
     public function test_military_markup_engine_computes_selling_price_and_percentage(): void
     {
         $company = $this->militaryCompany();
@@ -104,11 +183,7 @@ class ChecklistFeaturesTest extends TestCase
 
     public function test_role_permission_gate_grants_and_denies(): void
     {
-        $permission = Permission::create([
-            'slug'     => 'approve-pricing',
-            'label_ar' => 'اعتماد',
-            'group'    => 'financial',
-        ]);
+        $permission = Permission::where('slug', 'approve-pricing')->firstOrFail();
 
         $operations = $this->userWithRole('operations');
         $operations->role->permissions()->sync([$permission->id]);
@@ -121,8 +196,6 @@ class ChecklistFeaturesTest extends TestCase
 
     public function test_admin_always_passes_every_gate(): void
     {
-        Permission::create(['slug' => 'approve-pricing', 'label_ar' => 'اعتماد', 'group' => 'financial']);
-
         $admin = $this->userWithRole('admin');
 
         $this->assertTrue(Gate::forUser($admin->fresh())->allows('approve-pricing'));

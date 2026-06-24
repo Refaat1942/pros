@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\DB;
  */
 class CaseService
 {
-    public function __construct(private readonly WorkflowService $workflowService)
-    {
+    public function __construct(
+        private readonly WorkflowService $workflowService,
+        private readonly OrderRefService $orderRefService,
+    ) {
     }
 
     /**
@@ -113,7 +115,7 @@ class CaseService
         $num = ($lastNum ?? 0) + 1;
         $seq = sprintf('%04d', $num);
 
-        return ["CASE-{$year}-{$seq}", "ORD-{$year}-{$seq}"];
+        return ["CASE-{$year}-{$seq}", $this->orderRefService->generate()];
     }
 
     private function caseAuditSnapshot(CaseRecord $case): array

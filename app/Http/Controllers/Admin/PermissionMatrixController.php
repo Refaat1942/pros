@@ -25,7 +25,7 @@ class PermissionMatrixController extends Controller
 
         $validPermissionIds = Permission::pluck('id')->all();
 
-        Role::where('slug', '!=', Role::SLUG_ADMIN)
+        Role::query()
             ->get()
             ->each(function (Role $role) use ($matrix, $validPermissionIds) {
                 $ids = array_values(array_intersect(

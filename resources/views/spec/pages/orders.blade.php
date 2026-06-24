@@ -85,6 +85,12 @@
                 <p class="text-slate-600 mt-1"><span class="font-semibold">الروشتة:</span> <span id="medPrescription">—</span></p>
             </div>
 
+            <div id="specReworkBanner" class="hidden rounded-xl border border-red-200 bg-red-50 p-4 text-sm">
+                <p class="font-bold text-red-800" id="specReworkTitle">↩️ إرجاع من مكتب التشغيل</p>
+                <p class="text-red-600/80 text-xs mt-1" id="specReworkMeta"></p>
+                <p class="text-red-900 mt-2 whitespace-pre-wrap leading-relaxed" id="specReworkReason"></p>
+            </div>
+
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h5 class="font-bold text-slate-800">📦 بنود التوصيف</h5>
                 <button type="button" id="btnAddCatalogItem"

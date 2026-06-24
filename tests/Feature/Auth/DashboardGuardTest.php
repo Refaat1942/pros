@@ -45,6 +45,20 @@ class DashboardGuardTest extends TestCase
         $response->assertRedirect(route('admin.dashboard'));
     }
 
+    /** Admin with cross-dashboard permissions can login at reception */
+    public function test_admin_user_can_login_at_reception_dashboard(): void
+    {
+        $user = $this->userWithRole('admin');
+
+        $response = $this->post('/reception/login', [
+            'email'    => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('reception.dashboard'));
+        $this->assertAuthenticatedAs($user);
+    }
+
     /** Reception user must NOT be allowed in at the admin login page */
     public function test_reception_user_rejected_at_admin_login(): void
     {
@@ -115,13 +129,49 @@ class DashboardGuardTest extends TestCase
         $response->assertStatus(403);
     }
 
-    /** Doctor cannot access /technical/* */
+    /** Doctor cannot access /technical/* without permission */
     public function test_doctor_blocked_from_technical_dashboard(): void
     {
         $user = $this->userWithRole('doctor');
         $this->actingAs($user);
 
         $response = $this->getJson('/technical/inventory/list');
+
+        $response->assertStatus(403);
+    }
+
+    /** Admin with cross-dashboard permissions can access reception */
+    public function test_admin_with_permissions_can_access_reception_dashboard(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $this->actingAs($admin);
+
+        $response = $this->get(route('reception.appointments'));
+
+        $response->assertOk();
+    }
+
+    /** Admin with partial reception access cannot open blocked pages */
+    public function test_admin_without_quote_permission_blocked_from_quote_page(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $appointmentsId = \App\Models\Permission::where('slug', 'reception.appointments.view')->value('id');
+        $admin->role->permissions()->sync([$appointmentsId]);
+        $this->actingAs($admin->fresh());
+
+        $this->get(route('reception.appointments'))->assertOk();
+        $this->get(route('reception.quote'))->assertStatus(403);
+        $this->getJson('/reception/quote/list')->assertStatus(403);
+    }
+
+    /** Admin without reception permissions is blocked */
+    public function test_admin_without_permissions_blocked_from_reception(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $admin->role->permissions()->detach();
+        $this->actingAs($admin->fresh());
+
+        $response = $this->get(route('reception.appointments'));
 
         $response->assertStatus(403);
     }

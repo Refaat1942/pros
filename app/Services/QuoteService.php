@@ -20,11 +20,18 @@ class QuoteService
     }
 
     /**
-     * إنشاء Quote صادر من طلب تسعير محتسَب — يُستدعى داخل transaction المعدلات.
+     * إنشاء أو تحديث Quote صادر من طلب تسعير محتسَب.
+     * عند إعادة الحالة من مكتب التشغيل يُحدَّث العرض الحالي بدل إنشاء سجل مكرر.
      */
     public function issue(PricingRequest $request, float $total): Quote
     {
         $request->load('items', 'caseRecord');
+
+        $existing = Quote::where('pricing_request_id', $request->id)->first();
+
+        if ($existing) {
+            return $this->refreshIssued($existing, $request, $total);
+        }
 
         $quoteNo = $this->nextQuoteNo();
 
@@ -36,11 +43,55 @@ class QuoteService
             'patient_name'       => $request->patient_name,
             'company_name'       => $request->company_name,
             'quote_date'         => now()->toDateString(),
-            'status'             => Quote::STATUS_ISSUED,
-            'status_label'       => 'صادر — بمكتب التشغيل',
+            'status'             => Quote::STATUS_PENDING,
+            'status_label'       => 'بمكتب التشغيل — بانتظار الإصدار',
             'total'              => $total,
         ]);
 
+        $this->syncQuoteItems($quote, $request);
+        $this->syncCaseQuoteFields($request->case_id, $quoteNo, $total);
+
+        AuditService::log(
+            action:      'create',
+            description: "إنشاء عرض السعر {$quoteNo} — {$request->request_no}",
+            tag:         'quotes',
+            after:       $quote->only(['id', 'quote_no', 'case_id', 'total', 'status']),
+        );
+
+        return $quote->load('items');
+    }
+
+    private function refreshIssued(Quote $quote, PricingRequest $request, float $total): Quote
+    {
+        $before = $quote->only(['total', 'status', 'status_label']);
+
+        $quote->items()->delete();
+        $this->syncQuoteItems($quote, $request);
+
+        $quote->update([
+            'patient_name' => $request->patient_name,
+            'company_name' => $request->company_name,
+            'quote_date'   => now()->toDateString(),
+            'status'       => Quote::STATUS_PENDING,
+            'status_label' => 'بمكتب التشغيل — بانتظار الإصدار',
+            'total'        => $total,
+        ]);
+
+        $this->syncCaseQuoteFields($request->case_id, $quote->quote_no, $total);
+
+        AuditService::log(
+            action:      'reissue',
+            description: "تحديث عرض السعر {$quote->quote_no} بعد إعادة المسار — {$request->request_no}",
+            tag:         'quotes',
+            before:      $before,
+            after:       $quote->only(['id', 'quote_no', 'case_id', 'total', 'status', 'status_label']),
+        );
+
+        return $quote->load('items');
+    }
+
+    private function syncQuoteItems(Quote $quote, PricingRequest $request): void
+    {
         foreach ($request->items as $item) {
             $unitPrice = (float) ($item->unit_price
                 ?? $this->stockPriceService->highestUnitPrice($item->stock_item_code ?? ''));
@@ -55,27 +106,33 @@ class QuoteService
                 'amount'          => $lineAmount,
             ]);
         }
+    }
 
-        CaseRecord::where('id', $request->case_id)->update([
+    private function syncCaseQuoteFields(int $caseId, string $quoteNo, float $total): void
+    {
+        CaseRecord::where('id', $caseId)->update([
             'quote_no'    => $quoteNo,
             'quote_date'  => now()->toDateString(),
             'quote_total' => $total,
         ]);
-
-        AuditService::log(
-            action:      'create',
-            description: "إنشاء عرض السعر {$quoteNo} — {$request->request_no}",
-            tag:         'quotes',
-            after:       $quote->only(['id', 'quote_no', 'case_id', 'total', 'status']),
-        );
-
-        return $quote->load('items');
     }
 
     /**
-     * إعادة تأكيد إصدار العرض للجهة (طباعة/QR) — العرض صادر أصلاً من محرك التكاليف.
+     * إصدار العرض من مكتب التشغيل إلى الاستقبال — يظهر في قسم عروض الأسعار.
      */
-    public function markIssued(Quote $quote): Quote
+    public function releaseToReception(Quote $quote): Quote
+    {
+        if ($quote->status !== Quote::STATUS_PENDING) {
+            abort(422, 'العرض مُصدَر للاستقبال مسبقاً أو غير قابل للإصدار.');
+        }
+
+        return $this->markIssued($quote, 'إصدار من مكتب التشغيل');
+    }
+
+    /**
+     * تأكيد إصدار العرض للجهة (طباعة/QR) — بعد موافقة مكتب التشغيل.
+     */
+    public function markIssued(Quote $quote, ?string $auditNote = null): Quote
     {
         if (! in_array($quote->status, [Quote::STATUS_PENDING, Quote::STATUS_ISSUED], true)) {
             abort(422, 'لا يمكن إصدار عرض السعر — الحالة الحالية: ' . $quote->status);
@@ -83,15 +140,17 @@ class QuoteService
 
         $before = $quote->only(['status', 'status_label']);
 
-        return DB::transaction(function () use ($quote, $before) {
+        return DB::transaction(function () use ($quote, $before, $auditNote) {
             $quote->update([
                 'status'       => Quote::STATUS_ISSUED,
-                'status_label' => 'صادر للجهة',
+                'status_label' => 'صادر للجهة — بانتظار خطاب الموافقة',
             ]);
 
             AuditService::log(
                 action:      'issue',
-                description: "إصدار عرض السعر {$quote->quote_no}",
+                description: $auditNote
+                    ? "{$auditNote} — {$quote->quote_no}"
+                    : "إصدار عرض السعر {$quote->quote_no}",
                 tag:         'quotes',
                 before:      $before,
                 after:       $quote->only(['status', 'status_label']),

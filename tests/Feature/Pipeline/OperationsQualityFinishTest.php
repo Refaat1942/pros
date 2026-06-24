@@ -13,7 +13,7 @@ class OperationsQualityFinishTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_finish_quality_requires_finishing_stage(): void
+    public function test_finish_manufacturing_requires_wip_bom(): void
     {
         $item = $this->stockItem('RM-001', qty: 10);
         app(StockPriceService::class)->addBatch($item, 10, 200.0, $this->makeSupplier(), 'INV-A', now());
@@ -26,13 +26,12 @@ class OperationsQualityFinishTest extends TestCase
         $this->actingAs($user);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         app(BomService::class)->finish($bom->fresh());
     }
 
-    public function test_finish_quality_via_endpoint_closes_bom_and_ready_delivery(): void
+    public function test_finish_manufacturing_via_endpoint_closes_bom_and_ready_delivery(): void
     {
         $item = $this->stockItem('RM-001', qty: 10);
         app(StockPriceService::class)->addBatch($item, 10, 200.0, $this->makeSupplier(), 'INV-A', now());
@@ -46,14 +45,15 @@ class OperationsQualityFinishTest extends TestCase
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
-        $this->advanceCaseToFinishing($case);
 
         $response = $this->postJson("/operations/operations/{$case->id}/finish-quality");
 
         $response->assertOk()
+            ->assertJsonPath('message', 'تم التصنيع — الحالة جاهزة للتسليم.')
             ->assertJsonPath('bom.stage', Bom::STAGE_FINISHED);
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_READY_DELIVERY, $case->stage_key);
+        $this->assertEquals(CaseRecord::MFG_CLOSED, $case->manufacturing_stage);
     }
 }

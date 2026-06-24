@@ -14,6 +14,7 @@
 
   var LIST_URL = '/operations/pending/list';
   var APPROVE_URL = function (id) { return '/operations/pending/' + id + '/approve'; };
+  var RELEASE_URL = function (id) { return '/operations/pending/' + id + '/release-quote'; };
   var RETURN_URL = function (id) { return '/operations/pending/' + id + '/return'; };
 
   var casesCache = [];
@@ -54,8 +55,18 @@
     var quoteNo = quote ? quote.quote_no : (c.quote_no || '—');
     var total = quote ? quote.total : c.quote_total;
     var printBtn = quote && quote.print_url
-      ? '<a href="' + esc(quote.print_url) + '" target="_blank" rel="noopener" class="btn-action" style="margin-left:4px;">🖨️ طباعة العرض</a>'
+      ? '<a href="' + esc(quote.print_url) + '" target="_blank" rel="noopener" class="btn-action" style="margin-left:4px;">🖨️ طباعة عرض السعر</a>'
       : (isMil ? '<span class="text-xs text-muted">بدون عرض (عسكري)</span>' : '');
+
+    var releaseBtn = (!isMil && quote && quote.status === 'pending')
+      ? '<button type="button" class="btn-action btn-release-quote" data-case-id="' + c.id + '" style="margin-left:4px;background:#dbeafe;color:#1d4ed8;">📤 إصدار عرض سعر</button>'
+      : (!isMil && quote && quote.status === 'issued'
+        ? '<span class="text-xs text-muted" style="margin-left:4px;">صُدر للاستقبال</span>'
+        : '');
+
+    var approveBtn = isMil
+      ? '<button type="button" class="btn-action success btn-approve-pending" data-case-id="' + c.id + '" style="margin-left:4px;">✅ موافقة واعتماد الصرف</button>'
+      : '';
 
     var search = [c.case_no, c.order_ref, c.patient && c.patient.name, quoteNo].join(' ');
 
@@ -68,7 +79,8 @@
       '<td>' + (total ? fmt(total) + ' ج.م' : '—') + '</td>' +
       '<td class="col-actions" style="white-space:nowrap;">' +
         printBtn +
-        '<button type="button" class="btn-action success btn-approve-pending" data-case-id="' + c.id + '" style="margin-left:4px;">✅ موافقة واعتماد الصرف</button>' +
+        releaseBtn +
+        approveBtn +
         '<button type="button" class="btn-action btn-rework-pending" data-case-id="' + c.id + '" data-case-no="' + esc(c.case_no) + '" style="margin-left:4px;background:#fee2e2;color:#b91c1c;">↩️ إرجاع للتعديل</button>' +
       '</td></tr>';
   }
@@ -93,6 +105,9 @@
   }
 
   function bindTableEvents() {
+    document.querySelectorAll('.btn-release-quote').forEach(function (btn) {
+      btn.addEventListener('click', function () { releaseQuote(btn.getAttribute('data-case-id'), btn); });
+    });
     document.querySelectorAll('.btn-approve-pending').forEach(function (btn) {
       btn.addEventListener('click', function () { approveCase(btn.getAttribute('data-case-id'), btn); });
     });
@@ -139,6 +154,20 @@
       });
   }
 
+  function releaseQuote(caseId, btn) {
+    if (!caseId || !window.axios) return;
+    if (!window.confirm('إصدار عرض السعر للاستقبال؟ سيظهر في قسم عروض الأسعار لدى الاستقبال.')) return;
+
+    if (btn) btn.disabled = true;
+    axios.post(RELEASE_URL(caseId))
+      .then(function (res) {
+        toast(res.data.message || 'تم إصدار عرض السعر للاستقبال');
+        refreshList();
+      })
+      .catch(function (err) { toast(apiMessage(err, 'تعذّر إصدار العرض'), true); })
+      .finally(function () { if (btn) btn.disabled = false; });
+  }
+
   function approveCase(caseId, btn) {
     if (!caseId || !window.axios) return;
     if (!window.confirm('اعتماد الصرف؟ سيتم حجز المواد فوراً وتحويل الحالة للمخزن.')) return;
@@ -161,13 +190,13 @@
     if ($('reworkTarget')) $('reworkTarget').value = 'adjustments';
     if ($('reworkReason')) $('reworkReason').value = '';
     var modal = $('reworkModal');
-    if (modal) modal.classList.add('show');
+    if (modal) modal.classList.add('visible');
   }
 
   function closeReworkModal() {
     reworkCaseId = null;
     var modal = $('reworkModal');
-    if (modal) modal.classList.remove('show');
+    if (modal) modal.classList.remove('visible');
   }
 
   function submitRework() {

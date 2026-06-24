@@ -81,6 +81,55 @@
 
 .notif-mark-all-form { margin: 0; }
 
+/* أزرار الإجراء — مستقلة عن btn-action لكل اللوحات */
+.notif-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.notif-btn-outline {
+    background: #fff;
+    color: #334155;
+    border-color: #cbd5e1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.notif-btn-outline:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+.notif-btn-outline:active {
+    background: #f1f5f9;
+}
+
+.notif-btn-read {
+    background: linear-gradient(180deg, #059669 0%, #047857 100%);
+    color: #fff;
+    border-color: #047857;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.28);
+    min-width: 88px;
+}
+.notif-btn-read:hover {
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+}
+.notif-btn-read:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 4px rgba(5, 150, 105, 0.25);
+}
+
 .notif-feed {
     list-style: none;
     margin: 0;
@@ -161,6 +210,7 @@
     align-items: center;
     padding: 0 18px;
     margin: 0;
+    flex-shrink: 0;
 }
 
 .notif-empty-state {
@@ -240,8 +290,23 @@ a.dash-page-btn:hover {
 }
 
 @media (max-width: 640px) {
+    .notif-panel-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .notif-mark-all-form .notif-btn-outline {
+        width: 100%;
+    }
     .notif-card-text,
     .notif-card-case { margin-inline-start: 0; }
     .notif-card { flex-direction: column; }
-    .notif-card-action { padding: 0 20px 16px; justify-content: flex-end; }
+    .notif-card-action {
+        padding: 0 20px 16px;
+        justify-content: flex-end;
+    }
+    .notif-card-action .notif-btn-read {
+        width: 100%;
+        max-width: 200px;
+    }
 }

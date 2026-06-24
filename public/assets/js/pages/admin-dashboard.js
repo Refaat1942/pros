@@ -1,7 +1,4 @@
     var ADMIN_USER = '';
-    var pricingApprovalSearch = '';
-    var pricingApprovalFilter = 'awaiting_admin_approval';
-    var selectedPricingId = null;
     var casesFilter = 'waiting_return';
     var casesSearchTerm = '';
     var adminCaseBuckets = window.__ADMIN_CASE_BUCKETS || { waiting_return: [], in_progress: [], delivered: [] };
@@ -24,18 +21,6 @@
       });
     }
 
-    function syncSidebarPricingBadge(count) {
-      var el = document.getElementById('sidebarPricingBadge');
-      if (!el) return;
-      var n = typeof count === 'number' ? count : 0;
-      if (n > 0) {
-        el.textContent = String(n);
-        el.style.display = '';
-      } else {
-        el.textContent = '';
-        el.style.display = 'none';
-      }
-    }
     var suppliers = [];
 
     var COMPANIES_STORAGE_KEY = 'clinic_contract_companies';
@@ -234,7 +219,6 @@
       overview: 'لوحة المعلومات — الإدارة العليا',
       bi: 'لوحات القيادة (BI) — 5 لوحات',
       catalog: 'الأصناف والأسعار',
-      pricing: 'اعتماد طلبات التسعير',
       cases: 'متابعة الحالات',
       employees: 'إدارة الموظفين',
       companies: 'جهات التعاقد',
@@ -254,7 +238,6 @@
         window.location.href = dashboardPageUrl(sectionId);
         return;
       }
-      if (sectionId === 'pricing') renderPricingApproval();
       if (sectionId === 'cases') renderCasesSection();
       if (sectionId === 'overview') renderOverviewCasesCounts();
       if (sectionId === 'reports') renderBomAdminReport();
@@ -303,8 +286,7 @@
     });
 
     window.addEventListener('storage', function(e) {
-      if (e.key === PricingQueue.STORAGE_KEY || e.key === CasesWorkflow.STORAGE_KEY) {
-        renderPricingApproval();
+      if (e.key === CasesWorkflow.STORAGE_KEY) {
         renderCasesSection();
         renderOverviewCasesCounts();
         renderAdminAnalytics();
@@ -404,15 +386,11 @@
             '</tr>';
         }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       } else if (casesFilter === 'in_progress') {
-        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>مرحلة الشغل</th><th>BOM</th><th>تاريخ الموافقة</th><th>إجراء</th>' + pipelineCol + viewCol + '</tr>';
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>مرحلة الشغل</th><th>BOM</th><th>تاريخ الموافقة</th>' + pipelineCol + viewCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var bom = c.bom || null;
           var bomLabel = bom ? bom.stageLabel : '—';
           var bomCls = bom ? bom.badgeClass : 'default';
-          var canDel = !!c.canDeliver;
-          var actionBtn = canDel
-            ? '<button type="button" class="btn-action success" onclick="deliverCase(\'' + c.id + '\')">✅ تسليم</button>'
-            : '<span class="stage-badge ' + bomCls + '" title="' + (c.deliverBlockReason || '') + '">' + bomLabel + '</span>';
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
             '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
@@ -420,11 +398,10 @@
             '<td><span class="stage-badge progress">' + (c.manufacturingLabel || '—') + '</span></td>' +
             '<td><span class="stage-badge ' + bomCls + '">' + bomLabel + '</span></td>' +
             '<td>' + (c.approvalDate || '—') + '</td>' +
-            '<td>' + actionBtn + '</td>' +
             '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
             caseViewCell(c.id) +
             '</tr>';
-        }).join('') : '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
+        }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       } else {
         head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>المدفوع</th><th>تاريخ التسليم</th>' + pipelineCol + viewCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
@@ -469,19 +446,6 @@
       if (type === 'excel') ExportKit.toExcel('cases-' + casesFilter, headers, rows);
       else ExportKit.toPDF(title, headers, rows);
     }
-
-    function deliverCase(caseId) {
-      var c = getAdminCaseBucket('in_progress').concat(getAdminCaseBucket('delivered')).find(function(row) {
-        return String(row.id) === String(caseId);
-      });
-      if (!c || !c.canDeliver) {
-        alert('⚠️ ' + (c && c.deliverBlockReason ? c.deliverBlockReason : 'الحالة غير جاهزة للتسليم — استخدم لوحة الاستقبال'));
-        return;
-      }
-      if (!confirm('تأكيد تسليم الطرف للمريض:\n' + c.patient + '؟')) return;
-      alert('التسليم يتم من لوحة الاستقبال — مسح QR المريض.');
-    }
-    window.deliverCase = deliverCase;
 
     function escapeHtml(s) {
       return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -656,342 +620,6 @@
       });
     }
 
-    function pricingTypeBadge(patientType) {
-      if (typeof CasesWorkflow !== 'undefined' && CasesWorkflow.getPatientTypeMeta) {
-        var tm = CasesWorkflow.getPatientTypeMeta(patientType || 'civilian');
-        return '<span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span>';
-      }
-      var isMil = patientType === 'military';
-      return '<span class="patient-type-badge ' + (isMil ? 'military' : 'civilian') + '">' +
-        (isMil ? '🪖 عسكري' : '🌐 مدني') + '</span>';
-    }
-
-    function getFilteredPricingApproval() {
-      return PricingQueue.getAll().filter(function(p) {
-        var matchFilter = pricingApprovalFilter === 'all' || p.statusKey === pricingApprovalFilter;
-        var matchSearch = !pricingApprovalSearch ||
-          p.id.indexOf(pricingApprovalSearch) !== -1 ||
-          p.patient.indexOf(pricingApprovalSearch) !== -1 ||
-          p.orderRef.indexOf(pricingApprovalSearch) !== -1;
-        return matchFilter && matchSearch;
-      });
-    }
-
-    function filterServerPricingApprovalRows() {
-      var tbody = document.getElementById('pricingApprovalTable');
-      if (!tbody || tbody.dataset.serverRendered !== '1') return;
-
-      var searchEl = document.getElementById('pricingApprovalSearch');
-      var filterEl = document.getElementById('pricingApprovalFilter');
-      var search = searchEl ? searchEl.value.trim().toLowerCase() : '';
-      var status = filterEl ? filterEl.value : pricingApprovalFilter;
-      var visible = 0;
-      var pendingCount = 0;
-
-      tbody.querySelectorAll('tr[data-status]').forEach(function(row) {
-        var rowStatus = row.dataset.status || '';
-        if (rowStatus === 'awaiting_admin_approval') pendingCount++;
-
-        var hay = (row.dataset.search || row.textContent || '').toLowerCase();
-        var show = (status === 'all' || rowStatus === status)
-          && (!search || hay.indexOf(search) !== -1);
-
-        if (show) {
-          delete row.dataset.paginationSkip;
-          row.style.display = '';
-          visible++;
-        } else {
-          row.dataset.paginationSkip = '1';
-          row.style.display = 'none';
-        }
-      });
-
-      var badge = document.getElementById('pricingApprovalBadge');
-      if (badge) badge.textContent = pendingCount + ' بانتظار';
-      syncSidebarPricingBadge(pendingCount);
-
-      var countEl = document.getElementById('pricingApprovalCount');
-      if (countEl) countEl.textContent = visible + ' طلب';
-
-      refreshPaginated('pricingApprovalTable');
-    }
-
-    function renderPricingApproval() {
-      var tbody = document.getElementById('pricingApprovalTable');
-      if (tbody && tbody.dataset.serverRendered === '1') {
-        filterServerPricingApprovalRows();
-        return;
-      }
-
-      var all = PricingQueue.getAll();
-      var filtered = getFilteredPricingApproval();
-      var pendingCount = all.filter(function(p) { return p.statusKey === 'awaiting_admin_approval'; }).length;
-
-      document.getElementById('pricingApprovalBadge').textContent = pendingCount + ' بانتظار';
-      syncSidebarPricingBadge(pendingCount);
-      document.getElementById('pricingApprovalCount').textContent = filtered.length + ' طلب';
-
-      if (!filtered.length) {
-        document.getElementById('pricingApprovalTable').innerHTML =
-          '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px;">لا توجد طلبات مطابقة</td></tr>';
-        refreshPaginated('pricingApprovalTable');
-        return;
-      }
-
-      document.getElementById('pricingApprovalTable').innerHTML = filtered.map(function(p, idx) {
-        var actions = '<div class="approval-actions">' +
-          '<button type="button" class="btn-action" onclick="openPricingApprovalModal(\'' + p.id + '\')">عرض</button>';
-        if (p.statusKey === 'awaiting_admin_approval') {
-          actions += '<button type="button" class="btn-action approve" onclick="approvePricingRequest(\'' + p.id + '\')">✅ اعتماد</button>';
-        }
-        actions += '</div>';
-        return '<tr>' +
-          '<td style="color:var(--text-muted);font-weight:600">' + (idx + 1) + '</td>' +
-          '<td><strong>' + p.id + '</strong><br><span style="font-size:11px;color:var(--text-muted);">' + p.orderRef + '</span></td>' +
-          '<td><strong>' + p.patient + '</strong> ' + pricingTypeBadge(p.patientType) +
-          '<br><span style="font-size:11px;color:var(--text-muted);">' + p.company + '</span></td>' +
-          '<td>' + p.date + '</td>' +
-          '<td style="text-align:center;font-weight:700;">' + p.items + '</td>' +
-          '<td><span class="pricing-approval-status ' + p.statusKey + '">' + p.statusLabel + '</span></td>' +
-          '<td>' + actions + '</td>' +
-          '</tr>';
-      }).join('');
-      refreshPaginated('pricingApprovalTable');
-    }
-
-    function pricingDetailBox(label, value) {
-      return '<div class="catalog-detail-box"><div class="dl">' + label + '</div><div class="dv">' + value + '</div></div>';
-    }
-
-    function formatPricingDate(value) {
-      if (!value) return '—';
-      return String(value).slice(0, 10);
-    }
-
-    function renderPricingDetailModal(p) {
-      selectedPricingId = p.id;
-      var statusKey = p.status_key || '';
-      var patient = p.patient || {};
-      var caseInfo = p.case || {};
-
-      document.getElementById('pricingApprovalModalTitle').textContent = '🧾 ' + (p.request_no || '—');
-      document.getElementById('pricingApprovalModalRef').textContent =
-        (p.order_ref || caseInfo.order_ref || '—') + ' · ' + (p.patient_name || patient.name || '—');
-
-      var patientType = p.patient_type || patient.patient_type || caseInfo.patient_type;
-      var isMilitaryPatient = patientType === 'military';
-
-      var meta = [
-        pricingDetailBox('رقم الطلب', p.request_no || '—'),
-        pricingDetailBox('أمر التشغيل', p.order_ref || caseInfo.order_ref || '—'),
-        pricingDetailBox('رقم الحالة', caseInfo.case_no || '—'),
-        pricingDetailBox('المريض', p.patient_name || patient.name || '—'),
-        pricingDetailBox('رقم المريض', patient.patient_code || '—'),
-        pricingDetailBox('الهوية الوطنية', patient.national_id || '—'),
-        pricingDetailBox('الهاتف', patient.phone || '—'),
-        pricingDetailBox('تصنيف المريض', pricingTypeBadge(patientType)),
-      ];
-
-      if (isMilitaryPatient) {
-        meta.push(pricingDetailBox('الجهة السيادية', patient.sovereign_entity || caseInfo.sovereign_entity || 'القوات المسلحة'));
-        if (patient.rank) {
-          meta.push(pricingDetailBox('الرتبة', patient.rank));
-        }
-      } else {
-        meta.push(pricingDetailBox('جهة التعاقد', p.company_name || patient.company_name || caseInfo.company_name || '—'));
-      }
-
-      meta.push(
-        pricingDetailBox('الطبيب', p.doctor_name || '—'),
-        pricingDetailBox('تاريخ الطلب', formatPricingDate(p.request_date)),
-        pricingDetailBox('الحالة', p.display_status_label || p.status_label || '—')
-      );
-
-      if (p.approved_by) {
-        meta.push(pricingDetailBox('اعتمد بواسطة', p.approved_by));
-      }
-      if (p.approved_at) {
-        meta.push(pricingDetailBox('تاريخ الاعتماد', formatPricingDate(p.approved_at)));
-      }
-
-      document.getElementById('pricingApprovalModalMeta').innerHTML = meta.join('');
-
-      var rows = (p.items || []).map(function(item) {
-        return '<tr>' +
-          '<td><strong>' + (item.name || '—') + '</strong></td>' +
-          '<td>' + (item.stock_item_code || '—') + '</td>' +
-          '<td>' + (item.qty || 0) + '</td>' +
-          '<td>' + PricingQueue.formatMoney(item.unit_price) + '</td>' +
-          '<td>' + PricingQueue.formatMoney(item.line_total) + '</td>' +
-          '</tr>';
-      }).join('');
-
-      document.getElementById('pricingApprovalModalItems').innerHTML = rows ||
-        '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">لا توجد بنود</td></tr>';
-      document.getElementById('pricingApprovalModalTotal').textContent =
-        PricingQueue.formatMoney(p.computed_total || 0);
-
-      var approveBtn = document.getElementById('btnApprovePricingModal');
-      approveBtn.style.display = statusKey === 'awaiting_admin_approval' ? 'inline-flex' : 'none';
-    }
-
-    function openPricingApprovalModalFromServer(id) {
-      var modal = document.getElementById('pricingApprovalModal');
-      if (!modal) return;
-
-      selectedPricingId = id;
-      document.getElementById('pricingApprovalModalTitle').textContent = '🧾 جاري التحميل...';
-      document.getElementById('pricingApprovalModalRef').textContent = '';
-      document.getElementById('pricingApprovalModalMeta').innerHTML =
-        '<p style="text-align:center;color:var(--text-muted);padding:16px;">جاري تحميل التفاصيل...</p>';
-      document.getElementById('pricingApprovalModalItems').innerHTML = '';
-      document.getElementById('pricingApprovalModalTotal').textContent = '—';
-      document.getElementById('btnApprovePricingModal').style.display = 'none';
-      modal.classList.add('open');
-
-      fetch('/admin/pricing/' + id, {
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      })
-        .then(function(res) {
-          if (!res.ok) throw new Error('load failed');
-          return res.json();
-        })
-        .then(function(data) {
-          renderPricingDetailModal(data);
-        })
-        .catch(function() {
-          document.getElementById('pricingApprovalModalMeta').innerHTML =
-            '<p style="color:#dc2626;text-align:center;padding:16px;">تعذّر تحميل تفاصيل الطلب</p>';
-        });
-    }
-
-    function openPricingApprovalModal(id) {
-      var tbody = document.getElementById('pricingApprovalTable');
-      if (tbody && tbody.dataset.serverRendered === '1') {
-        openPricingApprovalModalFromServer(id);
-        return;
-      }
-
-      var p = PricingQueue.getById(id);
-      if (!p) return;
-      selectedPricingId = id;
-      document.getElementById('pricingApprovalModalTitle').textContent = '🧾 ' + p.id;
-      document.getElementById('pricingApprovalModalRef').textContent = p.orderRef + ' · ' + p.patient;
-      document.getElementById('pricingApprovalModalMeta').innerHTML =
-        '<div class="catalog-detail-box"><div class="dl">المريض</div><div class="dv">' + p.patient + '</div></div>' +
-        '<div class="catalog-detail-box"><div class="dl">تصنيف المريض</div><div class="dv">' + pricingTypeBadge(p.patientType) + '</div></div>' +
-        '<div class="catalog-detail-box"><div class="dl">جهة التعاقد</div><div class="dv" style="font-size:13px;font-weight:600">' + p.company + '</div></div>' +
-        '<div class="catalog-detail-box"><div class="dl">الطبيب</div><div class="dv" style="font-size:13px;font-weight:600">' + (p.doctor || '—') + '</div></div>' +
-        '<div class="catalog-detail-box"><div class="dl">التاريخ</div><div class="dv">' + p.date + '</div></div>' +
-        '<div class="catalog-detail-box"><div class="dl">الحالة</div><div class="dv" style="font-size:13px">' + p.statusLabel + '</div></div>' +
-        (p.approvedBy ? '<div class="catalog-detail-box"><div class="dl">اعتمد بواسطة</div><div class="dv" style="font-size:13px">' + p.approvedBy + '</div></div>' : '') +
-        (p.approvedAt ? '<div class="catalog-detail-box"><div class="dl">تاريخ الاعتماد</div><div class="dv" style="font-size:13px">' + p.approvedAt + '</div></div>' : '');
-
-      var rows = (p.recommendations || []).map(function(rec) {
-        var name = typeof rec === 'string' ? rec : rec.name;
-        var code = typeof rec === 'string' ? null : rec.code;
-        var qty = typeof rec === 'string' ? 1 : (rec.qty || 1);
-        var stock = PricingQueue.findStockItem(name, code);
-        var unit = PricingQueue.highestUnitPrice(stock);
-        return '<tr>' +
-          '<td><strong>' + name + '</strong></td>' +
-          '<td>' + (stock ? stock.code : (code || '—')) + '</td>' +
-          '<td>' + qty + '</td>' +
-          '<td>' + PricingQueue.formatMoney(unit) + '</td>' +
-          '<td>' + PricingQueue.formatMoney(unit * qty) + '</td>' +
-          '</tr>';
-      }).join('');
-
-      document.getElementById('pricingApprovalModalItems').innerHTML = rows ||
-        '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">لا توجد بنود</td></tr>';
-      document.getElementById('pricingApprovalModalTotal').textContent = PricingQueue.formatMoney(PricingQueue.estimateTotal(p.recommendations));
-
-      var approveBtn = document.getElementById('btnApprovePricingModal');
-      approveBtn.style.display = p.statusKey === 'awaiting_admin_approval' ? 'inline-flex' : 'none';
-
-      document.getElementById('pricingApprovalModal').classList.add('open');
-    }
-
-    function closePricingApprovalModal() {
-      document.getElementById('pricingApprovalModal').classList.remove('open');
-      selectedPricingId = null;
-    }
-
-    function approvePricingRequest(id) {
-      var tbody = document.getElementById('pricingApprovalTable');
-      if (tbody && tbody.dataset.serverRendered === '1') {
-        if (!confirm('موافقة الأدمن على الطلب وإرساله للاستقبال لإصدار عرض السعر؟')) return;
-        var csrf = document.querySelector('meta[name="csrf-token"]');
-        fetch('/admin/pricing/' + id + '/approve', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrf ? csrf.content : '',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        })
-          .then(function(res) {
-            if (!res.ok) throw new Error('approve failed');
-            return res.json();
-          })
-          .then(function() {
-            closePricingApprovalModal();
-            window.location.reload();
-          })
-          .catch(function() {
-            alert('⚠️ تعذّر اعتماد الطلب');
-          });
-        return;
-      }
-
-      var p = PricingQueue.getById(id);
-      if (!p || p.statusKey !== 'awaiting_admin_approval') return;
-      if (!confirm('موافقة الأدمن على طلب ' + p.id + ' وإرساله للاستقبال لإصدار عرض السعر؟')) return;
-      PricingQueue.approve(id, ADMIN_USER);
-      closePricingApprovalModal();
-      renderPricingApproval();
-      renderCasesSection();
-      renderOverviewCasesCounts();
-      renderAdminAnalytics();
-      alert('✅ تمت موافقة الأدمن — الطلب جاهز للاستقبال لإصدار عرض السعر');
-    }
-
-    function exportPricingApproval(type) {
-      var data = getFilteredPricingApproval();
-      var headers = ['رقم الطلب', 'أمر التشغيل', 'المريض', 'التصنيف', 'جهة التعاقد', 'التاريخ', 'البنود', 'الحالة'];
-      var rows = data.map(function(p) {
-        var typeLabel = p.patientType === 'military' ? 'عسكري' : 'مدني';
-        return [p.id, p.orderRef, p.patient, typeLabel, p.company, p.date, p.items, p.statusLabel];
-      });
-      if (type === 'excel') ExportKit.toExcel('pricing-approval', headers, rows);
-      else ExportKit.toPDF('اعتماد التسعير', headers, rows);
-    }
-
-    window.openPricingApprovalModal = openPricingApprovalModal;
-    window.approvePricingRequest = approvePricingRequest;
-
-    onId('pricingApprovalSearch', 'input', function(e) {
-      pricingApprovalSearch = e.target.value.trim();
-      renderPricingApproval();
-    });
-
-    onId('pricingApprovalFilter', 'change', function(e) {
-      pricingApprovalFilter = e.target.value;
-      renderPricingApproval();
-    });
-
-    onId('closePricingApprovalModal', 'click', closePricingApprovalModal);
-    onId('btnClosePricingApprovalModal', 'click', closePricingApprovalModal);
-    onId('btnApprovePricingModal', 'click', function() {
-      if (selectedPricingId) approvePricingRequest(selectedPricingId);
-    });
-    onId('pricingApprovalModal', 'click', function(e) {
-      if (e.target === this) closePricingApprovalModal();
-    });
 
     function getFilteredCompanies() {
       return contractCompanies.filter(function(c) {
@@ -1964,7 +1592,6 @@
 
     safePageInit(renderAdminAnalytics);
     safePageInit(function () { loadCatalogItems(); renderCatalog(); });
-    safePageInit(renderPricingApproval);
     safePageInit(renderCasesSection);
     safePageInit(bindCaseDetailModal);
     safePageInit(renderOverviewCasesCounts);

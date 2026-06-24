@@ -186,6 +186,25 @@
     }).join('');
   }
 
+  function renderReworkBanner(rework) {
+    var banner = $('adjReworkBanner');
+    if (!banner) return;
+    if (!rework) {
+      banner.hidden = true;
+      return;
+    }
+    banner.hidden = false;
+    if ($('adjReworkTitle')) {
+      $('adjReworkTitle').textContent = '↩️ ' + (rework.target_label || 'إرجاع من مكتب التشغيل');
+    }
+    if ($('adjReworkMeta')) {
+      $('adjReworkMeta').textContent = rework.returned_by ? ('بواسطة: ' + rework.returned_by) : '';
+    }
+    if ($('adjReworkReason')) {
+      $('adjReworkReason').textContent = rework.reason || '';
+    }
+  }
+
   function openModal(caseId) {
     if (!window.axios) return;
     axios.get(SHOW_URL(caseId))
@@ -200,6 +219,7 @@
         }
 
         renderBomItems((activeCase.bom && activeCase.bom.items) || []);
+        renderReworkBanner(activeCase.rework || null);
 
         catalogCache = res.data.stock_catalog || [];
         var datalist = $('adjCatalog');
@@ -225,6 +245,7 @@
     var modal = $('adjModal');
     if (modal) modal.classList.remove('visible');
     activeCase = null;
+    renderReworkBanner(null);
   }
 
   function autofillName() {

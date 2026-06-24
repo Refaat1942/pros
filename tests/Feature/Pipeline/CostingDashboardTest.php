@@ -61,7 +61,7 @@ class CostingDashboardTest extends TestCase
             ->get('/costing/costing')
             ->assertOk()
             ->assertSee('id="costingTable"', false)
-            ->assertSee('تأكيد وإصدار عرض السعر', false);
+            ->assertSee('تأكيد عرض سعر', false);
     }
 
     public function test_operations_role_cannot_access_costing_dashboard(): void
@@ -119,6 +119,42 @@ class CostingDashboardTest extends TestCase
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
         $this->assertNotNull(Quote::where('case_id', $case->id)->first());
+    }
+
+    public function test_costing_confirm_after_operations_rework_refreshes_existing_quote(): void
+    {
+        $adjustments = $this->userWithRole('adjustments');
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        $this->actingAs($adjustments)
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $this->actingAs($costing)
+            ->postJson("/costing/queue/{$case->id}/confirm")
+            ->assertOk();
+
+        $firstQuote = Quote::where('case_id', $case->id)->firstOrFail();
+        $firstQuoteNo = $firstQuote->quote_no;
+
+        app(\App\Services\OperationsService::class)->returnForRework(
+            $case->fresh(),
+            CaseRecord::STAGE_ADJUSTMENTS,
+            'تعديل بنود',
+        );
+
+        $this->actingAs($adjustments)
+            ->postJson("/adjustments/adjustments/{$case->id}/complete")
+            ->assertOk();
+
+        $this->actingAs($costing)
+            ->postJson("/costing/queue/{$case->id}/confirm")
+            ->assertOk();
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
+        $this->assertEquals(1, Quote::where('case_id', $case->id)->count());
+        $this->assertEquals($firstQuoteNo, Quote::where('case_id', $case->id)->value('quote_no'));
     }
 
     public function test_military_costing_confirm_auto_approves_to_warehouse(): void

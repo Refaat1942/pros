@@ -139,7 +139,7 @@
         }
 
         var modal = $('costingModal');
-        if (modal) modal.classList.add('show');
+        if (modal) modal.classList.add('visible');
       })
       .catch(function (err) { toast(apiMessage(err, 'تعذّر فتح التفاصيل'), true); });
   }
@@ -147,12 +147,11 @@
   function closeModal() {
     activeCaseId = null;
     var modal = $('costingModal');
-    if (modal) modal.classList.remove('show');
+    if (modal) modal.classList.remove('visible');
   }
 
   function confirmCosting() {
     if (!activeCaseId) return;
-    if (!window.confirm('تأكيد التكاليف وإصدار عرض السعر؟')) return;
 
     var btn = $('btnConfirmCosting');
     if (btn) btn.disabled = true;

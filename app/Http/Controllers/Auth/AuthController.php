@@ -32,7 +32,7 @@ class AuthController extends Controller
     }
 
     /**
-     * معالجة طلب تسجيل الدخول مع التحقق أن دور المستخدم يطابق الداشبورد.
+     * معالجة طلب تسجيل الدخول — الدور الأساسي أو صلاحية الوصول للوحة عبر المصفوفة.
      */
     public function login(LoginRequest $request, string $dashboard): RedirectResponse
     {
@@ -57,7 +57,7 @@ class AuthController extends Controller
 
         $userSlug = $user->role?->slug;
 
-        if ($userSlug !== $dashboard) {
+        if ($userSlug !== $dashboard && ! $user->canAccessDashboard($dashboard)) {
             Auth::logout();
 
             return back()

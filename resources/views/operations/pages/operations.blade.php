@@ -17,14 +17,6 @@
 @php
     $cases   = $ops_cases ?? collect();
     $summary = $ops_summary ?? ['raw' => 0, 'wip' => 0, 'done' => 0];
-    $mfgLabels = [
-        'warehouse'  => 'المخزن',
-        'issue'      => 'صرف خامات',
-        'generation' => 'توليد',
-        'assembly'   => 'تجميع',
-        'casting'    => 'صب',
-        'finishing'  => 'تشطيب',
-    ];
     $bomLabels = [
         'raw'      => ['label' => 'خام', 'cls' => 'bg-amber-100 text-amber-800'],
         'wip'      => ['label' => 'تحت التشغيل', 'cls' => 'bg-cyan-100 text-cyan-800'],
@@ -40,6 +32,7 @@
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p class="text-sm text-slate-600 leading-relaxed">
             تظهر هنا فقط الحالات التي <strong>صُرفت موادها من المخزن</strong> (تحويل للورشة).
+            يمكن طباعة <strong>إذن شغل الورشة</strong> من عمود الإجراء لكل أمر نشط.
             قبل الصرف تبقى الحالة في <strong>لوحة المخزون</strong> فقط.
             يلتقي هنا المساران: <strong class="text-indigo-700">عسكري</strong> و
             <strong class="text-emerald-700">مدني</strong> — كل حالة لها
@@ -116,23 +109,34 @@
                                 @else
                                     <span class="text-xs text-slate-400">بدون BOM</span>
                                 @endif
-                                <div class="text-xs text-slate-500 mt-1">{{ $mfgLabels[$case->manufacturing_stage] ?? ($case->manufacturing_stage ?? '—') }}</div>
                             </td>
-                            <td class="px-4 py-3 text-center font-bold">{{ $itemsCount }}</td>
+                            <td class="px-4 py-3 text-center">
+                                @if ($itemsCount > 0)
+                                    <button type="button"
+                                            class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50"
+                                            data-case-id="{{ $case->id }}"
+                                            data-patient="{{ $case->patient?->name ?? '—' }}"
+                                            data-case-no="{{ $case->case_no }}"
+                                            data-work-order="{{ $case->work_order_no ?? '—' }}"
+                                            data-items='@json($case->bom?->items->map(fn ($i) => ["stock_item_code" => $i->stock_item_code, "name" => $i->name, "qty" => $i->qty])->values() ?? [])'>
+                                        عرض
+                                    </button>
+                                @else
+                                    <span class="text-xs text-slate-400">—</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3">
-                                @if ($case->manufacturing_stage === 'finishing' && $bomStage === 'wip')
-                                    <button type="button" class="btn-finish-quality text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700"
+                                <a href="{{ route('operations.work-order.print', $case) }}" target="_blank" rel="noopener"
+                                   class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">
+                                    🖨️ طباعة إذن شغل الورشة
+                                </a>
+                                @if ($bomStage === 'wip')
+                                    <button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700"
                                             data-case-id="{{ $case->id }}">
-                                        ✓ فحص جودة
+                                        ✓ تم التصنيع
                                     </button>
                                 @elseif ($bomStage === 'finished')
                                     <span class="text-xs font-bold text-emerald-700">جاهز للتسليم</span>
-                                @elseif ($case->manufacturing_stage !== 'finishing')
-                                    <button type="button" class="btn-advance-stage text-xs font-bold rounded-lg bg-slate-800 text-white px-3 py-1.5 hover:bg-slate-700"
-                                            data-case-id="{{ $case->id }}"
-                                            data-mfg-stage="{{ $case->manufacturing_stage }}">
-                                        ▶ تقدم مرحلة
-                                    </button>
                                 @else
                                     <span class="text-xs text-slate-400">—</span>
                                 @endif
@@ -142,6 +146,30 @@
                         <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر تشغيل نشطة حالياً.</td></tr>
                     @endforelse
                 </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="opsBomItemsModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-800">📦 بنود أمر التشغيل</h3>
+                <p class="text-xs text-slate-500 mt-1" id="opsBomItemsSubtitle">—</p>
+            </div>
+            <button type="button" id="closeOpsBomItemsModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
+        </div>
+        <div class="overflow-y-auto flex-1 p-4">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-600">
+                    <tr>
+                        <th class="px-3 py-2 text-right font-bold">الكود</th>
+                        <th class="px-3 py-2 text-right font-bold">الصنف</th>
+                        <th class="px-3 py-2 text-right font-bold w-20">الكمية</th>
+                    </tr>
+                </thead>
+                <tbody id="opsBomItemsBody" class="divide-y divide-slate-100"></tbody>
             </table>
         </div>
     </div>

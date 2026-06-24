@@ -23,7 +23,8 @@ use Tests\TestCase;
  * Dashboard rules under test:
  *   - technicalBom      → ONLY shows BOMs for cases in `manufacturing`
  *   - queueService      → technicalBomRawIds excludes pre-manufacturing BOMs
- *   - queueService      → receptionApprovalPendingCaseIds returns civilian operations cases only
+ *   - queueService      → receptionApprovalPendingCaseIds returns civilian operations cases
+ *                         only after quote is issued to reception
  */
 class DualPathwayDashboardVisibilityTest extends TestCase
 {
@@ -130,22 +131,71 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     // ── Reception approval-pending queue ─────────────────────────────────────
 
     /**
-     * Civilian waiting_return cases surface via the queue service (feeds the quote page badge).
-     * The delivery page no longer carries approval_pending_cases — those live on reception/quote.
+     * Civilian operations cases with internal (pending) quote do NOT surface at reception yet.
      */
-    public function test_reception_quote_queue_surfaces_civilian_operations_cases(): void
+    public function test_reception_quote_queue_excludes_pending_internal_quote(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case    = $this->operationsReadyCase($patient);
+
+        $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
+
+        $this->assertNotContains(
+            (int) $case->id,
+            $ids,
+            'عرض السعر الداخلي (pending) يجب ألا يظهر في طابور الاستقبال قبل الإصدار من مكتب التشغيل'
+        );
+    }
+
+    public function test_reception_quote_queue_surfaces_after_operations_release(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case    = $this->operationsReadyCase($patient);
+
+        app(\App\Services\QuoteService::class)->releaseToReception(
+            \App\Models\Quote::where('case_id', $case->id)->firstOrFail()
+        );
+        app(\App\Services\OperationsService::class)->approve($case->fresh(), 'اختبار');
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 
         $this->assertContains(
             (int) $case->id,
             $ids,
-            'حالة مدنية في مكتب التشغيل يجب أن تظهر في طابور الموافقة بالاستقبال'
+            'بعد إصدار العرض للاستقبال يجب أن تظهر الحالة في طابور الموافقة'
         );
+    }
+
+    public function test_reception_quote_list_excludes_pending_until_operations_release(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case    = $this->operationsReadyCase($patient);
+        $quote   = \App\Models\Quote::where('case_id', $case->id)->firstOrFail();
+        $recep   = $this->userWithRole('reception');
+
+        $this->actingAs($recep)
+            ->getJson('/reception/quote/list')
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        app(\App\Services\QuoteService::class)->releaseToReception($quote);
+
+        $this->actingAs($recep)
+            ->getJson('/reception/quote/list')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.quote_no', $quote->quote_no);
+    }
+
+    /**
+     * @deprecated use test_reception_quote_queue_surfaces_after_operations_release
+     */
+    public function test_reception_quote_queue_surfaces_civilian_operations_cases(): void
+    {
+        $this->test_reception_quote_queue_surfaces_after_operations_release();
     }
 
     public function test_reception_delivery_page_has_no_approval_pending_section(): void
@@ -181,11 +231,16 @@ class DualPathwayDashboardVisibilityTest extends TestCase
         );
     }
 
-    public function test_queue_service_approval_pending_returns_civilian_operations(): void
+    public function test_queue_service_approval_pending_returns_civilian_operations_after_release(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case    = $this->operationsReadyCase($patient);
+
+        app(\App\Services\QuoteService::class)->releaseToReception(
+            \App\Models\Quote::where('case_id', $case->id)->firstOrFail()
+        );
+        app(\App\Services\OperationsService::class)->approve($case->fresh(), 'اختبار');
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 

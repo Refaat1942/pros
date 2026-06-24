@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Models\AppNotification;
 use App\Models\Bom;
 use App\Models\ReturnNote;
-use App\Services\Dashboard\DashboardQueueService;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
@@ -39,10 +38,6 @@ class AppServiceProvider extends ServiceProvider
 
             if ($roleSlug) {
                 $badges['notifications'] = AppNotification::forRole($roleSlug)->unread()->count();
-            }
-
-            if ($dashboardKey === 'admin') {
-                $badges['pricing'] = app(DashboardQueueService::class)->adminPricingAwaitingCount();
             }
 
             $view->with('sidebarBadges', $badges);

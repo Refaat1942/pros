@@ -40,6 +40,9 @@ class AdjustmentsService
      */
     public function complete(CaseRecord $case): CaseRecord
     {
-        return $this->costingService->receiveFromAdjustments($case);
+        $case = $this->costingService->receiveFromAdjustments($case);
+        $case->clearReworkNotice();
+
+        return $case;
     }
 }

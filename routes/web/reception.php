@@ -68,14 +68,16 @@ Route::prefix('reception')
             ->name('appointments.update-status');
 
         // ── Quotes (civilian only) ─────────────────────────────────────────
-        Route::get('quote/list', [QuoteController::class, 'index'])
-            ->name('quote.list');
+        Route::middleware('dashboard.page:reception,quote')->group(function () {
+            Route::get('quote/list', [QuoteController::class, 'index'])
+                ->name('quote.list');
 
-        Route::post('quote/{quote}/issue', [QuoteController::class, 'issue'])
-            ->name('quote.issue');
+            Route::post('quote/{quote}/issue', [QuoteController::class, 'issue'])
+                ->name('quote.issue');
 
-        Route::get('quote/{quote}/print', [QuoteController::class, 'print'])
-            ->name('quote.print');
+            Route::get('quote/{quote}/print', [QuoteController::class, 'print'])
+                ->name('quote.print');
+        });
 
         // ── Approval scan (OCR / QR) ───────────────────────────────────────
         Route::post('ocr/extract', [OcrExtractController::class, 'extract'])
@@ -88,14 +90,16 @@ Route::prefix('reception')
             ->name('ocr.scan');
 
         // ── Contracts archive (read-only) ──────────────────────────────────
-        Route::get('contracts/list', [ContractController::class, 'index'])
-            ->name('contracts.list');
+        Route::middleware('dashboard.page:reception,contracts')->group(function () {
+            Route::get('contracts/list', [ContractController::class, 'index'])
+                ->name('contracts.list');
 
-        Route::get('contracts/{contract}', [ContractController::class, 'show'])
-            ->name('contracts.show');
+            Route::get('contracts/{contract}', [ContractController::class, 'show'])
+                ->name('contracts.show');
 
-        Route::get('contracts/{contract}/download', [ContractController::class, 'download'])
-            ->name('contracts.download');
+            Route::get('contracts/{contract}/download', [ContractController::class, 'download'])
+                ->name('contracts.download');
+        });
 
         // ── Delivery (QR scan close) ───────────────────────────────────────
         Route::get('delivery/list', [DeliveryController::class, 'index'])
@@ -109,5 +113,6 @@ Route::prefix('reception')
 
         // ── Self-service lookup (reception staff — full patient journey) ───
         Route::get('selfservice/lookup', [ReceptionSelfServiceController::class, 'lookup'])
+            ->middleware('dashboard.page:reception,selfservice')
             ->name('selfservice.lookup');
     });

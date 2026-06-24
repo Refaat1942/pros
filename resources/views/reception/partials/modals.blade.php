@@ -18,7 +18,7 @@
 
   <!-- Quote Modal -->
   <div class="modal-overlay" id="quoteModal">
-    <div class="modal modal-wide quote-modal">
+    <div class="modal quote-modal">
       <div class="modal-header">
         <h3 id="quoteModalTitle">🧾 عرض السعر</h3>
         <button class="modal-close" id="closeQuoteModal">&times;</button>
@@ -28,7 +28,7 @@
       </div>
       <div class="modal-footer quote-modal-footer">
         <button class="btn btn-secondary" id="btnCloseQuoteModal">إغلاق</button>
-        <button class="btn btn-primary" onclick="window.print()">🖨️ طباعة عرض السعر</button>
+        <button type="button" class="btn btn-primary" id="btnPrintQuoteModal">🖨️ طباعة عرض السعر</button>
       </div>
     </div>
   </div>
@@ -77,8 +77,8 @@
         <div id="ocrStep2" style="display:none;text-align:center;padding:32px;">
           <div style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#059669;
                       border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;"></div>
-          <p style="font-weight:600;color:#374151;">جاري رفع الملف ومعالجته...</p>
-          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">يتم استخراج: اسم المريض — القيمة المالية</p>
+          <p style="font-weight:600;color:#374151;">جاري قراءة الخطاب واستخراج البيانات...</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">اسم المريض — المبلغ — رقم الخطاب — جهة التعاقد</p>
         </div>
 
         {{-- Step 3: Human Override verification --}}
@@ -113,8 +113,8 @@
                 🏢 جهة التعاقد
               </label>
               <input type="text" id="ocrConfirmCompany"
-                     style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box;background:#f8fafc;"
-                     readonly>
+                     style="width:100%;padding:10px 12px;border:2px solid #10b981;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box;"
+                     placeholder="جهة التعاقد">
             </div>
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">

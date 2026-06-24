@@ -25,6 +25,39 @@ class SpecService
     }
 
     /**
+     * إعادة فتح التوصيف للتعديل بعد إرجاع الحالة من مكتب التشغيل (أو المعدلات).
+     */
+    public function reopenForRework(CaseRecord $case): void
+    {
+        if ($case->stage_key !== CaseRecord::STAGE_TECHNICAL) {
+            return;
+        }
+
+        $spec = TechOrderSpec::where('case_id', $case->id)->first();
+
+        if (! $spec?->locked) {
+            return;
+        }
+
+        DB::transaction(function () use ($spec, $case) {
+            $before = $spec->only(['locked', 'submitted_at']);
+
+            $spec->update([
+                'locked'       => false,
+                'submitted_at' => null,
+            ]);
+
+            AuditService::log(
+                action:      'reopen',
+                description: "إعادة فتح التوصيف الفني للتعديل — {$case->case_no}",
+                tag:         'spec',
+                before:      $before,
+                after:       $spec->only(['locked', 'submitted_at']),
+            );
+        });
+    }
+
+    /**
      * إنشاء مسودة توصيف فني لحالة في مرحلة technical.
      */
     public function saveDraft(array $data): TechOrderSpec
@@ -131,6 +164,8 @@ class SpecService
 
             // التوصيف الفني → المعدلات
             $this->workflowService->advance($case, WorkflowEvent::SpecSaved->value);
+
+            $case->clearReworkNotice();
 
             AuditService::log(
                 action:      'submit',

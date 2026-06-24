@@ -29,7 +29,7 @@ class AuthServiceProvider extends ServiceProvider
     {
         Gate::before(fn (User $user, string $ability) => $user->isAdmin() ? true : null);
 
-        foreach (array_keys(Permission::CATALOG) as $slug) {
+        foreach (array_keys(Permission::catalog()) as $slug) {
             Gate::define($slug, fn (User $user) => $user->hasPermission($slug));
         }
     }

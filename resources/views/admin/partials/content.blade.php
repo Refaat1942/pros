@@ -8,7 +8,6 @@
       <li><a href="#" class="active" data-section="overview"><span class="nav-icon">📊</span> نظرة عامة</a></li>
       <li><a href="#" data-section="bi"><span class="nav-icon">📡</span> لوحات القيادة (BI)</a></li>
       <li><a href="#" data-section="catalog"><span class="nav-icon">📦</span> الأصناف والأسعار</a></li>
-      <li><a href="#" data-section="pricing"><span class="nav-icon">✅</span> اعتماد التسعير</a></li>
       <li><a href="#" data-section="cases"><span class="nav-icon">📁</span> متابعة الحالات</a></li>
       <li><a href="#" data-section="employees"><span class="nav-icon">👥</span> الموظفون</a></li>
       <li><a href="#" data-section="companies"><span class="nav-icon">🏢</span> جهات التعاقد</a></li>
@@ -204,52 +203,6 @@
               </tr>
             </thead>
             <tbody id="catalogTable"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pricing Approval Section -->
-    <div class="section-view" id="section-pricing">
-      <div id="analytics-pricing">@include('partials.dashboard-analytics-empty', ['stats' => [
-        ['icon' => '⏳', 'label' => 'انتظار موافقة الأدمن', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-        ['icon' => '✅', 'label' => 'جاهز لعرض السعر', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '📋', 'label' => 'إجمالي الطلبات', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
-        ['icon' => '💰', 'label' => 'قيمة معلقة', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
-      ]])</div>
-      <div class="panel">
-        <div class="panel-header">
-          <h3>✅ اعتماد طلبات التسعير</h3>
-          <span class="badge" id="pricingApprovalBadge">0</span>
-        </div>
-        <div class="data-toolbar">
-          <input type="text" id="pricingApprovalSearch" placeholder="🔍 بحث برقم الطلب أو اسم المريض...">
-            <select id="pricingApprovalFilter">
-                <option value="awaiting_admin_approval">بانتظار الاعتماد</option>
-                <option value="sent_to_reception">تم الإرسال للاستقبال</option>
-                <option value="all">الكل</option>
-            </select>
-          <span class="toolbar-count" id="pricingApprovalCount">0 طلب</span>
-          <div class="export-btns">
-            <button class="btn-export excel" onclick="exportPricingApproval('excel')">📊 Excel</button>
-            <button class="btn-export pdf" onclick="exportPricingApproval('pdf')">📄 PDF</button>
-          </div>
-        </div>
-        <div class="panel-body">
-          <table data-paginate="10">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>رقم الطلب</th>
-                <th>المريض</th>
-                <th>التاريخ</th>
-                <th>البنود</th>
-                <th>التقدير (Highest Batch)</th>
-                <th>الحالة</th>
-                <th>إجراء</th>
-              </tr>
-            </thead>
-            <tbody id="pricingApprovalTable"></tbody>
           </table>
         </div>
       </div>
@@ -605,45 +558,6 @@
       </div>
     </div>
   </main>
-
-  <!-- اعتماد التسعير — تفاصيل -->
-  <div class="catalog-modal-overlay" id="pricingApprovalModal" role="dialog" aria-modal="true">
-    <div class="catalog-modal" onclick="event.stopPropagation()">
-      <div class="catalog-modal-header">
-        <div>
-          <h3 id="pricingApprovalModalTitle">🧾 تفاصيل طلب التسعير</h3>
-          <div class="modal-code" id="pricingApprovalModalRef"></div>
-        </div>
-        <button type="button" class="catalog-modal-close" id="closePricingApprovalModal">&times;</button>
-      </div>
-      <div class="catalog-modal-body">
-        <div class="catalog-detail-grid" id="pricingApprovalModalMeta"></div>
-        <h4 style="font-size:14px;font-weight:800;margin:16px 0 10px;color:var(--secondary);">📦 البنود والأسعار</h4>
-        <table data-paginate="10">
-          <thead>
-            <tr>
-              <th>الصنف</th>
-              <th>الكود</th>
-              <th>الكمية</th>
-              <th>أعلى سعر دفعة</th>
-              <th>الإجمالي</th>
-            </tr>
-          </thead>
-          <tbody id="pricingApprovalModalItems"></tbody>
-          <tfoot>
-            <tr>
-              <td colspan="4" style="text-align:left;font-weight:700;">الإجمالي التقديري</td>
-              <td id="pricingApprovalModalTotal" style="font-weight:800;color:var(--primary-dark);"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      <div class="catalog-modal-footer">
-        <button type="button" class="btn-action" id="btnClosePricingApprovalModal">إغلاق</button>
-        <button type="button" class="btn-action approve" id="btnApprovePricingModal" style="display:none;">✅ موافقة الأدمن — إرسال للاستقبال</button>
-      </div>
-    </div>
-  </div>
 
   <!-- تفاصيل الصنف — Popup -->
   <div class="catalog-modal-overlay" id="catalogDetailModal" role="dialog" aria-modal="true" aria-labelledby="catalogModalTitle">

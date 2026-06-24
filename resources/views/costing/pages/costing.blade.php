@@ -1,6 +1,6 @@
 <div class="panel inventory-wrap">
   <div class="panel-header">
-    <h3>💰 طابور التكاليف</h3>
+    <h3>💰 التكاليف</h3>
     <div style="display:flex;align-items:center;gap:10px;">
       <input type="search" id="costingSearch" placeholder="🔍 بحث..."
              class="form-control" style="max-width:200px;">

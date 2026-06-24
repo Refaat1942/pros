@@ -15,7 +15,6 @@ use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\User;
 use App\Models\VisitType;
-use App\Enums\PricingRequestStatus;
 use App\Models\ApprovalContract;
 use App\Models\MilitaryDebt;
 use App\Models\ReturnNote;
@@ -48,7 +47,6 @@ class DashboardPageDataService
             'admin.inventory-overview' => $this->adminInventoryOverview(),
             'admin.permissions'     => $this->adminPermissions(),
             'admin.suppliers'       => $this->adminSuppliers(),
-            'admin.pricing'         => $this->adminPricing(),
             'admin.cases'           => $this->adminCases(),
             'admin.contracts'       => $this->contractsPage(isAdmin: true),
             'admin.military-debts'  => $this->adminMilitaryDebts(),
@@ -185,47 +183,13 @@ class DashboardPageDataService
      */
     private function adminPermissions(): array
     {
-        $roles = Role::query()
-            ->with('permissions:id,slug')
-            ->where('slug', '!=', Role::SLUG_ADMIN)
-            ->orderBy('label_ar')
-            ->get(['id', 'slug', 'label_ar']);
-
-        $permissions = \App\Models\Permission::query()
-            ->orderBy('group')
-            ->orderBy('id')
-            ->get(['id', 'slug', 'label_ar', 'group']);
-
-        return [
-            'perm_roles'       => $roles,
-            'perm_permissions' => $permissions->groupBy('group'),
-            'perm_matrix'      => $roles->mapWithKeys(fn (Role $r) => [
-                $r->id => $r->permissions->pluck('slug')->all(),
-            ]),
-        ];
+        return app(\App\Services\PermissionCatalogService::class)->matrixPageData();
     }
 
     private function adminSuppliers(): array
     {
         return [
             'suppliers' => Supplier::query()
-                ->orderByDesc('id')
-                ->get(),
-        ];
-    }
-
-    private function adminPricing(): array
-    {
-        return [
-            'pricing_requests' => PricingRequest::query()
-                ->with(['caseRecord:id,case_no,stage_key,manufacturing_stage'])
-                ->whereIn('status_key', [
-                    PricingRequestStatus::AwaitingAdminApproval->value,
-                    PricingRequestStatus::SentToReception->value,
-                    PricingRequestStatus::Processing->value,
-                    PricingRequestStatus::Insufficient->value,
-                ])
-                ->orderByDesc('request_date')
                 ->orderByDesc('id')
                 ->get(),
         ];
@@ -480,7 +444,7 @@ class DashboardPageDataService
             ->with([
                 'patient:id,patient_code,name',
                 'bom:id,case_id,bom_no,stage',
-                'bom.items:id,bom_id',
+                'bom.items:id,bom_id,stock_item_code,name,qty',
             ])
             ->orderByDesc('updated_at')
             ->get();

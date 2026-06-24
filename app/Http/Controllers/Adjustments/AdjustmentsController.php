@@ -117,6 +117,7 @@ class AdjustmentsController extends Controller
         ]) + [
             'pathway_label'  => $case->isMilitary() ? 'عسكري' : 'مدني',
             'display_entity' => $case->displayEntity(),
+            'rework'         => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name'])
                 : null,

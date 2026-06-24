@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * يتحقق أن المستخدم المصادَق ينتمي فعلاً إلى الـ Dashboard الذي يحاول الوصول إليه.
+ * يتحقق أن المستخدم المصادَق يملك صلاحية الوصول إلى لوحة التحكم المطلوبة.
  *
- * المنطق: المقطع الأول من الـ URL يجب أن يطابق users.role->slug.
- * مثال: /admin/* يتطلب role->slug === 'admin'
+ * - الدور الأساسي: المقطع الأول من الـ URL يطابق users.role->slug.
+ * - عبر الصلاحيات: يمكن للإدارة (أو أي دور) فتح لوحة أخرى إذا مُنحت صلاحيات عرض لها.
  */
 class DashboardGuardMiddleware
 {
@@ -40,7 +40,7 @@ class DashboardGuardMiddleware
         $requiredPrefix = $request->segment(1);
         $userSlug       = $user->role?->slug;
 
-        if ($requiredPrefix !== $userSlug) {
+        if ($requiredPrefix !== $userSlug && ! $user->canAccessDashboard($requiredPrefix)) {
             abort(403, 'ليس لديك صلاحية الوصول إلى هذه اللوحة.');
         }
 

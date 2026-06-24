@@ -2,12 +2,11 @@
 
 namespace App\Services\Dashboard;
 
-use App\Enums\PricingRequestStatus;
 use App\Models\Appointment;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Patient;
-use App\Models\PricingRequest;
+use App\Models\Quote;
 
 /**
  * استعلامات الطوابير الحية — نفس منطق لوحات التحكم (Query-Chain Monitoring).
@@ -42,23 +41,6 @@ class DashboardQueueService
     }
 
     /** @return list<int> */
-    public function adminPricingAwaitingIds(): array
-    {
-        return PricingRequest::query()
-            ->where('status_key', PricingRequestStatus::AwaitingAdminApproval->value)
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
-    }
-
-    public function adminPricingAwaitingCount(): int
-    {
-        return PricingRequest::query()
-            ->where('status_key', PricingRequestStatus::AwaitingAdminApproval->value)
-            ->count();
-    }
-
-    /** @return list<int> */
     public function operationsManufacturingCaseIds(): array
     {
         return CaseRecord::query()
@@ -80,16 +62,23 @@ class DashboardQueueService
     }
 
     /**
-     * Civilian cases in waiting_return — need quote issuance + OCR approval scan.
-     * Military cases never reach this stage; they skip directly to manufacturing.
+     * Civilian cases with quote issued to reception — awaiting OCR / entity approval.
+     * After operations release the case may already be at warehouse (MFG_WAREHOUSE).
      *
      * @return list<int>
      */
     public function receptionApprovalPendingCaseIds(): array
     {
         return CaseRecord::query()
-            ->where('stage_key', CaseRecord::STAGE_OPERATIONS)
-            ->where('patient_type', \App\Models\Patient::TYPE_CIVILIAN)
+            ->where('patient_type', Patient::TYPE_CIVILIAN)
+            ->where(function ($q) {
+                $q->where('stage_key', CaseRecord::STAGE_OPERATIONS)
+                  ->orWhere(function ($q) {
+                      $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+                        ->where('manufacturing_stage', CaseRecord::MFG_WAREHOUSE);
+                  });
+            })
+            ->whereHas('quotes', fn ($q) => $q->where('status', Quote::STATUS_ISSUED))
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -113,6 +102,22 @@ class DashboardQueueService
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
+    }
+
+    /** @return list<int> */
+    public function operationsIssuedQuoteIds(): array
+    {
+        return Quote::query()
+            ->where('status', Quote::STATUS_ISSUED)
+            ->whereHas('caseRecord', fn ($q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    public function operationsIssuedQuotesCount(): int
+    {
+        return count($this->operationsIssuedQuoteIds());
     }
 
     /** @return list<int> */

@@ -299,7 +299,7 @@
           <table data-paginate="10">
             <thead>
               <tr>
-                <th>رقم العرض</th>
+                <th>رمز QR</th>
                 <th>المريض</th>
                 <th>جهة التعاقد</th>
                 <th>التاريخ</th>
@@ -384,7 +384,7 @@
 
   <!-- Quote Modal -->
   <div class="modal-overlay" id="quoteModal">
-    <div class="modal modal-wide quote-modal">
+    <div class="modal quote-modal">
       <div class="modal-header">
         <h3 id="quoteModalTitle">🧾 عرض السعر</h3>
         <button class="modal-close" id="closeQuoteModal">&times;</button>
@@ -394,7 +394,7 @@
       </div>
       <div class="modal-footer quote-modal-footer">
         <button class="btn btn-secondary" id="btnCloseQuoteModal">إغلاق</button>
-        <button class="btn btn-primary" onclick="window.print()">🖨️ طباعة عرض السعر</button>
+        <button type="button" class="btn btn-primary" id="btnPrintQuoteModal">🖨️ طباعة عرض السعر</button>
       </div>
     </div>
   </div>

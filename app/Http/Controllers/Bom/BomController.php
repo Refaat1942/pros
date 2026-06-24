@@ -9,6 +9,7 @@ use App\Http\Requests\Bom\StoreBomRequest;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\PricingRequestItem;
+use App\Models\Quote;
 use App\Models\StockItem;
 use App\Models\TechOrderSpecItem;
 use App\Services\BomService;
@@ -169,10 +170,16 @@ class BomController extends Controller
 
     private function formatSummary(Bom $bom): array
     {
+        $quote = Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
+
         return $bom->only([
             'id', 'bom_no', 'case_id', 'order_ref', 'quote_no',
             'patient_name', 'stage', 'released_at', 'finished_at',
         ]) + [
+            'quote_id' => $quote?->id,
+            'issue_voucher_print_url' => $quote
+                ? route('technical.quote.print-issue-voucher', $quote)
+                : null,
             'items_count' => $bom->relationLoaded('items') ? $bom->items->count() : 0,
             'case'        => $bom->relationLoaded('caseRecord') && $bom->caseRecord
                 ? $this->formatCase($bom->caseRecord)

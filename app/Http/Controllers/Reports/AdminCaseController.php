@@ -7,13 +7,16 @@ use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\AdminCaseDetailService;
+use App\Services\QuoteQrService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 class AdminCaseController extends Controller
 {
-    public function __construct(private readonly AdminCaseDetailService $detailService)
-    {
+    public function __construct(
+        private readonly AdminCaseDetailService $detailService,
+        private readonly QuoteQrService $quoteQrService,
+    ) {
     }
 
     /**
@@ -38,6 +41,11 @@ class AdminCaseController extends Controller
             ->orderByDesc('id')
             ->firstOrFail();
 
-        return view('quotes.print', compact('quote'));
+        return view('quotes.print', [
+            'quote'      => $quote,
+            'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
+            'embed'      => false,
+            'autoPrint'  => true,
+        ]);
     }
 }

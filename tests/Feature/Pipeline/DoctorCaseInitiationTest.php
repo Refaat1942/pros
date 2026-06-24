@@ -57,6 +57,8 @@ class DoctorCaseInitiationTest extends TestCase
         $case = app(CaseService::class)->initiate($patient, $record);
 
         $this->assertSame("CASE-{$year}-0013", $case->case_no);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $case->order_ref);
+        $this->assertNotSame("ORD-{$year}-0013", $case->order_ref);
     }
 
     public function test_lock_reuses_draft_for_same_appointment_instead_of_duplicate_case(): void

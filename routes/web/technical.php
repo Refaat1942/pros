@@ -52,6 +52,9 @@ Route::prefix('technical')
         Route::post('bom/{bom}/finish', [BomController::class, 'closeFinished'])
             ->name('bom.finish');
 
+        Route::get('quote/{quote}/print-issue-voucher', [\App\Http\Controllers\Quote\QuoteController::class, 'printIssueVoucher'])
+            ->name('quote.print-issue-voucher');
+
         // ── Return notes ─────────────────────────────────────────────────────
         Route::get('returns/list', [ReturnNoteController::class, 'index'])
             ->name('returns.list');

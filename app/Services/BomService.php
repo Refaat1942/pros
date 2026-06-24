@@ -84,20 +84,24 @@ class BomService
         return DB::transaction(function () use ($case, $items) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
-            if ($existing = Bom::where('case_id', $case->id)->first()) {
-                return $existing->load('items');
+            $existing = Bom::where('case_id', $case->id)->first();
+
+            if ($existing) {
+                $existing->items()->delete();
+                $existing->update(['stage' => Bom::STAGE_RAW]);
+                $bom = $existing;
+            } else {
+                $case->load('patient:id,name');
+
+                $bom = Bom::create([
+                    'bom_no'       => $this->nextBomNo(),
+                    'case_id'      => $case->id,
+                    'order_ref'    => $case->order_ref,
+                    'quote_no'     => $case->quote_no,
+                    'patient_name' => $case->patient?->name ?? '—',
+                    'stage'        => Bom::STAGE_RAW,
+                ]);
             }
-
-            $case->load('patient:id,name');
-
-            $bom = Bom::create([
-                'bom_no'       => $this->nextBomNo(),
-                'case_id'      => $case->id,
-                'order_ref'    => $case->order_ref,
-                'quote_no'     => $case->quote_no,
-                'patient_name' => $case->patient?->name ?? '—',
-                'stage'        => Bom::STAGE_RAW,
-            ]);
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
@@ -610,20 +614,24 @@ class BomService
     }
 
     /**
-     * فحص جودة نهائي — يُغلق BOM بعد مرحلة التشطيب (finishing).
+     * إتمام التصنيع — إغلاق BOM من مرحلة تحت التشغيل (wip) دون مراحل فرعية.
      */
     public function finish(Bom $bom): Bom
     {
         $bom->loadMissing('caseRecord');
         $case = $bom->caseRecord;
 
-        if ($case) {
-            $this->assertReleasedToWorkshop($case);
+        if (! $case || $case->stage_key !== CaseRecord::STAGE_MANUFACTURING) {
+            abort(422, 'الحالة ليست في مرحلة التصنيع.');
         }
 
-        if (! $case || $case->manufacturing_stage !== CaseRecord::MFG_FINISHING) {
-            abort(422, 'يجب الوصول لمرحلة التشغيل قبل فحص الجودة وإغلاق BOM.');
+        $this->assertReleasedToWorkshop($case);
+
+        if ($bom->stage !== Bom::STAGE_WIP) {
+            abort(422, 'BOM ليست تحت التشغيل — لا يمكن إتمام التصنيع.');
         }
+
+        $case->update(['manufacturing_stage' => CaseRecord::MFG_CLOSED]);
 
         return $this->closeFinished($bom);
     }

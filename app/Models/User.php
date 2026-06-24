@@ -63,6 +63,42 @@ class User extends Authenticatable
         return (bool) $this->role?->loadMissing('permissions')->hasPermission($slug);
     }
 
+    /**
+     * هل يمكن للمستخدم فتح صفحة ضمن لوحة تحكم؟
+     */
+    public function canViewDashboardPage(string $dashboard, string $page): bool
+    {
+        if ($this->isAdmin() && $dashboard === Role::SLUG_ADMIN) {
+            return true;
+        }
+
+        $slug = Permission::viewSlug($dashboard, $page);
+
+        return $this->role?->loadMissing('permissions')->permissions->contains('slug', $slug) ?? false;
+    }
+
+    /**
+     * هل يمكن للمستخدم الدخول إلى لوحة تحكم (أي صفحة فيها على الأقل)؟
+     */
+    public function canAccessDashboard(string $dashboard): bool
+    {
+        if ($dashboard === 'home' || ! config("dashboards.{$dashboard}")) {
+            return false;
+        }
+
+        if ($this->role?->slug === $dashboard) {
+            return true;
+        }
+
+        foreach (array_keys(config("dashboards.{$dashboard}.pages", [])) as $page) {
+            if ($this->canViewDashboardPage($dashboard, $page)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function medicalRecords(): HasMany
     {
         return $this->hasMany(MedicalRecord::class, 'doctor_user_id');

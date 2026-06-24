@@ -43,8 +43,8 @@ class OcrApprovalService
             abort(422, 'المسار العسكري لا يتطلب خطاب موافقة OCR.');
         }
 
-        if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
-            abort(422, 'الحالة ليست في مكتب التشغيل (بانتظار اعتماد الموافقة).');
+        if (! $this->caseAwaitingEntityApproval($case)) {
+            abort(422, 'الحالة ليست بانتظار اعتماد موافقة الجهة.');
         }
 
         if ($quote->status !== Quote::STATUS_ISSUED) {
@@ -140,5 +140,15 @@ class OcrApprovalService
         $normalize = static fn (string $s) => preg_replace('/\s+/u', '', mb_strtolower(trim($s)));
 
         return $normalize($a) === $normalize($b);
+    }
+
+    private function caseAwaitingEntityApproval(CaseRecord $case): bool
+    {
+        if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
+            return true;
+        }
+
+        return $case->stage_key === CaseRecord::STAGE_MANUFACTURING
+            && $case->manufacturing_stage === CaseRecord::MFG_WAREHOUSE;
     }
 }
