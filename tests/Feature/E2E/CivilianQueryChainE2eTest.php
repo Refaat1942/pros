@@ -228,16 +228,9 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertEquals(CaseRecord::STAGE_READY_DELIVERY, $case->stage_key);
         $this->assertContains($case->id, $queues->receptionDeliveryReadyCaseIds());
 
-        // ── Step 8: Reception final QR — closed + invoice + archive ────────
-        $this->actingAs($recep);
-        $deliveryPage = $this->get('/reception/delivery');
-        $deliveryPage->assertOk();
-        $deliveryPage->assertSee($case->work_order_no, false);
-
-        $tampered = $this->postJson('/reception/delivery/scan', ['scanned_qr' => 'QR-FAKE-TAMPERED']);
-        $tampered->assertStatus(422);
-
-        $close = $this->postJson('/reception/delivery/scan', ['scanned_qr' => $patient->patient_qr]);
+        // ── Step 8: Operations final delivery — closed + invoice + archive ─
+        $this->actingAs($ops);
+        $close = $this->postJson("/operations/operations/{$case->id}/deliver");
         $close->assertOk()->assertJsonPath('closed', true);
 
         $case->refresh();

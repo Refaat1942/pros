@@ -20,7 +20,6 @@ class SpecService
     public function __construct(
         private readonly WorkflowService $workflowService,
         private readonly BomService $bomService,
-        private readonly AdjustmentsService $adjustmentsService,
     ) {
     }
 
@@ -128,7 +127,8 @@ class SpecService
 
     /**
      * إرسال التوصيف — يُنشئ BOM خام (بنود الفني) ويُحوّل الحالة إلى المعدلات.
-     * لا تسعير هنا (عمى مالي للفني). المسار العسكري يُكمل تلقائياً حتى المخزن.
+     * لا تسعير هنا (عمى مالي للفني). المسار العسكري يمر بنفس مراحل المدني
+     * (معدلات → تكاليف → تشغيل) باستثناء إصدار عرض السعر.
      */
     public function submit(TechOrderSpec $spec): CaseRecord
     {
@@ -176,11 +176,6 @@ class SpecService
 
             return $case->fresh();
         });
-
-        // المسار العسكري: تكملة تلقائية صامتة (معدلات → تكاليف → عرض → تشغيل → مخزن).
-        if ($case->isMilitary()) {
-            $case = $this->adjustmentsService->complete($case);
-        }
 
         return $case;
     }

@@ -31,12 +31,10 @@
 <div class="space-y-6" id="opsDeskRoot" data-cases-count="{{ $cases->count() }}">
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p class="text-sm text-slate-600 leading-relaxed">
-            تظهر هنا فقط الحالات التي <strong>صُرفت موادها من المخزن</strong> (تحويل للورشة).
-            يمكن طباعة <strong>إذن شغل الورشة</strong> من عمود الإجراء لكل أمر نشط.
-            قبل الصرف تبقى الحالة في <strong>لوحة المخزون</strong> فقط.
+            تظهر هنا الحالات التي <strong>صُرفت موادها من المخزن</strong> (تحويل للورشة).
+            بعد <strong>تم التصنيع</strong> يظهر زر <strong>تم التسليم</strong> لإغلاق الطلب من مكتب التشغيل.
             يلتقي هنا المساران: <strong class="text-indigo-700">عسكري</strong> و
-            <strong class="text-emerald-700">مدني</strong> — كل حالة لها
-            <strong>رقم أمر تشغيل مركزي WO-*</strong>.
+            <strong class="text-emerald-700">مدني</strong>.
         </p>
         <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-center text-sm">
             <div class="rounded-xl bg-amber-50 border border-amber-100 py-3">
@@ -135,8 +133,11 @@
                                             data-case-id="{{ $case->id }}">
                                         ✓ تم التصنيع
                                     </button>
-                                @elseif ($bomStage === 'finished')
-                                    <span class="text-xs font-bold text-emerald-700">جاهز للتسليم</span>
+                                @elseif ($case->stage_key === \App\Models\CaseRecord::STAGE_READY_DELIVERY)
+                                    <button type="button" class="btn-deliver-case text-xs font-bold rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700"
+                                            data-case-id="{{ $case->id }}">
+                                        ✅ تم التسليم
+                                    </button>
                                 @else
                                     <span class="text-xs text-slate-400">—</span>
                                 @endif

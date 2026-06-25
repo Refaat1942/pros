@@ -32,7 +32,7 @@ return [
         'pages' => [
             'appointments' => ['title' => 'جدولة المواعيد', 'icon' => '📅', 'label' => 'جدولة المواعيد'],
             'quote' => ['title' => 'عروض الأسعار', 'icon' => '💰', 'label' => 'عروض الأسعار'],
-            'delivery' => ['title' => 'تسليم الطرف للمريض', 'icon' => '✅', 'label' => 'تسليم للمريض'],
+            // 'delivery' => ['title' => 'تسليم الطرف للمريض', 'icon' => '✅', 'label' => 'تسليم للمريض'], // نُقل لمكتب التشغيل
             'contracts' => ['title' => 'العقود والاتفاقيات', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
             'selfservice' => ['title' => 'متابعة حالة الطلب (خدمة ذاتية)', 'icon' => '📱', 'label' => 'متابعة الحالة (خدمة ذاتية)'],
             'patients' => ['title' => 'سجل المرضى المسجلين', 'icon' => '👤', 'label' => 'المرضى'],
@@ -47,7 +47,7 @@ return [
             'assets/js/shared/pricing-queue.js',
             'assets/js/shared/bom-inventory.js',
             'assets/js/pages/reception-dashboard.js',
-            'assets/js/pages/reception-delivery-dashboard.js',
+            // 'assets/js/pages/reception-delivery-dashboard.js', // التسليم من مكتب التشغيل
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => '',

@@ -110,15 +110,15 @@
 
 
 
-    if (bomStage === 'wip') {
+    if (c.stage_key === 'ready_delivery') {
 
-      return printBtn + '<button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" data-case-id="' + c.id + '">✓ تم التصنيع</button>';
+      return printBtn + '<button type="button" class="btn-deliver-case text-xs font-bold rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700" data-case-id="' + c.id + '">✅ تم التسليم</button>';
 
     }
 
-    if (bomStage === 'finished') {
+    if (bomStage === 'wip') {
 
-      return printBtn + '<span class="text-xs font-bold text-emerald-700">جاهز للتسليم</span>';
+      return printBtn + '<button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" data-case-id="' + c.id + '">✓ تم التصنيع</button>';
 
     }
 
@@ -228,6 +228,12 @@
 
     });
 
+    document.querySelectorAll('.btn-deliver-case').forEach(function (btn) {
+
+      btn.addEventListener('click', deliverCase);
+
+    });
+
     document.querySelectorAll('.btn-view-bom-items').forEach(function (btn) {
 
       btn.addEventListener('click', function () {
@@ -273,6 +279,44 @@
       .catch(function (err) {
 
         toast((err.response && err.response.data && err.response.data.message) || 'تعذّر إتمام التصنيع', true);
+
+        btn.disabled = false;
+
+      });
+
+  }
+
+
+
+  function deliverCase(ev) {
+
+    var btn = ev.currentTarget;
+
+    var caseId = btn.getAttribute('data-case-id');
+
+    if (!caseId || !window.axios) return;
+
+
+
+    if (!window.confirm('تأكيد تسليم الطرف وإغلاق الطلب؟')) return;
+
+
+
+    btn.disabled = true;
+
+    axios.post('/operations/operations/' + caseId + '/deliver')
+
+      .then(function () {
+
+        toast('✅ تم التسليم — أُغلق الطلب بنجاح');
+
+        refreshList();
+
+      })
+
+      .catch(function (err) {
+
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر إتمام التسليم', true);
 
         btn.disabled = false;
 

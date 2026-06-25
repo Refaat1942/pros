@@ -89,8 +89,42 @@ class OperationsListRefreshTest extends TestCase
 
         $this->getJson('/operations/operations/list')
             ->assertOk()
-            ->assertJsonPath('summary.done', 1)
+            ->assertJsonPath('summary.done', 0)
+            ->assertJsonPath('summary.ready_delivery', 1)
             ->assertJsonPath('summary.wip', 0)
+            ->assertJsonPath('total', 1);
+    }
+
+    public function test_operations_deliver_closes_case_from_desk(): void
+    {
+        $this->seedStockWithPriceBatch();
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('operations');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
+        $case->update(['work_order_no' => 'WO-2026-0101', 'quote_total' => 400.00]);
+
+        Bom::create([
+            'bom_no'       => 'BOM-DEL-01',
+            'case_id'      => $case->id,
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'stage'        => Bom::STAGE_FINISHED,
+            'finished_at'  => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/operations/operations/{$case->id}/deliver")
+            ->assertOk()
+            ->assertJsonPath('closed', true);
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);
+
+        $this->getJson('/operations/operations/list')
+            ->assertOk()
+            ->assertJsonPath('summary.done', 1)
             ->assertJsonPath('total', 0);
     }
 

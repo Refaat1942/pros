@@ -22,24 +22,24 @@ class DatabaseSeeder extends Seeder
             RolesAndAdminSeeder::class,
 
             // ── بيانات أساسية ───────────────────────────────────────────────
-            // ContractCompanySeeder::class,
-            // MilitaryRankSeeder::class,
-            // VisitTypeSeeder::class,
-            // StockCategorySeeder::class,
+            ContractCompanySeeder::class,
+            MilitaryRankSeeder::class,
+            VisitTypeSeeder::class,
+            StockCategorySeeder::class,
 
             // ── موردون ومخزون ───────────────────────────────────────────────
-            // ContractCompanyDebtSeeder::class,
-            // SupplierSeeder::class,
-            // InventorySeeder::class,
+            ContractCompanyDebtSeeder::class,
+            SupplierSeeder::class,
+            InventorySeeder::class,
 
             // ── مسار المريض والحالات ────────────────────────────────────────
-            // PatientSeeder::class,
-            // CaseSeeder::class,
-            // PricingSeeder::class,
-            // QuoteSeeder::class,
-            // BomSeeder::class,
-            // ReturnNoteSeeder::class,
-            // CreditNoteSeeder::class,
+            PatientSeeder::class,
+            CaseSeeder::class,
+            PricingSeeder::class,
+            QuoteSeeder::class,
+            BomSeeder::class,
+            ReturnNoteSeeder::class,
+            CreditNoteSeeder::class,
         ]);
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Requests\Manufacturing\AdvanceManufacturingStageRequest;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
+use App\Services\DeliveryService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,8 +17,10 @@ class ManufacturingStageController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly BomService $bomService)
-    {
+    public function __construct(
+        private readonly BomService $bomService,
+        private readonly DeliveryService $deliveryService,
+    ) {
     }
 
     /**
@@ -28,7 +31,7 @@ class ManufacturingStageController extends Controller
         $this->bomService->repairOrphanWipCases();
 
         $cases = $this->fetchForDashboard(
-            CaseRecord::releasedToWorkshop()
+            CaseRecord::operationsDeskQueue()
                 ->with([
                     'patient:id,patient_code,name',
                     'bom:id,case_id,bom_no,stage',
@@ -89,6 +92,37 @@ class ManufacturingStageController extends Controller
     }
 
     /**
+     * تسليم الطرف وإغلاق الحالة — من مكتب التشغيل (بديل الاستقبال).
+     */
+    public function deliver(CaseRecord $case): JsonResponse
+    {
+        $case->load('patient');
+
+        if (! $case->patient?->patient_qr) {
+            abort(422, 'بطاقة المريض غير متاحة — لا يمكن إتمام التسليم.');
+        }
+
+        try {
+            $case = $this->deliveryService->close($case, $case->patient->patient_qr);
+        } catch (\App\Exceptions\DeliveryNotReadyException $e) {
+            return response()->json(['message' => $e->getMessage(), 'blocked' => true], 422);
+        } catch (\App\Exceptions\InvalidPatientQrException $e) {
+            return response()->json([
+                'message'  => $e->getMessage(),
+                'blocked'  => true,
+                'security' => true,
+            ], 422);
+        }
+
+        return response()->json([
+            'message'    => 'تم تسليم الطرف وإغلاق الطلب بنجاح.',
+            'case'       => $this->formatCase($case),
+            'invoice_no' => $case->invoice_no,
+            'closed'     => true,
+        ]);
+    }
+
+    /**
      * إذن شغل / أمر الإنتاج — النموذج الرسمي (1.jpeg).
      */
     public function printWorkOrder(CaseRecord $case): View
@@ -109,12 +143,14 @@ class ManufacturingStageController extends Controller
     {
         $collection = collect($cases);
         $wipCount   = $collection->filter(fn ($c) => $c->bom?->stage === Bom::STAGE_WIP)->count();
+        $readyCount = $collection->filter(fn ($c) => $c->stage_key === CaseRecord::STAGE_READY_DELIVERY)->count();
 
         return [
-            'raw'          => 0,
-            'wip'          => $wipCount,
-            'done'         => CaseRecord::countManufacturingCompletedByOps(),
-            'total_active' => $collection->count(),
+            'raw'            => 0,
+            'wip'            => $wipCount,
+            'ready_delivery' => $readyCount,
+            'done'           => CaseRecord::countDeliveredByOps(),
+            'total_active'   => $collection->count(),
         ];
     }
 

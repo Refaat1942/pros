@@ -96,5 +96,5 @@
 </div>
 
 <footer>
-    <p>نموذج تجريبي للعرض — <span class="brand">Fratelanza</span> | نظام إدارة مركز إنتاج الأطراف الصناعية المتكامل</p>
+    <p>  <span class="brand">Fratelanza</span> | نظام إدارة مركز إنتاج الأطراف الصناعية المتكامل</p>
 </footer>

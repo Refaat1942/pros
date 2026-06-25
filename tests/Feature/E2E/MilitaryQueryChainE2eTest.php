@@ -73,8 +73,16 @@ class MilitaryQueryChainE2eTest extends TestCase
             'items'   => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1]],
         ])->assertCreated();
 
-        // المسار العسكري: الإرسال يُكمل المعدلات → التكاليف → تأكيد → اعتماد تلقائي → مخزن.
+        // المسار العسكري: الإرسال → المعدلات → التكاليف → تأكيد → اعتماد تلقائي → مخزن.
         $this->postJson('/spec/spec/' . $specRes->json('id') . '/submit')->assertOk();
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_ADJUSTMENTS, $case->stage_key);
+
+        $adjustments = $this->userWithRole('adjustments');
+        $this->actingAs($adjustments)
+            ->postJson("/adjustments/adjustments/{$case->id}/complete")
+            ->assertOk();
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_COST_CALC, $case->stage_key);
@@ -115,8 +123,8 @@ class MilitaryQueryChainE2eTest extends TestCase
         }
         $this->postJson("/operations/operations/{$case->id}/finish-quality")->assertOk();
 
-        $this->actingAs($recep);
-        $this->postJson('/reception/delivery/scan', ['scanned_qr' => $patient->patient_qr])->assertOk();
+        $this->actingAs($ops);
+        $this->postJson("/operations/operations/{$case->id}/deliver")->assertOk();
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);

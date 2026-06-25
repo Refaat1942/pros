@@ -168,14 +168,12 @@ class DashboardPageDataService
             ->get();
 
         $totalValue = $items->sum(fn (StockItem $i) => (int) $i->qty * (float) $i->price);
-        $soon = now()->addDays(60);
 
         return [
             'inventory_items' => $items,
             'inventory_overview_stats' => [
                 ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $items->count(), 'bg' => 'rgba(37,99,235,0.1)'],
                 ['icon' => '🔻', 'label' => 'أصناف منخفضة', 'value' => (string) $items->where('status', StockItem::STATUS_LOW)->count(), 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
-                ['icon' => '⏰', 'label' => 'قاربت الصلاحية', 'value' => (string) $items->filter(fn ($i) => $i->expiry_date && $i->expiry_date->lte($soon))->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
                 ['icon' => '💰', 'label' => 'قيمة المخزون', 'value' => number_format($totalValue, 2), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
             ],
         ];
@@ -453,7 +451,7 @@ class DashboardPageDataService
         app(BomService::class)->repairOrphanWipCases();
 
         $cases = CaseRecord::query()
-            ->releasedToWorkshop()
+            ->operationsDeskQueue()
             ->with([
                 'patient:id,patient_code,name',
                 'bom:id,case_id,bom_no,stage',
@@ -462,8 +460,9 @@ class DashboardPageDataService
             ->orderByDesc('updated_at')
             ->get();
 
-        $wipCount  = $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_WIP)->count();
-        $doneCount = CaseRecord::countManufacturingCompletedByOps();
+        $wipCount   = $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_WIP)->count();
+        $readyCount = $cases->filter(fn ($c) => $c->stage_key === CaseRecord::STAGE_READY_DELIVERY)->count();
+        $doneCount  = CaseRecord::countDeliveredByOps();
         $milCount  = $cases->filter(fn ($c) => $c->isMilitary())->count();
         $civCount  = $cases->count() - $milCount;
 
@@ -476,9 +475,10 @@ class DashboardPageDataService
                 ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
             'ops_summary' => [
-                'raw'  => 0,
-                'wip'  => $wipCount,
-                'done' => $doneCount,
+                'raw'            => 0,
+                'wip'            => $wipCount,
+                'ready_delivery' => $readyCount,
+                'done'           => $doneCount,
             ],
         ];
     }

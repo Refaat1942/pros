@@ -61,5 +61,8 @@ Route::prefix('operations')
 
             Route::post('operations/{case}/finish-quality', [ManufacturingStageController::class, 'finishQuality'])
                 ->name('operations.finish-quality');
+
+            Route::post('operations/{case}/deliver', [ManufacturingStageController::class, 'deliver'])
+                ->name('operations.deliver');
         });
     });

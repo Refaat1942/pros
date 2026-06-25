@@ -213,9 +213,31 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $q) => $q->where('stage', Bom::STAGE_FINISHED));
     }
 
-    public static function countManufacturingCompletedByOps(): int
+    /** طابور مكتب التشغيل — تحت التشغيل أو جاهزة للتسليم بعد تم التصنيع. */
+    public function scopeOperationsDeskQueue(Builder $query): Builder
     {
-        return static::query()->manufacturingCompletedByOps()->count();
+        return $query->where(function (Builder $q) {
+            $q->where(function (Builder $inner) {
+                $inner->where('stage_key', self::STAGE_MANUFACTURING)
+                    ->whereHas('bom', fn (Builder $b) => $b->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED]));
+            })->orWhere(function (Builder $inner) {
+                $inner->where('stage_key', self::STAGE_READY_DELIVERY)
+                    ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_FINISHED));
+            });
+        });
+    }
+
+    /** حالات أُغلِقت بالتسليم من مكتب التشغيل. */
+    public function scopeDeliveredByOps(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_DELIVERED)
+            ->whereHas('bom', fn (Builder $q) => $q->where('stage', Bom::STAGE_FINISHED));
+    }
+
+    public static function countDeliveredByOps(): int
+    {
+        return static::query()->deliveredByOps()->count();
     }
 
     public function isAtOperations(): bool
