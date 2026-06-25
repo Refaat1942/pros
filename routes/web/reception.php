@@ -31,7 +31,7 @@ Route::prefix('reception')
     ->name('reception.')
     ->group(function () {
 
-        // ── Lookup lists (select dropdowns) ───────────────────────────────
+        // ── Lookup lists (no page guard — shared across pages) ────────────
         Route::get('lookup/military-ranks', [MilitaryRankController::class, 'index'])
             ->name('lookup.military-ranks');
 
@@ -41,33 +41,37 @@ Route::prefix('reception')
         Route::get('lookup/companies', [ContractCompanyController::class, 'index'])
             ->name('lookup.companies');
 
-        // ── Patients ───────────────────────────────────────────────────────
-        Route::get('patients/list', [PatientController::class, 'index'])
-            ->name('patients.list');
-
-        Route::post('patients', [PatientController::class, 'store'])
-            ->name('patients.store');
-
-        Route::get('patients/{patient}', [PatientController::class, 'show'])
-            ->name('patients.show');
-
-        Route::put('patients/{patient}', [PatientController::class, 'update'])
-            ->name('patients.update');
-
         // ── Appointments ───────────────────────────────────────────────────
-        Route::get('appointments/list', [AppointmentController::class, 'index'])
-            ->name('appointments.list');
+        Route::middleware('dashboard.page:reception,appointments')->group(function () {
+            Route::get('appointments/list', [AppointmentController::class, 'index'])
+                ->name('appointments.list');
 
-        Route::post('appointments', [AppointmentController::class, 'store'])
-            ->name('appointments.store');
+            Route::post('appointments', [AppointmentController::class, 'store'])
+                ->name('appointments.store');
 
-        Route::put('appointments/{appointment}', [AppointmentController::class, 'update'])
-            ->name('appointments.update');
+            Route::put('appointments/{appointment}', [AppointmentController::class, 'update'])
+                ->name('appointments.update');
 
-        Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])
-            ->name('appointments.update-status');
+            Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])
+                ->name('appointments.update-status');
+        });
 
-        // ── Quotes (civilian only) ─────────────────────────────────────────
+        // ── Patients ───────────────────────────────────────────────────────
+        Route::middleware('dashboard.page:reception,patients')->group(function () {
+            Route::get('patients/list', [PatientController::class, 'index'])
+                ->name('patients.list');
+
+            Route::post('patients', [PatientController::class, 'store'])
+                ->name('patients.store');
+
+            Route::get('patients/{patient}', [PatientController::class, 'show'])
+                ->name('patients.show');
+
+            Route::put('patients/{patient}', [PatientController::class, 'update'])
+                ->name('patients.update');
+        });
+
+        // ── Quotes + OCR approval scan (civilian only) ─────────────────────
         Route::middleware('dashboard.page:reception,quote')->group(function () {
             Route::get('quote/list', [QuoteController::class, 'index'])
                 ->name('quote.list');
@@ -77,17 +81,16 @@ Route::prefix('reception')
 
             Route::get('quote/{quote}/print', [QuoteController::class, 'print'])
                 ->name('quote.print');
+
+            Route::post('ocr/extract', [OcrExtractController::class, 'extract'])
+                ->name('ocr.extract');
+
+            Route::post('ocr/process', [\App\Http\Controllers\Quote\OcrApprovalController::class, 'process'])
+                ->name('ocr.process');
+
+            Route::post('ocr/scan', [ApprovalScanController::class, 'scan'])
+                ->name('ocr.scan');
         });
-
-        // ── Approval scan (OCR / QR) ───────────────────────────────────────
-        Route::post('ocr/extract', [OcrExtractController::class, 'extract'])
-            ->name('ocr.extract');
-
-        Route::post('ocr/process', [\App\Http\Controllers\Quote\OcrApprovalController::class, 'process'])
-            ->name('ocr.process');
-
-        Route::post('ocr/scan', [ApprovalScanController::class, 'scan'])
-            ->name('ocr.scan');
 
         // ── Contracts archive (read-only) ──────────────────────────────────
         Route::middleware('dashboard.page:reception,contracts')->group(function () {
@@ -102,16 +105,18 @@ Route::prefix('reception')
         });
 
         // ── Delivery (QR scan close) ───────────────────────────────────────
-        Route::get('delivery/list', [DeliveryController::class, 'index'])
-            ->name('delivery.list');
+        Route::middleware('dashboard.page:reception,delivery')->group(function () {
+            Route::get('delivery/list', [DeliveryController::class, 'index'])
+                ->name('delivery.list');
 
-        Route::post('delivery/scan', [DeliveryController::class, 'scan'])
-            ->name('delivery.scan');
+            Route::post('delivery/scan', [DeliveryController::class, 'scan'])
+                ->name('delivery.scan');
 
-        Route::get('delivery/{case}', [DeliveryController::class, 'show'])
-            ->name('delivery.show');
+            Route::get('delivery/{case}', [DeliveryController::class, 'show'])
+                ->name('delivery.show');
+        });
 
-        // ── Self-service lookup (reception staff — full patient journey) ───
+        // ── Self-service lookup ────────────────────────────────────────────
         Route::get('selfservice/lookup', [ReceptionSelfServiceController::class, 'lookup'])
             ->middleware('dashboard.page:reception,selfservice')
             ->name('selfservice.lookup');

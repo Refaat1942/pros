@@ -21,12 +21,15 @@ Route::prefix('costing')
     ->name('costing.')
     ->group(function () {
 
-        Route::get('queue/list', [CostingController::class, 'index'])
-            ->name('queue.list');
+        // ── Costing page (التكاليف) ────────────────────────────────────────
+        Route::middleware('dashboard.page:costing,costing')->group(function () {
+            Route::get('queue/list', [CostingController::class, 'index'])
+                ->name('queue.list');
 
-        Route::get('queue/{case}', [CostingController::class, 'show'])
-            ->name('queue.show');
+            Route::get('queue/{case}', [CostingController::class, 'show'])
+                ->name('queue.show');
 
-        Route::post('queue/{case}/confirm', [CostingController::class, 'confirm'])
-            ->name('queue.confirm');
+            Route::post('queue/{case}/confirm', [CostingController::class, 'confirm'])
+                ->name('queue.confirm');
+        });
     });

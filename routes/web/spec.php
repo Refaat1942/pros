@@ -21,24 +21,31 @@ Route::prefix('spec')
     ->name('spec.')
     ->group(function () {
 
+        // ── Orders (طلبات التوصيف) ─────────────────────────────────────────
         Route::get('orders/list', [TechOrderSpecController::class, 'index'])
+            ->middleware('dashboard.page:spec,orders')
             ->name('orders.list');
 
-        Route::get('spec/{case}', [TechOrderSpecController::class, 'create'])
-            ->name('spec.create');
+        // ── Spec (معاينة التوصيف) ──────────────────────────────────────────
+        Route::middleware('dashboard.page:spec,spec')->group(function () {
+            Route::get('spec/{case}', [TechOrderSpecController::class, 'create'])
+                ->name('spec.create');
 
-        Route::post('spec', [TechOrderSpecController::class, 'store'])
-            ->name('spec.store');
+            Route::post('spec', [TechOrderSpecController::class, 'store'])
+                ->name('spec.store');
 
-        Route::put('spec/{spec}', [TechOrderSpecController::class, 'update'])
-            ->name('spec.update');
+            Route::put('spec/{spec}', [TechOrderSpecController::class, 'update'])
+                ->name('spec.update');
 
-        Route::post('spec/{spec}/submit', [TechOrderSpecController::class, 'submit'])
-            ->name('spec.submit');
+            Route::post('spec/{spec}/submit', [TechOrderSpecController::class, 'submit'])
+                ->name('spec.submit');
 
-        Route::get('spec/{spec}/preview', [TechOrderSpecController::class, 'preview'])
-            ->name('spec.preview');
+            Route::get('spec/{spec}/preview', [TechOrderSpecController::class, 'preview'])
+                ->name('spec.preview');
+        });
 
+        // ── Pricing status (إرسال للتسعير) ────────────────────────────────
         Route::get('pricing/list', [TechOrderSpecController::class, 'pricingStatus'])
+            ->middleware('dashboard.page:spec,pricing')
             ->name('pricing.list');
     });

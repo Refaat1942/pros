@@ -21,24 +21,34 @@ Route::prefix('doctor')
     ->name('doctor.')
     ->group(function () {
 
+        // ── Queue (قائمة الانتظار) ─────────────────────────────────────────
         Route::get('queue/list', [MedicalRecordController::class, 'queue'])
+            ->middleware('dashboard.page:doctor,queue')
             ->name('queue.list');
 
-        Route::get('diagnosis/{appointment}', [MedicalRecordController::class, 'create'])
-            ->name('diagnosis.create');
+        // ── Diagnosis (التشخيص الطبي) ──────────────────────────────────────
+        Route::middleware('dashboard.page:doctor,diagnosis')->group(function () {
+            Route::get('diagnosis/{appointment}', [MedicalRecordController::class, 'create'])
+                ->name('diagnosis.create');
 
-        Route::post('diagnosis', [MedicalRecordController::class, 'store'])
-            ->name('diagnosis.store');
+            Route::post('diagnosis', [MedicalRecordController::class, 'store'])
+                ->name('diagnosis.store');
 
-        Route::post('diagnosis/{appointment}/skip', [MedicalRecordController::class, 'skip'])
-            ->name('diagnosis.skip');
+            Route::post('diagnosis/{appointment}/skip', [MedicalRecordController::class, 'skip'])
+                ->name('diagnosis.skip');
+        });
 
-        Route::post('records/{record}/lock', [MedicalRecordController::class, 'lock'])
-            ->name('records.lock');
+        // ── Records (السجل الطبي) ──────────────────────────────────────────
+        Route::middleware('dashboard.page:doctor,records')->group(function () {
+            Route::post('records/{record}/lock', [MedicalRecordController::class, 'lock'])
+                ->name('records.lock');
 
-        Route::get('records/list', [MedicalRecordController::class, 'index'])
-            ->name('records.list');
+            Route::get('records/list', [MedicalRecordController::class, 'index'])
+                ->name('records.list');
+        });
 
+        // ── Transfer (المحولون للتوصيف) ────────────────────────────────────
         Route::get('transfer/list', [MedicalRecordController::class, 'transfers'])
+            ->middleware('dashboard.page:doctor,transfer')
             ->name('transfer.list');
     });
