@@ -1,6 +1,7 @@
 @php
     /** قائمة مُنسّقة من StockCatalogService::formatItem (مصفوفات). */
     $items = collect($stock_items ?? []);
+    // $categories = collect($stock_categories ?? []);
 @endphp
 <div class="section-view" id="section-catalog">
     <div class="panel">
@@ -24,7 +25,15 @@
         @endif
 
         <div class="data-toolbar" style="flex-wrap:wrap;gap:8px;">
-            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث بالصنف أو الكود..." onkeyup="filterSlimCatalog(this.value)">
+            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث بالصنف أو الكود..." onkeyup="applySlimCatalogFilters()">
+            {{-- فلتر الفئات — معطّل مع صفحة فئات الأصناف
+            <select id="catalogCategoryFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:160px;">
+                <option value="">🏷️ كل الفئات</option>
+                @foreach ($categories as $cat)
+                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                @endforeach
+            </select>
+            --}}
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
             @can('import-inventory')
@@ -65,7 +74,7 @@
             {{-- أسعار إضافية — صنف بأكثر من سعر (اختياري) --}}
             <div style="margin-top:14px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <label style="font-size:12px;font-weight:700;">أسعار إضافية (لو ليه أكثر من سعر)</label>
+                    {{-- <label style="font-size:12px;font-weight:700;">أسعار إضافية (لو ليه أكثر من سعر)</label> --}}
                     <button type="button" class="btn-action" onclick="addSlimPriceRow()">+ سعر إضافي</button>
                 </div>
                 <div id="slimExtraPrices" style="margin-top:8px;display:flex;flex-direction:column;gap:8px;"></div>
@@ -99,7 +108,9 @@
                 </thead>
                 <tbody id="catalogSlimTable">
                     @forelse ($items as $item)
-                        <tr class="catalog-slim-row" data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '')) }}"
+                        <tr class="catalog-slim-row"
+                            data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['category'] ?? '')) }}"
+                            data-category-id="{{ $item['category_id'] ?? '' }}"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
                             style="border-top:1px solid var(--border);">
                             <td style="padding:8px;direction:ltr;text-align:right;"><strong>{{ $item['code'] ?? '' }}</strong></td>
@@ -276,12 +287,33 @@
         return m ? m.getAttribute('content') : '';
     }
 
-    window.filterSlimCatalog = function (term) {
-        term = (term || '').toLowerCase().trim();
+    window.applySlimCatalogFilters = function () {
+        var term = (document.getElementById('catalogSlimSearch')?.value || '').toLowerCase().trim();
+        var catId = document.getElementById('catalogCategoryFilter')?.value || '';
+        var visible = 0;
+        var total = 0;
+
         document.querySelectorAll('#catalogSlimTable .catalog-slim-row').forEach(function (row) {
+            total++;
             var hay = row.getAttribute('data-search') || '';
-            row.style.display = (!term || hay.indexOf(term) !== -1) ? '' : 'none';
+            var rowCat = row.getAttribute('data-category-id') || '';
+            var matchSearch = !term || hay.indexOf(term) !== -1;
+            var matchCat = !catId || rowCat === catId;
+            var show = matchSearch && matchCat;
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
         });
+
+        var countEl = document.getElementById('catalogSlimCount');
+        if (countEl) {
+            countEl.textContent = (catId || term)
+                ? (visible + ' من ' + total + ' صنف')
+                : (total + ' صنف');
+        }
+    };
+
+    window.filterSlimCatalog = function () {
+        window.applySlimCatalogFilters();
     };
 
     window.addSlimPriceRow = function (amount) {
@@ -380,7 +412,7 @@
             + detailBox('كود الصنف', item.code || '—')
             + detailBox('الباركود', item.barcode || '—')
             + detailBox('الكمية', String(parseInt(item.qty, 10) || 0))
-            + detailBox('أعلى سعر', formatCatalogPrice(itemHighestPrice(item)) + ' ج.م')
+            + detailBox('أعلى سعر', '<span class="catalog-price-cell">' + formatCatalogPrice(itemHighestPrice(item)) + '</span>')
             + '</div>'
             + '<h4 style="font-size:14px;font-weight:800;margin:0 0 10px;color:var(--secondary);">💰 جميع الأسعار</h4>'
             + pricesHtml;
@@ -462,7 +494,10 @@
     };
 
     function formatCatalogPrice(n) {
-        return Number(n || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return Number(n || 0).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
     }
 
     function escAttr(value) {
@@ -473,14 +508,14 @@
     }
 
     function catalogRowHtml(item) {
-        var search = escAttr(((item.code || '') + ' ' + (item.name || '')).toLowerCase());
+        var search = escAttr(((item.code || '') + ' ' + (item.name || '') + ' ' + (item.category || '')).toLowerCase());
         var dataAttr = escAttr(JSON.stringify(item));
         var highest = itemHighestPrice(item);
         var extra = (item.prices && item.prices.length)
             ? (item.prices.length + ' سعر')
             : '—';
         var labelsUrl = '/admin/catalog/' + item.id + '/labels';
-        return '<tr class="catalog-slim-row" data-search="' + search + '" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
+        return '<tr class="catalog-slim-row" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             '<td style="padding:10px;direction:ltr;text-align:right;"><strong>' + (item.code || '') + '</strong></td>' +
             '<td style="padding:10px;">' + (item.name || '') + '</td>' +
             '<td style="padding:10px;text-align:center;">' + (parseInt(item.qty, 10) || 0) + '</td>' +
@@ -511,6 +546,7 @@
         var label = list.length + ' صنف';
         if (countEl) countEl.textContent = label;
         if (badge) badge.textContent = label;
+        window.applySlimCatalogFilters();
     };
 
     function showImportStatus(message, isError, errors) {

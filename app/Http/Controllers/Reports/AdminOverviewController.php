@@ -8,8 +8,11 @@ use App\Models\AuditLog;
 use App\Models\CaseRecord;
 use App\Models\MilitaryDebt;
 use App\Models\User;
+use App\Services\AdminPatientTrackService;
 use App\Services\BiReportService;
 use App\Services\Dashboard\DashboardPageDataService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AdminOverviewController extends Controller
@@ -19,13 +22,14 @@ class AdminOverviewController extends Controller
     public function __construct(
         private readonly BiReportService $biReportService,
         private readonly DashboardPageDataService $pageData,
+        private readonly AdminPatientTrackService $patientTrackService,
     ) {
     }
 
     /**
      * نظرة عامة — KPIs + آخر 5 حركات رقابة.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         $board1 = $this->biReportService->boardPatients();
         $board2 = $this->biReportService->boardInventory();
@@ -88,5 +92,13 @@ class AdminOverviewController extends Controller
                 ->orderByDesc('id')
                 ->get(['id', 'name', 'email', 'role_id', 'status', 'last_login_at']),
         ]));
+    }
+
+    /** API: مسار المرضى النشطين */
+    public function patientTracksApi(Request $request): JsonResponse
+    {
+        return response()->json(
+            $this->patientTrackService->list($request->query('search'))->values()
+        );
     }
 }

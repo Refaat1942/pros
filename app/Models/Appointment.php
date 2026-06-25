@@ -109,6 +109,31 @@ class Appointment extends Model
         return $this->patient_type === Patient::TYPE_MILITARY;
     }
 
+    /** اسم نوع الزيارة للعرض — من جدول visit_types وليس المعرّف. */
+    public function displayVisitType(): string
+    {
+        if ($this->relationLoaded('visitTypeRecord') && $this->visitTypeRecord) {
+            return $this->visitTypeRecord->name;
+        }
+
+        if ($this->visit_type_id) {
+            return VisitType::query()->whereKey($this->visit_type_id)->value('name') ?? '—';
+        }
+
+        if ($this->visit_type !== null && $this->visit_type !== '' && ctype_digit((string) $this->visit_type)) {
+            return VisitType::query()->whereKey((int) $this->visit_type)->value('name') ?? '—';
+        }
+
+        return match ($this->visit_type) {
+            self::VISIT_EXAM      => 'كشف',
+            self::VISIT_FOLLOWUP  => 'متابعة',
+            self::VISIT_FITTING   => 'تجربة',
+            self::VISIT_DELIVERY  => 'تسليم',
+            self::VISIT_REVIEW    => 'مراجعة',
+            default               => $this->visit_type ?: '—',
+        };
+    }
+
     /** الجهة المعروضة في قائمة الانتظار والتقارير. */
     public function displayEntity(): string
     {

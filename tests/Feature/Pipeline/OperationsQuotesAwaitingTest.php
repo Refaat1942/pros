@@ -30,7 +30,7 @@ class OperationsQuotesAwaitingTest extends TestCase
 
         $response->assertJsonPath('data.0.quote_no', $quote->fresh()->quote_no);
         $response->assertJsonPath('data.0.status', Quote::STATUS_ISSUED);
-        $response->assertJsonPath('data.0.stage_label', 'بالمخزن — بانتظار موافقة الجهة');
+        $response->assertJsonPath('data.0.stage_label', 'بانتظار موافقة الجهة');
     }
 
     public function test_pending_internal_quotes_not_in_awaiting_list(): void

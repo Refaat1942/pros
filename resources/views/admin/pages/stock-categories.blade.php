@@ -1,3 +1,6 @@
+{{--
+  صفحة فئات الأصناف — معطّلة مؤقتاً (انظر config/dashboards.php + routes/web/admin.php)
+--}}
 @php
     $categories = $stock_categories ?? collect();
     $openCategoryModal = old('form') === 'stock_category';

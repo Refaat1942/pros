@@ -51,6 +51,6 @@ class RolesAndAdminSeeder extends Seeder
      */
     private function seedPermissions(): void
     {
-        app(\App\Services\PermissionCatalogService::class)->seedRoleDefaults();
+        app(\App\Services\PermissionCatalogService::class)->seedRoleDefaults(fullSync: true);
     }
 }

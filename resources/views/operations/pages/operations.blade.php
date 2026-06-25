@@ -49,7 +49,7 @@
             </div>
             <div class="rounded-xl bg-emerald-50 border border-emerald-100 py-3">
                 <div class="text-2xl font-bold text-emerald-700" id="sumDone">{{ $summary['done'] }}</div>
-                <div class="text-emerald-600 mt-1">✅ BOM تام</div>
+                <div class="text-emerald-600 mt-1">✅ تم التسليم</div>
             </div>
             <div class="rounded-xl bg-slate-50 border border-slate-100 py-3">
                 <div class="text-2xl font-bold text-slate-800" id="sumTotal">{{ $cases->count() }}</div>

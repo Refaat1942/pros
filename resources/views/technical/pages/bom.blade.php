@@ -18,7 +18,7 @@
     $boms = $warehouse_boms ?? collect();
     $stageMeta = [
         'raw'      => ['label' => '📦 خام', 'cls' => 'bg-amber-100 text-amber-800 border-amber-200'],
-        'wip'      => ['label' => '🏭 WIP', 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
+        'wip'      => ['label' => '🏭 تحت التشغيل', 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
         'finished' => ['label' => '✅ تام', 'cls' => 'bg-emerald-100 text-emerald-800 border-emerald-200'],
     ];
 @endphp
@@ -40,12 +40,12 @@
     </div>
 
     <div class="p-4 border-b border-slate-100 flex flex-wrap gap-3 items-center">
-        <input type="search" id="bomSearch" placeholder="🔍 بحث بالمريض أو WO أو BOM..."
+        <input type="search" id="bomSearch" placeholder="🔍 بحث بالمريض أو أمر التشغيل أو رقم القائمة..."
                class="flex-1 min-w-[200px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-wh/40">
         <div class="flex flex-wrap gap-2" id="bomFilters">
             <button type="button" class="bom-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
             <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-amber-100 text-amber-800" data-filter="raw">📦 خام</button>
-            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 WIP</button>
+            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 تحت التشغيل</button>
             <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-800" data-filter="finished">✅ تام</button>
         </div>
     </div>
@@ -54,11 +54,11 @@
         <table data-paginate="10" class="w-full text-sm">
             <thead class="bg-slate-100 text-slate-600">
                 <tr>
-                    <th class="px-4 py-3 text-right font-bold">BOM</th>
+                    <th class="px-4 py-3 text-right font-bold">رقم القائمة</th>
                     <th class="px-4 py-3 text-right font-bold">المريض</th>
-                    <th class="px-4 py-3 text-right font-bold">WO</th>
+                    <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
                     <th class="px-4 py-3 text-right font-bold">المرحلة</th>
-                    <th class="px-4 py-3 text-right font-bold">البنود</th>
+                    <th class="px-4 py-3 text-right font-bold">الأصناف</th>
                     <th class="px-4 py-3 text-right font-bold">إجراء</th>
                 </tr>
             </thead>
@@ -73,7 +73,30 @@
                         <td class="px-4 py-3">
                             <span class="text-xs font-bold px-2 py-1 rounded-lg border {{ $meta['cls'] }}">{{ $meta['label'] }}</span>
                         </td>
-                        <td class="px-4 py-3 text-center font-bold">{{ $bom->items->count() }}</td>
+                        <td class="px-4 py-3 text-center">
+                            @if ($bom->items->isNotEmpty())
+                                @php
+                                    $bomItemsJson = $bom->items->map(fn ($i) => [
+                                        'stock_item_code' => $i->stock_item_code,
+                                        'name'            => $i->name,
+                                        'qty'             => $i->qty,
+                                        'issued_qty'      => $i->issued_qty,
+                                        'returned_qty'    => $i->returned_qty,
+                                    ])->values();
+                                @endphp
+                                <button type="button"
+                                        class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50"
+                                        data-bom-id="{{ $bom->id }}"
+                                        data-bom-no="{{ $bom->bom_no }}"
+                                        data-patient="{{ $bom->patient_name }}"
+                                        data-work-order="{{ $bom->caseRecord?->work_order_no ?? '—' }}"
+                                        data-items='@json($bomItemsJson)'>
+                                    عرض
+                                </button>
+                            @else
+                                <span class="text-xs text-slate-400">—</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3">
                             @php
                                 $quoteForVoucher = \App\Models\Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
@@ -90,10 +113,13 @@
                                     </a>
                                 @endif
                             @elseif ($bom->stage === 'wip')
-                                <button type="button" class="btn-finish rounded-xl bg-slate-700 text-white px-4 py-2 text-xs font-bold hover:bg-slate-800"
-                                        data-bom-id="{{ $bom->id }}">
-                                    ✅ إغلاق BOM
-                                </button>
+                                @if ($quoteForVoucher)
+                                    <a href="{{ route('technical.quote.print-issue-voucher', $quoteForVoucher) }}" target="_blank" rel="noopener"
+                                       class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 inline-block">
+                                        🖨️ طباعة إذن الصرف
+                                    </a>
+                                @endif
+                                <span class="text-xs text-slate-500">🏭 تحت التشغيل — يُغلق من مكتب التشغيل</span>
                             @else
                                 <span class="text-xs text-slate-400">—</span>
                             @endif
@@ -145,6 +171,32 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<div id="bomItemsModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-800">📦 بنود قائمة المواد</h3>
+                <p class="text-xs text-slate-500 mt-1" id="bomItemsSubtitle">—</p>
+            </div>
+            <button type="button" id="closeBomItemsModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
+        </div>
+        <div class="overflow-y-auto flex-1 p-4">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-600">
+                    <tr>
+                        <th class="px-3 py-2 text-right font-bold">الكود</th>
+                        <th class="px-3 py-2 text-right font-bold">الصنف</th>
+                        <th class="px-3 py-2 text-right font-bold w-16">المطلوب</th>
+                        <th class="px-3 py-2 text-right font-bold w-16">المصروف</th>
+                        <th class="px-3 py-2 text-right font-bold w-16">المرتجع</th>
+                    </tr>
+                </thead>
+                <tbody id="bomItemsBody" class="divide-y divide-slate-100"></tbody>
+            </table>
         </div>
     </div>
 </div>

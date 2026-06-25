@@ -1,6 +1,6 @@
 /**
 
- * Operations Desk — manufacturing queue, single "تم التصنيع" completion action.
+ * Operations Desk — manufacturing queue, BOM close action from operations only.
 
  */
 
@@ -170,9 +170,11 @@
 
 
 
-  function updateSummary(cases) {
+  function updateSummary(cases, summary) {
 
-    var raw = 0, wip = 0, done = 0, mil = 0;
+    summary = summary || {};
+
+    var raw = 0, wip = 0, mil = 0;
 
     cases.forEach(function (c) {
 
@@ -184,17 +186,17 @@
 
       else if (c.bom.stage === 'wip') wip++;
 
-      else if (c.bom.stage === 'finished') done++;
-
     });
 
-    if ($('sumRaw')) $('sumRaw').textContent = raw;
+    var done = summary.done != null ? summary.done : 0;
 
-    if ($('sumWip')) $('sumWip').textContent = wip;
+    if ($('sumRaw')) $('sumRaw').textContent = summary.raw != null ? summary.raw : raw;
+
+    if ($('sumWip')) $('sumWip').textContent = summary.wip != null ? summary.wip : wip;
 
     if ($('sumDone')) $('sumDone').textContent = done;
 
-    if ($('sumTotal')) $('sumTotal').textContent = cases.length;
+    if ($('sumTotal')) $('sumTotal').textContent = summary.total_active != null ? summary.total_active : cases.length;
 
 
 
@@ -252,7 +254,7 @@
 
 
 
-    if (!window.confirm('تأكيد اكتمال التصنيع؟ ستُحوَّل الحالة للتسليم.')) return;
+    if (!window.confirm('تأكيد تم التصنيع؟ ستُغلق قائمة المواد وتُحوَّل الحالة للتسليم.')) return;
 
 
 
@@ -478,7 +480,7 @@
 
         }
 
-        updateSummary(cases);
+        updateSummary(cases, res.data.summary || {});
 
         if (window.TablePagination) TablePagination.refreshById('opsTableBody');
 

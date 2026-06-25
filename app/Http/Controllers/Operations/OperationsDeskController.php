@@ -66,6 +66,7 @@ class OperationsDeskController extends Controller
             CaseRecord::atOperations()
                 ->with([
                     'patient:id,patient_code,name,patient_type',
+                    'techOrderSpec:id,case_id,tech_notes',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,source,qty',
                     'quotes:id,case_id,quote_no,total,status',
@@ -180,7 +181,7 @@ class OperationsDeskController extends Controller
 
         if ($case->stage_key === CaseRecord::STAGE_MANUFACTURING
             && $case->manufacturing_stage === CaseRecord::MFG_WAREHOUSE) {
-            return 'بالمخزن — بانتظار موافقة الجهة';
+            return 'بانتظار موافقة الجهة';
         }
 
         if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
@@ -199,6 +200,7 @@ class OperationsDeskController extends Controller
         ]) + [
             'pathway_label'  => $case->isMilitary() ? 'عسكري' : 'مدني',
             'display_entity' => $case->displayEntity(),
+            'tech_notes'     => $case->resolvedTechNotes(),
             'quote_total'    => (float) $case->quote_total,
             'quote'          => $quote ? [
                 'id'        => $quote->id,

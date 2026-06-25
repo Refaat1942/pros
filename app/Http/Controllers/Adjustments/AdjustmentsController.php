@@ -32,6 +32,7 @@ class AdjustmentsController extends Controller
             CaseRecord::inAdjustments()
                 ->with([
                     'patient:id,patient_code,name,patient_type',
+                    'techOrderSpec:id,case_id,tech_notes',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,source,qty',
                 ])
@@ -58,6 +59,7 @@ class AdjustmentsController extends Controller
 
         $case->load([
             'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank',
+            'techOrderSpec:id,case_id,tech_notes',
             'bom.items',
         ]);
 
@@ -117,6 +119,7 @@ class AdjustmentsController extends Controller
         ]) + [
             'pathway_label'  => $case->isMilitary() ? 'عسكري' : 'مدني',
             'display_entity' => $case->displayEntity(),
+            'tech_notes'     => $case->resolvedTechNotes(),
             'rework'         => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name'])

@@ -48,6 +48,7 @@
     <script src="{{ asset('assets/js/shared/toast.js') }}"></script>
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}"></script>
+    <script src="{{ asset('assets/js/shared/tech-notes-modal.js') }}"></script>
     @include('partials.firebase-web')
     <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)

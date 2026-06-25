@@ -57,6 +57,7 @@
       '<td>' + (isMil ? '🪖 عسكري' : '🌐 مدني') + '</td>' +
       '<td>' + (c.computed_total != null ? fmt(c.computed_total) + ' ج.م' : '—') + '</td>' +
       '<td class="col-actions">' +
+        (window.TechNotesModal ? window.TechNotesModal.buttonHtml(c.tech_notes, c.case_no) : '') +
         '<button type="button" class="btn-action primary btn-open-costing" data-case-id="' + c.id + '">مراجعة</button>' +
       '</td></tr>';
   }
@@ -92,6 +93,7 @@
         } else {
           tbody.innerHTML = cases.map(renderRow).join('');
           bindTableEvents();
+          if (window.TechNotesModal) window.TechNotesModal.bind();
         }
         if (window.TablePagination) TablePagination.refreshById('costingTable');
         filterSearch();

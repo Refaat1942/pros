@@ -4,6 +4,7 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\BomItem;
 use App\Models\CaseRecord;
+use App\Models\TechOrderSpec;
 use App\Services\BomService;
 use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
@@ -63,6 +64,64 @@ class AdjustmentsListTest extends TestCase
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.pathway_label', 'مدني')
             ->assertJsonPath('data.0.patient.name', $patient->name);
+    }
+
+    public function test_adjustments_list_includes_tech_notes_when_present(): void
+    {
+        $this->seedStockWithPriceBatch();
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $user    = $this->userWithRole('adjustments');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        TechOrderSpec::create([
+            'order_ref'    => $case->order_ref,
+            'case_id'      => $case->id,
+            'patient_name' => $patient->name,
+            'company_name' => $case->company_name,
+            'doctor_name'  => 'د. اختبار',
+            'tech_notes'   => 'ملاحظة فنية من التوصيف',
+            'locked'       => true,
+            'submitted_at' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/adjustments/adjustments/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.tech_notes', 'ملاحظة فنية من التوصيف');
+    }
+
+    public function test_adjustments_list_omits_blank_tech_notes(): void
+    {
+        $this->seedStockWithPriceBatch();
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $user    = $this->userWithRole('adjustments');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        TechOrderSpec::create([
+            'order_ref'    => $case->order_ref,
+            'case_id'      => $case->id,
+            'patient_name' => $patient->name,
+            'company_name' => $case->company_name,
+            'doctor_name'  => 'د. اختبار',
+            'tech_notes'   => '   ',
+            'locked'       => true,
+            'submitted_at' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/adjustments/adjustments/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.tech_notes', null);
     }
 
     public function test_military_case_appears_in_adjustments_queue(): void

@@ -1342,6 +1342,80 @@
       font-family: 'Tajawal', sans-serif; font-size: 13px; background: white; min-width: 130px;
     }
     .data-toolbar input[type="text"] { flex: 1; min-width: 180px; }
+    .data-toolbar .date-filter-group {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .data-toolbar .date-filter {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .data-toolbar .date-filter-lbl {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      line-height: 1;
+    }
+    .data-toolbar .date-filter-field {
+      display: inline-flex;
+      align-items: stretch;
+      direction: ltr;
+      position: relative;
+    }
+    .data-toolbar .date-filter-input {
+      width: 128px;
+      min-width: 128px;
+      flex: none;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-left: none;
+      border-radius: 0 8px 8px 0;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      background: #fff;
+    }
+    .data-toolbar .date-filter-picker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px 0 0 8px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      transition: background .15s, border-color .15s;
+    }
+    .data-toolbar .date-filter-picker:hover {
+      background: rgba(124,58,237,.06);
+      border-color: rgba(124,58,237,.25);
+    }
+    .data-toolbar .date-filter-native {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .data-toolbar .date-filter-input:focus,
+    .data-toolbar .date-filter-picker:focus-visible {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+    }
+    .data-toolbar .date-filter-field:focus-within .date-filter-input,
+    .data-toolbar .date-filter-field:focus-within .date-filter-picker {
+      border-color: var(--primary);
+    }
+    .data-toolbar .date-filter-field:focus-within {
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+      border-radius: 8px;
+    }
     .data-toolbar input:focus, .data-toolbar select:focus {
       outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
     }
@@ -1632,6 +1706,319 @@
 
     .ops-overview-panel { margin-bottom: 24px; }
     .overview-employees-panel { margin-bottom: 24px; width: 100%; }
+
+    /* ── Patient Track Panel (Overview) ─────────────────────────────────── */
+    .patient-track-panel { margin-bottom: 24px; }
+    .patient-track-panel .panel-header { align-items: center; }
+    .patient-track-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .patient-track-count {
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--primary);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 50px;
+    }
+    .patient-track-refresh {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--primary);
+      transition: background .15s, border-color .15s;
+    }
+    .patient-track-refresh:hover {
+      background: rgba(124,58,237,.06);
+      border-color: rgba(124,58,237,.25);
+    }
+    .patient-track-refresh:disabled { opacity: .6; cursor: wait; }
+    .patient-track-toolbar {
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0;
+    }
+    .patient-track-toolbar input[type="text"] { flex: 1; min-width: 220px; }
+    .patient-track-table-wrap { padding: 0 !important; overflow-x: auto; }
+    .patient-track-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .patient-track-table th,
+    .patient-track-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      vertical-align: middle;
+    }
+    .patient-track-table thead th {
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-muted);
+    }
+    .patient-track-row:hover { background: rgba(124,58,237,.03); }
+    .patient-track-cell-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+    .patient-track-contact {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .patient-track-stage-inline {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 2px;
+    }
+    .patient-track-percent-inline {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--primary-dark, #5b21b6);
+    }
+    .patient-track-modal-body { padding-top: 4px; }
+    .patient-track-modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .patient-track-pathway-note {
+      margin: 14px 0 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .patient-track-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px !important;
+    }
+    .patient-track-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+    .patient-track-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .patient-track-identity {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .patient-track-identity strong { font-size: 15px; }
+    .patient-track-percent {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--primary-dark, #5b21b6);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    .patient-track-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    .patient-track-stage {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--secondary);
+      margin: 0 0 10px;
+    }
+    .patient-track-bar {
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .patient-track-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #10b981);
+      border-radius: 999px;
+      transition: width .35s ease;
+    }
+    .patient-track-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .patient-track-step {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 52px;
+      padding: 4px 6px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #94a3b8;
+    }
+    .patient-track-step small {
+      font-size: 9px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+      max-width: 64px;
+    }
+    .patient-track-step--done {
+      background: #ecfdf5;
+      border-color: #86efac;
+      color: #059669;
+    }
+    .patient-track-step--current {
+      background: #f5f3ff;
+      border-color: #c4b5fd;
+      color: #6d28d9;
+      box-shadow: 0 0 0 2px rgba(124,58,237,.12);
+    }
+    .patient-track-empty {
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    /* ── Reception Waiting Panel (legacy) ───────────────────────────────── */
+    .reception-waiting-panel { margin-bottom: 24px; }
+    .reception-waiting-toolbar {
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0;
+    }
+    .reception-waiting-toolbar input[type="text"] {
+      flex: 1;
+      min-width: 220px;
+    }
+    .reception-waiting-panel .panel-header {
+      align-items: center;
+    }
+    .reception-waiting-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .reception-waiting-count {
+      font-size: 12px;
+      font-weight: 700;
+      background: #d97706;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 50px;
+    }
+    .reception-waiting-refresh {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--primary);
+      transition: background .15s, border-color .15s;
+    }
+    .reception-waiting-refresh:hover {
+      background: rgba(14,116,144,.06);
+      border-color: rgba(14,116,144,.25);
+    }
+    .reception-waiting-refresh:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+    .reception-waiting-summary {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
+    }
+    .reception-waiting-stat {
+      text-align: center;
+      padding: 12px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+    .reception-waiting-stat-val {
+      display: block;
+      font-size: 22px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .reception-waiting-stat-lbl {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .reception-waiting-stat--waiting .reception-waiting-stat-val { color: #d97706; }
+    .reception-waiting-stat--clinic .reception-waiting-stat-val { color: #0e7490; }
+    .reception-waiting-panel .rw-phone {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .reception-waiting-panel td strong {
+      display: inline-block;
+      margin-left: 6px;
+    }
+    .reception-waiting-panel .patient-type-badge {
+      display: inline-block;
+      margin-right: 6px;
+      font-size: 11px;
+      vertical-align: middle;
+    }
+    .reception-waiting-empty {
+      text-align: center;
+      padding: 28px 16px !important;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 50px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .status-waiting  { background: #fef3c7; color: #92400e; }
+    .status-in-clinic { background: #dbeafe; color: #1e40af; }
     .ops-overview-summary {
       display: grid;
       grid-template-columns: repeat(2, 1fr);

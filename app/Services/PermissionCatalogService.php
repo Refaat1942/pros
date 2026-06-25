@@ -37,47 +37,35 @@ class PermissionCatalogService
     }
 
     /**
-     * يُسنِد لكل دور (عدا الأدمن) صلاحيات عرض لوحته + الإجراءات الافتراضية.
+     * يُسنِد لكل دور (تشغيلي + أدمن) جميع صلاحيات اللوحات التشغيلية.
+     * النتيجة: كل التوجلز خضراء بعد migrate:fresh --seed؛
+     * يستطيع الأدمن تضييق الصلاحيات لاحقاً من صفحة المصفوفة.
+     *
+     * @param bool $fullSync  true = استبدال كامل، false = إضافة بدون حذف الموجود
      */
-    public function seedRoleDefaults(bool $replaceViews = false): void
+    public function seedRoleDefaults(bool $fullSync = false): void
     {
         $this->syncToDatabase();
 
-        $defaultActions = config('permissions.default_actions', []);
+        // جميع الصلاحيات التشغيلية (كل لوحة ما عدا admin)
+        $allIds = Permission::query()
+            ->where('dashboard', '!=', Role::SLUG_ADMIN)
+            ->pluck('id');
 
-        Role::query()
-            ->where('slug', '!=', Role::SLUG_ADMIN)
-            ->each(function (Role $role) use ($defaultActions, $replaceViews) {
-                $dashboard = $role->slug;
-
-                $viewIds = Permission::query()
-                    ->where('type', Permission::TYPE_VIEW)
-                    ->where('dashboard', $dashboard)
-                    ->pluck('id');
-
-                if ($replaceViews) {
-                    $actionIds = $role->permissions()
-                        ->where('type', Permission::TYPE_ACTION)
-                        ->pluck('permissions.id');
-                    $role->permissions()->sync($actionIds->merge($viewIds)->unique()->values());
-                } else {
-                    $role->permissions()->syncWithoutDetaching($viewIds);
-                }
-
-                $actionSlugs = $defaultActions[$dashboard] ?? [];
-                if ($actionSlugs !== []) {
-                    $actionIds = Permission::whereIn('slug', $actionSlugs)->pluck('id');
-                    $role->permissions()->syncWithoutDetaching($actionIds);
-                }
-            });
-
-        $this->seedAdminCrossDashboardAccess();
+        Role::query()->each(function (Role $role) use ($allIds, $fullSync) {
+            if ($fullSync) {
+                $role->permissions()->sync($allIds);
+            } else {
+                $role->permissions()->syncWithoutDetaching($allIds);
+            }
+        });
     }
 
     /**
-     * يمنح مسؤول النظام صلاحيات عرض كل اللوحات التشغيلية (عدا لوحة الإدارة — وصولها تلقائي).
+     * يمنح مسؤول النظام كل صلاحيات عرض وإجراءات اللوحات التشغيلية.
+     * لوحة الإدارة نفسها وصولها تلقائي عبر Gate::before.
      */
-    private function seedAdminCrossDashboardAccess(): void
+    private function seedAdminFullAccess(bool $fullSync = false): void
     {
         $admin = Role::where('slug', Role::SLUG_ADMIN)->first();
 
@@ -85,12 +73,15 @@ class PermissionCatalogService
             return;
         }
 
-        $viewIds = Permission::query()
-            ->where('type', Permission::TYPE_VIEW)
+        $ids = Permission::query()
             ->where('dashboard', '!=', Role::SLUG_ADMIN)
             ->pluck('id');
 
-        $admin->permissions()->syncWithoutDetaching($viewIds);
+        if ($fullSync) {
+            $admin->permissions()->sync($ids);
+        } else {
+            $admin->permissions()->syncWithoutDetaching($ids);
+        }
     }
 
     /**

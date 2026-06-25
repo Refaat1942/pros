@@ -15,7 +15,7 @@
 
   var STAGE_META = {
     raw: { label: '📦 خام', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
-    wip: { label: '🏭 WIP', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+    wip: { label: '🏭 تحت التشغيل', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
     finished: { label: '✅ تام', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   };
 
@@ -255,22 +255,81 @@
       });
   }
 
-  function finishBom(bomId) {
-    if (!window.confirm('إغلاق BOM وتحويلها إلى تام؟')) return;
-    axios.post('/technical/bom/' + bomId + '/finish')
+  function renderItemsCell(b) {
+    var count = b.items_count || 0;
+    if (!count) return '<span class="text-xs text-slate-400">—</span>';
+    return '<button type="button" class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50" data-bom-id="' + b.id + '">عرض</button>';
+  }
+
+  function renderBomItemsTable(items) {
+    var tbody = $('bomItemsBody');
+    if (!tbody) return;
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-8 text-center text-slate-400">لا توجد بنود.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(function (item) {
+      return '<tr>' +
+        '<td class="px-3 py-2 font-mono text-xs text-slate-500">' + esc(item.stock_item_code) + '</td>' +
+        '<td class="px-3 py-2 font-semibold text-slate-800">' + esc(item.name || item.stock_item_code) + '</td>' +
+        '<td class="px-3 py-2 text-center font-bold">' + esc(item.qty) + '</td>' +
+        '<td class="px-3 py-2 text-center font-bold text-emerald-700">' + esc(item.issued_qty != null ? item.issued_qty : 0) + '</td>' +
+        '<td class="px-3 py-2 text-center font-bold text-amber-700">' + esc(item.returned_qty != null ? item.returned_qty : 0) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function openBomItemsModal(btn) {
+    var modal = $('bomItemsModal');
+    var subtitle = $('bomItemsSubtitle');
+    if (!modal || !btn) return;
+
+    var bomNo = btn.getAttribute('data-bom-no') || '—';
+    var patient = btn.getAttribute('data-patient') || '—';
+    var wo = btn.getAttribute('data-work-order') || '—';
+    if (subtitle) subtitle.textContent = bomNo + ' · ' + patient + ' · ' + wo;
+
+    var embedded = btn.getAttribute('data-items');
+    if (embedded) {
+      try {
+        renderBomItemsTable(JSON.parse(embedded));
+        modal.classList.remove('hidden');
+        return;
+      } catch (e) { /* fetch below */ }
+    }
+
+    var bomId = btn.getAttribute('data-bom-id');
+    if (!bomId || !window.axios) return;
+    axios.get('/technical/bom/' + bomId)
       .then(function (res) {
-        toast(res.data.message || '✅ تم إغلاق BOM');
-        refreshBoms();
+        var data = res.data || {};
+        if (subtitle && data.bom_no) {
+          subtitle.textContent = (data.bom_no || bomNo) + ' · ' + (data.patient_name || patient) + ' · ' +
+            ((data.case && data.case.work_order_no) || wo);
+        }
+        var items = (data.items || []).map(function (it) {
+          return {
+            stock_item_code: it.stock_item_code,
+            name: it.name,
+            qty: it.qty,
+            issued_qty: it.issued_qty,
+            returned_qty: it.returned_qty,
+          };
+        });
+        renderBomItemsTable(items);
+        modal.classList.remove('hidden');
       })
-      .catch(function (err) {
-        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر الإغلاق', true);
-      });
+      .catch(function () { toast('تعذّر تحميل بنود القائمة', true); });
+  }
+
+  function closeBomItemsModal() {
+    var modal = $('bomItemsModal');
+    if (modal) modal.classList.add('hidden');
   }
 
   function renderBomRow(b) {
     var meta = STAGE_META[b.stage] || { label: b.stage, cls: 'bg-slate-100' };
     var wo = (b.case && b.case.work_order_no) ? b.case.work_order_no : '—';
-    var itemsCount = b.items_count || 0;
     var printBtn = b.issue_voucher_print_url
       ? '<a href="' + esc(b.issue_voucher_print_url) + '" target="_blank" rel="noopener" ' +
         'class="btn-print-voucher rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1">🖨️ طباعة إذن الصرف</a>'
@@ -279,7 +338,7 @@
     if (b.stage === 'raw') {
       action = '<button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm" data-bom-id="' + b.id + '">📤 صرف للورشة</button>' + printBtn;
     } else if (b.stage === 'wip') {
-      action = '<button type="button" class="btn-finish rounded-xl bg-slate-700 text-white px-4 py-2 text-xs font-bold hover:bg-slate-800" data-bom-id="' + b.id + '">✅ إغلاق BOM</button>' + printBtn;
+      action = printBtn + '<span class="text-xs text-slate-500">🏭 تحت التشغيل — يُغلق من مكتب التشغيل</span>';
     } else {
       action = printBtn || '<span class="text-xs text-slate-400">—</span>';
     }
@@ -289,16 +348,13 @@
       '<td class="px-4 py-3 font-semibold text-slate-800">' + esc(b.patient_name) + '</td>' +
       '<td class="px-4 py-3 font-mono text-xs text-violet-700">' + esc(wo) + '</td>' +
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg border ' + meta.cls + '">' + meta.label + '</span></td>' +
-      '<td class="px-4 py-3 text-center font-bold">' + itemsCount + '</td>' +
+      '<td class="px-4 py-3 text-center">' + renderItemsCell(b) + '</td>' +
       '<td class="px-4 py-3">' + action + '</td></tr>';
   }
 
   function bindBomEvents() {
     document.querySelectorAll('.btn-dispense').forEach(function (btn) {
       btn.addEventListener('click', function () { openModal(btn.getAttribute('data-bom-id')); });
-    });
-    document.querySelectorAll('.btn-finish').forEach(function (btn) {
-      btn.addEventListener('click', function () { finishBom(btn.getAttribute('data-bom-id')); });
     });
   }
 
@@ -335,6 +391,17 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     bindBomEvents();
+
+    var tableBody = $('bomTableBody');
+    if (tableBody) {
+      tableBody.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-view-bom-items');
+        if (btn) openBomItemsModal(btn);
+      });
+    }
+
+    $('closeBomItemsModal') && $('closeBomItemsModal').addEventListener('click', closeBomItemsModal);
+    $('bomItemsModal') && $('bomItemsModal').addEventListener('click', closeBomItemsModal);
 
     $('btnRefreshBoms') && $('btnRefreshBoms').addEventListener('click', refreshBoms);
     $('bomSearch') && $('bomSearch').addEventListener('input', applyFilters);

@@ -37,6 +37,7 @@ class CostingController extends Controller
             CaseRecord::inCostCalc()
                 ->with([
                     'patient:id,patient_code,name,patient_type',
+                    'techOrderSpec:id,case_id,tech_notes',
                     'pricingRequest:id,case_id,request_no,computed_total,internal_total,items_count,status_key',
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
@@ -62,6 +63,7 @@ class CostingController extends Controller
 
         $case->load([
             'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank',
+            'techOrderSpec:id,case_id,tech_notes',
             'bom.items',
             'pricingRequest.items',
         ]);
@@ -111,6 +113,7 @@ class CostingController extends Controller
         ]) + [
             'pathway_label'  => $case->isMilitary() ? 'عسكري' : 'مدني',
             'display_entity' => $case->displayEntity(),
+            'tech_notes'     => $case->resolvedTechNotes(),
             'computed_total' => $pricing ? (float) $pricing->computed_total : null,
             'internal_total' => CaseFinancialSummary::canSeeInternalCost() && $pricing
                 ? (float) $pricing->internal_total

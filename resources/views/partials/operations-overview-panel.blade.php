@@ -27,7 +27,7 @@
         </div>
         <div class="ops-overview-stat ops-overview-stat--done">
             <span class="ops-overview-stat-val">{{ $summary['done'] ?? 0 }}</span>
-            <span class="ops-overview-stat-lbl">✅ BOM تام</span>
+            <span class="ops-overview-stat-lbl">✅ تم التسليم</span>
         </div>
     </div>
     <div class="panel-body">

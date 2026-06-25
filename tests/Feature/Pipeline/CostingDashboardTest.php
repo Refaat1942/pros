@@ -6,6 +6,7 @@ use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\Quote;
+use App\Models\TechOrderSpec;
 use App\Services\BomService;
 use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
@@ -67,8 +68,12 @@ class CostingDashboardTest extends TestCase
     public function test_operations_role_cannot_access_costing_dashboard(): void
     {
         $ops = $this->userWithRole('operations');
+        // Simulate admin revoking costing-dashboard access
+        $ops->role->permissions()->detach(
+            \App\Models\Permission::where('dashboard', 'costing')->pluck('id')
+        );
 
-        $this->actingAs($ops)
+        $this->actingAs($ops->fresh())
             ->get('/costing/costing')
             ->assertForbidden();
     }
@@ -86,6 +91,31 @@ class CostingDashboardTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.stage_key', CaseRecord::STAGE_COST_CALC);
+    }
+
+    public function test_costing_list_includes_tech_notes_when_present(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        TechOrderSpec::create([
+            'order_ref'    => $case->order_ref,
+            'case_id'      => $case->id,
+            'patient_name' => $case->patient->name,
+            'company_name' => $case->company_name,
+            'doctor_name'  => 'د. اختبار',
+            'tech_notes'   => 'ملاحظة للتكاليف',
+            'locked'       => true,
+            'submitted_at' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $this->actingAs($costing)
+            ->getJson('/costing/queue/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.tech_notes', 'ملاحظة للتكاليف');
     }
 
     public function test_costing_show_includes_wac_for_view_costs_role(): void

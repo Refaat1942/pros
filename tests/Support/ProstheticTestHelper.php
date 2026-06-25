@@ -55,36 +55,12 @@ trait ProstheticTestHelper
     {
         app(\App\Services\PermissionCatalogService::class)->syncToDatabase();
 
-        if ($role->slug === Role::SLUG_ADMIN) {
-            $viewIds = Permission::query()
-                ->where('type', Permission::TYPE_VIEW)
-                ->where('dashboard', '!=', Role::SLUG_ADMIN)
-                ->pluck('id');
-            $role->permissions()->syncWithoutDetaching($viewIds);
-
-            return;
-        }
-
-        $viewIds = Permission::query()
-            ->where('type', Permission::TYPE_VIEW)
-            ->where('dashboard', $role->slug)
+        // كل دور يحصل على جميع الصلاحيات التشغيلية (= الحالة الافتراضية بعد seed)
+        $ids = Permission::query()
+            ->where('dashboard', '!=', Role::SLUG_ADMIN)
             ->pluck('id');
 
-        $role->permissions()->syncWithoutDetaching($viewIds);
-
-        $defaults = [
-            Role::SLUG_COSTING     => ['view-costs'],
-            Role::SLUG_OPERATIONS  => ['approve-pricing', 'view-costs', 'print-quote'],
-            Role::SLUG_DOCTOR      => ['skip-diagnosis'],
-            Role::SLUG_TECHNICAL   => ['manage-inventory', 'import-inventory', 'print-barcode', 'view-inventory-overview'],
-            Role::SLUG_RECEPTION   => ['print-quote'],
-        ];
-
-        $slugs = $defaults[$role->slug] ?? [];
-        if ($slugs !== []) {
-            $ids = Permission::whereIn('slug', $slugs)->pluck('id');
-            $role->permissions()->syncWithoutDetaching($ids);
-        }
+        $role->permissions()->syncWithoutDetaching($ids);
     }
 
     // ── ContractCompany helpers ───────────────────────────────────────────────

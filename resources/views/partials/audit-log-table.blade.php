@@ -13,8 +13,44 @@
             <option value="{{ $action }}" @selected(($filters['action'] ?? '') === $action)>{{ AuditLogLabel::action($action) }}</option>
         @endforeach
     </select>
-    <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" title="من تاريخ">
-    <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" title="إلى تاريخ">
+    <div class="date-filter-group">
+        <label class="date-filter">
+            <span class="date-filter-lbl">من تاريخ</span>
+            <span class="date-filter-field">
+                <input type="text"
+                       name="date_from"
+                       id="auditFilterDateFrom"
+                       value="{{ $filters['date_from'] ?? '' }}"
+                       placeholder="YYYY-MM-DD"
+                       dir="ltr"
+                       class="date-filter-input"
+                       pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+                       maxlength="10"
+                       autocomplete="off"
+                       inputmode="numeric">
+                <button type="button" class="date-filter-picker" data-target="auditFilterDateFrom" title="اختر من التقويم" aria-label="اختر من التقويم">📅</button>
+                <input type="date" class="date-filter-native" tabindex="-1" aria-hidden="true">
+            </span>
+        </label>
+        <label class="date-filter">
+            <span class="date-filter-lbl">إلى تاريخ</span>
+            <span class="date-filter-field">
+                <input type="text"
+                       name="date_to"
+                       id="auditFilterDateTo"
+                       value="{{ $filters['date_to'] ?? '' }}"
+                       placeholder="YYYY-MM-DD"
+                       dir="ltr"
+                       class="date-filter-input"
+                       pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+                       maxlength="10"
+                       autocomplete="off"
+                       inputmode="numeric">
+                <button type="button" class="date-filter-picker" data-target="auditFilterDateTo" title="اختر من التقويم" aria-label="اختر من التقويم">📅</button>
+                <input type="date" class="date-filter-native" tabindex="-1" aria-hidden="true">
+            </span>
+        </label>
+    </div>
     <button type="submit" class="btn-action primary">تطبيق</button>
     <span class="toolbar-count">{{ $auditLogs->total() }} حركة</span>
 </form>
@@ -53,3 +89,26 @@
         @endif
     </div>
 @endif
+
+<script>
+(function () {
+    document.querySelectorAll('.date-filter-picker').forEach(function (btn) {
+        var wrap = btn.closest('.date-filter-field');
+        var text = document.getElementById(btn.getAttribute('data-target'));
+        var native = wrap ? wrap.querySelector('.date-filter-native') : null;
+        if (!text || !native) return;
+
+        if (text.value) native.value = text.value;
+
+        btn.addEventListener('click', function () {
+            if (text.value) native.value = text.value;
+            if (typeof native.showPicker === 'function') native.showPicker();
+            else native.click();
+        });
+
+        native.addEventListener('change', function () {
+            text.value = native.value;
+        });
+    });
+})();
+</script>

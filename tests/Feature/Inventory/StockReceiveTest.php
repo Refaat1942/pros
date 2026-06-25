@@ -45,10 +45,14 @@ class StockReceiveTest extends TestCase
     public function test_reception_user_cannot_access_inventory_receive(): void
     {
         $user     = $this->userWithRole('reception');
+        // Simulate admin revoking technical-dashboard access
+        $user->role->permissions()->detach(
+            \App\Models\Permission::where('dashboard', 'technical')->pluck('id')
+        );
         $supplier = $this->makeSupplier();
         $item     = $this->stockItem('RM-011', qty: 0);
 
-        $this->actingAs($user);
+        $this->actingAs($user->fresh());
 
         $this->postJson('/technical/inventory/receive', [
             'stock_item_id' => $item->id,

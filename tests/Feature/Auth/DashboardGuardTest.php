@@ -129,11 +129,15 @@ class DashboardGuardTest extends TestCase
         $response->assertStatus(403);
     }
 
-    /** Doctor cannot access /technical/* without permission */
+    /** Doctor blocked from technical dashboard after admin removes that permission */
     public function test_doctor_blocked_from_technical_dashboard(): void
     {
         $user = $this->userWithRole('doctor');
-        $this->actingAs($user);
+        // Simulate admin revoking technical-dashboard access
+        $user->role->permissions()->detach(
+            \App\Models\Permission::where('dashboard', 'technical')->pluck('id')
+        );
+        $this->actingAs($user->fresh());
 
         $response = $this->getJson('/technical/inventory/list');
 

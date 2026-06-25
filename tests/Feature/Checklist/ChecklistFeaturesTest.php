@@ -189,6 +189,8 @@ class ChecklistFeaturesTest extends TestCase
         $operations->role->permissions()->sync([$permission->id]);
 
         $spec = $this->userWithRole('spec');
+        // Remove approve-pricing from spec to verify denial
+        $spec->role->permissions()->detach([$permission->id]);
 
         $this->assertTrue(Gate::forUser($operations->fresh())->allows('approve-pricing'));
         $this->assertFalse(Gate::forUser($spec->fresh())->allows('approve-pricing'));

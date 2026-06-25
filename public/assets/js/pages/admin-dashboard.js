@@ -174,11 +174,11 @@
     bindModal('rankModal', 'btnAddRank', ['closeRankModal', 'cancelRankModal']);
     bindEmployeeModal();
     bindModal('visitTypeModal', 'btnAddVisitType', ['closeVisitTypeModal', 'cancelVisitTypeModal']);
-    bindModal('stockCategoryModal', 'btnAddStockCategory', ['closeStockCategoryModal', 'cancelStockCategoryModal']);
+    // bindModal('stockCategoryModal', 'btnAddStockCategory', ['closeStockCategoryModal', 'cancelStockCategoryModal']);
     bindModal('supplierModal', 'btnAddSupplier', ['closeSupplierModal', 'cancelSupplierModal']);
     bindTableFilter('rankSearch', 'ranksTable', 'rankCount', 'رتبة');
     bindTableFilter('visitTypeSearch', 'visitTypesTable', 'visitTypeCount', 'نوع');
-    bindTableFilter('stockCategorySearch', 'stockCategoriesTable', 'stockCategoryCount', 'فئة');
+    // bindTableFilter('stockCategorySearch', 'stockCategoriesTable', 'stockCategoryCount', 'فئة');
     bindTableFilter('supplierSearch', 'suppliersTable', 'supplierCount', 'مورد');
 
     function loadCompanies() {
@@ -1624,3 +1624,193 @@
     })();
 
     bindTableFilter('companySearch', 'companiesTable', 'companiesCount', 'شركة');
+
+    // ── Patient Track Panel — table + path modal ───────────────────────────
+    (function bindPatientTrack() {
+      var btn = document.getElementById('patientTrackRefresh');
+      var searchInput = document.getElementById('patientTrackSearch');
+      var tbody = document.getElementById('patientTrackTableBody');
+      var modal = document.getElementById('patientTrackModal');
+      if (!tbody && !searchInput) return;
+
+      if (!window.__patientTracksById) window.__patientTracksById = {};
+
+      function escHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function syncTrackCache(tracks) {
+        window.__patientTracksById = {};
+        (tracks || []).forEach(function (track) {
+          if (track && track.id != null) {
+            window.__patientTracksById[String(track.id)] = track;
+          }
+        });
+      }
+
+      function stepHtml(step) {
+        var status = step.status || 'pending';
+        var icon = status === 'done' ? '✓' : (status === 'current' ? '●' : '○');
+        return '<span class="patient-track-step patient-track-step--' + status + '" title="' + escHtml(step.label || '') + '">'
+          + icon + '<small>' + escHtml(step.label || '') + '</small></span>';
+      }
+
+      function contactHtml(track) {
+        var parts = [];
+        if (track.phone) parts.push('<span dir="ltr">' + escHtml(track.phone) + '</span>');
+        if (track.national_id) parts.push('<span dir="ltr">' + escHtml(track.national_id) + '</span>');
+        return parts.length ? parts.join('') : '—';
+      }
+
+      function rowHtml(track) {
+        var pathway = track.pathway === 'military' ? 'military' : 'civilian';
+        var pathwayLabel = track.pathway === 'military' ? '🪖 عسكري' : '🌐 مدني';
+        var subLines = '';
+        if (track.case_no) subLines += '<div class="patient-track-cell-sub">' + escHtml(track.case_no) + '</div>';
+        if (track.company_name) subLines += '<div class="patient-track-cell-sub">' + escHtml(track.company_name) + '</div>';
+
+        return '<tr class="patient-track-row" data-search="' + escHtml(track.search_hay || '') + '">'
+          + '<td><strong>' + escHtml(track.name || '—') + '</strong>' + subLines + '</td>'
+          + '<td><span class="patient-type-badge ' + pathway + '">' + pathwayLabel + '</span></td>'
+          + '<td class="patient-track-contact">' + contactHtml(track) + '</td>'
+          + '<td><span class="patient-track-stage-inline">' + escHtml(track.stage_label || '—') + '</span>'
+          + '<span class="patient-track-percent-inline">' + (track.progress_percent || 0) + '%</span></td>'
+          + '<td class="col-actions"><button type="button" class="btn-action primary btn-view-patient-track" data-track-id="' + escHtml(track.id) + '">📍 عرض المسار</button></td>'
+          + '</tr>';
+      }
+
+      function openTrackModal(track) {
+        if (!modal || !track) return;
+
+        var pathway = track.pathway === 'military' ? 'military' : 'civilian';
+        var pathwayLabel = track.pathway === 'military' ? '🪖 عسكري' : '🌐 مدني';
+        var metaParts = [];
+        if (track.case_no) metaParts.push(track.case_no);
+        if (track.company_name) metaParts.push(track.company_name);
+
+        var titleEl = document.getElementById('patientTrackModalTitle');
+        var metaEl = document.getElementById('patientTrackModalMeta');
+        var nameEl = document.getElementById('patientTrackModalName');
+        var badgeEl = document.getElementById('patientTrackModalBadge');
+        var percentEl = document.getElementById('patientTrackModalPercent');
+        var stageEl = document.getElementById('patientTrackModalStage');
+        var barEl = document.getElementById('patientTrackModalBar');
+        var stepsEl = document.getElementById('patientTrackModalSteps');
+        var noteEl = document.getElementById('patientTrackModalPathNote');
+
+        if (titleEl) titleEl.textContent = '📍 مسار المريض — ' + (track.name || '—');
+        if (metaEl) metaEl.textContent = metaParts.join(' · ') || '—';
+        if (nameEl) nameEl.textContent = track.name || '—';
+        if (badgeEl) {
+          badgeEl.textContent = pathwayLabel;
+          badgeEl.className = 'patient-type-badge ' + pathway;
+        }
+        if (percentEl) percentEl.textContent = (track.progress_percent || 0) + '%';
+        if (stageEl) stageEl.textContent = track.stage_label || '—';
+        if (barEl) {
+          barEl.style.width = (track.progress_percent || 0) + '%';
+          barEl.parentElement.setAttribute('aria-valuenow', String(track.progress_percent || 0));
+        }
+        if (stepsEl) stepsEl.innerHTML = (track.steps || []).map(stepHtml).join('');
+        if (noteEl) {
+          noteEl.textContent = pathway === 'military'
+            ? 'المسار العسكري: 6 مراحل — بدون تسعير واعتماد جهة التأمين.'
+            : 'المسار المدني: 7 مراحل — يشمل التسعير واعتماد التشغيل وموافقة الجهة.';
+        }
+
+        modal.classList.add('open');
+      }
+
+      function closeTrackModal() {
+        if (modal) modal.classList.remove('open');
+      }
+
+      function resolveTrack(button) {
+        var id = button.getAttribute('data-track-id');
+        return id != null ? window.__patientTracksById[String(id)] : null;
+      }
+
+      if (tbody) {
+        tbody.addEventListener('click', function (event) {
+          var button = event.target.closest('.btn-view-patient-track');
+          if (!button) return;
+          var track = resolveTrack(button);
+          if (track) openTrackModal(track);
+        });
+      }
+
+      function applyPatientTrackFilter() {
+        var term = (searchInput && searchInput.value || '').toLowerCase().trim();
+        var rows = tbody ? tbody.querySelectorAll('.patient-track-row') : [];
+        var visible = 0;
+
+        rows.forEach(function (row) {
+          var hay = row.getAttribute('data-search') || '';
+          var show = !term || hay.indexOf(term) !== -1;
+          row.style.display = show ? '' : 'none';
+          if (show) visible++;
+        });
+
+        var countEl = document.getElementById('patientTrackFilterCount');
+        if (countEl) {
+          countEl.textContent = term
+            ? (visible + ' من ' + rows.length + ' مريض')
+            : (rows.length + ' مريض');
+        }
+      }
+
+      if (searchInput) {
+        searchInput.addEventListener('input', applyPatientTrackFilter);
+        applyPatientTrackFilter();
+      }
+
+      var closeBtn = document.getElementById('closePatientTrackModal');
+      var closeFooterBtn = document.getElementById('btnClosePatientTrackModal');
+      if (closeBtn) closeBtn.addEventListener('click', closeTrackModal);
+      if (closeFooterBtn) closeFooterBtn.addEventListener('click', closeTrackModal);
+      if (modal) {
+        modal.addEventListener('click', function (e) {
+          if (e.target === modal) closeTrackModal();
+        });
+      }
+
+      if (!btn) return;
+
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        var seg = window.location.pathname.split('/').filter(Boolean);
+        var prefix = '/' + (seg[0] || 'admin');
+        var search = searchInput ? encodeURIComponent(searchInput.value.trim()) : '';
+        var url = prefix + '/patient-tracks/list' + (search ? ('?search=' + search) : '');
+
+        fetch(url, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var badge = document.getElementById('patientTrackBadge');
+            if (badge) badge.textContent = data.length + ' مريض نشط';
+
+            syncTrackCache(data);
+
+            if (!tbody) return;
+
+            if (!data.length) {
+              tbody.innerHTML = '<tr><td colspan="5" class="patient-track-empty">✅ لا يوجد مرضى نشطون في المسار حالياً.</td></tr>';
+            } else {
+              tbody.innerHTML = data.map(rowHtml).join('');
+              if (window.TablePagination) TablePagination.refreshById('patientTrackTableBody');
+            }
+
+            applyPatientTrackFilter();
+          })
+          .catch(function () { /* silent */ })
+          .finally(function () {
+            btn.disabled = false;
+          });
+      });
+    })();

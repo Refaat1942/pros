@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Manufacturing;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Manufacturing\AdvanceManufacturingStageRequest;
+use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
 use App\Traits\PaginationTrait;
@@ -43,8 +44,9 @@ class ManufacturingStageController extends Controller
         );
 
         return response()->json([
-            'data'  => collect($cases)->map(fn ($c) => $this->formatCase($c))->values(),
-            'total' => $cases->count(),
+            'data'    => collect($cases)->map(fn ($c) => $this->formatCase($c))->values(),
+            'total'   => $cases->count(),
+            'summary' => $this->buildSummary($cases),
         ]);
     }
 
@@ -101,6 +103,19 @@ class ManufacturingStageController extends Controller
             'case'      => $case,
             'autoPrint' => true,
         ]);
+    }
+
+    private function buildSummary($cases): array
+    {
+        $collection = collect($cases);
+        $wipCount   = $collection->filter(fn ($c) => $c->bom?->stage === Bom::STAGE_WIP)->count();
+
+        return [
+            'raw'          => 0,
+            'wip'          => $wipCount,
+            'done'         => CaseRecord::countManufacturingCompletedByOps(),
+            'total_active' => $collection->count(),
+        ];
     }
 
     private function formatCase(CaseRecord $case): array

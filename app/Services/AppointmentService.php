@@ -162,7 +162,7 @@ class AppointmentService
 
         return [
             'visit_type_id' => $visitType->id,
-            'visit_type'    => (string) $visitType->id,
+            'visit_type'    => $visitType->name,
         ];
     }
 

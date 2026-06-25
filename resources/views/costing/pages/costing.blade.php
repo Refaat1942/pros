@@ -8,9 +8,15 @@
       <span class="badge" id="costingBadge">0</span>
     </div>
   </div>
-  <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;">
-    الحالات الواردة من المعدلات — راجع التكلفة <strong>للقراءة فقط</strong> ثم أكّد لإصدار عرض السعر.
-  </p>
+
+  <div class="panel-hint" role="note" aria-label="تعليمات لوحة التكاليف">
+    <p class="panel-hint__text">
+      <span class="panel-hint__label">تنبيه</span>
+      الحالات الواردة من <strong>المعدلات</strong> — راجع التكلفة <strong>للقراءة فقط</strong>،
+      ثم من نافذة المراجعة اضغط <strong>«تأكيد عرض سعر»</strong> لإصدار العرض وتحويل الحالة لمكتب التشغيل.
+    </p>
+  </div>
+
   <div class="bom-table-wrap">
     <table data-paginate="10" class="bom-table">
       <thead>

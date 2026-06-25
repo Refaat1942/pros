@@ -205,6 +205,19 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $q) => $q->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED]));
     }
 
+    /** حالات أُتمِم تصنيعها من مكتب التشغيل (BOM تام → جاهزة للتسليم أو مُسلَّمة). */
+    public function scopeManufacturingCompletedByOps(Builder $query): Builder
+    {
+        return $query
+            ->whereIn('stage_key', [self::STAGE_READY_DELIVERY, self::STAGE_DELIVERED])
+            ->whereHas('bom', fn (Builder $q) => $q->where('stage', Bom::STAGE_FINISHED));
+    }
+
+    public static function countManufacturingCompletedByOps(): int
+    {
+        return static::query()->manufacturingCompletedByOps()->count();
+    }
+
     public function isAtOperations(): bool
     {
         return $this->stage_key === self::STAGE_OPERATIONS;
@@ -218,6 +231,18 @@ class CaseRecord extends Model
     public function isInCostCalc(): bool
     {
         return $this->stage_key === self::STAGE_COST_CALC;
+    }
+
+    /** ملاحظات التوصيف الفني — null إذا لم تُكتب أو فارغة. */
+    public function resolvedTechNotes(): ?string
+    {
+        if (! $this->relationLoaded('techOrderSpec')) {
+            return null;
+        }
+
+        $notes = trim((string) ($this->techOrderSpec?->tech_notes ?? ''));
+
+        return $notes !== '' ? $notes : null;
     }
 
     public function clearReworkNotice(): void

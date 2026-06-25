@@ -86,6 +86,7 @@
         (isMil ? '🪖 عسكري' : '🌐 مدني') + '</span></td>' +
       '<td>' + items.length + '</td>' +
       '<td class="col-actions">' +
+        (window.TechNotesModal ? window.TechNotesModal.buttonHtml(c.tech_notes, c.case_no) : '') +
         '<button type="button" class="btn-action primary btn-open-adj" data-case-id="' + c.id + '">مراجعة وإضافة</button>' +
       '</td></tr>';
   }
@@ -150,6 +151,7 @@
         } else {
           tbody.innerHTML = casesCache.map(renderRow).join('');
           bindTableEvents();
+          if (window.TechNotesModal) window.TechNotesModal.bind();
         }
 
         updateAnalytics(casesCache);

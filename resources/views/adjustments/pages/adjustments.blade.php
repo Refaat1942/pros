@@ -15,12 +15,15 @@
             <span class="badge" id="adjBadge">0</span>
           </div>
         </div>
-        <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;line-height:1.7;">
-          تصل الحالة هنا فور <strong>إرسال التوصيف الفني</strong>. بنود الفني <strong>للقراءة فقط</strong> —
-          يمكن للمستشار <strong>إضافة</strong> مكوّنات جديدة دون تعديل أو حذف الأصلية، ثم
-          <strong>إرسالها للتكاليف</strong> (تُقفل قائمة المواد وتُدفع لمحرّك التسعير).
-          يلتقي هنا المساران: <strong>مدني</strong> و<strong>عسكري</strong>.
-        </p>
+        <div class="panel-hint panel-hint--adjustments" role="note" aria-label="تعليمات لوحة المعدلات">
+          <p class="panel-hint__text">
+            <span class="panel-hint__label">تنبيه</span>
+            تصل الحالة هنا فور <strong>إرسال التوصيف الفني</strong>. بنود الفني <strong>للقراءة فقط</strong> —
+            يمكن المعدلات <strong>إضافة</strong> مكوّنات جديدة دون تعديل أو حذف الأصلية، ثم
+            <strong>إرسالها للتكاليف</strong> (تُقفل قائمة المواد وتُدفع لمحرّك التسعير).
+            يلتقي هنا المساران: <strong>مدني</strong> و<strong>عسكري</strong>.
+          </p>
+        </div>
         <div class="bom-table-wrap">
           <table data-paginate="10" class="bom-table">
             <thead>

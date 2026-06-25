@@ -78,6 +78,7 @@
         (isMil ? '🪖 عسكري' : '🌐 مدني') + '</span></td>' +
       '<td>' + (total ? fmt(total) + ' ج.م' : '—') + '</td>' +
       '<td class="col-actions" style="white-space:nowrap;">' +
+        (window.TechNotesModal ? window.TechNotesModal.buttonHtml(c.tech_notes, c.case_no) : '') +
         printBtn +
         releaseBtn +
         approveBtn +
@@ -142,6 +143,7 @@
         } else {
           tbody.innerHTML = casesCache.map(renderRow).join('');
           bindTableEvents();
+          if (window.TechNotesModal) window.TechNotesModal.bind();
         }
         updateAnalytics(casesCache);
         if (window.TablePagination) TablePagination.refreshById('pendingTable');

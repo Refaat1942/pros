@@ -45,6 +45,40 @@ class OperationsPendingDeskTest extends TestCase
         $response->assertJsonStructure(['data' => [['quote' => ['print_url']]]]);
     }
 
+    public function test_pending_list_includes_tech_notes_when_present(): void
+    {
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        app(\App\Services\StockPriceService::class)->addBatch(
+            \App\Models\StockItem::first(),
+            10,
+            200.00,
+            $this->makeSupplier(),
+            'INV-001',
+            now()
+        );
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->operationsReadyCase($patient);
+
+        TechOrderSpec::create([
+            'order_ref'    => $case->order_ref,
+            'case_id'      => $case->id,
+            'patient_name' => $patient->name,
+            'company_name' => $case->company_name,
+            'doctor_name'  => 'د. اختبار',
+            'tech_notes'   => 'ملاحظة لمكتب التشغيل',
+            'locked'       => true,
+            'submitted_at' => now()->toDateString(),
+        ]);
+
+        $ops = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->getJson('/operations/pending/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.tech_notes', 'ملاحظة لمكتب التشغيل');
+    }
+
     public function test_pending_release_quote_makes_visible_at_reception_and_approves(): void
     {
         $item = $this->stockItem('RM-001', qty: 20, wac: 100.00);

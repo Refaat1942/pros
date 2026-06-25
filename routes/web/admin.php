@@ -4,7 +4,7 @@ use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Finance\MilitaryDebtController;
 use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Admin\PermissionMatrixController;
-use App\Http\Controllers\Admin\StockCategoryController;
+// use App\Http\Controllers\Admin\StockCategoryController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
@@ -27,6 +27,7 @@ Route::prefix('admin')
     ->name('admin.')
     ->group(function () {
         Route::get('overview', [AdminOverviewController::class, 'index'])->name('overview');
+        Route::get('patient-tracks/list', [AdminOverviewController::class, 'patientTracksApi'])->name('patient-tracks.list');
         Route::get('bi', [BiController::class, 'index'])->name('bi');
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit');
 
@@ -142,18 +143,18 @@ Route::prefix('admin')
         Route::delete('visit-types/{visitType}', [VisitTypeController::class, 'destroy'])
             ->name('visit-types.destroy');
 
-        // ── Stock Categories — JSON API (الصفحة Blade: GET admin/stock-categories) ─
-        Route::get('stock-categories/list', [StockCategoryController::class, 'index'])
-            ->name('stock-categories.list');
-
-        Route::post('stock-categories', [StockCategoryController::class, 'store'])
-            ->name('stock-categories.store');
-
-        Route::put('stock-categories/{stockCategory}', [StockCategoryController::class, 'update'])
-            ->name('stock-categories.update');
-
-        Route::delete('stock-categories/{stockCategory}', [StockCategoryController::class, 'destroy'])
-            ->name('stock-categories.destroy');
+        // ── Stock Categories — معطّل مؤقتاً ─────────────────────────────────
+        // Route::get('stock-categories/list', [StockCategoryController::class, 'index'])
+        //     ->name('stock-categories.list');
+        //
+        // Route::post('stock-categories', [StockCategoryController::class, 'store'])
+        //     ->name('stock-categories.store');
+        //
+        // Route::put('stock-categories/{stockCategory}', [StockCategoryController::class, 'update'])
+        //     ->name('stock-categories.update');
+        //
+        // Route::delete('stock-categories/{stockCategory}', [StockCategoryController::class, 'destroy'])
+        //     ->name('stock-categories.destroy');
 
         // ── Military sovereign debts ──────────────────────────────────────
         Route::get('military-debts/list', [MilitaryDebtController::class, 'index'])

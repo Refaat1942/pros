@@ -11,7 +11,6 @@ use App\Models\MilitaryRank;
 use App\Models\PricingRequest;
 use App\Models\Role;
 use App\Models\Supplier;
-use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\User;
 use App\Models\VisitType;
@@ -22,6 +21,7 @@ use App\Models\ReturnNoteLine;
 use App\Models\StockMovement;
 use App\Models\Patient;
 use App\Services\AdminCaseTrackingService;
+use App\Services\AdminPatientTrackService;
 use App\Services\BomService;
 use App\Services\DoctorTransferService;
 use App\Services\StockCatalogService;
@@ -42,12 +42,13 @@ class DashboardPageDataService
             'admin.companies'       => $this->adminCompanies(),
             'admin.military-ranks'  => $this->adminMilitaryRanks(),
             'admin.visit-types'     => $this->adminVisitTypes(),
-            'admin.stock-categories'=> $this->adminStockCategories(),
+            // 'admin.stock-categories'=> $this->adminStockCategories(),
             'admin.catalog'         => $this->adminCatalog(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
             'admin.permissions'     => $this->adminPermissions(),
             'admin.suppliers'       => $this->adminSuppliers(),
             'admin.cases'           => $this->adminCases(),
+            'admin.patient-tracks'  => $this->adminPatientTracks(),
             'admin.contracts'       => $this->contractsPage(isAdmin: true),
             'admin.military-debts'  => $this->adminMilitaryDebts(),
             'admin.returns'         => $this->adminReturns(),
@@ -129,6 +130,7 @@ class DashboardPageDataService
         ];
     }
 
+    /*
     private function adminStockCategories(): array
     {
         return [
@@ -137,15 +139,16 @@ class DashboardPageDataService
                 ->get(),
         ];
     }
+    */
 
     private function adminCatalog(): array
     {
         $catalogService = app(StockCatalogService::class);
 
         return [
-            'stock_categories' => StockCategory::query()
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            // 'stock_categories' => StockCategory::query()
+            //     ->orderBy('name')
+            //     ->get(['id', 'name']),
             'suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -206,6 +209,16 @@ class DashboardPageDataService
                 'delivered'      => $buckets['delivered']->all(),
             ],
             'admin_case_counts' => $buckets['counts'],
+        ];
+    }
+
+    private function adminPatientTracks(): array
+    {
+        $tracks = app(AdminPatientTrackService::class)->list(request()->query('search'));
+
+        return [
+            'patient_tracks' => $tracks,
+            'track_search'   => request()->query('search', ''),
         ];
     }
 
@@ -450,7 +463,7 @@ class DashboardPageDataService
             ->get();
 
         $wipCount  = $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_WIP)->count();
-        $doneCount = $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_FINISHED)->count();
+        $doneCount = CaseRecord::countManufacturingCompletedByOps();
         $milCount  = $cases->filter(fn ($c) => $c->isMilitary())->count();
         $civCount  = $cases->count() - $milCount;
 
