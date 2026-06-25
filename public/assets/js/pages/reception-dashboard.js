@@ -1296,6 +1296,23 @@
     }
 
     // ── Patient card display ─────────────────────────────────────────────────
+    function patientCardPrintUrl(data) {
+      if (!data) return null;
+      if (data.card_print_url) return data.card_print_url;
+      if (data.id) return '/reception/patients/' + data.id + '/card/print';
+      return null;
+    }
+
+    function printPatientCard() {
+      var url = window._patientCardPrintUrl;
+      if (!url) {
+        showToast('تعذّر فتح نموذج طباعة البطاقة', true);
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    window.printPatientCard = printPatientCard;
+
     function showPatientCard(data) {
       var meta = CasesWorkflow.getPatientTypeMeta(data.patientType || data.patient_type);
       document.getElementById('picType').textContent = meta.icon + ' ' + meta.label;
@@ -1334,6 +1351,7 @@
       document.getElementById('picQrText').textContent = data.tracking_url || data.tracking_uid || data.patientQr || data.patient_qr || '—';
       var card = document.getElementById('patientIdCard');
       if (card) card.setAttribute('data-type', data.patientType || data.patient_type);
+      window._patientCardPrintUrl = patientCardPrintUrl(data);
       document.getElementById('patientCardModal').classList.add('visible');
     }
 
@@ -1342,8 +1360,10 @@
     }
     var btnClosePC = document.getElementById('btnClosePatientCard');
     var btnClosePCx = document.getElementById('closePatientCardModal');
+    var btnPrintPC = document.getElementById('btnPrintPatientCard');
     if (btnClosePC) btnClosePC.addEventListener('click', closePatientCard);
     if (btnClosePCx) btnClosePCx.addEventListener('click', closePatientCard);
+    if (btnPrintPC) btnPrintPC.addEventListener('click', printPatientCard);
 
     function showFormError(el, msg) {
       if (!el) { alert(msg); return; }

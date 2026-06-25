@@ -67,6 +67,9 @@ Route::prefix('reception')
             Route::get('patients/{patient}', [PatientController::class, 'show'])
                 ->name('patients.show');
 
+            Route::get('patients/{patient}/card/print', [PatientController::class, 'printCard'])
+                ->name('patients.card.print');
+
             Route::put('patients/{patient}', [PatientController::class, 'update'])
                 ->name('patients.update');
         });

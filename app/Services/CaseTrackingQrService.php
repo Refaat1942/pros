@@ -19,8 +19,11 @@ class CaseTrackingQrService
         return $this->trackingUidService->trackingUrl($patient->tracking_uid);
     }
 
-    public function svg(Patient $patient, int $size = 200): string
+    public function svg(Patient $patient, int $size = 200, int $margin = 1): string
     {
-        return (string) QrCode::size($size)->generate($this->url($patient));
+        return (string) QrCode::size($size)
+            ->margin($margin)
+            ->errorCorrection('H')
+            ->generate($this->url($patient));
     }
 }

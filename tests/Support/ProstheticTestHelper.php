@@ -115,6 +115,7 @@ trait ProstheticTestHelper
         return Patient::create([
             'patient_code'        => '100001',
             'patient_qr'          => 'QR-100001',
+            'tracking_uid'        => 'case-test0001',
             'name'                => 'أحمد حسن',
             'phone'               => '01000000001',
             'national_id'         => '29901010100001',
@@ -131,6 +132,7 @@ trait ProstheticTestHelper
         return Patient::create([
             'patient_code'        => '654321',
             'patient_qr'          => 'QR-654321',
+            'tracking_uid'        => 'case-test6543',
             'name'                => 'العقيد محمود خالد',
             'phone'               => '01100000002',
             'national_id'         => '29801010200002',
