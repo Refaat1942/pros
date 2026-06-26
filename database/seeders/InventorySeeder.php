@@ -52,6 +52,14 @@ class InventorySeeder extends Seeder
                     'qty'                => max(1, (int) ($price['qty'] ?? 1)),
                 ]);
             }
+
+            $highest = collect($row['prices'])->max('amount');
+            if ($highest > 0 && (int) $row['qty'] > 0) {
+                $item->update([
+                    'price' => (float) $highest,
+                    'wac'   => (float) $highest,
+                ]);
+            }
         }
     }
 }

@@ -527,7 +527,9 @@
         visitTypeLabel: visitTypeName || getVisitMeta('exam').label,
         status: row.status || 'waiting',
         statusLabel: row.status_label || row.status || 'waiting',
-        transferredToClinic: !!row.transferred_to_clinic
+        transferredToClinic: !!row.transferred_to_clinic,
+        registeredAt: row.registered_at_formatted || '—',
+        waitLabel: row.wait_label || '—'
       };
     }
 
@@ -726,10 +728,10 @@
 
     function exportAppointments(type) {
       var data = getFilteredAppointments();
-      var headers = ['التاريخ', 'الوقت', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
+      var headers = ['التاريخ', 'الوقت', 'تاريخ الإضافة', 'وقت الانتظار', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
       var rows = data.map(function(a) {
         var vt = getVisitMeta(a.visitType);
-        return [a.date, a.time, a.name, vt.label, a.phone, a.company];
+        return [a.date, a.time, a.registeredAt, a.waitLabel, a.name, a.visitTypeLabel || vt.label, a.phone, a.company];
       });
       if (type === 'excel') ExportKit.toExcel('مواعيد_' + calendarView.selectedDate.replace(/\//g, '-'), headers, rows);
       else ExportKit.toPDF('مواعيد — ' + calendarView.selectedDate, headers, rows);
@@ -793,13 +795,15 @@
         var visitLabel = a.visitTypeLabel || vt.label;
         return '<tr>' +
           '<td><strong>' + a.time + '</strong></td>' +
+          '<td style="font-size:12px;white-space:nowrap;">' + a.registeredAt + '</td>' +
+          '<td><span class="wait-time">' + a.waitLabel + '</span></td>' +
           '<td>' + a.name + '</td>' +
           '<td><span class="visit-tag ' + vt.tagClass + '">' + visitLabel + '</span></td>' +
           '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + a.phone + '</td>' +
           '<td>' + a.company + '</td>' +
           '<td>' + getApptActionCell(a) + '</td>' +
           '</tr>';
-      }).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
+      }).join('') || '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
       var ac = document.getElementById('apptCount');
       if (ac) ac.textContent = filtered.length + ' موعد';
       var ah = document.getElementById('apptHeaderCount');

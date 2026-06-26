@@ -9,6 +9,7 @@ use App\Models\PricingRequest;
 use App\Models\Quote;
 use App\Services\AdminCaseTrackingService;
 use App\Services\Dashboard\DashboardPageDataService;
+use App\Support\ClinicTime;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -115,6 +116,32 @@ class AdminCaseTrackingTest extends TestCase
         $this->assertArrayHasKey('admin_case_buckets', $data);
         $this->assertGreaterThanOrEqual(1, count($data['admin_case_buckets']['in_progress']));
         $this->assertGreaterThanOrEqual(1, $data['admin_case_counts']['in_progress']);
+    }
+
+    public function test_case_row_includes_patient_phone_for_search(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+
+        $row = app(AdminCaseTrackingService::class)->buckets()['delivered']
+            ->firstWhere('id', (string) $case->id);
+
+        $this->assertNotNull($row);
+        $this->assertSame('01000000001', $row['patientPhone']);
+    }
+
+    public function test_delivered_bucket_includes_delivery_date_and_time(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $deliveredAt = now()->setTime(14, 30, 0);
+        $case->update(['delivered_at' => $deliveredAt]);
+
+        $row = app(AdminCaseTrackingService::class)->buckets()['delivered']
+            ->firstWhere('id', (string) $case->id);
+
+        $this->assertNotNull($row);
+        $this->assertSame(ClinicTime::format($deliveredAt), $row['deliveredAt']);
     }
 
     public function test_delivered_bucket_shows_cost_from_bom_when_case_fields_empty(): void

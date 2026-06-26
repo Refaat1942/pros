@@ -1,6 +1,7 @@
     var ADMIN_USER = '';
     var casesFilter = 'waiting_return';
     var casesSearchTerm = '';
+    var casesPatientTypeFilter = '';
     var adminCaseBuckets = window.__ADMIN_CASE_BUCKETS || { waiting_return: [], in_progress: [], delivered: [] };
     var catalogItems = [];
     var catalogSearchTerm = '';
@@ -275,6 +276,11 @@
       renderCasesSection();
     });
 
+    onId('casesPatientTypeFilter', 'change', function(e) {
+      casesPatientTypeFilter = e.target.value || '';
+      renderCasesSection();
+    });
+
     document.querySelectorAll('.nav-menu a[data-section]').forEach(function(link) {
       link.addEventListener('click', function(e) {
         var sectionId = link.getAttribute('data-section');
@@ -319,10 +325,16 @@
 
     function getFilteredCases() {
       var list = getAdminCaseBucket(casesFilter);
+      if (casesPatientTypeFilter) {
+        list = list.filter(function(c) {
+          return (c.patientType || '') === casesPatientTypeFilter;
+        });
+      }
       if (!casesSearchTerm) return list;
       var term = casesSearchTerm.toLowerCase();
       return list.filter(function(c) {
         return (c.patient || '').toLowerCase().indexOf(term) !== -1 ||
+          (c.patientPhone || '').toLowerCase().indexOf(term) !== -1 ||
           (c.quoteId || '').toLowerCase().indexOf(term) !== -1 ||
           (c.pricingRef || '').toLowerCase().indexOf(term) !== -1 ||
           (c.company || '').toLowerCase().indexOf(term) !== -1 ||
@@ -403,7 +415,7 @@
             '</tr>';
         }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       } else {
-        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>تاريخ التسليم</th>' + pipelineCol + viewCol + '</tr>';
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>تاريخ ووقت التسليم</th>' + pipelineCol + viewCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
@@ -437,7 +449,7 @@
         });
       } else {
         title = 'تقرير الحالات المسلّمة';
-        headers = ['المريض', 'جهة التعاقد', 'إجمالي التكلفة', 'تاريخ التسليم'];
+        headers = ['المريض', 'جهة التعاقد', 'إجمالي التكلفة', 'تاريخ ووقت التسليم'];
         rows = filtered.map(function(c) {
           return [c.patient, c.company, c.totalCost, ExportKit.formatDateForExport(c.deliveredAt)];
         });
@@ -502,7 +514,7 @@
         caseDetailBox('رقم الحالة', escapeHtml(c.case_no)) +
         caseDetailBox('أمر التشغيل', escapeHtml(c.work_order_no)) +
         caseDetailBox('مرحلة الحالة', escapeHtml(c.stage_label)) +
-        caseDetailBox('تاريخ التسليم', escapeHtml(c.delivered_at)) +
+        caseDetailBox('تاريخ ووقت التسليم', escapeHtml(c.delivered_at)) +
         caseDetailBox('إجمالي التكلفة', c.total_cost != null ? CasesWorkflow.formatMoney(c.total_cost) : '—') +
         caseDetailBox('المدفوع', c.paid != null ? '<span class="case-detail-paid">' + CasesWorkflow.formatMoney(c.paid) + '</span>' : '—') +
         '</div></div>';

@@ -10,6 +10,7 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Support\CaseDisplayStatus;
 use App\Support\CaseFinancialSummary;
+use App\Support\ClinicTime;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -43,7 +44,7 @@ class AdminCaseTrackingService
         $delivered = CaseRecord::query()
             ->with($this->caseRelations())
             ->where('stage_key', CaseRecord::STAGE_DELIVERED)
-            ->orderByDesc('updated_at')
+            ->orderByDesc('delivered_at')
             ->orderByDesc('id')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();
@@ -82,7 +83,7 @@ class AdminCaseTrackingService
     private function caseRelations(): array
     {
         return [
-            'patient:id,name,patient_type',
+            'patient:id,name,patient_type,phone',
             'bom:id,case_id,stage,bom_no',
             'bom.items:id,bom_id,qty,unit_cost',
             'pricingRequest:id,case_id,request_no,computed_total',
@@ -102,6 +103,7 @@ class AdminCaseTrackingService
             'id'                  => (string) $case->id,
             'caseNo'              => $case->case_no,
             'patient'             => $case->patient?->name ?? '—',
+            'patientPhone'        => $case->patient?->phone,
             'company'             => $case->displayEntity(),
             'patientType'         => $case->patient_type,
             'orderRef'            => $case->order_ref,
@@ -116,7 +118,7 @@ class AdminCaseTrackingService
             'stageLabel'          => $display->label,
             'totalCost'           => $totalCost,
             'paid'                => CaseFinancialSummary::paidAmount($case, $totalCost),
-            'deliveredAt'         => $this->formatDate($case->delivered_at),
+            'deliveredAt'         => $this->formatDateTime($case->delivered_at),
             'pipelineHtml'        => $this->pipelineHtml($case, $display->label),
             'quoteRefHtml'        => $case->quote_no
                 ? '<strong>' . e($case->quote_no) . '</strong>'
@@ -195,5 +197,16 @@ class AdminCaseTrackingService
         }
 
         return Carbon::parse((string) $value)->format('d/m/Y');
+    }
+
+    private function formatDateTime(mixed $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $dt = $value instanceof Carbon ? $value : Carbon::parse((string) $value);
+
+        return ClinicTime::format($dt, 'd/m/Y H:i');
     }
 }

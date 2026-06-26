@@ -30,7 +30,12 @@
         </div>
         <p class="cases-panel-hint" id="casesPanelHint" style="display:none"></p>
         <div class="data-toolbar">
-          <input type="text" id="casesSearch" placeholder="🔍 بحث بالمريض أو رقم عرض السعر...">
+          <input type="text" id="casesSearch" placeholder="🔍 بحث بالمريض أو الهاتف أو رقم عرض السعر...">
+          <select id="casesPatientTypeFilter" class="patient-track-filter-select" aria-label="فلتر النوع">
+            <option value="">مدني وعسكري</option>
+            <option value="civilian">🌐 مدني</option>
+            <option value="military">🪖 عسكري</option>
+          </select>
           <span class="toolbar-count" id="casesFilterCount">{{ ($counts['waiting_return'] ?? 0) }} حالة</span>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportCases('excel')">📊 Excel</button>

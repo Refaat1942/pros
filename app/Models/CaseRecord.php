@@ -93,7 +93,7 @@ class CaseRecord extends Model
         'approval_date' => 'date',
         'approval_confirmed_at' => 'datetime',
         'ledger_posted_at'      => 'datetime',
-        'delivered_at' => 'date',
+        'delivered_at' => 'datetime',
         'credit_note_amount' => 'decimal:2',
         'rework_returned_at' => 'datetime',
     ];

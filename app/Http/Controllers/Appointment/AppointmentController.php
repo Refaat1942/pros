@@ -11,6 +11,8 @@ use App\Services\AppointmentService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+
+class AppointmentController extends Controller
 {
     use PaginationTrait;
 
@@ -26,7 +28,7 @@ use Illuminate\Http\Request;
         $date = $request->date ?? now()->toDateString();
 
         $query = Appointment::with([
-            'patient:id,patient_code,name,patient_type,rank',
+            'patient:id,patient_code,name,patient_type,rank,created_at',
             'visitTypeRecord:id,name',
         ])
             ->whereDate('appointment_date', $date)
@@ -39,7 +41,7 @@ use Illuminate\Http\Request;
 
         return response()->json([
             'date'  => $date,
-            'data'  => $appointments,
+            'data'  => collect($appointments)->map(fn (Appointment $a) => $this->formatForReceptionList($a))->values(),
             'total' => $appointments->count(),
         ]);
     }
@@ -48,7 +50,10 @@ use Illuminate\Http\Request;
     {
         $appointment = $this->appointmentService->book($request->validated());
 
-        return response()->json($appointment, 201);
+        return response()->json($this->formatForReceptionList($appointment->load([
+            'patient:id,patient_code,name,patient_type,rank,created_at',
+            'visitTypeRecord:id,name',
+        ])), 201);
     }
 
     public function update(UpdateAppointmentRequest $request, Appointment $appointment): JsonResponse
@@ -69,6 +74,17 @@ use Illuminate\Http\Request;
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($appointment);
+        return response()->json($this->formatForReceptionList($appointment->load([
+            'patient:id,patient_code,name,patient_type,rank,created_at',
+            'visitTypeRecord:id,name',
+        ])));
+    }
+
+    private function formatForReceptionList(Appointment $appointment): array
+    {
+        return $appointment->toArray() + [
+            'registered_at_formatted' => $appointment->registeredAtFormatted(),
+            'wait_label'              => $appointment->receptionDeskWaitLabel(),
+        ];
     }
 }

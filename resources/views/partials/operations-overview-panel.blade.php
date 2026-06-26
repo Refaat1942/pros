@@ -17,8 +17,7 @@
 @endphp
 <div class="panel ops-overview-panel" id="operationsDeskOverview">
     <div class="panel-header">
-        <h3>🎯 مكتب التشغيل — أوامر نشطة</h3>
-        <span class="badge">{{ $cases->count() }} أمر</span>
+        <h3>🎯 مكتب التشغيل — <span class="ops-overview-order-count">{{ $cases->count() }}</span> أوامر نشطة</h3>
     </div>
     <div class="ops-overview-summary">
         <div class="ops-overview-stat ops-overview-stat--wip">

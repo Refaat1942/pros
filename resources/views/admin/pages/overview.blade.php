@@ -16,6 +16,8 @@
 
     @include('partials.operations-overview-panel')
 
+    @include('partials.visit-leaderboard-panel')
+
     <div class="panel overview-employees-panel" id="employees">
         <div class="panel-header">
           <h3>👥 إدارة الموظفين</h3>

@@ -9,6 +9,7 @@ use App\Models\CaseRecord;
 use App\Models\MilitaryDebt;
 use App\Models\User;
 use App\Services\AdminPatientTrackService;
+use App\Services\AdminVisitLeaderboardService;
 use App\Services\BiReportService;
 use App\Services\Dashboard\DashboardPageDataService;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +24,7 @@ class AdminOverviewController extends Controller
         private readonly BiReportService $biReportService,
         private readonly DashboardPageDataService $pageData,
         private readonly AdminPatientTrackService $patientTrackService,
+        private readonly AdminVisitLeaderboardService $visitLeaderboard,
     ) {
     }
 
@@ -91,6 +93,7 @@ class AdminOverviewController extends Controller
                 ->with('role:id,slug,label_ar')
                 ->orderByDesc('id')
                 ->get(['id', 'name', 'email', 'role_id', 'status', 'last_login_at']),
+            'visit_leaderboards' => $this->visitLeaderboard->topPatientsByVisitType(),
         ]));
     }
 

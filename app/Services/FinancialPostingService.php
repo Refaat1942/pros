@@ -112,7 +112,7 @@ class FinancialPostingService
                 'patient_national_id' => $case->patient?->national_id ?? null,
                 'sovereign_entity'    => $case->sovereign_entity ?? $case->company_name ?? '—',
                 'total_cost'          => $totalCost,
-                'delivered_at'        => $case->delivered_at ? (string) $case->delivered_at : now()->toDateString(),
+                'delivered_at'        => $case->delivered_at?->toDateString() ?? now()->toDateString(),
                 'status'              => MilitaryDebt::STATUS_PENDING,
             ]);
         }

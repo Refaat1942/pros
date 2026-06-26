@@ -8,6 +8,7 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Support\CaseDisplayStatus;
 use App\Support\CaseFinancialSummary;
+use App\Support\ClinicTime;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -51,7 +52,9 @@ class AdminCaseDetailService
                 'quote_date'          => $case->quote_date?->format('d/m/Y'),
                 'approval_date'       => $case->approval_date?->format('d/m/Y')
                     ?? $case->approval_confirmed_at?->format('d/m/Y'),
-                'delivered_at'        => $case->delivered_at?->format('d/m/Y'),
+                'delivered_at'        => $case->delivered_at
+                    ? ClinicTime::format($case->delivered_at, 'd/m/Y H:i')
+                    : null,
                 'total_cost'          => $totalCost,
                 'paid'                => CaseFinancialSummary::paidAmount($case, $totalCost),
                 'pricing_ref'         => $case->pricingRequest?->request_no,

@@ -118,7 +118,7 @@ class WorkflowService
             }
 
             if ($event === WorkflowEvent::Delivered->value) {
-                $updates['delivered_at'] = now()->toDateString();
+                $updates['delivered_at'] = now();
             }
 
             $case->update($updates);

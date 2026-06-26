@@ -25,6 +25,7 @@ use App\Services\AdminPatientTrackService;
 use App\Services\BomService;
 use App\Services\DoctorTransferService;
 use App\Services\StockCatalogService;
+use App\Services\StockPriceService;
 
 /**
  * يُحمّل بيانات Eloquent لكل صفحة لوحة تحكم — يُستدعى من ShowsDashboardPage.
@@ -162,13 +163,17 @@ class DashboardPageDataService
      */
     private function adminInventoryOverview(): array
     {
+        $priceService = app(StockPriceService::class);
+
         $items = StockItem::query()
             ->with(['category:id,name', 'prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id')])
             ->orderBy('code')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();
 
-        $totalValue = $items->sum(fn (StockItem $i) => (int) $i->qty * (float) $i->price);
+        $totalValue = $items->sum(
+            fn (StockItem $i) => (int) $i->qty * $priceService->wacUnitPrice($i->code)
+        );
 
         return [
             'inventory_items' => $items,

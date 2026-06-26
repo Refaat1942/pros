@@ -49,6 +49,9 @@
                     @php
                         $available = max(0, (int) $item->qty - (int) $item->reserved);
                         $expirySoon = $item->expiry_date && $item->expiry_date->lte($soon);
+                        $displayPrice = (float) $item->price > 0
+                            ? (float) $item->price
+                            : max((float) $item->wac, (float) ($item->prices->max('amount') ?? 0));
                         $history = $item->prices->take(3)->map(fn ($p) => number_format((float) $p->amount, 2)
                             . ' (' . ($p->received_at?->format('Y-m-d') ?? '—') . ')')->implode(' • ');
                     @endphp
@@ -62,7 +65,7 @@
                         <td style="padding:8px;text-align:center;font-weight:700;">{{ (int) $item->qty }}</td>
                         <td style="padding:8px;text-align:center;color:#d97706;">{{ (int) $item->reserved }}</td>
                         <td style="padding:8px;text-align:center;font-weight:700;color:{{ $available > 0 ? '#059669' : '#dc2626' }};">{{ $available }}</td>
-                        <td style="padding:8px;text-align:center;font-weight:700;">{{ number_format((float) $item->price, 2) }}</td>
+                        <td style="padding:8px;text-align:center;font-weight:700;">{{ number_format($displayPrice, 2) }}</td>
                         <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ number_format((float) $item->wac, 2) }}</td>
                         <td style="padding:8px;text-align:center;{{ $expirySoon ? 'color:#dc2626;font-weight:700;' : '' }}">
                             {{ $item->expiry_date?->format('Y-m-d') ?? '—' }}

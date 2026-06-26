@@ -47,7 +47,8 @@ class AdminOverviewOperationsTest extends TestCase
         $response = $this->get('/admin/overview');
 
         $response->assertOk();
-        $response->assertSee('مكتب التشغيل — أوامر نشطة');
+        $response->assertSee('مكتب التشغيل');
+        $response->assertSee('أوامر نشطة');
         $response->assertSee($case->work_order_no);
         $response->assertSee($patient->name);
         $response->assertSee('ops-overview-bom-btn', false);
