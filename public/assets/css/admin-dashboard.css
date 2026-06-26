@@ -1153,6 +1153,12 @@
     }
     .civ-debt-action-cell { min-width: 220px; }
 
+    /* ── مديونيات عسكرية ─────────────────────────────────────────────── */
+    .mil-debt-action-cell .mil-debt-table-actions {
+      min-width: auto;
+      justify-content: flex-start;
+    }
+
     .patient-type-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; }
     .patient-type-badge.civilian { background: rgba(14,116,144,0.12); color:#0e7490; }
     .patient-type-badge.military { background: rgba(180,83,9,0.14); color:#b45309; }

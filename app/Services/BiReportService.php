@@ -128,12 +128,11 @@ class BiReportService
             ->sum('total_cost');
 
         $militaryDebtPending = (float) MilitaryDebt::query()
-            ->where('status', MilitaryDebt::STATUS_PENDING)
-            ->sum('total_cost');
+            ->whereColumn('total_cost', '>', 'collected')
+            ->selectRaw('COALESCE(SUM(total_cost - collected), 0) as amt')
+            ->value('amt');
 
-        $militaryDebtCollected = (float) MilitaryDebt::query()
-            ->where('status', MilitaryDebt::STATUS_COLLECTED)
-            ->sum('total_cost');
+        $militaryDebtCollected = (float) MilitaryDebt::query()->sum('collected');
 
         $debts = ContractCompanyDebt::with('contractCompany:id,company_code,name,is_military')
             ->whereHas('contractCompany', fn ($q) => $q->where('is_military', false))

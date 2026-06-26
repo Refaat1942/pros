@@ -608,20 +608,11 @@ class DashboardPageDataService
     private function adminMilitaryDebts(): array
     {
         $debts   = MilitaryDebt::query()->orderBy('status')->orderByDesc('delivered_at')->orderByDesc('id')->get();
-        $pending   = $debts->where('status', MilitaryDebt::STATUS_PENDING)->count();
-        $collected = $debts->where('status', MilitaryDebt::STATUS_COLLECTED)->count();
-        $pendingAmt   = $debts->where('status', MilitaryDebt::STATUS_PENDING)->sum(fn ($d) => (float) $d->total_cost);
-        $collectedAmt = $debts->where('status', MilitaryDebt::STATUS_COLLECTED)->sum(fn ($d) => (float) $d->total_cost);
+        $service = app(\App\Services\MilitaryDebtService::class);
 
         return [
             'military_debts'       => $debts,
-            'military_debts_stats' => [
-                ['icon' => '📋', 'label' => 'إجمالي السجلات', 'value' => (string) $debts->count(), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5', 'key' => 'total'],
-                ['icon' => '🔴', 'label' => 'بانتظار التحصيل', 'value' => (string) $pending, 'bg' => 'rgba(220,38,38,0.1)', 'color' => '#dc2626', 'key' => 'pending_count'],
-                ['icon' => '🟢', 'label' => 'تم التحصيل', 'value' => (string) $collected, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'collected_count'],
-                ['icon' => '💰', 'label' => 'المبالغ المعلقة', 'value' => number_format($pendingAmt, 0), 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706', 'key' => 'pending_amount'],
-                ['icon' => '✅', 'label' => 'المبالغ المستحقة', 'value' => number_format($collectedAmt, 0), 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'collected_amount'],
-            ],
+            'military_debts_stats' => $service->stats($debts),
         ];
     }
 

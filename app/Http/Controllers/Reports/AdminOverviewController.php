@@ -71,7 +71,10 @@ class AdminOverviewController extends Controller
                     'icon'  => '🪖',
                     'label' => 'مديونيات عسكرية معلقة',
                     'value' => number_format(
-                        MilitaryDebt::where('status', MilitaryDebt::STATUS_PENDING)->sum('total_cost'),
+                        (float) MilitaryDebt::query()
+                            ->whereColumn('total_cost', '>', 'collected')
+                            ->selectRaw('COALESCE(SUM(total_cost - collected), 0) as amt')
+                            ->value('amt'),
                         0
                     ) . ' ج.م',
                     'color' => '#7c3aed',

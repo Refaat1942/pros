@@ -177,6 +177,9 @@ Route::prefix('admin')
         Route::patch('military-debts/{militaryDebt}/status', [MilitaryDebtController::class, 'updateStatus'])
             ->name('military-debts.status');
 
+        Route::post('military-debts/{militaryDebt}/collect', [MilitaryDebtController::class, 'recordPayment'])
+            ->name('military-debts.collect');
+
         Route::delete('military-debts/{militaryDebt}', [MilitaryDebtController::class, 'destroy'])
             ->name('military-debts.destroy');
 

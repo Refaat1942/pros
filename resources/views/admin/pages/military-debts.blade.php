@@ -101,7 +101,7 @@
                             @if ($debt->isCollected())
                                 <div>
                                     <span style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#dcfce7;color:#059669;">
-                                        🟢 تم التحصيل وإيداع الحساب
+                                        🟢 تم التحصيل 
                                     </span>
                                     <div style="font-size:10px;color:#64748b;margin-top:3px;">
                                         {{ $debt->collected_at?->format('d/m/Y H:i') ?? '' }}
@@ -117,7 +117,7 @@
                                             🔴 بانتظار التحصيل
                                         </option>
                                         <option value="collected" {{ $debt->status === MilitaryDebt::STATUS_COLLECTED ? 'selected' : '' }}>
-                                            🟢 تم التحصيل وإيداع الحساب
+                                            🟢 تم التحصيل 
                                         </option>
                                     </select>
                                     <span class="mil-debt-saving" data-id="{{ $debt->id }}"
@@ -125,13 +125,15 @@
                                 </div>
                             @endif
                         </td>
-                        <td>
-                            <button type="button"
-                                    class="btn btn-secondary mil-debt-view-btn"
-                                    style="padding:4px 12px;font-size:11px;"
-                                    onclick="openMilDebtDetail(this)">
-                                👁️ عرض
-                            </button>
+                        <td class="col-actions mil-debt-action-cell">
+                            <div class="table-actions mil-debt-table-actions">
+                                <button type="button"
+                                        class="admin-table-btn admin-table-btn--view mil-debt-view-btn"
+                                        onclick="openMilDebtDetail(this)"
+                                        aria-label="عرض تفاصيل {{ $debt->work_order_no ?? 'المديونية' }}">
+                                    <span aria-hidden="true">👁️</span><span>عرض</span>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -259,7 +261,7 @@
                 detailRow('إجمالي تكلفة الخامات', '<strong style="font-size:16px;color:' + (isCollected ? '#059669' : '#d97706') + ';">' + esc(d.totalCost) + ' ج.م</strong>') +
                 detailRow('تاريخ إغلاق الحالة', esc(d.deliveredAt)) +
                 detailRow('حالة المديونية', '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;background:' + statusBg + ';color:' + statusColor + ';">' + statusIcon + ' ' + esc(d.statusLabel) + '</span>') +
-                (isCollected ? detailRow('تاريخ التحصيل والإيداع', esc(d.collectedAt)) : '') +
+                (isCollected ? detailRow('تاريخ التحصيل', esc(d.collectedAt)) : '') +
                 (d.frozen === '1' ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#059669;">🔒 السجل مجمّد — تم اعتماد التحصيل ولا يمكن التعديل.</div>' : '') +
                 '</div>';
         }
@@ -327,14 +329,14 @@
                         var collectedAt = (res.debt && res.debt.collected_at) ? res.debt.collected_at : '';
                         cell.innerHTML =
                             '<div>' +
-                            '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#dcfce7;color:#059669;">🟢 تم التحصيل وإيداع الحساب</span>' +
+                            '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#dcfce7;color:#059669;">🟢 تم التحصيل وإيداع المبلغ</span>' +
                             (collectedAt ? '<div style="font-size:10px;color:#64748b;margin-top:3px;">' + collectedAt + '</div>' : '') +
                             '</div>';
                     }
                     if (row) {
                         row.dataset.status = 'collected';
                         row.dataset.frozen = '1';
-                        row.dataset.statusLabel = 'تم التحصيل وإيداع الحساب';
+                        row.dataset.statusLabel = 'تم التحصيل وإيداع المبلغ';
                         row.dataset.collectedAt = (res.debt && res.debt.collected_at) ? res.debt.collected_at : '—';
                     }
 

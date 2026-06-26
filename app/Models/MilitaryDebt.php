@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MilitaryDebt extends Model
 {
     public const STATUS_PENDING    = 'pending_collection';
+    public const STATUS_PARTIAL    = 'partial_collection';
     public const STATUS_COLLECTED  = 'collected';
 
     protected $fillable = [
@@ -21,6 +22,7 @@ class MilitaryDebt extends Model
         'patient_national_id',
         'sovereign_entity',
         'total_cost',
+        'collected',
         'delivered_at',
         'status',
         'collected_at',
@@ -28,6 +30,7 @@ class MilitaryDebt extends Model
 
     protected $casts = [
         'total_cost'    => 'decimal:2',
+        'collected'     => 'decimal:2',
         'delivered_at'  => 'date',
         'collected_at'  => 'datetime',
     ];
@@ -45,5 +48,10 @@ class MilitaryDebt extends Model
     public function isCollected(): bool
     {
         return $this->status === self::STATUS_COLLECTED;
+    }
+
+    public function remainingAmount(): float
+    {
+        return max(0, round((float) $this->total_cost - (float) $this->collected, 2));
     }
 }
