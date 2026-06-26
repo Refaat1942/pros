@@ -134,10 +134,9 @@ class PrototypeSeedData
     return [
       [
         'code' => 'ITM-001', 'name' => 'ركبة هيدروليكية', 'spec' => 'Medium — Ottobock',
-        'qty' => 8, 'reserved' => 2, 'category' => 'مفاصل', 'status' => 'ok', 'lastMoved' => null,
+        'qty' => 10, 'reserved' => 0, 'category' => 'مفاصل', 'status' => 'ok', 'lastMoved' => null,
         'prices' => [
-          ['id' => 'PR-001-1', 'label' => 'دفعة محلية', 'supplier' => 'النيل للتوريدات', 'supplierType' => 'محلي', 'itemCode' => 'ITM-001-01', 'amount' => 42000],
-          ['id' => 'PR-001-2', 'label' => 'Ottobock Egypt', 'supplier' => 'Ottobock Egypt', 'supplierType' => 'OEM', 'itemCode' => 'ITM-001-02', 'amount' => 95000],
+          ['id' => 'PR-001-1', 'label' => 'دفعة محلية', 'supplier' => 'النيل للتوريدات', 'supplierType' => 'محلي', 'itemCode' => 'ITM-001-01', 'amount' => 1000],
         ],
       ],
       [
@@ -201,10 +200,9 @@ class PrototypeSeedData
       ],
       [
         'code' => 'ITM-010', 'name' => 'مفصل كوع', 'spec' => 'Small — Mechanical',
-        'qty' => 1, 'reserved' => 1, 'category' => 'مفاصل', 'status' => 'low', 'lastMoved' => null,
+        'qty' => 10, 'reserved' => 0, 'category' => 'مفاصل', 'status' => 'ok', 'lastMoved' => null,
         'prices' => [
-          ['id' => 'PR-010-1', 'label' => 'Mechanical', 'supplier' => 'Ottobock Egypt', 'supplierType' => 'OEM', 'itemCode' => 'ITM-010-01', 'amount' => 38000],
-          ['id' => 'PR-010-2', 'label' => 'Proteor', 'supplier' => 'Proteor France', 'supplierType' => 'مستورد', 'itemCode' => 'ITM-010-02', 'amount' => 35000],
+          ['id' => 'PR-010-1', 'label' => 'Mechanical', 'supplier' => 'Ottobock Egypt', 'supplierType' => 'OEM', 'itemCode' => 'ITM-010-01', 'amount' => 1000],
         ],
       ],
     ];

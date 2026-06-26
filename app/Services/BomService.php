@@ -201,6 +201,45 @@ class BomService
     }
 
     /**
+     * حذف بند أضافه مستشار المعدلات — بنود الفني (source=spec) غير قابلة للحذف.
+     */
+    public function removeAdjustmentItem(CaseRecord $case, BomItem $item): Bom
+    {
+        return DB::transaction(function () use ($case, $item) {
+            if ($case->stage_key !== CaseRecord::STAGE_ADJUSTMENTS) {
+                abort(422, 'الحالة ليست في مرحلة المعدلات.');
+            }
+
+            $bom = Bom::where('case_id', $case->id)->lockForUpdate()->first();
+
+            if (! $bom || $item->bom_id !== $bom->id) {
+                abort(404, 'البند غير مرتبط بهذه الحالة.');
+            }
+
+            if ($bom->stage !== Bom::STAGE_RAW) {
+                abort(422, 'لا يمكن حذف البند — قائمة المواد لم تعد في مرحلة الإعداد.');
+            }
+
+            if ($item->source !== BomItem::SOURCE_ADJUSTMENT) {
+                abort(422, 'لا يمكن حذف بنود التوصيف الفني — للقراءة فقط.');
+            }
+
+            $snapshot = $item->only(['id', 'stock_item_code', 'name', 'qty', 'source']);
+            $item->delete();
+
+            AuditService::log(
+                action:      'delete',
+                description: "حذف بند مستشار المعدلات — {$bom->bom_no}",
+                tag:         'spec',
+                before:      $snapshot,
+                after:       ['bom_id' => $bom->id],
+            );
+
+            return $bom->fresh()->load('items');
+        });
+    }
+
+    /**
      * حجز كميات BOM في سجل المخزون عند اعتماد مكتب التشغيل (الخطوة 7).
      * يضبط تكلفة الوحدة على WAC (أساس التكلفة الداخلية) ويزيد reserved.
      * يرمي InsufficientStockException عند نقص الرصيد — يتعامل معها المنادي.

@@ -24,6 +24,7 @@
                 <th>الصنف</th>
                 <th>الكمية</th>
                 <th>المصدر</th>
+                <th class="adj-col-action" aria-label="إجراءات"></th>
               </tr>
             </thead>
             <tbody id="adjBomItems"></tbody>
@@ -219,5 +220,45 @@
       text-align: center;
       color: var(--text-muted, #94a3b8);
       font-size: 13px;
+    }
+
+    #adjModal .adj-col-action {
+      width: 48px;
+      text-align: center;
+    }
+
+    #adjModal .adj-remove-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      background: #fff5f5;
+      color: #dc2626;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    #adjModal .adj-remove-btn:hover:not(:disabled) {
+      background: #fee2e2;
+      border-color: #f87171;
+    }
+
+    #adjModal .adj-remove-btn:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    #adjModal .adj-remove-btn:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    #adjModal .adj-remove-btn svg {
+      width: 16px;
+      height: 16px;
+      display: block;
     }
   </style>

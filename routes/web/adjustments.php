@@ -32,6 +32,9 @@ Route::prefix('adjustments')
             Route::post('adjustments/{case}/items', [AdjustmentsController::class, 'addItems'])
                 ->name('adjustments.add-items');
 
+            Route::delete('adjustments/{case}/items/{bomItem}', [AdjustmentsController::class, 'removeItem'])
+                ->name('adjustments.remove-item');
+
             Route::post('adjustments/{case}/complete', [AdjustmentsController::class, 'complete'])
                 ->name('adjustments.complete');
         });

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Bom;
+use App\Models\BomItem;
 use App\Models\CaseRecord;
 
 /**
@@ -33,6 +34,18 @@ class AdjustmentsService
         }
 
         return $this->bomService->appendAdjustmentItems($case, $items);
+    }
+
+    /**
+     * حذف بند مستشار المعدلات — بنود الفني (source=spec) للقراءة فقط.
+     */
+    public function removeItem(CaseRecord $case, BomItem $item): Bom
+    {
+        if ($case->stage_key !== CaseRecord::STAGE_ADJUSTMENTS) {
+            abort(422, 'الحالة ليست في مرحلة المعدلات.');
+        }
+
+        return $this->bomService->removeAdjustmentItem($case, $item);
     }
 
     /**

@@ -18,7 +18,7 @@
     </div>
     <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;line-height:1.7;">
       العروض التي <strong>أُرسلت للاستقبال/العميل</strong> ولم تُرجَع بعد بموافقة الجهة (خطاب التأمين).
-      بعد اعتماد الموافقة عبر OCR في الاستقبال تختفي من هذا الطابور تلقائياً.
+      بعد اعتماد الموافقة تختفي من هذا الطابور تلقائياً.
     </p>
     <div class="bom-table-wrap">
       <table data-paginate="10" class="bom-table">

@@ -97,6 +97,22 @@ class AdjustmentsController extends Controller
     }
 
     /**
+     * حذف بند مستشار المعدلات — بنود الفني (source=spec) للقراءة فقط.
+     */
+    public function removeItem(CaseRecord $case, BomItem $bomItem): JsonResponse
+    {
+        $bom = $this->adjustmentsService->removeItem($case, $bomItem);
+
+        return response()->json([
+            'message' => 'تم حذف البند من قائمة المعدلات.',
+            'bom'     => [
+                'id'    => $bom->id,
+                'items' => $bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values(),
+            ],
+        ]);
+    }
+
+    /**
      * إغلاق المعدلات → دفع التكاليف → عرض السعر → مكتب التشغيل.
      */
     public function complete(CaseRecord $case): JsonResponse

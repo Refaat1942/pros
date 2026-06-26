@@ -192,6 +192,53 @@ class AdjustmentsListTest extends TestCase
         ]);
     }
 
+    public function test_consultant_can_remove_adjustment_items_but_not_spec_items(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $this->stockItem('RM-002', qty: 10);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('adjustments');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [
+                    ['stock_item_code' => 'RM-002', 'name' => 'مكوّن مستشار', 'qty' => 2],
+                ],
+            ])
+            ->assertCreated();
+
+        $specItem = BomItem::where('bom_id', $bom->id)
+            ->where('source', BomItem::SOURCE_SPEC)
+            ->firstOrFail();
+        $adjItem = BomItem::where('bom_id', $bom->id)
+            ->where('source', BomItem::SOURCE_ADJUSTMENT)
+            ->firstOrFail();
+
+        $this->actingAs($user)
+            ->deleteJson("/adjustments/adjustments/{$case->id}/items/{$specItem->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'لا يمكن حذف بنود التوصيف الفني — للقراءة فقط.');
+
+        $this->actingAs($user)
+            ->deleteJson("/adjustments/adjustments/{$case->id}/items/{$adjItem->id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'تم حذف البند من قائمة المعدلات.');
+
+        $this->assertDatabaseHas('bom_items', [
+            'id'              => $specItem->id,
+            'stock_item_code' => 'RM-001',
+            'source'          => BomItem::SOURCE_SPEC,
+        ]);
+        $this->assertDatabaseMissing('bom_items', ['id' => $adjItem->id]);
+    }
+
     public function test_adding_unknown_stock_item_returns_clear_error(): void
     {
         $this->seedStockWithPriceBatch();

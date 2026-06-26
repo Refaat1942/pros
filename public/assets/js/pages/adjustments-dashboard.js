@@ -15,6 +15,7 @@
   var LIST_URL = '/adjustments/adjustments/list';
   var SHOW_URL = function (id) { return '/adjustments/adjustments/' + id; };
   var ADD_URL = function (id) { return '/adjustments/adjustments/' + id + '/items'; };
+  var REMOVE_URL = function (caseId, itemId) { return '/adjustments/adjustments/' + caseId + '/items/' + itemId; };
   var COMPLETE_URL = function (id) { return '/adjustments/adjustments/' + id + '/complete'; };
 
   var casesCache = [];
@@ -317,11 +318,20 @@
     var tbody = $('adjBomItems');
     if (!tbody) return;
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">لا توجد بنود بعد.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود بعد.</td></tr>';
       return;
     }
     tbody.innerHTML = items.map(function (it) {
       var ro = it.read_only || it.source === 'spec';
+      var removeBtn = ro
+        ? '<td class="adj-col-action"></td>'
+        : '<td class="adj-col-action">' +
+            '<button type="button" class="adj-remove-btn btn-remove-adj-item" data-item-id="' + esc(it.id) + '"' +
+            ' title="حذف البند" aria-label="حذف البند">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+            ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>' +
+            '<path d="M10 11v6"/><path d="M14 11v6"/></svg></button></td>';
       return '<tr>' +
         '<td>' + esc(it.stock_item_code) + '</td>' +
         '<td>' + esc(it.name) + '</td>' +
@@ -329,6 +339,7 @@
         '<td>' + (ro
           ? '<span class="badge">🔒 الفني</span>'
           : '<span class="badge done">معدّلات</span>') + '</td>' +
+        removeBtn +
         '</tr>';
     }).join('');
   }
@@ -424,6 +435,30 @@
       .finally(function () { syncItemQtyLimits(); });
   }
 
+  function removeItem(itemId, triggerBtn) {
+    if (!activeCase || !window.axios || !itemId) return;
+    if (!window.confirm('حذف هذا البند من قائمة المعدلات؟')) return;
+
+    if (triggerBtn) triggerBtn.disabled = true;
+
+    axios.delete(REMOVE_URL(activeCase.id, itemId))
+      .then(function (res) {
+        clearFormError();
+        toast('تم حذف البند');
+        if (activeCase.bom) {
+          activeCase.bom.items = (res.data.bom && res.data.bom.items) || [];
+        }
+        renderBomItems((res.data.bom && res.data.bom.items) || []);
+        refreshItemPicker();
+      })
+      .catch(function (err) {
+        showError(apiMessage(err, 'تعذّر حذف البند'));
+      })
+      .finally(function () {
+        if (triggerBtn) triggerBtn.disabled = false;
+      });
+  }
+
   function completeAdjustments() {
     if (!activeCase || !window.axios) return;
     var btn = $('btnCompleteAdj');
@@ -458,6 +493,15 @@
     var pickerToggle = $('adjItemPickerToggle');
     var pickerSearch = $('adjItemPickerSearch');
     var pickerList = $('adjItemPickerList');
+    var bomItemsBody = $('adjBomItems');
+
+    if (bomItemsBody) {
+      bomItemsBody.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-remove-adj-item');
+        if (!btn) return;
+        removeItem(btn.getAttribute('data-item-id'), btn);
+      });
+    }
 
     if (pickerToggle) {
       pickerToggle.addEventListener('click', function () {
