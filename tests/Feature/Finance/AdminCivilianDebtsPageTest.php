@@ -72,4 +72,37 @@ class AdminCivilianDebtsPageTest extends TestCase
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.company.name', 'جهة ب');
     }
+
+    public function test_admin_can_record_full_civilian_debt_collection(): void
+    {
+        $company = $this->civilianCompany('شركة مصر للتأمين');
+        app(ContractDebtService::class)->increaseDue($company, 1000.00);
+
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->postJson("/admin/civilian-debts/{$company->id}/collect", ['amount' => 1000])
+            ->assertOk()
+            ->assertJsonPath('debt.status', DebtStatus::Paid->value)
+            ->assertJsonPath('debt.status_label', 'تم التحصيل')
+            ->assertJsonPath('debt.remaining', 0);
+
+        $this->assertEquals(1000.00, (float) $company->debt()->first()->fresh()->collected);
+
+        $this->assertDatabaseHas('contract_company_debts', [
+            'contract_company_id' => $company->id,
+            'collected'           => 1000,
+            'status'              => DebtStatus::Paid->value,
+        ]);
+    }
+
+    public function test_collect_rejects_amount_above_remaining(): void
+    {
+        $company = $this->civilianCompany('جهة متبقي');
+        $company->debt()->first()->update(['due' => 500, 'collected' => 200, 'status' => DebtStatus::Partial->value]);
+
+        $this->actingAs($this->userWithRole('admin'))
+            ->postJson("/admin/civilian-debts/{$company->id}/collect", ['amount' => 400])
+            ->assertStatus(422);
+    }
 }

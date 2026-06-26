@@ -42,9 +42,6 @@ class AdminCivilianDebtService
         $totalCollected = $debts->sum(fn (ContractCompanyDebt $d) => (float) $d->collected);
         $totalRemaining = $debts->sum(fn ($d) => $this->remaining($d));
         $outstanding    = $debts->filter(fn ($d) => $this->remaining($d) > 0)->count();
-        $pending        = $debts->where('status', DebtStatus::Pending->value)->count();
-        $partial        = $debts->where('status', DebtStatus::Partial->value)->count();
-        $paid           = $debts->where('status', DebtStatus::Paid->value)->count();
 
         return [
             ['icon' => '🏢', 'label' => 'جهات مدنية', 'value' => (string) $debts->count(), 'bg' => 'rgba(14,116,144,0.1)', 'color' => '#0e7490', 'key' => 'entities'],
@@ -52,7 +49,6 @@ class AdminCivilianDebtService
             ['icon' => '✅', 'label' => 'إجمالي المحصّل', 'value' => number_format($totalCollected, 0), 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'total_collected'],
             ['icon' => '⏳', 'label' => 'المتبقي للتحصيل', 'value' => number_format($totalRemaining, 0), 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706', 'key' => 'total_remaining'],
             ['icon' => '🔴', 'label' => 'جهات بمتبقٍ', 'value' => (string) $outstanding, 'bg' => 'rgba(220,38,38,0.1)', 'color' => '#dc2626', 'key' => 'outstanding_count'],
-            ['icon' => '📋', 'label' => 'لم يُسدَّد / جزئي / مسدَّد', 'value' => "{$pending} / {$partial} / {$paid}", 'bg' => 'rgba(100,116,139,0.1)', 'color' => '#475569', 'key' => 'status_split'],
         ];
     }
 
@@ -61,11 +57,10 @@ class AdminCivilianDebtService
         $due       = (float) $debt->due;
         $collected = (float) $debt->collected;
         $remaining = $this->remaining($debt);
-        $status    = DebtStatus::tryFrom((string) $debt->status);
 
         return $debt->only(['id', 'contract_company_id', 'due', 'collected', 'status']) + [
             'remaining'      => $remaining,
-            'status_label'   => $status?->label() ?? (string) $debt->status,
+            'status_label'   => $this->statusLabel((string) $debt->status, $due, $collected),
             'company'        => $debt->relationLoaded('contractCompany') && $debt->contractCompany
                 ? $debt->contractCompany->only(['id', 'company_code', 'name', 'is_military'])
                 : null,
@@ -75,5 +70,14 @@ class AdminCivilianDebtService
     private function remaining(ContractCompanyDebt $debt): float
     {
         return max(0, round((float) $debt->due - (float) $debt->collected, 2));
+    }
+
+    private function statusLabel(string $status, float $due, float $collected): string
+    {
+        if ($due > 0 && $collected >= $due) {
+            return 'تم التحصيل';
+        }
+
+        return DebtStatus::tryFrom($status)?->label() ?? $status;
     }
 }

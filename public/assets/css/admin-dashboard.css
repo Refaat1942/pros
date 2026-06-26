@@ -1122,6 +1122,36 @@
         font-weight: 800;
         color: #334155;
     }
+    .civ-debt-collect-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        min-width: 200px;
+    }
+    .civ-debt-collect-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+    }
+    .civ-debt-amount-input {
+        width: 120px;
+        min-width: 100px;
+        padding: 7px 10px;
+        font-size: 13px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        direction: ltr;
+        text-align: left;
+    }
+    .civ-debt-collect-row .btn-civ-collect {
+        padding: 7px 12px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    .civ-debt-action-cell { min-width: 220px; }
 
     .patient-type-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; }
     .patient-type-badge.civilian { background: rgba(14,116,144,0.12); color:#0e7490; }
