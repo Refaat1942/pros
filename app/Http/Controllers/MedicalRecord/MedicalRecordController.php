@@ -234,7 +234,7 @@ class MedicalRecordController extends Controller
                 ? $appointment->transferredAt()->copy()->timezone(ClinicTime::zone())->toIso8601String()
                 : null,
             'transferred_at_formatted' => $appointment->transferredAtFormatted(),
-            'wait_label'     => $appointment->receptionWaitLabel(),
+            'wait_label'     => $appointment->clinicWaitLabel(),
             'patient'        => $appointment->relationLoaded('patient') && $appointment->patient
                 ? $appointment->patient->only(['id', 'patient_code', 'name', 'national_id', 'patient_type', 'company_name', 'sovereign_entity'])
                     + ['display_entity' => $appointment->patient->displayEntity()]

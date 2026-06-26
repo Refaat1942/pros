@@ -43,6 +43,37 @@ class DoctorQueueStatsTest extends TestCase
             ->assertViewHas('queue_today_total', 1);
     }
 
+    public function test_sidebar_shows_waiting_count_beside_queue_link(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $doctor  = $this->userWithRole('doctor');
+
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض شارة القائمة');
+        $this->transferPatientToClinicHttp($recep, $patient);
+
+        $this->actingAs($doctor)
+            ->get('/doctor/queue')
+            ->assertOk()
+            ->assertSee('id="sidebarQueueBadge"', false)
+            ->assertSee('>1</span>', false);
+
+        $appointmentId = Appointment::where('patient_id', $patient->id)->value('id');
+
+        $this->actingAs($doctor)->postJson('/doctor/diagnosis', [
+            'patient_id'     => $patient->id,
+            'appointment_id' => $appointmentId,
+            'diagnosis'      => 'تشخيص',
+            'lock'           => true,
+        ])->assertCreated();
+
+        $this->actingAs($doctor)
+            ->get('/doctor/records')
+            ->assertOk()
+            ->assertSee('id="sidebarQueueBadge"', false)
+            ->assertSee('>0</span>', false);
+    }
+
     public function test_transfer_sets_transferred_to_clinic_at_for_wait_time(): void
     {
         $company = $this->civilianCompany();

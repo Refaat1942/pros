@@ -63,7 +63,7 @@ class Appointment extends Model
     }
 
     /**
-     * مدة الانتظار من إنشاء ملف المريض حتى تحويله للعيادة.
+     * مدة الانتظار من إنشاء ملف المريض حتى تحويله للعيادة (استقبال).
      */
     public function receptionWaitLabel(): string
     {
@@ -75,6 +75,20 @@ class Appointment extends Model
         }
 
         return self::formatWaitDuration($patient->created_at, $end);
+    }
+
+    /**
+     * مدة الانتظار في العيادة — من التحويل حتى الآن (قائمة الطبيب).
+     */
+    public function clinicWaitLabel(?\Carbon\CarbonInterface $until = null): string
+    {
+        $start = $this->transferredAt();
+
+        if (! $start) {
+            return '—';
+        }
+
+        return self::formatWaitDuration($start, $until ?? now());
     }
 
     public static function formatWaitDuration(\Carbon\CarbonInterface $from, \Carbon\CarbonInterface $to): string
@@ -94,11 +108,25 @@ class Appointment extends Model
             $parts[] = $diff->h.' '.($diff->h === 1 ? 'ساعة' : 'ساعات');
         }
 
-        if ($diff->i > 0 || $parts === []) {
+        if ($diff->i > 0) {
             $parts[] = $diff->i.' '.($diff->i === 1 ? 'دقيقة' : 'دقائق');
         }
 
-        return implode(' ', array_slice($parts, 0, 2));
+        if ($parts === []) {
+            return 'أقل من دقيقة';
+        }
+
+        return self::arabicDigits(implode(' ', array_slice($parts, 0, 2)));
+    }
+
+    /** تحويل الأرقام اللاتينية إلى أرقام عربية للعرض في الواجهة. */
+    private static function arabicDigits(string $text): string
+    {
+        return str_replace(
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+            $text,
+        );
     }
 
     public function patient(): BelongsTo

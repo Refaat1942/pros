@@ -601,6 +601,7 @@ class DashboardPageDataService
                 'lines',
                 'bom:id,bom_no',
                 'createdByUser:id,name',
+                'caseRecord:id,case_no,path',
             ])
             ->orderByDesc('created_at')
             ->limit(500)
@@ -612,6 +613,41 @@ class DashboardPageDataService
             ->havingRaw('SUM(qty_returned) > 0')
             ->orderByDesc('total_returned')
             ->get();
+
+        $barcodes = StockItem::query()
+            ->whereIn('code', $notes->flatMap(fn ($n) => $n->lines->pluck('stock_item_code'))->unique()->all())
+            ->pluck('barcode', 'code');
+
+        $statusLabels = [
+            ReturnNote::STATUS_COMPLETED => 'تم الاستلام',
+            ReturnNote::STATUS_PARTIAL   => 'استلام جزئي',
+            ReturnNote::STATUS_AUTHORIZED => 'بانتظار استلام المخزن',
+        ];
+
+        $linesExport = [];
+        foreach ($notes as $note) {
+            foreach ($note->lines as $line) {
+                $linesExport[] = [
+                    'return_no'       => $note->return_no,
+                    'status'          => $statusLabels[$note->status] ?? $note->status,
+                    'bom_no'          => $note->bom?->bom_no ?? '—',
+                    'work_order_no'   => $note->work_order_no ?? '—',
+                    'patient_name'    => $note->patient_name,
+                    'order_ref'       => $note->order_ref ?? '—',
+                    'case_no'         => $note->caseRecord?->case_no ?? '—',
+                    'stock_item_code' => $line->stock_item_code,
+                    'item_name'       => $line->name ?: $line->stock_item_code,
+                    'barcode'         => $barcodes[$line->stock_item_code] ?? '—',
+                    'qty_requested'   => $line->qty_requested,
+                    'qty_returned'    => $line->qty_returned,
+                    'qty_pending'     => max(0, $line->qty_requested - $line->qty_returned),
+                    'reason'          => $line->reason ?? '—',
+                    'sent_by'         => $note->createdByUser?->name ?? $note->created_by ?? '—',
+                    'sent_at'         => $note->authorized_at?->format('d/m/Y H:i') ?? '—',
+                    'received_at'     => $note->completed_at?->format('d/m/Y H:i') ?? '—',
+                ];
+            }
+        }
 
         $returnMovements = StockMovement::query()
             ->where('movement_type', StockMovement::TYPE_RETURN)
@@ -627,11 +663,13 @@ class DashboardPageDataService
         return [
             'return_notes'         => $notes,
             'return_items_summary' => $itemSummary,
+            'return_lines_export'  => $linesExport,
+            'return_barcodes'      => $barcodes,
             'return_notes_stats'   => [
-                ['icon' => '📋', 'label' => 'إجمالي الأذونات', 'value' => (string) $notes->count(), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5'],
-                ['icon' => '⏳', 'label' => 'مصرّح / بانتظار المسح', 'value' => (string) $authorized, 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706'],
-                ['icon' => '🔄', 'label' => 'جزئي', 'value' => (string) $partial, 'bg' => 'rgba(14,116,144,0.1)', 'color' => '#0e7490'],
-                ['icon' => '✅', 'label' => 'مكتمل', 'value' => (string) $completed, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669'],
+                ['icon' => '📋', 'label' => 'إجمالي الطلبات', 'value' => (string) $notes->count(), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5'],
+                ['icon' => '📤', 'label' => 'بانتظار المخزن', 'value' => (string) $authorized, 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706'],
+                ['icon' => '🔄', 'label' => 'استلام جزئي', 'value' => (string) $partial, 'bg' => 'rgba(14,116,144,0.1)', 'color' => '#0e7490'],
+                ['icon' => '✅', 'label' => 'تم الاستلام', 'value' => (string) $completed, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669'],
                 ['icon' => '📦', 'label' => 'وحدات مرتجعة', 'value' => (string) $totalReturnedQty, 'bg' => 'rgba(124,58,237,0.1)', 'color' => '#7c3aed'],
                 ['icon' => '💰', 'label' => 'قيمة WAC المستعادة', 'value' => number_format($totalReturnedValue, 0) . ' ج.م', 'bg' => 'rgba(5,150,105,0.08)', 'color' => '#059669'],
             ],

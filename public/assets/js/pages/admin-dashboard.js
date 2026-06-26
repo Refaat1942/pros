@@ -1810,8 +1810,7 @@
         var entityBoxes = pathway === 'military'
           ? detailBox('الجهة السيادية', details.sovereign_entity || details.display_entity)
             + detailBox('الرتبة', details.rank)
-          : detailBox('جهة التعاقد', details.company_name || details.display_entity || track.company_name)
-            + detailBox('كود الجهة', details.company_code, { mono: true });
+          : detailBox('جهة التعاقد', details.company_name || details.display_entity || track.company_name);
 
         var fileBoxes = ''
           + detailBox('تاريخ التسجيل', formatDetailDate(details.registered_at))
@@ -2044,6 +2043,220 @@
             btn.disabled = false;
           });
       });
+    })();
+
+    (function initAdminReturnsPage() {
+      var section = document.getElementById('section-returns');
+      if (!section) return;
+
+      function esc(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function visibleNoteRows() {
+        return Array.prototype.slice.call(document.querySelectorAll('.return-note-row')).filter(function (row) {
+          return row.style.display !== 'none';
+        });
+      }
+
+      function visibleLineRows() {
+        return Array.prototype.slice.call(document.querySelectorAll('.return-line-row')).filter(function (row) {
+          return row.style.display !== 'none';
+        });
+      }
+
+      function visibleItemRows() {
+        return Array.prototype.slice.call(document.querySelectorAll('.return-item-row')).filter(function (row) {
+          return row.style.display !== 'none';
+        });
+      }
+
+      function applyNoteFilters() {
+        var term = (document.getElementById('returnNoteSearch') || {}).value || '';
+        term = term.trim().toUpperCase();
+        var status = (document.getElementById('returnNoteStatusFilter') || {}).value || '';
+        var rows = document.querySelectorAll('.return-note-row');
+        var visible = 0;
+        rows.forEach(function (row) {
+          var matchTerm = !term || (row.dataset.search || '').toUpperCase().indexOf(term) !== -1;
+          var matchStatus = !status || row.dataset.status === status;
+          row.style.display = (matchTerm && matchStatus) ? '' : 'none';
+          if (matchTerm && matchStatus) visible++;
+        });
+        var countEl = document.getElementById('returnNoteFilterCount');
+        if (countEl) countEl.textContent = visible + ' طلب';
+        refreshPaginated('returnNotesTableBody');
+      }
+
+      function applyLineFilters() {
+        var term = (document.getElementById('returnLineSearch') || {}).value || '';
+        term = term.trim().toUpperCase();
+        var rows = document.querySelectorAll('.return-line-row');
+        var visible = 0;
+        rows.forEach(function (row) {
+          var match = !term || (row.dataset.search || '').toUpperCase().indexOf(term) !== -1;
+          row.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+        var countEl = document.getElementById('returnLineFilterCount');
+        if (countEl) countEl.textContent = visible + ' بند';
+        refreshPaginated('returnLinesTableBody');
+      }
+
+      function applyItemFilters() {
+        var term = (document.getElementById('returnItemSearch') || {}).value || '';
+        term = term.trim().toUpperCase();
+        var rows = document.querySelectorAll('.return-item-row');
+        var visible = 0;
+        rows.forEach(function (row) {
+          var match = !term || (row.dataset.search || '').toUpperCase().indexOf(term) !== -1;
+          row.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+        var countEl = document.getElementById('returnItemFilterCount');
+        if (countEl) countEl.textContent = visible + ' صنف';
+        refreshPaginated('returnItemsTableBody');
+      }
+
+      onId('returnNoteSearch', 'input', applyNoteFilters);
+      onId('returnNoteStatusFilter', 'change', applyNoteFilters);
+      onId('returnLineSearch', 'input', applyLineFilters);
+      onId('returnItemSearch', 'input', applyItemFilters);
+
+      function detailRow(label, value) {
+        return '<div class="admin-return-detail-row">' +
+          '<span class="admin-return-detail-label">' + label + '</span>' +
+          '<span class="admin-return-detail-value">' + value + '</span></div>';
+      }
+
+      window.closeReturnNoteDetail = function () {
+        var modal = document.getElementById('returnNoteDetailModal');
+        if (modal) modal.style.display = 'none';
+      };
+
+      window.openReturnNoteDetail = function (btn) {
+        var row = btn.closest('.return-note-row');
+        if (!row) return;
+        var d = row.dataset;
+        var lines = [];
+        try { lines = JSON.parse(d.lines || '[]'); } catch (e) { lines = []; }
+
+        var title = document.getElementById('returnNoteModalTitle');
+        var subtitle = document.getElementById('returnNoteModalSubtitle');
+        var body = document.getElementById('returnNoteModalBody');
+        var modal = document.getElementById('returnNoteDetailModal');
+
+        if (title) title.textContent = '↩️ ' + esc(d.returnNo);
+        if (subtitle) subtitle.textContent = esc(d.patient) + ' · ' + esc(d.bomNo) + ' · ' + esc(d.workOrder);
+
+        var linesHtml = lines.length
+          ? '<div class="admin-return-lines-table-wrap"><table class="admin-return-lines-table">' +
+            '<thead><tr><th>الصنف</th><th>الباركود</th><th>مطلوب</th><th>مستلم</th><th>متبقي</th><th>السبب</th></tr></thead><tbody>' +
+            lines.map(function (ln) {
+              var pending = Math.max(0, (ln.requested || 0) - (ln.returned || 0));
+              var done = pending === 0 && (ln.returned || 0) > 0;
+              return '<tr class="' + (done ? 'is-complete' : '') + '">' +
+                '<td><strong>' + esc(ln.name) + '</strong><br><code>' + esc(ln.code) + '</code></td>' +
+                '<td><code>' + esc(ln.barcode || '—') + '</code></td>' +
+                '<td>' + (ln.requested || 0) + '</td>' +
+                '<td><strong style="color:' + (done ? '#059669' : '#d97706') + ';">' + (ln.returned || 0) + '</strong></td>' +
+                '<td>' + pending + '</td>' +
+                '<td>' + esc(ln.reason || '—') + '</td></tr>';
+            }).join('') + '</tbody></table></div>'
+          : '<p style="color:var(--text-muted);">لا بنود.</p>';
+
+        if (body) {
+          body.innerHTML =
+            '<div class="admin-return-detail-grid">' +
+            detailRow('رقم الطلب', '<strong style="font-family:monospace;">' + esc(d.returnNo) + '</strong>') +
+            detailRow('BOM', esc(d.bomNo)) +
+            detailRow('أمر التشغيل', '<span style="font-family:monospace;color:#4f46e5;">' + esc(d.workOrder) + '</span>') +
+            detailRow('رقم الحالة', esc(d.caseNo)) +
+            detailRow('المريض', '<strong>' + esc(d.patient) + '</strong>') +
+            detailRow('مرجع الطلب', esc(d.orderRef)) +
+            detailRow('الحالة', esc(d.statusLabel)) +
+            detailRow('سبب الارتجاع', esc(d.reason)) +
+            detailRow('أرسله (التشغيل)', esc(d.createdBy)) +
+            detailRow('تاريخ الإرسال', esc(d.authorizedAt)) +
+            (d.completedAt !== '—' ? detailRow('تاريخ الاستلام', esc(d.completedAt)) : '') +
+            '</div>' +
+            '<h4 class="admin-return-lines-title">بنود الطلب</h4>' + linesHtml;
+        }
+
+        if (modal) modal.style.display = 'flex';
+      };
+
+      var modal = document.getElementById('returnNoteDetailModal');
+      if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeReturnNoteDetail(); });
+      onId('btnCloseReturnNoteDetail', 'click', closeReturnNoteDetail);
+      onId('btnReturnNoteModalClose', 'click', closeReturnNoteDetail);
+
+      window.exportAdminReturnNotes = function () {
+        var rows = visibleNoteRows();
+        if (!rows.length) { alert('لا توجد بيانات للتصدير'); return; }
+        var headers = ['رقم الطلب', 'BOM', 'أمر التشغيل', 'المريض', 'سبب الارتجاع', 'البنود', 'الحالة', 'أرسله', 'تاريخ الإرسال', 'تاريخ الاستلام'];
+        var data = rows.map(function (row) {
+          var d = row.dataset;
+          var lines = [];
+          try { lines = JSON.parse(d.lines || '[]'); } catch (e) { lines = []; }
+          var linesTxt = lines.map(function (ln) {
+            return (ln.name || ln.code) + ' ' + (ln.returned || 0) + '/' + (ln.requested || 0);
+          }).join(' · ');
+          return [
+            d.returnNo, d.bomNo, d.workOrder, d.patient, d.reason, linesTxt,
+            d.statusLabel, d.createdBy,
+            ExportKit.formatDateForExport(d.authorizedAt),
+            ExportKit.formatDateForExport(d.completedAt),
+          ];
+        });
+        ExportKit.toExcel('return-requests', headers, data);
+      };
+
+      window.exportAdminReturnLinesDetail = function () {
+        var all = window.__ADMIN_RETURN_LINES_EXPORT || [];
+        var term = ((document.getElementById('returnLineSearch') || {}).value || '').trim().toUpperCase();
+        var filtered = all.filter(function (row) {
+          if (!term) return true;
+          var hay = [
+            row.return_no, row.patient_name, row.stock_item_code,
+            row.item_name, row.barcode, row.work_order_no,
+          ].join(' ').toUpperCase();
+          return hay.indexOf(term) !== -1;
+        });
+        if (!filtered.length) { alert('لا توجد بيانات للتصدير'); return; }
+        var headers = [
+          'رقم الطلب', 'الحالة', 'BOM', 'أمر التشغيل', 'رقم الحالة', 'المريض', 'مرجع الطلب',
+          'كود الصنف', 'اسم الصنف', 'الباركود', 'مطلوب', 'مستلم', 'متبقي',
+          'سبب الارتجاع', 'أرسله', 'تاريخ الإرسال', 'تاريخ الاستلام',
+        ];
+        var data = filtered.map(function (row) {
+          return [
+            row.return_no, row.status, row.bom_no, row.work_order_no, row.case_no,
+            row.patient_name, row.order_ref, row.stock_item_code, row.item_name, row.barcode,
+            row.qty_requested, row.qty_returned, row.qty_pending, row.reason, row.sent_by,
+            ExportKit.formatDateForExport(row.sent_at),
+            ExportKit.formatDateForExport(row.received_at),
+          ];
+        });
+        ExportKit.toExcel('return-lines-detail', headers, data);
+      };
+
+      window.exportAdminReturnItems = function () {
+        var rows = visibleItemRows();
+        if (!rows.length) { alert('لا توجد بيانات للتصدير'); return; }
+        var headers = ['كود الصنف', 'اسم الصنف', 'كمية مطلوبة', 'كمية مرتجعة', 'نسبة الاسترداد'];
+        var data = rows.map(function (row) {
+          var cells = row.querySelectorAll('td');
+          return [
+            cells[0] ? cells[0].textContent.trim() : '',
+            cells[1] ? cells[1].textContent.trim() : '',
+            cells[2] ? cells[2].textContent.trim() : '',
+            cells[3] ? cells[3].textContent.trim() : '',
+            cells[4] ? cells[4].textContent.trim() : '',
+          ];
+        });
+        ExportKit.toExcel('return-items-summary', headers, data);
+      };
     })();
 
     (function bindAdminExcelExports() {

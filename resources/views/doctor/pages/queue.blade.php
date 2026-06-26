@@ -73,7 +73,7 @@
                   </span>
                 </td>
                 <td>{{ $entity }}</td>
-                <td><span class="wait-time">{{ $appt->receptionWaitLabel() }}</span></td>
+                <td><span class="wait-time">{{ $appt->clinicWaitLabel() }}</span></td>
                 <td>{{ $appt->transferredAtFormatted() }}</td>
                 <td>
                   <a href="{{ $diagnosisUrl }}" class="btn-action" onclick="event.stopPropagation()">

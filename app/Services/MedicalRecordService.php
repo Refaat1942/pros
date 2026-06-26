@@ -9,6 +9,8 @@ use App\Models\CaseRecommendation;
 use App\Models\MedicalRecord;
 use App\Models\MedicalRecordItem;
 use App\Models\Patient;
+use App\Services\Dashboard\DashboardQueueService;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +21,8 @@ class MedicalRecordService
 {
     public function __construct(
         private readonly CaseService $caseService,
+        private readonly DashboardQueueService $queueService,
+        private readonly NotificationService $notifications,
     ) {
     }
 
@@ -93,6 +97,8 @@ class MedicalRecordService
                 $this->syncCaseRecommendations($record->caseRecord, $record);
             }
 
+            $this->maybeNotifyReceptionIfClinicQueueEmpty($record->appointment_id);
+
             return $record;
         });
     }
@@ -133,6 +139,8 @@ class MedicalRecordService
                 tag:         'medical',
                 after:       ['case_id' => $case->id, 'appointment_id' => $appointment->id],
             );
+
+            $this->maybeNotifyReceptionIfClinicQueueEmpty($appointment->id);
 
             return $case;
         });
@@ -251,6 +259,26 @@ class MedicalRecordService
                 'name'              => $item->name,
                 'qty'               => $item->qty,
             ]);
+        }
+    }
+
+    private function maybeNotifyReceptionIfClinicQueueEmpty(?int $appointmentId): void
+    {
+        if (! $appointmentId) {
+            return;
+        }
+
+        $appointment = Appointment::find($appointmentId);
+
+        if (! $appointment) {
+            return;
+        }
+
+        $date = $appointment->appointment_date?->toDateString()
+            ?? now()->toDateString();
+
+        if ($this->queueService->doctorWaitingCount($date) === 0) {
+            $this->notifications->notifyReceptionClinicQueueEmpty($date);
         }
     }
 }

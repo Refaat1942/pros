@@ -13,18 +13,18 @@ class AdminReturnsPageTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_admin_returns_page_lists_return_notes_and_items(): void
+    public function test_admin_returns_page_lists_return_notes_items_and_line_details(): void
     {
         $this->seedStock();
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $tech    = $this->userWithRole('technical');
+        $ops     = $this->userWithRole('operations');
         $admin   = $this->userWithRole('admin');
         $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0900']);
 
-        $this->actingAs($tech);
+        $this->actingAs($ops);
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
@@ -35,9 +35,10 @@ class AdminReturnsPageTest extends TestCase
             $bom->fresh(),
             [['stock_item_code' => 'RM-001', 'qty' => 2, 'name' => 'صنف RM-001']],
             'فائض عن الحاجة',
-            $tech,
+            $ops,
         );
 
+        $this->actingAs($this->userWithRole('technical'));
         app(ReturnNoteService::class)->complete($note, [
             ['line_id' => $note->lines->first()->id, 'barcode' => 'BC-RM-001', 'qty_returned' => 2],
         ]);
@@ -45,10 +46,27 @@ class AdminReturnsPageTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/returns')
             ->assertOk()
-            ->assertSee('سجل إذونات الارتجاع')
+            ->assertSee('طلبات الارتجاع (قراءة فقط)')
+            ->assertSee('سجل طلبات الارتجاع')
+            ->assertSee('تفاصيل البنود — سجل كامل')
             ->assertSee($note->fresh()->return_no)
             ->assertSee('RM-001')
-            ->assertSee('الأصناف المرتجعة');
+            ->assertSee('فائض عن الحاجة')
+            ->assertSee('الأصناف المرتجعة')
+            ->assertSee('exportAdminReturnLinesDetail')
+            ->assertSee('تم الاستلام');
+    }
+
+    public function test_admin_returns_page_is_read_only_without_create_actions(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get('/admin/returns')
+            ->assertOk()
+            ->assertDontSee('إنشاء إذن')
+            ->assertDontSee('btnNewReturn')
+            ->assertDontSee('تأكيد الاستلام');
     }
 
     private function seedStock(): void

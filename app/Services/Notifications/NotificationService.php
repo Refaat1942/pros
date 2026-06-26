@@ -140,6 +140,24 @@ class NotificationService
     }
 
     /**
+     * عيادة → استقبال: انتهت قائمة انتظار الطبيب — يمكن استقبال مرضى جدد.
+     */
+    public function notifyReceptionClinicQueueEmpty(string $queueDate): AppNotification
+    {
+        return $this->push(
+            roleSlug: Role::SLUG_RECEPTION,
+            title:    '🟢 العيادة متاحة لاستقبال مرضى جدد',
+            body:     'انتهت قائمة انتظار الطبيب — يمكن تحويل مرضى جدد للعيادة.',
+            case:     null,
+            event:    'doctor_clinic_queue_empty',
+            data:     [
+                'queue_date' => $queueDate,
+                'url'        => '/reception/appointments',
+            ],
+        );
+    }
+
+    /**
      * استقبال → عيادة: إشعار الطبيب بمريض جديد في قائمة الانتظار.
      */
     public function notifyDoctorClinicTransfer(Appointment $appointment): AppNotification

@@ -12,9 +12,11 @@ final class ArabicDate
             return '—';
         }
 
-        $localized = $at->copy()->locale('ar');
+        $zone = ClinicTime::zone();
+        $localized = $at->copy()->timezone($zone)->locale('ar');
+        $now = now()->timezone($zone);
 
-        return $localized->diffForHumans()
+        return $localized->diffForHumans($now)
             .' · '
             .$localized->translatedFormat('j F Y، g:i a');
     }

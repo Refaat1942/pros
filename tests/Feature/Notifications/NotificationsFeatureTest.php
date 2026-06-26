@@ -4,6 +4,7 @@ namespace Tests\Feature\Notifications;
 
 use App\Enums\WorkflowEvent;
 use App\Models\AppNotification;
+use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Role;
 use App\Models\UserDevice;
@@ -178,5 +179,82 @@ class NotificationsFeatureTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(0, AppNotification::forRole(Role::SLUG_OPERATIONS)->unread()->count());
+    }
+
+    public function test_reception_notified_when_last_patient_exam_is_locked(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $doctor  = $this->userWithRole('doctor');
+
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض آخر كشف');
+        $this->transferPatientToClinicHttp($recep, $patient);
+
+        $appointmentId = Appointment::where('patient_id', $patient->id)->value('id');
+
+        $this->actingAs($doctor)->postJson('/doctor/diagnosis', [
+            'patient_id'     => $patient->id,
+            'appointment_id' => $appointmentId,
+            'diagnosis'      => 'تشخيص اختبار الإشعار',
+            'lock'           => true,
+        ])->assertCreated();
+
+        $notification = AppNotification::forRole(Role::SLUG_RECEPTION)
+            ->where('event', 'doctor_clinic_queue_empty')
+            ->first();
+
+        $this->assertNotNull($notification);
+        $this->assertStringContainsString('متاحة', $notification->title);
+        $this->assertStringContainsString('انتهت قائمة انتظار الطبيب', $notification->body);
+    }
+
+    public function test_reception_not_notified_when_other_patients_still_waiting(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $doctor  = $this->userWithRole('doctor');
+
+        $first  = $this->registerCivilianPatientHttp($recep, $company, 'مريض أول');
+        $second = $this->registerCivilianPatientHttp($recep, $company, 'مريض ثاني');
+        $this->transferPatientToClinicHttp($recep, $first);
+        $this->transferPatientToClinicHttp($recep, $second);
+
+        $firstAppointmentId = Appointment::where('patient_id', $first->id)->value('id');
+
+        $this->actingAs($doctor)->postJson('/doctor/diagnosis', [
+            'patient_id'     => $first->id,
+            'appointment_id' => $firstAppointmentId,
+            'diagnosis'      => 'تشخيص المريض الأول',
+            'lock'           => true,
+        ])->assertCreated();
+
+        $this->assertSame(
+            0,
+            AppNotification::forRole(Role::SLUG_RECEPTION)
+                ->where('event', 'doctor_clinic_queue_empty')
+                ->count(),
+        );
+        $this->assertSame(1, $this->queues()->doctorWaitingCount());
+    }
+
+    public function test_reception_notified_when_last_patient_skips_exam(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $doctor  = $this->userWithRole('doctor');
+
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض تخطي');
+        $appointment = $this->transferPatientToClinicHttp($recep, $patient);
+
+        $this->actingAs($doctor)
+            ->postJson("/doctor/diagnosis/{$appointment->id}/skip")
+            ->assertOk();
+
+        $this->assertSame(
+            1,
+            AppNotification::forRole(Role::SLUG_RECEPTION)
+                ->where('event', 'doctor_clinic_queue_empty')
+                ->count(),
+        );
     }
 }

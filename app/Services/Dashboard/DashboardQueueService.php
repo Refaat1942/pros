@@ -30,6 +30,18 @@ class DashboardQueueService
             ->all();
     }
 
+    /** مرضى بانتظار الكشف في عيادة الطبيب ليوم معيّن. */
+    public function doctorWaitingCount(?string $date = null): int
+    {
+        $date = $date ?? now()->toDateString();
+
+        return Appointment::query()
+            ->whereDate('appointment_date', $date)
+            ->where('status', Appointment::STATUS_IN_CLINIC)
+            ->where('transferred_to_clinic', true)
+            ->count();
+    }
+
     /** @return list<int> */
     public function specTechnicalCaseIds(): array
     {

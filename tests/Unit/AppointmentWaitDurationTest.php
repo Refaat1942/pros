@@ -22,7 +22,45 @@ class AppointmentWaitDurationTest extends TestCase
         ]);
         $appointment->setRelation('patient', $patient);
 
-        $this->assertSame('45 دقائق', $appointment->receptionWaitLabel());
+        $this->assertSame('٤٥ دقائق', $appointment->receptionWaitLabel());
+    }
+
+    public function test_reception_wait_label_shows_less_than_one_minute_when_immediate(): void
+    {
+        $patient = new Patient(['name' => 'اختبار']);
+        $patient->created_at = Carbon::parse('2026-06-19 10:00:00');
+
+        $appointment = new Appointment([
+            'transferred_to_clinic'    => true,
+            'transferred_to_clinic_at' => Carbon::parse('2026-06-19 10:00:30'),
+        ]);
+        $appointment->setRelation('patient', $patient);
+
+        $this->assertSame('أقل من دقيقة', $appointment->receptionWaitLabel());
+    }
+
+    public function test_clinic_wait_label_from_transfer_until_now(): void
+    {
+        $appointment = new Appointment([
+            'transferred_to_clinic'    => true,
+            'transferred_to_clinic_at' => Carbon::parse('2026-06-19 10:00:00'),
+        ]);
+
+        $label = $appointment->clinicWaitLabel(Carbon::parse('2026-06-19 10:03:00'));
+
+        $this->assertSame('٣ دقائق', $label);
+    }
+
+    public function test_clinic_wait_label_shows_less_than_one_minute_when_under_sixty_seconds(): void
+    {
+        $appointment = new Appointment([
+            'transferred_to_clinic'    => true,
+            'transferred_to_clinic_at' => Carbon::parse('2026-06-19 10:00:00'),
+        ]);
+
+        $label = $appointment->clinicWaitLabel(Carbon::parse('2026-06-19 10:00:45'));
+
+        $this->assertSame('أقل من دقيقة', $label);
     }
 
     public function test_format_wait_duration_includes_days_and_hours(): void
@@ -32,7 +70,7 @@ class AppointmentWaitDurationTest extends TestCase
 
         $label = Appointment::formatWaitDuration($from, $to);
 
-        $this->assertStringContainsString('2 أيام', $label);
-        $this->assertStringContainsString('2 ساعات', $label);
+        $this->assertStringContainsString('٢ أيام', $label);
+        $this->assertStringContainsString('٢ ساعات', $label);
     }
 }
