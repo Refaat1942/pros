@@ -3,16 +3,13 @@
 namespace App\Http\Controllers\Manufacturing;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Manufacturing\AdvanceManufacturingStageRequest;
-use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
 use App\Services\DeliveryService;
-use App\Support\BomItemAggregator;
+use App\Support\ManufacturingDeskCaseFormatter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class ManufacturingStageController extends Controller
 {
@@ -25,20 +22,17 @@ class ManufacturingStageController extends Controller
     }
 
     /**
-     * الحالات في مرحلة التصنيع مع المرحلة الفرعية.
+     * طابور التسليم — حالات جاهزة بعد إتمام التصنيع من الورشة.
      */
     public function index(Request $request): JsonResponse
     {
-        $this->bomService->repairOrphanWipCases();
-
         $cases = $this->fetchForDashboard(
-            CaseRecord::operationsDeskQueue()
+            CaseRecord::operationsDeliveryQueue()
                 ->with([
                     'patient:id,patient_code,name',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,qty,source',
                 ])
-                ->when($request->manufacturing_stage, fn ($q, $s) => $q->where('manufacturing_stage', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
                       ->orWhere('order_ref', 'like', "%{$s}%")
@@ -47,53 +41,18 @@ class ManufacturingStageController extends Controller
                 ->orderByDesc('updated_at')
         );
 
+        $collection = collect($cases);
+        $summary    = ManufacturingDeskCaseFormatter::deliverySummary($collection);
+
         return response()->json([
-            'data'    => collect($cases)->map(fn ($c) => $this->formatCase($c))->values(),
-            'total'   => $cases->count(),
-            'summary' => $this->buildSummary($cases),
+            'data'    => $collection->map(fn ($c) => ManufacturingDeskCaseFormatter::format($c, 'operations.work-order.print'))->values(),
+            'total'   => $collection->count(),
+            'summary' => $summary,
         ]);
     }
 
     /**
-     * تقدم مرحلة التصنيع الفرعية.
-     */
-    public function advance(AdvanceManufacturingStageRequest $request, CaseRecord $case): JsonResponse
-    {
-        $case = $this->bomService->advanceManufacturingStage(
-            $case,
-            $request->validated('manufacturing_stage'),
-        );
-
-        return response()->json([
-            'message' => 'تم تقدم مرحلة التصنيع.',
-            'case'    => $this->formatCase($case->load(['patient:id,patient_code,name', 'bom.items:id,bom_id'])),
-        ]);
-    }
-
-    /**
-     * إتمام التصنيع — إغلاق BOM وتحويل الحالة للتسليم.
-     */
-    public function finishQuality(CaseRecord $case): JsonResponse
-    {
-        $case->load('bom');
-
-        if (! $case->bom) {
-            abort(422, 'لا توجد BOM مرتبطة بهذه الحالة.');
-        }
-
-        $bom = $this->bomService->finish($case->bom);
-
-        $case->refresh()->load(['patient:id,patient_code,name', 'bom']);
-
-        return response()->json([
-            'message' => 'تم التصنيع — الحالة جاهزة للتسليم.',
-            'case'    => $this->formatCase($case),
-            'bom'     => $bom->only(['id', 'bom_no', 'stage', 'finished_at']),
-        ]);
-    }
-
-    /**
-     * تسليم الطرف وإغلاق الحالة — من مكتب التشغيل (بديل الاستقبال).
+     * تسليم الطرف وإغلاق الحالة — من مكتب التشغيل.
      */
     public function deliver(CaseRecord $case): JsonResponse
     {
@@ -117,16 +76,16 @@ class ManufacturingStageController extends Controller
 
         return response()->json([
             'message'    => 'تم تسليم الطرف وإغلاق الطلب بنجاح.',
-            'case'       => $this->formatCase($case),
+            'case'       => ManufacturingDeskCaseFormatter::format($case->load(['patient:id,patient_code,name', 'bom']), 'operations.work-order.print'),
             'invoice_no' => $case->invoice_no,
             'closed'     => true,
         ]);
     }
 
     /**
-     * إذن شغل / أمر الإنتاج — النموذج الرسمي (1.jpeg).
+     * إذن شغل — للطباعة من مكتب التشغيل عند التسليم.
      */
-    public function printWorkOrder(CaseRecord $case): View
+    public function printWorkOrder(CaseRecord $case): \Illuminate\View\View
     {
         abort_unless($case->work_order_no, 404, 'لا يوجد أمر تشغيل لهذه الحالة.');
 
@@ -138,54 +97,5 @@ class ManufacturingStageController extends Controller
             'case'      => $case,
             'autoPrint' => true,
         ]);
-    }
-
-    private function buildSummary($cases): array
-    {
-        $collection = collect($cases);
-        $wipCount   = $collection->filter(fn ($c) => $c->bom?->stage === Bom::STAGE_WIP)->count();
-        $readyCount = $collection->filter(fn ($c) => $c->stage_key === CaseRecord::STAGE_READY_DELIVERY)->count();
-
-        return [
-            'raw'            => 0,
-            'wip'            => $wipCount,
-            'ready_delivery' => $readyCount,
-            'done'           => CaseRecord::countDeliveredByOps(),
-            'total_active'   => $collection->count(),
-        ];
-    }
-
-    private function formatCase(CaseRecord $case): array
-    {
-        $bom = null;
-        if ($case->relationLoaded('bom') && $case->bom) {
-            $aggregated = $case->bom->relationLoaded('items')
-                ? BomItemAggregator::byStockCode($case->bom->items)
-                : [];
-
-            $bom = $case->bom->only(['id', 'bom_no', 'stage']) + [
-                'items_count' => count($aggregated),
-                'items'       => array_map(
-                    fn (array $item) => [
-                        'stock_item_code' => $item['stock_item_code'],
-                        'name'            => $item['name'],
-                        'qty'             => $item['qty'],
-                    ],
-                    $aggregated
-                ),
-            ];
-        }
-
-        return $case->only([
-            'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage',
-            'work_order_no', 'patient_type', 'path', 'quote_no', 'company_name',
-        ]) + [
-            'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
-            'work_order_print_url' => route('operations.work-order.print', $case),
-            'patient' => $case->relationLoaded('patient') && $case->patient
-                ? $case->patient->only(['id', 'patient_code', 'name'])
-                : null,
-            'bom' => $bom,
-        ];
     }
 }

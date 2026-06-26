@@ -32,6 +32,7 @@ trait ProstheticTestHelper
             'adjustments' => 'فني تعديلات',
             'costing'     => 'فني تكاليف',
             'operations'  => 'مكتب عمليات',
+            'workshop'    => 'ورشة التصنيع',
             'technical'   => 'مسؤول مخزن',
         ];
 

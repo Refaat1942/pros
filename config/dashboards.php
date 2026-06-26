@@ -138,11 +138,11 @@ return [
         'title' => 'لوحة التشغيل — مركز الأطراف الصناعية',
         'layout' => 'layouts.operations',
         'default_page' => 'pending',
-        'sidebar' => ['icon' => '🎯', 'title' => 'مكتب التشغيل', 'subtitle' => 'الموافقات والإنتاج والصرف'],
+        'sidebar' => ['icon' => '🎯', 'title' => 'مكتب التشغيل', 'subtitle' => 'الموافقات والتسليم'],
         'pages' => [
             'pending' => ['title' => 'مكتب التشغيل — موافقات وعروض الأسعار', 'icon' => '✅', 'label' => 'موافقات التشغيل'],
             'quotes-awaiting' => ['title' => 'عروض الأسعار — بانتظار موافقة الجهة', 'icon' => '💰', 'label' => 'عروض بانتظار الموافقة'],
-            'operations' => ['title' => 'مكتب التشغيل — أوامر الصرف والإنتاج', 'icon' => '🎯', 'label' => 'أوامر التشغيل'],
+            'operations' => ['title' => 'مكتب التشغيل — تسليم الطرف للعميل', 'icon' => '✅', 'label' => 'تسليم للعميل'],
             'returns' => ['title' => 'طلبات ارتجاع المواد — ورشة → مخزن', 'icon' => '↩️', 'label' => 'ارتجاع للمخزن'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
@@ -157,6 +157,24 @@ return [
         ],
         'body_attributes' => 'data-dashboard="operations"',
         'guard' => 'operations',
+    ],
+    'workshop' => [
+        'title' => 'لوحة ورشة التصنيع — مركز الأطراف الصناعية',
+        'layout' => 'layouts.workshop',
+        'default_page' => 'workshop',
+        'sidebar' => ['icon' => '🏭', 'title' => 'ورشة التصنيع', 'subtitle' => 'أوامر الإنتاج والتشغيل'],
+        'pages' => [
+            'workshop' => ['title' => 'ورشة التصنيع — أوامر تحت التشغيل', 'icon' => '🏭', 'label' => 'طابور الورشة'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
+        'scripts' => [
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
+            'assets/js/pages/workshop-dashboard.js',
+            'assets/js/shared/dashboard-mobile.js',
+        ],
+        'body_attributes' => 'data-dashboard="workshop"',
+        'guard' => 'workshop',
     ],
     'technical' => [
         'title' => 'لوحة المخزون — مركز الأطراف الصناعية',

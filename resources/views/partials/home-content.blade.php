@@ -75,9 +75,19 @@
             <a href="{{ route('dashboard.login', 'operations') }}" class="role-card operations">
                 <div class="icon-wrap">🎯</div>
                 <h2>التشغيل</h2>
-                <p>مكتب التشغيل — موافقات عروض الأسعار، طباعة وتسليم العروض للعميل، ومتابعة أوامر الإنتاج والصرف.</p>
+                <p>مكتب التشغيل — موافقات عروض الأسعار، طباعة وتسليم العروض للعميل، وتسليم الطرف بعد اكتمال التصنيع.</p>
                 <span class="enter-btn">
                     الدخول لمكتب التشغيل
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+            </a>
+
+            <a href="{{ route('dashboard.login', 'workshop') }}" class="role-card workshop">
+                <div class="icon-wrap">🏭</div>
+                <h2>ورشة التصنيع</h2>
+                <p>طابور أوامر الإنتاج بعد صرف المخزن — متابعة البنود والكميات وإتمام التصنيع قبل التسليم.</p>
+                <span class="enter-btn">
+                    الدخول لورشة التصنيع
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </span>
             </a>

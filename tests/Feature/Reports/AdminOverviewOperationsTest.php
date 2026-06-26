@@ -18,7 +18,7 @@ class AdminOverviewOperationsTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_overview_shows_active_operations_desk_cases(): void
+    public function test_overview_shows_active_workshop_cases(): void
     {
         $mock = $this->mock(BiReportService::class);
         $mock->shouldReceive('boardPatients')->once()->andReturn([
@@ -39,7 +39,6 @@ class AdminOverviewOperationsTest extends TestCase
         $patient = $this->civilianPatient($company);
         $admin   = $this->userWithRole('admin');
 
-        // اعتماد مكتب التشغيل ثم صرف المخزن → حالة نشطة بأمر شغل.
         $case = $this->dispensedManufacturingCase($patient);
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
 
@@ -47,12 +46,11 @@ class AdminOverviewOperationsTest extends TestCase
         $response = $this->get('/admin/overview');
 
         $response->assertOk();
-        $response->assertSee('مكتب التشغيل');
-        $response->assertSee('أوامر نشطة');
+        $response->assertSee('ورشة التصنيع');
+        $response->assertSee('تحت التشغيل');
         $response->assertSee($case->work_order_no);
         $response->assertSee($patient->name);
-        $response->assertSee('ops-overview-bom-btn', false);
-        $response->assertSee('opsOverviewBomModal', false);
+        $response->assertSee('workshop-overview-bom-btn', false);
     }
 
     public function test_overview_bom_items_modal_uses_merged_quantities_for_duplicate_codes(): void
@@ -123,7 +121,7 @@ class AdminOverviewOperationsTest extends TestCase
         $response->assertSee('موظف استقبال');
         $response->assertSee('مكتب عمليات');
         $response->assertSee('فني تكاليف');
-        $response->assertSee('8 موظف');
+        $response->assertSee('9 موظف');
     }
 
     public function test_overview_shows_audit_log_preview_from_database(): void
@@ -175,8 +173,19 @@ class AdminOverviewOperationsTest extends TestCase
             ->assertOk()
             ->assertSee('id="overviewWaitingCount" style="color:#d97706" data-server-rendered="1">0</span>', false);
 
-        // دخول حالة لمكتب التشغيل يزيد العدّاد.
-        $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        // دخول حالة لمكتب التشغيل مع عرض صادر يزيد عدّاد بانتظار رجوع العميل.
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        Quote::create([
+            'case_id'      => $case->id,
+            'quote_no'     => 'QT-OPS-OVERVIEW',
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $case->company_name,
+            'quote_date'   => now()->toDateString(),
+            'status'       => Quote::STATUS_ISSUED,
+            'status_label' => 'صادر للجهة — بانتظار خطاب الموافقة',
+            'total'        => 1000,
+        ]);
 
         $this->get('/admin/overview')
             ->assertOk()

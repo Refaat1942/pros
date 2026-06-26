@@ -7,6 +7,7 @@ use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
+use App\Support\ClinicTime;
 
 /**
  * استعلامات الطوابير الحية — نفس منطق لوحات التحكم (Query-Chain Monitoring).
@@ -16,7 +17,7 @@ class DashboardQueueService
     /** @return list<int> */
     public function doctorWaitingPatientIds(?string $date = null): array
     {
-        $date = $date ?? now()->toDateString();
+        $date = $date ?? ClinicTime::todayDateString();
 
         return Appointment::query()
             ->whereDate('appointment_date', $date)
@@ -33,7 +34,7 @@ class DashboardQueueService
     /** مرضى بانتظار الكشف في عيادة الطبيب ليوم معيّن. */
     public function doctorWaitingCount(?string $date = null): int
     {
-        $date = $date ?? now()->toDateString();
+        $date = $date ?? ClinicTime::todayDateString();
 
         return Appointment::query()
             ->whereDate('appointment_date', $date)
@@ -45,7 +46,7 @@ class DashboardQueueService
     /** مرضى مسجّلون في الاستقبال اليوم ولم يُحوَّلوا للعيادة بعد. */
     public function doctorReceptionPendingCount(?string $date = null): int
     {
-        $date = $date ?? now()->toDateString();
+        $date = $date ?? ClinicTime::todayDateString();
 
         return Appointment::query()
             ->whereDate('appointment_date', $date)
@@ -65,10 +66,11 @@ class DashboardQueueService
     }
 
     /** @return list<int> */
+    /** أوامر في ورشة التصنيع (BOM wip). */
     public function operationsManufacturingCaseIds(): array
     {
         return CaseRecord::query()
-            ->releasedToWorkshop()
+            ->workshopDeskQueue()
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();

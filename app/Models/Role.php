@@ -18,6 +18,7 @@ class Role extends Model
     public const SLUG_ADJUSTMENTS = 'adjustments';
     public const SLUG_COSTING     = 'costing';
     public const SLUG_OPERATIONS  = 'operations';
+    public const SLUG_WORKSHOP    = 'workshop';
     public const SLUG_TECHNICAL   = 'technical';
 
     /** جميع الـ slugs الصحيحة المطابقة لبادئات المسارات */
@@ -29,6 +30,7 @@ class Role extends Model
         self::SLUG_ADJUSTMENTS,
         self::SLUG_COSTING,
         self::SLUG_OPERATIONS,
+        self::SLUG_WORKSHOP,
         self::SLUG_TECHNICAL,
     ];
 

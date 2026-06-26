@@ -50,6 +50,7 @@ class UserFactory extends Factory
                 Role::SLUG_SPEC        => 'فني مواصفات',
                 Role::SLUG_ADJUSTMENTS => 'فني تعديلات',
                 Role::SLUG_OPERATIONS  => 'مكتب عمليات',
+                Role::SLUG_WORKSHOP    => 'ورشة التصنيع',
                 Role::SLUG_TECHNICAL   => 'مسؤول مخزن',
             ];
 
@@ -94,6 +95,11 @@ class UserFactory extends Factory
     public function operations(): static
     {
         return $this->forRole(Role::SLUG_OPERATIONS);
+    }
+
+    public function workshop(): static
+    {
+        return $this->forRole(Role::SLUG_WORKSHOP);
     }
 
     public function technical(): static

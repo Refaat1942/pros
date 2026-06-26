@@ -208,20 +208,21 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertEquals(Bom::STAGE_WIP, $bom->fresh()->stage);
         $this->assertContains($case->id, $queues->operationsManufacturingCaseIds());
 
-        // ── Step 7: Operations — sub-stages + quality finish ─────────────────
-        $this->actingAs($ops);
+        // ── Step 7: Workshop — sub-stages + quality finish ───────────────────
+        $workshop = $this->userWithRole('workshop');
+        $this->actingAs($workshop);
         foreach ([
             CaseRecord::MFG_GENERATION,
             CaseRecord::MFG_ASSEMBLY,
             CaseRecord::MFG_CASTING,
             CaseRecord::MFG_FINISHING,
         ] as $stage) {
-            $this->postJson("/operations/operations/{$case->id}/advance", [
+            $this->postJson("/workshop/workshop/{$case->id}/advance", [
                 'manufacturing_stage' => $stage,
             ])->assertOk();
         }
 
-        $finish = $this->postJson("/operations/operations/{$case->id}/finish-quality");
+        $finish = $this->postJson("/workshop/workshop/{$case->id}/finish-quality");
         $finish->assertOk();
 
         $case->refresh();

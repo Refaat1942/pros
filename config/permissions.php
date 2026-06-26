@@ -12,6 +12,7 @@ return [
         'adjustments' => ['label_ar' => 'لوحة المعدلات', 'icon' => '📏'],
         'costing'     => ['label_ar' => 'لوحة التكاليف', 'icon' => '💰'],
         'operations'  => ['label_ar' => 'مكتب التشغيل', 'icon' => '🎯'],
+        'workshop'    => ['label_ar' => 'ورشة التصنيع', 'icon' => '🏭'],
         'technical'   => ['label_ar' => 'لوحة المخزون', 'icon' => '📦'],
         'admin'       => ['label_ar' => 'لوحة الإدارة', 'icon' => '⚙️'],
     ],

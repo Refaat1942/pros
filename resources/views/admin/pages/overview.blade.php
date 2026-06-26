@@ -14,6 +14,8 @@
       </button>
     </div>
 
+    @include('partials.workshop-overview-panel')
+
     @include('partials.operations-overview-panel')
 
     @include('partials.visit-leaderboard-panel')

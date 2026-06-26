@@ -8,6 +8,7 @@ use App\Http\Requests\Appointment\UpdateAppointmentRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentStatusRequest;
 use App\Models\Appointment;
 use App\Services\AppointmentService;
+use App\Support\ClinicTime;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class AppointmentController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $date = $request->date ?? now()->toDateString();
+        $date = $request->date ?? ClinicTime::todayDateString();
 
         $query = Appointment::with([
             'patient:id,patient_code,name,patient_type,rank,created_at',

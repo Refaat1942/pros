@@ -28,6 +28,7 @@ use App\Services\BomService;
 use App\Services\DoctorTransferService;
 use App\Services\StockCatalogService;
 use App\Services\StockPriceService;
+use App\Support\ClinicTime;
 
 /**
  * يُحمّل بيانات Eloquent لكل صفحة لوحة تحكم — يُستدعى من ShowsDashboardPage.
@@ -68,7 +69,8 @@ class DashboardPageDataService
             'spec.orders'           => $this->specOrders(),
             'spec.pricing'          => $this->specPricing(),
             'spec.spec'             => $this->specPreview(),
-            'operations.operations' => $this->operationsDesk(),
+            'operations.operations' => $this->operationsDeliveryDesk(),
+            'workshop.workshop'   => $this->workshopDesk(),
             'technical.inventory'   => $this->technicalInventory(),
             'technical.bom'         => $this->technicalBom(),
             default                 => [],
@@ -308,7 +310,7 @@ class DashboardPageDataService
 
     private function doctorQueue(): array
     {
-        $date = request()->query('date', now()->toDateString());
+        $date = request()->query('date', ClinicTime::todayDateString());
 
         $baseQuery = Appointment::query()
             ->whereDate('appointment_date', $date)
@@ -470,12 +472,12 @@ class DashboardPageDataService
         return ['submitted_specs' => $specs];
     }
 
-    private function operationsDesk(): array
+    private function workshopDesk(): array
     {
         app(BomService::class)->repairOrphanWipCases();
 
         $cases = CaseRecord::query()
-            ->operationsDeskQueue()
+            ->workshopDeskQueue()
             ->with([
                 'patient:id,patient_code,name',
                 'bom:id,case_id,bom_no,stage',
@@ -484,25 +486,58 @@ class DashboardPageDataService
             ->orderByDesc('updated_at')
             ->get();
 
-        $wipCount   = $cases->filter(fn ($c) => $c->bom?->stage === \App\Models\Bom::STAGE_WIP)->count();
-        $readyCount = $cases->filter(fn ($c) => $c->stage_key === CaseRecord::STAGE_READY_DELIVERY)->count();
-        $doneCount  = CaseRecord::countDeliveredByOps();
+        $wipCount  = $cases->count();
         $milCount  = $cases->filter(fn ($c) => $c->isMilitary())->count();
         $civCount  = $cases->count() - $milCount;
 
         return [
-            'ops_cases'  => $cases,
-            'ops_stats'  => [
-                ['icon' => '🎯', 'label' => 'أوامر نشطة', 'value' => (string) $cases->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+            'workshop_cases'  => $cases,
+            'workshop_stats'  => [
+                ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '🪖', 'label' => 'مسار عسكري', 'value' => (string) $milCount, 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
                 ['icon' => '🌐', 'label' => 'مسار مدني', 'value' => (string) $civCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => '📦', 'label' => 'إجمالي الأوامر', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+            ],
+            'workshop_summary' => [
+                'wip'          => $wipCount,
+                'military'     => $milCount,
+                'civilian'     => $civCount,
+                'total_active' => $cases->count(),
+            ],
+        ];
+    }
+
+    private function operationsDeliveryDesk(): array
+    {
+        $cases = CaseRecord::query()
+            ->operationsDeliveryQueue()
+            ->with([
+                'patient:id,patient_code,name',
+                'bom:id,case_id,bom_no,stage',
+                'bom.items:id,bom_id,stock_item_code,name,qty',
+            ])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $readyCount = $cases->count();
+        $doneCount  = CaseRecord::countDeliveredByOps();
+        $milCount   = $cases->filter(fn ($c) => $c->isMilitary())->count();
+        $civCount   = $cases->count() - $milCount;
+
+        return [
+            'ops_cases'  => $cases,
+            'ops_stats'  => [
+                ['icon' => '✅', 'label' => 'جاهز للتسليم', 'value' => (string) $readyCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '🪖', 'label' => 'مسار عسكري', 'value' => (string) $milCount, 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
+                ['icon' => '🌐', 'label' => 'مسار مدني', 'value' => (string) $civCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '📁', 'label' => 'تم التسليم', 'value' => (string) $doneCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
             ],
             'ops_summary' => [
-                'raw'            => 0,
-                'wip'            => $wipCount,
-                'ready_delivery' => $readyCount,
+                'ready'          => $readyCount,
                 'done'           => $doneCount,
+                'military'       => $milCount,
+                'civilian'       => $civCount,
+                'total_active'   => $readyCount,
             ],
         ];
     }

@@ -35,9 +35,10 @@ class AdminOverviewController extends Controller
     {
         $board1 = $this->biReportService->boardPatients();
         $board2 = $this->biReportService->boardInventory();
-        $ops    = $this->pageData->resolve('operations', 'operations');
+        $workshop = $this->pageData->resolve('workshop', 'workshop');
+        $ops      = $this->pageData->resolve('operations', 'operations');
 
-        return $this->adminPage('overview', array_merge($ops, [
+        return $this->adminPage('overview', array_merge($workshop, $ops, [
             'open_cases'         => $board1['open_count'],
             'ready_for_delivery' => CaseRecord::where('stage_key', CaseRecord::STAGE_READY_DELIVERY)->count(),
             'sla_breached'       => $board1['sla_breached'],

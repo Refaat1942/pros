@@ -11,6 +11,7 @@
         'adjustments' => '📏',
         'costing'     => '💰',
         'operations'  => '🎯',
+        'workshop'    => '🏭',
         'technical'   => '📦',
     ];
 @endphp

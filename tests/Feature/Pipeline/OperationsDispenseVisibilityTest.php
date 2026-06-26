@@ -43,7 +43,7 @@ class OperationsDispenseVisibilityTest extends TestCase
         $this->assertMatchesRegularExpression('/^WO-\d{4}-\d{4}$/', $case->work_order_no);
     }
 
-    public function test_orphan_wip_case_repaired_on_operations_desk_load(): void
+    public function test_orphan_wip_case_repaired_on_workshop_desk_load(): void
     {
         $this->prepareStock();
         $company = $this->civilianCompany();
@@ -68,10 +68,10 @@ class OperationsDispenseVisibilityTest extends TestCase
         $this->assertEquals(CaseRecord::MFG_ISSUE, $case->manufacturing_stage);
         $this->assertNotEmpty($case->work_order_no);
 
-        $data = app(DashboardPageDataService::class)->resolve('operations', 'operations');
-        $ids  = collect($data['ops_cases'])->pluck('id');
+        $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
+        $ids  = collect($data['workshop_cases'])->pluck('id');
 
-        $this->assertTrue($ids->contains($case->id), 'الحالة يجب أن تظهر في مكتب التشغيل');
+        $this->assertTrue($ids->contains($case->id), 'الحالة يجب أن تظهر في ورشة التصنيع');
     }
 
     public function test_manufacturing_warehouse_dispense_advances_to_issue(): void
@@ -115,12 +115,12 @@ class OperationsDispenseVisibilityTest extends TestCase
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
     }
 
-    public function test_operations_desk_hidden_until_warehouse_dispense(): void
+    public function test_workshop_desk_hidden_until_warehouse_dispense(): void
     {
         $this->prepareStock();
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $ops     = $this->userWithRole('operations');
+        $workshop = $this->userWithRole('workshop');
         $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0200']);
 
@@ -128,23 +128,23 @@ class OperationsDispenseVisibilityTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
-        $data = app(DashboardPageDataService::class)->resolve('operations', 'operations');
-        $ids  = collect($data['ops_cases'])->pluck('id');
+        $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
+        $ids  = collect($data['workshop_cases'])->pluck('id');
 
         $this->assertFalse(
             $ids->contains($case->id),
             'الحالة لا يجب أن تظهر في الورشة قبل صرف المواد من المخزن'
         );
 
-        $this->actingAs($ops);
-        $this->postJson("/operations/operations/{$case->id}/advance", [
+        $this->actingAs($workshop);
+        $this->postJson("/workshop/workshop/{$case->id}/advance", [
             'manufacturing_stage' => CaseRecord::MFG_ISSUE,
         ])->assertStatus(422);
 
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
 
-        $data = app(DashboardPageDataService::class)->resolve('operations', 'operations');
-        $ids  = collect($data['ops_cases'])->pluck('id');
+        $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
+        $ids  = collect($data['workshop_cases'])->pluck('id');
 
         $this->assertTrue(
             $ids->contains($case->id),

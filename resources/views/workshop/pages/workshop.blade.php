@@ -6,7 +6,7 @@
       extend: {
         fontFamily: { sans: ['Tajawal', 'sans-serif'] },
         colors: {
-          ops: { DEFAULT: '#0e7490', dark: '#155e75', light: '#ecfeff' }
+          workshop: { DEFAULT: '#7c3aed', dark: '#6d28d9', light: '#f5f3ff' }
         }
       }
     }
@@ -15,52 +15,58 @@
 @endpush
 
 @php
-    $cases   = $ops_cases ?? collect();
-    $summary = $ops_summary ?? ['ready' => 0, 'done' => 0];
+    $cases   = $workshop_cases ?? collect();
+    $summary = $workshop_summary ?? ['wip' => 0, 'military' => 0, 'civilian' => 0, 'total_active' => 0];
 @endphp
 
-<div id="analytics-operations">
-    @include('partials.dashboard-analytics-empty', ['stats' => $ops_stats ?? [], 'hide_charts' => true])
+<div id="analytics-workshop">
+    @include('partials.dashboard-analytics-empty', ['stats' => $workshop_stats ?? [], 'hide_charts' => true])
 </div>
 
-<div class="space-y-6" id="opsDeskRoot" data-cases-count="{{ $cases->count() }}">
+<div class="space-y-6" id="workshopDeskRoot" data-cases-count="{{ $cases->count() }}">
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p class="text-sm text-slate-600 leading-relaxed">
-            تظهر هنا الحالات التي <strong>أُتمِم تصنيعها في الورشة</strong> وجاهزة للتسليم.
-            اضغط <strong>تم التسليم</strong> لإغلاق الطلب وتسليم الطرف للمريض.
+            تظهر هنا الأوامر التي <strong>صُرفت موادها من المخزن</strong> وجاهزة للتصنيع في الورشة.
+            بعد <strong>تم التصنيع</strong> تُحوَّل الحالة إلى مكتب التشغيل للتسليم للعميل.
+            يلتقي هنا المساران: <strong class="text-indigo-700">عسكري</strong> و
+            <strong class="text-emerald-700">مدني</strong>.
         </p>
-        <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-center text-sm">
-            <div class="rounded-xl bg-emerald-50 border border-emerald-100 py-3">
-                <div class="text-2xl font-bold text-emerald-700" id="sumReady">{{ $summary['ready'] ?? 0 }}</div>
-                <div class="text-emerald-600 mt-1">✅ جاهز للتسليم</div>
+        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-center text-sm">
+            <div class="rounded-xl bg-violet-50 border border-violet-100 py-3">
+                <div class="text-2xl font-bold text-violet-700" id="sumWip">{{ $summary['wip'] ?? 0 }}</div>
+                <div class="text-violet-600 mt-1">🏭 تحت التشغيل</div>
             </div>
-            <div class="rounded-xl bg-cyan-50 border border-cyan-100 py-3">
-                <div class="text-2xl font-bold text-cyan-700" id="sumDone">{{ $summary['done'] ?? 0 }}</div>
-                <div class="text-cyan-600 mt-1">📁 تم التسليم</div>
+            <div class="rounded-xl bg-indigo-50 border border-indigo-100 py-3">
+                <div class="text-2xl font-bold text-indigo-700" id="sumMilitary">{{ $summary['military'] ?? 0 }}</div>
+                <div class="text-indigo-600 mt-1">🪖 عسكري</div>
+            </div>
+            <div class="rounded-xl bg-emerald-50 border border-emerald-100 py-3">
+                <div class="text-2xl font-bold text-emerald-700" id="sumCivilian">{{ $summary['civilian'] ?? 0 }}</div>
+                <div class="text-emerald-600 mt-1">🌐 مدني</div>
             </div>
             <div class="rounded-xl bg-slate-50 border border-slate-100 py-3">
-                <div class="text-2xl font-bold text-slate-800" id="sumTotal">{{ $cases->count() }}</div>
-                <div class="text-slate-500 mt-1">🎯 بانتظار التسليم</div>
+                <div class="text-2xl font-bold text-slate-800" id="sumTotal">{{ $summary['total_active'] ?? $cases->count() }}</div>
+                <div class="text-slate-500 mt-1">🎯 إجمالي الأوامر</div>
             </div>
         </div>
     </div>
 
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
-            <h3 class="font-bold text-slate-800">✅ تسليم الطرف للعميل</h3>
-            <button type="button" id="btnRefreshOps"
-                    class="rounded-xl bg-ops text-white px-4 py-2 text-sm font-bold hover:bg-ops-dark transition-colors">
+            <h3 class="font-bold text-slate-800">🏭 طابور ورشة التصنيع</h3>
+            <button type="button" id="btnRefreshWorkshop"
+                    class="rounded-xl bg-workshop text-white px-4 py-2 text-sm font-bold hover:bg-workshop-dark transition-colors">
                 ↻ تحديث
             </button>
         </div>
 
         <div class="p-4 border-b border-slate-100 flex flex-wrap gap-3 items-center">
-            <input type="search" id="opsSearch" placeholder="🔍 بحث WO / مريض / حالة..."
-                   class="flex-1 min-w-[200px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ops/40">
-            <div class="flex flex-wrap gap-2" id="opsFilters">
-                <button type="button" class="ops-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
-                <button type="button" class="ops-filter rounded-full px-4 py-1.5 text-xs font-bold bg-indigo-100 text-indigo-700" data-filter="military">🪖 عسكري</button>
-                <button type="button" class="ops-filter rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-700" data-filter="civilian">🌐 مدني</button>
+            <input type="search" id="workshopSearch" placeholder="🔍 بحث WO / مريض / حالة..."
+                   class="flex-1 min-w-[200px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-workshop/40">
+            <div class="flex flex-wrap gap-2" id="workshopFilters">
+                <button type="button" class="workshop-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
+                <button type="button" class="workshop-filter rounded-full px-4 py-1.5 text-xs font-bold bg-indigo-100 text-indigo-700" data-filter="military">🪖 عسكري</button>
+                <button type="button" class="workshop-filter rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-700" data-filter="civilian">🌐 مدني</button>
             </div>
         </div>
 
@@ -71,24 +77,25 @@
                         <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
                         <th class="px-4 py-3 text-right font-bold">المريض</th>
                         <th class="px-4 py-3 text-right font-bold">المسار</th>
-                        <th class="px-4 py-3 text-right font-bold">جهة التعاقد</th>
+                        <th class="px-4 py-3 text-right font-bold">مرحلة التصنيع</th>
                         <th class="px-4 py-3 text-right font-bold">البنود</th>
                         <th class="px-4 py-3 text-right font-bold">إجراء</th>
                     </tr>
                 </thead>
-                <tbody id="opsTableBody" class="divide-y divide-slate-100">
+                <tbody id="workshopTableBody" class="divide-y divide-slate-100">
                     @forelse ($cases as $case)
                         @php
                             $itemsCount = $case->bom?->items?->isNotEmpty()
                                 ? \App\Support\BomItemAggregator::uniqueCodeCount($case->bom->items)
                                 : 0;
                             $isMil = $case->isMilitary();
+                            $mfgLabel = \App\Enums\ManufacturingStage::labelFor($case->manufacturing_stage);
                         @endphp
-                        <tr class="ops-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
+                        <tr class="workshop-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
                             data-search="{{ $case->work_order_no }} {{ $case->case_no }} {{ $case->patient?->name }}"
                             data-path="{{ $isMil ? 'military' : 'civilian' }}"
                             data-filter-hidden="0">
-                            <td class="px-4 py-3 font-mono font-bold text-ops">{{ $case->work_order_no ?? '—' }}</td>
+                            <td class="px-4 py-3 font-mono font-bold text-workshop">{{ $case->work_order_no ?? '—' }}</td>
                             <td class="px-4 py-3">
                                 <div class="font-semibold text-slate-800">{{ $case->patient?->name ?? '—' }}</div>
                                 <div class="text-xs text-slate-400">{{ $case->case_no }}</div>
@@ -98,7 +105,9 @@
                                     {{ $isMil ? '🪖 عسكري' : '🌐 مدني' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600">{{ $case->company_name ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                <span class="text-xs font-bold px-2 py-1 rounded-lg bg-cyan-100 text-cyan-800">{{ $mfgLabel }}</span>
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 @if ($itemsCount > 0)
                                     <button type="button"
@@ -115,18 +124,18 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3">
-                                <a href="{{ route('operations.work-order.print', $case) }}" target="_blank" rel="noopener"
-                                   class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">
+                                <a href="{{ route('workshop.work-order.print', $case) }}" target="_blank" rel="noopener"
+                                   class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">
                                     🖨️ طباعة إذن شغل
                                 </a>
-                                <button type="button" class="btn-deliver-case text-xs font-bold rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700"
+                                <button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700"
                                         data-case-id="{{ $case->id }}">
-                                    ✅ تم التسليم
+                                    ✓ تم التصنيع
                                 </button>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد حالات جاهزة للتسليم — تظهر بعد إتمام التصنيع في الورشة.</td></tr>
+                        <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في الورشة حالياً — تظهر بعد صرف المواد من المخزن.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -134,14 +143,14 @@
     </div>
 </div>
 
-<div id="opsBomItemsModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+<div id="workshopBomItemsModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <div>
                 <h3 class="font-bold text-slate-800">📦 بنود أمر التشغيل</h3>
-                <p class="text-xs text-slate-500 mt-1" id="opsBomItemsSubtitle">—</p>
+                <p class="text-xs text-slate-500 mt-1" id="workshopBomItemsSubtitle">—</p>
             </div>
-            <button type="button" id="closeOpsBomItemsModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
+            <button type="button" id="closeWorkshopBomItemsModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
         </div>
         <div class="overflow-y-auto flex-1 p-4">
             <table class="w-full text-sm">
@@ -152,7 +161,7 @@
                         <th class="px-3 py-2 text-right font-bold w-20">الكمية</th>
                     </tr>
                 </thead>
-                <tbody id="opsBomItemsBody" class="divide-y divide-slate-100"></tbody>
+                <tbody id="workshopBomItemsBody" class="divide-y divide-slate-100"></tbody>
             </table>
         </div>
     </div>

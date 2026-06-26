@@ -12,11 +12,13 @@ class QuickRoleSwitcherTest extends TestCase
         $this->assertFalse(Route::has('dev.role-switch'));
     }
 
-    public function test_switcher_config_lists_seven_pipeline_roles(): void
+    public function test_switcher_config_lists_pipeline_roles(): void
     {
-        $this->assertCount(7, config('dev-role-switcher.roles'));
+        $this->assertCount(8, config('dev-role-switcher.roles'));
         $this->assertArrayHasKey('costing', config('dev-role-switcher.roles'));
+        $this->assertArrayHasKey('workshop', config('dev-role-switcher.roles'));
         $this->assertSame('operations.dashboard', config('dev-role-switcher.roles.operations.route'));
+        $this->assertSame('workshop.dashboard', config('dev-role-switcher.roles.workshop.route'));
         $this->assertSame('technical.dashboard', config('dev-role-switcher.roles.technical.route'));
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\VisitType;
+use App\Support\ClinicTime;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\DB;
 
@@ -100,7 +101,7 @@ class AppointmentService
 
             if ($appointment->patient_id) {
                 Patient::where('id', $appointment->patient_id)
-                    ->update(['last_visit_at' => now()->toDateString()]);
+                    ->update(['last_visit_at' => ClinicTime::todayDateString()]);
             }
 
             AuditService::log(
@@ -131,7 +132,7 @@ class AppointmentService
             return [
                 'patient_id'        => $patient->id,
                 'appointment_date'  => $data['appointment_date'],
-                'appointment_time'  => $data['appointment_time'] ?? now()->format('H:i'),
+                'appointment_time'  => $data['appointment_time'] ?? ClinicTime::now()->format('H:i'),
                 ...$visitFields,
                 'patient_name'      => $patient->name,
                 'phone'             => $patient->phone,

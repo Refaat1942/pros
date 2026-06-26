@@ -69,14 +69,14 @@ class NotificationService
             'body'  => 'المريض {patient} (حالة {case}) أُعيد لإعادة التوصيف الفني.',
         ],
         WorkflowEvent::BomDispensed->value => [
-            'role'  => Role::SLUG_TECHNICAL,
-            'title' => '🏭 بدء التصنيع في الورشة',
-            'body'  => 'تم صرف مواد المريض {patient} (حالة {case}) — دخلت الورشة للتصنيع.',
+            'role'  => Role::SLUG_WORKSHOP,
+            'title' => '🏭 أمر جديد في ورشة التصنيع',
+            'body'  => 'تم صرف مواد المريض {patient} (حالة {case}) — الطلب جاهز للتصنيع في الورشة.',
         ],
         WorkflowEvent::BomFinished->value => [
-            'role'  => Role::SLUG_RECEPTION,
+            'role'  => Role::SLUG_OPERATIONS,
             'title' => '✅ طرف جاهز للتسليم',
-            'body'  => 'المريض {patient} (حالة {case}) جاهز للتسليم.',
+            'body'  => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه — جاهز للتسليم من مكتب التشغيل.',
         ],
         WorkflowEvent::Delivered->value => [
             'role'  => Role::SLUG_ADMIN,

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Reception;
 
+use App\Support\ClinicTime;
 use Tests\Support\DashboardQueueAssertions;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -19,7 +20,7 @@ class ReceptionAppointmentsListTest extends TestCase
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض توقيت الاستقبال');
 
         $this->actingAs($recep)
-            ->getJson('/reception/appointments/list?date=' . now()->toDateString())
+            ->getJson('/reception/appointments/list?date=' . ClinicTime::todayDateString())
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonStructure([
@@ -37,7 +38,7 @@ class ReceptionAppointmentsListTest extends TestCase
         $milCo   = $this->militaryCompany();
         $rank    = \App\Models\MilitaryRank::create(['name' => 'نقيب', 'rank_code' => 'CAP', 'sort_order' => 1]);
         $recep   = $this->userWithRole('reception');
-        $date    = now()->toDateString();
+        $date    = ClinicTime::todayDateString();
 
         $this->registerCivilianPatientHttp($recep, $company, 'مريض مدني مواعيد');
         $this->registerMilitaryPatientHttp($recep, $milCo, $rank, 'مريض عسكري مواعيد');

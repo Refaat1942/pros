@@ -9,6 +9,18 @@ use Tests\TestCase;
 
 class ClinicTimeTest extends TestCase
 {
+    public function test_today_date_string_uses_clinic_calendar_not_utc(): void
+    {
+        config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
+
+        // ٢٧ يونيو ٠٠:١١ بتوقيت القاهرة = ٢٦ يونيو ٢١:١١ UTC
+        \Carbon\Carbon::setTestNow('2026-06-26 21:11:00');
+
+        $this->assertSame('2026-06-27', ClinicTime::todayDateString());
+
+        \Carbon\Carbon::setTestNow();
+    }
+
     public function test_formats_utc_timestamp_in_clinic_timezone(): void
     {
         config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);

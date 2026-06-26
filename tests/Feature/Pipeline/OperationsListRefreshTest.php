@@ -13,7 +13,7 @@ class OperationsListRefreshTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_operations_page_includes_refresh_button(): void
+    public function test_operations_delivery_page_includes_refresh_button(): void
     {
         $user = $this->userWithRole('operations');
 
@@ -21,10 +21,11 @@ class OperationsListRefreshTest extends TestCase
             ->get('/operations/operations')
             ->assertOk()
             ->assertSee('id="btnRefreshOps"', false)
-            ->assertSee('id="opsTableBody"', false);
+            ->assertSee('id="opsTableBody"', false)
+            ->assertSee('تم التسليم', false);
     }
 
-    public function test_operations_list_endpoint_returns_active_manufacturing_cases(): void
+    public function test_operations_list_returns_only_ready_delivery_cases(): void
     {
         $this->seedStockWithPriceBatch();
 
@@ -37,99 +38,21 @@ class OperationsListRefreshTest extends TestCase
         $this->actingAs($user);
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
-        ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
-
-        $response = $this->getJson('/operations/operations/list');
-
-        $response->assertOk();
-        $response->assertJsonPath('total', 1);
-        $response->assertJsonPath('data.0.work_order_no', 'WO-2026-0100');
-        $response->assertJsonPath('data.0.patient.name', $patient->name);
-    }
-
-    public function test_operations_list_endpoint_returns_bom_items_for_view_modal(): void
-    {
-        $this->seedStockWithPriceBatch();
-
-        $company = $this->civilianCompany();
-        $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('operations');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
-        $case->update(['work_order_no' => 'WO-2026-0100']);
-
-        $this->actingAs($user);
-        $bom = app(BomService::class)->createSpecRaw($case, [
-            ['stock_item_code' => 'RM-001', 'name' => 'خام اختبار', 'qty' => 2],
         ]);
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
 
         $this->getJson('/operations/operations/list')
             ->assertOk()
-            ->assertJsonPath('data.0.bom.items.0.name', 'خام اختبار')
-            ->assertJsonPath('data.0.bom.items.0.qty', 2);
-    }
+            ->assertJsonPath('total', 0);
 
-    public function test_operations_list_merges_duplicate_bom_item_codes(): void
-    {
-        $this->seedStockWithPriceBatch();
-        $this->stockItem('RM-002', qty: 10);
-
-        $company = $this->civilianCompany();
-        $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('operations');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
-        $case->update(['work_order_no' => 'WO-2026-0102']);
-
-        $this->actingAs($user);
-        $bom = app(BomService::class)->createSpecRaw($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 1],
-            ['stock_item_code' => 'RM-002', 'qty' => 1],
-        ]);
-
-        \App\Models\BomItem::create([
-            'bom_id'          => $bom->id,
-            'stock_item_code' => 'RM-002',
-            'name'            => 'مكوّن إضافي',
-            'source'          => \App\Models\BomItem::SOURCE_ADJUSTMENT,
-            'qty'             => 1,
-            'unit_cost'       => 0,
-            'issued_qty'      => 0,
-            'returned_qty'    => 0,
-        ]);
-
-        app(BomService::class)->releaseToWip($bom->fresh(['items']), ['BC-RM-001', 'BC-RM-002']);
-
-        $this->getJson('/operations/operations/list')
-            ->assertOk()
-            ->assertJsonCount(2, 'data.0.bom.items')
-            ->assertJsonPath('data.0.bom.items.1.stock_item_code', 'RM-002')
-            ->assertJsonPath('data.0.bom.items.1.qty', 2);
-    }
-
-    public function test_operations_list_includes_manufacturing_completed_summary(): void
-    {
-        $this->seedStockWithPriceBatch();
-
-        $company = $this->civilianCompany();
-        $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('operations');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
-        $case->update(['work_order_no' => 'WO-2026-0100']);
-
-        $this->actingAs($user);
-        $bom = app(BomService::class)->createSpecRaw($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 1],
-        ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
         app(BomService::class)->finish($bom->fresh());
 
         $this->getJson('/operations/operations/list')
             ->assertOk()
-            ->assertJsonPath('summary.done', 0)
-            ->assertJsonPath('summary.ready_delivery', 1)
-            ->assertJsonPath('summary.wip', 0)
-            ->assertJsonPath('total', 1);
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.work_order_no', 'WO-2026-0100')
+            ->assertJsonPath('data.0.patient.name', $patient->name)
+            ->assertJsonPath('summary.ready', 1);
     }
 
     public function test_operations_deliver_closes_case_from_desk(): void

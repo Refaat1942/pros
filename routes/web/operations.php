@@ -52,16 +52,10 @@ Route::prefix('operations')
             ->middleware('dashboard.page:operations,quotes-awaiting')
             ->name('quotes-awaiting.list');
 
-        // ── Operations orders (أوامر التشغيل) ─────────────────────────────
+        // ── Operations delivery (تسليم للعميل) ────────────────────────────
         Route::middleware('dashboard.page:operations,operations')->group(function () {
             Route::get('operations/list', [ManufacturingStageController::class, 'index'])
                 ->name('operations.list');
-
-            Route::post('operations/{case}/advance', [ManufacturingStageController::class, 'advance'])
-                ->name('operations.advance');
-
-            Route::post('operations/{case}/finish-quality', [ManufacturingStageController::class, 'finishQuality'])
-                ->name('operations.finish-quality');
 
             Route::post('operations/{case}/deliver', [ManufacturingStageController::class, 'deliver'])
                 ->name('operations.deliver');

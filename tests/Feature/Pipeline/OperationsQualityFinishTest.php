@@ -20,7 +20,7 @@ class OperationsQualityFinishTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('operations');
+        $user    = $this->userWithRole('workshop');
         $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-QC-01']);
         $this->actingAs($user);
@@ -38,7 +38,7 @@ class OperationsQualityFinishTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('operations');
+        $user    = $this->userWithRole('workshop');
         $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-QC-02']);
         $this->actingAs($user);
@@ -46,7 +46,7 @@ class OperationsQualityFinishTest extends TestCase
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
 
-        $response = $this->postJson("/operations/operations/{$case->id}/finish-quality");
+        $response = $this->postJson("/workshop/workshop/{$case->id}/finish-quality");
 
         $response->assertOk()
             ->assertJsonPath('message', 'تم التصنيع — الحالة جاهزة للتسليم.')

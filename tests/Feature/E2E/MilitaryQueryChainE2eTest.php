@@ -117,11 +117,12 @@ class MilitaryQueryChainE2eTest extends TestCase
 
         $debtBefore = (float) $company->debt()->first()->due;
 
-        $this->actingAs($ops);
+        $workshop = $this->userWithRole('workshop');
+        $this->actingAs($workshop);
         foreach ([CaseRecord::MFG_GENERATION, CaseRecord::MFG_ASSEMBLY, CaseRecord::MFG_CASTING, CaseRecord::MFG_FINISHING] as $stage) {
-            $this->postJson("/operations/operations/{$case->id}/advance", ['manufacturing_stage' => $stage])->assertOk();
+            $this->postJson("/workshop/workshop/{$case->id}/advance", ['manufacturing_stage' => $stage])->assertOk();
         }
-        $this->postJson("/operations/operations/{$case->id}/finish-quality")->assertOk();
+        $this->postJson("/workshop/workshop/{$case->id}/finish-quality")->assertOk();
 
         $this->actingAs($ops);
         $this->postJson("/operations/operations/{$case->id}/deliver")->assertOk();

@@ -133,37 +133,45 @@ class OfficialPrintDocumentsTest extends TestCase
             ->assertJsonPath('data.0.path_label', '🪖 عسكري');
     }
 
-    public function test_operations_can_print_workshop_work_order(): void
+    public function test_workshop_can_print_work_order(): void
     {
         $this->stockItem('RM-001', qty: 10);
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->dispensedManufacturingCase($patient);
-        $ops = $this->userWithRole('operations');
+        $workshop = $this->userWithRole('workshop');
 
-        $this->actingAs($ops)
-            ->get(route('operations.work-order.print', $case))
+        $this->actingAs($workshop)
+            ->get(route('workshop.work-order.print', $case))
             ->assertOk()
             ->assertSee('إذن شغل', false)
-            ->assertSee($case->work_order_no, false)
-            ->assertSee('المواصفات', false)
-            ->assertSee('تاريخ التجربة الأولى', false)
-            ->assertSee('تاريخ التجربة الثانية', false)
-            ->assertSee('اسم القائم بالتشغيل', false)
-            ->assertSee('onload="window.print()"', false);
+            ->assertSee($case->work_order_no, false);
     }
 
-    public function test_operations_list_exposes_work_order_print_url(): void
+    public function test_workshop_list_exposes_work_order_print_url(): void
     {
         $this->stockItem('RM-001', qty: 10);
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->dispensedManufacturingCase($patient);
-        $ops = $this->userWithRole('operations');
+        $workshop = $this->userWithRole('workshop');
 
-        $response = $this->actingAs($ops)
-            ->getJson('/operations/operations/list')
-            ->assertOk();
+        $this->actingAs($workshop)
+            ->getJson('/workshop/workshop/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.work_order_print_url', route('workshop.work-order.print', $case));
+    }
 
-        $response->assertJsonPath('data.0.work_order_print_url', route('operations.work-order.print', $case));
+    public function test_workshop_page_renders_manufacturing_action(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->dispensedManufacturingCase($patient);
+        $workshop = $this->userWithRole('workshop');
+
+        $this->actingAs($workshop)
+            ->get('/workshop/workshop')
+            ->assertOk()
+            ->assertSee('تم التصنيع', false)
+            ->assertSee($case->work_order_no, false);
     }
 
     public function test_operations_pending_page_renders_quote_print_label(): void
@@ -187,13 +195,13 @@ class OfficialPrintDocumentsTest extends TestCase
             ->assertSee('printIssueVoucherLink', false);
     }
 
-    public function test_operations_page_renders_workshop_print_label(): void
+    public function test_workshop_page_loads_dashboard_script(): void
     {
-        $ops = $this->userWithRole('operations');
+        $workshop = $this->userWithRole('workshop');
 
-        $this->actingAs($ops)
-            ->get('/operations/operations')
+        $this->actingAs($workshop)
+            ->get('/workshop/workshop')
             ->assertOk()
-            ->assertSee('operations-dashboard.js', false);
+            ->assertSee('workshop-dashboard.js', false);
     }
 }

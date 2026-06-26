@@ -1,9 +1,9 @@
 /**
- * Operations Desk — delivery queue after workshop finishes manufacturing.
+ * Workshop Desk — manufacturing queue after warehouse dispense.
  */
 (function () {
-  if (document.body.dataset.dashboard !== 'operations') return;
-  if (document.body.dataset.activePage !== 'operations') return;
+  if (document.body.dataset.dashboard !== 'workshop') return;
+  if (document.body.dataset.activePage !== 'workshop') return;
 
   var csrf = document.querySelector('meta[name="csrf-token"]');
   if (csrf && window.axios) {
@@ -11,6 +11,12 @@
     axios.defaults.headers.common['Accept'] = 'application/json';
     axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
   }
+
+  var MFG_LABELS = {
+    warehouse: 'المخزن', issue: 'صرف خامات', workshop: 'الورشة', fitting: 'تجربة تركيب',
+    quality: 'مراقبة جودة', generation: 'توليد', assembly: 'تجميع', casting: 'صب',
+    finishing: 'تشطيب', closed: 'مغلق'
+  };
 
   function $(id) { return document.getElementById(id); }
 
@@ -29,46 +35,54 @@
   function renderActionCell(c) {
     var printBtn = c.work_order_print_url
       ? '<a href="' + esc(c.work_order_print_url) + '" target="_blank" rel="noopener" ' +
-        'class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">🖨️ طباعة إذن شغل</a> '
+        'class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ طباعة إذن شغل</a> '
       : '';
-    return printBtn + '<button type="button" class="btn-deliver-case text-xs font-bold rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700" data-case-id="' + c.id + '">✅ تم التسليم</button>';
+    return printBtn + '<button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" data-case-id="' + c.id + '">✓ تم التصنيع</button>';
   }
 
   function renderRow(c) {
     var isMil = c.patient_type === 'military' || c.path === 'military';
     var search = [c.work_order_no, c.case_no, c.patient && c.patient.name].join(' ');
+    var mfgLabel = MFG_LABELS[c.manufacturing_stage] || c.manufacturing_stage || '—';
 
-    return '<tr class="ops-row hover:bg-slate-50" data-case-id="' + c.id + '" data-search="' + esc(search) + '"' +
+    return '<tr class="workshop-row hover:bg-slate-50" data-case-id="' + c.id + '" data-search="' + esc(search) + '"' +
       ' data-path="' + (isMil ? 'military' : 'civilian') + '" data-filter-hidden="0">' +
-      '<td class="px-4 py-3 font-mono font-bold text-cyan-700">' + esc(c.work_order_no || '—') + '</td>' +
+      '<td class="px-4 py-3 font-mono font-bold text-violet-700">' + esc(c.work_order_no || '—') + '</td>' +
       '<td class="px-4 py-3"><div class="font-semibold text-slate-800">' + esc(c.patient && c.patient.name) + '</div>' +
         '<div class="text-xs text-slate-400">' + esc(c.case_no) + '</div></td>' +
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg ' +
         (isMil ? 'bg-indigo-100 text-indigo-700">🪖 عسكري' : 'bg-emerald-100 text-emerald-700">🌐 مدني') + '</span></td>' +
-      '<td class="px-4 py-3 text-slate-600">' + esc(c.company_name || '—') + '</td>' +
+      '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg bg-cyan-100 text-cyan-800">' + esc(mfgLabel) + '</span></td>' +
       '<td class="px-4 py-3 text-center">' + renderItemsCell(c) + '</td>' +
       '<td class="px-4 py-3">' + renderActionCell(c) + '</td></tr>';
   }
 
   function updateSummary(summary) {
     summary = summary || {};
-    if ($('sumReady')) $('sumReady').textContent = summary.ready != null ? summary.ready : 0;
-    if ($('sumDone')) $('sumDone').textContent = summary.done != null ? summary.done : 0;
+    if ($('sumWip')) $('sumWip').textContent = summary.wip != null ? summary.wip : 0;
+    if ($('sumMilitary')) $('sumMilitary').textContent = summary.military != null ? summary.military : 0;
+    if ($('sumCivilian')) $('sumCivilian').textContent = summary.civilian != null ? summary.civilian : 0;
     if ($('sumTotal')) $('sumTotal').textContent = summary.total_active != null ? summary.total_active : 0;
 
-    var analytics = document.getElementById('analytics-operations');
+    var analytics = document.getElementById('analytics-workshop');
     if (!analytics) return;
     var values = analytics.querySelectorAll('.ck-stat-value');
     if (values.length < 4) return;
-    values[0].textContent = summary.ready != null ? summary.ready : 0;
+    values[0].textContent = summary.wip != null ? summary.wip : 0;
     values[1].textContent = summary.military != null ? summary.military : 0;
     values[2].textContent = summary.civilian != null ? summary.civilian : 0;
-    values[3].textContent = summary.done != null ? summary.done : 0;
+    values[3].textContent = summary.total_active != null ? summary.total_active : 0;
+  }
+
+  function renderItemsCell(c) {
+    var items = (c.bom && c.bom.items) || [];
+    if (!items.length) return '<span class="text-xs text-slate-400">—</span>';
+    return '<button type="button" class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50" data-case-id="' + c.id + '">عرض</button>';
   }
 
   function bindTableEvents() {
-    document.querySelectorAll('.btn-deliver-case').forEach(function (btn) {
-      btn.addEventListener('click', deliverCase);
+    document.querySelectorAll('.btn-complete-manufacturing').forEach(function (btn) {
+      btn.addEventListener('click', completeManufacturing);
     });
     document.querySelectorAll('.btn-view-bom-items').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -78,43 +92,37 @@
     });
   }
 
-  function deliverCase(ev) {
+  function completeManufacturing(ev) {
     var btn = ev.currentTarget;
     var caseId = btn.getAttribute('data-case-id');
     if (!caseId || !window.axios) return;
-    if (!window.confirm('تأكيد تسليم الطرف وإغلاق الطلب؟')) return;
+    if (!window.confirm('تأكيد تم التصنيع؟ ستُحوَّل الحالة لمكتب التشغيل للتسليم.')) return;
 
     btn.disabled = true;
-    axios.post('/operations/operations/' + caseId + '/deliver')
+    axios.post('/workshop/workshop/' + caseId + '/finish-quality')
       .then(function () {
-        toast('✅ تم التسليم — أُغلق الطلب بنجاح');
+        toast('✅ تم التصنيع — الحالة جاهزة للتسليم في مكتب التشغيل');
         refreshList();
       })
       .catch(function (err) {
-        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر إتمام التسليم', true);
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر إتمام التصنيع', true);
         btn.disabled = false;
       });
   }
 
   var refreshInFlight = false;
   var casesCache = [];
-  var activeOpsFilter = 'all';
+  var activeFilter = 'all';
 
   function rowMatchesFilter(row) {
-    if (activeOpsFilter === 'all') return true;
-    return row.getAttribute('data-path') === activeOpsFilter;
-  }
-
-  function renderItemsCell(c) {
-    var items = (c.bom && c.bom.items) || [];
-    if (!items.length) return '<span class="text-xs text-slate-400">—</span>';
-    return '<button type="button" class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50" data-case-id="' + c.id + '">عرض</button>';
+    if (activeFilter === 'all') return true;
+    return row.getAttribute('data-path') === activeFilter;
   }
 
   function openBomItemsModal(caseData) {
-    var modal = $('opsBomItemsModal');
-    var tbody = $('opsBomItemsBody');
-    var subtitle = $('opsBomItemsSubtitle');
+    var modal = $('workshopBomItemsModal');
+    var tbody = $('workshopBomItemsBody');
+    var subtitle = $('workshopBomItemsSubtitle');
     if (!modal || !tbody) return;
 
     var patient = (caseData.patient && caseData.patient.name) || '—';
@@ -133,7 +141,7 @@
   }
 
   function closeBomItemsModal() {
-    var modal = $('opsBomItemsModal');
+    var modal = $('workshopBomItemsModal');
     if (modal) modal.classList.add('hidden');
   }
 
@@ -158,17 +166,17 @@
     if (!window.axios || refreshInFlight) return;
 
     refreshInFlight = true;
-    var btn = $('btnRefreshOps');
+    var btn = $('btnRefreshWorkshop');
     if (btn) { btn.disabled = true; btn.textContent = '↻ جاري التحديث...'; }
 
-    axios.get('/operations/operations/list')
+    axios.get('/workshop/workshop/list')
       .then(function (res) {
         casesCache = res.data.data || [];
-        var tbody = $('opsTableBody');
+        var tbody = $('workshopTableBody');
         if (!tbody) return;
         tbody.innerHTML = casesCache.length
           ? casesCache.map(renderRow).join('')
-          : '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد حالات جاهزة للتسليم.</td></tr>';
+          : '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في الورشة حالياً.</td></tr>';
         bindTableEvents();
         updateSummary(res.data.summary || {});
         applyFilters();
@@ -183,13 +191,13 @@
   }
 
   function applyFilters() {
-    var q = ($('opsSearch') && $('opsSearch').value || '').trim().toLowerCase();
-    document.querySelectorAll('.ops-row').forEach(function (row) {
+    var q = ($('workshopSearch') && $('workshopSearch').value || '').trim().toLowerCase();
+    document.querySelectorAll('.workshop-row').forEach(function (row) {
       var hay = (row.getAttribute('data-search') || '').toLowerCase();
       var ok = (!q || hay.indexOf(q) !== -1) && rowMatchesFilter(row);
       row.dataset.filterHidden = ok ? '0' : '1';
     });
-    var tbody = $('opsTableBody');
+    var tbody = $('workshopTableBody');
     if (tbody && window.TablePagination && TablePagination.repaginate) {
       TablePagination.repaginate(tbody);
     }
@@ -197,27 +205,27 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     bindTableEvents();
-    var search = $('opsSearch');
+    var search = $('workshopSearch');
     if (search) search.addEventListener('input', applyFilters);
-    var filtersRoot = $('opsFilters');
+    var filtersRoot = $('workshopFilters');
     if (filtersRoot) {
       filtersRoot.addEventListener('click', function (e) {
-        var btn = e.target.closest('.ops-filter');
+        var btn = e.target.closest('.workshop-filter');
         if (!btn) return;
-        activeOpsFilter = btn.getAttribute('data-filter') || 'all';
-        filtersRoot.querySelectorAll('.ops-filter').forEach(function (b) {
+        activeFilter = btn.getAttribute('data-filter') || 'all';
+        filtersRoot.querySelectorAll('.workshop-filter').forEach(function (b) {
           b.classList.remove('active', 'bg-slate-800', 'text-white');
         });
         btn.classList.add('active', 'bg-slate-800', 'text-white');
         applyFilters();
       });
     }
-    var refresh = $('btnRefreshOps');
+    var refresh = $('btnRefreshWorkshop');
     if (refresh) refresh.addEventListener('click', refreshList);
-    var closeBomModal = $('closeOpsBomItemsModal');
-    var bomModal = $('opsBomItemsModal');
-    if (closeBomModal) closeBomModal.addEventListener('click', closeBomItemsModal);
-    if (bomModal) bomModal.addEventListener('click', function (e) { if (e.target === bomModal) closeBomItemsModal(); });
+    var closeBtn = $('closeWorkshopBomItemsModal');
+    var modal = $('workshopBomItemsModal');
+    if (closeBtn) closeBtn.addEventListener('click', closeBomItemsModal);
+    if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeBomItemsModal(); });
     applyFilters();
   });
 })();

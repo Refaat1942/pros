@@ -1,6 +1,6 @@
 @php
     $queue = $queue_appointments ?? collect();
-    $queueDate = $queue_date ?? now()->toDateString();
+    $queueDate = $queue_date ?? \App\Support\ClinicTime::todayDateString();
     $todayTotal = $queue_today_total ?? $queue->count();
     $waitingCount = $queue_waiting_count ?? $queue->count();
     $examinedCount = $queue_examined_count ?? 0;

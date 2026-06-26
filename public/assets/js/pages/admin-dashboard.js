@@ -1642,7 +1642,7 @@
       }
 
       table.addEventListener('click', function (e) {
-        var btn = e.target.closest('.ops-overview-bom-btn');
+        var btn = e.target.closest('.ops-overview-bom-btn, .workshop-overview-bom-btn');
         if (btn) openModal(btn);
       });
 

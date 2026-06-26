@@ -213,13 +213,29 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $q) => $q->where('stage', Bom::STAGE_FINISHED));
     }
 
-    /** طابور مكتب التشغيل — تحت التشغيل أو جاهزة للتسليم بعد تم التصنيع. */
+    /** طابور ورشة التصنيع — BOM تحت التشغيل بعد صرف المخزن. */
+    public function scopeWorkshopDeskQueue(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_MANUFACTURING)
+            ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_WIP));
+    }
+
+    /** طابور مكتب التشغيل — جاهزة للتسليم بعد إتمام التصنيع من الورشة. */
+    public function scopeOperationsDeliveryQueue(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_READY_DELIVERY)
+            ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_FINISHED));
+    }
+
+    /** @deprecated استخدم workshopDeskQueue أو operationsDeliveryQueue */
     public function scopeOperationsDeskQueue(Builder $query): Builder
     {
         return $query->where(function (Builder $q) {
             $q->where(function (Builder $inner) {
                 $inner->where('stage_key', self::STAGE_MANUFACTURING)
-                    ->whereHas('bom', fn (Builder $b) => $b->whereIn('stage', [Bom::STAGE_WIP, Bom::STAGE_FINISHED]));
+                    ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_WIP));
             })->orWhere(function (Builder $inner) {
                 $inner->where('stage_key', self::STAGE_READY_DELIVERY)
                     ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_FINISHED));

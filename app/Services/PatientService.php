@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ContractCompany;
 use App\Models\MilitaryRank;
 use App\Models\Patient;
+use App\Support\ClinicTime;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -62,7 +63,7 @@ class PatientService
                 'sovereign_entity'    => $sovereignEntity,
                 'contract_company_id' => $contractCompanyId,
                 'company_name'        => $companyName,
-                'registered_at'       => now()->toDateString(),
+                'registered_at'       => ClinicTime::todayDateString(),
                 'status'              => Patient::STATUS_ACTIVE,
             ]);
 
@@ -75,7 +76,7 @@ class PatientService
 
             $this->appointmentService->book([
                 'patient_id'       => $patient->id,
-                'appointment_date' => now()->toDateString(),
+                'appointment_date' => ClinicTime::todayDateString(),
                 'visit_type_id'    => $data['visit_type_id'],
             ]);
 

@@ -31,7 +31,7 @@ class MedicalRecordController extends Controller
      */
     public function queue(Request $request): JsonResponse
     {
-        $date = $request->date ?? now()->toDateString();
+        $date = $request->date ?? ClinicTime::todayDateString();
 
         $baseQuery = Appointment::query()
             ->whereDate('appointment_date', $date)
