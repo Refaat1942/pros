@@ -6,32 +6,81 @@
     $b5 = $board5 ?? [];
     $fmt = fn ($n) => number_format((float) $n, 0);
     $fmtMoney = fn ($n) => number_format((float) $n, 2);
+
+    $totalCases = max(0, (int) ($b1['total_cases'] ?? 0));
+    $civCount = (int) ($b1['civilian_count'] ?? 0);
+    $milCount = (int) ($b1['military_count'] ?? 0);
+    $civPct = $totalCases > 0 ? round(($civCount / $totalCases) * 100) : 0;
+    $milPct = $totalCases > 0 ? round(($milCount / $totalCases) * 100) : 0;
+
+    $itemCount = (int) ($b2['item_count'] ?? 0);
+    $lowStock = (int) ($b2['low_stock'] ?? 0);
+    $healthPct = $itemCount > 0 ? (int) round((($itemCount - $lowStock) / $itemCount) * 100) : 100;
+    $healthTone = $healthPct >= 70 ? 'ok' : ($healthPct >= 40 ? 'mid' : 'low');
+
+    $slaCases = $b1['sla_breached_cases'] ?? [];
+    $slaCount = (int) ($b1['sla_breached'] ?? count($slaCases));
+
+    $opsTotal = max(1, (int) ($b3['open_work_orders'] ?? 0) + (int) ($b3['ready_for_delivery'] ?? 0));
+    $opsSteps = [
+        ['key' => 'dispense', 'label' => 'بانتظار الصرف', 'val' => (int) ($b3['awaiting_dispense'] ?? 0), 'tone' => 'amber'],
+        ['key' => 'workshop', 'label' => 'داخل الورش', 'val' => (int) ($b3['in_workshop'] ?? 0), 'tone' => 'purple'],
+        ['key' => 'open', 'label' => 'أوامر مفتوحة', 'val' => (int) ($b3['open_work_orders'] ?? 0), 'tone' => 'indigo'],
+        ['key' => 'ready', 'label' => 'جاهز للتسليم', 'val' => (int) ($b3['ready_for_delivery'] ?? 0), 'tone' => 'green'],
+    ];
 @endphp
 <div class="bi-grid" data-server-rendered="1">
 
     {{-- ── 1. إدارة المرضى ─────────────────────────────────────────────── --}}
-    <div class="bi-card">
-        <div class="bi-card-head"><span>👥</span><h4>1. إدارة المرضى</h4></div>
+    <article class="bi-card bi-card--patients" id="bi-board-1">
+        <header class="bi-card-head">
+            <span class="bi-card-icon bi-card-icon--patients" aria-hidden="true">👥</span>
+            <div class="bi-card-head__text">
+                <span class="bi-card-index">اللوحة 1</span>
+                <h4>إدارة المرضى و SLA</h4>
+            </div>
+            @if ($slaCount > 0)
+                <span class="bi-card-chip bi-card-chip--danger">{{ $slaCount }} متأخر</span>
+            @else
+                <span class="bi-card-chip bi-card-chip--ok">SLA سليم</span>
+            @endif
+        </header>
         <div class="bi-card-body">
             <div class="bi-kpi-grid bi-kpi-grid--4">
-                <div class="bi-kpi">
+                <div class="bi-kpi bi-kpi--accent">
                     <div class="bi-kpi-label">إجمالي الحالات</div>
                     <div class="bi-kpi-value">{{ $b1['total_cases'] ?? 0 }}</div>
                 </div>
                 <div class="bi-kpi">
                     <div class="bi-kpi-label">🌐 مدني</div>
-                    <div class="bi-kpi-value bi-tone-cyan">{{ $b1['civilian_count'] ?? 0 }}</div>
+                    <div class="bi-kpi-value bi-tone-cyan">{{ $civCount }}</div>
                 </div>
                 <div class="bi-kpi">
                     <div class="bi-kpi-label">🪖 عسكري</div>
-                    <div class="bi-kpi-value bi-tone-amber">{{ $b1['military_count'] ?? 0 }}</div>
+                    <div class="bi-kpi-value bi-tone-amber">{{ $milCount }}</div>
                 </div>
                 <div class="bi-kpi">
                     <div class="bi-kpi-label">حالات مفتوحة</div>
                     <div class="bi-kpi-value">{{ $b1['open_count'] ?? 0 }}</div>
                 </div>
             </div>
-            <div class="bi-highlight-row">
+
+            <div class="bi-split-block">
+                <div class="bi-split-bar" role="img" aria-label="توزيع مدني {{ $civPct }}% وعسكري {{ $milPct }}%">
+                    @if ($civPct > 0)
+                        <div class="bi-split-bar__civ" style="width:{{ $civPct }}%"></div>
+                    @endif
+                    @if ($milPct > 0)
+                        <div class="bi-split-bar__mil" style="width:{{ $milPct }}%"></div>
+                    @endif
+                </div>
+                <div class="bi-split-legend">
+                    <span><i class="bi-dot bi-dot--cyan"></i> مدني {{ $civPct }}%</span>
+                    <span><i class="bi-dot bi-dot--amber"></i> عسكري {{ $milPct }}%</span>
+                </div>
+            </div>
+
+            <div class="bi-metric-pill">
                 <span>⏱️ متوسط زمن التنفيذ (Turnaround)</span>
                 <strong>
                     @if(isset($b1['avg_turnaround']) && $b1['avg_turnaround'] !== null)
@@ -41,41 +90,53 @@
                     @endif
                 </strong>
             </div>
+
             <div class="bi-section-title">⏱️ حالات متأخرة عن الـ SLA ({{ $b1['sla_days'] ?? 21 }} يوم)</div>
-            <div class="bi-alert-box {{ empty($b1['sla_breached_cases']) ? 'bi-alert-box--ok' : 'bi-alert-box--warn' }}">
-                <ul class="bi-list">
-                    @forelse($b1['sla_breached_cases'] ?? [] as $case)
-                        <li>
-                            <span class="bi-case-ref">{{ $case['case_no'] }}</span>
-                            — {{ $case['patient'] }}
-                            <span class="bi-badge bi-badge--danger">{{ $case['days_open'] ?? '?' }} يوم</span>
-                        </li>
-                    @empty
-                        <li>لا توجد حالات متأخرة عن الـ SLA ✅</li>
-                    @endforelse
-                </ul>
+            <div class="bi-alert-box {{ empty($slaCases) ? 'bi-alert-box--ok' : 'bi-alert-box--warn' }}">
+                @if (empty($slaCases))
+                    <p class="bi-alert-empty">لا توجد حالات متأخرة عن الـ SLA ✅</p>
+                @else
+                    <ul class="bi-sla-list">
+                        @foreach($slaCases as $case)
+                            <li>
+                                <span class="bi-case-ref">{{ $case['case_no'] }}</span>
+                                <span class="bi-sla-patient">{{ $case['patient'] }}</span>
+                                <span class="bi-badge bi-badge--danger">{{ $case['days_open'] ?? '?' }} يوم</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
             </div>
         </div>
-    </div>
+    </article>
 
     {{-- ── 2. المخازن ──────────────────────────────────────────────────── --}}
-    <div class="bi-card">
-        <div class="bi-card-head"><span>📦</span><h4>2. المخازن وسلاسل الإمداد</h4></div>
+    <article class="bi-card bi-card--inventory" id="bi-board-2">
+        <header class="bi-card-head">
+            <span class="bi-card-icon bi-card-icon--inventory" aria-hidden="true">📦</span>
+            <div class="bi-card-head__text">
+                <span class="bi-card-index">اللوحة 2</span>
+                <h4>المخازن وسلاسل الإمداد</h4>
+            </div>
+            <span class="bi-card-chip bi-card-chip--{{ $healthTone }}">{{ $healthPct }}% صحة</span>
+        </header>
         <div class="bi-card-body">
-            <div class="bi-kpi-grid">
-                <div class="bi-kpi bi-kpi--wide">
-                    <div class="bi-kpi-label">القيمة المالية الإجمالية (WAC)</div>
-                    <div class="bi-kpi-value bi-tone-cyan">{{ $fmtMoney($b2['total_value'] ?? 0) }} <small>ج.م</small></div>
+            <div class="bi-inventory-hero">
+                <div class="bi-health-ring bi-health-ring--{{ $healthTone }}" style="--health-pct: {{ $healthPct }}">
+                    <span class="bi-health-ring__value">{{ $healthPct }}%</span>
                 </div>
-                <div class="bi-kpi">
-                    <div class="bi-kpi-label">عدد الأصناف</div>
-                    <div class="bi-kpi-value">{{ $b2['item_count'] ?? 0 }}</div>
-                </div>
-                <div class="bi-kpi">
-                    <div class="bi-kpi-label">🚨 أصناف ناقصة</div>
-                    <div class="bi-kpi-value bi-tone-red">{{ $b2['low_stock'] ?? 0 }}</div>
+                <div class="bi-inventory-hero__meta">
+                    <div class="bi-inventory-hero__value bi-tone-cyan">
+                        {{ $fmtMoney($b2['total_value'] ?? 0) }} <small>ج.م</small>
+                    </div>
+                    <p>القيمة المالية الإجمالية (WAC)</p>
+                    <div class="bi-inventory-tags">
+                        <span>{{ $itemCount }} صنف</span>
+                        <span class="bi-inventory-tags--warn">{{ $lowStock }} ناقص</span>
+                    </div>
                 </div>
             </div>
+
             <div class="bi-section-title">🐌 أصناف راكدة (&gt;180 يوم)</div>
             <div class="bi-table-wrap">
                 <table class="bi-table" data-paginate="8">
@@ -100,36 +161,46 @@
                 </table>
             </div>
         </div>
-    </div>
+    </article>
 
     {{-- ── 3. العمليات ─────────────────────────────────────────────────── --}}
-    <div class="bi-card">
-        <div class="bi-card-head"><span>🏭</span><h4>3. العمليات والتشغيل</h4></div>
-        <div class="bi-card-body">
-            <div class="bi-ops-grid">
-                <div class="bi-op-stat bi-op-stat--purple">
-                    <div class="val">{{ $b3['open_work_orders'] ?? 0 }}</div>
-                    <div class="lbl">أوامر تشغيل مفتوحة</div>
-                </div>
-                <div class="bi-op-stat">
-                    <div class="val">{{ $b3['awaiting_dispense'] ?? 0 }}</div>
-                    <div class="lbl">بانتظار الصرف</div>
-                </div>
-                <div class="bi-op-stat">
-                    <div class="val">{{ $b3['in_workshop'] ?? 0 }}</div>
-                    <div class="lbl">داخل الورش</div>
-                </div>
-                <div class="bi-op-stat bi-op-stat--green">
-                    <div class="val">{{ $b3['ready_for_delivery'] ?? 0 }}</div>
-                    <div class="lbl">جاهز للتسليم</div>
-                </div>
+    <article class="bi-card bi-card--operations" id="bi-board-3">
+        <header class="bi-card-head">
+            <span class="bi-card-icon bi-card-icon--operations" aria-hidden="true">🏭</span>
+            <div class="bi-card-head__text">
+                <span class="bi-card-index">اللوحة 3</span>
+                <h4>العمليات والتشغيل</h4>
             </div>
+            <span class="bi-card-chip">{{ $b3['open_work_orders'] ?? 0 }} أمر نشط</span>
+        </header>
+        <div class="bi-card-body">
+            <div class="bi-pipeline">
+                @foreach ($opsSteps as $i => $step)
+                    @if ($i > 0)
+                        <div class="bi-pipeline__connector" aria-hidden="true"></div>
+                    @endif
+                    <div class="bi-pipeline__step bi-pipeline__step--{{ $step['tone'] }}">
+                        <span class="bi-pipeline__val">{{ $step['val'] }}</span>
+                        <span class="bi-pipeline__lbl">{{ $step['label'] }}</span>
+                    </div>
+                @endforeach
+            </div>
+            <p class="bi-pipeline-hint">مسار الإنتاج من الصرف حتى الجاهزية للتسليم — أرقام لحظية من أوامر الشغل.</p>
         </div>
-    </div>
+    </article>
 
     {{-- ── 4. الجهات والتكاليف ─────────────────────────────────────────── --}}
-    <div class="bi-card bi-card--wide">
-        <div class="bi-card-head"><span>🏢</span><h4>4. الجهات والتكاليف</h4></div>
+    <article class="bi-card bi-card--wide bi-card--entities" id="bi-board-4">
+        <header class="bi-card-head">
+            <span class="bi-card-icon bi-card-icon--entities" aria-hidden="true">🏢</span>
+            <div class="bi-card-head__text">
+                <span class="bi-card-index">اللوحة 4</span>
+                <h4>الجهات والتكاليف</h4>
+            </div>
+            @if (!empty($b4['net_debts']))
+                <span class="bi-card-chip bi-card-chip--warn">صافي مستحق: {{ $fmtMoney($b4['net_debts']) }} ج.م</span>
+            @endif
+        </header>
         <div class="bi-card-body">
             <div class="bi-kpi-grid bi-kpi-grid--4">
                 <div class="bi-kpi">
@@ -141,11 +212,11 @@
                     <div class="bi-kpi-value bi-tone-amber">{{ $fmtMoney($b4['military_aggregated_cost'] ?? 0) }} <small>ج.م</small></div>
                 </div>
                 <div class="bi-kpi">
-                    <div class="bi-kpi-label">🪖 مديونيات عسكرية بانتظار التحصيل</div>
+                    <div class="bi-kpi-label">🪖 مديونيات بانتظار التحصيل</div>
                     <div class="bi-kpi-value bi-tone-purple">{{ $fmtMoney($b4['military_debt_pending'] ?? 0) }} <small>ج.م</small></div>
                 </div>
                 <div class="bi-kpi">
-                    <div class="bi-kpi-label">🪖 مديونيات عسكرية محصّلة</div>
+                    <div class="bi-kpi-label">🪖 مديونيات محصّلة</div>
                     <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4['military_debt_collected'] ?? 0) }} <small>ج.م</small></div>
                 </div>
             </div>
@@ -158,6 +229,8 @@
                             <tr>
                                 <th class="text">الجهة</th>
                                 <th class="num">مستحق (ج.م)</th>
+                                <th class="num">محصّل</th>
+                                <th class="num">المتبقي</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -165,6 +238,8 @@
                                 <tr>
                                     <td class="text">{{ $debt['company_name'] ?? '—' }}</td>
                                     <td class="num">{{ $fmtMoney($debt['due'] ?? 0) }}</td>
+                                    <td class="num bi-tone-green">{{ $fmtMoney($debt['collected'] ?? 0) }}</td>
+                                    <td class="num"><strong>{{ $fmtMoney($debt['remaining'] ?? 0) }}</strong></td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -172,19 +247,22 @@
                 </div>
             @endif
         </div>
-    </div>
+    </article>
 
     {{-- ── 5. المشتريات ─────────────────────────────────────────────────── --}}
-    <div class="bi-card bi-card--wide">
-        <div class="bi-card-head"><span>🛒</span><h4>5. المشتريات والموردين</h4></div>
-        <div class="bi-card-body">
-            <div class="bi-kpi bi-kpi--inline">
-                <div class="bi-kpi-label">عدد الموردين المعتمدين</div>
-                <div class="bi-kpi-value">{{ $b5['supplier_count'] ?? 0 }}</div>
+    <article class="bi-card bi-card--wide bi-card--purchasing" id="bi-board-5">
+        <header class="bi-card-head">
+            <span class="bi-card-icon bi-card-icon--purchasing" aria-hidden="true">🛒</span>
+            <div class="bi-card-head__text">
+                <span class="bi-card-index">اللوحة 5</span>
+                <h4>المشتريات والموردين</h4>
             </div>
+            <span class="bi-card-chip">{{ $b5['supplier_count'] ?? 0 }} مورد معتمد</span>
+        </header>
+        <div class="bi-card-body">
             <div class="bi-section-title">⚖️ مقارنة WAC ↔ أعلى سعر شراء</div>
             <div class="bi-table-wrap">
-                <table class="bi-table" data-paginate="10">
+                <table class="bi-table bi-table--purchasing" data-paginate="10">
                     <thead>
                         <tr>
                             <th class="text">الصنف</th>
@@ -219,5 +297,5 @@
                 </table>
             </div>
         </div>
-    </div>
+    </article>
 </div>
