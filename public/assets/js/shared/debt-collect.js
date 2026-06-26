@@ -81,13 +81,24 @@
       syncInvalidState(input, row);
     }, true);
 
-    // تمييز بصري فقط — بدون alert (blur + alert + focus كان يعيد فتح التنبيه عند OK)
+    // تمييز بصري + تنبيه عند تجاوز المتبقي (blur)
     root.addEventListener('blur', function (e) {
       var input = e.target.closest(INPUT_SELECTOR);
       if (!input) return;
       var row = input.closest('[data-remaining]');
       if (!row) return;
-      syncInvalidState(input, row);
+      var amount = parseFloat(input.value);
+      if (!amount || amount <= 0) {
+        markInvalid(input, false);
+        return;
+      }
+      var remaining = getRemaining(row);
+      if (exceedsRemaining(amount, remaining)) {
+        markInvalid(input, true);
+        showError('لا يمكن أن يكون المبلغ المحصّل أكبر من المتبقي (' + fmtMoney(remaining) + ' ج.م).');
+        return;
+      }
+      markInvalid(input, false);
     }, true);
   }
 

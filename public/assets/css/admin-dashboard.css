@@ -1122,6 +1122,12 @@
         font-weight: 800;
         color: #334155;
     }
+    .civ-debt-collect-cell {
+        min-width: 220px;
+    }
+    .civ-debt-status-cell {
+        min-width: 120px;
+    }
     .civ-debt-collect-wrap {
         display: flex;
         flex-direction: column;
@@ -1161,6 +1167,10 @@
 
     /* ── مديونيات عسكرية ─────────────────────────────────────────────── */
     .mil-debt-action-cell .mil-debt-table-actions {
+      min-width: auto;
+      justify-content: flex-start;
+    }
+    .civ-debt-table-actions {
       min-width: auto;
       justify-content: flex-start;
     }

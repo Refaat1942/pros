@@ -90,6 +90,10 @@ class AppointmentController extends Controller
             'queue_number'            => $appointment->patient_id,
             'registered_at_formatted' => $appointment->registeredAtFormatted(),
             'wait_label'              => $appointment->receptionDeskWaitLabel(),
+            'wait_started_at'         => $appointment->registrationMoment()?->toIso8601String(),
+            'wait_frozen_at'          => ($appointment->transferred_to_clinic && $appointment->transferredAt())
+                ? $appointment->transferredAt()->toIso8601String()
+                : null,
         ];
     }
 }

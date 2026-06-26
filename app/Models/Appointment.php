@@ -91,12 +91,16 @@ class Appointment extends Model
         return self::formatWaitDuration($start, $until ?? now());
     }
 
-    /** لحظة تسجيل المريض/الموعد في الاستقبال. */
+    /** لحظة تسجيل الموعد في الاستقبال — وقت إنشاء الموعد وليس ملف المريض الأول. */
     public function registrationMoment(): ?\Carbon\CarbonInterface
     {
+        if ($this->created_at) {
+            return $this->created_at;
+        }
+
         $patient = $this->relationLoaded('patient') ? $this->patient : null;
 
-        return $patient?->created_at ?? $this->created_at;
+        return $patient?->created_at;
     }
 
     /** تاريخ ووقت الإضافة — توقيت المركز. */
@@ -129,23 +133,34 @@ class Appointment extends Model
             return '—';
         }
 
-        $diff  = $from->diff($to);
+        $totalSeconds = (int) $from->diffInSeconds($to);
+
+        if ($totalSeconds < 60) {
+            return 'أقل من دقيقة';
+        }
+
+        $totalMinutes = intdiv($totalSeconds, 60);
+        $days         = intdiv($totalMinutes, 60 * 24);
+        $remMinutes   = $totalMinutes % (60 * 24);
+        $hours        = intdiv($remMinutes, 60);
+        $minutes      = $remMinutes % 60;
+
         $parts = [];
 
-        if ($diff->d > 0) {
-            $parts[] = $diff->d.' '.($diff->d === 1 ? 'يوم' : 'أيام');
+        if ($days > 0) {
+            $parts[] = $days.' '.($days === 1 ? 'يوم' : 'أيام');
         }
 
-        if ($diff->h > 0) {
-            $parts[] = $diff->h.' '.($diff->h === 1 ? 'ساعة' : 'ساعات');
+        if ($hours > 0) {
+            $parts[] = $hours.' '.($hours === 1 ? 'ساعة' : 'ساعات');
         }
 
-        if ($diff->i > 0) {
-            $parts[] = $diff->i.' '.($diff->i === 1 ? 'دقيقة' : 'دقائق');
+        if ($minutes > 0) {
+            $parts[] = $minutes.' '.($minutes === 1 ? 'دقيقة' : 'دقائق');
         }
 
         if ($parts === []) {
-            return 'أقل من دقيقة';
+            return self::arabicDigits('1 دقيقة');
         }
 
         return self::arabicDigits(implode(' ', array_slice($parts, 0, 2)));

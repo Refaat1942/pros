@@ -94,6 +94,13 @@ class DebtCollectionEntryService
             ? $payable->collectionEntries
             : $payable->collectionEntries()->orderBy('installment_no')->get();
 
+        if ($entries->isEmpty() && $collected > 0) {
+            return [
+                'collection_summary' => $this->legacySummary($due, $collected),
+                'collection_entries' => $this->legacyFormattedEntries($due, $collected),
+            ];
+        }
+
         return [
             'collection_summary' => $this->summary($entries, $due, $collected),
             'collection_entries' => $this->formatEntries($entries),
@@ -121,5 +128,34 @@ class DebtCollectionEntryService
             ->max('installment_no');
 
         return ((int) $max) + 1;
+    }
+
+    /** تحصيل مسجّل على الجهة دون صفوف دفعات (بيانات قديمة قبل سجل الدفعات). */
+    private function legacySummary(float $due, float $collected): array
+    {
+        $isFull = $due > 0 && $collected >= $due;
+
+        return [
+            'payment_count'      => 1,
+            'mode'               => $isFull ? 'full_once' : 'partial_once',
+            'mode_label'         => $isFull ? 'تحصيل كامل — دفعة واحدة' : 'تحصيل جزئي — دفعة واحدة',
+            'first_collected_at' => null,
+            'last_collected_at'  => null,
+        ];
+    }
+
+    /**
+     * @return list<array{installment_no: int, amount: float, running_collected: float, remaining_after: float, recorded_by_name: string, collected_at: null}>
+     */
+    private function legacyFormattedEntries(float $due, float $collected): array
+    {
+        return [[
+            'installment_no'    => 1,
+            'amount'            => round($collected, 2),
+            'running_collected' => round($collected, 2),
+            'remaining_after'   => max(0, round($due - $collected, 2)),
+            'recorded_by_name'  => 'ترحيل سابق',
+            'collected_at'      => null,
+        ]];
     }
 }

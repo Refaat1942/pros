@@ -1,5 +1,5 @@
 <div class="section-view" id="section-pending">
-  <div id="analytics-pending">@include('partials.dashboard-analytics-empty', ['stats' => [
+  <div id="analytics-pending">@include('partials.dashboard-analytics-empty', ['hide_charts' => true, 'stats' => [
     ['icon' => '⏳', 'label' => 'بانتظار الموافقة', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
     ['icon' => '🧾', 'label' => 'عروض صادرة', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
     ['icon' => '🌐', 'label' => 'مدني', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],

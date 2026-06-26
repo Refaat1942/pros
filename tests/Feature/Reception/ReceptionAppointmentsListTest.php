@@ -54,4 +54,41 @@ class ReceptionAppointmentsListTest extends TestCase
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.patient_name', 'مريض عسكري مواعيد');
     }
+
+    public function test_reception_wait_label_after_five_minutes_before_transfer(): void
+    {
+        \Carbon\Carbon::setTestNow('2026-06-26 10:00:00');
+
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $this->registerCivilianPatientHttp($recep, $company, 'انتظار خمس دقائق');
+
+        \Carbon\Carbon::setTestNow('2026-06-26 10:05:00');
+
+        $this->actingAs($recep)
+            ->getJson('/reception/appointments/list?date=2026-06-26')
+            ->assertOk()
+            ->assertJsonPath('data.0.wait_label', '٥ دقائق');
+
+        \Carbon\Carbon::setTestNow();
+    }
+
+    public function test_reception_wait_label_after_transfer_records_elapsed_minutes(): void
+    {
+        \Carbon\Carbon::setTestNow('2026-06-26 11:00:00');
+
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'تحويل بعد ثلاث دقائق');
+
+        \Carbon\Carbon::setTestNow('2026-06-26 11:03:00');
+        $this->transferPatientToClinicHttp($recep, $patient);
+
+        $this->actingAs($recep)
+            ->getJson('/reception/appointments/list?date=2026-06-26')
+            ->assertOk()
+            ->assertJsonPath('data.0.wait_label', '٣ دقائق');
+
+        \Carbon\Carbon::setTestNow();
+    }
 }

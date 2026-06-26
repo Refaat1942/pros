@@ -507,6 +507,43 @@
       return parts[2] + '-' + parts[1] + '-' + parts[0];
     }
 
+    function toArabicDigits(text) {
+      return String(text || '').replace(/[0-9]/g, function (d) {
+        return '٠١٢٣٤٥٦٧٨٩'[Number(d)];
+      });
+    }
+
+    function formatWaitLabelFromTimestamps(startIso, frozenEndIso) {
+      if (!startIso) return '—';
+      var start = new Date(startIso);
+      if (isNaN(start.getTime())) return '—';
+      var end = frozenEndIso ? new Date(frozenEndIso) : new Date();
+      if (isNaN(end.getTime())) end = new Date();
+      var totalSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
+      if (totalSeconds < 60) return 'أقل من دقيقة';
+
+      var totalMinutes = Math.floor(totalSeconds / 60);
+      var days = Math.floor(totalMinutes / (60 * 24));
+      var remMinutes = totalMinutes % (60 * 24);
+      var hours = Math.floor(remMinutes / 60);
+      var minutes = remMinutes % 60;
+      var parts = [];
+
+      if (days > 0) parts.push(days + (days === 1 ? ' يوم' : ' أيام'));
+      if (hours > 0) parts.push(hours + (hours === 1 ? ' ساعة' : ' ساعات'));
+      if (minutes > 0) parts.push(minutes + (minutes === 1 ? ' دقيقة' : ' دقائق'));
+      if (!parts.length) return toArabicDigits('1 دقيقة');
+
+      return toArabicDigits(parts.slice(0, 2).join(' '));
+    }
+
+    function appointmentWaitLabel(appt) {
+      if (appt.waitStartedAt) {
+        return formatWaitLabelFromTimestamps(appt.waitStartedAt, appt.waitFrozenAt);
+      }
+      return appt.waitLabel || '—';
+    }
+
     function mapAppointmentFromApi(row) {
       var patient = row.patient || {};
       var visitTypeRel = row.visit_type_record || null;
@@ -530,7 +567,9 @@
         statusLabel: row.status_label || row.status || 'waiting',
         transferredToClinic: !!row.transferred_to_clinic,
         registeredAt: row.registered_at_formatted || '—',
-        waitLabel: row.wait_label || '—'
+        waitLabel: row.wait_label || '—',
+        waitStartedAt: row.wait_started_at || row.created_at || null,
+        waitFrozenAt: row.wait_frozen_at || null
       };
     }
 
@@ -739,7 +778,7 @@
       var headers = ['التاريخ', 'الوقت', 'رقم الدور', 'تاريخ الإضافة', 'وقت الانتظار', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
       var rows = data.map(function(a) {
         var vt = getVisitMeta(a.visitType);
-        return [a.date, a.time, a.queueNumber, a.registeredAt, a.waitLabel, a.name, a.visitTypeLabel || vt.label, a.phone, a.company];
+        return [a.date, a.time, a.queueNumber, a.registeredAt, appointmentWaitLabel(a), a.name, a.visitTypeLabel || vt.label, a.phone, a.company];
       });
       if (type === 'excel') ExportKit.toExcel('مواعيد_' + calendarView.selectedDate.replace(/\//g, '-'), headers, rows);
       else ExportKit.toPDF('مواعيد — ' + calendarView.selectedDate, headers, rows);
@@ -805,7 +844,7 @@
           '<td><strong>' + a.time + '</strong></td>' +
           '<td><strong>' + a.queueNumber + '</strong></td>' +
           '<td style="font-size:12px;white-space:nowrap;">' + a.registeredAt + '</td>' +
-          '<td><span class="wait-time">' + a.waitLabel + '</span></td>' +
+          '<td><span class="wait-time">' + appointmentWaitLabel(a) + '</span></td>' +
           '<td>' + a.name + '</td>' +
           '<td><span class="visit-tag ' + vt.tagClass + '">' + visitLabel + '</span></td>' +
           '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + a.phone + '</td>' +
@@ -820,6 +859,17 @@
       var title = document.getElementById('apptPanelTitle');
       if (title) title.textContent = '📅 مواعيد — ' + calendarView.selectedDate;
       if (window.TablePagination) TablePagination.refreshById('appointmentsTable');
+    }
+
+    function refreshAppointmentWaitLabels() {
+      var tbody = document.getElementById('appointmentsTable');
+      if (!tbody) return;
+      var rows = tbody.querySelectorAll('tr');
+      var filtered = getFilteredAppointments();
+      filtered.forEach(function (a, index) {
+        var cell = rows[index] && rows[index].querySelector('.wait-time');
+        if (cell) cell.textContent = appointmentWaitLabel(a);
+      });
     }
 
     function renderPatients(filter) {
@@ -1763,6 +1813,7 @@
     })();
 
     initAppointmentsCalendar();
+    setInterval(refreshAppointmentWaitLabels, 30000);
 
     syncPricingQueueToQuotes();
     if (document.getElementById('patientsTable')) loadPatients();

@@ -105,4 +105,41 @@ class AdminCivilianDebtsPageTest extends TestCase
             ->postJson("/admin/civilian-debts/{$company->id}/collect", ['amount' => 400])
             ->assertStatus(422);
     }
+
+    public function test_legacy_civilian_collected_without_entries_shows_collection_summary(): void
+    {
+        $company = $this->civilianCompany('شركة ترحيل قديم');
+        \App\Models\ContractCompanyDebt::query()->updateOrCreate(
+            ['contract_company_id' => $company->id],
+            ['due' => 1500, 'collected' => 1500, 'status' => DebtStatus::Paid->value],
+        );
+
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get('/admin/civilian-debts')
+            ->assertOk()
+            ->assertSee('تحصيل كامل — دفعة واحدة', false)
+            ->assertDontSee('لم يُحصَّل بعد', false);
+
+        $this->actingAs($admin)
+            ->getJson('/admin/civilian-debts/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.collection_summary.mode', 'full_once')
+            ->assertJsonPath('data.0.collection_summary.mode_label', 'تحصيل كامل — دفعة واحدة')
+            ->assertJsonCount(1, 'data.0.collection_entries');
+    }
+
+    public function test_civilian_debts_page_shows_collect_input_for_outstanding_balance(): void
+    {
+        $company = $this->civilianCompany('جهة متبقي تحصيل');
+        app(ContractDebtService::class)->increaseDue($company, 2500);
+
+        $this->actingAs($this->userWithRole('admin'))
+            ->get('/admin/civilian-debts')
+            ->assertOk()
+            ->assertSee('المبلغ المحوّل', false)
+            ->assertSee('تم التحصيل', false)
+            ->assertSee('جهة متبقي تحصيل', false);
+    }
 }

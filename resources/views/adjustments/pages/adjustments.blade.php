@@ -1,5 +1,5 @@
 <div class="section-view" id="section-adjustments">
-      <div id="analytics-adjustments">@include('partials.dashboard-analytics-empty', ['stats' => [
+      <div id="analytics-adjustments">@include('partials.dashboard-analytics-empty', ['hide_charts' => true, 'stats' => [
         ['icon' => '📏', 'label' => 'حالات بالمعدلات', 'value' => '0', 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.12)'],
         ['icon' => '🪖', 'label' => 'عسكري', 'value' => '0', 'color' => '#4338ca', 'bg' => 'rgba(67,56,202,0.1)'],
         ['icon' => '🌐', 'label' => 'مدني', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],

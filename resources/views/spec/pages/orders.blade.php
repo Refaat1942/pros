@@ -19,7 +19,7 @@
 @endphp
 
 <div id="analytics-orders">
-    @include('partials.dashboard-analytics-empty', ['stats' => $spec_stats ?? []])
+    @include('partials.dashboard-analytics-empty', ['stats' => $spec_stats ?? [], 'hide_charts' => true])
 </div>
 
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-6" id="specOrdersRoot"
