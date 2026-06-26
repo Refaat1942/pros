@@ -20,6 +20,7 @@ use App\Models\ReturnNote;
 use App\Models\ReturnNoteLine;
 use App\Models\StockMovement;
 use App\Models\Patient;
+use App\Services\AdminCivilianDebtService;
 use App\Services\AdminCaseTrackingService;
 use App\Services\AdminPatientTrackService;
 use App\Services\AdminReportsService;
@@ -53,6 +54,7 @@ class DashboardPageDataService
             'admin.cases'           => $this->adminCases(),
             'admin.patient-tracks'  => $this->adminPatientTracks(),
             'admin.contracts'       => $this->contractsPage(isAdmin: true),
+            'admin.civilian-debts'  => $this->adminCivilianDebts(),
             'admin.military-debts'  => $this->adminMilitaryDebts(),
             'admin.returns'         => $this->adminReturns(),
             'reception.appointments'=> $this->receptionAppointments(),
@@ -585,6 +587,21 @@ class DashboardPageDataService
                 ['icon' => '✅', 'label' => 'تام', 'value' => (string) $finCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📋', 'label' => 'إجمالي القوائم', 'value' => (string) $boms->count(), 'bg' => 'rgba(124,58,237,0.1)'],
             ],
+        ];
+    }
+
+    private function adminCivilianDebts(): array
+    {
+        $service = app(AdminCivilianDebtService::class);
+        $debts   = $service->query()->get();
+
+        return [
+            'civilian_debts'           => $debts,
+            'civilian_debts_stats'     => $service->stats($debts),
+            'civilian_debt_companies'  => ContractCompany::query()
+                ->where('is_military', false)
+                ->orderBy('name')
+                ->get(['id', 'name', 'company_code']),
         ];
     }
 

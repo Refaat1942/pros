@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Contracts\ContractController;
+use App\Http\Controllers\Finance\CivilianDebtController;
 use App\Http\Controllers\Finance\MilitaryDebtController;
 use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Admin\PermissionMatrixController;
@@ -161,6 +162,10 @@ Route::prefix('admin')
         //
         // Route::delete('stock-categories/{stockCategory}', [StockCategoryController::class, 'destroy'])
         //     ->name('stock-categories.destroy');
+
+        // ── Civilian contract company debts ───────────────────────────────
+        Route::get('civilian-debts/list', [CivilianDebtController::class, 'index'])
+            ->name('civilian-debts.list');
 
         // ── Military sovereign debts ──────────────────────────────────────
         Route::get('military-debts/list', [MilitaryDebtController::class, 'index'])
