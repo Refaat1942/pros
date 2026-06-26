@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\DebtStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * مديونية جهة التعاقد — clinic_contract_debts
@@ -32,5 +33,10 @@ class ContractCompanyDebt extends Model
     public function contractCompany(): BelongsTo
     {
         return $this->belongsTo(ContractCompany::class);
+    }
+
+    public function collectionEntries(): MorphMany
+    {
+        return $this->morphMany(DebtCollectionEntry::class, 'payable')->orderBy('installment_no');
     }
 }

@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\DB;
  */
 class MilitaryDebtService
 {
+    public function __construct(
+        private readonly DebtCollectionEntryService $collectionEntryService,
+    ) {
+    }
+
     public function recordPayment(MilitaryDebt $debt, float $amount): MilitaryDebt
     {
         if ($debt->isCollected()) {
@@ -39,6 +44,8 @@ class MilitaryDebtService
             }
             $locked->save();
 
+            $this->collectionEntryService->record($locked, $amount, (float) $locked->total_cost);
+
             AuditService::log(
                 action:      'payment',
                 description: "تسجيل تحصيل مديونية عسكرية — WO: {$locked->work_order_no} بمقدار {$amount}",
@@ -47,7 +54,7 @@ class MilitaryDebtService
                 after:       $this->snapshot($locked->fresh()),
             );
 
-            return $locked->fresh();
+            return $locked->fresh()->load('collectionEntries');
         });
     }
 
@@ -95,7 +102,7 @@ class MilitaryDebtService
             'collected_at'        => $debt->collected_at?->format('Y-m-d H:i'),
             'is_frozen'           => $debt->isCollected(),
             'balance'             => $remaining > 0 ? 'outstanding' : 'settled',
-        ];
+        ] + $this->collectionEntryService->packageForPayable($debt, $due, $collected);
     }
 
     public function remaining(MilitaryDebt $debt): float

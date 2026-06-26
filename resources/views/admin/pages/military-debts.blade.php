@@ -1,6 +1,8 @@
 @php
     use App\Models\MilitaryDebt;
+    use App\Services\DebtCollectionEntryService;
     $debts = $military_debts ?? collect();
+    $collectionEntryService = app(DebtCollectionEntryService::class);
 
     $statusClass = function (string $status): string {
         return match ($status) {
@@ -62,6 +64,7 @@
                     <th class="num">المستحق (ج.م)</th>
                     <th class="num">المحصّل (ج.م)</th>
                     <th class="num">المتبقي (ج.م)</th>
+                    <th>تفاصيل التحصيل</th>
                     <th>الحالة</th>
                     <th>إجراء</th>
                 </tr>
@@ -75,6 +78,9 @@
                         $isSettled = $debt->isCollected();
                         $label = $isSettled ? 'تم التحصيل' : ($debt->status === MilitaryDebt::STATUS_PARTIAL ? 'مسدَّد جزئياً' : 'بانتظار التحصيل');
                         $class = $statusClass((string) $debt->status);
+                        $collectionPkg = $collectionEntryService->packageForPayable($debt, $due, $collected);
+                        $collectionSummary = $collectionPkg['collection_summary'];
+                        $collectionEntries = $collectionPkg['collection_entries'];
                     @endphp
                     <tr class="mil-debt-row"
                         data-id="{{ $debt->id }}"
@@ -86,6 +92,9 @@
                         data-remaining="{{ $remaining }}"
                         data-filter-hidden="0"
                         data-search="{{ $debt->work_order_no }} {{ $debt->patient_name }} {{ $debt->sovereign_entity }}"
+                        data-collection-title="{{ $debt->work_order_no ?? '' }} — {{ $debt->patient_name }}"
+                        data-collection-summary='@json($collectionSummary)'
+                        data-collection-entries='@json($collectionEntries)'
                         data-work-order="{{ $debt->work_order_no ?? '—' }}"
                         data-patient-name="{{ $debt->patient_name }}"
                         data-national-id="{{ $debt->patient_national_id ?? '—' }}"
@@ -120,6 +129,22 @@
                             <strong style="color:{{ $remaining > 0 ? '#d97706' : '#059669' }};">
                                 {{ number_format($remaining, 2) }}
                             </strong>
+                        </td>
+                        <td class="debt-collection-cell">
+                            @if ($collected > 0)
+                                <button type="button" class="debt-collection-summary-btn" onclick="openDebtCollectionModal(this)">
+                                    <span class="debt-collection-badge civ-debt-status civ-debt-status--{{ match($collectionSummary['mode']) {
+                                        'full_once', 'full_multi' => 'paid',
+                                        'partial_once', 'partial_multi' => 'partial',
+                                        default => 'pending',
+                                    } }}">{{ $collectionSummary['mode_label'] }}</span>
+                                    @if ($collectionSummary['payment_count'] > 1)
+                                        <small class="debt-collection-count">{{ $collectionSummary['payment_count'] }} دفعات</small>
+                                    @endif
+                                </button>
+                            @else
+                                <span class="debt-collection-empty">—</span>
+                            @endif
                         </td>
                         <td class="mil-debt-action-cell civ-debt-action-cell">
                             @if ($isSettled)
@@ -166,7 +191,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">
+                        <td colspan="11" style="text-align:center;padding:40px;color:var(--text-muted);">
                             لا توجد مديونيات عسكرية مسجلة بعد.<br>
                             <small>تظهر البيانات تلقائياً بعد إغلاق أي حالة عسكرية بالتسليم.</small>
                         </td>
@@ -304,6 +329,10 @@
         if (colEl) colEl.textContent = fmtMoney(collected);
         if (remEl) {
             remEl.innerHTML = '<strong style="color:' + (remaining > 0 ? '#d97706' : '#059669') + ';">' + fmtMoney(remaining) + '</strong>';
+        }
+
+        if (window.DebtCollectionHistory && debt.collection_summary) {
+            window.DebtCollectionHistory.updateCollectionCell(row, debt.collection_summary, debt.collection_entries, collected);
         }
 
         var actionCell = row.querySelector('.mil-debt-action-cell.civ-debt-action-cell');

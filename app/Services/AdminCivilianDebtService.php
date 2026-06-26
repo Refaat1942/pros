@@ -13,12 +13,17 @@ use Illuminate\Support\Collection;
  */
 class AdminCivilianDebtService
 {
+    public function __construct(
+        private readonly DebtCollectionEntryService $collectionEntryService,
+    ) {
+    }
+
     public function query(?Request $request = null): Builder
     {
         $request ??= request();
 
         return ContractCompanyDebt::query()
-            ->with('contractCompany:id,company_code,name,is_military')
+            ->with(['contractCompany:id,company_code,name,is_military', 'collectionEntries'])
             ->whereHas('contractCompany', fn (Builder $q) => $q->where('is_military', false))
             ->when($request->status, fn (Builder $q, string $status) => $q->where('status', $status))
             ->when($request->company_id, fn (Builder $q, $id) => $q->where('contract_company_id', (int) $id))
@@ -64,7 +69,7 @@ class AdminCivilianDebtService
             'company'        => $debt->relationLoaded('contractCompany') && $debt->contractCompany
                 ? $debt->contractCompany->only(['id', 'company_code', 'name', 'is_military'])
                 : null,
-        ];
+        ] + $this->collectionEntryService->packageForPayable($debt, $due, $collected);
     }
 
     private function remaining(ContractCompanyDebt $debt): float

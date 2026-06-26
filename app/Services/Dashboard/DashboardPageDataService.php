@@ -607,7 +607,12 @@ class DashboardPageDataService
 
     private function adminMilitaryDebts(): array
     {
-        $debts   = MilitaryDebt::query()->orderBy('status')->orderByDesc('delivered_at')->orderByDesc('id')->get();
+        $debts   = MilitaryDebt::query()
+            ->with('collectionEntries')
+            ->orderBy('status')
+            ->orderByDesc('delivered_at')
+            ->orderByDesc('id')
+            ->get();
         $service = app(\App\Services\MilitaryDebtService::class);
 
         return [

@@ -173,4 +173,11 @@ class MilitaryDebtController extends Controller
 
         return response()->json(['message' => 'تم حذف السجل بنجاح.']);
     }
+
+    public function collectionHistory(MilitaryDebt $militaryDebt): JsonResponse
+    {
+        $militaryDebt->load('collectionEntries');
+
+        return response()->json($this->militaryDebtService->formatDebt($militaryDebt));
+    }
 }

@@ -1,7 +1,9 @@
 @php
     use App\Enums\DebtStatus;
+    use App\Services\DebtCollectionEntryService;
     $debts = $civilian_debts ?? collect();
     $companies = $civilian_debt_companies ?? collect();
+    $collectionEntryService = app(DebtCollectionEntryService::class);
 
     $statusLabel = function (string $status, float $due, float $collected): string {
         if ($due > 0 && $collected >= $due) {
@@ -65,6 +67,7 @@
                         <th class="num">المستحق (ج.م)</th>
                         <th class="num">المحصّل (ج.م)</th>
                         <th class="num">المتبقي (ج.م)</th>
+                        <th>تفاصيل التحصيل</th>
                         <th>الحالة</th>
                     </tr>
                 </thead>
@@ -82,6 +85,9 @@
                                 DebtStatus::Partial->value => 'partial',
                                 default => 'pending',
                             };
+                            $collectionPkg = $collectionEntryService->packageForPayable($debt, $due, $collected);
+                            $collectionSummary = $collectionPkg['collection_summary'];
+                            $collectionEntries = $collectionPkg['collection_entries'];
                         @endphp
                         <tr class="civ-debt-row"
                             data-id="{{ $debt->id }}"
@@ -92,7 +98,10 @@
                             data-collected="{{ $collected }}"
                             data-remaining="{{ $remaining }}"
                             data-filter-hidden="0"
-                            data-search="{{ $company->name ?? '' }} {{ $company->company_code ?? '' }}">
+                            data-search="{{ $company->name ?? '' }} {{ $company->company_code ?? '' }}"
+                            data-collection-title="{{ $company->name ?? '' }}"
+                            data-collection-summary='@json($collectionSummary)'
+                            data-collection-entries='@json($collectionEntries)'>
                             <td><strong>{{ $company->name ?? '—' }}</strong></td>
                             <td class="num civ-debt-due">{{ number_format($due, 2) }}</td>
                             <td class="num civ-debt-collected" style="color:#059669;">{{ number_format($collected, 2) }}</td>
@@ -100,6 +109,22 @@
                                 <strong style="color:{{ $remaining > 0 ? '#d97706' : '#059669' }};">
                                     {{ number_format($remaining, 2) }}
                                 </strong>
+                            </td>
+                            <td class="debt-collection-cell">
+                                @if ($collected > 0)
+                                    <button type="button" class="debt-collection-summary-btn" onclick="openDebtCollectionModal(this)">
+                                        <span class="debt-collection-badge civ-debt-status civ-debt-status--{{ match($collectionSummary['mode']) {
+                                            'full_once', 'full_multi' => 'paid',
+                                            'partial_once', 'partial_multi' => 'partial',
+                                            default => 'pending',
+                                        } }}">{{ $collectionSummary['mode_label'] }}</span>
+                                        @if ($collectionSummary['payment_count'] > 1)
+                                            <small class="debt-collection-count">{{ $collectionSummary['payment_count'] }} دفعات</small>
+                                        @endif
+                                    </button>
+                                @else
+                                    <span class="debt-collection-empty">—</span>
+                                @endif
                             </td>
                             <td class="civ-debt-action-cell">
                                 @if ($isSettled)
@@ -133,7 +158,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" style="text-align:center;color:var(--text-muted);padding:28px;">
+                            <td colspan="6" style="text-align:center;color:var(--text-muted);padding:28px;">
                                 لا توجد مديونيات لجهات التعاقد المدنية بعد.
                             </td>
                         </tr>
@@ -256,6 +281,10 @@
         if (colEl) colEl.textContent = fmtMoney(collected);
         if (remEl) {
             remEl.innerHTML = '<strong style="color:' + (remaining > 0 ? '#d97706' : '#059669') + ';">' + fmtMoney(remaining) + '</strong>';
+        }
+
+        if (window.DebtCollectionHistory && debt.collection_summary) {
+            window.DebtCollectionHistory.updateCollectionCell(row, debt.collection_summary, debt.collection_entries, collected);
         }
 
         var actionCell = row.querySelector('.civ-debt-action-cell');

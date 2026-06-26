@@ -170,6 +170,9 @@ Route::prefix('admin')
         Route::post('civilian-debts/{company}/collect', [CivilianDebtController::class, 'recordPayment'])
             ->name('civilian-debts.collect');
 
+        Route::get('civilian-debts/{company}/collections', [CivilianDebtController::class, 'collectionHistory'])
+            ->name('civilian-debts.collections');
+
         // ── Military sovereign debts ──────────────────────────────────────
         Route::get('military-debts/list', [MilitaryDebtController::class, 'index'])
             ->name('military-debts.list');
@@ -179,6 +182,9 @@ Route::prefix('admin')
 
         Route::post('military-debts/{militaryDebt}/collect', [MilitaryDebtController::class, 'recordPayment'])
             ->name('military-debts.collect');
+
+        Route::get('military-debts/{militaryDebt}/collections', [MilitaryDebtController::class, 'collectionHistory'])
+            ->name('military-debts.collections');
 
         Route::delete('military-debts/{militaryDebt}', [MilitaryDebtController::class, 'destroy'])
             ->name('military-debts.destroy');

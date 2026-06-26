@@ -93,6 +93,8 @@ class ContractDebtService
             $debt->status    = $this->computeStatus($debt)->value;
             $debt->save();
 
+            app(DebtCollectionEntryService::class)->record($debt, $amount, (float) $debt->due);
+
             AuditService::log(
                 action:      'payment',
                 description: "تسجيل تحصيل من جهة {$company->name} بمقدار {$amount}",

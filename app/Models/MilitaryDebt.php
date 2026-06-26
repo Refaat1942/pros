@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * سجل مديونية جهة عسكرية — يُنشأ تلقائياً عند إغلاق الحالة العسكرية بالتسليم.
@@ -38,6 +39,11 @@ class MilitaryDebt extends Model
     public function caseRecord(): BelongsTo
     {
         return $this->belongsTo(CaseRecord::class, 'case_id');
+    }
+
+    public function collectionEntries(): MorphMany
+    {
+        return $this->morphMany(DebtCollectionEntry::class, 'payable')->orderBy('installment_no');
     }
 
     public function isPending(): bool

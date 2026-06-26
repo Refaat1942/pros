@@ -60,7 +60,7 @@ class CivilianDebtController extends Controller
 
         $this->contractDebtService->recordPayment($company, $amount);
 
-        $debt = $company->fresh()->load('debt.contractCompany')->debt;
+        $debt = $company->fresh()->load(['debt.contractCompany', 'debt.collectionEntries'])->debt;
 
         return response()->json([
             'message' => $debt->status === \App\Enums\DebtStatus::Paid->value
@@ -68,5 +68,17 @@ class CivilianDebtController extends Controller
                 : 'تم تسجيل جزء من التحصيل — يمكنك إكمال الباقي لاحقاً.',
             'debt'    => $this->civilianDebtService->formatDebt($debt),
         ]);
+    }
+
+    public function collectionHistory(ContractCompany $company): JsonResponse
+    {
+        if ($company->is_military) {
+            abort(422, 'هذه الجهة عسكرية.');
+        }
+
+        $debt = $this->contractDebtService->forCompany($company);
+        $debt->load('collectionEntries');
+
+        return response()->json($this->civilianDebtService->formatDebt($debt));
     }
 }

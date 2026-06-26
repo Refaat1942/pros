@@ -225,6 +225,7 @@ return [
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/debt-collect.js',
+            'assets/js/shared/debt-collection-history.js',
             'assets/js/shared/charts-kit.js',
             'assets/js/shared/stock-catalog.js',
             'assets/js/shared/cases-workflow.js',

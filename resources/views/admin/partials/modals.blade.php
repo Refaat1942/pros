@@ -53,3 +53,5 @@
   </div>
 
   <div class="toast" id="toast" aria-live="polite"></div>
+
+  @include('admin.partials.debt-collection-modal')

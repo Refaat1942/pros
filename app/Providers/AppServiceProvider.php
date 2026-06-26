@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Models\AppNotification;
 use App\Models\Bom;
+use App\Models\ContractCompanyDebt;
+use App\Models\MilitaryDebt;
 use App\Models\ReturnNote;
 use App\Services\Dashboard\DashboardQueueService;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -29,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
         Relation::enforceMorphMap([
             'bom' => Bom::class,
             'return_note' => ReturnNote::class,
+            'contract_company_debt' => ContractCompanyDebt::class,
+            'military_debt' => MilitaryDebt::class,
         ]);
 
         View::composer('partials.dashboard-sidebar', function ($view) {
