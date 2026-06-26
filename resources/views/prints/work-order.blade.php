@@ -106,7 +106,7 @@
             <div class="dept">القسم المالي</div>
         </div>
         <div class="header-left">
-            <div class="logo-placeholder" aria-hidden="true">شعار الجهة</div>
+            @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
             <div class="header-meta">
                 <div class="serial-red">{{ $case->order_ref }}</div>
                 <div>إذن شغل رقم: <span class="fill" style="min-width:18mm;">{{ $case->work_order_no ?? '—' }}</span></div>

@@ -56,6 +56,41 @@
       text-align: center;
     }
 
+    .home-brand {
+      display: flex;
+      justify-content: center;
+      margin: 0 auto clamp(1.25rem, 3vw, 1.75rem);
+    }
+
+    .home-brand__ring {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      line-height: 0;
+      box-shadow:
+        0 8px 32px rgba(14, 116, 144, 0.14),
+        0 2px 8px rgba(30, 58, 95, 0.06);
+    }
+
+    .home-brand__ring::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(14, 116, 144, 0.22), rgba(5, 150, 105, 0.18), rgba(30, 58, 95, 0.12));
+      z-index: -1;
+    }
+
+    .home-brand__logo {
+      display: block;
+      width: clamp(6.5rem, 16vw, 10.5rem);
+      height: clamp(6.5rem, 16vw, 10.5rem);
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
     .logo-badge {
       display: inline-flex;
       align-items: center;
@@ -295,6 +330,16 @@
 
     /* Responsive */
     @media (max-width: 600px) {
-      header { padding: 32px 0 24px; }
+      header { padding: 28px 0 20px; }
+      .home-brand__logo {
+        width: clamp(5.25rem, 26vw, 7rem);
+        height: clamp(5.25rem, 26vw, 7rem);
+      }
+      .home-brand__ring {
+        box-shadow:
+          0 4px 20px rgba(14, 116, 144, 0.12),
+          0 1px 4px rgba(30, 58, 95, 0.05);
+      }
+      header h1 { font-size: clamp(1.35rem, 5.5vw, 1.75rem); }
       .role-card { padding: 24px 20px; }
     }

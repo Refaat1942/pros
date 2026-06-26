@@ -323,9 +323,18 @@
     if (modal) modal.classList.add('hidden');
   }
 
+  function pathBadge(b) {
+    var pt = (b.case && b.case.patient_type) || b.patient_type || '';
+    var isMil = pt === 'military' || b.path === 'military';
+    var cls = isMil ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700';
+    var label = b.path_label || (isMil ? '🪖 عسكري' : '🌐 مدني');
+    return '<span class="text-xs font-bold px-2 py-0.5 rounded-lg ' + cls + '">' + esc(label) + '</span>';
+  }
+
   function renderBomRow(b) {
     var meta = STAGE_META[b.stage] || { label: b.stage, cls: 'bg-slate-100' };
     var wo = (b.case && b.case.work_order_no) ? b.case.work_order_no : '—';
+    var path = b.path || ((b.case && b.case.patient_type === 'military') ? 'military' : 'civilian');
     var printBtn = b.issue_voucher_print_url
       ? '<a href="' + esc(b.issue_voucher_print_url) + '" target="_blank" rel="noopener" ' +
         'class="btn-print-voucher rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1">🖨️ طباعة إذن الصرف</a>'
@@ -336,12 +345,12 @@
     } else if (b.stage === 'wip') {
       action = printBtn + '<span class="text-xs text-slate-500">🏭 تحت التشغيل — يُغلق من مكتب التشغيل</span>';
     } else {
-      action = printBtn || '<span class="text-xs text-slate-400">—</span>';
+      action = '<span class="text-xs text-slate-400">—</span>';
     }
-    return '<tr class="bom-row hover:bg-slate-50" data-bom-id="' + b.id + '" data-stage="' + b.stage + '" data-search="' +
+    return '<tr class="bom-row hover:bg-slate-50" data-bom-id="' + b.id + '" data-stage="' + b.stage + '" data-path="' + esc(path) + '" data-search="' +
       esc([b.bom_no, b.patient_name, wo].join(' ')) + '">' +
       '<td class="px-4 py-3 font-mono font-bold">' + esc(b.bom_no) + '</td>' +
-      '<td class="px-4 py-3 font-semibold text-slate-800">' + esc(b.patient_name) + '</td>' +
+      '<td class="px-4 py-3"><div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-slate-800">' + esc(b.patient_name) + '</span>' + pathBadge(b) + '</div></td>' +
       '<td class="px-4 py-3 font-mono text-xs text-violet-700">' + esc(wo) + '</td>' +
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg border ' + meta.cls + '">' + meta.label + '</span></td>' +
       '<td class="px-4 py-3 text-center">' + renderItemsCell(b) + '</td>' +

@@ -46,6 +46,79 @@
         color: #888;
         margin: 0 auto 4px;
     }
+    .org-logo-thermal {
+        width: var(--org-logo-size, 32mm);
+        height: var(--org-logo-size, 32mm);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .org-logo-thermal__inner {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .org-logo-thermal img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: grayscale(100%) contrast(1.62) brightness(1);
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        -webkit-print-color-adjust: economy;
+        print-color-adjust: economy;
+    }
+    .org-logo-thermal--seal {
+        padding: 1.2mm;
+        border: 1.1px solid #1a1a1a;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: inset 0 0 0 0.4mm #fff;
+    }
+    .org-logo-thermal--seal img {
+        filter: grayscale(100%) contrast(1.72) brightness(0.98);
+    }
+    @media print {
+        .org-logo-thermal img {
+            filter: grayscale(100%) contrast(1.75) brightness(0.96);
+        }
+        .org-logo-thermal--seal img {
+            filter: grayscale(100%) contrast(1.82) brightness(0.94);
+        }
+    }
+    .quote-qr-box {
+        width: 24mm;
+        flex-shrink: 0;
+        padding: 1.2mm;
+        border: 1px solid #000;
+        background: #fff;
+        text-align: center;
+        line-height: 1;
+    }
+    .quote-qr-box__code {
+        width: 20mm;
+        height: 20mm;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .quote-qr-box__code svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+    .quote-qr-box__label {
+        margin-top: 1mm;
+        font-size: 6.5pt;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        color: #111;
+    }
     .header-meta {
         font-size: 10.5pt;
         font-weight: 600;

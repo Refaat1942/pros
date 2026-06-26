@@ -80,6 +80,59 @@ class OfficialPrintDocumentsTest extends TestCase
         $response->assertJsonPath('data.0.issue_voucher_print_url', route('technical.quote.print-issue-voucher', $quote));
     }
 
+    public function test_technical_can_print_issue_voucher_for_military_bom_without_quote(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0099']);
+
+        $bom = Bom::create([
+            'case_id'      => $case->id,
+            'bom_no'       => 'BOM-MIL-001',
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'stage'        => Bom::STAGE_RAW,
+        ]);
+
+        $technical = $this->userWithRole('technical');
+
+        $this->actingAs($technical)
+            ->get(route('technical.bom.print-issue-voucher', $bom))
+            ->assertOk()
+            ->assertSee('إذن صرف', false)
+            ->assertSee($case->order_ref, false)
+            ->assertSee($patient->name, false)
+            ->assertSee('رئيس المخازن', false)
+            ->assertSee('onload="window.print()"', false);
+
+        $this->assertDatabaseMissing('quotes', ['case_id' => $case->id]);
+    }
+
+    public function test_technical_bom_list_exposes_issue_voucher_for_military_without_quote(): void
+    {
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0100']);
+
+        $bom = Bom::create([
+            'case_id'      => $case->id,
+            'bom_no'       => 'BOM-MIL-002',
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'stage'        => Bom::STAGE_RAW,
+        ]);
+
+        $technical = $this->userWithRole('technical');
+
+        $this->actingAs($technical)
+            ->getJson('/technical/bom/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.issue_voucher_print_url', route('technical.bom.print-issue-voucher', $bom))
+            ->assertJsonPath('data.0.path', 'military')
+            ->assertJsonPath('data.0.path_label', '🪖 عسكري');
+    }
+
     public function test_operations_can_print_workshop_work_order(): void
     {
         $this->stockItem('RM-001', qty: 10);

@@ -64,11 +64,27 @@
             </thead>
             <tbody id="bomTableBody" class="divide-y divide-slate-100">
                 @forelse ($boms as $bom)
-                    @php $meta = $stageMeta[$bom->stage] ?? ['label' => $bom->stage, 'cls' => 'bg-slate-100']; @endphp
+                    @php
+                        $meta = $stageMeta[$bom->stage] ?? ['label' => $bom->stage, 'cls' => 'bg-slate-100'];
+                        $isMil = ($bom->caseRecord?->patient_type ?? '') === \App\Models\Patient::TYPE_MILITARY;
+                        $voucherUrl = route('technical.bom.print-issue-voucher', $bom);
+                        $quoteForVoucher = \App\Models\Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
+                        if ($quoteForVoucher) {
+                            $voucherUrl = route('technical.quote.print-issue-voucher', $quoteForVoucher);
+                        }
+                    @endphp
                     <tr class="bom-row hover:bg-slate-50" data-bom-id="{{ $bom->id }}" data-stage="{{ $bom->stage }}"
+                        data-path="{{ $isMil ? 'military' : 'civilian' }}"
                         data-search="{{ $bom->bom_no }} {{ $bom->patient_name }} {{ $bom->caseRecord?->work_order_no }}">
                         <td class="px-4 py-3 font-mono font-bold">{{ $bom->bom_no }}</td>
-                        <td class="px-4 py-3 font-semibold text-slate-800">{{ $bom->patient_name }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-semibold text-slate-800">{{ $bom->patient_name }}</span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-lg {{ $isMil ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                    {{ $isMil ? '🪖 عسكري' : '🌐 مدني' }}
+                                </span>
+                            </div>
+                        </td>
                         <td class="px-4 py-3 font-mono text-xs text-wh">{{ $bom->caseRecord?->work_order_no ?? '—' }}</td>
                         <td class="px-4 py-3">
                             <span class="text-xs font-bold px-2 py-1 rounded-lg border {{ $meta['cls'] }}">{{ $meta['label'] }}</span>
@@ -92,27 +108,20 @@
                             @endif
                         </td>
                         <td class="px-4 py-3">
-                            @php
-                                $quoteForVoucher = \App\Models\Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
-                            @endphp
                             @if ($bom->stage === 'raw')
                                 <button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm"
                                         data-bom-id="{{ $bom->id }}">
                                     📤 صرف للورشة
                                 </button>
-                                @if ($quoteForVoucher)
-                                    <a href="{{ route('technical.quote.print-issue-voucher', $quoteForVoucher) }}" target="_blank" rel="noopener"
-                                       class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1 inline-block">
-                                        🖨️ طباعة إذن الصرف
-                                    </a>
-                                @endif
+                                <a href="{{ $voucherUrl }}" target="_blank" rel="noopener"
+                                   class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1 inline-block">
+                                    🖨️ طباعة إذن الصرف
+                                </a>
                             @elseif ($bom->stage === 'wip')
-                                @if ($quoteForVoucher)
-                                    <a href="{{ route('technical.quote.print-issue-voucher', $quoteForVoucher) }}" target="_blank" rel="noopener"
-                                       class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 inline-block">
-                                        🖨️ طباعة إذن الصرف
-                                    </a>
-                                @endif
+                                <a href="{{ $voucherUrl }}" target="_blank" rel="noopener"
+                                   class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 inline-block">
+                                    🖨️ طباعة إذن الصرف
+                                </a>
                                 <span class="text-xs text-slate-500">🏭 تحت التشغيل — يُغلق من مكتب التشغيل</span>
                             @else
                                 <span class="text-xs text-slate-400">—</span>

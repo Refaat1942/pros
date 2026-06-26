@@ -92,10 +92,11 @@ class QuoteController extends Controller
     {
         $quote->load(['caseRecord.bom.items', 'caseRecord.patient']);
 
-        abort_unless($quote->caseRecord?->bom, 404, 'لا توجد BOM مرتبطة بهذا الطلب.');
+        $bom = $quote->caseRecord?->bom;
+        abort_unless($bom, 404, 'لا توجد BOM مرتبطة بهذا الطلب.');
 
         return view('prints.issue-voucher', [
-            'quote'     => $quote,
+            'voucher'   => \App\Support\IssueVoucherPresenter::fromBom($bom),
             'autoPrint' => true,
         ]);
     }

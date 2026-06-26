@@ -1,8 +1,8 @@
 @php
-    $case = $quote->caseRecord;
-    $bom  = $case?->bom;
-    $items = $bom?->items ?? collect();
-    $voucherNo = $quote->order_ref ?: ($case?->order_ref ?? '—');
+    $voucherNo   = $voucher['voucher_no'] ?? '—';
+    $patientName = $voucher['patient_name'] ?? '—';
+    $companyName = $voucher['company_name'] ?? '—';
+    $items       = $voucher['items'] ?? collect();
     $dateDisplay = now()->format('d/m/Y');
 @endphp
 <!DOCTYPE html>
@@ -51,7 +51,7 @@
             <div class="dept">القسم المالي</div>
         </div>
         <div class="header-left">
-            <div class="logo-placeholder" aria-hidden="true">شعار الجهة</div>
+            @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
         </div>
     </header>
 
@@ -69,10 +69,10 @@
                 @endif
             </span>
         </p>
-        <p class="line">اسم المريض : <span class="fill fill-wide">{{ $quote->patient_name }}</span></p>
+        <p class="line">اسم المريض : <span class="fill fill-wide">{{ $patientName }}</span></p>
         <p class="line">
             بناء على التصديق الوارد لنا من :
-            <span class="fill fill-wide">{{ $quote->company_name ?? ($case?->company_name ?? '—') }}</span>
+            <span class="fill fill-wide">{{ $companyName }}</span>
         </p>
     </section>
 

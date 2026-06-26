@@ -56,6 +56,9 @@ Route::prefix('technical')
             Route::post('bom/{bom}/finish', [BomController::class, 'closeFinished'])
                 ->name('bom.finish');
 
+            Route::get('bom/{bom}/print-issue-voucher', [BomController::class, 'printIssueVoucher'])
+                ->name('bom.print-issue-voucher');
+
             Route::get('quote/{quote}/print-issue-voucher', [\App\Http\Controllers\Quote\QuoteController::class, 'printIssueVoucher'])
                 ->name('quote.print-issue-voucher');
         });

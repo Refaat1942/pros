@@ -8,15 +8,18 @@ use App\Http\Requests\Bom\DispenseBomRequest;
 use App\Http\Requests\Bom\StoreBomRequest;
 use App\Models\Bom;
 use App\Models\CaseRecord;
+use App\Models\Patient;
 use App\Models\PricingRequestItem;
 use App\Models\Quote;
 use App\Models\StockItem;
 use App\Models\TechOrderSpecItem;
 use App\Services\BomService;
 use App\Support\BomItemAggregator;
+use App\Support\IssueVoucherPresenter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class BomController extends Controller
 {
@@ -123,6 +126,19 @@ class BomController extends Controller
     }
 
     /**
+     * إذن صرف المخازن — للمسار العسكري (بدون عرض سعر) أو عند غياب الاقتباس.
+     */
+    public function printIssueVoucher(Bom $bom): View
+    {
+        abort_unless($bom->case_id, 404, 'لا توجد حالة مرتبطة بهذه القائمة.');
+
+        return view('prints.issue-voucher', [
+            'voucher'   => IssueVoucherPresenter::fromBom($bom),
+            'autoPrint' => true,
+        ]);
+    }
+
+    /**
      * إغلاق BOM — wip → finished، الحالة → ready_delivery.
      */
     public function closeFinished(Bom $bom): JsonResponse
@@ -171,16 +187,19 @@ class BomController extends Controller
 
     private function formatSummary(Bom $bom): array
     {
-        $quote = Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
+        $quote       = Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
+        $patientType = $bom->caseRecord?->patient_type;
+        $isMilitary  = $patientType === Patient::TYPE_MILITARY;
 
         return $bom->only([
             'id', 'bom_no', 'case_id', 'order_ref', 'quote_no',
             'patient_name', 'stage', 'released_at', 'finished_at',
         ]) + [
             'quote_id' => $quote?->id,
-            'issue_voucher_print_url' => $quote
-                ? route('technical.quote.print-issue-voucher', $quote)
-                : null,
+            'patient_type' => $patientType,
+            'path'         => $isMilitary ? 'military' : 'civilian',
+            'path_label'   => $isMilitary ? '🪖 عسكري' : '🌐 مدني',
+            'issue_voucher_print_url' => IssueVoucherPresenter::printUrl($bom),
             'items_count' => $bom->relationLoaded('items')
                 ? BomItemAggregator::uniqueCodeCount($bom->items)
                 : 0,

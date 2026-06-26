@@ -72,16 +72,67 @@
 
         .header-left {
             width: auto;
-            min-width: 52mm;
+            min-width: 58mm;
+            max-width: 62mm;
             flex-shrink: 0;
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 7px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4mm;
         }
 
         .logo-placeholder,
+        .org-logo-thermal,
         .quote-qr {
+            width: 32mm;
+            height: 32mm;
+            margin: 0;
+        }
+
+        .org-logo-thermal {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .org-logo-thermal__inner {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .org-logo-thermal img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: grayscale(100%) contrast(1.62) brightness(1);
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            -webkit-print-color-adjust: economy;
+            print-color-adjust: economy;
+        }
+
+        .org-logo-thermal--seal {
             width: 34mm;
             height: 34mm;
-            margin: 0 auto 6px;
+            padding: 1.2mm;
+            border: 1.1px solid #1a1a1a;
+            border-radius: 50%;
+            background: #fff;
+        }
+
+        .org-logo-thermal--seal img {
+            filter: grayscale(100%) contrast(1.72) brightness(0.98);
         }
 
         .logo-placeholder {
@@ -105,11 +156,45 @@
             display: block;
         }
 
+        .quote-qr-box {
+            width: 24mm;
+            flex-shrink: 0;
+            padding: 1.2mm;
+            border: 1px solid #000;
+            background: #fff;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .quote-qr-box__code {
+            width: 20mm;
+            height: 20mm;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quote-qr-box__code svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .quote-qr-box__label {
+            margin-top: 1mm;
+            font-size: 6.5pt;
+            font-weight: 800;
+            color: #111;
+        }
+
         .header-meta {
-            font-size: 11pt;
+            font-size: 10.5pt;
             font-weight: 600;
             text-align: right;
-            line-height: 1.85;
+            line-height: 1.75;
+            padding-top: 1mm;
+            border-top: 0.6px solid #ccc;
         }
 
         .header-meta .date-line,
@@ -170,7 +255,11 @@
         }
 
         body.embed-preview .header-left {
-            min-width: 58mm;
+            min-width: 62mm;
+        }
+
+        body.embed-preview .header-brand {
+            gap: 5mm;
         }
 
         /* ── Title ── */
@@ -362,6 +451,14 @@
             .disclaimer {
                 page-break-inside: avoid;
             }
+
+            .org-logo-thermal img {
+                filter: grayscale(100%) contrast(1.75) brightness(0.96);
+            }
+
+            .org-logo-thermal--seal img {
+                filter: grayscale(100%) contrast(1.82) brightness(0.94);
+            }
         }
     </style>
 </head>
@@ -383,15 +480,17 @@
             <div class="dept">القسم المالي</div>
         </div>
         <div class="header-left">
-            @if (!empty($quoteQrSvg))
-                <div class="quote-qr" aria-label="QR عرض السعر — {{ $refNo }}">
-                    {!! $quoteQrSvg !!}
-                </div>
-            @else
-                <div class="logo-placeholder" aria-hidden="true">شعار الجهة</div>
-            @endif
+            <div class="header-brand">
+                @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
+                @if (!empty($quoteQrSvg))
+                    <div class="quote-qr-box" aria-label="QR عرض السعر — {{ $refNo }}">
+                        <div class="quote-qr-box__code">{!! $quoteQrSvg !!}</div>
+                        <div class="quote-qr-box__label">مسح QR</div>
+                    </div>
+                @endif
+            </div>
             <div class="header-meta">
-                <div class="date-line">التاريخ: <span class="date-value">{{ $dateDisplay }}</span>م</div>
+                <div class="date-line">التاريخ: <span class="date-value">{{ $dateDisplay }}</span> م</div>
                 <div class="ref-line">عند الرد يذكر رقم: <span class="ref-value">{{ $refNo }}</span></div>
             </div>
         </div>

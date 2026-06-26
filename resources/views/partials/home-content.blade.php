@@ -2,7 +2,18 @@
 
 <div class="container">
     <header>
-        <h1>نظام الإدارة المتكامل<br><span class="highlight">لمركز إنتاج وتصنيع الأطراف الصناعية</span></h1>
+        <div class="home-brand" aria-label="شعار المركز">
+            <div class="home-brand__ring">
+                <img src="{{ asset('assets/images/org-logo.png') }}"
+                     alt="مركز الطب الطبيعي والتأهيلي وعلاج الروماتيزم بالقوات المسلحة"
+                     class="home-brand__logo"
+                     width="340"
+                     height="340"
+                     decoding="async"
+                     fetchpriority="high">
+            </div>
+        </div>
+        <h1>مركز الطب الطبيعي والتأهيلي<br><span class="highlight">وعلاج الروماتيزم بالقوات المسلحة</span></h1>
         <p class="subtitle">منصة موحدة لإدارة الأنشطة الإدارية، الطبية، والمخزنية — اختر لوحة التحكم المناسبة لدورك الوظيفي للدخول إلى النظام</p>
         
     </header>
