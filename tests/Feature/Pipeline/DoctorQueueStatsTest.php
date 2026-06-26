@@ -43,6 +43,33 @@ class DoctorQueueStatsTest extends TestCase
             ->assertViewHas('queue_today_total', 1);
     }
 
+    public function test_reception_pending_count_shows_untransferred_patients(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $doctor  = $this->userWithRole('doctor');
+
+        $waiting = $this->registerCivilianPatientHttp($recep, $company, 'مريض بالاستقبال');
+        $transferred = $this->registerCivilianPatientHttp($recep, $company, 'مريض محوّل');
+        $this->transferPatientToClinicHttp($recep, $transferred);
+
+        $this->actingAs($doctor)
+            ->get('/doctor/queue')
+            ->assertOk()
+            ->assertViewHas('queue_reception_pending_count', 1)
+            ->assertViewHas('queue_waiting_count', 1)
+            ->assertSee('id="receptionPendingCount"', false)
+            ->assertSee('في الاستقبال — لم يُحوَّلوا');
+
+        $this->transferPatientToClinicHttp($recep, $waiting);
+
+        $this->actingAs($doctor)
+            ->get('/doctor/queue')
+            ->assertOk()
+            ->assertViewHas('queue_reception_pending_count', 0)
+            ->assertViewHas('queue_waiting_count', 2);
+    }
+
     public function test_sidebar_shows_waiting_count_beside_queue_link(): void
     {
         $company = $this->civilianCompany();

@@ -42,6 +42,18 @@ class DashboardQueueService
             ->count();
     }
 
+    /** مرضى مسجّلون في الاستقبال اليوم ولم يُحوَّلوا للعيادة بعد. */
+    public function doctorReceptionPendingCount(?string $date = null): int
+    {
+        $date = $date ?? now()->toDateString();
+
+        return Appointment::query()
+            ->whereDate('appointment_date', $date)
+            ->where('status', Appointment::STATUS_WAITING)
+            ->where('transferred_to_clinic', false)
+            ->count();
+    }
+
     /** @return list<int> */
     public function specTechnicalCaseIds(): array
     {

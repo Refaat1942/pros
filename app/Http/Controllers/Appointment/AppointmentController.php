@@ -11,8 +11,6 @@ use App\Services\AppointmentService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
-class AppointmentController extends Controller
 {
     use PaginationTrait;
 

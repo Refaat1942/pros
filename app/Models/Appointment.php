@@ -91,6 +91,38 @@ class Appointment extends Model
         return self::formatWaitDuration($start, $until ?? now());
     }
 
+    /** لحظة تسجيل المريض/الموعد في الاستقبال. */
+    public function registrationMoment(): ?\Carbon\CarbonInterface
+    {
+        $patient = $this->relationLoaded('patient') ? $this->patient : null;
+
+        return $patient?->created_at ?? $this->created_at;
+    }
+
+    /** تاريخ ووقت الإضافة — توقيت المركز. */
+    public function registeredAtFormatted(): string
+    {
+        return ClinicTime::format($this->registrationMoment(), 'd/m/Y H:i');
+    }
+
+    /**
+     * مدة انتظار المريض في الاستقبال — من التسجيل حتى التحويل أو الآن.
+     */
+    public function receptionDeskWaitLabel(?\Carbon\CarbonInterface $until = null): string
+    {
+        $start = $this->registrationMoment();
+
+        if (! $start) {
+            return '—';
+        }
+
+        $end = ($this->transferred_to_clinic && $this->transferredAt())
+            ? $this->transferredAt()
+            : ($until ?? now());
+
+        return self::formatWaitDuration($start, $end);
+    }
+
     public static function formatWaitDuration(\Carbon\CarbonInterface $from, \Carbon\CarbonInterface $to): string
     {
         if ($to->lessThan($from)) {

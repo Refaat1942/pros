@@ -49,13 +49,17 @@ class MedicalRecordController extends Controller
             ->where('status', Appointment::STATUS_DONE)
             ->count();
 
+        $receptionPendingCount = app(\App\Services\Dashboard\DashboardQueueService::class)
+            ->doctorReceptionPendingCount($date);
+
         return response()->json([
-            'date'            => $date,
-            'data'            => collect($appointments)->map(fn (Appointment $a) => $this->formatQueueAppointment($a))->values(),
-            'total'           => $appointments->count(),
-            'waiting_count'   => $appointments->count(),
-            'examined_count'  => $examinedCount,
-            'today_total'     => $appointments->count() + $examinedCount,
+            'date'                      => $date,
+            'data'                      => collect($appointments)->map(fn (Appointment $a) => $this->formatQueueAppointment($a))->values(),
+            'total'                     => $appointments->count(),
+            'waiting_count'             => $appointments->count(),
+            'examined_count'            => $examinedCount,
+            'reception_pending_count'   => $receptionPendingCount,
+            'today_total'               => $appointments->count() + $examinedCount,
         ]);
     }
 

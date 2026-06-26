@@ -4,6 +4,7 @@
     $todayTotal = $queue_today_total ?? $queue->count();
     $waitingCount = $queue_waiting_count ?? $queue->count();
     $examinedCount = $queue_examined_count ?? 0;
+    $receptionPendingCount = $queue_reception_pending_count ?? 0;
 @endphp
 <div class="stats-row">
       <div class="stat-mini">
@@ -11,6 +12,13 @@
         <div class="info">
           <div class="label">حالات اليوم</div>
           <div class="value" id="todayCount">{{ $todayTotal }}</div>
+        </div>
+      </div>
+      <div class="stat-mini">
+        <div class="icon" style="background:rgba(217,119,6,0.12);">🏥</div>
+        <div class="info">
+          <div class="label">في الاستقبال — لم يُحوَّلوا</div>
+          <div class="value" id="receptionPendingCount" style="color:#d97706;">{{ $receptionPendingCount }}</div>
         </div>
       </div>
       <div class="stat-mini">

@@ -313,13 +313,16 @@ class DashboardPageDataService
             ->count();
 
         $waitingCount = $appointments->count();
+        $receptionPendingCount = app(\App\Services\Dashboard\DashboardQueueService::class)
+            ->doctorReceptionPendingCount($date);
 
         return [
-            'queue_date'           => $date,
-            'queue_appointments'   => $appointments,
-            'queue_today_total'    => $waitingCount + $examinedCount,
-            'queue_waiting_count'  => $waitingCount,
-            'queue_examined_count' => $examinedCount,
+            'queue_date'                  => $date,
+            'queue_appointments'          => $appointments,
+            'queue_today_total'           => $waitingCount + $examinedCount,
+            'queue_waiting_count'         => $waitingCount,
+            'queue_examined_count'        => $examinedCount,
+            'queue_reception_pending_count' => $receptionPendingCount,
         ];
     }
 
