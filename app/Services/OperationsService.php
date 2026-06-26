@@ -6,7 +6,9 @@ use App\Enums\PricingRequestStatus;
 use App\Enums\WorkflowEvent;
 use App\Exceptions\InsufficientStockException;
 use App\Models\CaseRecord;
+use App\Models\Patient;
 use App\Models\PricingRequest;
+use App\Models\Quote;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -130,6 +132,13 @@ class OperationsService
 
             if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
                 abort(422, 'الحالة ليست في مكتب التشغيل — لا يمكن الإعادة.');
+            }
+
+            if ($case->patient_type === Patient::TYPE_CIVILIAN) {
+                $latestQuote = Quote::where('case_id', $case->id)->orderByDesc('id')->first();
+                if ($latestQuote && $latestQuote->status !== Quote::STATUS_PENDING) {
+                    abort(422, 'لا يمكن الإرجاع للتعديل بعد إصدار عرض السعر للاستقبال.');
+                }
             }
 
             $before = ['stage_key' => $case->stage_key];

@@ -160,6 +160,34 @@ class OperationsPendingDeskTest extends TestCase
         $this->assertEquals(CaseRecord::STAGE_ADJUSTMENTS, $case->fresh()->stage_key);
     }
 
+    public function test_civilian_return_blocked_after_quote_released(): void
+    {
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        app(\App\Services\StockPriceService::class)->addBatch(
+            \App\Models\StockItem::first(),
+            10,
+            200.00,
+            $this->makeSupplier(),
+            'INV-001',
+            now()
+        );
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->operationsReadyCase($patient);
+        $ops = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->postJson("/operations/pending/{$case->id}/release-quote")
+            ->assertOk();
+
+        $this->actingAs($ops)
+            ->postJson("/operations/pending/{$case->id}/return", [
+                'target' => CaseRecord::STAGE_ADJUSTMENTS,
+                'reason' => 'محاولة بعد الإصدار',
+            ])
+            ->assertStatus(422);
+    }
+
     public function test_pending_return_to_adjustments_shows_rework_reason(): void
     {
         $this->stockItem('RM-001', qty: 10);

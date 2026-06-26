@@ -30,4 +30,28 @@ class ReceptionAppointmentsListTest extends TestCase
             ->assertJsonPath('data.0.patient_name', 'مريض توقيت الاستقبال')
             ->assertJsonPath('data.0.queue_number', $patient->id);
     }
+
+    public function test_appointments_list_filters_by_patient_type(): void
+    {
+        $company = $this->civilianCompany();
+        $milCo   = $this->militaryCompany();
+        $rank    = \App\Models\MilitaryRank::create(['name' => 'نقيب', 'rank_code' => 'CAP', 'sort_order' => 1]);
+        $recep   = $this->userWithRole('reception');
+        $date    = now()->toDateString();
+
+        $this->registerCivilianPatientHttp($recep, $company, 'مريض مدني مواعيد');
+        $this->registerMilitaryPatientHttp($recep, $milCo, $rank, 'مريض عسكري مواعيد');
+
+        $this->actingAs($recep)
+            ->getJson('/reception/appointments/list?date=' . $date . '&patient_type=civilian')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.patient_name', 'مريض مدني مواعيد');
+
+        $this->actingAs($recep)
+            ->getJson('/reception/appointments/list?date=' . $date . '&patient_type=military')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.patient_name', 'مريض عسكري مواعيد');
+    }
 }

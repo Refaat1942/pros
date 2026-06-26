@@ -68,6 +68,11 @@
       ? '<button type="button" class="btn-action success btn-approve-pending" data-case-id="' + c.id + '" style="margin-left:4px;">✅ موافقة واعتماد الصرف</button>'
       : '';
 
+    var canRework = isMil || !quote || quote.status === 'pending';
+    var reworkBtn = canRework
+      ? '<button type="button" class="btn-action btn-rework-pending" data-case-id="' + c.id + '" data-case-no="' + esc(c.case_no) + '" style="margin-left:4px;background:#fee2e2;color:#b91c1c;">↩️ إرجاع للتعديل</button>'
+      : '';
+
     var search = [c.case_no, c.order_ref, c.patient && c.patient.name, quoteNo].join(' ');
 
     return '<tr class="pending-row" data-case-id="' + c.id + '" data-search="' + esc(search) + '">' +
@@ -82,7 +87,7 @@
         printBtn +
         releaseBtn +
         approveBtn +
-        '<button type="button" class="btn-action btn-rework-pending" data-case-id="' + c.id + '" data-case-no="' + esc(c.case_no) + '" style="margin-left:4px;background:#fee2e2;color:#b91c1c;">↩️ إرجاع للتعديل</button>' +
+        reworkBtn +
       '</td></tr>';
   }
 

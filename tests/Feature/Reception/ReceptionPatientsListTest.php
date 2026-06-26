@@ -25,4 +25,31 @@ class ReceptionPatientsListTest extends TestCase
             ->assertJsonPath('data.0.id', $patient->id)
             ->assertJsonPath('data.0.name', 'مريض رقم الدور');
     }
+
+    public function test_patients_list_filters_by_patient_type(): void
+    {
+        $company = $this->civilianCompany();
+        $milCo   = $this->militaryCompany();
+        $rank    = \App\Models\MilitaryRank::create(['name' => 'نقيب', 'rank_code' => 'CAP', 'sort_order' => 1]);
+        $recep   = $this->userWithRole('reception');
+
+        $this->registerCivilianPatientHttp($recep, $company, 'مريض مدني سجل');
+        $this->registerMilitaryPatientHttp($recep, $milCo, $rank, 'مريض عسكري سجل');
+
+        $this->actingAs($recep)
+            ->getJson('/reception/patients/list?patient_type=civilian')
+            ->assertOk()
+            ->assertJson(fn ($json) => $json
+                ->where('total', 1)
+                ->where('data.0.name', 'مريض مدني سجل')
+                ->etc());
+
+        $this->actingAs($recep)
+            ->getJson('/reception/patients/list?patient_type=military')
+            ->assertOk()
+            ->assertJson(fn ($json) => $json
+                ->where('total', 1)
+                ->where('data.0.name', 'مريض عسكري سجل')
+                ->etc());
+    }
 }
