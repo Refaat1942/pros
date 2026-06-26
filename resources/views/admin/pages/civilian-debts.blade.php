@@ -115,7 +115,7 @@
                                         @endif
                                         <div class="civ-debt-collect-row">
                                             <input type="number"
-                                                   class="civ-debt-amount-input form-control"
+                                                   class="civ-debt-amount-input debt-collect-amount-input form-control"
                                                    min="0.01"
                                                    max="{{ $remaining }}"
                                                    step="0.01"
@@ -200,11 +200,36 @@
     }
 
     function showToast(msg, isError) {
-        if (window.DashboardToast) {
-            window.DashboardToast.show(msg, { isError: isError });
+        if (isError) {
+            if (window.DebtCollectValidation) {
+                window.DebtCollectValidation.showError(msg);
+            } else {
+                window.alert(msg);
+            }
             return;
         }
-        alert(msg);
+        var toastEl = document.getElementById('toast');
+        if (window.DashboardToast && toastEl) {
+            window.DashboardToast.show(msg, { isError: false });
+            return;
+        }
+    }
+
+    function validateCollectInput(input, row) {
+        var remaining = parseFloat(row.dataset.remaining) || 0;
+        if (window.DebtCollectValidation) {
+            return window.DebtCollectValidation.validateAmount(input, remaining, { alert: true });
+        }
+        var amount = parseFloat(input.value);
+        if (!amount || amount <= 0) {
+            showToast('أدخل المبلغ الذي حوّلته لحساب الإدارة.', true);
+            return false;
+        }
+        if (amount > remaining) {
+            showToast('لا يمكن أن يكون المبلغ المحصّل أكبر من المتبقي (' + fmtMoney(remaining) + ' ج.م).', true);
+            return false;
+        }
+        return true;
     }
 
     function statusClassFor(status) {
@@ -254,7 +279,7 @@
             '<div class="civ-debt-collect-wrap">' +
                 partialBadge +
                 '<div class="civ-debt-collect-row">' +
-                    '<input type="number" class="civ-debt-amount-input form-control" min="0.01" max="' + remaining + '" step="0.01" placeholder="المبلغ المحوّل" aria-label="مبلغ التحصيل">' +
+                    '<input type="number" class="civ-debt-amount-input debt-collect-amount-input form-control" min="0.01" max="' + remaining + '" step="0.01" placeholder="المبلغ المحوّل" aria-label="مبلغ التحصيل">' +
                     '<button type="button" class="btn-action success btn-civ-collect" data-company-id="' + row.dataset.companyId + '">تم التحصيل</button>' +
                 '</div>' +
             '</div>';
@@ -268,17 +293,10 @@
         if (!row) return;
 
         var input = row.querySelector('.civ-debt-amount-input');
-        var amount = input ? parseFloat(input.value) : NaN;
-        var remaining = parseFloat(row.dataset.remaining) || 0;
+        if (!validateCollectInput(input, row)) return;
 
-        if (!amount || amount <= 0) {
-            showToast('أدخل المبلغ الذي حوّلته الجهة لحساب الإدارة.', true);
-            return;
-        }
-        if (amount > remaining) {
-            showToast('المبلغ أكبر من المتبقي (' + fmtMoney(remaining) + ' ج.م).', true);
-            return;
-        }
+        var amount = parseFloat(input.value);
+        var remaining = parseFloat(row.dataset.remaining) || 0;
 
         if (!window.confirm('تأكيد تسجيل تحصيل ' + fmtMoney(amount) + ' ج.م؟')) return;
 

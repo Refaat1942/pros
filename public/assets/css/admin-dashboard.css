@@ -1146,6 +1146,12 @@
         direction: ltr;
         text-align: left;
     }
+    .debt-collect-input--invalid,
+    .civ-debt-amount-input.debt-collect-input--invalid {
+        border-color: #dc2626 !important;
+        background: #fef2f2;
+        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
+    }
     .civ-debt-collect-row .btn-civ-collect {
         padding: 7px 12px;
         font-size: 12px;
@@ -1158,6 +1164,25 @@
       min-width: auto;
       justify-content: flex-start;
     }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #0f172a;
+      color: #fff;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
 
     .patient-type-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; }
     .patient-type-badge.civilian { background: rgba(14,116,144,0.12); color:#0e7490; }

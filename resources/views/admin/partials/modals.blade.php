@@ -51,3 +51,5 @@
       </div>
     </div>
   </div>
+
+  <div class="toast" id="toast" aria-live="polite"></div>
