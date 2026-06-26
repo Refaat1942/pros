@@ -41,6 +41,61 @@ class AdminMilitaryDebtsPageTest extends TestCase
             ->assertSee('WO-TEST-001');
     }
 
+    public function test_military_debts_list_returns_newest_first(): void
+    {
+        $company = $this->militaryCompany('جهة ترتيب');
+        $patient = $this->militaryPatient($company);
+
+        $olderCase = $this->caseAtStage($patient, 'delivered');
+        $newerCase = $this->caseAtStage($patient, 'delivered');
+
+        MilitaryDebt::create([
+            'case_id'          => $olderCase->id,
+            'work_order_no'    => 'WO-OLD-001',
+            'patient_name'     => $patient->name,
+            'sovereign_entity' => 'القوات المسلحة',
+            'total_cost'       => 1000,
+            'delivered_at'     => now()->subDays(5)->toDateString(),
+            'status'           => MilitaryDebt::STATUS_PENDING,
+        ]);
+
+        MilitaryDebt::create([
+            'case_id'          => $newerCase->id,
+            'work_order_no'    => 'WO-NEW-999',
+            'patient_name'     => $patient->name,
+            'sovereign_entity' => 'القوات المسلحة',
+            'total_cost'       => 2000,
+            'delivered_at'     => now()->toDateString(),
+            'status'           => MilitaryDebt::STATUS_PENDING,
+        ]);
+
+        $response = $this->actingAs($this->userWithRole('admin'))
+            ->getJson('/admin/military-debts/list')
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame('WO-NEW-999', $response[0]['work_order_no']);
+        $this->assertSame('WO-OLD-001', $response[1]['work_order_no']);
+    }
+
+    public function test_military_debt_shows_last_payment_date_in_api(): void
+    {
+        $debt = $this->makeMilitaryDebt(2000, 0);
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)->postJson("/admin/military-debts/{$debt->id}/collect", ['amount' => 1000])->assertOk();
+        $this->actingAs($admin)->postJson("/admin/military-debts/{$debt->id}/collect", ['amount' => 1000])->assertOk();
+
+        $payload = $this->actingAs($admin)
+            ->getJson("/admin/military-debts/{$debt->id}/collections")
+            ->assertOk()
+            ->json();
+
+        $this->assertSame(MilitaryDebt::STATUS_COLLECTED, $payload['status']);
+        $this->assertNotNull($payload['last_collected_at']);
+        $this->assertSame($payload['collection_summary']['last_collected_at'], $payload['last_collected_at']);
+    }
+
     public function test_admin_can_record_partial_military_debt_collection(): void
     {
         $debt = $this->makeMilitaryDebt(5000, 0);

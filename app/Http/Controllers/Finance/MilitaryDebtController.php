@@ -23,10 +23,7 @@ class MilitaryDebtController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = MilitaryDebt::query()
-            ->orderBy('status')
-            ->orderByDesc('delivered_at')
-            ->orderByDesc('id');
+        $query = MilitaryDebt::query()->latestFirst();
 
         if ($request->filled('search')) {
             $s = $request->input('search');

@@ -40,7 +40,7 @@ class MilitaryDebtService
             $locked->collected = round((float) $locked->collected + $amount, 2);
             $locked->status    = $this->computeStatus($locked);
             if ($locked->status === MilitaryDebt::STATUS_COLLECTED) {
-                $locked->collected_at = $locked->collected_at ?? now();
+                $locked->collected_at = now();
             }
             $locked->save();
 
@@ -84,6 +84,9 @@ class MilitaryDebtService
         $due       = (float) $debt->total_cost;
         $collected = (float) $debt->collected;
         $remaining = $this->remaining($debt);
+        $collectionPkg = $this->collectionEntryService->packageForPayable($debt, $due, $collected);
+        $lastCollectedAt = $collectionPkg['collection_summary']['last_collected_at']
+            ?? $debt->collected_at?->format('d/m/Y H:i');
 
         return [
             'id'                  => $debt->id,
@@ -99,10 +102,11 @@ class MilitaryDebtService
             'delivered_at'        => $debt->delivered_at ? (string) $debt->delivered_at : null,
             'status'              => $debt->status,
             'status_label'        => $this->statusLabel($debt),
-            'collected_at'        => $debt->collected_at?->format('Y-m-d H:i'),
+            'collected_at'        => $debt->collected_at?->format('d/m/Y H:i'),
+            'last_collected_at'   => $lastCollectedAt,
             'is_frozen'           => $debt->isCollected(),
             'balance'             => $remaining > 0 ? 'outstanding' : 'settled',
-        ] + $this->collectionEntryService->packageForPayable($debt, $due, $collected);
+        ] + $collectionPkg;
     }
 
     public function remaining(MilitaryDebt $debt): float

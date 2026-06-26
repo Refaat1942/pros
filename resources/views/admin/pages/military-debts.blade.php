@@ -81,6 +81,8 @@
                         $collectionPkg = $collectionEntryService->packageForPayable($debt, $due, $collected);
                         $collectionSummary = $collectionPkg['collection_summary'];
                         $collectionEntries = $collectionPkg['collection_entries'];
+                        $lastCollectedAt = $collectionSummary['last_collected_at']
+                            ?? $debt->collected_at?->format('d/m/Y H:i');
                     @endphp
                     <tr class="mil-debt-row"
                         data-id="{{ $debt->id }}"
@@ -101,7 +103,8 @@
                         data-sovereign-entity="{{ $debt->sovereign_entity }}"
                         data-delivered-at="{{ $debt->delivered_at?->format('d/m/Y') ?? '—' }}"
                         data-status-label="{{ $label }}"
-                        data-collected-at="{{ $debt->collected_at?->format('d/m/Y H:i') ?? '—' }}">
+                        data-collected-at="{{ $lastCollectedAt ?? '—' }}"
+                        data-last-collected-at="{{ $lastCollectedAt ?? '—' }}">
                         @include('admin.partials.bulk-select-td', [
                             'id' => $debt->id,
                             'disabled' => $isSettled,
@@ -149,8 +152,8 @@
                         <td class="mil-debt-action-cell civ-debt-action-cell">
                             @if ($isSettled)
                                 <span class="civ-debt-status civ-debt-status--paid">✅ تم التحصيل</span>
-                                @if ($debt->collected_at)
-                                    <div style="font-size:10px;color:#64748b;margin-top:4px;">{{ $debt->collected_at->format('d/m/Y H:i') }}</div>
+                                @if ($lastCollectedAt)
+                                    <div style="font-size:10px;color:#64748b;margin-top:4px;">{{ $lastCollectedAt }}</div>
                                 @endif
                             @elseif ($due <= 0)
                                 <span class="civ-debt-status civ-debt-status--pending">—</span>
@@ -218,8 +221,8 @@
                     style="background:none;border:none;font-size:22px;cursor:pointer;color:#64748b;line-height:1;">&times;</button>
         </div>
         <div id="milDebtModalBody" style="flex:1;overflow:auto;padding:20px;"></div>
-        <div style="padding:12px 20px;border-top:1px solid #e2e8f0;background:#f8fafc;text-align:left;">
-            <button type="button" class="btn-view" id="btnMilDebtModalClose">إغلاق</button>
+        <div class="catalog-modal-footer">
+            <button type="button" class="btn-action primary" id="btnMilDebtModalClose">إغلاق</button>
         </div>
     </div>
 </div>
@@ -309,6 +312,15 @@
         return 'pending';
     }
 
+    function resolveLastCollectedAt(debt) {
+        if (debt.collection_summary && debt.collection_summary.last_collected_at) {
+            return debt.collection_summary.last_collected_at;
+        }
+        if (debt.last_collected_at) return debt.last_collected_at;
+        if (debt.collected_at) return debt.collected_at;
+        return '';
+    }
+
     function updateRowFromDebt(row, debt) {
         var due = parseFloat(debt.due ?? debt.total_cost) || 0;
         var collected = parseFloat(debt.collected) || 0;
@@ -321,6 +333,8 @@
         row.dataset.collected = String(collected);
         row.dataset.remaining = String(remaining);
         row.dataset.statusLabel = debt.status_label || '';
+        row.dataset.collectedAt = resolveLastCollectedAt(debt) || '—';
+        row.dataset.lastCollectedAt = resolveLastCollectedAt(debt) || '—';
 
         var dueEl = row.querySelector('.mil-debt-due');
         var colEl = row.querySelector('.mil-debt-collected');
@@ -339,8 +353,9 @@
         if (!actionCell) return;
 
         if (remaining <= 0 && due > 0) {
-            var at = debt.collected_at ? '<div style="font-size:10px;color:#64748b;margin-top:4px;">' + debt.collected_at + '</div>' : '';
-            actionCell.innerHTML = '<span class="civ-debt-status civ-debt-status--paid">✅ تم التحصيل</span>' + at;
+            var at = resolveLastCollectedAt(debt);
+            var atHtml = at ? '<div style="font-size:10px;color:#64748b;margin-top:4px;">' + at + '</div>' : '';
+            actionCell.innerHTML = '<span class="civ-debt-status civ-debt-status--paid">✅ تم التحصيل</span>' + atHtml;
             return;
         }
 
@@ -422,6 +437,8 @@
         if (subtitle) subtitle.textContent = (d.patientName || '') + ' · ' + (d.sovereignEntity || '');
 
         var isCollected = d.status === 'collected';
+        var collectedAmt = parseFloat(d.collected) || 0;
+        var lastPaymentAt = (d.lastCollectedAt && d.lastCollectedAt !== '—') ? d.lastCollectedAt : ((d.collectedAt && d.collectedAt !== '—') ? d.collectedAt : '');
         var statusColor = isCollected ? '#059669' : (d.status === 'partial_collection' ? '#d97706' : '#dc2626');
         var statusBg = isCollected ? '#dcfce7' : (d.status === 'partial_collection' ? '#fef3c7' : '#fee2e2');
         var statusIcon = isCollected ? '🟢' : (d.status === 'partial_collection' ? '🟡' : '🔴');
@@ -438,7 +455,7 @@
                 detailRow('المتبقي (ج.م)', '<strong style="color:' + (parseFloat(d.remaining) > 0 ? '#d97706' : '#059669') + ';">' + fmtMoney(d.remaining) + '</strong>') +
                 detailRow('تاريخ إغلاق الحالة', esc(d.deliveredAt)) +
                 detailRow('حالة المديونية', '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;background:' + statusBg + ';color:' + statusColor + ';">' + statusIcon + ' ' + esc(d.statusLabel) + '</span>') +
-                (isCollected ? detailRow('تاريخ التحصيل والإيداع', esc(d.collectedAt)) : '') +
+                (collectedAmt > 0 && lastPaymentAt ? detailRow('تاريخ التحصيل والإيداع', esc(lastPaymentAt)) : '') +
                 (d.frozen === '1' ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#059669;">🔒 السجل مجمّد — تم اعتماد التحصيل ولا يمكن التعديل.</div>' : '') +
                 '</div>';
         }

@@ -15,8 +15,8 @@
         </div>
         <div class="debt-collection-modal__summary" id="debtCollectionModalSummary"></div>
         <div class="debt-collection-modal__body" id="debtCollectionModalBody"></div>
-        <div class="debt-collection-modal__footer">
-            <button type="button" class="btn-view" id="btnDebtCollectionModalClose">إغلاق</button>
+        <div class="debt-collection-modal__footer catalog-modal-footer">
+            <button type="button" class="btn-action primary" id="btnDebtCollectionModalClose">إغلاق</button>
         </div>
     </div>
 </div>

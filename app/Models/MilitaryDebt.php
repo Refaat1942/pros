@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -59,5 +60,11 @@ class MilitaryDebt extends Model
     public function remainingAmount(): float
     {
         return max(0, round((float) $this->total_cost - (float) $this->collected, 2));
+    }
+
+    /** الأحدث أولاً — تاريخ الإغلاق ثم رقم السجل. */
+    public function scopeLatestFirst(Builder $query): Builder
+    {
+        return $query->orderByDesc('delivered_at')->orderByDesc('id');
     }
 }

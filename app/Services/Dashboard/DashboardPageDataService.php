@@ -609,9 +609,7 @@ class DashboardPageDataService
     {
         $debts   = MilitaryDebt::query()
             ->with('collectionEntries')
-            ->orderBy('status')
-            ->orderByDesc('delivered_at')
-            ->orderByDesc('id')
+            ->latestFirst()
             ->get();
         $service = app(\App\Services\MilitaryDebtService::class);
 
