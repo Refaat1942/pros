@@ -77,14 +77,94 @@
     if (badge) badge.textContent = notes.length + ' طلب';
   }
 
+  function formatDate(val) {
+    if (!val) return '—';
+    var d = new Date(val);
+    if (isNaN(d.getTime())) return esc(val);
+    return d.toLocaleString('ar-EG', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  }
+
+  function detailRow(label, value) {
+    return '<div class="return-detail-row">' +
+      '<span class="return-detail-label">' + label + '</span>' +
+      '<span class="return-detail-value">' + value + '</span></div>';
+  }
+
+  function openReturnDetail(noteId) {
+    var note = notesCache.find(function (n) { return String(n.id) === String(noteId); });
+    if (!note) return;
+
+    var title = $('returnDetailTitle');
+    var subtitle = $('returnDetailSubtitle');
+    var body = $('returnDetailBody');
+    var modal = $('returnDetailModal');
+
+    if (title) title.textContent = '↩️ ' + (note.return_no || 'طلب ارتجاع');
+    if (subtitle) {
+      subtitle.textContent = (note.patient_name || '—') + ' · ' +
+        (note.bom && note.bom.bom_no ? note.bom.bom_no : '—') + ' · ' +
+        (note.work_order_no || '—');
+    }
+
+    var lines = note.lines || [];
+    var linesHtml = lines.length
+      ? '<div class="return-detail-lines-wrap"><table class="return-detail-lines-table">' +
+        '<thead><tr><th>الصنف</th><th>الكود</th><th>مطلوب</th><th>مستلم</th><th>متبقي</th><th>سبب الارتجاع</th></tr></thead><tbody>' +
+        lines.map(function (ln) {
+          var requested = ln.qty_requested || 0;
+          var returned = ln.qty_returned || 0;
+          var pending = Math.max(0, requested - returned);
+          var done = pending === 0 && returned > 0;
+          return '<tr class="' + (done ? 'is-complete' : '') + '">' +
+            '<td><strong>' + esc(ln.name || ln.stock_item_code) + '</strong></td>' +
+            '<td><code>' + esc(ln.stock_item_code) + '</code></td>' +
+            '<td>' + requested + '</td>' +
+            '<td><strong style="color:' + (done ? '#059669' : '#d97706') + ';">' + returned + '</strong></td>' +
+            '<td>' + pending + '</td>' +
+            '<td>' + esc(ln.reason || '—') + '</td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<p style="color:var(--text-muted);font-size:13px;">لا توجد بنود في هذا الطلب.</p>';
+
+    if (body) {
+      body.innerHTML =
+        '<div class="return-detail-grid">' +
+        detailRow('رقم الطلب', '<strong style="font-family:monospace;">' + esc(note.return_no) + '</strong>') +
+        detailRow('المريض', '<strong>' + esc(note.patient_name || '—') + '</strong>') +
+        detailRow('رقم الحالة', esc(note.case_no || note.order_ref || '—')) +
+        detailRow('أمر التشغيل', '<span style="font-family:monospace;color:#0e7490;">' + esc(note.work_order_no || '—') + '</span>') +
+        detailRow('قائمة المواد (BOM)', esc(note.bom && note.bom.bom_no ? note.bom.bom_no : '—')) +
+        detailRow('مرجع الطلب', esc(note.order_ref || '—')) +
+        detailRow('الحالة', '<span class="badge ' + statusClass(note.status) + '">' + statusLabel(note.status) + '</span>') +
+        detailRow('أرسله (التشغيل)', esc(note.created_by_name || note.created_by || '—')) +
+        detailRow('تاريخ الإرسال', formatDate(note.authorized_at || note.created_at)) +
+        (note.completed_at ? detailRow('تاريخ الاستلام', formatDate(note.completed_at)) : '') +
+        '</div>' +
+        '<h4 class="return-detail-lines-title">📦 الأصناف المرتجعة</h4>' + linesHtml;
+    }
+
+    if (modal) modal.classList.add('visible');
+  }
+
+  function closeReturnDetailModal() {
+    var modal = $('returnDetailModal');
+    if (modal) modal.classList.remove('visible');
+  }
+
   function renderRow(n) {
     var linesTxt = (n.lines || []).map(function (ln) {
       return esc(ln.name || ln.stock_item_code) + ' ' + (ln.qty_returned || 0) + '/' + (ln.qty_requested || 0);
     }).join('<br>');
 
-    var action = n.status === 'completed'
+    var viewBtn = '<button type="button" class="btn-view btn-return-view" data-note-id="' + n.id + '">عرض</button>';
+
+    var statusAction = n.status === 'completed'
       ? '<span class="badge done">تم الاستلام</span>'
       : '<button type="button" class="btn-action success btn-return-scan" data-note-id="' + n.id + '">✓ تأكيد الاستلام</button>';
+
+    var action = '<div class="table-actions">' + viewBtn + statusAction + '</div>';
 
     return '<tr class="return-row" data-note-id="' + n.id + '">' +
       '<td><strong>' + esc(n.return_no) + '</strong></td>' +
@@ -96,6 +176,11 @@
   }
 
   function bindTableEvents() {
+    document.querySelectorAll('.btn-return-view').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        openReturnDetail(btn.getAttribute('data-note-id'));
+      });
+    });
     document.querySelectorAll('.btn-return-scan').forEach(function (btn) {
       btn.addEventListener('click', function () {
         openReturnScan(btn.getAttribute('data-note-id'));
@@ -261,6 +346,18 @@
       var b = $(id);
       if (b) b.addEventListener('click', closeReturnScanModal);
     });
+
+    ['closeReturnDetailModal', 'btnCloseReturnDetail'].forEach(function (id) {
+      var b = $(id);
+      if (b) b.addEventListener('click', closeReturnDetailModal);
+    });
+
+    var detailModal = $('returnDetailModal');
+    if (detailModal) {
+      detailModal.addEventListener('click', function (e) {
+        if (e.target === detailModal) closeReturnDetailModal();
+      });
+    }
 
     var scanBtn = $('btnReturnScan');
     var scanInput = $('returnBarcodeInput');

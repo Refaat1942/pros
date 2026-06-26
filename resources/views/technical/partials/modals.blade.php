@@ -108,4 +108,21 @@
     </div>
   </div>
 
+  <!-- Return note — full detail view -->
+  <div class="modal-overlay" id="returnDetailModal">
+    <div class="modal modal-return modal-return-detail" onclick="event.stopPropagation()">
+      <div class="modal-header return-modal-header">
+        <div class="return-modal-title-wrap">
+          <h3 id="returnDetailTitle">↩️ تفاصيل طلب الارتجاع</h3>
+          <p class="modal-subtitle" id="returnDetailSubtitle"></p>
+        </div>
+        <button type="button" class="modal-close" id="closeReturnDetailModal" aria-label="إغلاق">&times;</button>
+      </div>
+      <div class="modal-body return-detail-body" id="returnDetailBody"></div>
+      <div class="modal-footer return-modal-footer">
+        <button type="button" class="btn-action primary" id="btnCloseReturnDetail">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>

@@ -136,7 +136,7 @@
             </button>
             <button type="button" id="btnConfirmOcr"
                     style="padding:10px 24px;border-radius:8px;border:none;background:#059669;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">
-              ✅ تأكيد واعتماد مالي — توليد أمر الشغل
+              ✅ تأكيد واعتماد مالي — والتحويل للمخزن
             </button>
           </div>
         </div>

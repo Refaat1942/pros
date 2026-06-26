@@ -19,6 +19,14 @@
     return false;
   }
 
+  function isFilterHidden(row) {
+    return row.dataset.filterHidden === '1';
+  }
+
+  function isPaginatedRow(row, state) {
+    return !state.isEmpty(row) && !isFilterHidden(row);
+  }
+
   function isEmptyListItem(li) {
     if (li.dataset.paginationSkip === '1') return true;
     if (li.classList.contains('orders-empty-msg')) return true;
@@ -97,6 +105,10 @@
         row.style.display = state.totalDataRows === 0 ? '' : 'none';
         return;
       }
+      if (isFilterHidden(row)) {
+        row.style.display = 'none';
+        return;
+      }
       var show = visibleData >= start && visibleData < end;
       row.style.display = show ? '' : 'none';
       visibleData++;
@@ -113,7 +125,7 @@
     } else {
       state.rows = Array.prototype.slice.call(state.target.children);
     }
-    state.totalDataRows = state.rows.filter(function (r) { return !state.isEmpty(r); }).length;
+    state.totalDataRows = state.rows.filter(function (r) { return isPaginatedRow(r, state); }).length;
     state.totalRows = state.totalDataRows;
     state.totalPages = Math.max(1, Math.ceil(state.totalDataRows / state.perPage));
     if (state.page > state.totalPages) state.page = 1;
@@ -144,7 +156,7 @@
     };
 
     collectRows(state);
-    if (state.totalDataRows === 0) return;
+    if (!state.rows.some(function (r) { return !state.isEmpty(r); })) return;
 
     table.dataset.paginateBound = '1';
     table._paginationState = state;
@@ -177,14 +189,37 @@
     applyState(state);
   }
 
+  function resolveList(el) {
+    if (!el) return null;
+    if (el.matches && el.matches('ul,ol')) return el;
+    if (el.closest) {
+      var nested = el.closest('ul[data-paginate], ol[data-paginate]');
+      if (nested) return nested;
+    }
+    if (el.id) {
+      var byId = document.getElementById(el.id);
+      if (byId && byId.matches && byId.matches('ul,ol')) return byId;
+    }
+    return null;
+  }
+
+  function repaginate(el) {
+    if (!el) return;
+    var table = el.tagName === 'TABLE' ? el : (el.closest ? el.closest('table') : null);
+    if (table && table._paginationState) {
+      var state = table._paginationState;
+      state.page = 1;
+      collectRows(state);
+      applyState(state);
+      return;
+    }
+    refresh(el);
+  }
+
   function refresh(el) {
     if (!el) return;
     var table = el.tagName === 'TABLE' ? el : el.closest('table');
-    var list = el.matches && el.matches('ul,ol') ? el : (el.id ? document.getElementById(el.id) : null);
-    if (!list && el.closest) {
-      var ul = el.closest('ul,ol');
-      if (ul && ul.hasAttribute('data-paginate')) list = ul;
-    }
+    var list = resolveList(el);
 
     if (table && table.hasAttribute('data-paginate')) {
       delete table.dataset.paginateBound;
@@ -224,9 +259,14 @@
   global.TablePagination = {
     bind: bindDashboard,
     refresh: refresh,
+    repaginate: repaginate,
     refreshById: function (id) {
       var el = typeof id === 'string' ? document.getElementById(id) : id;
       if (el) refresh(el);
+    },
+    repaginateById: function (id) {
+      var el = typeof id === 'string' ? document.getElementById(id) : id;
+      if (el) repaginate(el);
     },
     DEFAULT_PER_PAGE: DEFAULT_PER_PAGE,
   };

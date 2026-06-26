@@ -150,5 +150,3 @@
         <div class="overflow-y-auto flex-1 p-2" id="catalogList"></div>
     </div>
 </div>
-
-<div id="specToast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] hidden rounded-xl bg-emerald-600 text-white px-6 py-3 text-sm font-bold shadow-lg"></div>

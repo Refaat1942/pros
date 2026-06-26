@@ -30,7 +30,7 @@
 
   function toast(msg) {
     if (window.DashboardToast) {
-      window.DashboardToast.show(msg, { id: 'toast', prefix: '🔔 ' });
+      window.DashboardToast.show(msg, { id: 'toast', type: 'info', title: 'إشعار جديد' });
       return;
     }
     var el = document.getElementById('toast');

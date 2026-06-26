@@ -1718,7 +1718,7 @@
           var q = quotations.find(function(x) { return x.id === _ocrCurrentQuote.id; });
           if (q) {
             q.status      = 'approved';
-            q.statusLabel = 'معتمد — تم توليد أمر الشغل';
+            q.statusLabel = 'معتمد — تم التحويل للمخزن';
           }
           renderQuoteTable();
           renderQuoteAnalytics();
@@ -1728,7 +1728,7 @@
         .catch(function (err) {
           var msg = (err && err.message) ? err.message : 'تعذّر إتمام الاعتماد المالي.';
           if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
-          if (btn) { btn.disabled = false; btn.textContent = '✅ تأكيد واعتماد مالي — توليد أمر الشغل'; }
+          if (btn) { btn.disabled = false; btn.textContent = '✅ تأكيد واعتماد مالي — والتحويل للمخزن'; }
         });
     }
 

@@ -29,7 +29,7 @@ class ReturnNoteController extends Controller
         $inboxOnly = $request->boolean('inbox');
 
         $notes = $this->fetchForDashboard(
-            ReturnNote::with(['bom:id,bom_no', 'lines'])
+            ReturnNote::with(['bom:id,bom_no', 'lines', 'caseRecord:id,case_no', 'createdByUser:id,name'])
                 ->when($inboxOnly, fn ($q) => $q->whereIn('status', [
                     ReturnNote::STATUS_AUTHORIZED,
                     ReturnNote::STATUS_PARTIAL,
@@ -134,9 +134,15 @@ class ReturnNoteController extends Controller
     {
         return $note->only([
             'id', 'return_no', 'bom_id', 'case_id', 'order_ref',
-            'work_order_no', 'patient_name', 'status',
-            'authorized_at', 'completed_at',
+            'work_order_no', 'patient_name', 'status', 'created_by',
+            'authorized_at', 'completed_at', 'created_at',
         ]) + [
+            'case_no' => $note->relationLoaded('caseRecord') && $note->caseRecord
+                ? $note->caseRecord->case_no
+                : null,
+            'created_by_name' => $note->relationLoaded('createdByUser') && $note->createdByUser
+                ? $note->createdByUser->name
+                : ($note->created_by ?: null),
             'lines' => $note->relationLoaded('lines')
                 ? $note->lines->map->only([
                     'id', 'stock_item_code', 'name',

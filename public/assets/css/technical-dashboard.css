@@ -447,24 +447,6 @@
 
     .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
 
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: var(--secondary);
-      color: white;
-      padding: 14px 28px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 600;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-      z-index: 1000;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .toast.show { transform: translateX(-50%) translateY(0); }
-
     .section-view { display: block; animation: fadeIn 0.3s ease; }
 
     @keyframes fadeIn {
@@ -1588,6 +1570,60 @@
       background: #f8fafc;
     }
     .return-modal-footer .btn-action.success { min-width: 130px; }
+
+    .return-modal-footer { justify-content: flex-end; }
+
+    .modal-return-detail { max-width: 720px; }
+    .return-detail-body { max-height: min(70vh, 560px); overflow-y: auto; }
+    .return-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px 16px;
+      margin-bottom: 18px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+    }
+    .return-detail-row { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+    .return-detail-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; }
+    .return-detail-value { font-weight: 600; color: var(--text); word-break: break-word; }
+    .return-detail-lines-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--secondary);
+      margin: 0 0 10px;
+    }
+    .return-detail-lines-wrap { overflow-x: auto; }
+    .return-detail-lines-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .return-detail-lines-table th,
+    .return-detail-lines-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+    }
+    .return-detail-lines-table th {
+      background: #f1f5f9;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .return-detail-lines-table tr.is-complete td { background: rgba(5, 150, 105, 0.04); }
+    .return-detail-lines-table code {
+      font-family: var(--font-mono, monospace);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .table-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
 
     .return-scan-info { margin-bottom: 16px; }
     .return-scan-note-head {

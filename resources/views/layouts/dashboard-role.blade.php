@@ -14,14 +14,18 @@
     @endforeach
 @endpush
 
+@push('styles-late')
+    <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
+@endpush
+
 @section('content')
     @include("{$dashboardKey}.partials.content")
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('assets/js/shared/toast.js') }}"></script>
+    <script src="{{ asset('assets/js/shared/toast.js') }}?v={{ filemtime(public_path('assets/js/shared/toast.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
-    <script src="{{ asset('assets/js/shared/table-pagination.js') }}"></script>
+    <script src="{{ asset('assets/js/shared/table-pagination.js') }}?v={{ filemtime(public_path('assets/js/shared/table-pagination.js')) }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)
         <script src="{{ str_starts_with($script, 'http') ? $script : asset($script) }}"></script>
     @endforeach

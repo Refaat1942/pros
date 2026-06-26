@@ -103,7 +103,7 @@ class CostingController extends Controller
         return response()->json([
             'message' => $case->isMilitary()
                 ? 'تم تأكيد التكاليف — اعتماد عسكري تلقائي وتحويل للمخزن.'
-                : 'تم تأكيد التكاليف وإصدار عرض السعر — الحالة في مكتب التشغيل.',
+                : 'تم تأكيد التكاليف  — الحالة في مكتب التشغيل.',
             'case'    => $this->formatSummary($case->load(['patient', 'pricingRequest', 'quotes'])),
         ]);
     }

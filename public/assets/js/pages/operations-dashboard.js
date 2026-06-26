@@ -46,43 +46,35 @@
 
     if (window.DashboardToast) {
 
-      window.DashboardToast.show(msg, {
-
-        id: 'opsToast',
-
-        prefix: '',
-
-        isError: isError,
-
-        render: function (el, text, opts) {
-
-          el.textContent = text;
-
-          el.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] rounded-xl px-6 py-3 text-sm font-bold shadow-lg ' +
-
-            (opts.isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
-
-        },
-
-      });
+      window.DashboardToast.show(msg, { id: 'toast', isError: !!isError });
 
       return;
 
     }
 
-    var el = $('opsToast');
+    var el = $('toast');
 
-    if (!el) return;
+    if (!el) {
+
+      alert(msg);
+
+      return;
+
+    }
 
     el.textContent = msg;
 
-    el.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] rounded-xl px-6 py-3 text-sm font-bold shadow-lg ' +
-
-      (isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
-
     el.classList.remove('hidden');
 
-    setTimeout(function () { el.classList.add('hidden'); }, 5000);
+    el.classList.add('show');
+
+    setTimeout(function () {
+
+      el.classList.remove('show');
+
+      el.classList.add('hidden');
+
+    }, 5000);
 
   }
 
@@ -138,7 +130,13 @@
 
 
 
-    return '<tr class="ops-row hover:bg-slate-50" data-case-id="' + c.id + '" data-search="' + esc(search) + '">' +
+    var bomStage = c.bom && c.bom.stage ? c.bom.stage : '';
+
+    return '<tr class="ops-row hover:bg-slate-50" data-case-id="' + c.id + '" data-search="' + esc(search) + '"' +
+
+      ' data-bom-stage="' + esc(bomStage) + '" data-stage-key="' + esc(c.stage_key || '') + '"' +
+
+      ' data-path="' + (isMil ? 'military' : 'civilian') + '" data-filter-hidden="0">' +
 
       '<td class="px-4 py-3 font-mono font-bold text-cyan-700">' + esc(c.work_order_no || '—') + '</td>' +
 
@@ -329,6 +327,25 @@
   var refreshInFlight = false;
 
   var casesCache = [];
+
+  var activeOpsFilter = 'all';
+
+
+
+  function rowMatchesFilter(row) {
+    if (activeOpsFilter === 'all') return true;
+
+    var bomStage = row.getAttribute('data-bom-stage') || '';
+    var stageKey = row.getAttribute('data-stage-key') || '';
+    var path = row.getAttribute('data-path') || '';
+
+    if (activeOpsFilter === 'wip') return bomStage === 'wip';
+    if (activeOpsFilter === 'ready') return stageKey === 'ready_delivery';
+    if (activeOpsFilter === 'military') return path === 'military';
+    if (activeOpsFilter === 'civilian') return path === 'civilian';
+
+    return true;
+  }
 
 
 
@@ -526,9 +543,7 @@
 
         updateSummary(cases, res.data.summary || {});
 
-        if (window.TablePagination) TablePagination.refreshById('opsTableBody');
-
-        filterSearch();
+        applyFilters();
 
       })
 
@@ -552,7 +567,7 @@
 
 
 
-  function filterSearch() {
+  function applyFilters() {
 
     var q = ($('opsSearch') && $('opsSearch').value || '').trim().toLowerCase();
 
@@ -560,9 +575,21 @@
 
       var hay = (row.getAttribute('data-search') || '').toLowerCase();
 
-      row.style.display = !q || hay.indexOf(q) !== -1 ? '' : 'none';
+      var searchOk = !q || hay.indexOf(q) !== -1;
+
+      var filterOk = rowMatchesFilter(row);
+
+      row.dataset.filterHidden = searchOk && filterOk ? '0' : '1';
 
     });
+
+    var tbody = $('opsTableBody');
+
+    if (tbody && window.TablePagination && TablePagination.repaginate) {
+
+      TablePagination.repaginate(tbody);
+
+    }
 
   }
 
@@ -574,7 +601,33 @@
 
     var search = $('opsSearch');
 
-    if (search) search.addEventListener('input', filterSearch);
+    if (search) search.addEventListener('input', applyFilters);
+
+    var filtersRoot = $('opsFilters');
+
+    if (filtersRoot) {
+
+      filtersRoot.addEventListener('click', function (e) {
+
+        var btn = e.target.closest('.ops-filter');
+
+        if (!btn) return;
+
+        activeOpsFilter = btn.getAttribute('data-filter') || 'all';
+
+        filtersRoot.querySelectorAll('.ops-filter').forEach(function (b) {
+
+          b.classList.remove('active', 'bg-slate-800', 'text-white');
+
+        });
+
+        btn.classList.add('active', 'bg-slate-800', 'text-white');
+
+        applyFilters();
+
+      });
+
+    }
 
     var refresh = $('btnRefreshOps');
 
@@ -599,6 +652,8 @@
       });
 
     }
+
+    applyFilters();
 
   });
 

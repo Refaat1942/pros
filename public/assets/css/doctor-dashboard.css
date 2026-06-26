@@ -641,27 +641,6 @@
       transform: none !important;
     }
 
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: var(--secondary);
-      color: white;
-      padding: 14px 28px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 600;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-      z-index: 1000;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .toast.show { transform: translateX(-50%) translateY(0); }
-
     .blocked-notice {
       background: rgba(220,38,38,0.06);
       border: 1px dashed rgba(220,38,38,0.3);

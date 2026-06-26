@@ -17,25 +17,21 @@
 
   function toast(msg, isError) {
     if (window.DashboardToast) {
-      window.DashboardToast.show(msg, {
-        id: 'deliveryToast',
-        prefix: '',
-        isError: isError,
-        render: function (el, text, opts) {
-          el.textContent = text;
-          el.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] rounded-xl px-6 py-3 text-sm font-bold shadow-lg ' +
-            (opts.isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
-        },
-      });
+      window.DashboardToast.show(msg, { id: 'toast', isError: !!isError });
       return;
     }
-    var el = $('deliveryToast');
-    if (!el) return;
+    var el = $('toast');
+    if (!el) {
+      alert(msg);
+      return;
+    }
     el.textContent = msg;
-    el.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] rounded-xl px-6 py-3 text-sm font-bold shadow-lg ' +
-      (isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
     el.classList.remove('hidden');
-    setTimeout(function () { el.classList.add('hidden'); }, 5000);
+    el.classList.add('show');
+    setTimeout(function () {
+      el.classList.remove('show');
+      el.classList.add('hidden');
+    }, 5000);
   }
 
   function showError(msg) {

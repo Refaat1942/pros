@@ -33,7 +33,7 @@
       </div>
       <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
         <button type="button" class="btn-view" id="btnCancelCosting">إغلاق</button>
-        <button type="button" class="btn-action success" id="btnConfirmCosting">✅ تأكيد عرض سعر</button>
+        <button type="button" class="btn-action success" id="btnConfirmCosting">✅ تأكيد  </button>
       </div>
     </div>
   </div>

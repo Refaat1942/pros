@@ -1165,25 +1165,6 @@
       justify-content: flex-start;
     }
 
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: #0f172a;
-      color: #fff;
-      padding: 14px 28px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 600;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      z-index: 1000;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      pointer-events: none;
-    }
-
-    .toast.show { transform: translateX(-50%) translateY(0); }
-
     /* ── سجل دفعات التحصيل ─────────────────────────────────────────── */
     .debt-collection-modal-overlay {
       position: fixed;

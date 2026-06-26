@@ -59,13 +59,21 @@
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
             <h3 class="font-bold text-slate-800">🎯 أوامر التشغيل النشطة</h3>
-            <div class="flex items-center gap-2">
-                <input type="search" id="opsSearch" placeholder="🔍 بحث WO / مريض / حالة..."
-                       class="rounded-xl border border-slate-200 px-4 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-ops/40">
-                <button type="button" id="btnRefreshOps"
-                        class="rounded-xl bg-ops text-white px-4 py-2 text-sm font-bold hover:bg-ops-dark transition-colors">
-                    ↻ تحديث
-                </button>
+            <button type="button" id="btnRefreshOps"
+                    class="rounded-xl bg-ops text-white px-4 py-2 text-sm font-bold hover:bg-ops-dark transition-colors">
+                ↻ تحديث
+            </button>
+        </div>
+
+        <div class="p-4 border-b border-slate-100 flex flex-wrap gap-3 items-center">
+            <input type="search" id="opsSearch" placeholder="🔍 بحث WO / مريض / حالة..."
+                   class="flex-1 min-w-[200px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ops/40">
+            <div class="flex flex-wrap gap-2" id="opsFilters">
+                <button type="button" class="ops-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
+                <button type="button" class="ops-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 تحت التصنيع</button>
+                <button type="button" class="ops-filter rounded-full px-4 py-1.5 text-xs font-bold bg-indigo-100 text-indigo-800" data-filter="ready">✅ جاهز للتسليم</button>
+                <button type="button" class="ops-filter rounded-full px-4 py-1.5 text-xs font-bold bg-indigo-100 text-indigo-700" data-filter="military">🪖 عسكري</button>
+                <button type="button" class="ops-filter rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-700" data-filter="civilian">🌐 مدني</button>
             </div>
         </div>
 
@@ -92,7 +100,11 @@
                             $isMil = $case->isMilitary();
                         @endphp
                         <tr class="ops-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
-                            data-search="{{ $case->work_order_no }} {{ $case->case_no }} {{ $case->patient?->name }}">
+                            data-search="{{ $case->work_order_no }} {{ $case->case_no }} {{ $case->patient?->name }}"
+                            data-bom-stage="{{ $bomStage ?? '' }}"
+                            data-stage-key="{{ $case->stage_key }}"
+                            data-path="{{ $isMil ? 'military' : 'civilian' }}"
+                            data-filter-hidden="0">
                             <td class="px-4 py-3 font-mono font-bold text-ops">{{ $case->work_order_no ?? '—' }}</td>
                             <td class="px-4 py-3">
                                 <div class="font-semibold text-slate-800">{{ $case->patient?->name ?? '—' }}</div>
@@ -177,5 +189,3 @@
         </div>
     </div>
 </div>
-
-<div id="opsToast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] hidden rounded-xl px-6 py-3 text-sm font-bold shadow-lg"></div>

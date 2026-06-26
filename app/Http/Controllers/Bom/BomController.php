@@ -117,7 +117,7 @@ class BomController extends Controller
         }
 
         return response()->json([
-            'message' => 'تم صرف المواد بنجاح — BOM في مرحلة wip.',
+            'message' => 'تم صرف الأصناف بنجاح — وهي في مرحلة التصنيع حالياً.',
             'bom'     => $this->formatDetail($bom),
         ]);
     }
