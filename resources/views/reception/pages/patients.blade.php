@@ -6,7 +6,12 @@
           <span style="font-size:12px;font-weight:600;color:var(--primary);" id="patientsCount">0 مرضى</span>
         </div>
         <div class="search-bar">
-          <input type="text" id="patientSearch" placeholder="🔍 بحث بالاسم أو رقم الهاتف...">
+          <input type="text" id="patientSearch" placeholder="🔍 بحث بالاسم أو الهاتف أو رقم الدور...">
+          <select id="patientTypeFilter" aria-label="فلتر النوع">
+            <option value="all">مدني وعسكري</option>
+            <option value="civilian">🌐 مدني</option>
+            <option value="military">🪖 عسكري</option>
+          </select>
           <select id="patientStatusFilter">
             <option value="all">كل الحالات</option>
             <option value="quoted">عرض سعر</option>
@@ -23,6 +28,7 @@
             <thead>
               <tr>
                 <th>اسم المريض</th>
+                <th>رقم الدور</th>
                 <th>رقم الهاتف</th>
                 <th>جهة التعاقد</th>
                 <th>تاريخ التسجيل</th>

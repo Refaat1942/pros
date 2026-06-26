@@ -24,9 +24,10 @@ class ReceptionAppointmentsListTest extends TestCase
             ->assertJsonPath('total', 1)
             ->assertJsonStructure([
                 'data' => [
-                    0 => ['registered_at_formatted', 'wait_label', 'patient_name'],
+                    0 => ['registered_at_formatted', 'wait_label', 'patient_name', 'queue_number'],
                 ],
             ])
-            ->assertJsonPath('data.0.patient_name', 'مريض توقيت الاستقبال');
+            ->assertJsonPath('data.0.patient_name', 'مريض توقيت الاستقبال')
+            ->assertJsonPath('data.0.queue_number', $patient->id);
     }
 }

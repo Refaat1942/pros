@@ -126,16 +126,12 @@ class AdminReportsService
                 ->where('movement_type', StockMovement::TYPE_ISSUE)
                 ->whereBetween('moved_at', [$monthStart, $monthEnd])
                 ->sum('quantity'),
-            'receives_this_month' => StockMovement::query()
-                ->where('movement_type', StockMovement::TYPE_RECEIVE)
-                ->whereBetween('moved_at', [$monthStart, $monthEnd])
-                ->sum('quantity'),
             'active_batches'   => StockItemPrice::query()->where('qty', '>', 0)->count(),
             'batch_samples'      => StockItemPrice::query()
                 ->with('stockItem:id,code,name')
                 ->where('qty', '>', 0)
                 ->orderByDesc('received_at')
-                ->limit(5)
+                ->limit(8)
                 ->get()
                 ->map(fn (StockItemPrice $p) => [
                     'code'   => $p->stockItem?->code ?? '—',

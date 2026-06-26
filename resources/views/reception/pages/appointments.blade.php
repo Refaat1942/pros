@@ -34,7 +34,12 @@
             <span style="font-size:12px;font-weight:600;color:var(--primary);" id="apptHeaderCount">0 موعد</span>
           </div>
           <div class="data-toolbar">
-            <input type="text" id="apptSearch" placeholder="🔍 بحث بالاسم أو رقم الهاتف...">
+            <input type="text" id="apptSearch" placeholder="🔍 بحث بالاسم أو الهاتف أو رقم الدور...">
+            <select id="apptTypeFilter" aria-label="فلتر النوع">
+              <option value="all">مدني وعسكري</option>
+              <option value="civilian">🌐 مدني</option>
+              <option value="military">🪖 عسكري</option>
+            </select>
             <select id="apptStatusFilter">
               <option value="all">كل الحالات</option>
               <option value="waiting">انتظار</option>
@@ -53,6 +58,7 @@
               <thead>
                 <tr>
                   <th>الوقت</th>
+                  <th>رقم الدور</th>
                   <th>تاريخ الإضافة</th>
                   <th>وقت الانتظار</th>
                   <th>اسم المريض</th>

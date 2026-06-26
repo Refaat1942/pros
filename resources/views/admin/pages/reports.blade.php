@@ -14,7 +14,7 @@
 @endphp
 <div class="section-view" id="section-reports" data-server-rendered="1">
       <div class="reports-section-title">💰 التقارير المالية والتشغيلية</div>
-      <div class="report-cards" id="financialReportCards">
+      <div class="report-cards report-cards--financial" id="financialReportCards">
         <div class="report-card">
           <h4>📈 الإيرادات الشهرية — {{ $financial['month_label'] ?? '' }}</h4>
           <div style="font-size:28px;font-weight:800;color:#059669;margin:8px 0;">
@@ -58,8 +58,8 @@
       </div>
 
       <div class="reports-section-title">📦 تقارير المخزون والتحليلات الذكية</div>
-      <div class="report-cards" id="inventoryReportCards">
-        <div class="report-card wide">
+      <div class="report-cards report-cards--inventory" id="inventoryReportCards">
+        <div class="report-card report-card--health">
           <h4>💚 صحة المخزون الإجمالية</h4>
           <div class="health-score-wrap">
             <div style="font-size:36px;font-weight:800;color:{{ ($inventory['health_pct'] ?? 0) >= 70 ? '#059669' : '#d97706' }};">
@@ -97,36 +97,30 @@
           @endforelse
         </div>
 
-        <div class="report-card">
+        <div class="report-card report-card--issues">
           <h4>📤 حركات الصرف — هذا الشهر</h4>
           <div style="font-size:28px;font-weight:800;color:#0e7490;">
             {{ number_format((int) ($inventory['issues_this_month'] ?? 0)) }} وحدة
           </div>
         </div>
 
-        <div class="report-card">
-          <h4>📥 استلام من الموردين — هذا الشهر</h4>
-          <div style="font-size:28px;font-weight:800;color:#059669;">
-            {{ number_format((int) ($inventory['receives_this_month'] ?? 0)) }} وحدة
-          </div>
-        </div>
-
-        <div class="report-card">
+        <div class="report-card report-card--batch">
           <h4>🏷️ الدفعات النشطة (Batch Tracking)</h4>
-          <div style="font-size:22px;font-weight:800;margin-bottom:8px;">
-            {{ (int) ($inventory['active_batches'] ?? 0) }} دفعة
-          </div>
+          <div class="batch-total">{{ (int) ($inventory['active_batches'] ?? 0) }} دفعة</div>
+          <div class="batch-samples-grid">
           @forelse ($inventory['batch_samples'] ?? [] as $batch)
-            <div class="stagnant-item">
-              <span>{{ $batch['code'] }}</span>
-              <span>{{ number_format($batch['amount'], 2) }} × {{ $batch['qty'] }}</span>
+            <div class="batch-sample-chip">
+              <strong>{{ $batch['code'] }}</strong>
+              <span>{{ number_format($batch['amount'], 2) }} ج.م × {{ $batch['qty'] }}</span>
             </div>
           @empty
-            <p style="color:var(--text-muted);font-size:13px;">لا توجد دفعات نشطة.</p>
+            <p style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">لا توجد دفعات نشطة.</p>
           @endforelse
+          </div>
         </div>
 
-        <div class="report-card wide" id="bomAdminPanel">
+        <div class="reports-bom-row">
+        <div class="report-card report-card--bom" id="bomAdminPanel">
           <h4>📋 BOM — خام / تحت التشغيل / تام (قيمة Highest Batch Cost)</h4>
           <div id="bomAdminSummary" class="bom-admin-summary">
             @foreach (['raw' => 'خام', 'wip' => 'تحت التشغيل', 'finished' => 'تام'] as $key => $label)
@@ -167,18 +161,28 @@
           </div>
         </div>
 
-        <div class="report-card">
+        <div class="report-card report-card--fill" id="pendingPrepPanel">
           <h4>⏳ أوامر تحضير معلقة</h4>
-          <div style="font-size:28px;font-weight:800;color:#d97706;margin-bottom:8px;">
-            {{ (int) ($operations['awaiting_dispense'] ?? 0) }} أمر
+          <div class="pending-prep-stats">
+            <div class="pending-prep-stat pending-prep-stat--main">
+              <span class="pending-prep-stat__value">{{ (int) ($operations['awaiting_dispense'] ?? 0) }}</span>
+              <span class="pending-prep-stat__label">أمر بانتظار الصرف</span>
+              <p class="pending-prep-stat__hint">BOM «خام» — بانتظار صرف المخزن</p>
+            </div>
+            <div class="pending-prep-stat">
+              <span class="pending-prep-stat__value">{{ (int) ($operations['in_workshop'] ?? 0) }}</span>
+              <span class="pending-prep-stat__label">🏭 تحت التشغيل</span>
+            </div>
+            <div class="pending-prep-stat">
+              <span class="pending-prep-stat__value">{{ (int) ($operations['ready_for_delivery'] ?? 0) }}</span>
+              <span class="pending-prep-stat__label">✅ جاهز للتسليم</span>
+            </div>
+            <div class="pending-prep-stat">
+              <span class="pending-prep-stat__value">{{ (int) ($operations['open_work_orders'] ?? 0) }}</span>
+              <span class="pending-prep-stat__label">🎯 أوامر نشطة</span>
+            </div>
           </div>
-          <p style="font-size:12px;color:var(--text-muted);margin:0;">
-            BOM «خام» — بانتظار صرف المخزن
-          </p>
-          <div style="margin-top:12px;font-size:13px;">
-            <div>🏭 تحت التشغيل: <strong>{{ (int) ($operations['in_workshop'] ?? 0) }}</strong></div>
-            <div>✅ جاهز للتسليم: <strong>{{ (int) ($operations['ready_for_delivery'] ?? 0) }}</strong></div>
-          </div>
+        </div>
         </div>
       </div>
     </div>

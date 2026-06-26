@@ -34,6 +34,10 @@ class AppointmentController extends Controller
             ->whereDate('appointment_date', $date)
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->visit_type, fn ($q, $t) => $q->where('visit_type', $t))
+            ->when($request->patient_type, fn ($q, $t) => $q->whereHas(
+                'patient',
+                fn ($p) => $p->where('patient_type', $t)
+            ))
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
@@ -83,6 +87,7 @@ class AppointmentController extends Controller
     private function formatForReceptionList(Appointment $appointment): array
     {
         return $appointment->toArray() + [
+            'queue_number'            => $appointment->patient_id,
             'registered_at_formatted' => $appointment->registeredAtFormatted(),
             'wait_label'              => $appointment->receptionDeskWaitLabel(),
         ];

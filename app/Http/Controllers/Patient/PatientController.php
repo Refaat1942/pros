@@ -39,6 +39,10 @@ class PatientController extends Controller
                       ->orWhere('phone', 'like', "%{$search}%")
                       ->orWhere('patient_code', 'like', "%{$search}%")
                       ->orWhere('national_id', 'like', "%{$search}%");
+
+                    if (ctype_digit((string) $search)) {
+                        $q->orWhere('id', (int) $search);
+                    }
                 }))
                 ->orderByDesc('id')
         );

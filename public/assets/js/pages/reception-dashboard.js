@@ -519,6 +519,7 @@
         id: row.id,
         date: displayDateFromIso(row.appointment_date),
         time: row.appointment_time ? String(row.appointment_time).substring(0, 5) : '—',
+        queueNumber: row.queue_number != null ? String(row.queue_number) : (row.patient_id != null ? String(row.patient_id) : '—'),
         name: row.patient_name || patient.name || '—',
         phone: row.phone || '—',
         company: affiliation,
@@ -645,12 +646,15 @@
     function getFilteredAppointments() {
       var search = (document.getElementById('apptSearch') || {}).value || '';
       var status = (document.getElementById('apptStatusFilter') || {}).value || 'all';
+      var patientType = (document.getElementById('apptTypeFilter') || {}).value || 'all';
       search = search.trim();
       return appointments.filter(function(a) {
-        var ms = !search || a.name.indexOf(search) !== -1 || a.phone.indexOf(search) !== -1;
+        var ms = !search || a.name.indexOf(search) !== -1 || a.phone.indexOf(search) !== -1 ||
+          String(a.queueNumber || '').indexOf(search) !== -1;
         var mst = status === 'all' || a.status === status;
+        var mpt = patientType === 'all' || a.patient_type === patientType;
         var md = a.date === calendarView.selectedDate;
-        return ms && mst && md;
+        return ms && mst && mpt && md;
       });
     }
 
@@ -669,6 +673,7 @@
       }
       return {
         id: row.id,
+        queueNumber: row.queue_number != null ? String(row.queue_number) : String(row.id),
         name: row.name || '—',
         phone: row.phone || '—',
         company: company,
@@ -719,19 +724,22 @@
     function getFilteredPatients(filter) {
       filter = filter || '';
       var status = (document.getElementById('patientStatusFilter') || {}).value || 'all';
+      var patientType = (document.getElementById('patientTypeFilter') || {}).value || 'all';
       return patientsRegistry.filter(function(p) {
-        var ms = !filter || p.name.indexOf(filter) !== -1 || p.phone.indexOf(filter) !== -1;
+        var ms = !filter || p.name.indexOf(filter) !== -1 || p.phone.indexOf(filter) !== -1 ||
+          String(p.queueNumber || '').indexOf(filter) !== -1;
         var mst = status === 'all' || p.status === status;
-        return ms && mst;
+        var mpt = patientType === 'all' || p.patient_type === patientType;
+        return ms && mst && mpt;
       });
     }
 
     function exportAppointments(type) {
       var data = getFilteredAppointments();
-      var headers = ['التاريخ', 'الوقت', 'تاريخ الإضافة', 'وقت الانتظار', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
+      var headers = ['التاريخ', 'الوقت', 'رقم الدور', 'تاريخ الإضافة', 'وقت الانتظار', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
       var rows = data.map(function(a) {
         var vt = getVisitMeta(a.visitType);
-        return [a.date, a.time, a.registeredAt, a.waitLabel, a.name, a.visitTypeLabel || vt.label, a.phone, a.company];
+        return [a.date, a.time, a.queueNumber, a.registeredAt, a.waitLabel, a.name, a.visitTypeLabel || vt.label, a.phone, a.company];
       });
       if (type === 'excel') ExportKit.toExcel('مواعيد_' + calendarView.selectedDate.replace(/\//g, '-'), headers, rows);
       else ExportKit.toPDF('مواعيد — ' + calendarView.selectedDate, headers, rows);
@@ -739,9 +747,9 @@
 
     function exportPatients(type) {
       var data = getFilteredPatients((document.getElementById('patientSearch') || {}).value.trim());
-      var headers = ['اسم المريض', 'رقم الهاتف', 'جهة التعاقد / الرتبة', 'تاريخ التسجيل', 'آخر زيارة'];
+      var headers = ['اسم المريض', 'رقم الدور', 'رقم الهاتف', 'جهة التعاقد / الرتبة', 'تاريخ التسجيل', 'آخر زيارة'];
       var rows = data.map(function(p) {
-        return [p.name, p.phone, p.company, p.registered, p.lastVisit];
+        return [p.name, p.queueNumber, p.phone, p.company, p.registered, p.lastVisit];
       });
       if (type === 'excel') ExportKit.toExcel('سجل_المرضى', headers, rows);
       else ExportKit.toPDF('سجل المرضى المسجلين', headers, rows);
@@ -795,6 +803,7 @@
         var visitLabel = a.visitTypeLabel || vt.label;
         return '<tr>' +
           '<td><strong>' + a.time + '</strong></td>' +
+          '<td><strong>' + a.queueNumber + '</strong></td>' +
           '<td style="font-size:12px;white-space:nowrap;">' + a.registeredAt + '</td>' +
           '<td><span class="wait-time">' + a.waitLabel + '</span></td>' +
           '<td>' + a.name + '</td>' +
@@ -803,7 +812,7 @@
           '<td>' + a.company + '</td>' +
           '<td>' + getApptActionCell(a) + '</td>' +
           '</tr>';
-      }).join('') || '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
+      }).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
       var ac = document.getElementById('apptCount');
       if (ac) ac.textContent = filtered.length + ' موعد';
       var ah = document.getElementById('apptHeaderCount');
@@ -821,6 +830,7 @@
         ? filtered.map(function(p) {
             return '<tr>' +
               '<td><strong>' + p.name + '</strong></td>' +
+              '<td><strong>' + p.queueNumber + '</strong></td>' +
               '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + p.phone + '</td>' +
               '<td>' + p.company + '</td>' +
               '<td>' + p.registered + '</td>' +
@@ -828,7 +838,7 @@
               '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="openPatientFile(\'' + p.phone + '\')">عرض الملف</button></td>' +
               '</tr>';
           }).join('')
-        : '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">لا يوجد مرضى مسجّلون</td></tr>';
+        : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">لا يوجد مرضى مسجّلون</td></tr>';
       var countEl = document.getElementById('patientsCount');
       if (countEl) countEl.textContent = filtered.length + ' مريض';
       if (window.TablePagination) TablePagination.refreshById('patientsTable');
@@ -1409,8 +1419,14 @@
     if (apptSearchEl) apptSearchEl.addEventListener('input', function() { renderAppointments(); });
     var apptStatusEl = document.getElementById('apptStatusFilter');
     if (apptStatusEl) apptStatusEl.addEventListener('change', function() { renderAppointments(); });
+    var apptTypeEl = document.getElementById('apptTypeFilter');
+    if (apptTypeEl) apptTypeEl.addEventListener('change', function() { renderAppointments(); });
     var patientStatusEl = document.getElementById('patientStatusFilter');
     if (patientStatusEl) patientStatusEl.addEventListener('change', function() {
+      renderPatients((document.getElementById('patientSearch') || {}).value.trim());
+    });
+    var patientTypeEl = document.getElementById('patientTypeFilter');
+    if (patientTypeEl) patientTypeEl.addEventListener('change', function() {
       renderPatients((document.getElementById('patientSearch') || {}).value.trim());
     });
 
