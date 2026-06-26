@@ -12,7 +12,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('prosthetics:housekeeping')
+            ->everyThreeDays()
+            ->at('03:00')
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/housekeeping.log'));
     }
 
     /**
