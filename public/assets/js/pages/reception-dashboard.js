@@ -1567,12 +1567,20 @@
       if (files && files.length > 0) processOcrFile(files[0]);
     }
 
+    function isAllowedApprovalLetter(file) {
+      if (!file) return false;
+      var type = (file.type || '').toLowerCase();
+      if (type.indexOf('image/') === 0 || type === 'application/pdf') return true;
+      var ext = (file.name.split('.').pop() || '').toLowerCase();
+      var imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tif', 'tiff', 'heic', 'heif', 'avif', 'ico'];
+      return imageExts.indexOf(ext) !== -1 || ext === 'pdf';
+    }
+
     function processOcrFile(file) {
       if (!file || !_ocrCurrentQuote) return;
 
-      var allowed = ['image/jpeg','image/png','image/jpg','application/pdf'];
-      if (allowed.indexOf(file.type) === -1) {
-        alert('نوع الملف غير مدعوم. يُرجى اختيار صورة أو PDF.');
+      if (!isAllowedApprovalLetter(file)) {
+        alert('نوع الملف غير مدعوم. يُرجى اختيار صورة بأي صيغة مدعومة أو PDF.');
         return;
       }
       if (file.size > 10 * 1024 * 1024) {

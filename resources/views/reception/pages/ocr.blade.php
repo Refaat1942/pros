@@ -15,7 +15,7 @@
           <div class="upload-zone" id="uploadZone">
             <div class="upload-icon">📤</div>
             <p><strong>اسحب صورة خطاب الموافقة هنا</strong> أو انقر للاختيار</p>
-            <p class="hint">يدعم: JPG, PNG, PDF — قراءة تلقائية للنص العربي</p>
+            <p class="hint">يدعم جميع أنواع الصور و PDF — قراءة تلقائية للنص العربي</p>
             <input type="file" id="fileInput" accept="image/*,.pdf" style="display:none;">
           </div>
 

@@ -239,6 +239,86 @@ class AdjustmentsListTest extends TestCase
         $this->assertDatabaseMissing('bom_items', ['id' => $adjItem->id]);
     }
 
+    public function test_warehouse_bom_api_merges_spec_and_adjustment_lines_with_same_code(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $this->stockItem('RM-002', qty: 10);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('adjustments');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+            ['stock_item_code' => 'RM-002', 'qty' => 1],
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [
+                    ['stock_item_code' => 'RM-002', 'name' => 'مفصل كوع', 'qty' => 1],
+                ],
+            ])
+            ->assertCreated();
+
+        $technical = $this->userWithRole('technical');
+
+        $this->actingAs($technical)
+            ->getJson("/technical/bom/{$bom->id}")
+            ->assertOk()
+            ->assertJsonCount(2, 'items')
+            ->assertJsonPath('items.1.stock_item_code', 'RM-002')
+            ->assertJsonPath('items.1.qty', 2);
+    }
+
+    public function test_adjustment_adding_same_code_twice_merges_into_one_adjustment_row(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $this->stockItem('RM-002', qty: 10);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('adjustments');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [
+                    ['stock_item_code' => 'RM-002', 'name' => 'مكوّن مستشار', 'qty' => 1],
+                ],
+            ])
+            ->assertCreated();
+
+        $this->actingAs($user)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [
+                    ['stock_item_code' => 'RM-002', 'name' => 'مكوّن مستشار', 'qty' => 2],
+                ],
+            ])
+            ->assertCreated();
+
+        $this->assertSame(
+            1,
+            BomItem::where('bom_id', $bom->id)
+                ->where('stock_item_code', 'RM-002')
+                ->where('source', BomItem::SOURCE_ADJUSTMENT)
+                ->count()
+        );
+
+        $this->assertSame(
+            3,
+            (int) BomItem::where('bom_id', $bom->id)
+                ->where('stock_item_code', 'RM-002')
+                ->where('source', BomItem::SOURCE_ADJUSTMENT)
+                ->value('qty')
+        );
+    }
+
     public function test_adding_unknown_stock_item_returns_clear_error(): void
     {
         $this->seedStockWithPriceBatch();

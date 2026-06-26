@@ -16,8 +16,7 @@ use Tests\TestCase;
  * Feature — BOM full lifecycle: raw → WIP → finished → return note
  * (الفصل الخامس: المخزن والصرف الصارم + الفصل السادس: الورشة)
  *
- * IMPORTANT: releaseToWip() expects ONE barcode per BomItem *row*, not per unit qty.
- * The barcode uniquely identifies the item line, not each individual unit.
+ * IMPORTANT: releaseToWip() expects ONE barcode per unique stock_item_code (rows merged by code).
  */
 class BomLifecycleTest extends TestCase
 {
@@ -199,12 +198,12 @@ class BomLifecycleTest extends TestCase
         ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
 
-        // Create BOM with 2 separate BomItem rows
+        // صفّان بنفس الكود — يُصرف بباركود واحد لكل كود صنف فريد
         $bom = app(BomService::class)->create($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 1],  // row 1
-            ['stock_item_code' => 'RM-001', 'qty' => 1],  // row 2 — 2 items = 2 barcodes
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
 
         $qtyAfterDispense = $item->fresh()->qty;  // 18
 

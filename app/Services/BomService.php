@@ -12,6 +12,7 @@ use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\StockItem;
 use App\Models\StockMovement;
+use App\Support\BomItemAggregator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -175,6 +176,16 @@ class BomService
 
                 if ($qty > $maxAllowed) {
                     abort(422, "الكمية المطلوبة ({$qty}) تتجاوز المتاح للصنف {$code} — الحد الأقصى: ".max(0, $maxAllowed).'.');
+                }
+
+                $existingAdj = $bom->items->first(
+                    fn (BomItem $i) => $i->stock_item_code === $code && $i->source === BomItem::SOURCE_ADJUSTMENT
+                );
+
+                if ($existingAdj) {
+                    $existingAdj->update(['qty' => $existingAdj->qty + $qty]);
+                    $bom->load('items');
+                    continue;
                 }
 
                 BomItem::create([
@@ -449,20 +460,22 @@ class BomService
                 $bom->refresh()->load('items');
             }
 
-            $items = $bom->items;
+            $items  = $bom->items;
+            $groups = BomItemAggregator::groupModels($items);
 
-            if (count($scannedBarcodes) !== $items->count()) {
+            if (count($scannedBarcodes) !== $groups->count()) {
                 throw BarcodeDispenseMismatchException::forItem('عدد الباركود لا يطابق بنود BOM');
             }
 
             $remaining = $scannedBarcodes;
             $stockBefore = [];
 
-            foreach ($items as $bomItem) {
+            foreach ($groups as $code => $rows) {
+                $representative = $rows->first();
                 $matchedBarcode = null;
 
                 foreach ($remaining as $idx => $barcode) {
-                    if ($this->barcodeValidation->validateScan($barcode, $bomItem)) {
+                    if ($this->barcodeValidation->validateScan($barcode, $representative)) {
                         $matchedBarcode = $barcode;
                         unset($remaining[$idx]);
                         break;
@@ -470,10 +483,11 @@ class BomService
                 }
 
                 if ($matchedBarcode === null) {
-                    throw BarcodeDispenseMismatchException::forItem($bomItem->stock_item_code);
+                    throw BarcodeDispenseMismatchException::forItem($code);
                 }
 
-                $stockItem = StockItem::where('code', $bomItem->stock_item_code)
+                $totalQty  = (int) $rows->sum('qty');
+                $stockItem = StockItem::where('code', $code)
                     ->lockForUpdate()
                     ->firstOrFail();
 
@@ -482,50 +496,52 @@ class BomService
                     'reserved' => $stockItem->reserved,
                 ];
 
-                if ($stockItem->qty < $bomItem->qty) {
+                if ($stockItem->qty < $totalQty) {
                     abort(422, "رصيد غير كافٍ للصنف {$stockItem->code}");
                 }
             }
 
             $performedById = Auth::id();
 
-            foreach ($items as $bomItem) {
-                $stockItem = StockItem::where('code', $bomItem->stock_item_code)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+            foreach ($groups as $code => $rows) {
+                foreach ($rows as $bomItem) {
+                    $stockItem = StockItem::where('code', $bomItem->stock_item_code)
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                $qty         = $bomItem->qty;
-                $balanceAfter = $stockItem->qty - $qty;
+                    $qty          = $bomItem->qty;
+                    $balanceAfter = $stockItem->qty - $qty;
 
-                StockMovement::create([
-                    'stock_item_id'        => $stockItem->id,
-                    'movement_type'        => StockMovement::TYPE_ISSUE,
-                    'quantity'             => -$qty,
-                    'unit_cost'            => $bomItem->unit_cost,
-                    'balance_after'        => $balanceAfter,
-                    'reference_type'       => 'bom',
-                    'reference_id'         => $bom->id,
-                    'performed_by_user_id' => $performedById,
-                    'moved_at'             => now(),
-                ]);
+                    StockMovement::create([
+                        'stock_item_id'        => $stockItem->id,
+                        'movement_type'        => StockMovement::TYPE_ISSUE,
+                        'quantity'             => -$qty,
+                        'unit_cost'            => $bomItem->unit_cost,
+                        'balance_after'        => $balanceAfter,
+                        'reference_type'       => 'bom',
+                        'reference_id'         => $bom->id,
+                        'performed_by_user_id' => $performedById,
+                        'moved_at'             => now(),
+                    ]);
 
-                $stockItem->decrement('qty', $qty);
+                    $stockItem->decrement('qty', $qty);
 
-                // BOM خام من التوصيف/seed قد يُصرف بدون حجز مسبق — لا ننقص reserved تحت الصفر.
-                $reservedRelease = min($stockItem->reserved, $qty);
-                if ($reservedRelease > 0) {
-                    $stockItem->decrement('reserved', $reservedRelease);
+                    // BOM خام من التوصيف/seed قد يُصرف بدون حجز مسبق — لا ننقص reserved تحت الصفر.
+                    $reservedRelease = min($stockItem->reserved, $qty);
+                    if ($reservedRelease > 0) {
+                        $stockItem->decrement('reserved', $reservedRelease);
+                    }
+
+                    $newQty = $stockItem->fresh()->qty;
+                    $stockItem->update([
+                        'last_moved_at' => now()->toDateString(),
+                        'status'        => $newQty <= StockItem::LOW_QTY_THRESHOLD
+                            ? StockItem::STATUS_LOW
+                            : StockItem::STATUS_OK,
+                    ]);
+
+                    $bomItem->update(['issued_qty' => $qty]);
                 }
-
-                $newQty = $stockItem->fresh()->qty;
-                $stockItem->update([
-                    'last_moved_at' => now()->toDateString(),
-                    'status'        => $newQty <= StockItem::LOW_QTY_THRESHOLD
-                        ? StockItem::STATUS_LOW
-                        : StockItem::STATUS_OK,
-                ]);
-
-                $bomItem->update(['issued_qty' => $qty]);
             }
 
             $bom->update([
@@ -539,13 +555,15 @@ class BomService
             }
 
             $stockAfter = [];
-            foreach ($items as $bomItem) {
-                $stockItem = StockItem::where('code', $bomItem->stock_item_code)->first();
-                if ($stockItem) {
-                    $stockAfter[$stockItem->code] = [
-                        'qty'      => $stockItem->qty,
-                        'reserved' => $stockItem->reserved,
-                    ];
+            foreach ($groups as $code => $rows) {
+                foreach ($rows as $bomItem) {
+                    $stockItem = StockItem::where('code', $bomItem->stock_item_code)->first();
+                    if ($stockItem) {
+                        $stockAfter[$stockItem->code] = [
+                            'qty'      => $stockItem->qty,
+                            'reserved' => $stockItem->reserved,
+                        ];
+                    }
                 }
             }
 

@@ -76,13 +76,7 @@
                         <td class="px-4 py-3 text-center">
                             @if ($bom->items->isNotEmpty())
                                 @php
-                                    $bomItemsJson = $bom->items->map(fn ($i) => [
-                                        'stock_item_code' => $i->stock_item_code,
-                                        'name'            => $i->name,
-                                        'qty'             => $i->qty,
-                                        'issued_qty'      => $i->issued_qty,
-                                        'returned_qty'    => $i->returned_qty,
-                                    ])->values();
+                                    $bomItemsJson = \App\Support\BomItemAggregator::byStockCode($bom->items);
                                 @endphp
                                 <button type="button"
                                         class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50"
@@ -152,7 +146,7 @@
                 <div id="dispenseRequired" class="rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm space-y-2"></div>
                 <div class="flex gap-2">
                     <input type="text" id="barcodeInput" autofocus
-                           placeholder="امسح الباركود ثم Enter..."
+                           placeholder="امسح الباركود"
                            maxlength="100"
                            class="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
                     <button type="button" id="btnAddBarcode"

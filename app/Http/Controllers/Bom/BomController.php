@@ -13,6 +13,7 @@ use App\Models\Quote;
 use App\Models\StockItem;
 use App\Models\TechOrderSpecItem;
 use App\Services\BomService;
+use App\Support\BomItemAggregator;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -180,7 +181,9 @@ class BomController extends Controller
             'issue_voucher_print_url' => $quote
                 ? route('technical.quote.print-issue-voucher', $quote)
                 : null,
-            'items_count' => $bom->relationLoaded('items') ? $bom->items->count() : 0,
+            'items_count' => $bom->relationLoaded('items')
+                ? BomItemAggregator::uniqueCodeCount($bom->items)
+                : 0,
             'case'        => $bom->relationLoaded('caseRecord') && $bom->caseRecord
                 ? $this->formatCase($bom->caseRecord)
                 : null,
@@ -196,12 +199,13 @@ class BomController extends Controller
 
         return $this->formatSummary($bom) + [
             'items' => $bom->relationLoaded('items')
-                ? $bom->items->map(fn ($item) => $item->only([
-                    'id', 'stock_item_code', 'name', 'qty',
-                    'unit_cost', 'issued_qty', 'returned_qty',
-                ]) + [
-                    'expected_barcode' => $barcodes[$item->stock_item_code] ?? null,
-                ])
+                ? collect(BomItemAggregator::byStockCode($bom->items))
+                    ->map(function (array $item) use ($barcodes) {
+                        return $item + [
+                            'expected_barcode' => $barcodes[$item['stock_item_code']] ?? null,
+                        ];
+                    })
+                    ->values()
                 : [],
         ];
     }

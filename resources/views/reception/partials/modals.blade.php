@@ -68,7 +68,7 @@
                ondrop="event.preventDefault();this.style.background='#f0fdf4';handleOcrFileDrop(event);">
             <div style="font-size:40px;margin-bottom:12px;">📤</div>
             <p style="font-weight:700;color:#065f46;margin:0 0 6px;">اسحب خطاب الموافقة هنا أو انقر للاختيار</p>
-            <p style="font-size:12px;color:#6b7280;margin:0;">يدعم: JPG, PNG, PDF — حجم أقصى 10 ميجا</p>
+            <p style="font-size:12px;color:#6b7280;margin:0;">يدعم جميع أنواع الصور و PDF — حجم أقصى 10 ميجا</p>
           </div>
           <input type="file" id="ocrFileInput" accept="image/*,.pdf" style="display:none;">
         </div>

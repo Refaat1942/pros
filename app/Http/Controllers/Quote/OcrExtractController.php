@@ -25,7 +25,30 @@ class OcrExtractController extends Controller
     {
         $request->validate([
             'quote_no'    => ['required', 'string', 'max:50'],
-            'letter_file' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
+            'letter_file' => [
+                'required',
+                'file',
+                'max:10240',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! $value instanceof \Illuminate\Http\UploadedFile) {
+                        return;
+                    }
+
+                    $mime = strtolower($value->getMimeType() ?? '');
+                    if (str_starts_with($mime, 'image/') || str_contains($mime, 'pdf')) {
+                        return;
+                    }
+
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tif', 'tiff', 'heic', 'heif', 'avif', 'ico'];
+
+                    if (in_array($ext, $imageExts, true) || $ext === 'pdf') {
+                        return;
+                    }
+
+                    $fail('نوع الملف غير مدعوم. يُرجى رفع صورة بأي صيغة مدعومة أو PDF.');
+                },
+            ],
         ]);
 
         $quote = Quote::with(['caseRecord.patient'])

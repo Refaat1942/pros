@@ -55,6 +55,35 @@ class OcrExtractTest extends TestCase
         $this->assertSame('2026-06-24', $response->json('extracted.letter_date'));
     }
 
+    public function test_extract_endpoint_accepts_webp_image(): void
+    {
+        $item = $this->stockItem('RM-001', qty: 10, wac: 100.00);
+        app(\App\Services\StockPriceService::class)->addBatch(
+            $item, 10, 200.00, $this->makeSupplier(), 'INV-001', now()
+        );
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->operationsReadyCase($patient);
+        $ops     = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->postJson("/operations/pending/{$case->id}/release-quote")
+            ->assertOk();
+
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $recep = $this->userWithRole('reception');
+
+        $file = UploadedFile::fake()->image('letter.webp');
+
+        $this->actingAs($recep)
+            ->postJson('/reception/ocr/extract', [
+                'quote_no'    => $quote->quote_no,
+                'letter_file' => $file,
+            ])
+            ->assertOk()
+            ->assertJsonStructure(['stored_path', 'extracted']);
+    }
+
     public function test_loose_binary_extractor_finds_arabic_fragments(): void
     {
         $service = app(OcrLetterExtractionService::class);
