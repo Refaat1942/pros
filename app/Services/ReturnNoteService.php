@@ -75,8 +75,8 @@ class ReturnNoteService
 
             AuditService::log(
                 action:      'create',
-                description: "إنشاء إذن ارتجاع {$note->return_no}",
-                tag:         'warehouse',
+                description: "طلب ارتجاع مواد للمخزن {$note->return_no}",
+                tag:         'operations',
                 after:       $note->load('lines')->toArray(),
             );
 

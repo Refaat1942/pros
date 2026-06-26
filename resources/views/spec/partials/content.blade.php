@@ -111,7 +111,7 @@
 
             <div class="form-actions">
               <button type="submit" class="btn btn-primary" id="submitSpec">
-                📤 اعتماد التوصيف وإرسال للتسعير
+                📤 اعتماد وإرسال
               </button>
             </div>
           </form>

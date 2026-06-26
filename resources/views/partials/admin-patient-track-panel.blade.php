@@ -1,6 +1,9 @@
 @php
     $tracks = collect($patient_tracks ?? []);
     $trackSearch = $track_search ?? '';
+    $trackStage = $track_stage ?? '';
+    $trackPatientType = $track_patient_type ?? '';
+    $trackStageOptions = $track_stage_options ?? [];
 @endphp
 <script>
 window.__patientTracksById = @json($tracks->keyBy('id')->all());
@@ -9,7 +12,7 @@ window.__patientTracksById = @json($tracks->keyBy('id')->all());
     <div class="panel-header">
         <h3>📍 مسار المرضى — تتبع المراحل</h3>
         <div class="patient-track-actions">
-            <span class="patient-track-count" id="patientTrackBadge">{{ $tracks->count() }} مريض نشط</span>
+            <span class="patient-track-count" id="patientTrackBadge">{{ $tracks->count() }} مريض</span>
             <button type="button" class="patient-track-refresh" id="patientTrackRefresh" title="تحديث" aria-label="تحديث">↺</button>
         </div>
     </div>
@@ -19,6 +22,17 @@ window.__patientTracksById = @json($tracks->keyBy('id')->all());
                value="{{ $trackSearch }}"
                placeholder="🔍 بحث بالاسم أو الهاتف أو الرقم القومي..."
                autocomplete="off">
+        <select id="patientTrackStageFilter" class="patient-track-filter-select" aria-label="فلتر المرحلة">
+            <option value="">كل المراحل</option>
+            @foreach ($trackStageOptions as $option)
+                <option value="{{ $option['value'] }}" @selected($trackStage === $option['value'])>{{ $option['label'] }}</option>
+            @endforeach
+        </select>
+        <select id="patientTrackTypeFilter" class="patient-track-filter-select" aria-label="فلتر النوع">
+            <option value="">مدني وعسكري</option>
+            <option value="civilian" @selected($trackPatientType === 'civilian')>🌐 مدني</option>
+            <option value="military" @selected($trackPatientType === 'military')>🪖 عسكري</option>
+        </select>
         <span class="toolbar-count" id="patientTrackFilterCount">{{ $tracks->count() }} مريض</span>
     </div>
     <div class="panel-body patient-track-table-wrap">
@@ -34,7 +48,10 @@ window.__patientTracksById = @json($tracks->keyBy('id')->all());
             </thead>
             <tbody id="patientTrackTableBody">
                 @forelse ($tracks as $track)
-                    <tr class="patient-track-row" data-search="{{ $track['search_hay'] ?? '' }}">
+                    <tr class="patient-track-row"
+                        data-search="{{ $track['search_hay'] ?? '' }}"
+                        data-stage-key="{{ $track['stage_key'] ?? '' }}"
+                        data-pathway="{{ $track['pathway'] ?? '' }}">
                         <td>
                             <strong>{{ $track['name'] }}</strong>
                             @if (! empty($track['case_no']))
@@ -65,17 +82,24 @@ window.__patientTracksById = @json($tracks->keyBy('id')->all());
                             <span class="patient-track-percent-inline">{{ $track['progress_percent'] }}%</span>
                         </td>
                         <td class="col-actions">
-                            <button type="button"
-                                    class="btn-action primary btn-view-patient-track"
-                                    data-track-id="{{ $track['id'] }}">
-                                📍 عرض المسار
-                            </button>
+                            <div class="patient-track-action-btns">
+                                <button type="button"
+                                        class="btn-action primary btn-view-patient-track"
+                                        data-track-id="{{ $track['id'] }}">
+                                    📍 عرض المسار
+                                </button>
+                                <button type="button"
+                                        class="btn-action btn-view-patient-details"
+                                        data-track-id="{{ $track['id'] }}">
+                                    👤 تفاصيل المريض
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="5" class="patient-track-empty">
-                            ✅ لا يوجد مرضى نشطون في المسار حالياً — تظهر هنا الحالات غير المُسلَّمة ومواعيد الاستقبال والعيادة.
+                            ✅ لا يوجد مرضى مطابقون للفلتر الحالي — يشمل المسار الحالات النشطة والمُسلَّمة.
                         </td>
                     </tr>
                 @endforelse
@@ -110,6 +134,22 @@ window.__patientTracksById = @json($tracks->keyBy('id')->all());
         </div>
         <div class="catalog-modal-footer">
             <button type="button" class="btn-action" id="btnClosePatientTrackModal">إغلاق</button>
+        </div>
+    </div>
+</div>
+
+<div class="catalog-modal-overlay" id="patientDetailsModal" role="dialog" aria-modal="true" aria-labelledby="patientDetailsModalTitle">
+    <div class="catalog-modal patient-details-modal" onclick="event.stopPropagation()">
+        <div class="catalog-modal-header patient-details-modal-header">
+            <div>
+                <h3 id="patientDetailsModalTitle">👤 تفاصيل المريض</h3>
+                <div class="modal-code" id="patientDetailsModalMeta">—</div>
+            </div>
+            <button type="button" class="catalog-modal-close" id="closePatientDetailsModal" aria-label="إغلاق">&times;</button>
+        </div>
+        <div class="catalog-modal-body patient-details-modal-body" id="patientDetailsModalBody"></div>
+        <div class="catalog-modal-footer patient-details-modal-footer">
+            <button type="button" class="btn-action primary" id="btnClosePatientDetailsModal">إغلاق</button>
         </div>
     </div>
 </div>

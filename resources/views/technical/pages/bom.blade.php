@@ -24,14 +24,14 @@
 @endphp
 
 <div id="analytics-bom">
-    @include('partials.dashboard-analytics-empty', ['stats' => $bom_stats ?? []])
+    @include('partials.dashboard-analytics-empty', ['stats' => $bom_stats ?? [], 'hide_charts' => true])
 </div>
 
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="bomWarehouseRoot">
     <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
         <div>
-            <h3 class="font-bold text-slate-800">📋 BOM — خام → تحت التشغيل → تام</h3>
-            <p class="text-xs text-slate-500 mt-1">صرف للورشة بالباركود — مطابقة صارمة مع بنود BOM الخام</p>
+            <h3 class="font-bold text-slate-800">📋 قوائم صرف المواد — خام → تحت التشغيل → تام</h3>
+            <p class="text-xs text-slate-500 mt-1">صرف للورشة بالباركود — مطابقة صارمة مع بنود القائمة</p>
         </div>
         <button type="button" id="btnRefreshBoms"
                 class="rounded-xl bg-wh text-white px-4 py-2 text-sm font-bold hover:bg-wh-dark transition-colors">

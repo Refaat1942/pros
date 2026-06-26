@@ -18,24 +18,24 @@
 
 <div class="panel">
     <div class="panel-header">
-        <h3>📑 العقود والاتفاقيات — تحكم كامل</h3>
+        <h3>📑 موافقات جهات التعاقد — تحكم كامل</h3>
         <span class="badge" id="contractsCount">{{ $contracts->count() }}</span>
     </div>
     <div class="data-toolbar">
-        <input type="text" id="contractSearch" placeholder="🔍 بحث بالمريض أو الجهة أو رقم العقد..." autocomplete="off">
+        <input type="text" id="contractSearch" placeholder="🔍 بحث بالمريض أو الجهة أو رقم الموافقة..." autocomplete="off">
         <select id="contractCompanyFilter" style="padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;">
             <option value="">كل الجهات</option>
             @foreach ($contracts->pluck('company_name')->unique()->sort()->values() as $company)
                 <option value="{{ $company }}">{{ $company }}</option>
             @endforeach
         </select>
-        <span class="toolbar-count" id="contractFilterCount">{{ $contracts->count() }} عقد</span>
+        <span class="toolbar-count" id="contractFilterCount">{{ $contracts->count() }} موافقة</span>
     </div>
     <div class="panel-body">
         <table data-paginate="15">
             <thead>
                 <tr>
-                    <th>رقم العقد</th>
+                    <th>رقم الموافقة</th>
                     <th>المريض</th>
                     <th>الجهة الضامنة</th>
                     <th>المبلغ المعتمد</th>
@@ -101,7 +101,7 @@
                 @empty
                     <tr>
                         <td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">
-                            لا توجد عقود مسجلة حتى الآن.
+                            لا توجد موافقات مسجلة حتى الآن.
                         </td>
                     </tr>
                 @endforelse
@@ -163,7 +163,7 @@
             row.style.display = show ? '' : 'none';
             if (show) visible++;
         });
-        if (countEl) countEl.textContent = visible + ' عقد';
+        if (countEl) countEl.textContent = visible + ' موافقة';
         if (window.TablePagination) TablePagination.refreshById('contractsTable');
     }
 

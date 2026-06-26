@@ -112,9 +112,10 @@ class QuoteVisibilityPipelineTest extends TestCase
             ->assertSee('<svg', false)
             ->assertSee('embed-preview', false);
 
-        // بعد الإصدار + اعتماد الصرف: الحالة تخرج من طابور التشغيل
+        // بعد الإصدار: الحالة تبقى في مكتب التشغيل بانتظار رجوع العميل
         $this->actingAs($ops)
             ->getJson('/operations/pending/list')
-            ->assertJsonPath('total', 0);
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.quote.status', Quote::STATUS_ISSUED);
     }
 }

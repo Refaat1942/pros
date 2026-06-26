@@ -60,16 +60,10 @@ Route::prefix('technical')
                 ->name('quote.print-issue-voucher');
         });
 
-        // ── Return notes (إذن ارتجاع) ──────────────────────────────────────
+        // ── Return notes — استلام المخزن فقط ───────────────────────────────
         Route::middleware('dashboard.page:technical,returns')->group(function () {
             Route::get('returns/list', [ReturnNoteController::class, 'index'])
                 ->name('returns.list');
-
-            Route::get('returns/create', [ReturnNoteController::class, 'create'])
-                ->name('returns.create');
-
-            Route::post('returns', [ReturnNoteController::class, 'store'])
-                ->name('returns.store');
 
             Route::post('returns/{returnNote}/complete', [ReturnNoteController::class, 'complete'])
                 ->name('returns.complete');

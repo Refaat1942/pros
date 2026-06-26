@@ -40,7 +40,7 @@
     if (submitBtn) {
       submitBtn.textContent = isMilitaryPatient(patientType)
         ? '📤 اعتماد وإرسال للتشغيل'
-        : '📤 اعتماد وإرسال للتسعير';
+        : '📤 اعتماد وإرسال';
     }
     var bannerText = $('specSubmittedBannerText');
     if (bannerText) {
@@ -134,14 +134,28 @@
     if (notes) notes.disabled = locked;
   }
 
+  function catalogEntry(code) {
+    return state.catalog.find(function (s) { return s.code === code; });
+  }
+
+  function itemAvailableMax(code) {
+    var entry = catalogEntry(code);
+    return entry ? Math.max(0, parseInt(entry.available_max, 10) || 0) : 0;
+  }
+
+  function clampItemQty(code, qty) {
+    var max = itemAvailableMax(code);
+    if (max <= 0) return 0;
+    return Math.min(max, Math.max(1, parseInt(qty, 10) || 1));
+  }
+
   function mapSpecItems(items) {
     return (items || []).map(function (i) {
-      var cat = state.catalog.find(function (s) { return s.code === i.stock_item_code; });
+      var cat = catalogEntry(i.stock_item_code);
       return {
         stock_item_code: i.stock_item_code,
         name: i.name,
-        qty: i.qty || 1,
-        category: cat ? cat.category : '',
+        qty: clampItemQty(i.stock_item_code, i.qty || 1),
         uom: cat ? cat.uom : '',
       };
     });
@@ -153,32 +167,84 @@
     }
 
     return data.medical_record.items.map(function (i) {
-      var cat = state.catalog.find(function (s) { return s.code === i.stock_item_code; });
+      var cat = catalogEntry(i.stock_item_code);
       return {
         stock_item_code: i.stock_item_code,
         name: i.name,
-        qty: i.qty || 1,
-        category: cat ? cat.category : '',
+        qty: clampItemQty(i.stock_item_code, i.qty || 1),
         uom: cat ? cat.uom : '',
       };
     });
   }
 
-  function syncQtyFromInputs() {
-    var tbody = $('specItemsBody');
-    if (!tbody) return;
-    tbody.querySelectorAll('[data-qty-idx]').forEach(function (input) {
-      var idx = parseInt(input.getAttribute('data-qty-idx'), 10);
-      if (!isNaN(idx) && state.items[idx]) {
-        state.items[idx].qty = Math.max(1, parseInt(input.value, 10) || 1);
+  function validateItemQuantities(items) {
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var max = itemAvailableMax(item.stock_item_code);
+      var label = item.name ? ('«' + item.name + '»') : item.stock_item_code;
+      if (max <= 0) {
+        return {
+          message: 'الصنف ' + label + ' غير متوفر في المخزون حالياً.',
+          item: item,
+        };
       }
+      if (item.qty > max) {
+        return {
+          message: 'الكمية المطلوبة للصنف ' + label + ' غير متاحة — الكمية المتاحة: ' + max + '.',
+          item: item,
+        };
+      }
+    }
+    return null;
+  }
+
+  function readItemsFromInputs() {
+    var tbody = $('specItemsBody');
+    return state.items.map(function (item, idx) {
+      var qty = item.qty || 1;
+      if (tbody) {
+        var input = tbody.querySelector('[data-qty-idx="' + idx + '"]');
+        if (input) {
+          qty = Math.max(1, parseInt(input.value, 10) || 1);
+        }
+      }
+      return {
+        stock_item_code: item.stock_item_code,
+        name: item.name,
+        qty: qty,
+        uom: item.uom,
+      };
+    }).filter(function (item) {
+      return item && item.stock_item_code && item.name;
     });
   }
 
+  function highlightQtyIssue(item) {
+    var tbody = $('specItemsBody');
+    if (!tbody || !item) return;
+    tbody.querySelectorAll('.spec-qty-input').forEach(function (input) {
+      input.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+    });
+    var idx = state.items.findIndex(function (row) {
+      return row.stock_item_code === item.stock_item_code;
+    });
+    if (idx < 0) return;
+    var input = tbody.querySelector('[data-qty-idx="' + idx + '"]');
+    if (input) {
+      input.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+      input.focus();
+      input.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
   function resolveItemsForSubmit() {
-    syncQtyFromInputs();
-    return state.items.filter(function (item) {
-      return item && item.stock_item_code && item.name;
+    return readItemsFromInputs().map(function (item) {
+      return {
+        stock_item_code: item.stock_item_code,
+        name: item.name,
+        qty: clampItemQty(item.stock_item_code, item.qty),
+        uom: item.uom,
+      };
     });
   }
 
@@ -186,27 +252,32 @@
     var tbody = $('specItemsBody');
     if (!tbody) return;
     if (!state.items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">أضف أصنافاً من الكاتلوج</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">أضف أصنافاً من الكاتلوج</td></tr>';
       return;
     }
     tbody.innerHTML = state.items.map(function (item, idx) {
       return '<tr data-idx="' + idx + '">' +
         '<td class="px-4 py-3 font-mono text-xs">' + item.stock_item_code + '</td>' +
         '<td class="px-4 py-3 font-semibold text-slate-800">' + item.name + '</td>' +
-        '<td class="px-4 py-3 text-slate-500">' + (item.category || '—') + '</td>' +
         '<td class="px-4 py-3 text-slate-500">' + (item.uom || '—') + '</td>' +
         '<td class="px-4 py-3"><input type="number" min="1" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
           (state.locked ? 'disabled' : '') +
-          ' class="w-20 rounded-lg border border-slate-200 px-2 py-1 text-center text-sm"></td>' +
+          ' class="spec-qty-input w-20 rounded-lg border border-slate-200 px-2 py-1 text-center text-sm"></td>' +
         '<td class="px-4 py-3 text-center">' +
           (state.locked ? '—' : '<button type="button" data-remove-idx="' + idx + '" class="text-red-500 hover:text-red-700 font-bold">✕</button>') +
         '</td></tr>';
     }).join('');
 
     tbody.querySelectorAll('[data-qty-idx]').forEach(function (input) {
+      input.addEventListener('input', function () {
+        clearError();
+        input.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+      });
       input.addEventListener('change', function () {
         var i = parseInt(input.getAttribute('data-qty-idx'), 10);
-        state.items[i].qty = Math.max(1, parseInt(input.value, 10) || 1);
+        var requested = Math.max(1, parseInt(input.value, 10) || 1);
+        state.items[i].qty = requested;
+        input.value = String(requested);
       });
     });
     tbody.querySelectorAll('[data-remove-idx]').forEach(function (btn) {
@@ -436,8 +507,9 @@
     });
     list.innerHTML = items.map(function (item) {
       var already = state.items.some(function (i) { return i.stock_item_code === item.code; });
+      var unavailable = (parseInt(item.available_max, 10) || 0) <= 0;
       return '<button type="button" data-pick-code="' + item.code + '" ' +
-        (already ? 'disabled' : '') +
+        (already || unavailable ? 'disabled' : '') +
         ' class="w-full text-right px-4 py-3 rounded-xl hover:bg-amber-50 border border-transparent hover:border-amber-200 mb-1 disabled:opacity-40">' +
         '<span class="font-mono text-xs text-slate-500">' + item.code + '</span> ' +
         '<span class="font-bold text-slate-800">' + item.name + '</span>' +
@@ -453,8 +525,7 @@
         state.items.push({
           stock_item_code: item.code,
           name: item.name,
-          qty: 1,
-          category: item.category,
+          qty: clampItemQty(item.code, 1),
           uom: item.uom,
         });
         renderItemsTable();
@@ -488,13 +559,22 @@
     if (submitBtn) submitBtn.addEventListener('click', function () {
       if (state.locked || state.submitting || state.loadingCase) return;
 
-      var items = resolveItemsForSubmit();
+      var items = readItemsFromInputs();
       if (!items.length) {
         showError('أضف بنداً واحداً على الأقل');
         return;
       }
 
-      state.items = items;
+      var qtyErr = validateItemQuantities(items);
+      if (qtyErr) {
+        showError(qtyErr.message);
+        highlightQtyIssue(qtyErr.item);
+        var errBox = $('specFormError');
+        if (errBox) errBox.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+
+      state.items = resolveItemsForSubmit();
 
       var notes = $('techNotes');
       if (window.DashboardValidation && notes) {

@@ -167,7 +167,7 @@
       .then(function (res) {
         state.items = res.data.items || [];
         if (!state.items.length) {
-          toast('لا توجد بنود في BOM', true);
+          toast('لا توجد بنود في القائمة', true);
           return;
         }
         var printLink = $('printIssueVoucherLink');
@@ -184,7 +184,7 @@
         $('dispenseModal').classList.remove('hidden');
         $('barcodeInput') && $('barcodeInput').focus();
       })
-      .catch(function () { toast('تعذّر تحميل BOM', true); });
+      .catch(function () { toast('تعذّر تحميل قائمة المواد', true); });
   }
 
   function closeModal() {
@@ -230,7 +230,7 @@
     }
 
     if (state.scanned.length !== state.items.length) {
-      showAlarm('عدد الباركود (' + state.scanned.length + ') لا يطابق بنود BOM (' + state.items.length + ')');
+      showAlarm('عدد الباركود (' + state.scanned.length + ') لا يطابق بنود القائمة (' + state.items.length + ')');
       return;
     }
 

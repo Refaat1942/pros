@@ -726,10 +726,10 @@
 
     function exportAppointments(type) {
       var data = getFilteredAppointments();
-      var headers = ['التاريخ', 'الوقت', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة', 'الحالة'];
+      var headers = ['التاريخ', 'الوقت', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
       var rows = data.map(function(a) {
         var vt = getVisitMeta(a.visitType);
-        return [a.date, a.time, a.name, vt.label, a.phone, a.company, a.statusLabel];
+        return [a.date, a.time, a.name, vt.label, a.phone, a.company];
       });
       if (type === 'excel') ExportKit.toExcel('مواعيد_' + calendarView.selectedDate.replace(/\//g, '-'), headers, rows);
       else ExportKit.toPDF('مواعيد — ' + calendarView.selectedDate, headers, rows);
@@ -797,10 +797,9 @@
           '<td><span class="visit-tag ' + vt.tagClass + '">' + visitLabel + '</span></td>' +
           '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + a.phone + '</td>' +
           '<td>' + a.company + '</td>' +
-          '<td><span class="status-badge ' + a.status + '">' + a.statusLabel + '</span></td>' +
           '<td>' + getApptActionCell(a) + '</td>' +
           '</tr>';
-      }).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
+      }).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
       var ac = document.getElementById('apptCount');
       if (ac) ac.textContent = filtered.length + ' موعد';
       var ah = document.getElementById('apptHeaderCount');

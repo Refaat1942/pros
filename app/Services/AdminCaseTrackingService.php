@@ -6,6 +6,7 @@ use App\Enums\CaseStage;
 use App\Enums\ManufacturingStage;
 use App\Models\Bom;
 use App\Models\CaseRecord;
+use App\Models\Patient;
 use App\Models\Quote;
 use App\Support\CaseDisplayStatus;
 use App\Support\CaseFinancialSummary;
@@ -24,34 +25,28 @@ class AdminCaseTrackingService
     /** @return array{waiting_return: Collection<int, array>, in_progress: Collection<int, array>, delivered: Collection<int, array>, counts: array{waiting_return: int, in_progress: int, delivered: int}} */
     public function buckets(): array
     {
-        $cases = CaseRecord::query()
-            ->with([
-                'patient:id,name,patient_type',
-                'bom:id,case_id,stage,bom_no',
-                'bom.items:id,bom_id,qty,unit_cost',
-                'pricingRequest:id,case_id,request_no,computed_total',
-                'quotes:id,case_id,status',
-            ])
+        $waiting = $this->waitingReturnCases();
+        $waitingIds = $waiting->pluck('id')->all();
+
+        $progress = CaseRecord::query()
+            ->with($this->caseRelations())
             ->whereIn('stage_key', [
-                CaseRecord::STAGE_OPERATIONS,
                 CaseRecord::STAGE_MANUFACTURING,
                 CaseRecord::STAGE_READY_DELIVERY,
-                CaseRecord::STAGE_DELIVERED,
             ])
+            ->when($waitingIds !== [], fn ($q) => $q->whereNotIn('id', $waitingIds))
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();
 
-        $waiting = $cases
-            ->where('stage_key', CaseRecord::STAGE_OPERATIONS)
-            ->filter(fn (CaseRecord $c) => $c->quotes->contains('status', Quote::STATUS_ISSUED))
-            ->values();
-        $progress = $cases->whereIn('stage_key', [
-            CaseRecord::STAGE_MANUFACTURING,
-            CaseRecord::STAGE_READY_DELIVERY,
-        ])->values();
-        $delivered = $cases->where('stage_key', CaseRecord::STAGE_DELIVERED)->values();
+        $delivered = CaseRecord::query()
+            ->with($this->caseRelations())
+            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
 
         return [
             'waiting_return' => $waiting->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
@@ -62,6 +57,36 @@ class AdminCaseTrackingService
                 'in_progress'    => $progress->count(),
                 'delivered'      => $delivered->count(),
             ],
+        ];
+    }
+
+    /**
+     * نفس منطق استقبال عروض الأسعار: مدني + عرض صادر (issued) ولم يُسلَّم بعد.
+     *
+     * @return Collection<int, CaseRecord>
+     */
+    private function waitingReturnCases(): Collection
+    {
+        return CaseRecord::query()
+            ->with($this->caseRelations())
+            ->where('patient_type', Patient::TYPE_CIVILIAN)
+            ->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED)
+            ->whereHas('quotes', fn ($q) => $q->where('status', Quote::STATUS_ISSUED))
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
+    }
+
+    /** @return list<string|array<string, string>> */
+    private function caseRelations(): array
+    {
+        return [
+            'patient:id,name,patient_type',
+            'bom:id,case_id,stage,bom_no',
+            'bom.items:id,bom_id,qty,unit_cost',
+            'pricingRequest:id,case_id,request_no,computed_total',
+            'quotes:id,case_id,status',
         ];
     }
 

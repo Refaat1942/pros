@@ -157,7 +157,6 @@ class DualPathwayDashboardVisibilityTest extends TestCase
         app(\App\Services\QuoteService::class)->releaseToReception(
             \App\Models\Quote::where('case_id', $case->id)->firstOrFail()
         );
-        app(\App\Services\OperationsService::class)->approve($case->fresh(), 'اختبار');
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 
@@ -240,7 +239,6 @@ class DualPathwayDashboardVisibilityTest extends TestCase
         app(\App\Services\QuoteService::class)->releaseToReception(
             \App\Models\Quote::where('case_id', $case->id)->firstOrFail()
         );
-        app(\App\Services\OperationsService::class)->approve($case->fresh(), 'اختبار');
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 

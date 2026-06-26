@@ -86,7 +86,9 @@
                         @php
                             $bomStage = $case->bom?->stage;
                             $bomMeta  = $bomStage ? ($bomLabels[$bomStage] ?? ['label' => $bomStage, 'cls' => 'bg-slate-100']) : null;
-                            $itemsCount = $case->bom?->items?->count() ?? 0;
+                            $itemsCount = $case->bom?->items?->isNotEmpty()
+                                ? \App\Support\BomItemAggregator::uniqueCodeCount($case->bom->items)
+                                : 0;
                             $isMil = $case->isMilitary();
                         @endphp
                         <tr class="ops-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
@@ -116,7 +118,7 @@
                                             data-patient="{{ $case->patient?->name ?? '—' }}"
                                             data-case-no="{{ $case->case_no }}"
                                             data-work-order="{{ $case->work_order_no ?? '—' }}"
-                                            data-items='@json($case->bom?->items->map(fn ($i) => ["stock_item_code" => $i->stock_item_code, "name" => $i->name, "qty" => $i->qty])->values() ?? [])'>
+                                            data-items='@json(\App\Support\BomItemAggregator::byStockCode($case->bom->items))'>
                                         عرض
                                     </button>
                                 @else

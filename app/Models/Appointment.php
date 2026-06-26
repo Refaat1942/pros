@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ClinicTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -53,6 +54,12 @@ class Appointment extends Model
         }
 
         return $this->transferred_to_clinic ? $this->updated_at : null;
+    }
+
+    /** وقت التحويل للعرض — توقيت المركز (Africa/Cairo). */
+    public function transferredAtFormatted(): string
+    {
+        return ClinicTime::format($this->transferredAt());
     }
 
     /**

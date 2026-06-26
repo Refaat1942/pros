@@ -19,7 +19,7 @@
         <button type="button" class="cases-quick-btn delivered" data-cases-filter="delivered">
           <span class="cq-icon">✅</span>
           <span class="cq-title">تم التسليم</span>
-          <span class="cq-desc">حالات مكتملة — تقرير مالي (تكلفة / مدفوع)</span>
+          <span class="cq-desc">حالات مكتملة — تقرير مالي (إجمالي التكلفة)</span>
           <span class="cq-count" id="casesDeliveredCount">{{ $counts['delivered'] ?? 0 }}</span>
         </button>
       </div>

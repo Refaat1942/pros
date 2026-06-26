@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Enums\WorkflowEvent;
 use App\Models\AppNotification;
+use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Role;
 use App\Models\UserDevice;
@@ -136,6 +137,34 @@ class NotificationService
         }
 
         return $notification;
+    }
+
+    /**
+     * استقبال → عيادة: إشعار الطبيب بمريض جديد في قائمة الانتظار.
+     */
+    public function notifyDoctorClinicTransfer(Appointment $appointment): AppNotification
+    {
+        $appointment->loadMissing('patient:id,name,patient_type');
+
+        $patientName = $appointment->patient_name
+            ?? $appointment->patient?->name
+            ?? 'مريض';
+        $entity = $appointment->displayEntity();
+        $pathway = $appointment->isMilitary() ? 'عسكري' : 'مدني';
+
+        return $this->push(
+            roleSlug: Role::SLUG_DOCTOR,
+            title:    '🩺 مريض جديد في قائمة الانتظار',
+            body:     "تم تحويل المريض {$patientName} ({$entity} — {$pathway}) من الاستقبال — جاهز للكشف.",
+            case:     null,
+            event:    'patient_transferred_to_clinic',
+            data:     [
+                'appointment_id' => (string) $appointment->id,
+                'patient_id'     => (string) ($appointment->patient_id ?? ''),
+                'patient_name'   => $patientName,
+                'url'            => '/doctor/queue',
+            ],
+        );
     }
 
     /**

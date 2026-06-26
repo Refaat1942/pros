@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Bom\ReturnNoteController;
 use App\Http\Controllers\Dashboard\OperationsDashboardController;
 use App\Http\Controllers\Manufacturing\ManufacturingStageController;
 use App\Http\Controllers\Operations\OperationsDeskController;
@@ -64,5 +65,17 @@ Route::prefix('operations')
 
             Route::post('operations/{case}/deliver', [ManufacturingStageController::class, 'deliver'])
                 ->name('operations.deliver');
+        });
+
+        // ── Return requests (طلب ارتجاع مواد → المخزن) ─────────────────────
+        Route::middleware('dashboard.page:operations,returns')->group(function () {
+            Route::get('returns/list', [ReturnNoteController::class, 'index'])
+                ->name('returns.list');
+
+            Route::get('returns/create', [ReturnNoteController::class, 'create'])
+                ->name('returns.create');
+
+            Route::post('returns', [ReturnNoteController::class, 'store'])
+                ->name('returns.store');
         });
     });

@@ -154,7 +154,7 @@ class CivilianQueryChainE2eTest extends TestCase
         $quote->refresh();
         $case->refresh();
         $this->assertEquals(Quote::STATUS_ISSUED, $quote->status);
-        $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
 
         // ── Step 5c: Operations prints quote + OCR approval letter → WO ─────
         $this->actingAs($ops);

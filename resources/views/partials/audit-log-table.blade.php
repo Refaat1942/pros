@@ -52,6 +52,7 @@
         </label>
     </div>
     <button type="submit" class="btn-action primary">تطبيق</button>
+    <button type="button" class="btn-export excel" data-export-audit="#auditListFull" data-export-filename="audit-log">📊 Excel</button>
     <span class="toolbar-count">{{ $auditLogs->total() }} حركة</span>
 </form>
 

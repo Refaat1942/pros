@@ -8,6 +8,7 @@ use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
 use App\Services\DeliveryService;
+use App\Support\BomItemAggregator;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -158,16 +159,20 @@ class ManufacturingStageController extends Controller
     {
         $bom = null;
         if ($case->relationLoaded('bom') && $case->bom) {
+            $aggregated = $case->bom->relationLoaded('items')
+                ? BomItemAggregator::byStockCode($case->bom->items)
+                : [];
+
             $bom = $case->bom->only(['id', 'bom_no', 'stage']) + [
-                'items_count' => $case->bom->relationLoaded('items') ? $case->bom->items->count() : 0,
-                'items'       => $case->bom->relationLoaded('items')
-                    ? $case->bom->items->map(fn ($item) => [
-                        'stock_item_code' => $item->stock_item_code,
-                        'name'            => $item->name,
-                        'qty'             => $item->qty,
-                        'source'          => $item->source,
-                    ])->values()->all()
-                    : [],
+                'items_count' => count($aggregated),
+                'items'       => array_map(
+                    fn (array $item) => [
+                        'stock_item_code' => $item['stock_item_code'],
+                        'name'            => $item['name'],
+                        'qty'             => $item['qty'],
+                    ],
+                    $aggregated
+                ),
             ];
         }
 

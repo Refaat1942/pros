@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CaseStage;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Patient;
@@ -17,16 +18,32 @@ class AdminPatientTrackService
     {
     }
 
-    /** @return Collection<int, array<string, mixed>> */
-    public function list(?string $search = null, int $limit = 100): Collection
+    /** @return list<array{value: string, label: string}> */
+    public static function stageFilterOptions(): array
     {
+        return array_map(
+            fn (CaseStage $stage) => ['value' => $stage->value, 'label' => $stage->label()],
+            CaseStage::cases()
+        );
+    }
+
+    /** @return Collection<int, array<string, mixed>> */
+    public function list(
+        ?string $search = null,
+        ?string $stage = null,
+        ?string $patientType = null,
+        int $limit = 100,
+    ): Collection {
         $term = trim((string) $search);
+        $stageFilter = trim((string) $stage);
+        $typeFilter = trim((string) $patientType);
 
         return Patient::query()
             ->with([
+                'contractCompany:id,name,company_code,is_military',
+                'militaryRank:id,name',
                 'cases' => fn ($q) => $q
                     ->with('quotes:id,case_id,status')
-                    ->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED)
                     ->orderByDesc('id'),
                 'appointments' => fn ($q) => $q
                     ->whereIn('status', [Appointment::STATUS_WAITING, Appointment::STATUS_IN_CLINIC])
@@ -34,23 +51,33 @@ class AdminPatientTrackService
                     ->orderByDesc('appointment_date'),
             ])
             ->where(function (Builder $q) {
-                $q->whereHas('cases', fn (Builder $c) => $c->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED))
+                $q->whereHas('cases')
                     ->orWhereHas('appointments', fn (Builder $a) => $a
                         ->whereIn('status', [Appointment::STATUS_WAITING, Appointment::STATUS_IN_CLINIC])
                         ->where('appointment_date', '<=', now()->toDateString()));
             })
+            ->when($typeFilter === Patient::TYPE_CIVILIAN, fn (Builder $q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
+            ->when($typeFilter === Patient::TYPE_MILITARY, fn (Builder $q) => $q->where('patient_type', Patient::TYPE_MILITARY))
             ->when($term !== '', fn (Builder $q) => $this->applySearch($q, $term))
             ->orderByDesc('updated_at')
             ->limit($limit)
             ->get()
             ->map(fn (Patient $patient) => $this->formatTrack($patient))
+            ->when(
+                $stageFilter !== '',
+                fn (Collection $tracks) => $tracks->filter(
+                    fn (array $track) => ($track['stage_key'] ?? '') === $stageFilter
+                )
+            )
             ->values();
     }
 
     /** @return array<string, mixed> */
     private function formatTrack(Patient $patient): array
     {
-        $activeCase = $patient->cases->first();
+        $activeCase = $patient->cases->first(
+            fn (CaseRecord $case) => $case->stage_key !== CaseRecord::STAGE_DELIVERED
+        ) ?? $patient->cases->first();
         $appointment = $patient->appointments->first();
         $uid = $patient->tracking_uid ?: $activeCase?->tracking_uid;
 
@@ -86,6 +113,7 @@ class AdminPatientTrackService
             'patient_type'     => $patient->patient_type,
             'company_name'     => $patient->displayEntity(),
             'case_no'          => $activeCase?->case_no,
+            'stage_key'        => $this->resolveStageKey($activeCase, $appointment),
             'pathway'          => $tracking['pathway'],
             'pathway_label'    => $tracking['pathway'] === 'military' ? 'عسكري' : 'مدني',
             'stage_label'      => $tracking['stage_label'],
@@ -95,6 +123,59 @@ class AdminPatientTrackService
             'search_hay'       => mb_strtolower(trim(
                 ($patient->name ?? '') . ' ' . ($patient->phone ?? '') . ' ' . ($patient->national_id ?? '')
             )),
+            'patient_details'  => $this->formatPatientDetails($patient, $activeCase, $tracking),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function formatPatientDetails(Patient $patient, ?CaseRecord $activeCase, array $tracking): array
+    {
+        $statusLabels = [
+            Patient::STATUS_ACTIVE   => 'نشط',
+            Patient::STATUS_INACTIVE => 'غير نشط',
+            Patient::STATUS_QUOTED   => 'تم التسعير',
+            Patient::STATUS_DONE     => 'مكتمل',
+        ];
+
+        $cases = $patient->cases->map(fn (CaseRecord $case) => [
+            'case_no'      => $case->case_no,
+            'order_ref'    => $case->order_ref,
+            'stage_key'    => $case->stage_key,
+            'stage_label'  => CaseStage::labelFor($case->stage_key),
+            'patient_type' => $case->patient_type,
+            'delivered_at' => $case->delivered_at?->toDateString(),
+            'created_at'   => $case->created_at?->toDateString(),
+        ])->values()->all();
+
+        return [
+            'id'                  => $patient->id,
+            'patient_code'        => $patient->patient_code,
+            'patient_qr'          => $patient->patient_qr,
+            'tracking_uid'        => $patient->tracking_uid,
+            'name'                => $patient->name,
+            'phone'               => $patient->phone,
+            'national_id'         => $patient->national_id,
+            'patient_type'        => $patient->patient_type,
+            'patient_type_label'  => $patient->isMilitary() ? 'عسكري' : 'مدني',
+            'rank'                => $patient->rank,
+            'sovereign_entity'    => $patient->sovereign_entity,
+            'display_entity'      => $patient->displayEntity(),
+            'company_name'        => $patient->company_name,
+            'company_code'        => $patient->contractCompany?->company_code,
+            'registered_at'       => $patient->registered_at?->toDateString(),
+            'last_visit_at'       => $patient->last_visit_at?->toDateString(),
+            'status'              => $patient->status,
+            'status_label'        => $statusLabels[$patient->status] ?? $patient->status,
+            'current_stage_label' => $tracking['stage_label'] ?? null,
+            'active_case'         => $activeCase ? [
+                'case_no'      => $activeCase->case_no,
+                'order_ref'    => $activeCase->order_ref,
+                'stage_key'    => $activeCase->stage_key,
+                'stage_label'  => CaseStage::labelFor($activeCase->stage_key),
+                'delivered_at' => $activeCase->delivered_at?->toDateString(),
+            ] : null,
+            'cases'               => $cases,
+            'cases_count'         => count($cases),
         ];
     }
 
@@ -160,6 +241,21 @@ class AdminPatientTrackService
             'current_index' => $currentIndex,
             'steps'         => $this->remapStepStatuses($steps, $currentIndex),
         ];
+    }
+
+    private function resolveStageKey(?CaseRecord $case, ?Appointment $appointment): ?string
+    {
+        if ($case) {
+            return $case->stage_key;
+        }
+
+        if (! $appointment) {
+            return null;
+        }
+
+        return $appointment->status === Appointment::STATUS_IN_CLINIC
+            ? CaseRecord::STAGE_EXAM
+            : CaseRecord::STAGE_RECEPTION;
     }
 
     private function applySearch(Builder $query, string $term): void

@@ -143,6 +143,7 @@ return [
             'pending' => ['title' => 'مكتب التشغيل — موافقات وعروض الأسعار', 'icon' => '✅', 'label' => 'موافقات التشغيل'],
             'quotes-awaiting' => ['title' => 'عروض الأسعار — بانتظار موافقة الجهة', 'icon' => '💰', 'label' => 'عروض بانتظار الموافقة'],
             'operations' => ['title' => 'مكتب التشغيل — أوامر الصرف والإنتاج', 'icon' => '🎯', 'label' => 'أوامر التشغيل'],
+            'returns' => ['title' => 'طلبات ارتجاع المواد — ورشة → مخزن', 'icon' => '↩️', 'label' => 'ارتجاع للمخزن'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
@@ -151,6 +152,7 @@ return [
             'assets/js/pages/operations-pending-dashboard.js',
             'assets/js/pages/operations-quotes-awaiting-dashboard.js',
             'assets/js/pages/operations-dashboard.js',
+            'assets/js/pages/operations-returns-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="operations"',
@@ -163,8 +165,8 @@ return [
         'sidebar' => ['icon' => '📦', 'title' => 'لوحة المخزون', 'subtitle' => 'إدارة الأصناف والكميات'],
         'pages' => [
             'inventory' => ['title' => 'المخزون — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزون'],
-            'bom' => ['title' => 'BOM — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'BOM — خام / تشغيل / تام'],
-            'returns' => ['title' => 'إذن ارتجاع', 'icon' => '↩️', 'label' => 'إذن ارتجاع'],
+            'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد للورشة'],
+            'returns' => ['title' => 'استلام ارتجاع المواد — من الورشة', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
@@ -208,7 +210,7 @@ return [
             'returns' => ['title' => 'مراقبة ارتجاع المواد — ورشة → مخزن', 'icon' => '↩️', 'label' => 'ارتجاع المواد'],
             // ── التعاقد والمالية ───────────────────────────────────────────────
             'companies' => ['title' => 'جهات التعاقد', 'icon' => '🏢', 'label' => 'جهات التعاقد'],
-            'contracts' => ['title' => 'العقود والاتفاقيات — أرشيف الاعتمادات المالية', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
+            'contracts' => ['title' => 'موافقات جهات التعاقد — أرشيف الاعتمادات المالية', 'icon' => '📑', 'label' => 'موافقات جهات التعاقد'],
             'military-debts' => ['title' => 'مديونيات الجهات العسكرية', 'icon' => '🪖', 'label' => 'مديونيات عسكرية'],
             // ── الرقابة ────────────────────────────────────────────────────────
             'audit' => ['title' => 'سجل الرقابة الحصين — Immutable Audit Log', 'icon' => '🔒', 'label' => 'سجل الرقابة'],

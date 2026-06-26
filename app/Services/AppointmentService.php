@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\VisitType;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -12,6 +13,9 @@ use Illuminate\Support\Facades\DB;
  */
 class AppointmentService
 {
+    public function __construct(private readonly NotificationService $notifications)
+    {
+    }
     public function book(array $data): Appointment
     {
         return DB::transaction(function () use ($data) {
@@ -78,6 +82,8 @@ class AppointmentService
 
         return DB::transaction(function () use ($appointment, $status) {
             $before = ['status' => $appointment->status];
+            $notifyDoctor = $status === Appointment::STATUS_IN_CLINIC
+                && $before['status'] === Appointment::STATUS_WAITING;
 
             $updates = [
                 'status'                => $status,
@@ -105,7 +111,13 @@ class AppointmentService
                 after:       ['status' => $appointment->status],
             );
 
-            return $appointment->fresh()->load('patient');
+            $appointment = $appointment->fresh()->load('patient');
+
+            if ($notifyDoctor) {
+                $this->notifications->notifyDoctorClinicTransfer($appointment);
+            }
+
+            return $appointment;
         });
     }
 

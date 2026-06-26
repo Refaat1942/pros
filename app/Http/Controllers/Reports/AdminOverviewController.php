@@ -77,7 +77,7 @@ class AdminOverviewController extends Controller
                 ],
             ],
             'case_strip' => [
-                'waiting_return' => CaseRecord::atOperations()->count(),
+                'waiting_return' => app(\App\Services\AdminCaseTrackingService::class)->buckets()['counts']['waiting_return'],
                 'in_progress'    => CaseRecord::whereIn('stage_key', [
                     CaseRecord::STAGE_MANUFACTURING,
                     CaseRecord::STAGE_READY_DELIVERY,
@@ -98,7 +98,11 @@ class AdminOverviewController extends Controller
     public function patientTracksApi(Request $request): JsonResponse
     {
         return response()->json(
-            $this->patientTrackService->list($request->query('search'))->values()
+            $this->patientTrackService->list(
+                search: $request->query('search'),
+                stage: $request->query('stage'),
+                patientType: $request->query('patient_type'),
+            )->values()
         );
     }
 }

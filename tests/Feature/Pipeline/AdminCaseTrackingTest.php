@@ -6,6 +6,7 @@ use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
+use App\Models\Quote;
 use App\Services\AdminCaseTrackingService;
 use App\Services\Dashboard\DashboardPageDataService;
 use Tests\Support\ProstheticTestHelper;
@@ -14,6 +15,51 @@ use Tests\TestCase;
 class AdminCaseTrackingTest extends TestCase
 {
     use ProstheticTestHelper;
+
+    public function test_issued_quote_appears_in_waiting_return_bucket(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->operationsReadyCase($patient);
+        $quote   = Quote::where('case_id', $case->id)->firstOrFail();
+        $ops     = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->postJson("/operations/pending/{$case->id}/release-quote")
+            ->assertOk();
+
+        $buckets = app(AdminCaseTrackingService::class)->buckets();
+
+        $this->assertSame(1, $buckets['counts']['waiting_return']);
+        $row = $buckets['waiting_return']->first();
+        $this->assertSame($patient->name, $row['patient']);
+        $this->assertSame($quote->fresh()->quote_no, $row['quoteId']);
+    }
+
+    public function test_manufacturing_case_with_issued_quote_appears_in_waiting_return_bucket(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['quote_no' => 'QT-TEST-MFG', 'quote_date' => now()->toDateString()]);
+
+        \App\Models\Quote::create([
+            'case_id'       => $case->id,
+            'quote_no'      => 'QT-TEST-MFG',
+            'order_ref'     => $case->order_ref,
+            'patient_name'  => $patient->name,
+            'company_name'  => $case->company_name,
+            'quote_date'    => now()->toDateString(),
+            'status'        => \App\Models\Quote::STATUS_ISSUED,
+            'status_label'  => 'صادر للجهة — بانتظار خطاب الموافقة',
+            'total'         => 1000,
+        ]);
+
+        $buckets = app(AdminCaseTrackingService::class)->buckets();
+
+        $this->assertSame(1, $buckets['counts']['waiting_return']);
+        $this->assertSame(0, $buckets['counts']['in_progress']);
+        $this->assertSame('QT-TEST-MFG', $buckets['waiting_return']->first()['quoteId']);
+    }
 
     public function test_manufacturing_case_appears_in_in_progress_bucket(): void
     {

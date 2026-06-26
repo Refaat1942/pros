@@ -8,6 +8,7 @@ use App\Models\CaseRecord;
 use App\Models\Role;
 use App\Models\UserDevice;
 use App\Services\WorkflowService;
+use Tests\Support\DashboardQueueAssertions;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -19,7 +20,29 @@ use Tests\TestCase;
  */
 class NotificationsFeatureTest extends TestCase
 {
+    use DashboardQueueAssertions;
     use ProstheticTestHelper;
+
+    public function test_reception_transfer_to_clinic_notifies_doctor(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض إشعار الطبيب');
+
+        $this->assertSame(0, AppNotification::forRole(Role::SLUG_DOCTOR)->count());
+
+        $appointment = $this->transferPatientToClinicHttp($recep, $patient);
+
+        $notification = AppNotification::forRole(Role::SLUG_DOCTOR)
+            ->where('event', 'patient_transferred_to_clinic')
+            ->first();
+
+        $this->assertNotNull($notification);
+        $this->assertStringContainsString('مريض إشعار الطبيب', $notification->body);
+        $this->assertStringContainsString('قائمة الانتظار', $notification->title);
+        $this->assertSame((string) $appointment->id, $notification->data['appointment_id'] ?? null);
+    }
 
     public function test_spec_submit_notifies_adjustments_dashboard(): void
     {

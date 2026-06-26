@@ -12,14 +12,28 @@ var ExportKit = (function () {
   function formatDateForExport(val) {
     if (val == null || val === '' || val === '—') return '—';
     var s = String(val).trim();
-    var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (iso) {
-      return '\t' + iso[3] + '/' + iso[2] + '/' + iso[1];
+    var isoDateTime = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (isoDateTime) {
+      var formatted = isoDateTime[3] + '/' + isoDateTime[2] + '/' + isoDateTime[1];
+      if (isoDateTime[4] != null) {
+        formatted += ' ' + isoDateTime[4] + ':' + isoDateTime[5];
+        if (isoDateTime[6] != null) formatted += ':' + isoDateTime[6];
+      }
+      return '\t' + formatted;
     }
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}(\s+\d{1,2}:\d{2}(?::\d{2})?)?$/.test(s)) {
       return '\t' + s;
     }
     return '\t' + s;
+  }
+
+  function sanitizeCellForExcel(text) {
+    var value = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+    if (!value || value === '—') return value || '';
+    if (/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(value)) {
+      return formatDateForExport(value);
+    }
+    return value;
   }
 
   function download(content, filename, mime) {
@@ -124,10 +138,125 @@ var ExportKit = (function () {
     });
   }
 
+  function cellText(cell) {
+    if (!cell) return '';
+    var clone = cell.cloneNode(true);
+    clone.querySelectorAll('button, input, .bulk-checkbox, .rank-drag-handle, .contract-actions, .table-actions').forEach(function (el) {
+      el.remove();
+    });
+    return String(clone.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function shouldSkipHeader(th) {
+    if (!th) return true;
+    if (th.classList.contains('bulk-select-col') || th.classList.contains('rank-drag-col') || th.classList.contains('col-actions')) {
+      return true;
+    }
+    var label = (th.getAttribute('aria-label') || '').trim();
+    if (label.indexOf('سحب') !== -1 || label.indexOf('تحديد') !== -1) return true;
+    return false;
+  }
+
+  /** تصدير جدول HTML — كل الصفوف (بما فيها صفحات الترقيم المخفية). */
+  function fromVisibleTable(selector, options) {
+    options = options || {};
+    var table = typeof selector === 'string' ? document.querySelector(selector) : selector;
+    if (!table) {
+      alert('الجدول غير موجود');
+      return;
+    }
+
+    var thead = table.tHead || table.querySelector('thead');
+    var tbody = table.tBodies[0] || table.querySelector('tbody');
+    if (!thead || !tbody) {
+      alert('لا توجد بيانات للتصدير');
+      return;
+    }
+
+    var headerCells = thead.querySelectorAll('th');
+    var headers = [];
+    var includeIndexes = [];
+    headerCells.forEach(function (th, index) {
+      if (shouldSkipHeader(th)) return;
+      headers.push(String(th.textContent || '').replace(/\s+/g, ' ').trim());
+      includeIndexes.push(index);
+    });
+
+    if (!headers.length) {
+      alert('لا توجد أعمدة للتصدير');
+      return;
+    }
+
+    var rows = [];
+    tbody.querySelectorAll('tr').forEach(function (tr) {
+      if (tr.querySelector('td[colspan]')) return;
+      var cells = tr.querySelectorAll('td');
+      if (!cells.length) return;
+      var row = includeIndexes.map(function (index) {
+        return sanitizeCellForExcel(cellText(cells[index]));
+      });
+      if (row.some(function (value) { return value !== ''; })) {
+        rows.push(row);
+      }
+    });
+
+    toExcel(options.filename || 'export', headers, rows);
+  }
+
+  function fromAuditList(selector, options) {
+    options = options || {};
+    var container = typeof selector === 'string' ? document.querySelector(selector) : selector;
+    if (!container) {
+      alert('لا توجد بيانات للتصدير');
+      return;
+    }
+
+    var headers = ['الوقت', 'المستخدم', 'الوصف', 'العملية'];
+    var rows = [];
+    container.querySelectorAll('.audit-item').forEach(function (item) {
+      var descEl = item.querySelector('.audit-desc');
+      var user = item.querySelector('.audit-desc strong');
+      var desc = descEl ? descEl.textContent.replace((user && user.textContent) || '', '').replace(/—/g, ' ').replace(/\s+/g, ' ').trim() : '';
+      rows.push([
+        sanitizeCellForExcel(cellText(item.querySelector('.audit-time'))),
+        user ? user.textContent.trim() : '',
+        desc,
+        cellText(item.querySelector('.audit-tag')),
+      ]);
+    });
+
+    toExcel(options.filename || 'audit-log', headers, rows);
+  }
+
+  function fromPermissions(filename) {
+    var roleName = document.getElementById('permRoleBannerName');
+    var role = roleName ? roleName.textContent.trim() : 'الدور';
+    var headers = ['الدور', 'اللوحة', 'الصلاحية', 'مفعّل'];
+    var rows = [];
+
+    document.querySelectorAll('.perm-visible-cb').forEach(function (cb) {
+      var card = cb.closest('.perm-card');
+      var dashboard = card ? card.querySelector('.perm-card-title') : null;
+      var label = cb.closest('.perm-toggle');
+      var permLabel = label ? label.querySelector('.perm-toggle-text strong') : null;
+      rows.push([
+        role,
+        dashboard ? dashboard.textContent.trim() : '—',
+        permLabel ? permLabel.textContent.trim() : (cb.getAttribute('data-slug') || '—'),
+        cb.checked ? 'نعم' : 'لا',
+      ]);
+    });
+
+    toExcel(filename || 'permissions', headers, rows);
+  }
+
   return {
     toExcel: toExcel,
     toPDF: toPDF,
     filterItems: filterItems,
-    formatDateForExport: formatDateForExport
+    formatDateForExport: formatDateForExport,
+    fromVisibleTable: fromVisibleTable,
+    fromAuditList: fromAuditList,
+    fromPermissions: fromPermissions,
   };
 })();

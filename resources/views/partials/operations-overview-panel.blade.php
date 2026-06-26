@@ -47,7 +47,9 @@
                     @php
                         $bomStage   = $case->bom?->stage;
                         $bomMeta    = $bomStage ? ($bomLabels[$bomStage] ?? ['label' => $bomStage, 'class' => 'ops-badge']) : null;
-                        $itemsCount = $case->bom?->items?->count() ?? 0;
+                        $itemsCount = $case->bom?->items?->isNotEmpty()
+                            ? \App\Support\BomItemAggregator::uniqueCodeCount($case->bom->items)
+                            : 0;
                         $isMil      = $case->isMilitary();
                     @endphp
                     <tr>
@@ -69,7 +71,23 @@
                             @endif
                             <div class="ops-case-no">{{ $mfgLabels[$case->manufacturing_stage] ?? ($case->manufacturing_stage ?? '—') }}</div>
                         </td>
-                        <td style="text-align:center;font-weight:700">{{ $itemsCount }}</td>
+                        <td style="text-align:center">
+                            @if ($itemsCount > 0)
+                                @php
+                                    $bomItemsJson = \App\Support\BomItemAggregator::byStockCode($case->bom->items);
+                                @endphp
+                                <button type="button"
+                                        class="btn-action ops-overview-bom-btn"
+                                        data-patient="{{ $case->patient?->name ?? '—' }}"
+                                        data-case-no="{{ $case->case_no }}"
+                                        data-work-order="{{ $case->work_order_no ?? '—' }}"
+                                        data-items='@json($bomItemsJson)'>
+                                    عرض
+                                </button>
+                            @else
+                                <span class="ops-muted">—</span>
+                            @endif
+                        </td>
                         <td>
                             @if ($bomStage === 'finished')
                                 <span class="ops-badge ops-badge--done">جاهز للتسليم</span>
@@ -89,5 +107,32 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+</div>
+
+<div class="catalog-modal-overlay" id="opsOverviewBomModal" role="dialog" aria-modal="true" aria-labelledby="opsOverviewBomTitle">
+    <div class="catalog-modal" onclick="event.stopPropagation()">
+        <div class="catalog-modal-header">
+            <div>
+                <h3 id="opsOverviewBomTitle">📦 بنود أمر التشغيل</h3>
+                <div class="modal-code" id="opsOverviewBomSubtitle">—</div>
+            </div>
+            <button type="button" class="catalog-modal-close" id="opsOverviewBomClose" aria-label="إغلاق">&times;</button>
+        </div>
+        <div class="catalog-modal-body" style="padding-top:0;">
+            <table class="data-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>الكود</th>
+                        <th>الصنف</th>
+                        <th style="text-align:center;width:72px;">الكمية</th>
+                    </tr>
+                </thead>
+                <tbody id="opsOverviewBomBody"></tbody>
+            </table>
+        </div>
+        <div class="catalog-modal-footer">
+            <button type="button" class="btn-action" id="opsOverviewBomCloseBtn">إغلاق</button>
+        </div>
     </div>
 </div>

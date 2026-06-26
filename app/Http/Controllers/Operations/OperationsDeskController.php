@@ -101,10 +101,10 @@ class OperationsDeskController extends Controller
 
         $quote = Quote::where('case_id', $case->id)->orderByDesc('id')->firstOrFail();
         $quote = $this->quoteService->releaseToReception($quote);
-        $case  = $this->operationsService->approve($case->fresh(), Auth::user()?->name);
+        $case  = $case->fresh();
 
         return response()->json([
-            'message' => 'تم إصدار عرض السعر للاستقبال — حُجزت المواد وحُوّلت الحالة للمخزن.',
+            'message' => 'تم إصدار عرض السعر للاستقبال — بانتظار رجوع العميل بخطاب الموافقة.',
             'quote'   => [
                 'id'           => $quote->id,
                 'quote_no'     => $quote->quote_no,
@@ -185,7 +185,7 @@ class OperationsDeskController extends Controller
         }
 
         if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
-            return 'بمكتب التشغيل';
+            return 'بانتظار رجوع العميل';
         }
 
         return $case->stage_key;

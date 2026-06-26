@@ -9,6 +9,7 @@ use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Services\DoctorTransferService;
 use App\Services\MedicalRecordService;
+use App\Support\ClinicTime;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -229,7 +230,10 @@ class MedicalRecordController extends Controller
             'transferred_to_clinic_at',
         ]) + [
             'display_entity' => $appointment->displayEntity(),
-            'transferred_at' => $appointment->transferredAt()?->toIso8601String(),
+            'transferred_at' => $appointment->transferredAt()
+                ? $appointment->transferredAt()->copy()->timezone(ClinicTime::zone())->toIso8601String()
+                : null,
+            'transferred_at_formatted' => $appointment->transferredAtFormatted(),
             'wait_label'     => $appointment->receptionWaitLabel(),
             'patient'        => $appointment->relationLoaded('patient') && $appointment->patient
                 ? $appointment->patient->only(['id', 'patient_code', 'name', 'national_id', 'patient_type', 'company_name', 'sovereign_entity'])

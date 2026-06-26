@@ -10,7 +10,7 @@
     </div> -->
     <ul class="nav-menu">
       <li><a href="#" class="active" data-section="inventory"><span class="nav-icon">📦</span> المخزون</a></li>
-      <li><a href="#" data-section="bom"><span class="nav-icon">📋</span> BOM — خام / تشغيل / تام</a></li>
+      <li><a href="#" data-section="bom"><span class="nav-icon">📋</span> صرف المواد للورشة</a></li>
       <li><a href="#" data-section="returns"><span class="nav-icon">↩️</span> إذن ارتجاع</a></li>
     </ul>
 
@@ -150,7 +150,7 @@
 
     <!-- BOM Section -->
     <div class="section-view" id="section-bom">
-      <div id="analytics-bom">@include('partials.dashboard-analytics-empty', ['stats' => [
+      <div id="analytics-bom">@include('partials.dashboard-analytics-empty', ['hide_charts' => true, 'stats' => [
         ['icon' => '📦', 'label' => 'خام', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
         ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
         ['icon' => '✅', 'label' => 'تام', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
@@ -158,7 +158,7 @@
       ]])</div>
       <div class="panel inventory-wrap">
         <div class="panel-header">
-          <h3>📋 قائمة المواد (BOM) — خام → تحت التشغيل → تام</h3>
+          <h3>📋 قوائم صرف المواد — خام → تحت التشغيل → تام</h3>
           <span class="badge" id="bomBadge">0 قوائم</span>
         </div>
 
@@ -182,7 +182,7 @@
           <table data-paginate="10" class="bom-table">
             <thead>
               <tr>
-                <th>رقم BOM</th>
+                <th>رقم القائمة</th>
                 <th>المريض</th>
                 <th>أمر التشغيل</th>
                 <th>المرحلة</th>

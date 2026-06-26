@@ -74,7 +74,7 @@
                 </td>
                 <td>{{ $entity }}</td>
                 <td><span class="wait-time">{{ $appt->receptionWaitLabel() }}</span></td>
-                <td>{{ $appt->transferredAt()?->format('d/m/Y H:i') ?? '—' }}</td>
+                <td>{{ $appt->transferredAtFormatted() }}</td>
                 <td>
                   <a href="{{ $diagnosisUrl }}" class="btn-action" onclick="event.stopPropagation()">
                     📝 فحص

@@ -111,9 +111,8 @@ class OperationsPendingDeskTest extends TestCase
         $case->refresh();
         $item->refresh();
 
-        $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
-        $this->assertEquals(CaseRecord::MFG_WAREHOUSE, $case->manufacturing_stage);
-        $this->assertGreaterThan(0, (int) $item->reserved);
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
+        $this->assertEquals(0, (int) $item->reserved);
 
         $this->actingAs($recep)
             ->getJson('/reception/quote/list')

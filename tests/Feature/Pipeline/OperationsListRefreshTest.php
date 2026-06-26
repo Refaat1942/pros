@@ -70,6 +70,43 @@ class OperationsListRefreshTest extends TestCase
             ->assertJsonPath('data.0.bom.items.0.qty', 2);
     }
 
+    public function test_operations_list_merges_duplicate_bom_item_codes(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $this->stockItem('RM-002', qty: 10);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('operations');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0102']);
+
+        $this->actingAs($user);
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+            ['stock_item_code' => 'RM-002', 'qty' => 1],
+        ]);
+
+        \App\Models\BomItem::create([
+            'bom_id'          => $bom->id,
+            'stock_item_code' => 'RM-002',
+            'name'            => 'مكوّن إضافي',
+            'source'          => \App\Models\BomItem::SOURCE_ADJUSTMENT,
+            'qty'             => 1,
+            'unit_cost'       => 0,
+            'issued_qty'      => 0,
+            'returned_qty'    => 0,
+        ]);
+
+        app(BomService::class)->releaseToWip($bom->fresh(['items']), ['BC-RM-001', 'BC-RM-002']);
+
+        $this->getJson('/operations/operations/list')
+            ->assertOk()
+            ->assertJsonCount(2, 'data.0.bom.items')
+            ->assertJsonPath('data.0.bom.items.1.stock_item_code', 'RM-002')
+            ->assertJsonPath('data.0.bom.items.1.qty', 2);
+    }
+
     public function test_operations_list_includes_manufacturing_completed_summary(): void
     {
         $this->seedStockWithPriceBatch();

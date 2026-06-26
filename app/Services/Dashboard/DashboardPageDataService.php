@@ -213,11 +213,18 @@ class DashboardPageDataService
 
     private function adminPatientTracks(): array
     {
-        $tracks = app(AdminPatientTrackService::class)->list(request()->query('search'));
+        $tracks = app(AdminPatientTrackService::class)->list(
+            search: request()->query('search'),
+            stage: request()->query('stage'),
+            patientType: request()->query('patient_type'),
+        );
 
         return [
-            'patient_tracks' => $tracks,
-            'track_search'   => request()->query('search', ''),
+            'patient_tracks'       => $tracks,
+            'track_search'         => request()->query('search', ''),
+            'track_stage'          => request()->query('stage', ''),
+            'track_patient_type'   => request()->query('patient_type', ''),
+            'track_stage_options'  => AdminPatientTrackService::stageFilterOptions(),
         ];
     }
 
@@ -645,7 +652,7 @@ class DashboardPageDataService
             'contracts'    => $contracts,
             'is_admin'     => $isAdmin,
             'contracts_stats' => [
-                ['icon' => '📑', 'label' => 'إجمالي العقود', 'value' => (string) $contracts->count(), 'bg' => 'rgba(124,58,237,0.1)'],
+                ['icon' => '📑', 'label' => $isAdmin ? 'إجمالي الموافقات' : 'إجمالي العقود', 'value' => (string) $contracts->count(), 'bg' => 'rgba(124,58,237,0.1)'],
                 ['icon' => '💰', 'label' => 'إجمالي المبالغ', 'value' => number_format($totalAmount, 0), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📅', 'label' => 'هذا الشهر', 'value' => (string) $contracts->filter(fn ($c) => $c->approval_date?->isCurrentMonth())->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '📎', 'label' => 'لها مستندات', 'value' => (string) $contracts->filter(fn ($c) => $c->letter_path)->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],

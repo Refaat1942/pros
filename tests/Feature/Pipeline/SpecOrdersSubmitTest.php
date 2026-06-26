@@ -198,4 +198,57 @@ class SpecOrdersSubmitTest extends TestCase
         $this->assertStringNotContainsString('!DashboardValidation.validateField', $js);
         $this->assertStringContainsString("axios.post('/spec/spec/' + state.specId + '/submit')", $js);
     }
+
+    public function test_spec_rejects_quantity_above_available_stock(): void
+    {
+        $this->stockItem('ITM-003', qty: 5);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $doctor  = $this->userWithRole('doctor');
+        $spec    = $this->userWithRole('spec');
+
+        $this->actingAs($doctor);
+
+        $record = MedicalRecord::create([
+            'patient_id'     => $patient->id,
+            'patient_name'   => $patient->name,
+            'patient_type'   => $patient->patient_type,
+            'diagnosis'      => 'بتر فوق الركبة',
+            'doctor_name'    => $doctor->name,
+            'record_date'    => now()->toDateString(),
+            'status'         => MedicalRecord::STATUS_DRAFT,
+            'locked'         => false,
+        ]);
+
+        MedicalRecordItem::create([
+            'medical_record_id' => $record->id,
+            'stock_item_code'   => 'ITM-003',
+            'name'              => 'قدم Carbon Spring',
+            'qty'               => 1,
+        ]);
+
+        app(\App\Services\MedicalRecordService::class)->lock($record);
+
+        $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
+
+        $draft = TechOrderSpec::create([
+            'order_ref'    => $case->order_ref,
+            'case_id'      => $case->id,
+            'patient_name' => $patient->name,
+            'company_name' => $case->company_name,
+            'doctor_name'  => $doctor->name,
+            'locked'       => false,
+        ]);
+
+        $this->actingAs($spec)
+            ->putJson("/spec/spec/{$draft->id}", [
+                'tech_notes' => 'كمية زائدة',
+                'items'      => [
+                    ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => 900],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'الكمية المطلوبة للصنف «قدم Carbon Spring» غير متاحة — الكمية المتاحة: 5.']);
+    }
 }

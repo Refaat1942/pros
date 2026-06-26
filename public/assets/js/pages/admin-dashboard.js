@@ -353,13 +353,13 @@
       var hintEl = document.getElementById('casesPanelHint');
       if (hintEl) {
         if (casesFilter === 'waiting_return') {
-          hintEl.innerHTML = 'العميل خرج من المركز بـ <strong>عرض سعر رسمي</strong> (QR) — العمود «رقم عرض السعر» هو الوثيقة المطبوعة. «مرجع التسعير» يربط الطلب بخطوة حساب التكلفة وموافقة الأدمن.';
-          hintEl.style.display = 'block';
+          hintEl.innerHTML = '';
+          hintEl.style.display = 'none';
         } else if (casesFilter === 'in_progress') {
           hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/الورشة. التسليم للمريض يتم بعد BOM «تام» فقط.';
           hintEl.style.display = 'block';
         } else {
-          hintEl.innerHTML = 'تقرير مالي: إجمالي التكلفة والمدفوع للحالات المسلّمة.';
+          hintEl.innerHTML = 'تقرير مالي: إجمالي التكلفة للحالات المسلّمة.';
           hintEl.style.display = 'block';
         }
       }
@@ -403,19 +403,18 @@
             '</tr>';
         }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       } else {
-        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>المدفوع</th><th>تاريخ التسليم</th>' + pipelineCol + viewCol + '</tr>';
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>إجمالي التكلفة</th><th>تاريخ التسليم</th>' + pipelineCol + viewCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
             '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
             '<td>' + c.company + '</td>' +
             '<td class="pricing-total-cell">' + CasesWorkflow.formatMoney(c.totalCost) + '</td>' +
-            '<td style="color:#059669;font-weight:700">' + CasesWorkflow.formatMoney(c.paid) + '</td>' +
             '<td>' + (c.deliveredAt || '—') + '</td>' +
             '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
             caseViewCell(c.id) +
             '</tr>';
-        }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
+        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
       }
 
       refreshPaginated('casesTableBody');
@@ -438,9 +437,9 @@
         });
       } else {
         title = 'تقرير الحالات المسلّمة';
-        headers = ['المريض', 'جهة التعاقد', 'إجمالي التكلفة', 'المدفوع', 'تاريخ التسليم'];
+        headers = ['المريض', 'جهة التعاقد', 'إجمالي التكلفة', 'تاريخ التسليم'];
         rows = filtered.map(function(c) {
-          return [c.patient, c.company, c.totalCost, c.paid, ExportKit.formatDateForExport(c.deliveredAt)];
+          return [c.patient, c.company, c.totalCost, ExportKit.formatDateForExport(c.deliveredAt)];
         });
       }
       if (type === 'excel') ExportKit.toExcel('cases-' + casesFilter, headers, rows);
@@ -1270,23 +1269,26 @@
 
     function exportEmployees(type) {
       var tbody = document.getElementById('employeesTableFull') || document.getElementById('employeesTable');
-      var headers = ['الاسم', 'الدور', 'الحالة', 'آخر دخول'];
+      var headers = ['الاسم', 'البريد', 'الدور', 'الحالة', 'آخر دخول'];
       var rows = [];
       if (tbody && tbody.dataset.serverRendered === '1') {
         tbody.querySelectorAll('tr').forEach(function(row) {
           if (row.style.display === 'none') return;
           var cells = row.querySelectorAll('td');
-          if (cells.length < 4) return;
+          if (cells.length < 5) return;
+          var offset = row.querySelector('.bulk-checkbox, input[type="checkbox"]') ? 1 : 0;
+          if (cells.length < offset + 5) return;
           rows.push([
-            (cells[0].querySelector('strong') || cells[0]).textContent.trim(),
-            cells[1].textContent.trim(),
-            cells[2].textContent.trim(),
-            cells[3].textContent.trim()
+            (cells[offset].querySelector('strong') || cells[offset]).textContent.trim(),
+            cells[offset + 1].textContent.trim(),
+            cells[offset + 2].textContent.trim(),
+            cells[offset + 3].textContent.trim(),
+            ExportKit.formatDateForExport(cells[offset + 4].textContent.trim())
           ]);
         });
       } else {
         rows = getFilteredEmployees().map(function(e) {
-          return [e.name, e.roleLabel, e.status === 'active' ? 'نشط' : 'غير نشط', e.lastLogin];
+          return [e.name, e.email || '—', e.roleLabel, e.status === 'active' ? 'نشط' : 'غير نشط', ExportKit.formatDateForExport(e.lastLogin)];
         });
       }
       if (type === 'excel') ExportKit.toExcel('الموظفون', headers, rows);
@@ -1584,6 +1586,64 @@
 
 
 
+    function bindOpsOverviewBomModal() {
+      var table = document.getElementById('opsOverviewTable');
+      var modal = document.getElementById('opsOverviewBomModal');
+      if (!table || !modal) return;
+
+      function closeModal() {
+        modal.classList.remove('open');
+      }
+
+      function openModal(btn) {
+        var patient = btn.getAttribute('data-patient') || '—';
+        var caseNo = btn.getAttribute('data-case-no') || '—';
+        var wo = btn.getAttribute('data-work-order') || '—';
+        var items = [];
+
+        try {
+          items = JSON.parse(btn.getAttribute('data-items') || '[]');
+        } catch (e) {
+          items = [];
+        }
+
+        var subtitle = document.getElementById('opsOverviewBomSubtitle');
+        var tbody = document.getElementById('opsOverviewBomBody');
+
+        if (subtitle) subtitle.textContent = patient + ' · ' + caseNo + ' · ' + wo;
+
+        if (tbody) {
+          if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد بنود.</td></tr>';
+          } else {
+            tbody.innerHTML = items.map(function (item) {
+              return '<tr>' +
+                '<td style="font-family:monospace;font-size:12px;color:#64748b">' + escapeHtml(item.stock_item_code) + '</td>' +
+                '<td style="font-weight:600">' + escapeHtml(item.name || item.stock_item_code) + '</td>' +
+                '<td style="text-align:center;font-weight:700">' + escapeHtml(item.qty) + '</td>' +
+                '</tr>';
+            }).join('');
+          }
+        }
+
+        modal.classList.add('open');
+      }
+
+      table.addEventListener('click', function (e) {
+        var btn = e.target.closest('.ops-overview-bom-btn');
+        if (btn) openModal(btn);
+      });
+
+      ['opsOverviewBomClose', 'opsOverviewBomCloseBtn'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('click', closeModal);
+      });
+
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+      });
+    }
+
     var activePage = document.body.dataset.activePage || '';
 
     function safePageInit(fn) {
@@ -1595,6 +1655,7 @@
     safePageInit(renderCasesSection);
     safePageInit(bindCaseDetailModal);
     safePageInit(renderOverviewCasesCounts);
+    safePageInit(bindOpsOverviewBomModal);
     safePageInit(renderCompanies);
     safePageInit(renderEmployees);
     safePageInit(renderDebts);
@@ -1629,8 +1690,11 @@
     (function bindPatientTrack() {
       var btn = document.getElementById('patientTrackRefresh');
       var searchInput = document.getElementById('patientTrackSearch');
+      var stageFilter = document.getElementById('patientTrackStageFilter');
+      var typeFilter = document.getElementById('patientTrackTypeFilter');
       var tbody = document.getElementById('patientTrackTableBody');
       var modal = document.getElementById('patientTrackModal');
+      var detailsModal = document.getElementById('patientDetailsModal');
       if (!tbody && !searchInput) return;
 
       if (!window.__patientTracksById) window.__patientTracksById = {};
@@ -1666,6 +1730,45 @@
         return parts.length ? parts.join('') : '—';
       }
 
+      function detailBox(label, value, opts) {
+        opts = opts || {};
+        if (value == null || value === '') return '';
+        var valueClass = 'dv' + (opts.mono ? ' mono' : '') + (opts.ok ? ' ok' : '');
+        return '<div class="catalog-detail-box">'
+          + '<div class="dl">' + escHtml(label) + '</div>'
+          + '<div class="' + valueClass + '">' + escHtml(String(value)) + '</div>'
+          + '</div>';
+      }
+
+      function detailSection(title, boxesHtml, extraClass) {
+        if (!boxesHtml) return '';
+        return '<section class="pd-section' + (extraClass ? ' ' + extraClass : '') + '">'
+          + '<h4 class="pd-section-title">' + title + '</h4>'
+          + '<div class="catalog-detail-grid">' + boxesHtml + '</div>'
+          + '</section>';
+      }
+
+      function detailSectionRaw(title, contentHtml, extraClass) {
+        if (!contentHtml) return '';
+        return '<section class="pd-section' + (extraClass ? ' ' + extraClass : '') + '">'
+          + '<h4 class="pd-section-title">' + title + '</h4>'
+          + contentHtml
+          + '</section>';
+      }
+
+      function formatDetailDate(value) {
+        if (!value) return '';
+        var m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? (m[3] + '/' + m[2] + '/' + m[1]) : value;
+      }
+
+      function actionButtonsHtml(trackId) {
+        return '<div class="patient-track-action-btns">'
+          + '<button type="button" class="btn-action primary btn-view-patient-track" data-track-id="' + escHtml(trackId) + '">📍 عرض المسار</button>'
+          + '<button type="button" class="btn-action btn-view-patient-details" data-track-id="' + escHtml(trackId) + '">👤 تفاصيل المريض</button>'
+          + '</div>';
+      }
+
       function rowHtml(track) {
         var pathway = track.pathway === 'military' ? 'military' : 'civilian';
         var pathwayLabel = track.pathway === 'military' ? '🪖 عسكري' : '🌐 مدني';
@@ -1673,14 +1776,96 @@
         if (track.case_no) subLines += '<div class="patient-track-cell-sub">' + escHtml(track.case_no) + '</div>';
         if (track.company_name) subLines += '<div class="patient-track-cell-sub">' + escHtml(track.company_name) + '</div>';
 
-        return '<tr class="patient-track-row" data-search="' + escHtml(track.search_hay || '') + '">'
+        return '<tr class="patient-track-row" data-search="' + escHtml(track.search_hay || '') + '"'
+          + ' data-stage-key="' + escHtml(track.stage_key || '') + '"'
+          + ' data-pathway="' + escHtml(pathway) + '">'
           + '<td><strong>' + escHtml(track.name || '—') + '</strong>' + subLines + '</td>'
           + '<td><span class="patient-type-badge ' + pathway + '">' + pathwayLabel + '</span></td>'
           + '<td class="patient-track-contact">' + contactHtml(track) + '</td>'
           + '<td><span class="patient-track-stage-inline">' + escHtml(track.stage_label || '—') + '</span>'
           + '<span class="patient-track-percent-inline">' + (track.progress_percent || 0) + '%</span></td>'
-          + '<td class="col-actions"><button type="button" class="btn-action primary btn-view-patient-track" data-track-id="' + escHtml(track.id) + '">📍 عرض المسار</button></td>'
+          + '<td class="col-actions">' + actionButtonsHtml(track.id) + '</td>'
           + '</tr>';
+      }
+
+      function openPatientDetailsModal(track) {
+        if (!detailsModal || !track) return;
+
+        var details = track.patient_details || {};
+        var titleEl = document.getElementById('patientDetailsModalTitle');
+        var metaEl = document.getElementById('patientDetailsModalMeta');
+        var bodyEl = document.getElementById('patientDetailsModalBody');
+        var pathway = track.pathway === 'military' ? 'military' : 'civilian';
+        var pathwayLabel = track.pathway === 'military' ? '🪖 عسكري' : '🌐 مدني';
+        var patientName = details.name || track.name || '—';
+        var stageLabel = details.current_stage_label || track.stage_label || '—';
+
+        if (titleEl) titleEl.textContent = 'تفاصيل المريض';
+        if (metaEl) metaEl.textContent = details.patient_code ? ('رقم المريض: ' + details.patient_code) : '—';
+
+        var contactBoxes = ''
+          + detailBox('الهاتف', details.phone || track.phone, { mono: true })
+          + detailBox('الرقم القومي', details.national_id || track.national_id, { mono: true });
+
+        var entityBoxes = pathway === 'military'
+          ? detailBox('الجهة السيادية', details.sovereign_entity || details.display_entity)
+            + detailBox('الرتبة', details.rank)
+          : detailBox('جهة التعاقد', details.company_name || details.display_entity || track.company_name)
+            + detailBox('كود الجهة', details.company_code, { mono: true });
+
+        var fileBoxes = ''
+          + detailBox('تاريخ التسجيل', formatDetailDate(details.registered_at))
+          + detailBox('آخر زيارة', formatDetailDate(details.last_visit_at))
+          + detailBox('حالة الملف', details.status_label, { ok: details.status === 'active' })
+          + detailBox('كود التتبع', details.tracking_uid || details.patient_qr, { mono: true })
+          + detailBox('عدد الحالات', details.cases_count);
+
+        var activeBoxes = '';
+        if (details.active_case) {
+          activeBoxes = detailBox('رقم الحالة', details.active_case.case_no, { mono: true })
+            + detailBox('رقم الطلب', details.active_case.order_ref, { mono: true })
+            + detailBox('مرحلة الحالة', details.active_case.stage_label);
+        }
+
+        var casesHtml = '';
+        if (details.cases && details.cases.length) {
+          casesHtml = detailSectionRaw('📋 سجل الحالات',
+            '<div class="pd-table-wrap"><table class="patient-details-cases-table"><thead><tr>'
+            + '<th>رقم الحالة</th><th>الطلب</th><th>المرحلة</th><th>التسليم</th></tr></thead><tbody>'
+            + details.cases.map(function (c) {
+              return '<tr><td class="mono">' + escHtml(c.case_no || '—') + '</td>'
+                + '<td class="mono">' + escHtml(c.order_ref || '—') + '</td>'
+                + '<td>' + escHtml(c.stage_label || '—') + '</td>'
+                + '<td>' + escHtml(formatDetailDate(c.delivered_at) || '—') + '</td></tr>';
+            }).join('')
+            + '</tbody></table></div>',
+            'pd-section--muted');
+        }
+
+        if (bodyEl) {
+          bodyEl.innerHTML = '<div class="pd-hero">'
+            + '<div class="pd-hero-main">'
+            + '<span class="pd-avatar" aria-hidden="true">👤</span>'
+            + '<div><p class="pd-name">' + escHtml(patientName) + '</p>'
+            + '<p class="pd-code">' + escHtml(details.patient_code || '—') + '</p></div>'
+            + '</div>'
+            + '<div class="pd-hero-badges">'
+            + '<span class="patient-type-badge ' + pathway + '">' + escHtml(details.patient_type_label || pathwayLabel) + '</span>'
+            + '<span class="pd-stage-pill">📍 ' + escHtml(stageLabel) + '</span>'
+            + '</div></div>'
+            + detailSection('📞 بيانات التواصل', contactBoxes)
+            + detailSection('🏢 ' + (pathway === 'military' ? 'الجهة والرتبة' : 'جهة التعاقد'), entityBoxes)
+            + detailSection('📁 الملف والتتبع', fileBoxes, 'pd-section--muted')
+            + (activeBoxes ? detailSection('⚡ الحالة النشطة', activeBoxes, 'pd-section--highlight') : '')
+            + casesHtml
+            || '<p class="patient-details-empty">لا توجد تفاصيل لهذا المريض.</p>';
+        }
+
+        detailsModal.classList.add('open');
+      }
+
+      function closePatientDetailsModal() {
+        if (detailsModal) detailsModal.classList.remove('open');
       }
 
       function openTrackModal(track) {
@@ -1736,37 +1921,73 @@
 
       if (tbody) {
         tbody.addEventListener('click', function (event) {
-          var button = event.target.closest('.btn-view-patient-track');
-          if (!button) return;
-          var track = resolveTrack(button);
-          if (track) openTrackModal(track);
+          var trackButton = event.target.closest('.btn-view-patient-track');
+          if (trackButton) {
+            var track = resolveTrack(trackButton);
+            if (track) openTrackModal(track);
+            return;
+          }
+          var detailsButton = event.target.closest('.btn-view-patient-details');
+          if (detailsButton) {
+            var detailsTrack = resolveTrack(detailsButton);
+            if (detailsTrack) openPatientDetailsModal(detailsTrack);
+          }
         });
       }
 
       function applyPatientTrackFilter() {
         var term = (searchInput && searchInput.value || '').toLowerCase().trim();
+        var stage = stageFilter ? stageFilter.value : '';
+        var pathway = typeFilter ? typeFilter.value : '';
         var rows = tbody ? tbody.querySelectorAll('.patient-track-row') : [];
         var visible = 0;
 
         rows.forEach(function (row) {
           var hay = row.getAttribute('data-search') || '';
-          var show = !term || hay.indexOf(term) !== -1;
+          var rowStage = row.getAttribute('data-stage-key') || '';
+          var rowPathway = row.getAttribute('data-pathway') || '';
+          var show = (!term || hay.indexOf(term) !== -1)
+            && (!stage || rowStage === stage)
+            && (!pathway || rowPathway === pathway);
           row.style.display = show ? '' : 'none';
           if (show) visible++;
         });
 
         var countEl = document.getElementById('patientTrackFilterCount');
         if (countEl) {
-          countEl.textContent = term
+          countEl.textContent = (term || stage || pathway)
             ? (visible + ' من ' + rows.length + ' مريض')
             : (rows.length + ' مريض');
         }
       }
 
+      function patientTrackQueryParams() {
+        var params = new URLSearchParams();
+        var search = searchInput ? searchInput.value.trim() : '';
+        var stage = stageFilter ? stageFilter.value : '';
+        var pathway = typeFilter ? typeFilter.value : '';
+        if (search) params.set('search', search);
+        if (stage) params.set('stage', stage);
+        if (pathway) params.set('patient_type', pathway);
+        return params.toString();
+      }
+
       if (searchInput) {
         searchInput.addEventListener('input', applyPatientTrackFilter);
-        applyPatientTrackFilter();
       }
+      if (stageFilter) {
+        stageFilter.addEventListener('change', function () {
+          applyPatientTrackFilter();
+          if (btn) btn.click();
+        });
+      }
+      if (typeFilter) {
+        typeFilter.addEventListener('change', function () {
+          applyPatientTrackFilter();
+          if (btn) btn.click();
+        });
+      }
+      applyPatientTrackFilter();
 
       var closeBtn = document.getElementById('closePatientTrackModal');
       var closeFooterBtn = document.getElementById('btnClosePatientTrackModal');
@@ -1778,14 +1999,24 @@
         });
       }
 
+      var closeDetailsBtn = document.getElementById('closePatientDetailsModal');
+      var closeDetailsFooterBtn = document.getElementById('btnClosePatientDetailsModal');
+      if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closePatientDetailsModal);
+      if (closeDetailsFooterBtn) closeDetailsFooterBtn.addEventListener('click', closePatientDetailsModal);
+      if (detailsModal) {
+        detailsModal.addEventListener('click', function (e) {
+          if (e.target === detailsModal) closePatientDetailsModal();
+        });
+      }
+
       if (!btn) return;
 
       btn.addEventListener('click', function () {
         btn.disabled = true;
         var seg = window.location.pathname.split('/').filter(Boolean);
         var prefix = '/' + (seg[0] || 'admin');
-        var search = searchInput ? encodeURIComponent(searchInput.value.trim()) : '';
-        var url = prefix + '/patient-tracks/list' + (search ? ('?search=' + search) : '');
+        var query = patientTrackQueryParams();
+        var url = prefix + '/patient-tracks/list' + (query ? ('?' + query) : '');
 
         fetch(url, {
           headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
@@ -1793,14 +2024,14 @@
           .then(function (r) { return r.json(); })
           .then(function (data) {
             var badge = document.getElementById('patientTrackBadge');
-            if (badge) badge.textContent = data.length + ' مريض نشط';
+            if (badge) badge.textContent = data.length + ' مريض';
 
             syncTrackCache(data);
 
             if (!tbody) return;
 
             if (!data.length) {
-              tbody.innerHTML = '<tr><td colspan="5" class="patient-track-empty">✅ لا يوجد مرضى نشطون في المسار حالياً.</td></tr>';
+              tbody.innerHTML = '<tr><td colspan="5" class="patient-track-empty">✅ لا يوجد مرضى مطابقون للفلتر الحالي.</td></tr>';
             } else {
               tbody.innerHTML = data.map(rowHtml).join('');
               if (window.TablePagination) TablePagination.refreshById('patientTrackTableBody');
@@ -1812,5 +2043,112 @@
           .finally(function () {
             btn.disabled = false;
           });
+      });
+    })();
+
+    (function bindAdminExcelExports() {
+      document.addEventListener('click', function (event) {
+        var tableBtn = event.target.closest('[data-export-table]');
+        if (tableBtn && window.ExportKit && ExportKit.fromVisibleTable) {
+          event.preventDefault();
+          ExportKit.fromVisibleTable(tableBtn.getAttribute('data-export-table'), {
+            filename: tableBtn.getAttribute('data-export-filename') || 'export',
+          });
+          return;
+        }
+
+        var auditBtn = event.target.closest('[data-export-audit]');
+        if (auditBtn && window.ExportKit && ExportKit.fromAuditList) {
+          event.preventDefault();
+          ExportKit.fromAuditList(auditBtn.getAttribute('data-export-audit'), {
+            filename: auditBtn.getAttribute('data-export-filename') || 'audit-log',
+          });
+          return;
+        }
+
+        var permBtn = event.target.closest('[data-export-permissions]');
+        if (permBtn && window.ExportKit && ExportKit.fromPermissions) {
+          event.preventDefault();
+          ExportKit.fromPermissions(permBtn.getAttribute('data-export-filename') || 'permissions');
+        }
+      });
+
+      function slugifyFilename(text) {
+        return String(text || 'export')
+          .replace(/[^\w\u0600-\u06FF]+/g, '_')
+          .replace(/^_+|_+$/g, '')
+          .slice(0, 48) || 'export';
+      }
+
+      function panelHasExport(panel) {
+        return !!panel.querySelector('.btn-export.excel, [data-export-table], [data-export-audit], [data-export-permissions], a[href*="export"]');
+      }
+
+      function makeExportButton(table, filename) {
+        if (!table.id) {
+          table.id = 'admin-export-table-' + Math.random().toString(36).slice(2, 9);
+        }
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-export excel';
+        btn.setAttribute('data-export-table', '#' + table.id);
+        btn.setAttribute('data-export-filename', filename);
+        btn.textContent = '📊 Excel';
+        return btn;
+      }
+
+      function injectTableExport(host, table, filename) {
+        if (!table || !host) return;
+        if (host.querySelector('[data-export-table="' + '#' + table.id + '"]')) return;
+
+        var toolbar = host.querySelector('.data-toolbar');
+        var btn = makeExportButton(table, filename);
+        var wrap = document.createElement('div');
+        wrap.className = 'export-btns';
+        wrap.appendChild(btn);
+
+        if (toolbar) {
+          var count = toolbar.querySelector('.toolbar-count');
+          if (count) toolbar.insertBefore(wrap, count);
+          else toolbar.appendChild(wrap);
+          return;
+        }
+
+        var header = host.querySelector('.panel-header, .bi-card-head');
+        if (header) {
+          var actions = header.querySelector('.patient-track-actions, .perm-header-actions');
+          if (actions) actions.insertBefore(btn, actions.firstChild);
+          else header.appendChild(wrap);
+          return;
+        }
+
+        if (host.classList.contains('report-card')) {
+          var title = host.querySelector('h4');
+          if (title) {
+            title.insertAdjacentElement('afterend', wrap);
+          }
+        }
+      }
+
+      document.querySelectorAll('.panel, .bi-card, .ops-overview-panel, .report-card').forEach(function (panel) {
+        if (panelHasExport(panel)) return;
+
+        panel.querySelectorAll('table').forEach(function (table) {
+          if (!table.querySelector('thead')) return;
+          if (table.closest('.perm-hidden-matrix, .catalog-modal, #patientTrackModal')) return;
+
+          var heading = panel.querySelector('h3, h4');
+          var filename = slugifyFilename(heading ? heading.textContent : 'export');
+          var biWrap = table.closest('.bi-table-wrap');
+          if (biWrap) {
+            var sectionTitle = biWrap.previousElementSibling;
+            if (sectionTitle && sectionTitle.classList.contains('bi-section-title') && !sectionTitle.querySelector('[data-export-table]')) {
+              sectionTitle.appendChild(makeExportButton(table, slugifyFilename(sectionTitle.textContent)));
+            }
+            return;
+          }
+
+          injectTableExport(panel, table, filename);
+        });
       });
     })();

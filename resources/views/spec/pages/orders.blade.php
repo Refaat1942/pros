@@ -105,7 +105,6 @@
                         <tr>
                             <th class="px-4 py-3 text-right font-bold">الكود</th>
                             <th class="px-4 py-3 text-right font-bold">الصنف</th>
-                            <th class="px-4 py-3 text-right font-bold">الفئة</th>
                             <th class="px-4 py-3 text-right font-bold">الوحدة</th>
                             <th class="px-4 py-3 text-right font-bold w-28">الكمية</th>
                             <th class="px-4 py-3 text-center font-bold w-20">حذف</th>

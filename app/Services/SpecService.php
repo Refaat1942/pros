@@ -185,6 +185,8 @@ class SpecService
      */
     private function syncItems(TechOrderSpec $spec, array $items): void
     {
+        $this->validateItemQuantities($items);
+
         $spec->items()->delete();
 
         foreach ($items as $item) {
@@ -199,13 +201,32 @@ class SpecService
 
     private function validateStockCodes(TechOrderSpec $spec): void
     {
-        $codes = $spec->items->pluck('stock_item_code')->filter()->unique();
+        $this->validateItemQuantities($spec->items->map(fn ($i) => [
+            'stock_item_code' => $i->stock_item_code,
+            'qty'             => $i->qty,
+        ])->all());
+    }
 
-        $existing = StockItem::whereIn('code', $codes)->pluck('code');
+    /**
+     * @param  list<array{stock_item_code: string, qty: int}>  $items
+     */
+    private function validateItemQuantities(array $items): void
+    {
+        foreach ($items as $item) {
+            $code = $item['stock_item_code'] ?? '';
+            $qty  = (int) ($item['qty'] ?? 0);
 
-        foreach ($codes as $code) {
-            if (! $existing->contains($code)) {
+            $stock = StockItem::where('code', $code)->first();
+
+            if (! $stock) {
                 throw new InvalidSpecItemException($code);
+            }
+
+            $available = $stock->availableQty();
+
+            if ($qty > $available) {
+                $name = $item['name'] ?? $stock->name ?? $code;
+                abort(422, "الكمية المطلوبة للصنف «{$name}» غير متاحة — الكمية المتاحة: {$available}.");
             }
         }
     }

@@ -26,8 +26,14 @@ class ReturnNoteController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $inboxOnly = $request->boolean('inbox');
+
         $notes = $this->fetchForDashboard(
             ReturnNote::with(['bom:id,bom_no', 'lines'])
+                ->when($inboxOnly, fn ($q) => $q->whereIn('status', [
+                    ReturnNote::STATUS_AUTHORIZED,
+                    ReturnNote::STATUS_PARTIAL,
+                ]))
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('return_no', 'like', "%{$s}%")
@@ -103,7 +109,7 @@ class ReturnNoteController extends Controller
         );
 
         return response()->json([
-            'message' => 'تم إنشاء إذن الارتجاع.',
+            'message' => 'تم إرسال طلب الارتجاع للمخزن — بانتظار الاستلام.',
             'note'    => $this->formatNote($note),
         ], 201);
     }
@@ -119,7 +125,7 @@ class ReturnNoteController extends Controller
         );
 
         return response()->json([
-            'message' => 'تم إتمام الارتجاع.',
+            'message' => 'تم تأكيد استلام المواد المرتجعة.',
             'note'    => $this->formatNote($note),
         ]);
     }

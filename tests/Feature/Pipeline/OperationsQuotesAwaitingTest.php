@@ -22,7 +22,6 @@ class OperationsQuotesAwaitingTest extends TestCase
         $ops = $this->userWithRole('operations');
 
         app(QuoteService::class)->releaseToReception($quote);
-        app(OperationsService::class)->approve($case->fresh(), 'اختبار');
 
         $response = $this->actingAs($ops)
             ->getJson('/operations/quotes-awaiting/list')
@@ -30,7 +29,7 @@ class OperationsQuotesAwaitingTest extends TestCase
 
         $response->assertJsonPath('data.0.quote_no', $quote->fresh()->quote_no);
         $response->assertJsonPath('data.0.status', Quote::STATUS_ISSUED);
-        $response->assertJsonPath('data.0.stage_label', 'بانتظار موافقة الجهة');
+        $response->assertJsonPath('data.0.stage_label', 'بانتظار رجوع العميل');
     }
 
     public function test_pending_internal_quotes_not_in_awaiting_list(): void
@@ -84,7 +83,6 @@ class OperationsQuotesAwaitingTest extends TestCase
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
 
         app(QuoteService::class)->releaseToReception($quote);
-        app(OperationsService::class)->approve($case->fresh(), 'اختبار');
 
         $service = app(\App\Services\Dashboard\DashboardQueueService::class);
 
