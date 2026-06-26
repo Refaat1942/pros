@@ -39,7 +39,7 @@
                     id="email"
                     name="email"
                     value="{{ old('email') }}"
-                    placeholder="example@clinic.local"
+                    placeholder="example@clinic.com"
                     autocomplete="email"
                     class="{{ $errors->has('email') ? 'is-invalid' : '' }}"
                     autofocus

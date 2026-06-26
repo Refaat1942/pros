@@ -116,7 +116,8 @@ class DashboardPageDataService
     {
         return [
             'military_ranks' => MilitaryRank::query()
-                ->orderByDesc('id')
+                ->orderBy('sort_order')
+                ->orderBy('name')
                 ->get(),
         ];
     }
@@ -681,8 +682,8 @@ class DashboardPageDataService
             'notifications_stats'  => [
                 ['icon' => '🔔', 'label' => 'إجمالي الإشعارات', 'value' => (string) $base->count(), 'bg' => 'rgba(37,99,235,0.1)', 'color' => '#2563eb'],
                 ['icon' => '📬', 'label' => 'غير مقروء', 'value' => (string) $unread, 'bg' => 'rgba(220,38,38,0.1)', 'color' => '#dc2626'],
-                ['icon' => '📅', 'label' => 'اليوم', 'value' => (string) $today, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669'],
-                ['icon' => '📄', 'label' => 'هذه الصفحة', 'value' => (string) $notifications->count(), 'bg' => 'rgba(100,116,139,0.1)'],
+                // ['icon' => '📅', 'label' => 'اليوم', 'value' => (string) $today, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669'],
+                // ['icon' => '📄', 'label' => 'هذه الصفحة', 'value' => (string) $notifications->count(), 'bg' => 'rgba(100,116,139,0.1)'],
             ],
         ];
     }

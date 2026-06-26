@@ -38,7 +38,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * ربط المستخدم بدور لوحة تحكم — يُنشئ email ثابت: {slug}@clinic.local
+     * ربط المستخدم بدور لوحة تحكم — يُنشئ email ثابت: {slug}@clinic.com
      */
     public function forRole(string $slug): static
     {
@@ -60,7 +60,7 @@ class UserFactory extends Factory
 
             return [
                 'role_id' => $role->id,
-                'email'   => "{$slug}@clinic.local",
+                'email'   => "{$slug}@clinic.com",
                 'name'    => $role->label_ar,
             ];
         });

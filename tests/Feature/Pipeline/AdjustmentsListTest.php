@@ -212,7 +212,31 @@ class AdjustmentsListTest extends TestCase
                 ],
             ])
             ->assertStatus(422)
-            ->assertJsonPath('message', 'الصنف غير موجود: 52132');
+            ->assertJsonPath('message', 'الصنف المختار غير موجود في المخزون.');
+    }
+
+    public function test_adding_item_with_qty_above_available_returns_error(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $this->stockItem('RM-002', qty: 2);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('adjustments');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [
+                    ['stock_item_code' => 'RM-002', 'name' => 'مكوّن مستشار', 'qty' => 5],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'الكمية المطلوبة (5) تتجاوز المتاح للصنف RM-002 — الحد الأقصى: 2.']);
     }
 
     private function seedStockWithPriceBatch(): void

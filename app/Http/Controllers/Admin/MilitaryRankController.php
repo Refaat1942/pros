@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ReorderMilitaryRanksRequest;
 use App\Http\Requests\Admin\StoreMilitaryRankRequest;
 use App\Http\Requests\Admin\UpdateMilitaryRankRequest;
 use App\Models\MilitaryRank;
@@ -11,6 +12,7 @@ use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * إدارة الرتب العسكرية — يختار منها الاستقبال عند تسجيل المريض العسكري.
@@ -38,7 +40,8 @@ class MilitaryRankController extends Controller
                     $request->search,
                     fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
                 )
-                ->orderByDesc('id')
+                ->orderBy('sort_order')
+                ->orderBy('name')
         );
 
         return response()->json([
@@ -57,7 +60,7 @@ class MilitaryRankController extends Controller
         $rank = MilitaryRank::create([
             'name'       => $data['name'],
             'rank_code'  => null,
-            'sort_order' => $data['sort_order'] ?? 0,
+            'sort_order' => (int) (MilitaryRank::max('sort_order') ?? 0) + 10,
         ]);
 
         AuditService::log(
@@ -119,5 +122,28 @@ class MilitaryRankController extends Controller
         );
 
         return response()->json(['message' => 'تم حذف الرتبة بنجاح.']);
+    }
+
+    /**
+     * حفظ ترتيب الرتب بعد السحب والإفلات.
+     */
+    public function reorder(ReorderMilitaryRanksRequest $request): JsonResponse
+    {
+        $ids = $request->validated('ids');
+
+        DB::transaction(function () use ($ids) {
+            foreach ($ids as $index => $id) {
+                MilitaryRank::whereKey($id)->update(['sort_order' => ($index + 1) * 10]);
+            }
+        });
+
+        AuditService::log(
+            action:      'update',
+            description: 'إعادة ترتيب الرتب العسكرية',
+            tag:         'admin',
+            after:       ['order' => $ids],
+        );
+
+        return response()->json(['message' => 'تم حفظ الترتيب بنجاح.']);
     }
 }

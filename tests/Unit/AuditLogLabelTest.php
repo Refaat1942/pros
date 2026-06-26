@@ -9,8 +9,8 @@ class AuditLogLabelTest extends TestCase
 {
     public function test_translates_common_auth_actions(): void
     {
-        $this->assertSame('تسجيل دخول · مصادقة', AuditLogLabel::badge('login', 'auth'));
-        $this->assertSame('تسجيل خروج · مصادقة', AuditLogLabel::badge('logout', 'auth'));
+        $this->assertSame('تسجيل دخول', AuditLogLabel::badge('login', 'auth'));
+        $this->assertSame('تسجيل خروج', AuditLogLabel::badge('logout', 'auth'));
     }
 
     public function test_translates_financial_update(): void

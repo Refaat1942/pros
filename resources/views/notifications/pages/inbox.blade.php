@@ -99,7 +99,6 @@
             <div class="notif-empty-state">
                 <div class="notif-empty-icon">🔕</div>
                 <h4>لا توجد إشعارات{{ $filter === 'unread' ? ' غير مقروءة' : '' }}</h4>
-                <p>ستظهر هنا إشعارات FCM والتدفق بين اللوحات عند وصول حالة جديدة للوحة.</p>
             </div>
         @endif
     </div>

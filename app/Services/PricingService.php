@@ -41,6 +41,7 @@ class PricingService
             if ($case->pricing_request_id) {
                 $existing = PricingRequest::with('items')->find($case->pricing_request_id);
                 if ($existing) {
+                    $this->syncItemsFromBom($case, $existing);
                     $this->calculate($existing);
 
                     return $existing->fresh()->load('items');
@@ -89,6 +90,31 @@ class PricingService
 
             return $pricingRequest->fresh()->load('items');
         });
+    }
+
+    /**
+     * مزامنة بنود طلب التسعير مع BOM النهائي (فني + معدلات).
+     */
+    public function syncItemsFromBom(CaseRecord $case, PricingRequest $request): void
+    {
+        $bom = Bom::with('items')->where('case_id', $case->id)->first();
+
+        if (! $bom || $bom->items->isEmpty()) {
+            abort(422, 'لا توجد قائمة مواد (BOM) لاحتساب تكلفتها.');
+        }
+
+        $request->items()->delete();
+
+        foreach ($bom->items as $item) {
+            PricingRequestItem::create([
+                'pricing_request_id' => $request->id,
+                'stock_item_code'    => $item->stock_item_code,
+                'name'               => $item->name,
+                'qty'                => $item->qty,
+            ]);
+        }
+
+        $request->update(['items_count' => $bom->items->count()]);
     }
 
     /**

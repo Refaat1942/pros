@@ -49,6 +49,32 @@ class StockImportService
     }
 
     /**
+     * يصدّر الأصناف الحالية بنفس أعمدة القالب (للتعديل وإعادة الرفع).
+     *
+     * @param  iterable<int, array<string, mixed>>  $items  عناصر من StockCatalogService::formatItem
+     */
+    public function exportContents(iterable $items): string
+    {
+        $rows = [self::HEADERS];
+
+        foreach ($items as $item) {
+            $rows[] = [
+                (string) ($item['code'] ?? ''),
+                (string) ($item['name'] ?? ''),
+                (string) ((int) ($item['qty'] ?? 0)),
+                $this->formatPriceColumn($item),
+            ];
+        }
+
+        $out = "\xEF\xBB\xBF";
+        foreach ($rows as $row) {
+            $out .= $this->toCsvLine($row);
+        }
+
+        return $out;
+    }
+
+    /**
      * يستورد ملف CSV ويعيد ملخص العملية.
      *
      * @return array{created:int, updated:int, skipped:int, errors:list<string>}
@@ -340,5 +366,34 @@ class StockImportService
         }, $row);
 
         return implode(',', $escaped) . "\r\n";
+    }
+
+    /** @param  array<string, mixed>  $item */
+    private function formatPriceColumn(array $item): string
+    {
+        $parts = [];
+        $main  = (float) ($item['price'] ?? 0);
+
+        if ($main > 0) {
+            $parts[] = $this->formatAmount($main);
+        }
+
+        foreach ($item['prices'] ?? [] as $row) {
+            $amount = (float) ($row['amount'] ?? 0);
+            if ($amount > 0) {
+                $parts[] = $this->formatAmount($amount);
+            }
+        }
+
+        return $parts !== [] ? implode(';', $parts) : '0';
+    }
+
+    private function formatAmount(float $value): string
+    {
+        if (fmod($value, 1.0) === 0.0) {
+            return (string) (int) $value;
+        }
+
+        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
     }
 }

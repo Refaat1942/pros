@@ -167,6 +167,16 @@ class BomService
                     abort(422, "الصنف غير موجود: {$code}");
                 }
 
+                $alreadyInBom = (int) $bom->items
+                    ->where('stock_item_code', $code)
+                    ->sum('qty');
+
+                $maxAllowed = $stockItem->availableQty() - $alreadyInBom;
+
+                if ($qty > $maxAllowed) {
+                    abort(422, "الكمية المطلوبة ({$qty}) تتجاوز المتاح للصنف {$code} — الحد الأقصى: ".max(0, $maxAllowed).'.');
+                }
+
                 BomItem::create([
                     'bom_id'          => $bom->id,
                     'stock_item_code' => $code,

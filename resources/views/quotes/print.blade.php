@@ -232,8 +232,14 @@
         }
 
         .pricing-table .col-spec {
-            width: 48%;
+            width: 38%;
             text-align: right;
+        }
+
+        .pricing-table .col-code {
+            width: 12%;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
         }
 
         .pricing-table .col-amount {
@@ -241,7 +247,7 @@
         }
 
         .pricing-table .col-remarks {
-            width: 18%;
+            width: 14%;
         }
 
         .pricing-table .sub-head {
@@ -415,6 +421,7 @@
         <thead>
             <tr>
                 <th class="col-spec" rowspan="2">المواصفات</th>
+                <th class="col-code" rowspan="2">كود الصنف</th>
                 <th class="col-amount" colspan="2">المبلغ</th>
                 <th class="col-remarks" rowspan="2">ملاحظات</th>
             </tr>
@@ -433,14 +440,16 @@
                 @endphp
                 <tr>
                     <td class="col-spec">{{ $specLabel }}</td>
+                    <td class="col-code">{{ $item->stock_item_code ?? '' }}</td>
                     <td class="num">{{ str_pad((string) $lineSplit['piasters'], 2, '0', STR_PAD_LEFT) }}</td>
                     <td class="num">{{ number_format($lineSplit['pounds']) }}</td>
-                    <td>{{ $item->stock_item_code ?? '' }}</td>
+                    <td>&nbsp;</td>
                 </tr>
             @endforeach
             @for ($i = 0; $i < $emptyRows; $i++)
                 <tr>
                     <td class="col-spec">&nbsp;</td>
+                    <td class="col-code">&nbsp;</td>
                     <td class="num">&nbsp;</td>
                     <td class="num">&nbsp;</td>
                     <td>&nbsp;</td>
@@ -448,6 +457,7 @@
             @endfor
             <tr>
                 <td class="total-label">الإجمالي</td>
+                <td class="col-code">&nbsp;</td>
                 <td class="num">{{ $totalFmt['piasters'] }}</td>
                 <td class="num">{{ $totalFmt['pounds'] }}</td>
                 <td>&nbsp;</td>

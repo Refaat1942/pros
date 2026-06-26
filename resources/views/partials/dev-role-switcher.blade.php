@@ -50,7 +50,7 @@
                         @csrf
                         <button type="submit"
                                 class="dev-role-switcher__btn{{ $isActive ? ' is-active' : '' }}"
-                                title="{{ $meta['label'] }} — {{ $slug }}@clinic.local">
+                                title="{{ $meta['label'] }} — {{ $slug }}@clinic.com">
                             <span class="dev-role-switcher__icon" aria-hidden="true">{{ $icons[$slug] ?? '👤' }}</span>
                             <span>{{ $meta['label'] }}</span>
                         </button>

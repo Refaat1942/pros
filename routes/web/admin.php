@@ -78,6 +78,9 @@ Route::prefix('admin')
             ->middleware('can:import-inventory')
             ->name('catalog.template');
 
+        Route::get('catalog/export', [StockCatalogController::class, 'export'])
+            ->name('catalog.export');
+
         Route::post('catalog/import', [StockCatalogController::class, 'import'])
             ->middleware('can:import-inventory')
             ->name('catalog.import');
@@ -120,6 +123,9 @@ Route::prefix('admin')
         // ── Military Ranks — JSON API (الصفحة Blade: GET admin/military-ranks) ──
         Route::get('military-ranks/list', [MilitaryRankController::class, 'index'])
             ->name('military-ranks.list');
+
+        Route::post('military-ranks/reorder', [MilitaryRankController::class, 'reorder'])
+            ->name('military-ranks.reorder');
 
         Route::post('military-ranks', [MilitaryRankController::class, 'store'])
             ->name('military-ranks.store');

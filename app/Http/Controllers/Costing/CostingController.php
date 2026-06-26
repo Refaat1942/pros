@@ -70,7 +70,11 @@ class CostingController extends Controller
 
         $pricing = $case->pricingRequest;
 
-        if ($pricing && (float) $pricing->computed_total <= 0) {
+        if ($pricing && $case->bom) {
+            $this->pricingService->syncItemsFromBom($case, $pricing);
+            $this->pricingService->refreshLinePrices($pricing);
+            $pricing->refresh()->load('items');
+        } elseif ($pricing && (float) $pricing->computed_total <= 0) {
             $this->pricingService->refreshLinePrices($pricing);
             $pricing->refresh()->load('items');
         }

@@ -158,7 +158,7 @@
 
   function releaseQuote(caseId, btn) {
     if (!caseId || !window.axios) return;
-    if (!window.confirm('إصدار عرض السعر للاستقبال؟ سيظهر في قسم عروض الأسعار لدى الاستقبال.')) return;
+    if (!window.confirm('إصدار عرض السعر للمريض.')) return;
 
     if (btn) btn.disabled = true;
     axios.post(RELEASE_URL(caseId))

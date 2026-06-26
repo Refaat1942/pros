@@ -133,6 +133,21 @@ class StockCatalogController extends Controller
     }
 
     /**
+     * تصدير الأصناف الحالية إلى CSV (متوافق مع القالب والرفع الجماعي).
+     */
+    public function export(StockImportService $importService): StreamedResponse
+    {
+        $contents = $importService->exportContents($this->catalogService->listForDashboard());
+        $filename = 'stock-items-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($contents) {
+            echo $contents;
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
      * الرفع الجماعي بالإكسيل/CSV — upsert حسب الكود.
      */
     public function import(Request $request, StockImportService $importService): RedirectResponse|JsonResponse

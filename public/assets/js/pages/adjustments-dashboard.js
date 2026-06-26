@@ -21,6 +21,8 @@
   var catalogCache = [];
   var activeCase = null;
   var refreshInFlight = false;
+  var pickerOpen = false;
+  var pickerSearchQuery = '';
 
   function $(id) { return document.getElementById(id); }
 
@@ -72,6 +74,149 @@
 
   function bomItemsOf(c) {
     return (c.bom && c.bom.items) || [];
+  }
+
+  function catalogItemAvailable(item) {
+    if (!item) return 0;
+    if (item.available != null) return Math.max(0, parseInt(item.available, 10) || 0);
+    return Math.max(0, (parseInt(item.qty, 10) || 0) - (parseInt(item.reserved, 10) || 0));
+  }
+
+  function qtyAlreadyInBom(code) {
+    if (!activeCase || !code) return 0;
+    return bomItemsOf(activeCase)
+      .filter(function (it) { return it.stock_item_code === code; })
+      .reduce(function (sum, it) { return sum + (parseInt(it.qty, 10) || 0); }, 0);
+  }
+
+  function maxAddableQty(catalogItem) {
+    return Math.max(0, catalogItemAvailable(catalogItem) - qtyAlreadyInBom(catalogItem.code));
+  }
+
+  function findCatalogItem(code) {
+    return catalogCache.filter(function (i) { return i.code === code; })[0] || null;
+  }
+
+  function getSelectedItemCode() {
+    var el = $('adjItemValue');
+    return el ? el.value : '';
+  }
+
+  function setSelectedItemCode(code) {
+    var hidden = $('adjItemValue');
+    var label = $('adjItemPickerLabel');
+    if (hidden) hidden.value = code || '';
+    var item = code ? findCatalogItem(code) : null;
+    if (label) {
+      label.textContent = item ? (item.code + ' — ' + item.name) : '— اختر الصنف —';
+    }
+    syncItemQtyLimits();
+  }
+
+  function renderItemPickerList() {
+    var list = $('adjItemPickerList');
+    if (!list) return;
+
+    var q = pickerSearchQuery.trim().toLowerCase();
+    var items = catalogCache.filter(function (item) {
+      if (!q) return true;
+      return (item.code + ' ' + item.name).toLowerCase().indexOf(q) !== -1;
+    });
+
+    if (!items.length) {
+      list.innerHTML = '<li class="adj-picker-empty">لا توجد نتائج</li>';
+      return;
+    }
+
+    var selectedCode = getSelectedItemCode();
+    list.innerHTML = items.map(function (item) {
+      var maxQty = maxAddableQty(item);
+      var disabled = maxQty < 1;
+      var selected = selectedCode === item.code;
+      var label = item.code + ' — ' + item.name;
+
+      if (disabled) {
+        return '<li class="adj-picker-option is-disabled" aria-disabled="true">' +
+          esc(label) + ' <span class="adj-picker-muted">(غير متاح)</span></li>';
+      }
+
+      return '<li class="adj-picker-option' + (selected ? ' is-selected' : '') + '" role="option"' +
+        ' data-code="' + esc(item.code) + '" tabindex="0">' + esc(label) + '</li>';
+    }).join('');
+  }
+
+  function refreshItemPicker() {
+    var previous = getSelectedItemCode();
+    if (previous && findCatalogItem(previous) && maxAddableQty(findCatalogItem(previous)) > 0) {
+      setSelectedItemCode(previous);
+    } else {
+      setSelectedItemCode('');
+    }
+    renderItemPickerList();
+  }
+
+  function openItemPicker() {
+    var picker = $('adjItemPicker');
+    var toggle = $('adjItemPickerToggle');
+    var search = $('adjItemPickerSearch');
+    var modal = $('adjModal');
+    if (!picker) return;
+
+    pickerOpen = true;
+    picker.classList.add('is-open');
+    if (modal) modal.classList.add('adj-picker-open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+
+    pickerSearchQuery = '';
+    if (search) search.value = '';
+    renderItemPickerList();
+
+    if (search) search.focus();
+  }
+
+  function closeItemPicker() {
+    var picker = $('adjItemPicker');
+    var toggle = $('adjItemPickerToggle');
+    var modal = $('adjModal');
+    pickerOpen = false;
+    if (picker) picker.classList.remove('is-open');
+    if (modal) modal.classList.remove('adj-picker-open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+
+  function resetItemPicker() {
+    pickerSearchQuery = '';
+    var search = $('adjItemPickerSearch');
+    if (search) search.value = '';
+    setSelectedItemCode('');
+    closeItemPicker();
+  }
+
+  function syncItemQtyLimits() {
+    var qtyEl = $('adjItemQty');
+    var addBtn = $('btnAddAdjItem');
+    if (!qtyEl) return;
+
+    var item = findCatalogItem(getSelectedItemCode());
+    var maxQty = item ? maxAddableQty(item) : 0;
+    var hasItem = !!item && maxQty > 0;
+
+    qtyEl.disabled = !hasItem;
+    qtyEl.max = hasItem ? String(maxQty) : '';
+    qtyEl.min = hasItem ? '1' : '0';
+
+    if (!hasItem) {
+      qtyEl.value = '1';
+      if (addBtn) addBtn.disabled = true;
+      return;
+    }
+
+    var current = parseInt(qtyEl.value, 10);
+    if (!current || current < 1) current = 1;
+    if (current > maxQty) current = maxQty;
+    qtyEl.value = String(current);
+
+    if (addBtn) addBtn.disabled = false;
   }
 
   function renderRow(c) {
@@ -224,16 +369,8 @@
         renderReworkBanner(activeCase.rework || null);
 
         catalogCache = res.data.stock_catalog || [];
-        var datalist = $('adjCatalog');
-        if (datalist) {
-          datalist.innerHTML = catalogCache.map(function (i) {
-            return '<option value="' + esc(i.code) + '">' + esc(i.name) + '</option>';
-          }).join('');
-        }
-
-        if ($('adjItemCode')) $('adjItemCode').value = '';
-        if ($('adjItemName')) $('adjItemName').value = '';
-        if ($('adjItemQty')) $('adjItemQty').value = '1';
+        resetItemPicker();
+        refreshItemPicker();
         clearFormError();
 
         modal.classList.add('visible');
@@ -247,42 +384,44 @@
     var modal = $('adjModal');
     if (modal) modal.classList.remove('visible');
     activeCase = null;
+    resetItemPicker();
     renderReworkBanner(null);
-  }
-
-  function autofillName() {
-    var codeEl = $('adjItemCode');
-    var nameEl = $('adjItemName');
-    if (!codeEl || !nameEl) return;
-    var code = codeEl.value.trim().toLowerCase();
-    var match = catalogCache.filter(function (i) { return String(i.code).toLowerCase() === code; })[0];
-    if (match) nameEl.value = match.name || '';
   }
 
   function addItem() {
     if (!activeCase || !window.axios) return;
-    var code = ($('adjItemCode') && $('adjItemCode').value.trim()) || '';
-    var name = ($('adjItemName') && $('adjItemName').value.trim()) || '';
+    var code = getSelectedItemCode();
+    var catalogItem = findCatalogItem(code);
     var qty = parseInt(($('adjItemQty') && $('adjItemQty').value) || '0', 10);
+    var maxQty = catalogItem ? maxAddableQty(catalogItem) : 0;
 
-    if (!code || !qty || qty < 1) { showError('أدخل كود الصنف وكمية صحيحة'); return; }
+    if (!catalogItem || !code) { showError('اختر الصنف من القائمة'); return; }
+    if (!qty || qty < 1) { showError('أدخل كمية صحيحة'); return; }
+    if (qty > maxQty) {
+      showError('الكمية تتجاوز المتاح — الحد الأقصى: ' + maxQty);
+      return;
+    }
 
     var btn = $('btnAddAdjItem');
     if (btn) btn.disabled = true;
 
-    axios.post(ADD_URL(activeCase.id), { items: [{ stock_item_code: code, name: name || code, qty: qty }] })
+    axios.post(ADD_URL(activeCase.id), {
+      items: [{ stock_item_code: code, name: catalogItem.name, qty: qty }],
+    })
       .then(function (res) {
         clearFormError();
         toast('تمت إضافة البند');
+        if (activeCase.bom) {
+          activeCase.bom.items = (res.data.bom && res.data.bom.items) || [];
+        }
         renderBomItems((res.data.bom && res.data.bom.items) || []);
-        if ($('adjItemCode')) $('adjItemCode').value = '';
-        if ($('adjItemName')) $('adjItemName').value = '';
-        if ($('adjItemQty')) $('adjItemQty').value = '1';
+        refreshItemPicker();
+        resetItemPicker();
       })
       .catch(function (err) {
         showError(apiMessage(err, 'تعذّر إضافة البند'));
       })
-      .finally(function () { if (btn) btn.disabled = false; });
+      .finally(function () { syncItemQtyLimits(); });
   }
 
   function completeAdjustments() {
@@ -314,10 +453,55 @@
     var addBtn = $('btnAddAdjItem');
     var completeBtn = $('btnCompleteAdj');
     var modal = $('adjModal');
-    var codeInput = $('adjItemCode');
-    if (codeInput) {
-      codeInput.addEventListener('change', autofillName);
-      codeInput.addEventListener('input', autofillName);
+    var qtyInput = $('adjItemQty');
+    var picker = $('adjItemPicker');
+    var pickerToggle = $('adjItemPickerToggle');
+    var pickerSearch = $('adjItemPickerSearch');
+    var pickerList = $('adjItemPickerList');
+
+    if (pickerToggle) {
+      pickerToggle.addEventListener('click', function () {
+        if (pickerOpen) closeItemPicker();
+        else openItemPicker();
+      });
+    }
+
+    if (pickerSearch) {
+      pickerSearch.addEventListener('input', function () {
+        pickerSearchQuery = pickerSearch.value || '';
+        renderItemPickerList();
+      });
+      pickerSearch.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          closeItemPicker();
+        }
+      });
+    }
+
+    if (pickerList) {
+      pickerList.addEventListener('click', function (e) {
+        var opt = e.target.closest('.adj-picker-option');
+        if (!opt || opt.classList.contains('is-disabled')) return;
+        setSelectedItemCode(opt.getAttribute('data-code'));
+        closeItemPicker();
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      if (!pickerOpen || !picker) return;
+      if (!picker.contains(e.target)) closeItemPicker();
+    });
+
+    if (qtyInput) {
+      qtyInput.addEventListener('input', function () {
+        var item = findCatalogItem(getSelectedItemCode());
+        if (!item) return;
+        var maxQty = maxAddableQty(item);
+        var val = parseInt(qtyInput.value, 10);
+        if (val > maxQty) qtyInput.value = String(maxQty);
+        if (val < 1 && qtyInput.value !== '') qtyInput.value = '1';
+      });
     }
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);

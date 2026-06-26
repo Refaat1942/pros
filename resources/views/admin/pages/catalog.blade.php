@@ -36,6 +36,8 @@
             --}}
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
+            <a class="btn-action" href="{{ route('admin.catalog.export') }}">📊 تصدير Excel</a>
+
             @can('import-inventory')
                 <a class="btn-action" href="{{ route('admin.catalog.template') }}">⬇️ تنزيل القالب</a>
                 <form id="catalogImportForm" method="POST" action="{{ route('admin.catalog.import') }}" enctype="multipart/form-data" style="display:inline-flex;">

@@ -29,7 +29,7 @@
           <span class="badge" id="opsBadge">0</span>
         </div>
         <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;">
-          يلتقي هنا المساران (مدني بعد الموافقة · عسكري مباشرة). كل حالة لها <strong>رقم أمر تشغيل مركزي</strong>. الصرف للمخزن يتم بمسح الباركود.
+          كل حالة لها <strong>رقم أمر تشغيل مركزي</strong>. الصرف للمخزن يتم بمسح الباركود.
         </p>
         <div class="bom-summary" id="opsSummary"></div>
         <div class="bom-table-wrap">

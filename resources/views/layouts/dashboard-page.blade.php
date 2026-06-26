@@ -10,7 +10,12 @@
 
 @push('styles')
     @foreach ($dashboardConfig['styles'] as $style)
-        <link rel="stylesheet" href="{{ str_starts_with($style, 'http') ? $style : asset($style) }}">
+        @php
+            $styleSrc = str_starts_with($style, 'http')
+                ? $style
+                : asset($style) . (is_file(public_path($style)) ? '?v=' . filemtime(public_path($style)) : '');
+        @endphp
+        <link rel="stylesheet" href="{{ $styleSrc }}">
     @endforeach
 @endpush
 

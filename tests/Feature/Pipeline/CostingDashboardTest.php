@@ -134,6 +134,66 @@ class CostingDashboardTest extends TestCase
         $this->assertEquals(400.00, (float) $response->json('pricing.computed_total'));
     }
 
+    public function test_costing_total_includes_adjustment_bom_items(): void
+    {
+        $case = $this->caseInAdjustments();
+
+        $item2 = $this->stockItem('RM-002', qty: 10);
+        app(StockPriceService::class)->addBatch(
+            $item2,
+            10,
+            1000.00,
+            \App\Models\Supplier::query()->firstOrFail(),
+            'INV-002',
+            now(),
+        );
+
+        $adjustments = $this->userWithRole('adjustments');
+
+        $this->actingAs($adjustments)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [
+                    ['stock_item_code' => 'RM-002', 'name' => 'مكوّن إضافي', 'qty' => 1],
+                ],
+            ])
+            ->assertCreated();
+
+        // طلب تسعير قديم ببنود التوصيف فقط — كان سبب ظهور إجمالي ناقص
+        $stalePricing = PricingRequest::create([
+            'request_no'   => '111111',
+            'order_ref'    => $case->order_ref,
+            'case_id'      => $case->id,
+            'patient_name' => $case->patient->name,
+            'company_name' => $case->company_name,
+            'request_date' => now()->toDateString(),
+            'items_count'  => 1,
+            'patient_type' => $case->patient_type,
+            'status_key'   => 'processing',
+            'step'         => PricingRequest::STEP_ADMIN,
+        ]);
+        \App\Models\PricingRequestItem::create([
+            'pricing_request_id' => $stalePricing->id,
+            'stock_item_code'    => 'RM-001',
+            'name'               => 'RM-001',
+            'qty'                => 2,
+            'unit_price'         => 200,
+            'line_total'         => 400,
+        ]);
+        $stalePricing->update(['computed_total' => 400, 'internal_total' => 400]);
+        $case->update(['pricing_request_id' => $stalePricing->id]);
+
+        $this->actingAs($adjustments)
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($this->userWithRole('costing'))
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk();
+
+        // RM-001 ×2 @200 + RM-002 ×1 @1000
+        $this->assertEquals(1400.00, (float) $response->json('pricing.computed_total'));
+        $this->assertCount(2, $response->json('pricing.items'));
+    }
+
     public function test_costing_confirm_issues_quote_and_moves_to_operations(): void
     {
         $costing = $this->userWithRole('costing');

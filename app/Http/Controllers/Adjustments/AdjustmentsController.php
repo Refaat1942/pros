@@ -64,16 +64,14 @@ class AdjustmentsController extends Controller
         ]);
 
         $stockCatalog = StockItem::query()
-            ->with('category:id,name')
-            ->orderBy('code')
-            ->get(['id', 'code', 'name', 'spec', 'category_id', 'uom'])
-            ->map(fn ($item) => [
-                'code'        => $item->code,
-                'name'        => $item->name,
-                'spec'        => $item->spec,
-                'category'    => $item->category?->name,
-                'category_id' => $item->category_id,
-                'uom'         => $item->uom,
+            ->orderBy('name')
+            ->get(['id', 'code', 'name', 'qty', 'reserved'])
+            ->map(fn (StockItem $item) => [
+                'code'      => $item->code,
+                'name'      => $item->name,
+                'qty'       => (int) $item->qty,
+                'reserved'  => (int) $item->reserved,
+                'available' => $item->availableQty(),
             ]);
 
         return response()->json([

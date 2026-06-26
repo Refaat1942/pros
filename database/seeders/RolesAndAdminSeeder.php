@@ -34,7 +34,7 @@ class RolesAndAdminSeeder extends Seeder
 
         foreach (Role::ALL_SLUGS as $slug) {
             User::updateOrCreate(
-                ['email' => "{$slug}@clinic.local"],
+                ['email' => "{$slug}@clinic.com"],
                 [
                     'name'     => Role::where('slug', $slug)->value('label_ar'),
                     'password' => UserFactory::TEST_PASSWORD,
