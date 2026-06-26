@@ -71,9 +71,9 @@ class BiReportService
     {
         $stagnantCutoff = now()->subDays(180)->toDateString();
 
-        $totalValue = (float) StockItem::query()
-            ->selectRaw('SUM(qty * wac) as total')
-            ->value('total');
+        $totalValue = StockItem::query()
+            ->get(['code', 'qty', 'wac'])
+            ->sum(fn (StockItem $i) => (int) $i->qty * $this->stockPriceService->wacUnitPrice($i->code));
 
         $stagnantItems = StockItem::query()
             ->whereNotNull('last_moved_at')

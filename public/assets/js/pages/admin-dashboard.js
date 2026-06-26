@@ -1578,7 +1578,7 @@
     }
 
     function renderBomAdminReport() {
-      return;
+      if (document.getElementById('section-reports')?.dataset.serverRendered === '1') return;
     }
 
     /* ===== 5 لوحات قيادة BI ===== */

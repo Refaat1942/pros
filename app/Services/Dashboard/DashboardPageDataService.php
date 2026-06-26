@@ -22,6 +22,7 @@ use App\Models\StockMovement;
 use App\Models\Patient;
 use App\Services\AdminCaseTrackingService;
 use App\Services\AdminPatientTrackService;
+use App\Services\AdminReportsService;
 use App\Services\BomService;
 use App\Services\DoctorTransferService;
 use App\Services\StockCatalogService;
@@ -46,6 +47,7 @@ class DashboardPageDataService
             // 'admin.stock-categories'=> $this->adminStockCategories(),
             'admin.catalog'         => $this->adminCatalog(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
+            'admin.reports'         => $this->adminReports(),
             'admin.permissions'     => $this->adminPermissions(),
             'admin.suppliers'       => $this->adminSuppliers(),
             'admin.cases'           => $this->adminCases(),
@@ -158,9 +160,6 @@ class DashboardPageDataService
         ];
     }
 
-    /**
-     * لوحة المخزون التفصيلية للأدمن — الأرصدة، الأسعار، WAC، الصلاحية، وتاريخ الأسعار.
-     */
     private function adminInventoryOverview(): array
     {
         $priceService = app(StockPriceService::class);
@@ -213,6 +212,13 @@ class DashboardPageDataService
                 'delivered'      => $buckets['delivered']->all(),
             ],
             'admin_case_counts' => $buckets['counts'],
+        ];
+    }
+
+    private function adminReports(): array
+    {
+        return [
+            'admin_reports' => app(AdminReportsService::class)->build(),
         ];
     }
 
