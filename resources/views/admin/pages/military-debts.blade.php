@@ -1,9 +1,16 @@
 @php
     use App\Models\MilitaryDebt;
     $debts = $military_debts ?? collect();
+
+    $statusClass = function (string $status): string {
+        return match ($status) {
+            MilitaryDebt::STATUS_COLLECTED => 'paid',
+            MilitaryDebt::STATUS_PARTIAL => 'partial',
+            default => 'pending',
+        };
+    };
 @endphp
 
-{{-- ─── Statistics ─────────────────────────────────────────────────────── --}}
 <div class="ck-analytics" data-static-ui="1" id="analytics-military-debts">
     <div class="ck-stats">
         @foreach ($military_debts_stats ?? [] as $stat)
@@ -20,7 +27,6 @@
     </div>
 </div>
 
-{{-- ─── Table ───────────────────────────────────────────────────────────── --}}
 <div class="panel">
     <div class="panel-header">
         <h3>🪖 مديونيات الجهات العسكرية</h3>
@@ -31,16 +37,21 @@
         <input type="text" id="milDebtSearch"
                placeholder="🔍 بحث بالمريض أو الجهة أو رقم الأمر..."
                autocomplete="off">
-        <select id="milDebtStatusFilter"
-                style="padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;">
+        <select id="milDebtStatusFilter" aria-label="فلتر الحالة">
             <option value="">كل الحالات</option>
-            <option value="pending_collection">🔴 بانتظار التحصيل</option>
-            <option value="collected">🟢 تم التحصيل</option>
+            <option value="{{ MilitaryDebt::STATUS_PENDING }}">🔴 بانتظار التحصيل</option>
+            <option value="{{ MilitaryDebt::STATUS_PARTIAL }}">🟡 مسدَّد جزئياً</option>
+            <option value="{{ MilitaryDebt::STATUS_COLLECTED }}">🟢 تم التحصيل</option>
+        </select>
+        <select id="milDebtBalanceFilter" aria-label="فلتر الرصيد">
+            <option value="">كل الأرصدة</option>
+            <option value="outstanding">متبقٍ للتحصيل</option>
+            <option value="settled">تم التحصيل بالكامل</option>
         </select>
         <span class="toolbar-count" id="milDebtFilterCount">{{ $debts->count() }} سجل</span>
     </div>
     <div class="panel-body">
-        <table class="bulk-select-table" data-bulk-bar="militaryDebtsBulkBar" data-bulk-delete-base="/admin/military-debts" data-paginate="15">
+        <table class="bulk-select-table" data-bulk-bar="militaryDebtsBulkBar" data-bulk-delete-base="/admin/military-debts" data-no-paginate>
             <thead>
                 <tr>
                     @include('admin.partials.bulk-select-th')
@@ -48,31 +59,43 @@
                     <th>اسم المريض</th>
                     <th>الرقم العسكري</th>
                     <th>الجهة العسكرية الضامنة</th>
-                    <th>إجمالي تكلفة الخامات</th>
-                    <th>تاريخ الإغلاق</th>
-                    <th>حالة المديونية</th>
+                    <th class="num">المستحق (ج.م)</th>
+                    <th class="num">المحصّل (ج.م)</th>
+                    <th class="num">المتبقي (ج.م)</th>
+                    <th>الحالة</th>
                     <th>إجراء</th>
                 </tr>
             </thead>
             <tbody id="milDebtTable">
                 @forelse ($debts as $debt)
+                    @php
+                        $due = (float) $debt->total_cost;
+                        $collected = (float) $debt->collected;
+                        $remaining = max(0, $due - $collected);
+                        $isSettled = $debt->isCollected();
+                        $label = $isSettled ? 'تم التحصيل' : ($debt->status === MilitaryDebt::STATUS_PARTIAL ? 'مسدَّد جزئياً' : 'بانتظار التحصيل');
+                        $class = $statusClass((string) $debt->status);
+                    @endphp
                     <tr class="mil-debt-row"
                         data-id="{{ $debt->id }}"
                         data-status="{{ $debt->status }}"
-                        data-frozen="{{ $debt->isCollected() ? '1' : '0' }}"
-                        data-cost="{{ (float) $debt->total_cost }}"
+                        data-balance="{{ $remaining > 0 ? 'outstanding' : 'settled' }}"
+                        data-frozen="{{ $isSettled ? '1' : '0' }}"
+                        data-due="{{ $due }}"
+                        data-collected="{{ $collected }}"
+                        data-remaining="{{ $remaining }}"
+                        data-filter-hidden="0"
                         data-search="{{ $debt->work_order_no }} {{ $debt->patient_name }} {{ $debt->sovereign_entity }}"
                         data-work-order="{{ $debt->work_order_no ?? '—' }}"
                         data-patient-name="{{ $debt->patient_name }}"
                         data-national-id="{{ $debt->patient_national_id ?? '—' }}"
                         data-sovereign-entity="{{ $debt->sovereign_entity }}"
-                        data-total-cost="{{ number_format((float) $debt->total_cost, 0) }}"
                         data-delivered-at="{{ $debt->delivered_at?->format('d/m/Y') ?? '—' }}"
-                        data-status-label="{{ $debt->isCollected() ? 'تم التحصيل وإيداع الحساب' : 'بانتظار التحصيل' }}"
+                        data-status-label="{{ $label }}"
                         data-collected-at="{{ $debt->collected_at?->format('d/m/Y H:i') ?? '—' }}">
                         @include('admin.partials.bulk-select-td', [
                             'id' => $debt->id,
-                            'disabled' => $debt->isCollected(),
+                            'disabled' => $isSettled,
                             'disabledTitle' => 'لا يمكن حذف سجل محصّل ومجمّد',
                         ])
                         <td>
@@ -91,37 +114,42 @@
                                 🪖 {{ $debt->sovereign_entity }}
                             </span>
                         </td>
-                        <td>
-                            <strong style="color:{{ $debt->status === MilitaryDebt::STATUS_COLLECTED ? '#059669' : '#d97706' }};">
-                                {{ number_format((float)$debt->total_cost, 0) }} ج.م
+                        <td class="num mil-debt-due">{{ number_format($due, 2) }}</td>
+                        <td class="num mil-debt-collected" style="color:#059669;">{{ number_format($collected, 2) }}</td>
+                        <td class="num mil-debt-remaining">
+                            <strong style="color:{{ $remaining > 0 ? '#d97706' : '#059669' }};">
+                                {{ number_format($remaining, 2) }}
                             </strong>
                         </td>
-                        <td>{{ $debt->delivered_at?->format('d/m/Y') ?? '—' }}</td>
-                        <td class="mil-debt-status-cell">
-                            @if ($debt->isCollected())
-                                <div>
-                                    <span style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#dcfce7;color:#059669;">
-                                        🟢 تم التحصيل 
-                                    </span>
-                                    <div style="font-size:10px;color:#64748b;margin-top:3px;">
-                                        {{ $debt->collected_at?->format('d/m/Y H:i') ?? '' }}
-                                    </div>
-                                </div>
+                        <td class="mil-debt-action-cell civ-debt-action-cell">
+                            @if ($isSettled)
+                                <span class="civ-debt-status civ-debt-status--paid">✅ تم التحصيل</span>
+                                @if ($debt->collected_at)
+                                    <div style="font-size:10px;color:#64748b;margin-top:4px;">{{ $debt->collected_at->format('d/m/Y H:i') }}</div>
+                                @endif
+                            @elseif ($due <= 0)
+                                <span class="civ-debt-status civ-debt-status--pending">—</span>
                             @else
-                                <div style="display:flex;align-items:center;gap:8px;">
-                                    <select
-                                        class="mil-debt-status-select"
-                                        data-debt-id="{{ $debt->id }}"
-                                        style="padding:6px 10px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:#fff;">
-                                        <option value="pending_collection" {{ $debt->status === MilitaryDebt::STATUS_PENDING ? 'selected' : '' }}>
-                                            🔴 بانتظار التحصيل
-                                        </option>
-                                        <option value="collected" {{ $debt->status === MilitaryDebt::STATUS_COLLECTED ? 'selected' : '' }}>
-                                            🟢 تم التحصيل 
-                                        </option>
-                                    </select>
-                                    <span class="mil-debt-saving" data-id="{{ $debt->id }}"
-                                          style="display:none;font-size:11px;color:#64748b;">جاري...</span>
+                                <div class="civ-debt-collect-wrap">
+                                    @if ($collected > 0)
+                                        <span class="civ-debt-status civ-debt-status--{{ $class }}" style="margin-bottom:6px;">
+                                            {{ $label }}
+                                        </span>
+                                    @endif
+                                    <div class="civ-debt-collect-row">
+                                        <input type="number"
+                                               class="civ-debt-amount-input form-control mil-debt-amount-input"
+                                               min="0.01"
+                                               max="{{ $remaining }}"
+                                               step="0.01"
+                                               placeholder="المبلغ المحوّل"
+                                               aria-label="مبلغ التحصيل">
+                                        <button type="button"
+                                                class="btn-action success btn-mil-collect"
+                                                data-debt-id="{{ $debt->id }}">
+                                            تم التحصيل
+                                        </button>
+                                    </div>
                                 </div>
                             @endif
                         </td>
@@ -138,7 +166,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">
+                        <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">
                             لا توجد مديونيات عسكرية مسجلة بعد.<br>
                             <small>تظهر البيانات تلقائياً بعد إغلاق أي حالة عسكرية بالتسليم.</small>
                         </td>
@@ -149,7 +177,6 @@
     </div>
 </div>
 
-{{-- ─── Detail Modal ────────────────────────────────────────────────────── --}}
 <div id="milDebtDetailModal"
      style="display:none;position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.65);
             backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
@@ -175,26 +202,43 @@
 <script>
 (function () {
     var searchEl  = document.getElementById('milDebtSearch');
-    var filterEl  = document.getElementById('milDebtStatusFilter');
-    var rows      = Array.prototype.slice.call(document.querySelectorAll('.mil-debt-row'));
+    var statusEl  = document.getElementById('milDebtStatusFilter');
+    var balanceEl = document.getElementById('milDebtBalanceFilter');
     var countEl   = document.getElementById('milDebtFilterCount');
 
+    function getRows() {
+        return Array.prototype.slice.call(document.querySelectorAll('.mil-debt-row'));
+    }
+
+    function fmtMoney(n) {
+        return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function rowMatchesFilters(row) {
+        var term = searchEl ? searchEl.value.trim().toUpperCase() : '';
+        var status = statusEl ? statusEl.value : '';
+        var balance = balanceEl ? balanceEl.value : '';
+        var haystack = (row.dataset.search || '').toUpperCase();
+        var matchTerm = !term || haystack.indexOf(term) !== -1;
+        var matchStatus = !status || row.dataset.status === status;
+        var matchBalance = !balance || row.dataset.balance === balance;
+        return matchTerm && matchStatus && matchBalance;
+    }
+
     function applyFilters() {
-        var term   = searchEl ? searchEl.value.trim().toUpperCase() : '';
-        var status = filterEl ? filterEl.value : '';
         var visible = 0;
-        rows.forEach(function (row) {
-            var matchTerm   = !term   || (row.dataset.search || '').toUpperCase().indexOf(term) !== -1;
-            var matchStatus = !status || row.dataset.status === status;
-            row.style.display = (matchTerm && matchStatus) ? '' : 'none';
-            if (matchTerm && matchStatus) visible++;
+        getRows().forEach(function (row) {
+            var show = rowMatchesFilters(row);
+            row.dataset.filterHidden = show ? '0' : '1';
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
         });
         if (countEl) countEl.textContent = visible + ' سجل';
-        if (window.TablePagination) TablePagination.refreshById('milDebtTable');
     }
 
     if (searchEl) searchEl.addEventListener('input', applyFilters);
-    if (filterEl) filterEl.addEventListener('change', applyFilters);
+    if (statusEl) statusEl.addEventListener('change', applyFilters);
+    if (balanceEl) balanceEl.addEventListener('change', applyFilters);
 
     function getCsrf() {
         var m = document.querySelector('meta[name="csrf-token"]');
@@ -209,29 +253,114 @@
         alert(msg);
     }
 
-    function parseNum(val) {
-        return parseInt(String(val || '0').replace(/,/g, ''), 10) || 0;
+    function statusClassFor(status) {
+        if (status === 'collected') return 'paid';
+        if (status === 'partial_collection') return 'partial';
+        return 'pending';
     }
 
-    function fmtNum(n) {
-        return n.toLocaleString('ar-EG');
+    function updateRowFromDebt(row, debt) {
+        var due = parseFloat(debt.due ?? debt.total_cost) || 0;
+        var collected = parseFloat(debt.collected) || 0;
+        var remaining = parseFloat(debt.remaining) || 0;
+
+        row.dataset.status = debt.status;
+        row.dataset.balance = remaining > 0 ? 'outstanding' : 'settled';
+        row.dataset.frozen = debt.is_frozen ? '1' : '0';
+        row.dataset.due = String(due);
+        row.dataset.collected = String(collected);
+        row.dataset.remaining = String(remaining);
+        row.dataset.statusLabel = debt.status_label || '';
+
+        var dueEl = row.querySelector('.mil-debt-due');
+        var colEl = row.querySelector('.mil-debt-collected');
+        var remEl = row.querySelector('.mil-debt-remaining');
+        if (dueEl) dueEl.textContent = fmtMoney(due);
+        if (colEl) colEl.textContent = fmtMoney(collected);
+        if (remEl) {
+            remEl.innerHTML = '<strong style="color:' + (remaining > 0 ? '#d97706' : '#059669') + ';">' + fmtMoney(remaining) + '</strong>';
+        }
+
+        var actionCell = row.querySelector('.mil-debt-action-cell.civ-debt-action-cell');
+        if (!actionCell) return;
+
+        if (remaining <= 0 && due > 0) {
+            var at = debt.collected_at ? '<div style="font-size:10px;color:#64748b;margin-top:4px;">' + debt.collected_at + '</div>' : '';
+            actionCell.innerHTML = '<span class="civ-debt-status civ-debt-status--paid">✅ تم التحصيل</span>' + at;
+            return;
+        }
+
+        if (due <= 0) {
+            actionCell.innerHTML = '<span class="civ-debt-status civ-debt-status--pending">—</span>';
+            return;
+        }
+
+        var partialBadge = collected > 0
+            ? '<span class="civ-debt-status civ-debt-status--' + statusClassFor(debt.status) + '" style="margin-bottom:6px;">' + (debt.status_label || '') + '</span>'
+            : '';
+
+        actionCell.innerHTML =
+            '<div class="civ-debt-collect-wrap">' +
+                partialBadge +
+                '<div class="civ-debt-collect-row">' +
+                    '<input type="number" class="civ-debt-amount-input form-control mil-debt-amount-input" min="0.01" max="' + remaining + '" step="0.01" placeholder="المبلغ المحوّل" aria-label="مبلغ التحصيل">' +
+                    '<button type="button" class="btn-action success btn-mil-collect" data-debt-id="' + row.dataset.id + '">تم التحصيل</button>' +
+                '</div>' +
+            '</div>';
     }
 
-    function statEl(key) {
-        return document.querySelector('#analytics-military-debts [data-stat="' + key + '"]');
-    }
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-mil-collect');
+        if (!btn) return;
 
-    function updateStatsOnCollect(cost) {
-        var pendingCount = statEl('pending_count');
-        var collectedCount = statEl('collected_count');
-        var pendingAmount = statEl('pending_amount');
-        var collectedAmount = statEl('collected_amount');
+        var row = btn.closest('.mil-debt-row');
+        if (!row) return;
 
-        if (pendingCount) pendingCount.textContent = String(Math.max(0, parseInt(pendingCount.textContent, 10) - 1));
-        if (collectedCount) collectedCount.textContent = String(parseInt(collectedCount.textContent, 10) + 1);
-        if (pendingAmount) pendingAmount.textContent = fmtNum(Math.max(0, parseNum(pendingAmount.textContent) - cost));
-        if (collectedAmount) collectedAmount.textContent = fmtNum(parseNum(collectedAmount.textContent) + cost);
-    }
+        var input = row.querySelector('.mil-debt-amount-input');
+        var amount = input ? parseFloat(input.value) : NaN;
+        var remaining = parseFloat(row.dataset.remaining) || 0;
+
+        if (!amount || amount <= 0) {
+            showToast('أدخل المبلغ الذي حوّلته الجهة العسكرية لحساب الإدارة.', true);
+            return;
+        }
+        if (amount > remaining) {
+            showToast('المبلغ أكبر من المتبقي (' + fmtMoney(remaining) + ' ج.م).', true);
+            return;
+        }
+
+        if (!window.confirm('تأكيد تسجيل تحصيل ' + fmtMoney(amount) + ' ج.م؟')) return;
+
+        btn.disabled = true;
+        fetch('/admin/military-debts/' + btn.getAttribute('data-debt-id') + '/collect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrf(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ amount: amount }),
+        })
+            .then(function (res) {
+                return res.json().then(function (data) {
+                    if (!res.ok) throw new Error(data.message || 'تعذّر تسجيل التحصيل');
+                    return data;
+                });
+            })
+            .then(function (data) {
+                updateRowFromDebt(row, data.debt);
+                showToast(data.message || 'تم التحصيل');
+                applyFilters();
+            })
+            .catch(function (err) {
+                showToast(err.message || 'تعذّر تسجيل التحصيل', true);
+            })
+            .finally(function () {
+                btn.disabled = false;
+            });
+    });
 
     window.openMilDebtDetail = function (btn) {
         var row = btn.closest('.mil-debt-row');
@@ -247,9 +376,9 @@
         if (subtitle) subtitle.textContent = (d.patientName || '') + ' · ' + (d.sovereignEntity || '');
 
         var isCollected = d.status === 'collected';
-        var statusColor = isCollected ? '#059669' : '#dc2626';
-        var statusBg = isCollected ? '#dcfce7' : '#fee2e2';
-        var statusIcon = isCollected ? '🟢' : '🔴';
+        var statusColor = isCollected ? '#059669' : (d.status === 'partial_collection' ? '#d97706' : '#dc2626');
+        var statusBg = isCollected ? '#dcfce7' : (d.status === 'partial_collection' ? '#fef3c7' : '#fee2e2');
+        var statusIcon = isCollected ? '🟢' : (d.status === 'partial_collection' ? '🟡' : '🔴');
 
         if (body) {
             body.innerHTML =
@@ -258,10 +387,12 @@
                 detailRow('اسم المريض العسكري', '<strong>' + esc(d.patientName) + '</strong>') +
                 detailRow('الرقم العسكري / القومي', '<span style="font-family:monospace;">' + esc(d.nationalId) + '</span>') +
                 detailRow('الجهة العسكرية الضامنة', '<span style="background:#ede9fe;color:#4f46e5;padding:3px 10px;border-radius:6px;font-weight:600;">🪖 ' + esc(d.sovereignEntity) + '</span>') +
-                detailRow('إجمالي تكلفة الخامات', '<strong style="font-size:16px;color:' + (isCollected ? '#059669' : '#d97706') + ';">' + esc(d.totalCost) + ' ج.م</strong>') +
+                detailRow('المستحق (ج.م)', '<strong>' + fmtMoney(d.due) + '</strong>') +
+                detailRow('المحصّل (ج.م)', '<strong style="color:#059669;">' + fmtMoney(d.collected) + '</strong>') +
+                detailRow('المتبقي (ج.م)', '<strong style="color:' + (parseFloat(d.remaining) > 0 ? '#d97706' : '#059669') + ';">' + fmtMoney(d.remaining) + '</strong>') +
                 detailRow('تاريخ إغلاق الحالة', esc(d.deliveredAt)) +
                 detailRow('حالة المديونية', '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;background:' + statusBg + ';color:' + statusColor + ';">' + statusIcon + ' ' + esc(d.statusLabel) + '</span>') +
-                (isCollected ? detailRow('تاريخ التحصيل', esc(d.collectedAt)) : '') +
+                (isCollected ? detailRow('تاريخ التحصيل والإيداع', esc(d.collectedAt)) : '') +
                 (d.frozen === '1' ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#059669;">🔒 السجل مجمّد — تم اعتماد التحصيل ولا يمكن التعديل.</div>' : '') +
                 '</div>';
         }
@@ -295,66 +426,6 @@
     if (btnCloseMilDebt) btnCloseMilDebt.addEventListener('click', closeMilDebtDetail);
     if (btnMilDebtClose) btnMilDebtClose.addEventListener('click', closeMilDebtDetail);
 
-    document.querySelectorAll('.mil-debt-status-select').forEach(function (sel) {
-        sel.addEventListener('change', function () {
-            var id       = sel.dataset.debtId;
-            var newVal   = sel.value;
-            var savingEl = document.querySelector('.mil-debt-saving[data-id="' + id + '"]');
-            var row      = document.querySelector('.mil-debt-row[data-id="' + id + '"]');
-            var cost     = row ? parseFloat(row.dataset.cost || '0') : 0;
-
-            sel.disabled = true;
-            if (savingEl) savingEl.style.display = 'inline';
-
-            fetch('/admin/military-debts/' + id + '/status', {
-                method: 'PATCH',
-                headers: {
-                    'Accept':           'application/json',
-                    'Content-Type':     'application/json',
-                    'X-CSRF-TOKEN':     getCsrf(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({ status: newVal })
-            })
-            .then(function (r) {
-                return r.ok ? r.json() : r.json().then(function (j) { throw j; });
-            })
-            .then(function (res) {
-                showToast(res.message || 'تم التحديث.', false);
-
-                if (newVal === 'collected') {
-                    var cell = sel.closest('.mil-debt-status-cell');
-                    if (cell) {
-                        var collectedAt = (res.debt && res.debt.collected_at) ? res.debt.collected_at : '';
-                        cell.innerHTML =
-                            '<div>' +
-                            '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#dcfce7;color:#059669;">🟢 تم التحصيل وإيداع المبلغ</span>' +
-                            (collectedAt ? '<div style="font-size:10px;color:#64748b;margin-top:3px;">' + collectedAt + '</div>' : '') +
-                            '</div>';
-                    }
-                    if (row) {
-                        row.dataset.status = 'collected';
-                        row.dataset.frozen = '1';
-                        row.dataset.statusLabel = 'تم التحصيل وإيداع المبلغ';
-                        row.dataset.collectedAt = (res.debt && res.debt.collected_at) ? res.debt.collected_at : '—';
-                    }
-
-                    updateStatsOnCollect(cost);
-                } else {
-                    if (row) row.dataset.status = newVal;
-                    sel.disabled = false;
-                    if (savingEl) savingEl.style.display = 'none';
-                }
-            })
-            .catch(function (err) {
-                var msg = (err && err.message) ? err.message : 'تعذّر التحديث.';
-                showToast(msg, true);
-                sel.value    = sel.value === 'collected' ? 'pending_collection' : 'collected';
-                sel.disabled = false;
-                if (savingEl) savingEl.style.display = 'none';
-            });
-        });
-    });
+    applyFilters();
 })();
 </script>
