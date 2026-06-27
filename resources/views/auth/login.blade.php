@@ -31,20 +31,20 @@
             <input type="hidden" name="device_id" id="device_id" value="">
             <input type="hidden" name="device_type" id="device_type" value="web">
 
-            {{-- Email --}}
+            {{-- Username --}}
             <div class="form-group">
-                <label for="email">البريد الإلكتروني</label>
+                <label for="username">اسم المستخدم</label>
                 <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value="{{ old('email') }}"
-                    placeholder="example@clinic.com"
-                    autocomplete="email"
-                    class="{{ $errors->has('email') ? 'is-invalid' : '' }}"
+                    type="text"
+                    id="username"
+                    name="username"
+                    value="{{ old('username') }}"
+                    placeholder="admin"
+                    autocomplete="username"
+                    class="{{ $errors->has('username') ? 'is-invalid' : '' }}"
                     autofocus
                 >
-                @error('email')
+                @error('username')
                     <div class="field-error">{{ $message }}</div>
                 @enderror
             </div>

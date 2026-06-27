@@ -9,11 +9,27 @@ use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends BaseRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('username')) {
+            $this->merge([
+                'username' => strtolower(trim((string) $this->input('username'))),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
+            'username' => [
+                'required',
+                'string',
+                'min:3',
+                'max:50',
+                'alpha_dash',
+                'unique:users,username',
+            ],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
             'role_id'  => [
                 'required',
@@ -27,7 +43,8 @@ class StoreUserRequest extends BaseRequest
     public function messages(): array
     {
         return [
-            'email.unique'       => 'البريد الإلكتروني مستخدم مسبقاً.',
+            'username.unique'    => 'اسم المستخدم مستخدم مسبقاً.',
+            'username.alpha_dash'=> 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
         ];
     }

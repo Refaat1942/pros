@@ -26,7 +26,7 @@ class QuickRoleSwitcherController extends Controller
         }
 
         $user = User::query()
-            ->where('email', "{$role}@clinic.com")
+            ->where('username', $role)
             ->where('status', User::STATUS_ACTIVE)
             ->firstOrFail();
 

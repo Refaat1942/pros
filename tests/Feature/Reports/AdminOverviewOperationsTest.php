@@ -112,7 +112,7 @@ class AdminOverviewOperationsTest extends TestCase
             'item_count' => 0, 'low_stock' => 0,
         ]);
 
-        $admin = User::where('email', 'admin@clinic.com')->firstOrFail();
+        $admin = User::where('username', 'admin')->firstOrFail();
         $this->actingAs($admin);
 
         $response = $this->get('/admin/overview');

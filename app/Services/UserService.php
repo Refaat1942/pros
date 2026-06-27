@@ -12,7 +12,7 @@ class UserService
     {
         $user = User::create([
             'name'     => $data['name'],
-            'email'    => $data['email'],
+            'username' => $data['username'],
             'password' => $data['password'],
             'role_id'  => $data['role_id'],
             'status'   => $data['status'] ?? User::STATUS_ACTIVE,
@@ -20,9 +20,9 @@ class UserService
 
         AuditService::log(
             action:      'create',
-            description: "إضافة موظف: {$user->name} ({$user->email})",
+            description: "إضافة موظف: {$user->name} ({$user->username})",
             tag:         'admin',
-            after:       $user->only(['id', 'name', 'email', 'role_id', 'status']),
+            after:       $user->only(['id', 'name', 'username', 'role_id', 'status']),
         );
 
         return $user->load('role:id,slug,label_ar');
@@ -31,12 +31,12 @@ class UserService
     public function update(User $user, array $data): User
     {
         $user->loadMissing('role:id,slug');
-        $before = $user->only(['name', 'email', 'role_id', 'status']);
+        $before = $user->only(['name', 'username', 'role_id', 'status']);
 
         $payload = [
-            'name'   => $data['name'],
-            'email'  => $data['email'],
-            'status' => $data['status'],
+            'name'     => $data['name'],
+            'username' => $data['username'],
+            'status'   => $data['status'],
         ];
 
         if ($user->role?->slug === Role::SLUG_ADMIN) {
@@ -56,7 +56,7 @@ class UserService
             description: "تعديل موظف: {$user->name}",
             tag:         'admin',
             before:      $before,
-            after:       $user->fresh()->only(['name', 'email', 'role_id', 'status']),
+            after:       $user->fresh()->only(['name', 'username', 'role_id', 'status']),
         );
 
         return $user->fresh()->load('role:id,slug,label_ar');
@@ -91,7 +91,7 @@ class UserService
 
     public function delete(User $user): void
     {
-        $before = $user->only(['name', 'email', 'role_id', 'status']);
+        $before = $user->only(['name', 'username', 'role_id', 'status']);
 
         $user->delete();
 

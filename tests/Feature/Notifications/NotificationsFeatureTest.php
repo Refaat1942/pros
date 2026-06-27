@@ -81,7 +81,7 @@ class NotificationsFeatureTest extends TestCase
         $this->userWithRole('reception');
 
         $this->post('/reception/login', [
-            'email'       => 'reception@test.local',
+            'username'    => 'reception',
             'password'    => 'password',
             'device_id'   => 'fcm-token-abc-123',
             'device_type' => 'web',
@@ -98,7 +98,7 @@ class NotificationsFeatureTest extends TestCase
         $this->userWithRole('doctor');
 
         $this->post('/doctor/login', [
-            'email'    => 'doctor@test.local',
+            'username' => 'doctor',
             'password' => 'password',
         ])->assertRedirect(route('doctor.dashboard'));
 

@@ -34,7 +34,7 @@ class DashboardGuardMiddleware
 
             return redirect()
                 ->to("/{$loginDashboard}/login")
-                ->withErrors(['email' => 'تم تعطيل حسابك — تواصل مع الإدارة.']);
+                ->withErrors(['username' => 'تم تعطيل حسابك — تواصل مع الإدارة.']);
         }
 
         $requiredPrefix = $request->segment(1);

@@ -1,6 +1,12 @@
 @php
     /** قائمة مُنسّقة من StockCatalogService::formatItem (مصفوفات). */
     $items = collect($stock_items ?? []);
+    $dateFrom = $date_from ?? request()->query('from');
+    $dateTo = $date_to ?? request()->query('to');
+    $exportUrl = route('admin.catalog.export', array_filter([
+        'from' => $dateFrom,
+        'to'   => $dateTo,
+    ]));
     // $categories = collect($stock_categories ?? []);
 @endphp
 <div class="section-view" id="section-catalog">
@@ -24,6 +30,21 @@
             </div>
         @endif
 
+        <form method="GET" action="{{ route('admin.catalog') }}" class="reports-date-filter" id="catalogDateFilter" style="margin:12px 16px 0;">
+            <label>
+                <span>من</span>
+                <input type="date" name="from" id="catalogDateFrom" value="{{ $dateFrom }}">
+            </label>
+            <label>
+                <span>إلى</span>
+                <input type="date" name="to" id="catalogDateTo" value="{{ $dateTo }}">
+            </label>
+            <button type="submit" class="btn-action primary">تطبيق الفترة</button>
+            @if ($dateFrom || $dateTo)
+                <a href="{{ route('admin.catalog') }}" class="btn-action">مسح الفلتر</a>
+            @endif
+        </form>
+
         <div class="data-toolbar" style="flex-wrap:wrap;gap:8px;">
             <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث بالصنف أو الكود..." onkeyup="applySlimCatalogFilters()">
             {{-- فلتر الفئات — معطّل مع صفحة فئات الأصناف
@@ -36,7 +57,7 @@
             --}}
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
-            <a class="btn-action" href="{{ route('admin.catalog.export') }}">📊 تصدير Excel</a>
+            <a class="btn-action" href="{{ $exportUrl }}">📊 تصدير Excel</a>
 
             @can('import-inventory')
                 <a class="btn-action" href="{{ route('admin.catalog.template') }}">⬇️ تنزيل القالب</a>

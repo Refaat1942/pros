@@ -7,6 +7,7 @@ use App\Enums\StockUom;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -15,14 +16,31 @@ use Illuminate\Support\Facades\DB;
  */
 class StockCatalogService
 {
-    public function listForDashboard(): Collection
+    public function listForDashboard(?string $from = null, ?string $to = null): Collection
     {
+        $range = $this->parseDateRange($from, $to);
+
         return StockItem::query()
             ->with(['category:id,name', 'prices:id,stock_item_id,label,amount'])
+            ->when($range['from'], fn ($q, Carbon $start) => $q->where('created_at', '>=', $start))
+            ->when($range['to'], fn ($q, Carbon $end) => $q->where('created_at', '<=', $end))
             ->orderByDesc('id')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get()
             ->map(fn (StockItem $item) => $this->formatItem($item));
+    }
+
+    /** @return array{from: Carbon|null, to: Carbon|null} */
+    public function parseDateRange(?string $from, ?string $to): array
+    {
+        $fromDate = $from ? Carbon::parse($from)->startOfDay() : null;
+        $toDate   = $to ? Carbon::parse($to)->endOfDay() : null;
+
+        if ($fromDate && $toDate && $fromDate->gt($toDate)) {
+            [$fromDate, $toDate] = [$toDate->copy()->startOfDay(), $fromDate->copy()->endOfDay()];
+        }
+
+        return ['from' => $fromDate, 'to' => $toDate];
     }
 
     public function formatItem(StockItem $item): array
@@ -44,6 +62,8 @@ class StockCatalogService
             'expiry_date' => $item->expiry_date?->toDateString(),
             'wac'         => (float) $item->wac,
             'status'      => $item->status,
+            'created_at'  => $item->created_at?->toDateString(),
+            'updated_at'  => $item->updated_at?->toDateString(),
             // الأسعار الإضافية (إن وُجدت — صنف بأكثر من سعر).
             'prices'      => $item->prices->map(fn (StockItemPrice $p) => [
                 'id'     => (string) $p->id,

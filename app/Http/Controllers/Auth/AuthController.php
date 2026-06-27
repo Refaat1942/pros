@@ -36,12 +36,12 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request, string $dashboard): RedirectResponse
     {
-        $credentials = $request->only('email', 'password');
+        $credentials = $request->only('username', 'password');
 
         if (! Auth::attempt($credentials, false)) {
             return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['email' => 'البريد الإلكتروني أو كلمة المرور غير صحيحة.']);
+                ->withInput($request->only('username'))
+                ->withErrors(['username' => 'اسم المستخدم أو كلمة المرور غير صحيحة.']);
         }
 
         /** @var \App\Models\User $user */
@@ -51,8 +51,8 @@ class AuthController extends Controller
             Auth::logout();
 
             return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['email' => 'هذا الحساب معطّل — تواصل مع الإدارة.']);
+                ->withInput($request->only('username'))
+                ->withErrors(['username' => 'هذا الحساب معطّل — تواصل مع الإدارة.']);
         }
 
         $userSlug = $user->role?->slug;
@@ -61,8 +61,8 @@ class AuthController extends Controller
             Auth::logout();
 
             return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['email' => 'هذا الحساب غير مصرّح له بالدخول لهذه اللوحة..']);
+                ->withInput($request->only('username'))
+                ->withErrors(['username' => 'هذا الحساب غير مصرّح له بالدخول لهذه اللوحة..']);
         }
 
         $request->session()->regenerate();
@@ -83,7 +83,7 @@ class AuthController extends Controller
             action:      'login',
             description: "تسجيل دخول ناجح — لوحة {$dashboard}",
             tag:         'auth',
-            after:       ['email' => $authUser->email, 'role' => $authUser->role?->slug],
+            after:       ['username' => $authUser->username, 'role' => $authUser->role?->slug],
         );
 
         return redirect()->route("{$dashboard}.dashboard");

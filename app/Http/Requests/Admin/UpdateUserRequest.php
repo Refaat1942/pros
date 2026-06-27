@@ -21,6 +21,12 @@ class UpdateUserRequest extends BaseRequest
                 'status'  => User::STATUS_ACTIVE,
             ]);
         }
+
+        if ($this->has('username')) {
+            $this->merge([
+                'username' => strtolower(trim((string) $this->input('username'))),
+            ]);
+        }
     }
 
     public function rules(): array
@@ -41,7 +47,14 @@ class UpdateUserRequest extends BaseRequest
 
         return [
             'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            'username' => [
+                'required',
+                'string',
+                'min:3',
+                'max:50',
+                'alpha_dash',
+                Rule::unique('users', 'username')->ignore($userId),
+            ],
             'password' => ['nullable', 'string', 'min:6', 'confirmed'],
             'role_id'  => $roleRules,
             'status'   => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
@@ -51,7 +64,8 @@ class UpdateUserRequest extends BaseRequest
     public function messages(): array
     {
         return [
-            'email.unique'       => 'البريد الإلكتروني مستخدم مسبقاً.',
+            'username.unique'    => 'اسم المستخدم مستخدم مسبقاً.',
+            'username.alpha_dash'=> 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
         ];
     }

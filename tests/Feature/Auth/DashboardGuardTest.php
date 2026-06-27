@@ -25,7 +25,7 @@ class DashboardGuardTest extends TestCase
         $user = $this->userWithRole('reception');
 
         $response = $this->post('/reception/login', [
-            'email'    => $user->email,
+            'username' => $user->username,
             'password' => 'password',
         ]);
 
@@ -38,7 +38,7 @@ class DashboardGuardTest extends TestCase
         $user = $this->userWithRole('admin');
 
         $response = $this->post('/admin/login', [
-            'email'    => $user->email,
+            'username' => $user->username,
             'password' => 'password',
         ]);
 
@@ -51,7 +51,7 @@ class DashboardGuardTest extends TestCase
         $user = $this->userWithRole('admin');
 
         $response = $this->post('/reception/login', [
-            'email'    => $user->email,
+            'username' => $user->username,
             'password' => 'password',
         ]);
 
@@ -65,12 +65,12 @@ class DashboardGuardTest extends TestCase
         $user = $this->userWithRole('reception');
 
         $response = $this->post('/admin/login', [
-            'email'    => $user->email,
+            'username' => $user->username,
             'password' => 'password',
         ]);
 
         $response->assertRedirect();
-        $response->assertSessionHasErrors('email');
+        $response->assertSessionHasErrors('username');
         $this->assertGuest();
     }
 
@@ -79,11 +79,11 @@ class DashboardGuardTest extends TestCase
         $user = $this->userWithRole('doctor');
 
         $response = $this->post('/doctor/login', [
-            'email'    => $user->email,
+            'username' => $user->username,
             'password' => 'wrong-password',
         ]);
 
-        $response->assertSessionHasErrors('email');
+        $response->assertSessionHasErrors('username');
         $this->assertGuest();
     }
 
@@ -93,12 +93,12 @@ class DashboardGuardTest extends TestCase
         $user->update(['status' => User::STATUS_INACTIVE]);
 
         $response = $this->post('/reception/login', [
-            'email'    => $user->email,
+            'username' => $user->username,
             'password' => 'password',
         ]);
 
         $response->assertRedirect();
-        $response->assertSessionHasErrors('email');
+        $response->assertSessionHasErrors('username');
         $this->assertGuest();
     }
 
@@ -112,7 +112,7 @@ class DashboardGuardTest extends TestCase
         $response = $this->get(route('reception.dashboard'));
 
         $response->assertRedirect('/reception/login');
-        $response->assertSessionHasErrors('email');
+        $response->assertSessionHasErrors('username');
         $this->assertGuest();
     }
 

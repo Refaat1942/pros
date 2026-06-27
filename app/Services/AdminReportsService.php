@@ -25,24 +25,24 @@ class AdminReportsService
     }
 
     /** @return array<string, mixed> */
-    public function build(): array
+    public function build(?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
     {
         $inventoryBoard = $this->biReportService->boardInventory();
         $operationsBoard = $this->biReportService->boardOperations();
 
         return [
-            'financial' => $this->financial(),
-            'inventory' => array_merge($inventoryBoard, $this->inventoryExtras($inventoryBoard)),
-            'operations' => $operationsBoard,
-            'bom'         => $this->bomReport(),
+            'financial'   => $this->financial($from, $to),
+            'inventory'   => array_merge($inventoryBoard, $this->inventoryExtras($inventoryBoard, $from, $to)),
+            'operations'  => $operationsBoard,
+            'bom'         => $this->bomReport($from, $to),
         ];
     }
 
     /** @return array<string, mixed> */
-    private function financial(): array
+    private function financial(?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
     {
-        $monthStart = now()->startOfMonth();
-        $monthEnd   = now()->endOfMonth();
+        $monthStart = ($from ?? now()->startOfMonth())->copy()->startOfDay();
+        $monthEnd   = ($to ?? now()->endOfMonth())->copy()->endOfDay();
 
         $deliveredThisMonth = CaseRecord::query()
             ->where('patient_type', Patient::TYPE_CIVILIAN)
@@ -81,7 +81,8 @@ class AdminReportsService
         return [
             'monthly_revenue'      => round((float) $monthlyRevenue, 2),
             'delivered_count'      => $deliveredThisMonth->count(),
-            'month_label'          => now()->translatedFormat('F Y'),
+            'month_label'          => $monthStart->translatedFormat('F Y')
+                . ($from || $to ? '' : ''),
             'top_items'            => $topItems,
             'work_orders_count'    => $workOrders->count(),
             'work_orders'          => $workOrders->map(fn (CaseRecord $c) => [
@@ -97,10 +98,10 @@ class AdminReportsService
      * @param  array<string, mixed>  $inventoryBoard
      * @return array<string, mixed>
      */
-    private function inventoryExtras(array $inventoryBoard): array
+    private function inventoryExtras(array $inventoryBoard, ?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
     {
-        $monthStart = now()->startOfMonth();
-        $monthEnd   = now()->endOfMonth();
+        $monthStart = ($from ?? now()->startOfMonth())->copy()->startOfDay();
+        $monthEnd   = ($to ?? now()->endOfMonth())->copy()->endOfDay();
 
         $itemCount = (int) ($inventoryBoard['item_count'] ?? 0);
         $lowStock  = (int) ($inventoryBoard['low_stock'] ?? 0);
@@ -144,7 +145,7 @@ class AdminReportsService
     }
 
     /** @return array<string, mixed> */
-    private function bomReport(): array
+    private function bomReport(?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
     {
         $boms = Bom::query()
             ->with([
@@ -152,6 +153,7 @@ class AdminReportsService
                 'caseRecord:id,case_no,work_order_no,patient_id',
                 'caseRecord.patient:id,name',
             ])
+            ->when($from && $to, fn ($q) => $q->whereBetween('updated_at', [$from, $to]))
             ->orderByDesc('id')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();

@@ -225,7 +225,8 @@
       companies: 'جهات التعاقد',
       debts: 'مديونيات جهات التعاقد',
       audit: 'سجل الرقابة الحصين — Immutable Audit Log',
-      reports: 'التقارير والتحليلات',
+      general-view: 'رؤية عامة',
+      reports: 'التقارير',
       suppliers: 'الموردون وفواتير المشتريات'
     };
 
@@ -1236,7 +1237,7 @@
       var search = document.getElementById('empSearch') ? document.getElementById('empSearch').value.trim() : '';
       var role = document.getElementById('empRoleFilter') ? document.getElementById('empRoleFilter').value : 'all';
       var status = document.getElementById('empStatusFilter') ? document.getElementById('empStatusFilter').value : 'all';
-      return ExportKit.filterItems(employees, { search: search, searchKeys: ['name', 'roleLabel'], filterField: 'role', filterValue: role })
+      return ExportKit.filterItems(employees, { search: search, searchKeys: ['name', 'username', 'roleLabel'], filterField: 'role', filterValue: role })
         .filter(function(e) { return status === 'all' || e.status === status; });
     }
 
@@ -1329,7 +1330,7 @@
 
     function exportEmployees(type) {
       var tbody = document.getElementById('employeesTableFull') || document.getElementById('employeesTable');
-      var headers = ['الاسم', 'البريد', 'الدور', 'الحالة', 'آخر دخول'];
+      var headers = ['الاسم', 'اسم المستخدم', 'الدور', 'الحالة', 'آخر دخول'];
       var rows = [];
       if (tbody && tbody.dataset.serverRendered === '1') {
         tbody.querySelectorAll('tr').forEach(function(row) {
@@ -1348,7 +1349,7 @@
         });
       } else {
         rows = getFilteredEmployees().map(function(e) {
-          return [e.name, e.email || '—', e.roleLabel, e.status === 'active' ? 'نشط' : 'غير نشط', ExportKit.formatDateForExport(e.lastLogin)];
+          return [e.name, e.username || '—', e.roleLabel, e.status === 'active' ? 'نشط' : 'غير نشط', ExportKit.formatDateForExport(e.lastLogin)];
         });
       }
       if (type === 'excel') ExportKit.toExcel('الموظفون', headers, rows);

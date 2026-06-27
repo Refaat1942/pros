@@ -51,7 +51,8 @@ class DashboardPageDataService
             // 'admin.stock-categories'=> $this->adminStockCategories(),
             'admin.catalog'         => $this->adminCatalog(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
-            'admin.reports'         => $this->adminReports(),
+            'admin.general-view'    => $this->adminGeneralView(),
+            'admin.reports'         => $this->adminReportsHub(),
             'admin.permissions'     => $this->adminPermissions(),
             'admin.suppliers'       => $this->adminSuppliers(),
             'admin.cases'           => $this->adminCases(),
@@ -86,7 +87,7 @@ class DashboardPageDataService
         $employees = User::query()
             ->with('role:id,slug,label_ar')
             ->orderByDesc('id')
-            ->get(['id', 'name', 'email', 'role_id', 'status', 'last_login_at']);
+            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at']);
 
         $roles = Role::query()
             ->orderBy('label_ar')
@@ -156,6 +157,8 @@ class DashboardPageDataService
     private function adminCatalog(): array
     {
         $catalogService = app(StockCatalogService::class);
+        $from = request()->query('from');
+        $to   = request()->query('to');
 
         return [
             // 'stock_categories' => StockCategory::query()
@@ -164,7 +167,9 @@ class DashboardPageDataService
             'suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'stock_items' => $catalogService->listForDashboard(),
+            'stock_items' => $catalogService->listForDashboard($from, $to),
+            'date_from'   => $from,
+            'date_to'     => $to,
         ];
     }
 
@@ -223,13 +228,19 @@ class DashboardPageDataService
         ];
     }
 
-    private function adminReports(): array
+    private function adminGeneralView(): array
     {
         return [
             'admin_reports' => app(AdminReportsService::class)->build(),
         ];
     }
 
+    private function adminReportsHub(): array
+    {
+        return [
+            'report_sections' => app(\App\Services\AdminReportsHubService::class)->sections(),
+        ];
+    }
     private function adminPatientTracks(): array
     {
         $tracks = app(AdminPatientTrackService::class)->list(
