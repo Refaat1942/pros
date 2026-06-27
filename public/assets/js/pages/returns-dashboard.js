@@ -1,5 +1,5 @@
 /**
- * Warehouse returns inbox — confirm receipt from operations (barcode scan).
+ * Warehouse returns inbox — confirm receipt from workshop (barcode scan).
  */
 (function () {
   if (document.body.dataset.activePage !== 'returns') return;

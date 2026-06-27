@@ -477,6 +477,15 @@
         '<div class="case-doc-panel__body">' + innerHtml + '</div></div>';
     }
 
+    /** خطاب الموافقة: PDF في iframe — أي صورة (jfif/heic/…) في img */
+    function approvalLetterPreviewHtml(url, ext) {
+      ext = (ext || '').toLowerCase();
+      if (ext === 'pdf') {
+        return '<iframe src="' + escapeHtml(url) + '" title="خطاب الموافقة"></iframe>';
+      }
+      return '<img src="' + escapeHtml(url) + '" alt="خطاب الموافقة">';
+    }
+
     function closeCaseDetailModal() {
       var modal = document.getElementById('caseDetailModal');
       var body = document.getElementById('caseDetailModalBody');
@@ -553,14 +562,7 @@
       if (a) {
         var letterPreview = '';
         if (a.has_letter && a.letter_url) {
-          var ext = (a.letter_ext || '').toLowerCase();
-          if (ext === 'pdf') {
-            letterPreview = '<iframe src="' + escapeHtml(a.letter_url) + '" title="خطاب الموافقة"></iframe>';
-          } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].indexOf(ext) !== -1) {
-            letterPreview = '<img src="' + escapeHtml(a.letter_url) + '" alt="خطاب الموافقة">';
-          } else {
-            letterPreview = '<iframe src="' + escapeHtml(a.letter_url) + '" title="خطاب الموافقة"></iframe>';
-          }
+          letterPreview = approvalLetterPreviewHtml(a.letter_url, a.letter_ext);
         }
         approvalSection =
           '<div class="case-detail-section">' +

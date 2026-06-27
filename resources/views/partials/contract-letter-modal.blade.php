@@ -40,10 +40,8 @@
         ext = (ext || '').toLowerCase();
         if (ext === 'pdf') {
             body.innerHTML = '<iframe src="' + url + '" style="width:100%;height:70vh;border:none;border-radius:8px;background:#fff;" title="خطاب الموافقة"></iframe>';
-        } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].indexOf(ext) !== -1) {
-            body.innerHTML = '<img src="' + url + '" alt="خطاب الموافقة" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);">';
         } else {
-            body.innerHTML = '<iframe src="' + url + '" style="width:100%;height:70vh;border:none;border-radius:8px;background:#fff;" title="خطاب الموافقة"></iframe>';
+            body.innerHTML = '<img src="' + url + '" alt="خطاب الموافقة" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);">';
         }
 
         modal.style.display = 'flex';

@@ -58,7 +58,49 @@ class AdminCaseDetailTest extends TestCase
         $response->assertJsonPath('quote.quote_no', 'QT-2026-0099');
         $response->assertJsonPath('approval.contract_no', 'CTR-2026-0001');
         $response->assertJsonPath('approval.letter_ref', 'LTR-001');
+        $response->assertJsonPath('approval.letter_ext', 'png');
         $this->assertStringContainsString('/admin/cases/' . $case->id . '/quote', $response->json('quote.print_url'));
+    }
+
+    public function test_admin_case_detail_exposes_jfif_letter_extension_for_image_preview(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $admin   = $this->userWithRole('admin');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
+        $case->update(['work_order_no' => 'WO-2026-0822']);
+
+        $quote = Quote::create([
+            'quote_no'     => 'QT-2026-0822',
+            'case_id'      => $case->id,
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
+            'quote_date'   => now()->toDateString(),
+            'status'       => Quote::STATUS_APPROVED,
+            'total'        => 10000.00,
+        ]);
+
+        ApprovalContract::create([
+            'contract_no'     => 'CNT-2026-0001',
+            'case_id'         => $case->id,
+            'quote_id'        => $quote->id,
+            'patient_name'    => $patient->name,
+            'company_name'    => $company->name,
+            'approved_amount' => 10000.00,
+            'approval_date'   => now()->toDateString(),
+            'work_order_no'   => 'WO-2026-0822',
+            'letter_path'     => 'approval_letters/sample.jfif',
+        ]);
+
+        \Illuminate\Support\Facades\Storage::disk('public')->put('approval_letters/sample.jfif', 'fake-image');
+
+        $response = $this->actingAs($admin)->getJson('/admin/cases/' . $case->id . '/detail');
+
+        $response->assertOk();
+        $response->assertJsonPath('approval.has_letter', true);
+        $response->assertJsonPath('approval.letter_ext', 'jfif');
+        $this->assertStringContainsString('approval_letters/sample.jfif', $response->json('approval.letter_url'));
     }
 
     public function test_admin_military_case_detail_always_shows_armed_forces_sovereign(): void
