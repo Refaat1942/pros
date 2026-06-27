@@ -365,13 +365,35 @@
       });
     }
 
+    function exportFromServerTable(tableId) {
+      var tbody = document.getElementById(tableId);
+      if (!tbody || tbody.dataset.serverRendered !== '1') return null;
+      var table = tbody.closest('table');
+      if (!table || !window.ExportKit || !ExportKit.collectFromTable) return null;
+      return ExportKit.collectFromTable(table);
+    }
+
     function exportQueue(type) {
-      var data = getFilteredQueue();
-      var headers = ['#', 'اسم المريض', 'الجهة', 'تاريخ الإضافة'];
-      var rows = data.map(function(p, i) {
-        return [i + 1, p.name, p.company, p.queuedAt || p.wait || '—'];
-      });
-      if (type === 'excel') ExportKit.toExcel('قائمة_الانتظار', headers, rows);
+      var collected = exportFromServerTable('queueTable');
+      var headers, rows;
+
+      if (collected && collected.rows.length) {
+        headers = collected.headers;
+        rows = collected.rows;
+      } else {
+        var data = getFilteredQueue();
+        headers = ['#', 'اسم المريض', 'الجهة', 'وقت الانتظار', 'وقت التحويل'];
+        rows = data.map(function(p, i) {
+          return [i + 1, p.name, p.company, p.wait || '—', p.queuedAt || '—'];
+        });
+      }
+
+      if (!rows.length) {
+        alert('لا توجد بيانات للتصدير');
+        return;
+      }
+
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('قائمة_الانتظار'), headers, rows);
       else ExportKit.toPDF('قائمة الانتظار الرقمية', headers, rows);
     }
 
@@ -403,22 +425,50 @@
     }
 
     function exportRecords(type) {
-      var data = getFilteredRecords();
-      var headers = ['المريض', 'رقم الهاتف', 'التشخيص', 'الروشتة', 'الطبيب', 'التاريخ'];
-      var rows = data.map(function(r) {
-        return [r.name, r.phone || '—', r.diagnosis || '—', r.prescription || '—', r.doctor, r.date];
-      });
-      if (type === 'excel') ExportKit.toExcel('السجل_الطبي', headers, rows);
+      var collected = exportFromServerTable('recordsTable');
+      var headers, rows;
+
+      if (collected && collected.rows.length) {
+        headers = collected.headers;
+        rows = collected.rows;
+      } else {
+        var data = getFilteredRecords();
+        headers = ['المريض', 'رقم الهاتف', 'التشخيص', 'الطبيب', 'التاريخ'];
+        rows = data.map(function(r) {
+          return [r.name, r.phone || '—', r.diagnosis || '—', r.doctor, r.date];
+        });
+      }
+
+      if (!rows.length) {
+        alert('لا توجد بيانات للتصدير');
+        return;
+      }
+
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('السجل_الطبي'), headers, rows);
       else ExportKit.toPDF('السجل الطبي — التقارير المعتمدة', headers, rows);
     }
 
     function exportTransferred(type) {
-      var data = getFilteredTransferred();
-      var headers = ['المريض', 'الجهة', 'تاريخ التحويل', 'الحالة'];
-      var rows = data.map(function(t) {
-        return [t.name, t.company, t.date, t.status];
-      });
-      if (type === 'excel') ExportKit.toExcel('المحولون_للتوصيف', headers, rows);
+      var collected = exportFromServerTable('transferredTable');
+      var headers, rows;
+
+      if (collected && collected.rows.length) {
+        headers = collected.headers;
+        rows = collected.rows;
+      } else {
+        var data = getFilteredTransferred();
+        headers = ['المريض', 'الجهة', 'تاريخ التحويل', 'الحالة'];
+        rows = data.map(function(t) {
+          return [t.name, t.company, t.date, t.status];
+        });
+      }
+
+      if (!rows.length) {
+        alert('لا توجد بيانات للتصدير');
+        return;
+      }
+
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('المحولون_للتوصيف'), headers, rows);
       else ExportKit.toPDF('الحالات المحولة للتوصيف', headers, rows);
     }
 

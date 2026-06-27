@@ -46,7 +46,7 @@
         </label>
     </div>
     <button type="submit" class="btn-action primary" id="auditApplyFilters">تطبيق</button>
-    <button type="button" class="btn-export excel" data-export-audit="#auditListFull" data-export-filename="audit-log">📊 Excel</button>
+    <button type="button" class="btn-export excel" data-export-audit="#auditListFull" data-export-filename="سجل_الرقابة">📊 Excel</button>
     <span class="toolbar-count" id="auditCount">{{ $auditLogs->total() }} حركة</span>
 </form>
 

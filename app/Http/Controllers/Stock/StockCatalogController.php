@@ -150,7 +150,7 @@ class StockCatalogController extends Controller
                 $request->query('to'),
             )
         );
-        $filename = 'stock-items-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'الأصناف_والأسعار-' . now()->format('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($contents) {
             echo $contents;

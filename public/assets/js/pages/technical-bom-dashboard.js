@@ -15,7 +15,7 @@
 
   var STAGE_META = {
     raw: { label: '📦 خام', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
-    wip: { label: '🏭 تحت التشغيل', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+    wip: { label: '🏭 تم التحويل للورشة', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
     finished: { label: '✅ تام', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   };
 
@@ -343,7 +343,7 @@
     if (b.stage === 'raw') {
       action = '<button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm" data-bom-id="' + b.id + '">📤 صرف للورشة</button>' + printBtn;
     } else if (b.stage === 'wip') {
-      action = printBtn + '<span class="text-xs text-slate-500">🏭 تحت التشغيل — يُغلق من مكتب التشغيل</span>';
+      action = printBtn + '<span class="text-xs text-slate-500">🏭 تم التحويل للورشة — يُغلق من مكتب التشغيل</span>';
     } else {
       action = '<span class="text-xs text-slate-400">—</span>';
     }

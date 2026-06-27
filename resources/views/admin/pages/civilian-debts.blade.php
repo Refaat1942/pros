@@ -496,7 +496,7 @@
             return;
         }
 
-        var headers = ['جهة التعاقد', 'المستحق (ج.م)', 'المحصّل (ج.م)', 'المتبقي (ج.م)', 'الحالة'];
+        var headers = ['جهة التعاقد', 'المستحق', 'المحصّل', 'المتبقي', 'الحالة'];
         var dataRows = [];
 
         getRows().forEach(function (row) {
@@ -511,7 +511,7 @@
         });
 
         ExportKit.toExcel(
-            'مديونيات_مدنية_' + new Date().toISOString().slice(0, 10),
+            ExportKit.buildFilename('مديونيات_مدنية'),
             headers,
             dataRows
         );

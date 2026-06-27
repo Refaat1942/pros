@@ -650,7 +650,7 @@ class DashboardPageDataService
             'warehouse_boms' => $boms,
             'bom_stats'      => [
                 ['icon' => '📦', 'label' => 'خام', 'value' => (string) $rawCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-                ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['icon' => '🏭', 'label' => 'تم التحويل للورشة', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '✅', 'label' => 'تام', 'value' => (string) $finCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📋', 'label' => 'إجمالي القوائم', 'value' => (string) $boms->count(), 'bg' => 'rgba(124,58,237,0.1)'],
             ],

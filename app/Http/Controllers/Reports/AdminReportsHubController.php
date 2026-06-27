@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Reports;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Reports\Concerns\RendersAdminDashboard;
 use App\Services\AdminReportsHubService;
+use App\Support\ExportCsvFormat;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use InvalidArgumentException;
@@ -58,7 +60,11 @@ class AdminReportsHubController extends Controller
             abort(404);
         }
 
-        $filename = 'report-' . $section . '-' . $dates['from']->format('Ymd') . '-' . $dates['to']->format('Ymd') . '.csv';
+        $filename = $this->exportFilename(
+            $report['title'] ?? $this->hub->sectionMeta($section)['label'] ?? 'تقرير',
+            $dates['from'],
+            $dates['to'],
+        );
 
         $headers = [
             'Content-Type'        => 'text/csv; charset=UTF-8',
@@ -71,13 +77,21 @@ class AdminReportsHubController extends Controller
             fputcsv($out, [$report['title'] ?? 'تقرير']);
             fputcsv($out, [$report['period_label'] ?? '']);
             fputcsv($out, []);
-            fputcsv($out, $report['headers'] ?? []);
+            fputcsv($out, ExportCsvFormat::row($report['headers'] ?? []));
             foreach ($report['rows'] ?? [] as $row) {
-                fputcsv($out, $row);
+                fputcsv($out, ExportCsvFormat::row($row));
             }
             fclose($out);
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    private function exportFilename(string $title, Carbon $from, Carbon $to): string
+    {
+        $base = preg_replace('/\s+/u', '_', trim($title));
+        $base = preg_replace('/[^\p{L}\p{N}_-]+/u', '', $base) ?: 'تقرير';
+
+        return $base . '_' . $from->format('Y-m-d') . '_' . $to->format('Y-m-d') . '.csv';
     }
 }

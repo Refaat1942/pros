@@ -84,6 +84,11 @@ class OperationsListRefreshTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.company_name', Patient::MILITARY_SOVEREIGN_ENTITY)
             ->assertJsonPath('data.0.pathway_label', 'عسكري');
+
+        $this->actingAs($user)
+            ->get('/operations/operations')
+            ->assertOk()
+            ->assertSee(Patient::MILITARY_SOVEREIGN_ENTITY, false);
     }
 
     public function test_operations_deliver_closes_case_from_desk(): void

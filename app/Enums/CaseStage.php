@@ -42,7 +42,19 @@ enum CaseStage: string
             return '—';
         }
 
-        return self::tryFrom($key)?->label() ?? $key;
+        return self::tryFrom($key)?->label()
+            ?? self::legacyLabelFor($key)
+            ?? $key;
+    }
+
+    /** مراحل قديمة في بيانات تجريبية/مهاجرة — للعرض فقط. */
+    private static function legacyLabelFor(string $key): ?string
+    {
+        return match ($key) {
+            'admin_approval' => 'انتظار موافقة الأدمن',
+            'waiting_return' => 'بانتظار رجوع العميل',
+            default          => null,
+        };
     }
 
     public function badgeClass(): string
@@ -57,9 +69,11 @@ enum CaseStage: string
             self::Exam->value          => 'badge-info',
             self::Technical->value     => 'badge-info',
             self::Adjustments->value   => 'badge-warning',
-            self::CostCalc->value      => 'badge-warning',
+            self::CostCalc->value,
+            'admin_approval'           => 'badge-warning',
             self::Quote->value         => 'badge-warning',
-            self::Operations->value    => 'badge-warning',
+            self::Operations->value,
+            'waiting_return'             => 'badge-warning',
             self::Manufacturing->value => 'badge-info',
             self::ReadyDelivery->value => 'badge-success',
             self::Delivered->value     => 'badge-success',

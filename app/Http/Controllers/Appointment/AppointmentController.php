@@ -7,6 +7,7 @@ use App\Http\Requests\Appointment\StoreAppointmentRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentStatusRequest;
 use App\Models\Appointment;
+use App\Models\Patient;
 use App\Services\AppointmentService;
 use App\Support\ClinicTime;
 use App\Traits\PaginationTrait;
@@ -89,6 +90,8 @@ class AppointmentController extends Controller
     {
         return $appointment->toArray() + [
             'queue_number'            => $appointment->patient_id,
+            'patient_type'            => $appointment->patient_type ?? $appointment->patient?->patient_type,
+            'patient_type_label'      => ($appointment->patient_type ?? $appointment->patient?->patient_type) === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
             'registered_at_formatted' => $appointment->registeredAtFormatted(),
             'wait_label'              => $appointment->receptionDeskWaitLabel(),
             'wait_started_at'         => $appointment->registrationMoment()?->toIso8601String(),

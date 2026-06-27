@@ -1,6 +1,6 @@
 @php
     $table = $table ?? '';
-    $filename = $filename ?? 'export';
+    $filename = $filename ?? 'تصدير';
 @endphp
 <button type="button"
         class="btn-export excel"

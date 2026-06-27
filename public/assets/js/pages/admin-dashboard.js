@@ -455,7 +455,14 @@
           return [c.patient, c.company, c.totalCost, ExportKit.formatDateForExport(c.deliveredAt)];
         });
       }
-      if (type === 'excel') ExportKit.toExcel('cases-' + casesFilter, headers, rows);
+      if (type === 'excel') {
+        var caseNames = {
+          waiting_return: 'حالات_بانتظار_رجوع_العميل',
+          in_progress: 'حالات_تحت_التنفيذ',
+          delivered: 'حالات_مسلّمة'
+        };
+        ExportKit.toExcel(ExportKit.buildFilename(caseNames[casesFilter] || 'متابعة_الحالات'), headers, rows);
+      }
       else ExportKit.toPDF(title, headers, rows);
     }
 
@@ -709,7 +716,7 @@
       var data = getFilteredCompanies();
       var headers = ['#', 'اسم الجهة'];
       var rows = data.map(function(c, i) { return [i + 1, c.name]; });
-      if (type === 'excel') ExportKit.toExcel('contract-companies', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('جهات_التعاقد'), headers, rows);
       else ExportKit.toPDF('جهات التعاقد', headers, rows);
     }
 
@@ -1160,7 +1167,7 @@
         var s = StockCatalog.getPriceSummary(i.prices);
         return [i.code, i.name, i.category, i.spec, s.count, s.min, s.max, i.qty || 0];
       });
-      if (type === 'excel') ExportKit.toExcel('catalog-items', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('الأصناف_والأسعار'), headers, rows);
       else ExportKit.toPDF('الأصناف والأسعار', headers, rows);
     }
     window.exportCatalog = exportCatalog;
@@ -1352,7 +1359,7 @@
           return [e.name, e.username || '—', e.roleLabel, e.status === 'active' ? 'نشط' : 'غير نشط', ExportKit.formatDateForExport(e.lastLogin)];
         });
       }
-      if (type === 'excel') ExportKit.toExcel('الموظفون', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('الموظفون'), headers, rows);
       else ExportKit.toPDF('ادارة الموظفين', headers, rows);
     }
 
@@ -1363,7 +1370,7 @@
         var lbl = d.status === 'paid' ? 'مسدد' : d.status === 'partial' ? 'جزئي' : 'معلق';
         return [d.company, formatNumber(d.due), lbl];
       });
-      if (type === 'excel') ExportKit.toExcel('المديونيات', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('مديونيات_جهات_التعاقد'), headers, rows);
       else ExportKit.toPDF('مديونيات جهات التعاقد', headers, rows);
     }
 
@@ -1371,7 +1378,7 @@
       var data = getFilteredAudit();
       var headers = ['الوقت', 'المستخدم', 'الوصف', 'العملية'];
       var rows = data.map(function(l) { return [l.time, l.user, l.desc, l.action]; });
-      if (type === 'excel') ExportKit.toExcel('سجل_الرقابة', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('سجل_الرقابة'), headers, rows);
       else ExportKit.toPDF('سجل الرقابة — Audit Trail', headers, rows);
     }
 
@@ -1395,7 +1402,7 @@
           return [s.name, s.phone || '—', s.email || '—'];
         });
       }
-      if (type === 'excel') ExportKit.toExcel('الموردون', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('الموردون'), headers, rows);
       else ExportKit.toPDF('الموردون', headers, rows);
     }
 
@@ -2388,7 +2395,7 @@
             ExportKit.formatDateForExport(d.completedAt),
           ];
         });
-        ExportKit.toExcel('return-requests', headers, data);
+        ExportKit.toExcel(ExportKit.buildFilename('طلبات_الارتجاع'), headers, data);
       };
 
       window.exportAdminReturnLinesDetail = function () {
@@ -2417,7 +2424,7 @@
             ExportKit.formatDateForExport(row.received_at),
           ];
         });
-        ExportKit.toExcel('return-lines-detail', headers, data);
+        ExportKit.toExcel(ExportKit.buildFilename('تفاصيل_بنود_الارتجاع'), headers, data);
       };
     })();
 
@@ -2427,7 +2434,7 @@
         if (tableBtn && window.ExportKit && ExportKit.fromVisibleTable) {
           event.preventDefault();
           ExportKit.fromVisibleTable(tableBtn.getAttribute('data-export-table'), {
-            filename: tableBtn.getAttribute('data-export-filename') || 'export',
+            filename: tableBtn.getAttribute('data-export-filename') || 'تصدير',
           });
           return;
         }
@@ -2436,7 +2443,7 @@
         if (auditBtn && window.ExportKit && ExportKit.fromAuditList) {
           event.preventDefault();
           ExportKit.fromAuditList(auditBtn.getAttribute('data-export-audit'), {
-            filename: auditBtn.getAttribute('data-export-filename') || 'audit-log',
+            filename: auditBtn.getAttribute('data-export-filename') || 'سجل_الرقابة',
           });
           return;
         }
@@ -2444,15 +2451,12 @@
         var permBtn = event.target.closest('[data-export-permissions]');
         if (permBtn && window.ExportKit && ExportKit.fromPermissions) {
           event.preventDefault();
-          ExportKit.fromPermissions(permBtn.getAttribute('data-export-filename') || 'permissions');
+          ExportKit.fromPermissions(permBtn.getAttribute('data-export-filename') || 'مصفوفة_الصلاحيات');
         }
       });
 
       function slugifyFilename(text) {
-        return String(text || 'export')
-          .replace(/[^\w\u0600-\u06FF]+/g, '_')
-          .replace(/^_+|_+$/g, '')
-          .slice(0, 48) || 'export';
+        return ExportKit.slugFilename ? ExportKit.slugFilename(text) : String(text || 'تصدير');
       }
 
       function panelHasExport(panel) {

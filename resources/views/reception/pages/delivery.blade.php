@@ -102,7 +102,7 @@
                             <div>
                                 <p class="font-bold text-slate-800">{{ $case->patient?->name ?? '—' }}</p>
                                 <p class="text-xs text-slate-500 mt-1">{{ $case->case_no }} · {{ $case->work_order_no ?? '—' }}</p>
-                                <p class="text-xs text-slate-400">{{ $case->company_name ?? '—' }}</p>
+                                <p class="text-xs text-slate-400">{{ $case->displayEntity() }}</p>
                             </div>
                             <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">BOM تام</span>
                         </div>
