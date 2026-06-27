@@ -136,16 +136,10 @@ class WorkshopAnalyticsService
             ->count();
 
         $finishedMonth = $this->countFinishedBetween($monthStart->toDateString(), $now->toDateString());
-        $wipValue = (float) Bom::query()
-            ->where('stage', Bom::STAGE_WIP)
-            ->with('items:id,bom_id,qty,unit_cost')
-            ->get()
-            ->sum(fn (Bom $b) => $b->totalValue());
 
         return [
             'returns_this_month'   => $returnsMonth,
             'finished_this_month'    => $finishedMonth,
-            'wip_bom_value'          => round($wipValue, 2),
             'month_label'            => $now->translatedFormat('F Y'),
             'top_wip_items'          => array_slice($this->topWipBomItems(), 0, 5),
             'longest_wip'            => $this->longestWipCases(),

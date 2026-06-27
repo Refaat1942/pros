@@ -35,14 +35,6 @@
             </div>
 
             <div class="workshop-report-card">
-                <h4>💰 قيمة قوائم المواد — تحت التشغيل</h4>
-                <div class="workshop-report-card__value workshop-report-card__value--purple">
-                    {{ number_format((float) ($reports['wip_bom_value'] ?? 0), 2) }} ج.م
-                </div>
-                <p class="workshop-report-card__sub">بأعلى تكلفة دفعة — تحت التشغيل فقط</p>
-            </div>
-
-            <div class="workshop-report-card">
                 <h4>↩️ ارتجاعات — الشهر</h4>
                 <div class="workshop-report-card__value workshop-report-card__value--teal">
                     {{ (int) ($reports['returns_this_month'] ?? 0) }} طلب
