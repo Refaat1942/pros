@@ -79,6 +79,7 @@ class PricingService
                     'pricing_request_id' => $pricingRequest->id,
                     'stock_item_code'    => $item->stock_item_code,
                     'name'               => $item->name,
+                    'source'             => $item->source ?? \App\Models\BomItem::SOURCE_SPEC,
                     'qty'                => $item->qty,
                 ]);
             }
@@ -110,6 +111,7 @@ class PricingService
                 'pricing_request_id' => $request->id,
                 'stock_item_code'    => $item->stock_item_code,
                 'name'               => $item->name,
+                'source'             => $item->source ?? \App\Models\BomItem::SOURCE_SPEC,
                 'qty'                => $item->qty,
             ]);
         }

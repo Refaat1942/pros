@@ -9,6 +9,7 @@ use App\Models\Quote;
 use App\Services\AdminCaseDetailService;
 use App\Services\QuoteQrService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AdminCaseController extends Controller
@@ -30,7 +31,7 @@ class AdminCaseController extends Controller
     /**
      * عرض/طباعة عرض السعر المرتبط بالحالة (مدني).
      */
-    public function quotePrint(CaseRecord $case): View
+    public function quotePrint(Request $request, CaseRecord $case): View
     {
         abort_if($case->patient_type === Patient::TYPE_MILITARY, 404);
 
@@ -41,11 +42,13 @@ class AdminCaseController extends Controller
             ->orderByDesc('id')
             ->firstOrFail();
 
+        $embed = $request->boolean('embed');
+
         return view('quotes.print', [
             'quote'      => $quote,
             'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
-            'embed'      => false,
-            'autoPrint'  => true,
+            'embed'      => $embed,
+            'autoPrint'  => ! $embed,
         ]);
     }
 }

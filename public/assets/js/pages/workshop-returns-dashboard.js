@@ -52,8 +52,12 @@
   }
 
   function deriveBarcode(code) {
-    var digits = String(code || '').replace(/\D/g, '');
-    return 'BC-' + digits;
+    return code ? 'BC-' + String(code) : '';
+  }
+
+  function lineBarcode(ln) {
+    if (ln && ln.barcode) return String(ln.barcode);
+    return deriveBarcode(ln && ln.stock_item_code);
   }
 
   function updateSummary(notes) {

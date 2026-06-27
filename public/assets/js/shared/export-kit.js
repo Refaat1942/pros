@@ -214,6 +214,7 @@ var ExportKit = (function () {
     var headers = ['الوقت', 'المستخدم', 'الوصف', 'العملية'];
     var rows = [];
     container.querySelectorAll('.audit-item').forEach(function (item) {
+      if (item.style.display === 'none') return;
       var descEl = item.querySelector('.audit-desc');
       var user = item.querySelector('.audit-desc strong');
       var desc = descEl ? descEl.textContent.replace((user && user.textContent) || '', '').replace(/—/g, ' ').replace(/\s+/g, ' ').trim() : '';

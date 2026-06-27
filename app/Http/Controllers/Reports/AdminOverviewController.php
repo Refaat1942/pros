@@ -109,6 +109,7 @@ class AdminOverviewController extends Controller
                 search: $request->query('search'),
                 stage: $request->query('stage'),
                 patientType: $request->query('patient_type'),
+                visitType: $request->query('visit_type'),
             )->values()
         );
     }

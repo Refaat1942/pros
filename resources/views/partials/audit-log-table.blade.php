@@ -1,16 +1,10 @@
-<form method="GET" action="{{ route('admin.audit') }}" class="data-toolbar" style="margin-bottom:12px">
+<form method="GET" action="{{ route('admin.audit') }}" id="auditFilterForm" class="data-toolbar" style="margin-bottom:12px" novalidate>
     @php use App\Support\AuditLogLabel; @endphp
-    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="🔍 بحث بالمستخدم أو الوصف...">
-    <select name="tag">
+    <input type="text" id="auditSearch" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="🔍 بحث بالمستخدم أو الوصف...">
+    <select id="auditTagFilter" name="tag">
         <option value="">كل الوسوم</option>
         @foreach($filterTags ?? [] as $tag)
             <option value="{{ $tag }}" @selected(($filters['tag'] ?? '') === $tag)>{{ AuditLogLabel::tag($tag) }}</option>
-        @endforeach
-    </select>
-    <select name="action">
-        <option value="">كل العمليات</option>
-        @foreach($filterActions ?? [] as $action)
-            <option value="{{ $action }}" @selected(($filters['action'] ?? '') === $action)>{{ AuditLogLabel::action($action) }}</option>
         @endforeach
     </select>
     <div class="date-filter-group">
@@ -51,14 +45,18 @@
             </span>
         </label>
     </div>
-    <button type="submit" class="btn-action primary">تطبيق</button>
+    <button type="submit" class="btn-action primary" id="auditApplyFilters">تطبيق</button>
     <button type="button" class="btn-export excel" data-export-audit="#auditListFull" data-export-filename="audit-log">📊 Excel</button>
-    <span class="toolbar-count">{{ $auditLogs->total() }} حركة</span>
+    <span class="toolbar-count" id="auditCount">{{ $auditLogs->total() }} حركة</span>
 </form>
 
-<div data-server-rendered="1">
+<div data-server-rendered="1" id="auditItemsList">
     @forelse($auditLogs as $log)
-        <div class="audit-item">
+        <div class="audit-item"
+             data-tag="{{ $log->tag }}"
+             data-action="{{ $log->action }}"
+             data-date="{{ $log->logged_at?->format('Y-m-d') }}"
+             data-search="{{ mb_strtolower(($log->user_name ?? '') . ' ' . ($log->description ?? '')) }}">
             <span class="audit-time">{{ $log->logged_at?->format('Y-m-d H:i:s') }}</span>
             <div class="audit-desc">
                 <strong>{{ $log->user_name ?? '—' }}</strong> — {{ $log->description }}
@@ -109,6 +107,7 @@
 
         native.addEventListener('change', function () {
             text.value = native.value;
+            text.dispatchEvent(new Event('change', { bubbles: true }));
         });
     });
 })();

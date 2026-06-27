@@ -1,14 +1,14 @@
 <div class="section-view" id="section-audit">
       <div id="analytics-audit">
         @isset($audit_stats)
-          @include('partials.dashboard-analytics-empty', ['stats' => $audit_stats])
+          @include('partials.dashboard-analytics-empty', ['stats' => $audit_stats, 'hide_charts' => true])
         @else
           @include('partials.dashboard-analytics-empty', ['stats' => [
             ['icon' => '📝', 'label' => 'عمليات', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
             ['icon' => '➕', 'label' => 'إنشاء', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
             ['icon' => '✏️', 'label' => 'تحديث', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ['icon' => '👁️', 'label' => 'عرض', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-          ]])
+          ], 'hide_charts' => true])
         @endisset
       </div>
       <div class="immutable-audit-banner">
@@ -19,7 +19,7 @@
           <h3>🔒 سجل الرقابة الكامل — Immutable Audit Log</h3>
           <span class="badge">للقراءة فقط</span>
         </div>
-        <div class="panel-body" id="auditListFull" @isset($auditLogs) data-server-rendered="1" @endisset>
+        <div class="panel-body" id="auditListFull" @isset($auditLogs) data-server-rendered="1" data-audit-total="{{ $auditLogs->total() }}" @endisset>
           @isset($auditLogs)
             @include('partials.audit-log-table')
           @else

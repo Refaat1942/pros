@@ -108,7 +108,8 @@ class ReturnNoteListTest extends TestCase
         $this->getJson('/technical/returns/list?inbox=1')
             ->assertOk()
             ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.id', $pending->id);
+            ->assertJsonPath('data.0.id', $pending->id)
+            ->assertJsonPath('data.0.lines.0.barcode', 'BC-RM-001');
     }
 
     private function seedStock(): void

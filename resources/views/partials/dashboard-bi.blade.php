@@ -37,12 +37,12 @@
             <span class="bi-card-icon bi-card-icon--patients" aria-hidden="true">👥</span>
             <div class="bi-card-head__text">
                 <span class="bi-card-index">اللوحة 1</span>
-                <h4>إدارة المرضى و SLA</h4>
+                <h4>إدارة المرضى والمواعيد المتفقة للتسليم</h4>
             </div>
             @if ($slaCount > 0)
                 <span class="bi-card-chip bi-card-chip--danger">{{ $slaCount }} متأخر</span>
             @else
-                <span class="bi-card-chip bi-card-chip--ok">SLA سليم</span>
+                <span class="bi-card-chip bi-card-chip--ok">ضمن الموعد المتفق</span>
             @endif
         </header>
         <div class="bi-card-body">
@@ -81,7 +81,7 @@
             </div>
 
             <div class="bi-metric-pill">
-                <span>⏱️ متوسط زمن التنفيذ (Turnaround)</span>
+                <span>⏱️ متوسط مدة إنجاز الحالة</span>
                 <strong>
                     @if(isset($b1['avg_turnaround']) && $b1['avg_turnaround'] !== null)
                         {{ $b1['avg_turnaround'] }} يوم
@@ -91,10 +91,10 @@
                 </strong>
             </div>
 
-            <div class="bi-section-title">⏱️ حالات متأخرة عن الـ SLA ({{ $b1['sla_days'] ?? 21 }} يوم)</div>
+            <div class="bi-section-title">⏱️ حالات متأخرة عن الموعد المتفق ({{ $b1['sla_days'] ?? 21 }} يوم)</div>
             <div class="bi-alert-box {{ empty($slaCases) ? 'bi-alert-box--ok' : 'bi-alert-box--warn' }}">
                 @if (empty($slaCases))
-                    <p class="bi-alert-empty">لا توجد حالات متأخرة عن الـ SLA ✅</p>
+                    <p class="bi-alert-empty">لا توجد حالات متأخرة عن الموعد المتفق ✅</p>
                 @else
                     <ul class="bi-sla-list">
                         @foreach($slaCases as $case)
@@ -129,7 +129,7 @@
                     <div class="bi-inventory-hero__value bi-tone-cyan">
                         {{ $fmtMoney($b2['total_value'] ?? 0) }} <small>ج.م</small>
                     </div>
-                    <p>القيمة المالية الإجمالية (WAC)</p>
+                    <p>القيمة المالية الإجمالية — متوسط التكلفة المرجح</p>
                     <div class="bi-inventory-tags">
                         <span>{{ $itemCount }} صنف</span>
                         <span class="bi-inventory-tags--warn">{{ $lowStock }} ناقص</span>
@@ -260,13 +260,13 @@
             <span class="bi-card-chip">{{ $b5['supplier_count'] ?? 0 }} مورد معتمد</span>
         </header>
         <div class="bi-card-body">
-            <div class="bi-section-title">⚖️ مقارنة WAC ↔ أعلى سعر شراء</div>
+            <div class="bi-section-title">⚖️ مقارنة متوسط التكلفة ↔ أعلى سعر شراء</div>
             <div class="bi-table-wrap">
                 <table class="bi-table bi-table--purchasing" data-paginate="10">
                     <thead>
                         <tr>
                             <th class="text">الصنف</th>
-                            <th class="num">WAC</th>
+                            <th class="num">متوسط التكلفة</th>
                             <th class="num">أعلى سعر</th>
                             <th class="num">الفرق</th>
                         </tr>

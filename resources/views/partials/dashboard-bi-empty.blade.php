@@ -5,11 +5,11 @@
             <div class="bi-row"><span>إجمالي الحالات</span><strong>0</strong></div>
             <div class="bi-row"><span>🌐 مدني</span><strong style="color:#0e7490">0</strong></div>
             <div class="bi-row"><span>🪖 عسكري</span><strong style="color:#b45309">0</strong></div>
-            <div class="bi-row"><span>متوسط زمن التنفيذ (Turnaround)</span><strong>0 يوم</strong></div>
+            <div class="bi-row"><span>متوسط مدة إنجاز الحالة</span><strong>0 يوم</strong></div>
             <div class="bi-row"><span>حالات مفتوحة</span><strong>0</strong></div>
-            <div class="bi-sub">⏱️ حالات متأخرة عن الـ SLA (21 يوم):
+            <div class="bi-sub">⏱️ حالات متأخرة عن الموعد المتفق (21 يوم):
                 <ul class="bi-list">
-                    <li style="color:var(--accent,#059669)">لا توجد حالات متأخرة عن الـ SLA ✅</li>
+                    <li style="color:var(--accent,#059669)">لا توجد حالات متأخرة عن الموعد المتفق ✅</li>
                 </ul>
             </div>
         </div>
@@ -17,7 +17,7 @@
     <div class="bi-card">
         <div class="bi-card-head"><span>📦</span><h4>2. المخازن وسلاسل الإمداد</h4></div>
         <div class="bi-card-body">
-            <div class="bi-row"><span>القيمة المالية الإجمالية (WAC)</span><strong style="color:#0e7490">0 ج.م</strong></div>
+            <div class="bi-row"><span>القيمة المالية الإجمالية — متوسط التكلفة المرجح</span><strong style="color:#0e7490">0 ج.م</strong></div>
             <div class="bi-row"><span>عدد الأصناف</span><strong>0</strong></div>
             <div class="bi-row"><span>🚨 أصناف ناقصة (قرب حد الأمان)</span><strong style="color:#b91c1c">0</strong></div>
             <div class="bi-sub">🐌 أصناف راكدة (&gt;180 يوم):
@@ -49,10 +49,10 @@
         <div class="bi-card-head"><span>🏭</span><h4>5. المشتريات والموردين</h4></div>
         <div class="bi-card-body">
             <div class="bi-row"><span>عدد الموردين المعتمدين</span><strong>0</strong></div>
-            <div class="bi-sub">⚖️ مقارنة المتوسط المرجح (WAC) ↔ أعلى سعر شراء:
+            <div class="bi-sub">⚖️ مقارنة متوسط التكلفة المرجح ↔ أعلى سعر شراء:
                 <table data-paginate="10" class="bi-table">
                     <thead>
-                        <tr><th>الصنف</th><th>WAC</th><th>أعلى سعر</th><th>الفرق</th></tr>
+                        <tr><th>الصنف</th><th>متوسط التكلفة</th><th>أعلى سعر</th><th>الفرق</th></tr>
                     </thead>
                     <tbody>
                         <tr><td colspan="4" style="color:var(--text-muted)">لا توجد أصناف</td></tr>

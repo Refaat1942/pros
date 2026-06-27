@@ -1,7 +1,6 @@
 @php
     use App\Models\ReturnNote;
     $notes = $return_notes ?? collect();
-    $items = $return_items_summary ?? collect();
     $linesExport = $return_lines_export ?? [];
     $barcodes = $return_barcodes ?? collect();
 
@@ -16,6 +15,19 @@
         ReturnNote::STATUS_PARTIAL   => ['bg' => '#e0f2fe', 'color' => '#0e7490', 'icon' => '🔄'],
         default                      => ['bg' => '#fef3c7', 'color' => '#d97706', 'icon' => '📤'],
     };
+
+    $returnNoteLinesById = $notes->mapWithKeys(function ($note) use ($barcodes) {
+        return [$note->id => $note->lines->map(function ($line) use ($barcodes) {
+            return [
+                'code'      => $line->stock_item_code,
+                'name'      => $line->name ?: $line->stock_item_code,
+                'barcode'   => $barcodes[$line->stock_item_code] ?? ('BC-' . $line->stock_item_code),
+                'requested' => (int) $line->qty_requested,
+                'returned'  => (int) $line->qty_returned,
+                'reason'    => $line->reason ?? '—',
+            ];
+        })->values()->all()];
+    })->all();
 @endphp
 
 <div class="section-view" id="section-returns">
@@ -82,15 +94,7 @@
                         @php
                             $style = $statusStyle($note->status);
                             $reason = $note->lines->first()?->reason ?? '—';
-                            $linesSummary = $note->lines->map(fn ($l) => ($l->name ?: $l->stock_item_code) . ' ' . $l->qty_returned . '/' . $l->qty_requested)->join(' · ');
-                            $linesJson = $note->lines->map(fn ($l) => [
-                                'code' => $l->stock_item_code,
-                                'name' => $l->name ?: $l->stock_item_code,
-                                'barcode' => $barcodes[$l->stock_item_code] ?? ('BC-' . preg_replace('/\D/', '', $l->stock_item_code)),
-                                'requested' => $l->qty_requested,
-                                'returned' => $l->qty_returned,
-                                'reason' => $l->reason,
-                            ])->values()->toJson(JSON_UNESCAPED_UNICODE);
+                            $linesSummary = $note->lines->map(fn ($l) => ($l->name ?: $l->stock_item_code) . ' ×' . $l->qty_returned)->join(' · ');
                         @endphp
                         <tr class="return-note-row"
                             data-id="{{ $note->id }}"
@@ -106,8 +110,7 @@
                             data-created-by="{{ $note->createdByUser?->name ?? $note->created_by ?? '—' }}"
                             data-reason="{{ $reason }}"
                             data-authorized-at="{{ $note->authorized_at?->format('d/m/Y H:i') ?? '—' }}"
-                            data-completed-at="{{ $note->completed_at?->format('d/m/Y H:i') ?? '—' }}"
-                            data-lines="{{ e($linesJson) }}">
+                            data-completed-at="{{ $note->completed_at?->format('d/m/Y H:i') ?? '—' }}">
                             <td><strong style="font-family:monospace;">{{ $note->return_no }}</strong></td>
                             <td>{{ $note->bom?->bom_no ?? '—' }}</td>
                             <td><span style="font-family:monospace;font-size:12px;color:#4f46e5;">{{ $note->work_order_no ?? '—' }}</span></td>
@@ -172,9 +175,7 @@
                         <th>كود الصنف</th>
                         <th>اسم الصنف</th>
                         <th>الباركود</th>
-                        <th>مطلوب</th>
-                        <th>مستلم</th>
-                        <th>متبقي</th>
+                        <th>الكمية المرجعة</th>
                         <th>سبب الارتجاع</th>
                         <th>أرسله</th>
                         <th>تاريخ الإرسال</th>
@@ -192,9 +193,7 @@
                             <td><code class="return-code-chip">{{ $row['stock_item_code'] }}</code></td>
                             <td><strong>{{ $row['item_name'] }}</strong></td>
                             <td><code>{{ $row['barcode'] }}</code></td>
-                            <td>{{ $row['qty_requested'] }}</td>
                             <td><strong style="color:#059669;">{{ $row['qty_returned'] }}</strong></td>
-                            <td>{{ $row['qty_pending'] }}</td>
                             <td>{{ $row['reason'] }}</td>
                             <td>{{ $row['sent_by'] }}</td>
                             <td>{{ $row['sent_at'] }}</td>
@@ -202,67 +201,8 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="14" style="text-align:center;padding:32px;color:var(--text-muted);">
+                            <td colspan="12" style="text-align:center;padding:32px;color:var(--text-muted);">
                                 لا توجد بنود ارتجاع مسجلة بعد.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    {{-- ─── Returned items summary ─────────────────────────────────────── --}}
-    <div class="panel">
-        <div class="panel-header">
-            <h3>📦 الأصناف المرتجعة — ملخص تراكمي</h3>
-            <span class="badge">{{ $items->count() }} صنف</span>
-        </div>
-        <div class="data-toolbar">
-            <input type="text" id="returnItemSearch"
-                   placeholder="🔍 بحث بالصنف أو الكود..."
-                   autocomplete="off">
-            <div class="export-btns">
-                <button type="button" class="btn-export excel" onclick="exportAdminReturnItems('excel')">📊 Excel</button>
-            </div>
-            <span class="toolbar-count" id="returnItemFilterCount">{{ $items->count() }} صنف</span>
-        </div>
-        <div class="panel-body">
-            <table data-paginate="12" id="returnItemsTable">
-                <thead>
-                    <tr>
-                        <th>كود الصنف</th>
-                        <th>اسم الصنف</th>
-                        <th>كمية مطلوبة (إجمالي)</th>
-                        <th>كمية مرتجعة فعلياً</th>
-                        <th>نسبة الاسترداد</th>
-                    </tr>
-                </thead>
-                <tbody id="returnItemsTableBody">
-                    @forelse ($items as $item)
-                        @php
-                            $requested = (int) $item->total_requested;
-                            $returned  = (int) $item->total_returned;
-                            $pct       = $requested > 0 ? min(100, round(($returned / $requested) * 100)) : 0;
-                        @endphp
-                        <tr class="return-item-row"
-                            data-search="{{ $item->stock_item_code }} {{ $item->name }}">
-                            <td><code class="return-code-chip">{{ $item->stock_item_code }}</code></td>
-                            <td><strong>{{ $item->name }}</strong></td>
-                            <td>{{ $requested }}</td>
-                            <td><strong style="color:#059669;">{{ $returned }}</strong></td>
-                            <td>
-                                <div class="return-pct-bar">
-                                    <div class="return-pct-fill" style="width:{{ $pct }}%;"></div>
-                                    <span>{{ $pct }}%</span>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted);">
-                                لا توجد أصناف مرتجعة بعد.<br>
-                                <small>تظهر البيانات بعد تأكيد استلام الارتجاع في لوحة المخزن.</small>
                             </td>
                         </tr>
                     @endforelse
@@ -274,6 +214,7 @@
 
 <script>
     window.__ADMIN_RETURN_LINES_EXPORT = @json($linesExport, JSON_UNESCAPED_UNICODE);
+    window.__ADMIN_RETURN_NOTE_LINES = @json($returnNoteLinesById, JSON_UNESCAPED_UNICODE);
 </script>
 
 {{-- Detail modal --}}

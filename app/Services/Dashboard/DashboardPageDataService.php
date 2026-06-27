@@ -236,6 +236,7 @@ class DashboardPageDataService
             search: request()->query('search'),
             stage: request()->query('stage'),
             patientType: request()->query('patient_type'),
+            visitType: request()->query('visit_type'),
         );
 
         return [
@@ -243,7 +244,9 @@ class DashboardPageDataService
             'track_search'         => request()->query('search', ''),
             'track_stage'          => request()->query('stage', ''),
             'track_patient_type'   => request()->query('patient_type', ''),
+            'track_visit_type'     => request()->query('visit_type', ''),
             'track_stage_options'  => AdminPatientTrackService::stageFilterOptions(),
+            'track_visit_options'  => AdminPatientTrackService::visitFilterOptions(),
         ];
     }
 
@@ -685,13 +688,6 @@ class DashboardPageDataService
             ->limit(500)
             ->get();
 
-        $itemSummary = ReturnNoteLine::query()
-            ->selectRaw('stock_item_code, MAX(name) as name, SUM(qty_requested) as total_requested, SUM(qty_returned) as total_returned')
-            ->groupBy('stock_item_code')
-            ->havingRaw('SUM(qty_returned) > 0')
-            ->orderByDesc('total_returned')
-            ->get();
-
         $barcodes = StockItem::query()
             ->whereIn('code', $notes->flatMap(fn ($n) => $n->lines->pluck('stock_item_code'))->unique()->all())
             ->pluck('barcode', 'code');
@@ -739,17 +735,16 @@ class DashboardPageDataService
         $completed  = $notes->where('status', ReturnNote::STATUS_COMPLETED)->count();
 
         return [
-            'return_notes'         => $notes,
-            'return_items_summary' => $itemSummary,
-            'return_lines_export'  => $linesExport,
-            'return_barcodes'      => $barcodes,
+            'return_notes'        => $notes,
+            'return_lines_export' => $linesExport,
+            'return_barcodes'     => $barcodes,
             'return_notes_stats'   => [
                 ['icon' => '📋', 'label' => 'إجمالي الطلبات', 'value' => (string) $notes->count(), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5'],
                 ['icon' => '📤', 'label' => 'بانتظار المخزن', 'value' => (string) $authorized, 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706'],
                 ['icon' => '🔄', 'label' => 'استلام جزئي', 'value' => (string) $partial, 'bg' => 'rgba(14,116,144,0.1)', 'color' => '#0e7490'],
                 ['icon' => '✅', 'label' => 'تم الاستلام', 'value' => (string) $completed, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669'],
                 ['icon' => '📦', 'label' => 'وحدات مرتجعة', 'value' => (string) $totalReturnedQty, 'bg' => 'rgba(124,58,237,0.1)', 'color' => '#7c3aed'],
-                ['icon' => '💰', 'label' => 'قيمة WAC المستعادة', 'value' => number_format($totalReturnedValue, 0) . ' ج.م', 'bg' => 'rgba(5,150,105,0.08)', 'color' => '#059669'],
+                ['icon' => '💰', 'label' => 'قيمة المستعاد — متوسط التكلفة المرجح', 'value' => number_format($totalReturnedValue, 0) . ' ج.م', 'bg' => 'rgba(5,150,105,0.08)', 'color' => '#059669'],
             ],
         ];
     }

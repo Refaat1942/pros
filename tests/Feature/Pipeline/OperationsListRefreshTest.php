@@ -4,6 +4,7 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\Bom;
 use App\Models\CaseRecord;
+use App\Models\Patient;
 use App\Services\BomService;
 use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
@@ -53,6 +54,36 @@ class OperationsListRefreshTest extends TestCase
             ->assertJsonPath('data.0.work_order_no', 'WO-2026-0100')
             ->assertJsonPath('data.0.patient.name', $patient->name)
             ->assertJsonPath('summary.ready', 1);
+    }
+
+    public function test_operations_list_shows_armed_forces_as_company_for_military_cases(): void
+    {
+        $this->seedStockWithPriceBatch();
+
+        $company = $this->civilianCompany();
+        $patient = $this->militaryPatient($company);
+        $user    = $this->userWithRole('operations');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
+        $case->update([
+            'path'          => CaseRecord::PATH_MILITARY,
+            'work_order_no' => 'WO-2026-0002',
+            'company_name'  => null,
+        ]);
+
+        Bom::create([
+            'bom_no'       => 'BOM-MIL-01',
+            'case_id'      => $case->id,
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'stage'        => Bom::STAGE_FINISHED,
+            'finished_at'  => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/operations/operations/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.company_name', Patient::MILITARY_SOVEREIGN_ENTITY)
+            ->assertJsonPath('data.0.pathway_label', 'عسكري');
     }
 
     public function test_operations_deliver_closes_case_from_desk(): void

@@ -14,6 +14,7 @@ class PricingRequestItem extends Model
         'pricing_request_id',
         'stock_item_code',
         'name',
+        'source',
         'qty',
         'unit_price',
         'line_total',

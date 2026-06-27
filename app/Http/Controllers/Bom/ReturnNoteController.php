@@ -7,6 +7,7 @@ use App\Http\Requests\Bom\CompleteReturnNoteRequest;
 use App\Http\Requests\Bom\StoreReturnNoteRequest;
 use App\Models\Bom;
 use App\Models\ReturnNote;
+use App\Models\StockItem;
 use App\Services\ReturnNoteService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -43,8 +44,10 @@ class ReturnNoteController extends Controller
                 ->orderByDesc('created_at')
         );
 
+        $barcodes = $this->barcodesForNotes(collect($notes));
+
         return response()->json([
-            'data'  => collect($notes)->map(fn ($n) => $this->formatNote($n))->values(),
+            'data'  => collect($notes)->map(fn ($n) => $this->formatNote($n, $barcodes))->values(),
             'total' => $notes->count(),
         ]);
     }
@@ -130,8 +133,16 @@ class ReturnNoteController extends Controller
         ]);
     }
 
-    private function formatNote(ReturnNote $note): array
+    private function formatNote(ReturnNote $note, ?\Illuminate\Support\Collection $barcodes = null): array
     {
+        $lines = $note->relationLoaded('lines') ? $note->lines : collect();
+
+        if ($barcodes === null && $lines->isNotEmpty()) {
+            $barcodes = StockItem::query()
+                ->whereIn('code', $lines->pluck('stock_item_code')->unique()->all())
+                ->pluck('barcode', 'code');
+        }
+
         return $note->only([
             'id', 'return_no', 'bom_id', 'case_id', 'order_ref',
             'work_order_no', 'patient_name', 'status', 'created_by',
@@ -143,15 +154,37 @@ class ReturnNoteController extends Controller
             'created_by_name' => $note->relationLoaded('createdByUser') && $note->createdByUser
                 ? $note->createdByUser->name
                 : ($note->created_by ?: null),
-            'lines' => $note->relationLoaded('lines')
-                ? $note->lines->map->only([
-                    'id', 'stock_item_code', 'name',
-                    'qty_requested', 'qty_returned', 'reason',
-                ])
-                : [],
+            'lines' => $lines->map(fn ($line) => [
+                'id'              => $line->id,
+                'stock_item_code' => $line->stock_item_code,
+                'name'            => $line->name,
+                'qty_requested'   => $line->qty_requested,
+                'qty_returned'    => $line->qty_returned,
+                'reason'          => $line->reason,
+                'barcode'         => $barcodes[$line->stock_item_code] ?? null,
+            ])->values()->all(),
             'bom' => $note->relationLoaded('bom') && $note->bom
                 ? $note->bom->only(['id', 'bom_no'])
                 : null,
         ];
+    }
+
+    /** @param  \Illuminate\Support\Collection<int, ReturnNote>  $notes */
+    private function barcodesForNotes(\Illuminate\Support\Collection $notes): \Illuminate\Support\Collection
+    {
+        $codes = $notes
+            ->flatMap(fn (ReturnNote $note) => $note->relationLoaded('lines')
+                ? $note->lines->pluck('stock_item_code')
+                : collect())
+            ->unique()
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($codes === []) {
+            return collect();
+        }
+
+        return StockItem::query()->whereIn('code', $codes)->pluck('barcode', 'code');
     }
 }

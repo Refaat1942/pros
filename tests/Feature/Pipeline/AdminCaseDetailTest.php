@@ -103,6 +103,68 @@ class AdminCaseDetailTest extends TestCase
         $this->assertStringContainsString('approval_letters/sample.jfif', $response->json('approval.letter_url'));
     }
 
+    public function test_admin_case_detail_marks_quote_items_added_by_adjustments(): void
+    {
+        $this->stockItem('ITM-001', qty: 10);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $admin   = $this->userWithRole('admin');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+
+        $bom = app(\App\Services\BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'ITM-001', 'qty' => 1],
+        ]);
+        \App\Models\BomItem::create([
+            'bom_id'          => $bom->id,
+            'stock_item_code' => 'ITM-001',
+            'name'            => 'ركبة هيدروليكية',
+            'source'          => \App\Models\BomItem::SOURCE_ADJUSTMENT,
+            'qty'             => 2,
+            'unit_cost'       => 0,
+            'issued_qty'      => 0,
+            'returned_qty'    => 0,
+        ]);
+
+        $quote = Quote::create([
+            'quote_no'     => 'QT-2026-ADJ1',
+            'case_id'      => $case->id,
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
+            'quote_date'   => now()->toDateString(),
+            'status'       => Quote::STATUS_APPROVED,
+            'total'        => 30000.00,
+        ]);
+
+        \App\Models\QuoteItem::create([
+            'quote_id'        => $quote->id,
+            'name'            => 'ركبة هيدروليكية',
+            'source'          => \App\Models\BomItem::SOURCE_SPEC,
+            'stock_item_code' => 'ITM-001',
+            'qty'             => 1,
+            'amount'          => 10000.00,
+        ]);
+        \App\Models\QuoteItem::create([
+            'quote_id'        => $quote->id,
+            'name'            => 'ركبة هيدروليكية',
+            'source'          => \App\Models\BomItem::SOURCE_ADJUSTMENT,
+            'stock_item_code' => 'ITM-001',
+            'qty'             => 2,
+            'amount'          => 20000.00,
+        ]);
+
+        $case->update(['quote_no' => 'QT-2026-ADJ1']);
+
+        $response = $this->actingAs($admin)->getJson('/admin/cases/' . $case->id . '/detail');
+
+        $response->assertOk();
+        $response->assertJsonPath('quote.items.0.from_adjustments', false);
+        $response->assertJsonPath('quote.items.0.source_label', null);
+        $response->assertJsonPath('quote.items.1.from_adjustments', true);
+        $response->assertJsonPath('quote.items.1.source_label', 'المعدلات');
+    }
+
     public function test_admin_military_case_detail_always_shows_armed_forces_sovereign(): void
     {
         $company = $this->civilianCompany();

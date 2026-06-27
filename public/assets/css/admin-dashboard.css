@@ -2819,6 +2819,188 @@
       font-size: 13px;
       line-height: 1.7;
     }
+    .patient-track-journey {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .patient-track-journey-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0 0 14px;
+      color: var(--text);
+    }
+    .patient-track-journey-empty {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+    .patient-track-timeline {
+      position: relative;
+      padding-right: 4px;
+    }
+    .patient-track-timeline-item {
+      display: flex;
+      gap: 12px;
+      position: relative;
+      padding-bottom: 16px;
+    }
+    .patient-track-timeline-item:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      right: 5px;
+      top: 14px;
+      bottom: 0;
+      width: 2px;
+      background: #e5e7eb;
+    }
+    .patient-track-timeline-marker {
+      flex-shrink: 0;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #7c3aed;
+      border: 2px solid #ede9fe;
+      margin-top: 4px;
+      position: relative;
+      z-index: 1;
+    }
+    .journey-quote-preview-modal {
+      z-index: 1100;
+    }
+    .patient-track-timeline-body {
+      flex: 1;
+      min-width: 0;
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .patient-track-timeline-layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .patient-track-timeline-main {
+      flex: 1;
+      min-width: 0;
+    }
+    .patient-track-doc-btn {
+      flex-shrink: 0;
+      align-self: center;
+      border: 1px solid #c4b5fd;
+      background: #f5f3ff;
+      color: #6d28d9;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      line-height: 1.3;
+      transition: background .15s, border-color .15s;
+    }
+    .patient-track-doc-btn:hover {
+      background: #ede9fe;
+      border-color: #a78bfa;
+    }
+    .journey-quote-preview-dialog {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 920px;
+      max-height: 92vh;
+      box-shadow: 0 24px 80px rgba(0,0,0,.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .journey-quote-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+    .journey-quote-preview-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .journey-quote-preview-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: #64748b;
+      line-height: 1;
+    }
+    .journey-quote-preview-body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      background: #f1f5f9;
+      min-height: 320px;
+    }
+    .journey-quote-preview-frame {
+      width: 100%;
+      height: 70vh;
+      border: none;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .patient-track-timeline-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px 12px;
+      margin-bottom: 6px;
+    }
+    .patient-track-timeline-cat {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6d28d9;
+      background: #f5f3ff;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .patient-track-timeline-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .patient-track-timeline-title {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .patient-track-timeline-lines {
+      margin: 0;
+      padding: 0 18px 0 0;
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--text-muted);
+    }
+    .patient-track-timeline-lines li + li {
+      margin-top: 4px;
+    }
+    .patient-track-journey-link {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #6d28d9;
+      text-decoration: none;
+    }
+    .patient-track-journey-link:hover {
+      text-decoration: underline;
+    }
 
     /* ── Reception Waiting Panel (legacy) ───────────────────────────────── */
     .reception-waiting-panel { margin-bottom: 24px; }
@@ -3136,6 +3318,21 @@
     }
     .case-detail-table .num { text-align: center; font-variant-numeric: tabular-nums; }
     .case-detail-table tr:last-child td { border-bottom: none; }
+
+    .case-item-source {
+      display: inline-block;
+      margin-right: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .case-item-source--adj {
+      background: rgba(100,116,139,0.14);
+      color: #475569;
+    }
 
     .case-detail-empty,
     .case-detail-loading,

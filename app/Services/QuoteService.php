@@ -101,6 +101,7 @@ class QuoteService
             QuoteItem::create([
                 'quote_id'        => $quote->id,
                 'name'            => $item->name,
+                'source'          => $item->source ?? \App\Models\BomItem::SOURCE_SPEC,
                 'stock_item_code' => $item->stock_item_code,
                 'qty'             => $item->qty,
                 'amount'          => $lineAmount,

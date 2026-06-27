@@ -1,6 +1,6 @@
 {{-- Popup — معاينة خطاب الموافقة المرفوع --}}
 <div class="modal-overlay" id="contractLetterModal"
-     style="display:none;position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.65);
+     style="display:none;position:fixed;inset:0;z-index:1100;background:rgba(15,23,42,.65);
             backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
     <div style="background:#fff;border-radius:16px;width:100%;max-width:820px;max-height:92vh;
                 box-shadow:0 24px 80px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;">
