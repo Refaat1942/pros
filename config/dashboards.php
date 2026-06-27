@@ -167,12 +167,16 @@ return [
         'sidebar' => ['icon' => '🏭', 'title' => 'ورشة التصنيع', 'subtitle' => 'أوامر الإنتاج والتشغيل'],
         'pages' => [
             'workshop' => ['title' => 'ورشة التصنيع — أوامر تحت التشغيل', 'icon' => '🏭', 'label' => 'طابور الورشة'],
+            'statistics' => ['title' => 'إحصائيات الورشة', 'icon' => '📊', 'label' => 'الإحصائيات'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
             'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
+            'assets/js/shared/export-kit.js',
+            'assets/js/shared/charts-kit.js',
             'assets/js/pages/workshop-dashboard.js',
+            'assets/js/pages/workshop-statistics.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="workshop"',

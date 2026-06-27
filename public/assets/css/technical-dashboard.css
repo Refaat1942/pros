@@ -1692,3 +1692,297 @@
     @media (max-width: 768px) {
       .content-grid { grid-template-columns: 1fr; }
     }
+
+    /* ── صفحة إحصائيات الورشة ─────────────────────────────────────────── */
+    .workshop-stats-page {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .workshop-stats-hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 24px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(14,116,144,0.06) 100%);
+      border: 1px solid rgba(124,58,237,0.15);
+      box-shadow: var(--shadow);
+    }
+
+    .workshop-stats-hero__text h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--secondary);
+      margin-bottom: 8px;
+    }
+
+    .workshop-stats-hero__text p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .workshop-stats-meta {
+      display: inline-block;
+      margin-right: 8px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.7);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    .workshop-stats-hero__chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .workshop-stats-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--secondary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .workshop-stats-chip--accent {
+      background: #7c3aed;
+      color: #fff;
+      border-color: #7c3aed;
+    }
+
+    #workshopStatsRoot .ck-stats {
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    }
+
+    #workshopStatsRoot .ck-charts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workshop-reports-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .workshop-reports-section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--secondary);
+      margin-top: 4px;
+    }
+
+    .workshop-report-cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .workshop-report-cards--secondary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workshop-report-card {
+      background: var(--card, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .workshop-report-card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 10px;
+    }
+
+    .workshop-report-card__value {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .workshop-report-card__value--green { color: #059669; }
+    .workshop-report-card__value--purple { color: #7c3aed; }
+    .workshop-report-card__value--teal { color: #0e7490; }
+
+    .workshop-report-card__sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .workshop-report-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .workshop-report-bar__label {
+      min-width: 72px;
+      max-width: 120px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .workshop-report-bar__track {
+      flex: 1;
+      height: 8px;
+      background: #f1f5f9;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .workshop-report-bar__fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    .workshop-report-list-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 12px;
+    }
+
+    .workshop-report-list-item:last-child { border-bottom: none; }
+
+    .workshop-report-list-item__meta {
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .workshop-report-empty {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .workshop-report-table-panel {
+      background: var(--card, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .workshop-report-table-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border, #e2e8f0);
+    }
+
+    .workshop-report-table-header h4 {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--secondary);
+      margin: 0;
+    }
+
+    .workshop-report-table-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .workshop-report-search {
+      min-width: 220px;
+      padding: 9px 14px;
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .workshop-export-btn {
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: none;
+      background: #059669;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .workshop-export-btn:hover { background: #047857; }
+
+    .workshop-report-table-wrap { overflow-x: auto; }
+
+    .workshop-report-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .workshop-report-table th {
+      text-align: right;
+      padding: 12px 16px;
+      background: #f8fafc;
+      font-weight: 700;
+      color: var(--secondary);
+      border-bottom: 1px solid var(--border, #e2e8f0);
+      white-space: nowrap;
+    }
+
+    .workshop-report-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    .workshop-report-empty-cell {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 32px 16px !important;
+    }
+
+    .workshop-wo-badge {
+      font-family: ui-monospace, monospace;
+      font-weight: 800;
+      color: #7c3aed;
+    }
+
+    .workshop-path-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .workshop-path-badge--civ { background: rgba(5,150,105,0.12); color: #047857; }
+    .workshop-path-badge--mil { background: rgba(79,70,229,0.12); color: #4338ca; }
+
+    @media (max-width: 900px) {
+      #workshopStatsRoot .ck-charts { grid-template-columns: 1fr; }
+      .workshop-report-cards,
+      .workshop-report-cards--secondary { grid-template-columns: 1fr; }
+    }

@@ -27,6 +27,7 @@ use App\Services\AdminReportsService;
 use App\Services\BomService;
 use App\Services\DoctorTransferService;
 use App\Services\ReceptionAnalyticsService;
+use App\Services\WorkshopAnalyticsService;
 use App\Services\StockCatalogService;
 use App\Services\StockPriceService;
 use App\Support\ClinicTime;
@@ -72,7 +73,8 @@ class DashboardPageDataService
             'spec.pricing'          => $this->specPricing(),
             'spec.spec'             => $this->specPreview(),
             'operations.operations' => $this->operationsDeliveryDesk(),
-            'workshop.workshop'   => $this->workshopDesk(),
+            'workshop.workshop'     => $this->workshopDesk(),
+            'workshop.statistics'   => $this->workshopStatistics(),
             'technical.inventory'   => $this->technicalInventory(),
             'technical.bom'         => $this->technicalBom(),
             default                 => [],
@@ -479,6 +481,13 @@ class DashboardPageDataService
             ->get();
 
         return ['submitted_specs' => $specs];
+    }
+
+    private function workshopStatistics(): array
+    {
+        return [
+            'workshop_analytics' => app(WorkshopAnalyticsService::class)->build(),
+        ];
     }
 
     private function workshopDesk(): array
