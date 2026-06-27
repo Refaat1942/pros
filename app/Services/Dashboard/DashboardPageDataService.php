@@ -26,6 +26,7 @@ use App\Services\AdminPatientTrackService;
 use App\Services\AdminReportsService;
 use App\Services\BomService;
 use App\Services\DoctorTransferService;
+use App\Services\ReceptionAnalyticsService;
 use App\Services\StockCatalogService;
 use App\Services\StockPriceService;
 use App\Support\ClinicTime;
@@ -59,6 +60,7 @@ class DashboardPageDataService
             'admin.military-debts'  => $this->adminMilitaryDebts(),
             'admin.returns'         => $this->adminReturns(),
             'reception.appointments'=> $this->receptionAppointments(),
+            'reception.statistics'  => $this->receptionStatistics(),
             'reception.patients'    => $this->receptionPatients(),
             'reception.delivery'    => $this->receptionDelivery(),
             'reception.contracts'   => $this->contractsPage(isAdmin: false),
@@ -246,6 +248,13 @@ class DashboardPageDataService
     private function receptionAppointments(): array
     {
         return $this->receptionPatientFormData();
+    }
+
+    private function receptionStatistics(): array
+    {
+        return [
+            'reception_analytics' => app(ReceptionAnalyticsService::class)->build(),
+        ];
     }
 
     private function receptionPatientFormData(): array

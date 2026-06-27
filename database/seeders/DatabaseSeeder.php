@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
             ContractCompanySeeder::class,
             MilitaryRankSeeder::class,
             VisitTypeSeeder::class,
-            // StockCategorySeeder::class,
+            StockCategorySeeder::class,
 
             // ── موردون ومخزون ───────────────────────────────────────────────
             ContractCompanyDebtSeeder::class,

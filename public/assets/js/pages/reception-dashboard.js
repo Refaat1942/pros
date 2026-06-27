@@ -392,11 +392,10 @@
           '<td><strong>' + q.patient + '</strong></td>' +
           '<td>' + q.company + '</td>' +
           '<td>' + q.date + '</td>' +
-          '<td><strong>' + formatQuoteAmount(q.total) + ' ج.م</strong></td>' +
           '<td><span class="quote-status-tag ' + q.status + '">' + q.statusLabel + '</span></td>' +
           '<td>' + viewBtn + issueBtn + ocrBtn + '</td>' +
           '</tr>';
-      }).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد عروض مطابقة</td></tr>';
+      }).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد عروض مطابقة</td></tr>';
 
       document.getElementById('quoteListCount').textContent = quotations.length;
       document.getElementById('quoteFilterCount').textContent = filtered.length + ' عروض';

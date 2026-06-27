@@ -1240,3 +1240,88 @@
       .quote-meta { grid-template-columns: 1fr; }
       .qr-section { flex-direction: column; text-align: center; }
     }
+
+    /* ── صفحة الإحصائيات ─────────────────────────────────────────────── */
+    .reception-stats-page {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .reception-stats-hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 24px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(5,150,105,0.08) 0%, rgba(14,116,144,0.06) 100%);
+      border: 1px solid rgba(5,150,105,0.15);
+      box-shadow: var(--shadow);
+    }
+
+    .reception-stats-hero__text h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--secondary);
+      margin-bottom: 8px;
+    }
+
+    .reception-stats-hero__text p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 640px;
+    }
+
+    .reception-stats-meta {
+      display: inline-block;
+      margin-right: 8px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.7);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    .reception-stats-hero__chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .reception-stats-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--secondary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .reception-stats-chip--accent {
+      background: var(--secondary);
+      color: #fff;
+      border-color: var(--secondary);
+    }
+
+    #receptionStatsRoot .ck-stats {
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    }
+
+    #receptionStatsRoot .ck-charts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (max-width: 900px) {
+      #receptionStatsRoot .ck-charts {
+        grid-template-columns: 1fr;
+      }
+    }

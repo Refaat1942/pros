@@ -31,6 +31,7 @@ return [
         'sidebar' => ['icon' => '📋', 'title' => 'لوحة موظف الاستقبال', 'subtitle' => 'الجدولة والموافقات'],
         'pages' => [
             'appointments' => ['title' => 'جدولة المواعيد', 'icon' => '📅', 'label' => 'جدولة المواعيد'],
+            'statistics' => ['title' => 'إحصائيات الاستقبال', 'icon' => '📊', 'label' => 'الإحصائيات'],
             'quote' => ['title' => 'عروض الأسعار', 'icon' => '💰', 'label' => 'عروض الأسعار'],
             // 'delivery' => ['title' => 'تسليم الطرف للمريض', 'icon' => '✅', 'label' => 'تسليم للمريض'], // نُقل لمكتب التشغيل
             'contracts' => ['title' => 'العقود والاتفاقيات', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
@@ -47,6 +48,7 @@ return [
             'assets/js/shared/pricing-queue.js',
             'assets/js/shared/bom-inventory.js',
             'assets/js/pages/reception-dashboard.js',
+            'assets/js/pages/reception-statistics.js',
             // 'assets/js/pages/reception-delivery-dashboard.js', // التسليم من مكتب التشغيل
             'assets/js/shared/dashboard-mobile.js',
         ],
