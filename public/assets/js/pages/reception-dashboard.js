@@ -772,14 +772,20 @@
       });
     }
 
+    function patientTypeBadgeHtml(patientType) {
+      var tm = CasesWorkflow.getPatientTypeMeta(patientType);
+      return '<span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span>';
+    }
+
     function exportAppointments(type) {
       var data = getFilteredAppointments();
-      var headers = ['التاريخ', 'الوقت', 'رقم الدور', 'تاريخ الإضافة', 'وقت الانتظار', 'اسم المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
+      var headers = ['التاريخ', 'الوقت', 'رقم الدور', 'تاريخ الإضافة', 'وقت الانتظار', 'اسم المريض', 'نوع المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
       var rows = data.map(function(a) {
         var vt = getVisitMeta(a.visitType);
-        return [a.date, a.time, a.queueNumber, a.registeredAt, appointmentWaitLabel(a), a.name, a.visitTypeLabel || vt.label, a.phone, a.company];
+        var typeLabel = CasesWorkflow.getPatientTypeLabel(a.patient_type);
+        return [a.date, a.time, a.queueNumber, a.registeredAt, appointmentWaitLabel(a), a.name, typeLabel, a.visitTypeLabel || vt.label, a.phone, a.company];
       });
-      if (type === 'excel') ExportKit.toExcel('مواعيد_' + calendarView.selectedDate.replace(/\//g, '-'), headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('مواعيد_' + calendarView.selectedDate.replace(/\//g, '-'), false), headers, rows);
       else ExportKit.toPDF('مواعيد — ' + calendarView.selectedDate, headers, rows);
     }
 
@@ -789,7 +795,7 @@
       var rows = data.map(function(p) {
         return [p.name, p.queueNumber, p.phone, p.company, p.registered, p.lastVisit];
       });
-      if (type === 'excel') ExportKit.toExcel('سجل_المرضى', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('سجل_المرضى'), headers, rows);
       else ExportKit.toPDF('سجل المرضى المسجلين', headers, rows);
     }
 
@@ -845,12 +851,13 @@
           '<td style="font-size:12px;white-space:nowrap;">' + a.registeredAt + '</td>' +
           '<td><span class="wait-time">' + appointmentWaitLabel(a) + '</span></td>' +
           '<td>' + a.name + '</td>' +
+          '<td>' + patientTypeBadgeHtml(a.patient_type) + '</td>' +
           '<td><span class="visit-tag ' + vt.tagClass + '">' + visitLabel + '</span></td>' +
           '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + a.phone + '</td>' +
           '<td>' + a.company + '</td>' +
           '<td>' + getApptActionCell(a) + '</td>' +
           '</tr>';
-      }).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
+      }).join('') || '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
       var ac = document.getElementById('apptCount');
       if (ac) ac.textContent = filtered.length + ' موعد';
       var ah = document.getElementById('apptHeaderCount');

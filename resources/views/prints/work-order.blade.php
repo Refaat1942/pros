@@ -122,7 +122,7 @@
             رقم التصديق: <span class="fill" style="min-width:28mm;">{{ $approvalNo }}</span>
             تاريخه: <span class="fill" style="min-width:22mm;">{{ $approvalDate }}</span>
         </div>
-        <div class="line">الجهة المحول منها: <span class="fill fill-wide">{{ $case->company_name ?? $case->sovereign_entity ?? '—' }}</span></div>
+        <div class="line">الجهة المحول منها: <span class="fill fill-wide">{{ $case->displayEntity() }}</span></div>
         <div class="line">العنوان: <span class="fill fill-wide">&nbsp;</span></div>
         <div class="line">
             القيمة: <span class="fill" style="min-width:24mm;">{{ $valueDisplay }}</span>

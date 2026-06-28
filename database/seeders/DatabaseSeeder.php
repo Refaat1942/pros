@@ -10,7 +10,7 @@ class DatabaseSeeder extends Seeder
     /**
      * بعد migrate:fresh — قاعدة البيانات فارغة ما عدا:
      *   - roles
-     *   - users (حساب اختبار لكل لوحة: {slug}@clinic.com)
+     *   - users (حساب اختبار لكل لوحة: username = slug الدور)
      *
      * باقي الجداول تُملأ من seeders أدناه.
      */
@@ -27,12 +27,12 @@ class DatabaseSeeder extends Seeder
             VisitTypeSeeder::class,
             StockCategorySeeder::class,
 
-            // ── موردون ومخزون ───────────────────────────────────────────────
+            // // ── موردون ومخزون ───────────────────────────────────────────────
             ContractCompanyDebtSeeder::class,
             SupplierSeeder::class,
             InventorySeeder::class,
 
-            // ── مسار المريض والحالات ────────────────────────────────────────
+            // // ── مسار المريض والحالات ────────────────────────────────────────
             PatientSeeder::class,
             CaseSeeder::class,
             PricingSeeder::class,

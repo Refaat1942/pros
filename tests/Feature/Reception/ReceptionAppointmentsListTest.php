@@ -53,7 +53,9 @@ class ReceptionAppointmentsListTest extends TestCase
             ->getJson('/reception/appointments/list?date=' . $date . '&patient_type=military')
             ->assertOk()
             ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.patient_name', 'مريض عسكري مواعيد');
+            ->assertJsonPath('data.0.patient_name', 'مريض عسكري مواعيد')
+            ->assertJsonPath('data.0.patient_type', 'military')
+            ->assertJsonPath('data.0.patient_type_label', 'عسكري');
     }
 
     public function test_reception_wait_label_after_five_minutes_before_transfer(): void

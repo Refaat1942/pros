@@ -18,7 +18,7 @@
     $boms = $warehouse_boms ?? collect();
     $stageMeta = [
         'raw'      => ['label' => '📦 خام', 'cls' => 'bg-amber-100 text-amber-800 border-amber-200'],
-        'wip'      => ['label' => '🏭 تحت التشغيل', 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
+        'wip'      => ['label' => '🏭 تم التحويل للورشة', 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
         'finished' => ['label' => '✅ تام', 'cls' => 'bg-emerald-100 text-emerald-800 border-emerald-200'],
     ];
 @endphp
@@ -30,7 +30,7 @@
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="bomWarehouseRoot">
     <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
         <div>
-            <h3 class="font-bold text-slate-800">📋 قوائم صرف المواد — خام → تحت التشغيل → تام</h3>
+            <h3 class="font-bold text-slate-800">📋 قوائم صرف المواد — خام → تم التحويل للورشة → تام</h3>
             <p class="text-xs text-slate-500 mt-1">صرف للورشة بالباركود — مطابقة صارمة مع بنود القائمة</p>
         </div>
         <button type="button" id="btnRefreshBoms"
@@ -45,7 +45,7 @@
         <div class="flex flex-wrap gap-2" id="bomFilters">
             <button type="button" class="bom-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
             <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-amber-100 text-amber-800" data-filter="raw">📦 خام</button>
-            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 تحت التشغيل</button>
+            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 تم التحويل للورشة</button>
             <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-800" data-filter="finished">✅ تام</button>
         </div>
     </div>
@@ -122,7 +122,7 @@
                                    class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 inline-block">
                                     🖨️ طباعة إذن الصرف
                                 </a>
-                                <span class="text-xs text-slate-500">🏭 تحت التشغيل — يُغلق من مكتب التشغيل</span>
+                                <span class="text-xs text-slate-500">🏭 تم التحويل للورشة — يُغلق من مكتب التشغيل</span>
                             @else
                                 <span class="text-xs text-slate-400">—</span>
                             @endif

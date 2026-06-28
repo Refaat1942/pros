@@ -33,7 +33,7 @@
             <button type="button" id="permCheckAllBtn" class="perm-check-all-btn">
                 ✅ تحديد الكل
             </button>
-            <button type="button" class="btn-export excel" data-export-permissions="1" data-export-filename="permissions-matrix">📊 Excel</button>
+            <button type="button" class="btn-export excel" data-export-permissions="1" data-export-filename="مصفوفة_الصلاحيات">📊 Excel</button>
         </div>
     </div>
 

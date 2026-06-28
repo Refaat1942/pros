@@ -44,12 +44,15 @@ trait ProstheticTestHelper
         $role = $this->makeRole($slug);
         $this->seedDefaultPermissions($role);
 
-        return User::factory()->create([
-            'role_id'  => $role->id,
-            'email'    => "{$slug}@test.local",
-            'password' => Hash::make('password'),
-            'status'   => User::STATUS_ACTIVE,
-        ]);
+        return User::query()->updateOrCreate(
+            ['username' => $slug],
+            [
+                'role_id'  => $role->id,
+                'password' => Hash::make('password'),
+                'status'   => User::STATUS_ACTIVE,
+                'name'     => $role->label_ar,
+            ]
+        );
     }
 
     private function seedDefaultPermissions(Role $role): void

@@ -1,5 +1,5 @@
 /**
- * Operations returns — request material return to warehouse (workshop → store).
+ * Workshop returns — request material return to warehouse (workshop → store).
  */
 (function () {
   if (document.body.dataset.activePage !== 'returns') return;
@@ -12,9 +12,9 @@
     axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
   }
 
-  var LIST_URL = '/operations/returns/list';
-  var CREATE_URL = '/operations/returns/create';
-  var STORE_URL = '/operations/returns';
+  var LIST_URL = '/workshop/returns/list';
+  var CREATE_URL = '/workshop/returns/create';
+  var STORE_URL = '/workshop/returns';
 
   var notesCache = [];
   var eligibleBoms = [];
@@ -52,8 +52,12 @@
   }
 
   function deriveBarcode(code) {
-    var digits = String(code || '').replace(/\D/g, '');
-    return 'BC-' + digits;
+    return code ? 'BC-' + String(code) : '';
+  }
+
+  function lineBarcode(ln) {
+    if (ln && ln.barcode) return String(ln.barcode);
+    return deriveBarcode(ln && ln.stock_item_code);
   }
 
   function updateSummary(notes) {

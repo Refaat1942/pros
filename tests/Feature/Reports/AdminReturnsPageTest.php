@@ -46,14 +46,15 @@ class AdminReturnsPageTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/returns')
             ->assertOk()
-            ->assertSee('طلبات الارتجاع (قراءة فقط)')
             ->assertSee('سجل طلبات الارتجاع')
             ->assertSee('تفاصيل البنود — سجل كامل')
             ->assertSee($note->fresh()->return_no)
             ->assertSee('RM-001')
             ->assertSee('فائض عن الحاجة')
-            ->assertSee('الأصناف المرتجعة')
+            ->assertDontSee('الأصناف المرتجعة — ملخص تراكمي')
             ->assertSee('exportAdminReturnLinesDetail')
+            ->assertSee('__ADMIN_RETURN_NOTE_LINES', false)
+            ->assertSee('"returned":2', false)
             ->assertSee('تم الاستلام');
     }
 

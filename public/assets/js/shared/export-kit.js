@@ -27,8 +27,18 @@ var ExportKit = (function () {
     return '\t' + s;
   }
 
+  function stripCurrencySuffix(val) {
+    if (val == null || val === '') return '';
+    return String(val)
+      .replace(/\s*\(\s*ج\.?\s*م\.?\s*\)/gu, '')
+      .replace(/\s*ألف\s+ج\.?\s*م\.?\s*/gu, ' ألف')
+      .replace(/\s+ج\.?\s*م\.?\s*$/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function sanitizeCellForExcel(text) {
-    var value = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+    var value = stripCurrencySuffix(String(text == null ? '' : text).replace(/\s+/g, ' ').trim());
     if (!value || value === '—') return value || '';
     if (/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(value)) {
       return formatDateForExport(value);
@@ -60,18 +70,37 @@ var ExportKit = (function () {
     }
   }
 
+  function slugFilename(text) {
+    return String(text || 'تصدير')
+      .replace(/[^\w\u0600-\u06FF]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 80) || 'تصدير';
+  }
+
+  function buildFilename(label, withDate) {
+    var base = slugFilename(label);
+    if (withDate !== false) {
+      base += '_' + new Date().toISOString().slice(0, 10);
+    }
+    return base;
+  }
+
   function toExcel(filename, headers, rows) {
     if (!rows || !rows.length) {
       alert('لا توجد بيانات للتصدير');
       return;
     }
+    var cleanHeaders = headers.map(function (h) { return stripCurrencySuffix(h); });
+    var cleanRows = rows.map(function (row) {
+      return row.map(function (cell) { return sanitizeCellForExcel(cell); });
+    });
     var BOM = '\uFEFF';
-    var lines = [headers.map(escapeCsv).join(',')];
-    rows.forEach(function (row) {
+    var lines = [cleanHeaders.map(escapeCsv).join(',')];
+    cleanRows.forEach(function (row) {
       lines.push(row.map(escapeCsv).join(','));
     });
     download(BOM + lines.join('\n'), filename + '.csv', 'text/csv;charset=utf-8;');
-    notify('تم تصدير Excel بنجاح — ' + rows.length + ' سجل');
+    notify('تم تصدير Excel بنجاح — ' + cleanRows.length + ' سجل');
   }
 
   function toPDF(title, headers, rows, subtitle) {
@@ -154,7 +183,50 @@ var ExportKit = (function () {
     }
     var label = (th.getAttribute('aria-label') || '').trim();
     if (label.indexOf('سحب') !== -1 || label.indexOf('تحديد') !== -1) return true;
+    var text = String(th.textContent || '').replace(/\s+/g, ' ').trim();
+    if (text === 'إجراء' || text === 'عرض') return true;
     return false;
+  }
+
+  function shouldSkipRow(tr) {
+    if (!tr || tr.classList.contains('pagination-empty-row')) return true;
+    if (tr.querySelector('td[colspan]')) return true;
+    if (tr.dataset.paginationSkip === '1' || tr.dataset.filterHidden === '1') return true;
+    if (tr.style.display === 'none') return true;
+    return false;
+  }
+
+  function collectFromTable(selector) {
+    var table = typeof selector === 'string' ? document.querySelector(selector) : selector;
+    if (!table) return { headers: [], rows: [] };
+
+    var thead = table.tHead || table.querySelector('thead');
+    var tbody = table.tBodies[0] || table.querySelector('tbody');
+    if (!thead || !tbody) return { headers: [], rows: [] };
+
+    var headerCells = thead.querySelectorAll('th');
+    var headers = [];
+    var includeIndexes = [];
+    headerCells.forEach(function (th, index) {
+      if (shouldSkipHeader(th)) return;
+      headers.push(String(th.textContent || '').replace(/\s+/g, ' ').trim());
+      includeIndexes.push(index);
+    });
+
+    var rows = [];
+    tbody.querySelectorAll('tr').forEach(function (tr) {
+      if (shouldSkipRow(tr)) return;
+      var cells = tr.querySelectorAll('td');
+      if (!cells.length) return;
+      var row = includeIndexes.map(function (index) {
+        return sanitizeCellForExcel(cellText(cells[index]));
+      });
+      if (row.some(function (value) { return value !== ''; })) {
+        rows.push(row);
+      }
+    });
+
+    return { headers: headers, rows: rows };
   }
 
   /** تصدير جدول HTML — كل الصفوف (بما فيها صفحات الترقيم المخفية). */
@@ -166,41 +238,17 @@ var ExportKit = (function () {
       return;
     }
 
-    var thead = table.tHead || table.querySelector('thead');
-    var tbody = table.tBodies[0] || table.querySelector('tbody');
-    if (!thead || !tbody) {
+    var collected = collectFromTable(table);
+    if (!collected.headers.length) {
+      alert('لا توجد أعمدة للتصدير');
+      return;
+    }
+    if (!collected.rows.length) {
       alert('لا توجد بيانات للتصدير');
       return;
     }
 
-    var headerCells = thead.querySelectorAll('th');
-    var headers = [];
-    var includeIndexes = [];
-    headerCells.forEach(function (th, index) {
-      if (shouldSkipHeader(th)) return;
-      headers.push(String(th.textContent || '').replace(/\s+/g, ' ').trim());
-      includeIndexes.push(index);
-    });
-
-    if (!headers.length) {
-      alert('لا توجد أعمدة للتصدير');
-      return;
-    }
-
-    var rows = [];
-    tbody.querySelectorAll('tr').forEach(function (tr) {
-      if (tr.querySelector('td[colspan]')) return;
-      var cells = tr.querySelectorAll('td');
-      if (!cells.length) return;
-      var row = includeIndexes.map(function (index) {
-        return sanitizeCellForExcel(cellText(cells[index]));
-      });
-      if (row.some(function (value) { return value !== ''; })) {
-        rows.push(row);
-      }
-    });
-
-    toExcel(options.filename || 'export', headers, rows);
+    toExcel(options.filename || 'تصدير', collected.headers, collected.rows);
   }
 
   function fromAuditList(selector, options) {
@@ -214,6 +262,7 @@ var ExportKit = (function () {
     var headers = ['الوقت', 'المستخدم', 'الوصف', 'العملية'];
     var rows = [];
     container.querySelectorAll('.audit-item').forEach(function (item) {
+      if (item.style.display === 'none') return;
       var descEl = item.querySelector('.audit-desc');
       var user = item.querySelector('.audit-desc strong');
       var desc = descEl ? descEl.textContent.replace((user && user.textContent) || '', '').replace(/—/g, ' ').replace(/\s+/g, ' ').trim() : '';
@@ -225,7 +274,7 @@ var ExportKit = (function () {
       ]);
     });
 
-    toExcel(options.filename || 'audit-log', headers, rows);
+    toExcel(options.filename || 'سجل_الرقابة', headers, rows);
   }
 
   function fromPermissions(filename) {
@@ -247,7 +296,7 @@ var ExportKit = (function () {
       ]);
     });
 
-    toExcel(filename || 'permissions', headers, rows);
+    toExcel(filename || 'مصفوفة_الصلاحيات', headers, rows);
   }
 
   return {
@@ -255,6 +304,9 @@ var ExportKit = (function () {
     toPDF: toPDF,
     filterItems: filterItems,
     formatDateForExport: formatDateForExport,
+    slugFilename: slugFilename,
+    buildFilename: buildFilename,
+    collectFromTable: collectFromTable,
     fromVisibleTable: fromVisibleTable,
     fromAuditList: fromAuditList,
     fromPermissions: fromPermissions,

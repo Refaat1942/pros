@@ -15,8 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('role_id')->nullable(); // FK → roles (يُربط في migration الأدوار)
             $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->string('username')->unique();
             $table->string('password');
             $table->string('status')->default('active'); // active | inactive
             $table->timestamp('last_login_at')->nullable();

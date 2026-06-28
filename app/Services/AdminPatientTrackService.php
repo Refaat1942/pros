@@ -6,6 +6,7 @@ use App\Enums\CaseStage;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Patient;
+use App\Models\VisitType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -14,8 +15,10 @@ use Illuminate\Support\Collection;
  */
 class AdminPatientTrackService
 {
-    public function __construct(private readonly PublicTrackingService $publicTracking)
-    {
+    public function __construct(
+        private readonly PublicTrackingService $publicTracking,
+        private readonly AdminPatientJourneyService $journey,
+    ) {
     }
 
     /** @return list<array{value: string, label: string}> */
@@ -27,58 +30,100 @@ class AdminPatientTrackService
         );
     }
 
+    /** @return list<array{value: int, label: string}> */
+    public static function visitFilterOptions(): array
+    {
+        return VisitType::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (VisitType $type) => ['value' => $type->id, 'label' => $type->name])
+            ->all();
+    }
+
     /** @return Collection<int, array<string, mixed>> */
     public function list(
         ?string $search = null,
         ?string $stage = null,
         ?string $patientType = null,
+        ?string $visitType = null,
         int $limit = 100,
     ): Collection {
         $term = trim((string) $search);
         $stageFilter = trim((string) $stage);
         $typeFilter = trim((string) $patientType);
+        $visitTypeId = trim((string) $visitType) !== '' ? (int) $visitType : null;
+        $visitTypeName = $visitTypeId
+            ? VisitType::query()->whereKey($visitTypeId)->value('name')
+            : null;
 
-        return Patient::query()
+        $patients = Patient::query()
             ->with([
                 'contractCompany:id,name,company_code,is_military',
                 'militaryRank:id,name',
                 'cases' => fn ($q) => $q
-                    ->with('quotes:id,case_id,status')
+                    ->with([
+                        'quotes.items',
+                        'pricingRequest',
+                        'bom.items',
+                        'techOrderSpec.items',
+                        'medicalRecords',
+                    ])
                     ->orderByDesc('id'),
                 'appointments' => fn ($q) => $q
-                    ->whereIn('status', [Appointment::STATUS_WAITING, Appointment::STATUS_IN_CLINIC])
-                    ->where('appointment_date', '<=', now()->toDateString())
-                    ->orderByDesc('appointment_date'),
+                    ->orderByDesc('appointment_date')
+                    ->orderByDesc('id'),
+                'appointments.visitTypeRecord:id,name',
             ])
             ->where(function (Builder $q) {
                 $q->whereHas('cases')
                     ->orWhereHas('appointments', fn (Builder $a) => $a
                         ->whereIn('status', [Appointment::STATUS_WAITING, Appointment::STATUS_IN_CLINIC])
-                        ->where('appointment_date', '<=', now()->toDateString()));
+                        ->whereDate('appointment_date', '<=', now()));
             })
             ->when($typeFilter === Patient::TYPE_CIVILIAN, fn (Builder $q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
             ->when($typeFilter === Patient::TYPE_MILITARY, fn (Builder $q) => $q->where('patient_type', Patient::TYPE_MILITARY))
+            ->when($visitTypeId, fn (Builder $q) => $q->whereHas('appointments', fn (Builder $a) => $a->where(function (Builder $sub) use ($visitTypeId, $visitTypeName) {
+                $sub->where('visit_type_id', $visitTypeId);
+                if ($visitTypeName) {
+                    $sub->orWhere('visit_type', $visitTypeName);
+                }
+            })))
             ->when($term !== '', fn (Builder $q) => $this->applySearch($q, $term))
             ->orderByDesc('updated_at')
             ->limit($limit)
-            ->get()
-            ->map(fn (Patient $patient) => $this->formatTrack($patient))
+            ->get();
+
+        $registrationAudits = $this->journey->registrationAuditsForPatients($patients);
+
+        return $patients
+            ->map(fn (Patient $patient) => $this->formatTrack(
+                $patient,
+                $registrationAudits[$patient->id] ?? null,
+            ))
             ->when(
                 $stageFilter !== '',
                 fn (Collection $tracks) => $tracks->filter(
                     fn (array $track) => ($track['stage_key'] ?? '') === $stageFilter
                 )
             )
+            ->when(
+                $visitTypeId,
+                fn (Collection $tracks) => $tracks->filter(
+                    fn (array $track) => (int) ($track['visit_type_id'] ?? 0) === $visitTypeId
+                )
+            )
             ->values();
     }
 
     /** @return array<string, mixed> */
-    private function formatTrack(Patient $patient): array
+    private function formatTrack(Patient $patient, ?\App\Models\AuditLog $registrationAudit = null): array
     {
         $activeCase = $patient->cases->first(
             fn (CaseRecord $case) => $case->stage_key !== CaseRecord::STAGE_DELIVERED
         ) ?? $patient->cases->first();
-        $appointment = $patient->appointments->first();
+        $appointment = $this->activeAppointment($patient);
+        $visitAppointment = $patient->appointments->first();
+        $visitTypeId = $this->resolveAppointmentVisitTypeId($visitAppointment);
         $uid = $patient->tracking_uid ?: $activeCase?->tracking_uid;
 
         $tracking = $uid
@@ -123,6 +168,9 @@ class AdminPatientTrackService
             'search_hay'       => mb_strtolower(trim(
                 ($patient->name ?? '') . ' ' . ($patient->phone ?? '') . ' ' . ($patient->national_id ?? '')
             )),
+            'visit_type_id'    => $visitTypeId,
+            'visit_type_label' => $visitAppointment?->displayVisitType(),
+            'journey'          => $this->journey->build($patient, $activeCase, $registrationAudit),
             'patient_details'  => $this->formatPatientDetails($patient, $activeCase, $tracking),
         ];
     }
@@ -256,6 +304,37 @@ class AdminPatientTrackService
         return $appointment->status === Appointment::STATUS_IN_CLINIC
             ? CaseRecord::STAGE_EXAM
             : CaseRecord::STAGE_RECEPTION;
+    }
+
+    private function activeAppointment(Patient $patient): ?Appointment
+    {
+        return $patient->appointments->first(
+            fn (Appointment $a) => in_array($a->status, [Appointment::STATUS_WAITING, Appointment::STATUS_IN_CLINIC], true)
+                && $a->appointment_date->lte(now())
+        );
+    }
+
+    private function resolveAppointmentVisitTypeId(?Appointment $appointment): ?int
+    {
+        if (! $appointment) {
+            return null;
+        }
+
+        if ($appointment->visit_type_id) {
+            return (int) $appointment->visit_type_id;
+        }
+
+        if ($appointment->visit_type !== null && $appointment->visit_type !== '' && ctype_digit((string) $appointment->visit_type)) {
+            return (int) $appointment->visit_type;
+        }
+
+        if ($appointment->visit_type) {
+            $id = VisitType::query()->where('name', $appointment->visit_type)->value('id');
+
+            return $id ? (int) $id : null;
+        }
+
+        return null;
     }
 
     private function applySearch(Builder $query, string $term): void

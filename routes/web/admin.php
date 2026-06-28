@@ -12,6 +12,7 @@ use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Reports\AdminCaseController;
 use App\Http\Controllers\Reports\AdminOverviewController;
+use App\Http\Controllers\Reports\AdminReportsHubController;
 use App\Http\Controllers\Reports\AuditLogController;
 use App\Http\Controllers\Reports\BiController;
 use App\Http\Controllers\Stock\StockCatalogController;
@@ -32,6 +33,10 @@ Route::prefix('admin')
         Route::get('bi', [BiController::class, 'index'])->name('bi');
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit');
 
+        Route::get('reports', [AdminReportsHubController::class, 'index'])->name('reports');
+        Route::get('reports/{section}/export', [AdminReportsHubController::class, 'export'])->name('reports.export');
+        Route::get('reports/{section}', [AdminReportsHubController::class, 'show'])->name('reports.section');
+
         Route::get('cases/{case}/detail', [AdminCaseController::class, 'show'])->name('cases.detail');
         Route::get('cases/{case}/quote', [AdminCaseController::class, 'quotePrint'])->name('cases.quote');
     });
@@ -41,7 +46,7 @@ registerDashboardPages(
     'admin.',
     AdminDashboardController::class,
     'admin',
-    except: ['overview', 'bi', 'audit'],
+    except: ['overview', 'bi', 'audit', 'reports', 'reports-section'],
 );
 
 /*

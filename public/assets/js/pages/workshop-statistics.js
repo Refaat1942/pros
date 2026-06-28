@@ -72,7 +72,7 @@
       });
     });
 
-    ExportKit.toExcel('workshop_completed_' + new Date().toISOString().slice(0, 10), HEADERS, formatted);
+    ExportKit.toExcel(ExportKit.buildFilename('سجل_الإنتاج_المكتمل'), HEADERS, formatted);
   }
 
   function bindSearch() {

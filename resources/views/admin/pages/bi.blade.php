@@ -16,7 +16,7 @@
           <span class="bi-hero__eyebrow">📡 مركز القيادة</span>
           <h2 class="bi-hero__title">لوحات ذكاء الأعمال</h2>
           <p class="bi-hero__desc">
-            مؤشرات لحظية من قاعدة البيانات: توزيع المسارات، SLA، قيمة المخزون (WAC)، خط الإنتاج، تكاليف الجهات، ومقارنة أسعار الشراء.
+            مؤشرات لحظية من قاعدة البيانات: توزيع المسارات، الموعد المتفق للتسليم، قيمة المخزون بمتوسط التكلفة المرجح، خط الإنتاج، تكاليف الجهات، ومقارنة أسعار الشراء.
           </p>
         </div>
         @if ($hasBoards)
@@ -26,17 +26,17 @@
               <strong class="bi-hero-kpi__value">{{ number_format($b1['total_cases'] ?? 0) }}</strong>
             </div>
             <div class="bi-hero-kpi bi-hero-kpi--cyan">
-              <span class="bi-hero-kpi__label">قيمة المخزون WAC</span>
+              <span class="bi-hero-kpi__label">قيمة المخزون — متوسط التكلفة</span>
               <strong class="bi-hero-kpi__value">{{ number_format((float) ($b2['total_value'] ?? 0), 0) }} <small>ج.م</small></strong>
             </div>
             <div class="bi-hero-kpi bi-hero-kpi--purple">
               <span class="bi-hero-kpi__label">أوامر تشغيل مفتوحة</span>
               <strong class="bi-hero-kpi__value">{{ number_format($b3['open_work_orders'] ?? 0) }}</strong>
             </div>
-            <div class="bi-hero-kpi {{ $slaCount > 0 ? 'bi-hero-kpi--warn' : 'bi-hero-kpi--ok' }}">
-              <span class="bi-hero-kpi__label">تجاوز SLA</span>
+            {{-- <div class="bi-hero-kpi {{ $slaCount > 0 ? 'bi-hero-kpi--warn' : 'bi-hero-kpi--ok' }}">
+              <span class="bi-hero-kpi__label">تجاوز الموعد المتفق</span>
               <strong class="bi-hero-kpi__value">{{ $slaCount }}</strong>
-            </div>
+            </div> --}}
             <div class="bi-hero-kpi bi-hero-kpi--green">
               <span class="bi-hero-kpi__label">صحة المخزون</span>
               <strong class="bi-hero-kpi__value">{{ $healthPct }}%</strong>

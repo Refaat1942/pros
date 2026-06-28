@@ -6,6 +6,7 @@ use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\StockItemPrice;
+use App\Services\AdminReportsHubService;
 use App\Services\AdminReportsService;
 use App\Services\Dashboard\DashboardPageDataService;
 use App\Services\StockPriceService;
@@ -53,7 +54,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertCount(1, $reports['bom']['rows']);
     }
 
-    public function test_admin_reports_page_renders_server_data(): void
+    public function test_general_view_page_renders_snapshot_data(): void
     {
         $this->seed(RolesAndAdminSeeder::class);
         $admin = $this->userWithRole('admin');
@@ -73,20 +74,81 @@ class AdminReportsPageTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get('/admin/reports')
+            ->get('/admin/general-view')
             ->assertOk()
             ->assertSee('data-server-rendered="1"', false)
+            ->assertSee('رؤية عامة', false)
             ->assertSee('الإيرادات الشهرية')
-            ->assertSee('12,000.00')
             ->assertSee('صحة المخزون');
     }
 
-    public function test_dashboard_page_data_includes_admin_reports(): void
+    public function test_reports_hub_shows_section_cards(): void
     {
-        $data = app(DashboardPageDataService::class)->resolve('admin', 'reports');
+        $admin = $this->userWithRole('admin');
 
-        $this->assertArrayHasKey('admin_reports', $data);
-        $this->assertArrayHasKey('financial', $data['admin_reports']);
-        $this->assertArrayHasKey('bom', $data['admin_reports']);
+        $this->actingAs($admin)
+            ->get('/admin/reports')
+            ->assertOk()
+            ->assertSee('reports-hub-grid', false)
+            ->assertSee('مسار المرضى', false)
+            ->assertSee('سجل الرقابة', false);
+    }
+
+    public function test_reports_section_supports_date_filter_and_export(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $from = now()->startOfMonth()->toDateString();
+        $to = now()->toDateString();
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/audit?from=' . $from . '&to=' . $to)
+            ->assertOk()
+            ->assertSee('reports-date-filter', false)
+            ->assertSee('تصدير Excel', false);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/audit/export?from=' . $from . '&to=' . $to)
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+    }
+
+    public function test_reports_hub_service_builds_financial_report_for_range(): void
+    {
+        $hub = app(AdminReportsHubService::class);
+        $dates = $hub->parseDateRange(now()->startOfMonth()->toDateString(), now()->toDateString());
+
+        $report = $hub->build('financial', $dates['from'], $dates['to']);
+
+        $this->assertSame('الإيرادات والمالية', $report['title']);
+        $this->assertNotEmpty($report['headers']);
+    }
+
+    public function test_reports_hub_does_not_list_internal_reports_section_page(): void
+    {
+        $hub = app(AdminReportsHubService::class);
+        $ids = collect($hub->sections())->pluck('id')->all();
+
+        $this->assertNotContains('reports-section', $ids);
+        $this->assertNull($hub->sectionMeta('reports-section'));
+    }
+
+    public function test_reports_section_slug_returns_not_found(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/reports-section')
+            ->assertNotFound();
+    }
+
+    public function test_dashboard_page_data_includes_general_view_and_reports_hub(): void
+    {
+        $general = app(DashboardPageDataService::class)->resolve('admin', 'general-view');
+        $hub = app(DashboardPageDataService::class)->resolve('admin', 'reports');
+
+        $this->assertArrayHasKey('admin_reports', $general);
+        $this->assertArrayHasKey('financial', $general['admin_reports']);
+        $this->assertArrayHasKey('report_sections', $hub);
+        $this->assertNotEmpty($hub['report_sections']);
     }
 }

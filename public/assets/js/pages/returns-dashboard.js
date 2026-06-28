@@ -1,5 +1,5 @@
 /**
- * Warehouse returns inbox — confirm receipt from operations (barcode scan).
+ * Warehouse returns inbox — confirm receipt from workshop (barcode scan).
  */
 (function () {
   if (document.body.dataset.activePage !== 'returns') return;
@@ -49,9 +49,10 @@
     return 'waiting';
   }
 
-  function deriveBarcode(code) {
-    var digits = String(code || '').replace(/\D/g, '');
-    return 'BC-' + digits;
+  function lineBarcode(ln) {
+    if (ln && ln.barcode) return String(ln.barcode);
+    var code = ln && ln.stock_item_code ? String(ln.stock_item_code) : '';
+    return code ? 'BC-' + code : '';
   }
 
   function updateSummary(notes) {
@@ -252,7 +253,7 @@
         '</div>' +
         '<div class="barcode-required"><h4>بنود متبقية للاستلام:</h4>' +
         pending.map(function (ln) {
-          var bc = deriveBarcode(ln.stock_item_code);
+          var bc = lineBarcode(ln);
           var rem = (ln.qty_requested || 0) - (ln.qty_returned || 0);
           return '<div class="barcode-req-item"><span>' + esc(ln.name || ln.stock_item_code) + ' ×' + rem + '</span><code>' + esc(bc) + '</code></div>';
         }).join('') + '</div>';
@@ -290,10 +291,12 @@
 
     var barcode = $('returnBarcodeInput').value.trim();
     var qty = parseInt($('returnQtyInput').value, 10) || 1;
+    var normalizedBarcode = barcode.toUpperCase();
 
     var line = (note.lines || []).find(function (ln) {
-      var bc = deriveBarcode(ln.stock_item_code);
-      return bc === barcode || ln.stock_item_code === barcode;
+      var bc = lineBarcode(ln).toUpperCase();
+      return bc === normalizedBarcode
+        || String(ln.stock_item_code || '').toUpperCase() === normalizedBarcode;
     });
 
     if (!line) {

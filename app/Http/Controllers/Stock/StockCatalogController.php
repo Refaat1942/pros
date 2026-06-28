@@ -35,8 +35,15 @@ class StockCatalogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $range = $this->catalogService->parseDateRange(
+            $request->query('from'),
+            $request->query('to'),
+        );
+
         $query = StockItem::query()
             ->with(['category:id,name', 'prices.supplier:id,name'])
+            ->when($range['from'], fn ($q, Carbon $start) => $q->where('created_at', '>=', $start))
+            ->when($range['to'], fn ($q, Carbon $end) => $q->where('created_at', '<=', $end))
             ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
             ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -123,7 +130,7 @@ class StockCatalogController extends Controller
     public function template(StockImportService $importService): StreamedResponse
     {
         $contents = $importService->templateContents();
-        $filename = 'stock-items-template.csv';
+        $filename = 'قالب-الأصناف.csv';
 
         return response()->streamDownload(function () use ($contents) {
             echo $contents;
@@ -135,10 +142,15 @@ class StockCatalogController extends Controller
     /**
      * تصدير الأصناف الحالية إلى CSV (متوافق مع القالب والرفع الجماعي).
      */
-    public function export(StockImportService $importService): StreamedResponse
+    public function export(Request $request, StockImportService $importService): StreamedResponse
     {
-        $contents = $importService->exportContents($this->catalogService->listForDashboard());
-        $filename = 'stock-items-' . now()->format('Y-m-d') . '.csv';
+        $contents = $importService->exportContents(
+            $this->catalogService->listForDashboard(
+                $request->query('from'),
+                $request->query('to'),
+            )
+        );
+        $filename = 'الأصناف_والأسعار-' . now()->format('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($contents) {
             echo $contents;

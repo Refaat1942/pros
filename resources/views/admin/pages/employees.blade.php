@@ -33,7 +33,7 @@
                 <tr>
                     @include('admin.partials.bulk-select-th')
                     <th>الاسم</th>
-                    <th>البريد</th>
+                    <th>اسم المستخدم</th>
                     <th>الدور</th>
                     <th>الحالة</th>
                     <th>آخر دخول</th>
@@ -76,11 +76,12 @@
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
                 </div>
                 <div class="form-group" style="margin-bottom:14px;">
-                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">البريد الإلكتروني <span style="color:#dc2626">*</span></label>
-                    <input type="email" name="email" class="form-control"
-                           data-v-rules="required,email,max:191" maxlength="191"
-                           value="{{ old('email', $editUser?->email) }}"
-                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">اسم المستخدم <span style="color:#dc2626">*</span></label>
+                    <input type="text" name="username" class="form-control"
+                           data-v-rules="required,username,max:50" maxlength="50"
+                           value="{{ old('username', $editUser?->username) }}"
+                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"
+                           dir="ltr">
                 </div>
                 <div class="form-group" style="margin-bottom:14px;">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">

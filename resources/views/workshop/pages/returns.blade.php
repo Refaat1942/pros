@@ -7,7 +7,7 @@
         </div>
     </div>
     <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;line-height:1.7;">
-        مكتب التشغيل يُرسل مواداً زائدة أو غير مستخدمة إلى المخزن.
+        الورشة تُرسل مواداً زائدة أو غير مستخدمة إلى المخزن.
         بعد الإرسال تظهر الحالة <strong>بانتظار استلام المخزن</strong> حتى يؤكد أمين المخزن بالباركود.
     </p>
     <div class="bom-summary" id="returnsSummary"></div>

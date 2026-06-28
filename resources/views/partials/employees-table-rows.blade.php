@@ -16,7 +16,7 @@
             ])
         @endif
         <td><strong>{{ $employee->name }}</strong></td>
-        <td>{{ $employee->email }}</td>
+        <td dir="ltr">{{ $employee->username }}</td>
         <td>
             <span class="role-badge {{ $employee->role?->slug ?? 'unknown' }}">
                 {{ $employee->role?->label_ar ?? '—' }}

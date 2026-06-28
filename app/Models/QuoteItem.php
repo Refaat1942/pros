@@ -13,6 +13,7 @@ class QuoteItem extends Model
     protected $fillable = [
         'quote_id',
         'name',
+        'source',
         'stock_item_code',
         'qty',
         'amount',

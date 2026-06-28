@@ -98,7 +98,7 @@
                                     {{ $isMil ? '🪖 عسكري' : '🌐 مدني' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600">{{ $case->company_name ?? '—' }}</td>
+                            <td class="px-4 py-3 text-slate-600">{{ $case->displayEntity() }}</td>
                             <td class="px-4 py-3 text-center">
                                 @if ($itemsCount > 0)
                                     <button type="button"

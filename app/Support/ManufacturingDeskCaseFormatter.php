@@ -33,10 +33,11 @@ class ManufacturingDeskCaseFormatter
             ];
         }
 
-        return $case->only([
+        $payload = $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage',
-            'work_order_no', 'patient_type', 'path', 'quote_no', 'company_name',
+            'work_order_no', 'patient_type', 'path', 'quote_no',
         ]) + [
+            'company_name'  => $case->displayEntity(),
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
             'work_order_print_url' => $case->work_order_no
                 ? route($printRouteName, $case)
@@ -46,6 +47,8 @@ class ManufacturingDeskCaseFormatter
                 : null,
             'bom' => $bom,
         ];
+
+        return $payload;
     }
 
     /** @return array{wip: int, military: int, civilian: int, total_active: int} */

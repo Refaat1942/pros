@@ -14,13 +14,13 @@ class ReturnNoteListTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_operations_returns_create_lists_wip_boms_with_returnable_items(): void
+    public function test_workshop_returns_create_lists_wip_boms_with_returnable_items(): void
     {
         $this->seedStock();
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('operations');
+        $user    = $this->userWithRole('workshop');
         $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0500']);
 
@@ -31,19 +31,19 @@ class ReturnNoteListTest extends TestCase
         $bom->items()->update(['unit_cost' => 200]);
         app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
 
-        $this->getJson('/operations/returns/create')
+        $this->getJson('/workshop/returns/create')
             ->assertOk()
             ->assertJsonPath('boms.0.bom_no', $bom->fresh()->bom_no)
             ->assertJsonPath('boms.0.items.0.returnable_qty', 2);
     }
 
-    public function test_operations_returns_list_shows_existing_return_notes(): void
+    public function test_workshop_returns_list_shows_existing_return_notes(): void
     {
         $this->seedStock();
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('operations');
+        $user    = $this->userWithRole('workshop');
         $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
 
         $this->actingAs($user);
@@ -60,7 +60,7 @@ class ReturnNoteListTest extends TestCase
             $user,
         );
 
-        $this->getJson('/operations/returns/list')
+        $this->getJson('/workshop/returns/list')
             ->assertOk()
             ->assertJsonPath('total', 1);
     }
@@ -71,7 +71,7 @@ class ReturnNoteListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $ops     = $this->userWithRole('operations');
+        $ops     = $this->userWithRole('workshop');
         $tech    = $this->userWithRole('technical');
         $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
 
@@ -108,7 +108,8 @@ class ReturnNoteListTest extends TestCase
         $this->getJson('/technical/returns/list?inbox=1')
             ->assertOk()
             ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.id', $pending->id);
+            ->assertJsonPath('data.0.id', $pending->id)
+            ->assertJsonPath('data.0.lines.0.barcode', 'BC-RM-001');
     }
 
     private function seedStock(): void

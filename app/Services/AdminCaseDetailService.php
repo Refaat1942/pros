@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ApprovalContract;
+use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
@@ -24,6 +25,7 @@ class AdminCaseDetailService
             'quotes' => fn ($q) => $q->with('items')->orderByDesc('id'),
             'pricingRequest:id,case_id,request_no',
             'bom:id,case_id,bom_no,stage',
+            'bom.items:id,bom_id,stock_item_code,name,source,qty',
         ]);
 
         $quote    = $this->resolveQuote($case);
@@ -79,12 +81,7 @@ class AdminCaseDetailService
                 'quote_date'   => $quote->quote_date?->format('d/m/Y'),
                 'total'        => (float) $quote->total,
                 'company_name' => $quote->company_name,
-                'items'          => $quote->items->map(fn ($i) => [
-                    'name'            => $i->name,
-                    'stock_item_code' => $i->stock_item_code,
-                    'qty'             => $i->qty,
-                    'amount'          => (float) $i->amount,
-                ])->values()->all(),
+                'items'          => $this->mapQuoteItems($case, $quote),
                 'print_url'    => route('admin.cases.quote', $case),
             ] : null,
             'approval' => $contract ? [
@@ -118,5 +115,33 @@ class AdminCaseDetailService
         }
 
         return $case->quotes->first();
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function mapQuoteItems(CaseRecord $case, Quote $quote): array
+    {
+        $bomItems = ($case->bom?->items ?? collect())->sortBy('id')->values();
+        $useIndex = $bomItems->isNotEmpty() && $bomItems->count() === $quote->items->count();
+
+        return $quote->items->sortBy('id')->values()->map(function ($item, int $idx) use ($bomItems, $useIndex) {
+            $source = $item->source ?? null;
+
+            if (($source === null || $source === BomItem::SOURCE_SPEC) && $useIndex && $bomItems->has($idx)) {
+                $source = $bomItems[$idx]->source;
+            }
+
+            $source ??= BomItem::SOURCE_SPEC;
+            $fromAdjustments = $source === BomItem::SOURCE_ADJUSTMENT;
+
+            return [
+                'name'              => $item->name,
+                'stock_item_code'   => $item->stock_item_code,
+                'qty'               => $item->qty,
+                'amount'            => (float) $item->amount,
+                'source'            => $source,
+                'from_adjustments'  => $fromAdjustments,
+                'source_label'      => $fromAdjustments ? 'المعدلات' : null,
+            ];
+        })->all();
     }
 }

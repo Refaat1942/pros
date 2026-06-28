@@ -3,7 +3,9 @@
     $trackSearch = $track_search ?? '';
     $trackStage = $track_stage ?? '';
     $trackPatientType = $track_patient_type ?? '';
+    $trackVisitType = $track_visit_type ?? '';
     $trackStageOptions = $track_stage_options ?? [];
+    $trackVisitOptions = $track_visit_options ?? [];
 @endphp
 <script type="application/json" id="patientTracksData">@json($tracks->keyBy('id')->all())</script>
 <div class="panel patient-track-panel" id="patientTrackPanel">
@@ -31,6 +33,12 @@
             <option value="civilian" @selected($trackPatientType === 'civilian')>🌐 مدني</option>
             <option value="military" @selected($trackPatientType === 'military')>🪖 عسكري</option>
         </select>
+        <select id="patientTrackVisitFilter" class="patient-track-filter-select" aria-label="فلتر نوع الزيارة">
+            <option value="">كل الزيارات</option>
+            @foreach ($trackVisitOptions as $option)
+                <option value="{{ $option['value'] }}" @selected((string) $trackVisitType === (string) $option['value'])>{{ $option['label'] }}</option>
+            @endforeach
+        </select>
         <span class="toolbar-count" id="patientTrackFilterCount">{{ $tracks->count() }} مريض</span>
     </div>
     <div class="panel-body patient-track-table-wrap">
@@ -49,7 +57,8 @@
                     <tr class="patient-track-row"
                         data-search="{{ $track['search_hay'] ?? '' }}"
                         data-stage-key="{{ $track['stage_key'] ?? '' }}"
-                        data-pathway="{{ $track['pathway'] ?? '' }}">
+                        data-pathway="{{ $track['pathway'] ?? '' }}"
+                        data-visit-type-id="{{ $track['visit_type_id'] ?? '' }}">
                         <td>
                             <strong>{{ $track['name'] }}</strong>
                             @if (! empty($track['case_no']))
@@ -107,7 +116,7 @@
 </div>
 
 <div class="catalog-modal-overlay" id="patientTrackModal" role="dialog" aria-modal="true" aria-labelledby="patientTrackModalTitle">
-    <div class="catalog-modal patient-track-modal" onclick="event.stopPropagation()" style="max-width:720px;">
+    <div class="catalog-modal patient-track-modal" onclick="event.stopPropagation()" style="max-width:920px;">
         <div class="catalog-modal-header">
             <div>
                 <h3 id="patientTrackModalTitle">📍 مسار المريض</h3>
@@ -129,6 +138,7 @@
             </div>
             <div class="patient-track-steps" id="patientTrackModalSteps" aria-hidden="true"></div>
             <p class="patient-track-pathway-note" id="patientTrackModalPathNote"></p>
+            <div class="patient-track-journey" id="patientTrackModalJourney" aria-live="polite"></div>
         </div>
         <div class="catalog-modal-footer">
             <button type="button" class="btn-action" id="btnClosePatientTrackModal">إغلاق</button>
@@ -149,5 +159,19 @@
         <div class="catalog-modal-footer patient-details-modal-footer">
             <button type="button" class="btn-action primary" id="btnClosePatientDetailsModal">إغلاق</button>
         </div>
+    </div>
+</div>
+
+@include('partials.contract-letter-modal')
+
+<div class="modal-overlay journey-quote-preview-modal" id="journeyQuotePreviewModal"
+     style="display:none;position:fixed;inset:0;z-index:1100;background:rgba(15,23,42,.65);
+            backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+    <div class="journey-quote-preview-dialog">
+        <div class="journey-quote-preview-header">
+            <h3 id="journeyQuotePreviewTitle">🧾 عرض السعر</h3>
+            <button type="button" id="btnCloseJourneyQuotePreview" class="journey-quote-preview-close" aria-label="إغلاق">&times;</button>
+        </div>
+        <div id="journeyQuotePreviewBody" class="journey-quote-preview-body"></div>
     </div>
 </div>

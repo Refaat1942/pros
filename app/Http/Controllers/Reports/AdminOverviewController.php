@@ -96,7 +96,7 @@ class AdminOverviewController extends Controller
             'employees_preview' => User::query()
                 ->with('role:id,slug,label_ar')
                 ->orderByDesc('id')
-                ->get(['id', 'name', 'email', 'role_id', 'status', 'last_login_at']),
+                ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at']),
             'visit_leaderboards' => $this->visitLeaderboard->topPatientsByVisitType(),
         ]));
     }
@@ -109,6 +109,7 @@ class AdminOverviewController extends Controller
                 search: $request->query('search'),
                 stage: $request->query('stage'),
                 patientType: $request->query('patient_type'),
+                visitType: $request->query('visit_type'),
             )->values()
         );
     }

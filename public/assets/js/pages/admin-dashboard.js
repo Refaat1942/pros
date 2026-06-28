@@ -218,14 +218,15 @@
 
     var sectionTitles = {
       overview: 'لوحة المعلومات — الإدارة العليا',
-      bi: 'لوحات القيادة (BI) — 5 لوحات',
+      bi: 'لوحات القيادة — 5 لوحات',
       catalog: 'الأصناف والأسعار',
       cases: 'متابعة الحالات',
       employees: 'إدارة الموظفين',
       companies: 'جهات التعاقد',
       debts: 'مديونيات جهات التعاقد',
       audit: 'سجل الرقابة الحصين — Immutable Audit Log',
-      reports: 'التقارير والتحليلات',
+      general-view: 'رؤية عامة',
+      reports: 'التقارير',
       suppliers: 'الموردون وفواتير المشتريات'
     };
 
@@ -454,7 +455,14 @@
           return [c.patient, c.company, c.totalCost, ExportKit.formatDateForExport(c.deliveredAt)];
         });
       }
-      if (type === 'excel') ExportKit.toExcel('cases-' + casesFilter, headers, rows);
+      if (type === 'excel') {
+        var caseNames = {
+          waiting_return: 'حالات_بانتظار_رجوع_العميل',
+          in_progress: 'حالات_تحت_التنفيذ',
+          delivered: 'حالات_مسلّمة'
+        };
+        ExportKit.toExcel(ExportKit.buildFilename(caseNames[casesFilter] || 'متابعة_الحالات'), headers, rows);
+      }
       else ExportKit.toPDF(title, headers, rows);
     }
 
@@ -475,6 +483,15 @@
       return '<div class="case-doc-panel">' +
         '<div class="case-doc-panel__head"><span>' + title + '</span></div>' +
         '<div class="case-doc-panel__body">' + innerHtml + '</div></div>';
+    }
+
+    /** خطاب الموافقة: PDF في iframe — أي صورة (jfif/heic/…) في img */
+    function approvalLetterPreviewHtml(url, ext) {
+      ext = (ext || '').toLowerCase();
+      if (ext === 'pdf') {
+        return '<iframe src="' + escapeHtml(url) + '" title="خطاب الموافقة"></iframe>';
+      }
+      return '<img src="' + escapeHtml(url) + '" alt="خطاب الموافقة">';
     }
 
     function closeCaseDetailModal() {
@@ -522,7 +539,10 @@
       var quoteSection = '';
       if (q) {
         var itemsRows = (q.items || []).map(function(it) {
-          return '<tr><td>' + escapeHtml(it.name) + '</td><td>' + escapeHtml(it.stock_item_code || '—') + '</td>' +
+          var adjBadge = it.from_adjustments
+            ? ' <span class="case-item-source case-item-source--adj" title="أُضيف بواسطة المعدلات">📏 المعدلات</span>'
+            : '';
+          return '<tr><td>' + escapeHtml(it.name) + adjBadge + '</td><td>' + escapeHtml(it.stock_item_code || '—') + '</td>' +
             '<td class="num">' + it.qty + '</td><td class="num case-detail-paid">' +
             CasesWorkflow.formatMoney(it.amount) + '</td></tr>';
         }).join('');
@@ -553,14 +573,7 @@
       if (a) {
         var letterPreview = '';
         if (a.has_letter && a.letter_url) {
-          var ext = (a.letter_ext || '').toLowerCase();
-          if (ext === 'pdf') {
-            letterPreview = '<iframe src="' + escapeHtml(a.letter_url) + '" title="خطاب الموافقة"></iframe>';
-          } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].indexOf(ext) !== -1) {
-            letterPreview = '<img src="' + escapeHtml(a.letter_url) + '" alt="خطاب الموافقة">';
-          } else {
-            letterPreview = '<iframe src="' + escapeHtml(a.letter_url) + '" title="خطاب الموافقة"></iframe>';
-          }
+          letterPreview = approvalLetterPreviewHtml(a.letter_url, a.letter_ext);
         }
         approvalSection =
           '<div class="case-detail-section">' +
@@ -703,7 +716,7 @@
       var data = getFilteredCompanies();
       var headers = ['#', 'اسم الجهة'];
       var rows = data.map(function(c, i) { return [i + 1, c.name]; });
-      if (type === 'excel') ExportKit.toExcel('contract-companies', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('جهات_التعاقد'), headers, rows);
       else ExportKit.toPDF('جهات التعاقد', headers, rows);
     }
 
@@ -1154,7 +1167,7 @@
         var s = StockCatalog.getPriceSummary(i.prices);
         return [i.code, i.name, i.category, i.spec, s.count, s.min, s.max, i.qty || 0];
       });
-      if (type === 'excel') ExportKit.toExcel('catalog-items', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('الأصناف_والأسعار'), headers, rows);
       else ExportKit.toPDF('الأصناف والأسعار', headers, rows);
     }
     window.exportCatalog = exportCatalog;
@@ -1231,7 +1244,7 @@
       var search = document.getElementById('empSearch') ? document.getElementById('empSearch').value.trim() : '';
       var role = document.getElementById('empRoleFilter') ? document.getElementById('empRoleFilter').value : 'all';
       var status = document.getElementById('empStatusFilter') ? document.getElementById('empStatusFilter').value : 'all';
-      return ExportKit.filterItems(employees, { search: search, searchKeys: ['name', 'roleLabel'], filterField: 'role', filterValue: role })
+      return ExportKit.filterItems(employees, { search: search, searchKeys: ['name', 'username', 'roleLabel'], filterField: 'role', filterValue: role })
         .filter(function(e) { return status === 'all' || e.status === status; });
     }
 
@@ -1270,8 +1283,51 @@
 
     function getFilteredAudit() {
       var search = document.getElementById('auditSearch') ? document.getElementById('auditSearch').value.trim() : '';
-      var action = document.getElementById('auditActionFilter') ? document.getElementById('auditActionFilter').value : 'all';
-      return ExportKit.filterItems(auditLogs, { search: search, searchKeys: ['user', 'desc', 'action'], filterField: 'action', filterValue: action });
+      return ExportKit.filterItems(auditLogs, { search: search, searchKeys: ['user', 'desc', 'action'] });
+    }
+
+    function filterServerAuditRows() {
+      var host = document.getElementById('auditListFull');
+      var list = document.getElementById('auditItemsList');
+      if (!host || host.dataset.serverRendered !== '1' || !list) return;
+
+      var form = document.getElementById('auditFilterForm');
+      var searchEl = form ? form.querySelector('[name="search"]') : document.getElementById('auditSearch');
+      var tagEl = form ? form.querySelector('[name="tag"]') : document.getElementById('auditTagFilter');
+      var fromEl = form ? form.querySelector('[name="date_from"]') : document.getElementById('auditFilterDateFrom');
+      var toEl = form ? form.querySelector('[name="date_to"]') : document.getElementById('auditFilterDateTo');
+
+      var search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+      var tag = tagEl ? tagEl.value : '';
+      var dateFrom = fromEl ? fromEl.value.trim() : '';
+      var dateTo = toEl ? toEl.value.trim() : '';
+
+      var visible = 0;
+      list.querySelectorAll('.audit-item').forEach(function (item) {
+        var itemText = (item.dataset.search || '').toLowerCase();
+        var itemTag = item.dataset.tag || '';
+        var itemDate = item.dataset.date || '';
+
+        var show = (!search || itemText.indexOf(search) !== -1)
+          && (!tag || itemTag === tag)
+          && (!dateFrom || (itemDate && itemDate >= dateFrom))
+          && (!dateTo || (itemDate && itemDate <= dateTo));
+
+        item.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      var countEl = document.getElementById('auditCount');
+      if (countEl) {
+        var pageTotal = list.querySelectorAll('.audit-item').length;
+        var dbTotal = host.dataset.auditTotal || String(pageTotal);
+        var filtering = !!(search || tag || dateFrom || dateTo);
+        if (filtering && visible !== pageTotal) {
+          countEl.textContent = visible + ' حركة (من ' + pageTotal + ' في الصفحة)';
+        } else {
+          countEl.textContent = dbTotal + ' حركة';
+        }
+      }
     }
 
     function getFilteredSuppliers() {
@@ -1281,7 +1337,7 @@
 
     function exportEmployees(type) {
       var tbody = document.getElementById('employeesTableFull') || document.getElementById('employeesTable');
-      var headers = ['الاسم', 'البريد', 'الدور', 'الحالة', 'آخر دخول'];
+      var headers = ['الاسم', 'اسم المستخدم', 'الدور', 'الحالة', 'آخر دخول'];
       var rows = [];
       if (tbody && tbody.dataset.serverRendered === '1') {
         tbody.querySelectorAll('tr').forEach(function(row) {
@@ -1300,10 +1356,10 @@
         });
       } else {
         rows = getFilteredEmployees().map(function(e) {
-          return [e.name, e.email || '—', e.roleLabel, e.status === 'active' ? 'نشط' : 'غير نشط', ExportKit.formatDateForExport(e.lastLogin)];
+          return [e.name, e.username || '—', e.roleLabel, e.status === 'active' ? 'نشط' : 'غير نشط', ExportKit.formatDateForExport(e.lastLogin)];
         });
       }
-      if (type === 'excel') ExportKit.toExcel('الموظفون', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('الموظفون'), headers, rows);
       else ExportKit.toPDF('ادارة الموظفين', headers, rows);
     }
 
@@ -1314,7 +1370,7 @@
         var lbl = d.status === 'paid' ? 'مسدد' : d.status === 'partial' ? 'جزئي' : 'معلق';
         return [d.company, formatNumber(d.due), lbl];
       });
-      if (type === 'excel') ExportKit.toExcel('المديونيات', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('مديونيات_جهات_التعاقد'), headers, rows);
       else ExportKit.toPDF('مديونيات جهات التعاقد', headers, rows);
     }
 
@@ -1322,7 +1378,7 @@
       var data = getFilteredAudit();
       var headers = ['الوقت', 'المستخدم', 'الوصف', 'العملية'];
       var rows = data.map(function(l) { return [l.time, l.user, l.desc, l.action]; });
-      if (type === 'excel') ExportKit.toExcel('سجل_الرقابة', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('سجل_الرقابة'), headers, rows);
       else ExportKit.toPDF('سجل الرقابة — Audit Trail', headers, rows);
     }
 
@@ -1346,7 +1402,7 @@
           return [s.name, s.phone || '—', s.email || '—'];
         });
       }
-      if (type === 'excel') ExportKit.toExcel('الموردون', headers, rows);
+      if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('الموردون'), headers, rows);
       else ExportKit.toPDF('الموردون', headers, rows);
     }
 
@@ -1549,7 +1605,10 @@
 
     function renderAuditFull() {
       var container = document.getElementById('auditListFull');
-      if (container && container.dataset.serverRendered === '1') return;
+      if (container && container.dataset.serverRendered === '1') {
+        filterServerAuditRows();
+        return;
+      }
       var filtered = getFilteredAudit();
       renderAuditItems('auditListFull', null, filtered);
       var ac = document.getElementById('auditCount');
@@ -1565,10 +1624,20 @@
       var el = document.getElementById(id);
       if (el) { el.addEventListener('input', renderDebts); el.addEventListener('change', renderDebts); }
     });
-    ['auditSearch','auditActionFilter'].forEach(function(id) {
+    ['auditSearch', 'auditTagFilter', 'auditFilterDateFrom', 'auditFilterDateTo'].forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) { el.addEventListener('input', renderAuditFull); el.addEventListener('change', renderAuditFull); }
+      if (el) {
+        el.addEventListener('input', renderAuditFull);
+        el.addEventListener('change', renderAuditFull);
+      }
     });
+    var auditForm = document.getElementById('auditFilterForm');
+    if (auditForm) {
+      auditForm.addEventListener('submit', function () {
+        var host = document.getElementById('auditListFull');
+        if (host) host.dataset.auditTotal = '';
+      });
+    }
     ['supplierSearch'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) { el.addEventListener('input', renderSuppliers); el.addEventListener('change', renderSuppliers); }
@@ -1704,6 +1773,7 @@
       var searchInput = document.getElementById('patientTrackSearch');
       var stageFilter = document.getElementById('patientTrackStageFilter');
       var typeFilter = document.getElementById('patientTrackTypeFilter');
+      var visitFilter = document.getElementById('patientTrackVisitFilter');
       var tbody = document.getElementById('patientTrackTableBody');
       var modal = document.getElementById('patientTrackModal');
       var detailsModal = document.getElementById('patientDetailsModal');
@@ -1806,7 +1876,8 @@
 
         return '<tr class="patient-track-row" data-search="' + escHtml(track.search_hay || '') + '"'
           + ' data-stage-key="' + escHtml(track.stage_key || '') + '"'
-          + ' data-pathway="' + escHtml(pathway) + '">'
+          + ' data-pathway="' + escHtml(pathway) + '"'
+          + ' data-visit-type-id="' + escHtml(track.visit_type_id != null ? String(track.visit_type_id) : '') + '">'
           + '<td><strong>' + escHtml(track.name || '—') + '</strong>' + subLines + '</td>'
           + '<td><span class="patient-type-badge ' + pathway + '">' + pathwayLabel + '</span></td>'
           + '<td class="patient-track-contact">' + contactHtml(track) + '</td>'
@@ -1895,6 +1966,98 @@
         if (detailsModal) detailsModal.classList.remove('open');
       }
 
+      function journeyPreviewBtnHtml(preview) {
+        if (!preview || !preview.url) return '';
+        return '<button type="button" class="patient-track-doc-btn"'
+          + ' data-preview-type="' + escHtml(preview.type || '') + '"'
+          + ' data-preview-url="' + escHtml(preview.url) + '"'
+          + ' data-preview-ext="' + escHtml(preview.ext || '') + '"'
+          + ' data-preview-title="' + escHtml(preview.title || preview.label || '') + '"'
+          + ' data-preview-contract="' + escHtml(preview.contract_no || '') + '"'
+          + ' title="' + escHtml(preview.label || 'عرض') + '">'
+          + '📄 ' + escHtml(preview.label || 'عرض')
+          + '</button>';
+      }
+
+      function openJourneyQuotePreview(url, title) {
+        var modal = document.getElementById('journeyQuotePreviewModal');
+        var titleEl = document.getElementById('journeyQuotePreviewTitle');
+        var bodyEl = document.getElementById('journeyQuotePreviewBody');
+        if (!modal || !bodyEl) {
+          window.open(url, '_blank', 'noopener');
+          return;
+        }
+        if (titleEl) titleEl.textContent = title || '🧾 عرض السعر';
+        bodyEl.innerHTML = '<iframe src="' + escHtml(url) + '" title="عرض السعر" class="journey-quote-preview-frame"></iframe>';
+        modal.style.display = 'flex';
+      }
+
+      function closeJourneyQuotePreview() {
+        var modal = document.getElementById('journeyQuotePreviewModal');
+        var bodyEl = document.getElementById('journeyQuotePreviewBody');
+        if (modal) modal.style.display = 'none';
+        if (bodyEl) bodyEl.innerHTML = '';
+      }
+
+      function handleJourneyPreviewClick(event) {
+        var btn = event.target.closest('.patient-track-doc-btn');
+        if (!btn) return;
+        event.preventDefault();
+        event.stopPropagation();
+
+        var type = btn.getAttribute('data-preview-type') || '';
+        var url = btn.getAttribute('data-preview-url') || '';
+        if (!url) return;
+
+        if (type === 'approval_letter' && typeof window.openContractLetterView === 'function') {
+          window.openContractLetterView(
+            url,
+            btn.getAttribute('data-preview-contract') || btn.getAttribute('data-preview-title') || '',
+            btn.getAttribute('data-preview-ext') || ''
+          );
+          return;
+        }
+
+        if (type === 'quote') {
+          openJourneyQuotePreview(url, btn.getAttribute('data-preview-title') || 'عرض السعر');
+        }
+      }
+
+      function journeyTimelineHtml(events) {
+        if (!events || !events.length) {
+          return '<p class="patient-track-journey-empty">لا توجد أحداث مسجّلة بعد في دورة هذا المريض.</p>';
+        }
+
+        return '<h4 class="patient-track-journey-title">📋 سجل الدورة — كل ما حدث</h4>'
+          + '<div class="patient-track-timeline">'
+          + events.map(function (ev) {
+            var lines = (ev.lines || []).map(function (line) {
+              return '<li>' + escHtml(line) + '</li>';
+            }).join('');
+            var link = ev.link && ev.link.url
+              ? '<a class="patient-track-journey-link" href="' + escHtml(ev.link.url) + '" target="_blank" rel="noopener">' + escHtml(ev.link.label || 'عرض') + '</a>'
+              : '';
+            var previewBtn = journeyPreviewBtnHtml(ev.preview);
+            return '<article class="patient-track-timeline-item">'
+              + '<div class="patient-track-timeline-marker" aria-hidden="true"></div>'
+              + '<div class="patient-track-timeline-body">'
+              + '<div class="patient-track-timeline-layout">'
+              + '<div class="patient-track-timeline-main">'
+              + '<div class="patient-track-timeline-head">'
+              + '<span class="patient-track-timeline-cat">' + escHtml(ev.category_label || '') + '</span>'
+              + '<time class="patient-track-timeline-time">' + escHtml(ev.at_label || '—') + '</time>'
+              + '</div>'
+              + '<strong class="patient-track-timeline-title">' + escHtml(ev.title || '—') + '</strong>'
+              + (lines ? '<ul class="patient-track-timeline-lines">' + lines + '</ul>' : '')
+              + link
+              + '</div>'
+              + previewBtn
+              + '</div>'
+              + '</div></article>';
+          }).join('')
+          + '</div>';
+      }
+
       function openTrackModal(track) {
         if (!modal || !track) return;
 
@@ -1913,6 +2076,7 @@
         var barEl = document.getElementById('patientTrackModalBar');
         var stepsEl = document.getElementById('patientTrackModalSteps');
         var noteEl = document.getElementById('patientTrackModalPathNote');
+        var journeyEl = document.getElementById('patientTrackModalJourney');
 
         if (titleEl) titleEl.textContent = '📍 مسار المريض — ' + (track.name || '—');
         if (metaEl) metaEl.textContent = metaParts.join(' · ') || '—';
@@ -1933,6 +2097,7 @@
             ? 'المسار العسكري: 6 مراحل — بدون تسعير واعتماد جهة التأمين.'
             : 'المسار المدني: 7 مراحل — يشمل التسعير واعتماد التشغيل وموافقة الجهة.';
         }
+        if (journeyEl) journeyEl.innerHTML = journeyTimelineHtml(track.journey || []);
 
         modal.classList.add('open');
       }
@@ -1962,10 +2127,27 @@
         });
       }
 
+      var journeyElRoot = document.getElementById('patientTrackModalJourney');
+      if (journeyElRoot) {
+        journeyElRoot.addEventListener('click', handleJourneyPreviewClick);
+      }
+
+      var quotePreviewModal = document.getElementById('journeyQuotePreviewModal');
+      var btnCloseQuotePreview = document.getElementById('btnCloseJourneyQuotePreview');
+      if (btnCloseQuotePreview) {
+        btnCloseQuotePreview.addEventListener('click', closeJourneyQuotePreview);
+      }
+      if (quotePreviewModal) {
+        quotePreviewModal.addEventListener('click', function (event) {
+          if (event.target === quotePreviewModal) closeJourneyQuotePreview();
+        });
+      }
+
       function applyPatientTrackFilter() {
         var term = (searchInput && searchInput.value || '').toLowerCase().trim();
         var stage = stageFilter ? stageFilter.value : '';
         var pathway = typeFilter ? typeFilter.value : '';
+        var visitType = visitFilter ? visitFilter.value : '';
         var rows = tbody ? tbody.querySelectorAll('.patient-track-row') : [];
         var visible = 0;
 
@@ -1973,16 +2155,18 @@
           var hay = row.getAttribute('data-search') || '';
           var rowStage = row.getAttribute('data-stage-key') || '';
           var rowPathway = row.getAttribute('data-pathway') || '';
+          var rowVisitType = row.getAttribute('data-visit-type-id') || '';
           var show = (!term || hay.indexOf(term) !== -1)
             && (!stage || rowStage === stage)
-            && (!pathway || rowPathway === pathway);
+            && (!pathway || rowPathway === pathway)
+            && (!visitType || rowVisitType === visitType);
           row.style.display = show ? '' : 'none';
           if (show) visible++;
         });
 
         var countEl = document.getElementById('patientTrackFilterCount');
         if (countEl) {
-          countEl.textContent = (term || stage || pathway)
+          countEl.textContent = (term || stage || pathway || visitType)
             ? (visible + ' من ' + rows.length + ' مريض')
             : (rows.length + ' مريض');
         }
@@ -1993,9 +2177,11 @@
         var search = searchInput ? searchInput.value.trim() : '';
         var stage = stageFilter ? stageFilter.value : '';
         var pathway = typeFilter ? typeFilter.value : '';
+        var visitType = visitFilter ? visitFilter.value : '';
         if (search) params.set('search', search);
         if (stage) params.set('stage', stage);
         if (pathway) params.set('patient_type', pathway);
+        if (visitType) params.set('visit_type', visitType);
         return params.toString();
       }
 
@@ -2010,6 +2196,12 @@
       }
       if (typeFilter) {
         typeFilter.addEventListener('change', function () {
+          applyPatientTrackFilter();
+          if (btn) btn.click();
+        });
+      }
+      if (visitFilter) {
+        visitFilter.addEventListener('change', function () {
           applyPatientTrackFilter();
           if (btn) btn.click();
         });
@@ -2093,12 +2285,6 @@
         });
       }
 
-      function visibleItemRows() {
-        return Array.prototype.slice.call(document.querySelectorAll('.return-item-row')).filter(function (row) {
-          return row.style.display !== 'none';
-        });
-      }
-
       function applyNoteFilters() {
         var term = (document.getElementById('returnNoteSearch') || {}).value || '';
         term = term.trim().toUpperCase();
@@ -2131,30 +2317,24 @@
         refreshPaginated('returnLinesTableBody');
       }
 
-      function applyItemFilters() {
-        var term = (document.getElementById('returnItemSearch') || {}).value || '';
-        term = term.trim().toUpperCase();
-        var rows = document.querySelectorAll('.return-item-row');
-        var visible = 0;
-        rows.forEach(function (row) {
-          var match = !term || (row.dataset.search || '').toUpperCase().indexOf(term) !== -1;
-          row.style.display = match ? '' : 'none';
-          if (match) visible++;
-        });
-        var countEl = document.getElementById('returnItemFilterCount');
-        if (countEl) countEl.textContent = visible + ' صنف';
-        refreshPaginated('returnItemsTableBody');
-      }
-
       onId('returnNoteSearch', 'input', applyNoteFilters);
       onId('returnNoteStatusFilter', 'change', applyNoteFilters);
       onId('returnLineSearch', 'input', applyLineFilters);
-      onId('returnItemSearch', 'input', applyItemFilters);
 
       function detailRow(label, value) {
         return '<div class="admin-return-detail-row">' +
           '<span class="admin-return-detail-label">' + label + '</span>' +
           '<span class="admin-return-detail-value">' + value + '</span></div>';
+      }
+
+      function getReturnNoteLines(row) {
+        var id = row.dataset.id || row.getAttribute('data-id');
+        var map = window.__ADMIN_RETURN_NOTE_LINES || {};
+        if (id != null) {
+          if (Array.isArray(map[id]) && map[id].length) return map[id];
+          if (Array.isArray(map[String(id)]) && map[String(id)].length) return map[String(id)];
+        }
+        return [];
       }
 
       window.closeReturnNoteDetail = function () {
@@ -2166,8 +2346,7 @@
         var row = btn.closest('.return-note-row');
         if (!row) return;
         var d = row.dataset;
-        var lines = [];
-        try { lines = JSON.parse(d.lines || '[]'); } catch (e) { lines = []; }
+        var lines = getReturnNoteLines(row);
 
         var title = document.getElementById('returnNoteModalTitle');
         var subtitle = document.getElementById('returnNoteModalSubtitle');
@@ -2179,16 +2358,12 @@
 
         var linesHtml = lines.length
           ? '<div class="admin-return-lines-table-wrap"><table class="admin-return-lines-table">' +
-            '<thead><tr><th>الصنف</th><th>الباركود</th><th>مطلوب</th><th>مستلم</th><th>متبقي</th><th>السبب</th></tr></thead><tbody>' +
+            '<thead><tr><th>الصنف</th><th>الباركود</th><th>الكمية المرجعة</th><th>السبب</th></tr></thead><tbody>' +
             lines.map(function (ln) {
-              var pending = Math.max(0, (ln.requested || 0) - (ln.returned || 0));
-              var done = pending === 0 && (ln.returned || 0) > 0;
-              return '<tr class="' + (done ? 'is-complete' : '') + '">' +
+              return '<tr>' +
                 '<td><strong>' + esc(ln.name) + '</strong><br><code>' + esc(ln.code) + '</code></td>' +
                 '<td><code>' + esc(ln.barcode || '—') + '</code></td>' +
-                '<td>' + (ln.requested || 0) + '</td>' +
-                '<td><strong style="color:' + (done ? '#059669' : '#d97706') + ';">' + (ln.returned || 0) + '</strong></td>' +
-                '<td>' + pending + '</td>' +
+                '<td><strong style="color:#059669;">' + (ln.returned || 0) + '</strong></td>' +
                 '<td>' + esc(ln.reason || '—') + '</td></tr>';
             }).join('') + '</tbody></table></div>'
           : '<p style="color:var(--text-muted);">لا بنود.</p>';
@@ -2225,10 +2400,9 @@
         var headers = ['رقم الطلب', 'BOM', 'أمر التشغيل', 'المريض', 'سبب الارتجاع', 'البنود', 'الحالة', 'أرسله', 'تاريخ الإرسال', 'تاريخ الاستلام'];
         var data = rows.map(function (row) {
           var d = row.dataset;
-          var lines = [];
-          try { lines = JSON.parse(d.lines || '[]'); } catch (e) { lines = []; }
+          var lines = getReturnNoteLines(row);
           var linesTxt = lines.map(function (ln) {
-            return (ln.name || ln.code) + ' ' + (ln.returned || 0) + '/' + (ln.requested || 0);
+            return (ln.name || ln.code) + ' ×' + (ln.returned || 0);
           }).join(' · ');
           return [
             d.returnNo, d.bomNo, d.workOrder, d.patient, d.reason, linesTxt,
@@ -2237,7 +2411,7 @@
             ExportKit.formatDateForExport(d.completedAt),
           ];
         });
-        ExportKit.toExcel('return-requests', headers, data);
+        ExportKit.toExcel(ExportKit.buildFilename('طلبات_الارتجاع'), headers, data);
       };
 
       window.exportAdminReturnLinesDetail = function () {
@@ -2254,36 +2428,19 @@
         if (!filtered.length) { alert('لا توجد بيانات للتصدير'); return; }
         var headers = [
           'رقم الطلب', 'الحالة', 'BOM', 'أمر التشغيل', 'رقم الحالة', 'المريض', 'مرجع الطلب',
-          'كود الصنف', 'اسم الصنف', 'الباركود', 'مطلوب', 'مستلم', 'متبقي',
+          'كود الصنف', 'اسم الصنف', 'الباركود', 'الكمية المرجعة',
           'سبب الارتجاع', 'أرسله', 'تاريخ الإرسال', 'تاريخ الاستلام',
         ];
         var data = filtered.map(function (row) {
           return [
             row.return_no, row.status, row.bom_no, row.work_order_no, row.case_no,
             row.patient_name, row.order_ref, row.stock_item_code, row.item_name, row.barcode,
-            row.qty_requested, row.qty_returned, row.qty_pending, row.reason, row.sent_by,
+            row.qty_returned, row.reason, row.sent_by,
             ExportKit.formatDateForExport(row.sent_at),
             ExportKit.formatDateForExport(row.received_at),
           ];
         });
-        ExportKit.toExcel('return-lines-detail', headers, data);
-      };
-
-      window.exportAdminReturnItems = function () {
-        var rows = visibleItemRows();
-        if (!rows.length) { alert('لا توجد بيانات للتصدير'); return; }
-        var headers = ['كود الصنف', 'اسم الصنف', 'كمية مطلوبة', 'كمية مرتجعة', 'نسبة الاسترداد'];
-        var data = rows.map(function (row) {
-          var cells = row.querySelectorAll('td');
-          return [
-            cells[0] ? cells[0].textContent.trim() : '',
-            cells[1] ? cells[1].textContent.trim() : '',
-            cells[2] ? cells[2].textContent.trim() : '',
-            cells[3] ? cells[3].textContent.trim() : '',
-            cells[4] ? cells[4].textContent.trim() : '',
-          ];
-        });
-        ExportKit.toExcel('return-items-summary', headers, data);
+        ExportKit.toExcel(ExportKit.buildFilename('تفاصيل_بنود_الارتجاع'), headers, data);
       };
     })();
 
@@ -2293,7 +2450,7 @@
         if (tableBtn && window.ExportKit && ExportKit.fromVisibleTable) {
           event.preventDefault();
           ExportKit.fromVisibleTable(tableBtn.getAttribute('data-export-table'), {
-            filename: tableBtn.getAttribute('data-export-filename') || 'export',
+            filename: tableBtn.getAttribute('data-export-filename') || 'تصدير',
           });
           return;
         }
@@ -2302,7 +2459,7 @@
         if (auditBtn && window.ExportKit && ExportKit.fromAuditList) {
           event.preventDefault();
           ExportKit.fromAuditList(auditBtn.getAttribute('data-export-audit'), {
-            filename: auditBtn.getAttribute('data-export-filename') || 'audit-log',
+            filename: auditBtn.getAttribute('data-export-filename') || 'سجل_الرقابة',
           });
           return;
         }
@@ -2310,15 +2467,12 @@
         var permBtn = event.target.closest('[data-export-permissions]');
         if (permBtn && window.ExportKit && ExportKit.fromPermissions) {
           event.preventDefault();
-          ExportKit.fromPermissions(permBtn.getAttribute('data-export-filename') || 'permissions');
+          ExportKit.fromPermissions(permBtn.getAttribute('data-export-filename') || 'مصفوفة_الصلاحيات');
         }
       });
 
       function slugifyFilename(text) {
-        return String(text || 'export')
-          .replace(/[^\w\u0600-\u06FF]+/g, '_')
-          .replace(/^_+|_+$/g, '')
-          .slice(0, 48) || 'export';
+        return ExportKit.slugFilename ? ExportKit.slugFilename(text) : String(text || 'تصدير');
       }
 
       function panelHasExport(panel) {

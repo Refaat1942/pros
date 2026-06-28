@@ -24,7 +24,6 @@ class AuditLogController extends Controller
     {
         $logs = AuditLog::query()
             ->when($request->tag, fn ($q, $t) => $q->where('tag', $t))
-            ->when($request->action, fn ($q, $a) => $q->where('action', $a))
             ->when($request->user_id, fn ($q, $id) => $q->where('user_id', $id))
             ->when($request->date_from, fn ($q, $d) => $q->whereDate('logged_at', '>=', $d))
             ->when($request->date_to, fn ($q, $d) => $q->whereDate('logged_at', '<=', $d))
@@ -73,8 +72,7 @@ class AuditLogController extends Controller
                 ],
             ],
             'filterTags'    => AuditLog::query()->distinct()->orderBy('tag')->pluck('tag')->filter(),
-            'filterActions' => AuditLog::query()->distinct()->orderBy('action')->pluck('action')->filter(),
-            'filters'       => $request->only(['tag', 'action', 'user_id', 'date_from', 'date_to', 'search']),
+            'filters'       => $request->only(['tag', 'user_id', 'date_from', 'date_to', 'search']),
         ]);
     }
 }

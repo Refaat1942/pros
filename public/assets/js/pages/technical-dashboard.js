@@ -163,7 +163,7 @@ function exportInventory(type) {
   var rows = data.map(function (i) {
     return [i.code, i.name, i.category, i.spec, i.qty, i.reserved || 0, i.status === 'ok' ? 'متوفر' : 'منخفض'];
   });
-  if (type === 'excel') ExportKit.toExcel('inventory', headers, rows);
+  if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('المخزون'), headers, rows);
   else ExportKit.toPDF('توفر المخزون', headers, rows);
 }
 
@@ -173,7 +173,7 @@ function exportPricing(type) {
   var rows = data.map(function (p) {
     return [p.id, p.orderRef, p.patient, p.company, p.date, p.items, p.statusLabel];
   });
-  if (type === 'excel') ExportKit.toExcel('pricing-queue', headers, rows);
+  if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('طلبات_التسعير'), headers, rows);
   else ExportKit.toPDF('طلبات التسعير', headers, rows);
 }
 
@@ -183,7 +183,7 @@ function exportOrders(type) {
   var rows = data.map(function (o) {
     return [o.id, o.name, recommendationsText(o.recommendations), o.doctor, o.date];
   });
-  if (type === 'excel') ExportKit.toExcel('stock-requests', headers, rows);
+  if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('طلبات_التوصيف'), headers, rows);
   else ExportKit.toPDF('طلبات الصرف', headers, rows);
 }
 
@@ -631,7 +631,7 @@ function exportBom(type) {
       b.createdAt
     ];
   });
-  if (type === 'excel') ExportKit.toExcel('bom-inventory', headers, rows);
+  if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('قوائم_صرف_المواد'), headers, rows);
   else ExportKit.toPDF('قائمة مواد BOM', headers, rows);
 }
 window.exportBom = exportBom;
