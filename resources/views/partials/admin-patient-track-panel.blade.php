@@ -5,9 +5,7 @@
     $trackPatientType = $track_patient_type ?? '';
     $trackStageOptions = $track_stage_options ?? [];
 @endphp
-<script>
-window.__patientTracksById = @json($tracks->keyBy('id')->all());
-</script>
+<script type="application/json" id="patientTracksData">@json($tracks->keyBy('id')->all())</script>
 <div class="panel patient-track-panel" id="patientTrackPanel">
     <div class="panel-header">
         <h3>📍 مسار المرضى — تتبع المراحل</h3>

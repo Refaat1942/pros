@@ -43,6 +43,7 @@ class AdminPatientTrackTest extends TestCase
             ->assertSee('تفاصيل المريض', false)
             ->assertSee('id="patientTrackModal"', false)
             ->assertSee('id="patientDetailsModal"', false)
+            ->assertSee('id="patientTracksData"', false)
             ->assertSee($patient->name, false);
     }
 

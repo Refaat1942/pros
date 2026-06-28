@@ -1711,6 +1711,22 @@
 
       if (!window.__patientTracksById) window.__patientTracksById = {};
 
+      function hydrateTrackCacheFromDom() {
+        var dataEl = document.getElementById('patientTracksData');
+        if (!dataEl) return;
+
+        try {
+          var payload = JSON.parse(dataEl.textContent || '{}');
+          if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+            window.__patientTracksById = payload;
+          }
+        } catch (err) {
+          console.error('patient-tracks: invalid JSON payload', err);
+        }
+      }
+
+      hydrateTrackCacheFromDom();
+
       function escHtml(value) {
         return String(value)
           .replace(/&/g, '&amp;')
