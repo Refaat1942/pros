@@ -225,7 +225,7 @@
       companies: 'جهات التعاقد',
       debts: 'مديونيات جهات التعاقد',
       audit: 'سجل الرقابة الحصين — Immutable Audit Log',
-      general-view: 'رؤية عامة',
+      'general-view': 'رؤية عامة',
       reports: 'التقارير',
       suppliers: 'الموردون وفواتير المشتريات'
     };
