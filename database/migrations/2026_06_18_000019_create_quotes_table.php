@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('quotes', function (Blueprint $table) {
             $table->id();
-            $table->string('quote_no')->unique(); // QT-2026-0847
+            $table->string('quote_no')->unique(); // سريال عرض السعر — QT-2026-0847
             $table->string('order_ref');
             $table->foreignId('case_id')->nullable()->constrained('cases')->nullOnDelete();
             $table->foreignId('pricing_request_id')->nullable()->unique()->constrained('pricing_requests')->nullOnDelete();

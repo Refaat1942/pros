@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Dashboard\SpecDashboardController;
+use App\Http\Controllers\Spec\SpecEditRequestController;
 use App\Http\Controllers\TechOrderSpec\TechOrderSpecController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,15 @@ Route::prefix('spec')
 
             Route::get('spec/{spec}/preview', [TechOrderSpecController::class, 'preview'])
                 ->name('spec.preview');
+
+            Route::get('spec/{spec}/print', [TechOrderSpecController::class, 'print'])
+                ->name('spec.print');
+
+            Route::get('spec/{spec}/edit-request', [SpecEditRequestController::class, 'show'])
+                ->name('spec.edit-request.show');
+
+            Route::post('spec/{spec}/edit-request', [SpecEditRequestController::class, 'store'])
+                ->name('spec.edit-request.store');
         });
 
         // ── Pricing status (إرسال للتسعير) ────────────────────────────────

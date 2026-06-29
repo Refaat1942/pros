@@ -72,7 +72,7 @@ class BomService
     }
 
     /**
-     * BOM خام من التوصيف الفني — بدون حجز مخزني وبدون تكلفة (عمى مالي للفني).
+     * BOM خام من التوصيف الفني — حجز backorder مسموح (متاح سالب عند نقص الرصيد).
      *
      * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
      */
@@ -88,6 +88,10 @@ class BomService
             $existing = Bom::where('case_id', $case->id)->first();
 
             if ($existing) {
+                if ($existing->stock_reserved_at) {
+                    $this->releaseBomReservation($existing);
+                }
+
                 $existing->items()->delete();
                 $existing->update(['stage' => Bom::STAGE_RAW]);
                 $bom = $existing;
@@ -131,7 +135,152 @@ class BomService
                 after:       $bom->load('items')->only(['id', 'bom_no', 'case_id', 'stage']),
             );
 
-            return $bom;
+            $this->reserveBackorderForBom($bom);
+
+            return $bom->fresh()->load('items');
+        });
+    }
+
+    /**
+     * حجز بنود BOM كطلب توريد — يُسمح بتجاوز الرصيد (متاح سالب / backorder).
+     */
+    public function reserveBackorderForBom(Bom $bom): void
+    {
+        $bom->loadMissing('items');
+
+        foreach ($bom->items as $bomItem) {
+            $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+
+            if (! $stockItem) {
+                abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
+            }
+
+            $stockItem->increment('reserved', $bomItem->qty);
+        }
+
+        $bom->update(['stock_reserved_at' => now()]);
+
+        AuditService::log(
+            action:      'reserve',
+            description: "حجز/طلب توريد من التوصيف — {$bom->bom_no}",
+            tag:         'spec',
+            after:       [
+                'bom_id' => $bom->id,
+                'items'  => $bom->items->map(fn (BomItem $i) => [
+                    'code' => $i->stock_item_code,
+                    'qty'  => $i->qty,
+                ])->values()->all(),
+            ],
+        );
+    }
+
+    /**
+     * عكس تأثير حجز BOM على reserved (يدعم الكميات السالبة).
+     */
+    private function reverseReservedDelta(StockItem $stockItem, int $qty): void
+    {
+        $stockItem->increment('reserved', -$qty);
+    }
+
+    /**
+     * إلغاء حجز BOM سابق قبل إعادة بناء بنود التوصيف.
+     */
+    public function releaseBomReservation(Bom $bom): void
+    {
+        $bom->loadMissing('items');
+
+        foreach ($bom->items as $bomItem) {
+            $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+
+            if (! $stockItem) {
+                continue;
+            }
+
+            $this->reverseReservedDelta($stockItem, $bomItem->qty);
+        }
+
+        $bom->update(['stock_reserved_at' => null]);
+    }
+
+    /**
+     * استبدال بنود الفني فقط في BOM — مع إعادة حساب الحجز دون مساس ببنود المعدلات.
+     *
+     * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
+     */
+    public function replaceSpecSourceItems(CaseRecord $case, array $items): Bom
+    {
+        if ($items === []) {
+            abort(422, 'يجب إضافة بند واحد على الأقل.');
+        }
+
+        return DB::transaction(function () use ($case, $items) {
+            $bom = Bom::where('case_id', $case->id)->lockForUpdate()->first();
+
+            if (! $bom) {
+                abort(422, 'لا توجد قائمة مواد لهذه الحالة.');
+            }
+
+            if ($bom->stage !== Bom::STAGE_RAW) {
+                abort(422, 'لا يمكن تعديل بنود التوصيف — قائمة المواد لم تعد في مرحلة الإعداد.');
+            }
+
+            $specItems = $bom->items()->where('source', BomItem::SOURCE_SPEC)->get();
+
+            foreach ($specItems as $bomItem) {
+                $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+
+                if ($stockItem) {
+                    $this->reverseReservedDelta($stockItem, $bomItem->qty);
+                }
+            }
+
+            $bom->items()->where('source', BomItem::SOURCE_SPEC)->delete();
+
+            foreach ($items as $row) {
+                $code = $row['stock_item_code'];
+                $qty  = (int) $row['qty'];
+
+                if (! StockItem::where('code', $code)->exists()) {
+                    abort(422, "الصنف غير موجود: {$code}");
+                }
+
+                BomItem::create([
+                    'bom_id'          => $bom->id,
+                    'stock_item_code' => $code,
+                    'name'            => $row['name'] ?? $code,
+                    'source'          => BomItem::SOURCE_SPEC,
+                    'qty'             => $qty,
+                    'unit_cost'       => 0,
+                    'issued_qty'      => 0,
+                    'returned_qty'    => 0,
+                ]);
+            }
+
+            $bom->load('items');
+
+            foreach ($bom->items->where('source', BomItem::SOURCE_SPEC) as $bomItem) {
+                $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+
+                if ($stockItem) {
+                    $stockItem->increment('reserved', $bomItem->qty);
+                }
+            }
+
+            if (! $bom->stock_reserved_at) {
+                $bom->update(['stock_reserved_at' => now()]);
+            }
+
+            AuditService::log(
+                action:      'update',
+                description: "تحديث بنود التوصيف في BOM — {$bom->bom_no}",
+                tag:         'spec',
+                after:       [
+                    'bom_id' => $bom->id,
+                    'items'  => $items,
+                ],
+            );
+
+            return $bom->fresh()->load('items');
         });
     }
 
@@ -171,12 +320,6 @@ class BomService
                 $alreadyInBom = (int) $bom->items
                     ->where('stock_item_code', $code)
                     ->sum('qty');
-
-                $maxAllowed = $stockItem->availableQty() - $alreadyInBom;
-
-                if ($qty > $maxAllowed) {
-                    abort(422, "الكمية المطلوبة ({$qty}) تتجاوز المتاح للصنف {$code} — الحد الأقصى: ".max(0, $maxAllowed).'.');
-                }
 
                 $existingAdj = $bom->items->first(
                     fn (BomItem $i) => $i->stock_item_code === $code && $i->source === BomItem::SOURCE_ADJUSTMENT
@@ -263,20 +406,17 @@ class BomService
             abort(422, 'لا توجد قائمة مواد لحجزها.');
         }
 
+        if ($bom->stock_reserved_at) {
+            $this->ensureUnitCosts($bom);
+
+            return;
+        }
+
         foreach ($bom->items as $bomItem) {
             $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
 
             if (! $stockItem) {
                 abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
-            }
-
-            if ($stockItem->availableQty() < $bomItem->qty) {
-                throw new InsufficientStockException(
-                    stockItemCode:    $bomItem->stock_item_code,
-                    required:         $bomItem->qty,
-                    available:        $stockItem->availableQty(),
-                    pricingRequestId: $case->pricing_request_id,
-                );
             }
 
             $bomItem->update([
@@ -285,6 +425,8 @@ class BomService
 
             $stockItem->increment('reserved', $bomItem->qty);
         }
+
+        $bom->update(['stock_reserved_at' => now()]);
 
         AuditService::log(
             action:      'reserve',
@@ -356,21 +498,14 @@ class BomService
                 abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
             }
 
-            if ($stockItem->availableQty() < $bomItem->qty) {
-                throw new InsufficientStockException(
-                    stockItemCode:    $bomItem->stock_item_code,
-                    required:         $bomItem->qty,
-                    available:        $stockItem->availableQty(),
-                    pricingRequestId: $case->pricing_request_id,
-                );
-            }
-
             $bomItem->update([
                 'unit_cost' => $this->stockPriceService->highestUnitPrice($bomItem->stock_item_code),
             ]);
 
             $stockItem->increment('reserved', $bomItem->qty);
         }
+
+        $bom->update(['stock_reserved_at' => now()]);
 
         AuditService::log(
             action:      'update',
@@ -412,15 +547,6 @@ class BomService
 
         if (! $stockItem) {
             abort(422, "الصنف غير موجود: {$code}");
-        }
-
-        if ($stockItem->availableQty() < $qty) {
-            throw new InsufficientStockException(
-                stockItemCode:    $code,
-                required:         $qty,
-                available:        $stockItem->availableQty(),
-                pricingRequestId: $case->pricing_request_id,
-            );
         }
 
         $unitCost = $this->stockPriceService->highestUnitPrice($code);

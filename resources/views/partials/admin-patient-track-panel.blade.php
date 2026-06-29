@@ -65,7 +65,9 @@
                                 <div class="patient-track-cell-sub">{{ $track['case_no'] }}</div>
                             @endif
                             @if (! empty($track['company_name']))
-                                <div class="patient-track-cell-sub">{{ $track['company_name'] }}</div>
+                                <div class="patient-track-cell-sub">
+                                    @include('partials.patient-entity-cell', ['entity' => $track['entity'] ?? null, 'subject' => $track])
+                                </div>
                             @endif
                         </td>
                         <td>

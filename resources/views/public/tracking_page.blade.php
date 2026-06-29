@@ -26,65 +26,18 @@
             <p class="text-xs text-slate-400 mt-3 font-mono" dir="ltr">{{ $tracking['tracking_uid'] }}</p>
         </div>
 
+        @php
+            $progressPct = $tracking['progress_percent'] ?? 0;
+        @endphp
+
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-            <div class="flex items-center justify-between gap-2 mb-5">
-                <h2 class="text-sm font-semibold text-slate-700">مسار الطلب</h2>
-                @if (($tracking['pathway'] ?? '') === 'civilian')
-                    <span class="text-[11px] font-medium px-2 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100">مسار مدني</span>
-                @else
-                    <span class="text-[11px] font-medium px-2 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-100">مسار عسكري</span>
-                @endif
+            <p class="text-sm font-semibold text-slate-700 mb-4 text-center">نسبة الإنجاز</p>
+            <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                     style="width: {{ $progressPct }}%"></div>
             </div>
-
-            @php
-                $steps = $tracking['steps'];
-                $total = count($steps);
-                $current = $tracking['current_index'];
-                $progressPct = $total > 1 ? round(($current / ($total - 1)) * 100) : 0;
-            @endphp
-
-            <div class="mb-6">
-                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                         style="width: {{ $progressPct }}%"></div>
-                </div>
-                <p class="text-xs text-slate-400 mt-2 text-center">{{ $progressPct }}% مكتمل</p>
-            </div>
-
-            <ol class="space-y-0">
-                @foreach ($steps as $index => $step)
-                    @php
-                        $isDone = $step['status'] === 'done';
-                        $isCurrent = $step['status'] === 'current';
-                        $dotClass = $isDone ? 'bg-emerald-500 text-white' : ($isCurrent ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500' : 'bg-slate-100 text-slate-400');
-                        $lineClass = $isDone ? 'bg-emerald-400' : 'bg-slate-200';
-                    @endphp
-                    <li class="flex gap-3 {{ $index < $total - 1 ? 'pb-5' : '' }}">
-                        <div class="flex flex-col items-center">
-                            <span class="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold shrink-0 {{ $dotClass }}">
-                                @if ($isDone)
-                                    ✓
-                                @else
-                                    {{ $index + 1 }}
-                                @endif
-                            </span>
-                            @if ($index < $total - 1)
-                                <span class="w-0.5 flex-1 mt-1 {{ $lineClass }} min-h-[24px]"></span>
-                            @endif
-                        </div>
-                        <div class="pt-1 {{ $isCurrent ? '' : 'opacity-70' }}">
-                            <p class="text-sm font-medium {{ $isCurrent ? 'text-emerald-800' : 'text-slate-700' }}">
-                                {{ $step['label'] }}
-                            </p>
-                            @if ($isCurrent)
-                                <p class="text-xs text-emerald-600 mt-0.5">← أنت هنا</p>
-                            @elseif ($isDone)
-                                <p class="text-xs text-slate-400 mt-0.5">مكتمل</p>
-                            @endif
-                        </div>
-                    </li>
-                @endforeach
-            </ol>
+            <p class="text-2xl font-bold text-emerald-700 mt-4 text-center">{{ $progressPct }}%</p>
+            <p class="text-xs text-slate-400 mt-1 text-center">مكتمل</p>
         </div>
 
         <footer class="text-center mt-8 text-xs text-slate-400 leading-relaxed">

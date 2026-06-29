@@ -16,6 +16,7 @@ use App\Support\CaseDisplayStatus;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class TechOrderSpecController extends Controller
 {
@@ -148,6 +149,22 @@ class TechOrderSpecController extends Controller
     }
 
     /**
+     * طباعة تقرير التوصيف الفني — A4 مع شعار المؤسسة.
+     */
+    public function print(TechOrderSpec $spec, Request $request): Response
+    {
+        abort_unless($spec->locked, 403, 'التوصيف لم يُرسَل بعد.');
+
+        $spec->load(['items', 'caseRecord.patient']);
+
+        return response()->view('spec.print', [
+            'spec'      => $spec,
+            'case'      => $spec->caseRecord,
+            'autoPrint' => ! $request->boolean('embed'),
+        ]);
+    }
+
+    /**
      * حالات أُرسل توصيفها — مع حالة طلب التسعير.
      */
     public function pricingStatus(Request $request): JsonResponse
@@ -209,6 +226,9 @@ class TechOrderSpecController extends Controller
             'items' => $spec->relationLoaded('items')
                 ? $spec->items->map->only(['stock_item_code', 'name', 'qty'])
                 : [],
+            'print_url' => $spec->locked
+                ? route('spec.spec.print', ['spec' => $spec->id])
+                : null,
         ];
     }
 

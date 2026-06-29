@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\DB;
  */
 class StockReceiveService
 {
-    public function __construct(private readonly StockPriceService $stockPriceService)
-    {
+    public function __construct(
+        private readonly StockPriceService $stockPriceService,
+        private readonly SupplierDebtService $supplierDebtService,
+    ) {
     }
 
     /**
@@ -57,6 +59,9 @@ class StockReceiveService
             $this->stockPriceService->createPriceBatch(
                 $item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt
             );
+
+            $this->supplierDebtService->increaseDue($supplier, round($qty * $unitPrice, 2));
+            app(SupplierService::class)->attachStockItem($supplier, $item);
 
             $this->stockPriceService->recalcWac($item, $qty, $unitPrice);
 

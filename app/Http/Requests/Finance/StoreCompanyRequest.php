@@ -10,7 +10,9 @@ class StoreCompanyRequest extends BaseRequest
     {
         return [
             'name'        => ['required', 'string', 'min:2', 'max:255', 'unique:contract_companies,name'],
-            'is_military' => ['required', 'boolean'],
+            'is_military'   => ['required', 'boolean'],
+            'is_contracted' => ['sometimes', 'boolean'],
+            'discount_percent' => ['sometimes', 'numeric', 'min:0', 'max:100'],
         ];
     }
 

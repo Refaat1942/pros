@@ -8,9 +8,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * عرض السعر الرسمي — quotations في reception-dashboard.js
+ *
+ * المعرف الفريد: quote_no (سريال عرض السعر) — صيغة QT-{سنة}-{تسلسل}
  */
 class Quote extends Model
 {
+    /** تسمية الحقل الفريد في الواجهة */
+    public const SERIAL_LABEL = 'سريال عرض السعر';
+
     public const STATUS_PENDING = 'pending';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_ISSUED = 'issued';
@@ -32,6 +37,16 @@ class Quote extends Model
         'quote_date' => 'date',
         'total' => 'decimal:2',
     ];
+
+    protected $appends = [
+        'quote_serial',
+    ];
+
+    /** سريال عرض السعر — نفس quote_no (المعرف الفريد) */
+    public function getQuoteSerialAttribute(): string
+    {
+        return (string) $this->quote_no;
+    }
 
     public function caseRecord(): BelongsTo
     {

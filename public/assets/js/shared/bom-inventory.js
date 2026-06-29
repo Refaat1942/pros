@@ -5,9 +5,9 @@ var BomInventory = (function () {
   var STORAGE_KEY = 'clinic_bom_inventory';
 
   var STAGES = [
-    { key: 'raw', label: 'خام' },
-    { key: 'wip', label: 'تحت التشغيل' },
-    { key: 'finished', label: 'تام' }
+    { key: 'raw', label: 'مخزن خام', short: 'خام' },
+    { key: 'wip', label: 'مخزن إنتاج', short: 'إنتاج' },
+    { key: 'finished', label: 'مخزن تسليم', short: 'تسليم' }
   ];
 
   function noop() {}

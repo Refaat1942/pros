@@ -115,6 +115,8 @@ class QuoteController extends Controller
             'status_label',
             'total',
         ]) + [
+            'quote_serial' => $quote->quote_no,
+            'quote_serial_label' => Quote::SERIAL_LABEL,
             'items' => $quote->relationLoaded('items')
                 ? $quote->items->map->only(['name', 'stock_item_code', 'qty', 'amount'])
                 : [],

@@ -3,6 +3,7 @@
 namespace App\Services\Dashboard;
 
 use App\Models\AppNotification;
+use App\Enums\StockWarehouseType;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\ContractCompany;
@@ -11,6 +12,7 @@ use App\Models\MilitaryRank;
 use App\Models\PricingRequest;
 use App\Models\Role;
 use App\Models\Supplier;
+use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\User;
 use App\Models\VisitType;
@@ -24,11 +26,14 @@ use App\Services\AdminCivilianDebtService;
 use App\Services\AdminCaseTrackingService;
 use App\Services\AdminPatientTrackService;
 use App\Services\AdminReportsService;
+use App\Services\AdjustmentsTransferHistoryService;
 use App\Services\BomService;
 use App\Services\DoctorTransferService;
 use App\Services\ReceptionAnalyticsService;
 use App\Services\WorkshopAnalyticsService;
+use App\Services\SpecEditRequestService;
 use App\Services\StockCatalogService;
+use App\Services\SupplierService;
 use App\Services\StockPriceService;
 use App\Support\ClinicTime;
 
@@ -57,6 +62,7 @@ class DashboardPageDataService
             'admin.suppliers'       => $this->adminSuppliers(),
             'admin.cases'           => $this->adminCases(),
             'admin.patient-tracks'  => $this->adminPatientTracks(),
+            'admin.spec-edit-requests' => $this->adminSpecEditRequests(),
             'admin.contracts'       => $this->contractsPage(isAdmin: true),
             'admin.civilian-debts'  => $this->adminCivilianDebts(),
             'admin.military-debts'  => $this->adminMilitaryDebts(),
@@ -73,6 +79,7 @@ class DashboardPageDataService
             'spec.orders'           => $this->specOrders(),
             'spec.pricing'          => $this->specPricing(),
             'spec.spec'             => $this->specPreview(),
+            'adjustments.history'   => $this->adjustmentsHistory(),
             'operations.operations' => $this->operationsDeliveryDesk(),
             'workshop.workshop'     => $this->workshopDesk(),
             'workshop.statistics'   => $this->workshopStatistics(),
@@ -138,7 +145,7 @@ class DashboardPageDataService
     {
         return [
             'visit_types' => VisitType::query()
-                ->orderByDesc('id')
+                ->ordered()
                 ->get(),
         ];
     }
@@ -157,13 +164,16 @@ class DashboardPageDataService
     private function adminCatalog(): array
     {
         $catalogService = app(StockCatalogService::class);
+        $schema = app(\App\Services\StockCategorySchemaService::class);
         $from = request()->query('from');
         $to   = request()->query('to');
 
         return [
-            // 'stock_categories' => StockCategory::query()
-            //     ->orderBy('name')
-            //     ->get(['id', 'name']),
+            'stock_categories' => StockCategory::query()
+                ->with('fields')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (StockCategory $c) => $schema->formatCategory($c)),
             'suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -178,20 +188,27 @@ class DashboardPageDataService
         $priceService = app(StockPriceService::class);
 
         $items = StockItem::query()
-            ->with(['category:id,name', 'prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id')])
+            ->with([
+                'category:id,name',
+                'prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id'),
+                'attributeValues.field',
+            ])
             ->orderBy('code')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();
 
         $totalValue = $items->sum(
-            fn (StockItem $i) => (int) $i->qty * $priceService->wacUnitPrice($i->code)
+            fn (StockItem $i) => max(0, (int) $i->qty) * $priceService->wacUnitPrice($i->code)
         );
+
+        $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
 
         return [
             'inventory_items' => $items,
             'inventory_overview_stats' => [
                 ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $items->count(), 'bg' => 'rgba(37,99,235,0.1)'],
                 ['icon' => '🔻', 'label' => 'أصناف منخفضة', 'value' => (string) $items->where('status', StockItem::STATUS_LOW)->count(), 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+                ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
                 ['icon' => '💰', 'label' => 'قيمة المخزون', 'value' => number_format($totalValue, 2), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
             ],
         ];
@@ -207,10 +224,21 @@ class DashboardPageDataService
 
     private function adminSuppliers(): array
     {
+        $service = app(SupplierService::class);
+
         return [
-            'suppliers' => Supplier::query()
-                ->orderByDesc('id')
-                ->get(),
+            'suppliers'   => $service->listForAdmin(
+                search: request()->query('search'),
+                from: request()->query('from'),
+                to: request()->query('to'),
+                debtFilter: request()->query('debt'),
+            ),
+            'supplier_filters' => [
+                'search' => request()->query('search'),
+                'from'   => request()->query('from'),
+                'to'     => request()->query('to'),
+                'debt'   => request()->query('debt'),
+            ],
         ];
     }
 
@@ -282,14 +310,15 @@ class DashboardPageDataService
                 ->get(['id', 'name']),
             'civilian_companies' => ContractCompany::query()
                 ->where('is_military', false)
+                ->orderByDesc('is_contracted')
                 ->orderBy('name')
-                ->get(['id', 'name']),
+                ->get(['id', 'name', 'is_contracted']),
             'military_companies' => ContractCompany::query()
                 ->where('is_military', true)
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'visit_types' => VisitType::query()
-                ->orderBy('name')
+                ->ordered()
                 ->get(['id', 'name']),
         ];
     }
@@ -298,7 +327,7 @@ class DashboardPageDataService
     {
         return array_merge($this->receptionPatientFormData(), [
             'patients' => Patient::query()
-                ->with('contractCompany:id,name')
+                ->with('contractCompany:id,name,is_contracted')
                 ->orderByDesc('id')
                 ->limit((int) config('dashboards.table_fetch_limit', 1000))
                 ->get(),
@@ -342,7 +371,8 @@ class DashboardPageDataService
             ->where('transferred_to_clinic', true);
 
         $appointments = (clone $baseQuery)
-            ->with('patient:id,patient_code,name,patient_type,company_name,sovereign_entity,created_at')
+            ->with('patient:id,patient_code,name,patient_type,company_name,sovereign_entity,contract_company_id,created_at')
+            ->with('patient.contractCompany:id,name,is_contracted')
             ->where('status', Appointment::STATUS_IN_CLINIC)
             ->orderByDesc('transferred_to_clinic_at')
             ->orderByDesc('id')
@@ -488,13 +518,38 @@ class DashboardPageDataService
     {
         $specs = \App\Models\TechOrderSpec::query()
             ->where('locked', true)
-            ->with(['items', 'caseRecord:id,case_no,order_ref'])
+            ->with([
+                'items',
+                'caseRecord:id,case_no,order_ref,stage_key',
+                'pendingEditRequest:id,tech_order_spec_id,status,created_at',
+            ])
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit(50)
             ->get();
 
-        return ['submitted_specs' => $specs];
+        $editService = app(SpecEditRequestService::class);
+
+        return [
+            'submitted_specs' => $specs,
+            'spec_edit_stats' => [
+                'total'    => $specs->count(),
+                'editable' => $specs->filter(fn ($s) => $editService->canRequestEdit($s))->count(),
+                'pending'  => $specs->filter(fn ($s) => $s->pendingEditRequest)->count(),
+            ],
+        ];
+    }
+
+    private function adminSpecEditRequests(): array
+    {
+        $service = app(SpecEditRequestService::class);
+        $rows    = $service->listForAdmin('pending');
+
+        return [
+            'spec_edit_requests' => $rows,
+            'spec_edit_pending'  => count($rows),
+            'rejection_reasons'  => config('spec_edit.rejection_reasons', []),
+        ];
     }
 
     private function workshopStatistics(): array
@@ -582,8 +637,9 @@ class DashboardPageDataService
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();
 
-        $okCount    = $items->where('status', StockItem::STATUS_OK)->count();
-        $lowCount   = $items->where('status', StockItem::STATUS_LOW)->count();
+        $okCount        = $items->filter(fn (StockItem $i) => $i->status === StockItem::STATUS_OK && ! $i->isBackorder())->count();
+        $lowCount       = $items->where('status', StockItem::STATUS_LOW)->count();
+        $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
         $reserved   = (int) $items->sum('reserved');
 
         return [
@@ -597,7 +653,8 @@ class DashboardPageDataService
                 'qty'           => (int) $item->qty,
                 'reserved'      => (int) $item->reserved,
                 'available'     => $item->availableQty(),
-                'status'        => $item->status,
+                'backorder'     => $item->backorderQty(),
+                'status'        => $item->isBackorder() ? 'backorder' : $item->status,
                 'barcode'       => $item->barcode,
                 'last_moved_at' => $item->last_moved_at?->format('d/m/Y'),
             ])->values()->all(),
@@ -607,7 +664,7 @@ class DashboardPageDataService
             'inventory_stats' => [
                 ['icon' => '💚', 'label' => 'صحة المخزون', 'value' => $this->inventoryHealthLabel($items), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '✅', 'label' => 'متوفر', 'value' => (string) $okCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '⚠️', 'label' => 'منخفض', 'value' => (string) $lowCount, 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+                ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
                 ['icon' => '🔒', 'label' => 'محجوز', 'value' => (string) $reserved, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
             ],
         ];
@@ -649,9 +706,9 @@ class DashboardPageDataService
         return [
             'warehouse_boms' => $boms,
             'bom_stats'      => [
-                ['icon' => '📦', 'label' => 'خام', 'value' => (string) $rawCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-                ['icon' => '🏭', 'label' => 'تم التحويل للورشة', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-                ['icon' => '✅', 'label' => 'تام', 'value' => (string) $finCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => StockWarehouseType::Raw->icon(), 'label' => StockWarehouseType::Raw->label(), 'value' => (string) $rawCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => StockWarehouseType::Production->icon(), 'label' => StockWarehouseType::Production->label(), 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['icon' => StockWarehouseType::Delivery->icon(), 'label' => StockWarehouseType::Delivery->label(), 'value' => (string) $finCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📋', 'label' => 'إجمالي القوائم', 'value' => (string) $boms->count(), 'bg' => 'rgba(124,58,237,0.1)'],
             ],
         ];
@@ -779,6 +836,25 @@ class DashboardPageDataService
                 ['icon' => '📅', 'label' => 'هذا الشهر', 'value' => (string) $contracts->filter(fn ($c) => $c->approval_date?->isCurrentMonth())->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '📎', 'label' => 'لها مستندات', 'value' => (string) $contracts->filter(fn ($c) => $c->letter_path)->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
+        ];
+    }
+
+    private function adjustmentsHistory(): array
+    {
+        $service = app(AdjustmentsTransferHistoryService::class);
+        $dates   = $service->parseDateRange(
+            request()->query('from'),
+            request()->query('to'),
+        );
+        $search = request()->query('search');
+        $rows   = $service->list($dates['from'], $dates['to'], $search);
+
+        return [
+            'history_rows'  => $rows,
+            'history_stats' => $service->stats($dates['from'], $dates['to'], $search),
+            'date_from'     => $dates['from']->toDateString(),
+            'date_to'       => $dates['to']->toDateString(),
+            'search_query'  => $search ?? '',
         ];
     }
 

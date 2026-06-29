@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -58,8 +59,30 @@ class StockItem extends Model
         return $this->hasMany(StockMovement::class);
     }
 
+    public function attributeValues(): HasMany
+    {
+        return $this->hasMany(StockItemAttributeValue::class);
+    }
+
+    public function suppliers(): BelongsToMany
+    {
+        return $this->belongsToMany(Supplier::class, 'supplier_stock_item')
+            ->withTimestamps();
+    }
+
     public function availableQty(): int
     {
-        return max(0, $this->qty - $this->reserved);
+        return $this->qty - $this->reserved;
+    }
+
+    /** كمية العجز المطلوب توريدها (حجز يتجاوز الرصيد الفعلي). */
+    public function backorderQty(): int
+    {
+        return max(0, $this->reserved - $this->qty);
+    }
+
+    public function isBackorder(): bool
+    {
+        return $this->backorderQty() > 0;
     }
 }

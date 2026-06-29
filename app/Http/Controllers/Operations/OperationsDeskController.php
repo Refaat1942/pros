@@ -161,6 +161,8 @@ class OperationsDeskController extends Controller
             'id', 'quote_no', 'order_ref', 'case_id', 'patient_name', 'company_name',
             'quote_date', 'status', 'status_label', 'total',
         ]) + [
+            'quote_serial'       => $quote->quote_no,
+            'quote_serial_label' => Quote::SERIAL_LABEL,
             'issued_at'      => $quote->updated_at?->toIso8601String(),
             'print_url'      => route('operations.quote.print', $quote),
             'stage_label'    => $this->issuedQuoteStageLabel($case),

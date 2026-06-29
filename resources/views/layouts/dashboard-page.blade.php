@@ -22,6 +22,7 @@
 @push('styles-late')
     <link rel="stylesheet" href="{{ asset('assets/css/sidebar-logout.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/entity-badges.css') }}?v={{ filemtime(public_path('assets/css/entity-badges.css')) }}">
 @endpush
 
 @section('content')
@@ -54,6 +55,7 @@
     <script src="{{ asset('assets/js/shared/toast.js') }}?v={{ filemtime(public_path('assets/js/shared/toast.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}?v={{ filemtime(public_path('assets/js/shared/table-pagination.js')) }}"></script>
+    <script src="{{ asset('assets/js/shared/entity-badges.js') }}?v={{ filemtime(public_path('assets/js/shared/entity-badges.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/tech-notes-modal.js') }}"></script>
     @include('partials.firebase-web')
     <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}"></script>

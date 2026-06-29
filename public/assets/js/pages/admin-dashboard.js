@@ -383,7 +383,7 @@
       var viewCol = '<th style="width:90px">عرض</th>';
 
       if (casesFilter === 'waiting_return') {
-        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>رقم عرض السعر</th><th>تاريخ العرض</th><th>أيام الانتظار</th>' + pipelineCol + viewCol + '</tr>';
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>سريال عرض السعر</th><th>تاريخ العرض</th><th>أيام الانتظار</th>' + pipelineCol + viewCol + '</tr>';
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var days = c.quoteDaysWaiting || 0;
           var daysCls = days >= 14 ? ' days-wait-badge urgent' : ' days-wait-badge';
@@ -438,7 +438,7 @@
       var headers, rows, title;
       if (casesFilter === 'waiting_return') {
         title = 'حالات بانتظار رجوع العميل';
-        headers = ['المريض', 'جهة التعاقد', 'رقم عرض السعر', 'مرجع التسعير', 'تاريخ العرض', 'أيام الانتظار', 'الحالة'];
+        headers = ['المريض', 'جهة التعاقد', 'سريال عرض السعر', 'مرجع التسعير', 'تاريخ العرض', 'أيام الانتظار', 'الحالة'];
         rows = filtered.map(function(c) {
           return [c.patient, c.company, c.quoteId, c.pricingRef || '—', ExportKit.formatDateForExport(c.quoteDate), c.quoteDaysWaiting || 0, c.stageLabel];
         });
@@ -1872,7 +1872,9 @@
         var pathwayLabel = track.pathway === 'military' ? '🪖 عسكري' : '🌐 مدني';
         var subLines = '';
         if (track.case_no) subLines += '<div class="patient-track-cell-sub">' + escHtml(track.case_no) + '</div>';
-        if (track.company_name) subLines += '<div class="patient-track-cell-sub">' + escHtml(track.company_name) + '</div>';
+        if (track.company_name || track.entity) {
+          subLines += '<div class="patient-track-cell-sub">' + (window.EntityBadges ? EntityBadges.renderHtml(track) : escHtml(track.company_name || '—')) + '</div>';
+        }
 
         return '<tr class="patient-track-row" data-search="' + escHtml(track.search_hay || '') + '"'
           + ' data-stage-key="' + escHtml(track.stage_key || '') + '"'

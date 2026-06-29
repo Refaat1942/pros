@@ -71,7 +71,7 @@
                         <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
                         <th class="px-4 py-3 text-right font-bold">المريض</th>
                         <th class="px-4 py-3 text-right font-bold">المسار</th>
-                        <th class="px-4 py-3 text-right font-bold">جهة التعاقد</th>
+                        <th class="px-4 py-3 text-right font-bold">الفوترة / الجهة</th>
                         <th class="px-4 py-3 text-right font-bold">البنود</th>
                         <th class="px-4 py-3 text-right font-bold">إجراء</th>
                     </tr>
@@ -98,7 +98,7 @@
                                     {{ $isMil ? '🪖 عسكري' : '🌐 مدني' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600">{{ $case->displayEntity() }}</td>
+                            <td class="px-4 py-3 text-slate-600">@include('partials.patient-entity-cell', ['subject' => $case])</td>
                             <td class="px-4 py-3 text-center">
                                 @if ($itemsCount > 0)
                                     <button type="button"

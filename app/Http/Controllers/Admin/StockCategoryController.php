@@ -7,24 +7,26 @@ use App\Http\Requests\Admin\StoreStockCategoryRequest;
 use App\Http\Requests\Admin\UpdateStockCategoryRequest;
 use App\Models\StockCategory;
 use App\Services\AuditService;
+use App\Services\StockCategorySchemaService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
-/**
- * إدارة فئات الأصناف — تُستخدم في catalog الأصناف والأسعار.
- */
 class StockCategoryController extends Controller
 {
     use PaginationTrait;
 
+    public function __construct(private readonly StockCategorySchemaService $schema)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
-        if ($request->boolean('all')) {
-            $categories = StockCategory::query()
-                ->orderBy('name')
-                ->get(['id', 'name']);
+        $query = StockCategory::query()->with('fields')->orderBy('name');
+
+        if ($request->boolean('all') || $request->boolean('with_fields')) {
+            $categories = $query->get()->map(fn (StockCategory $c) => $this->schema->formatCategory($c));
 
             return response()->json(['data' => $categories]);
         }
@@ -34,8 +36,9 @@ class StockCategoryController extends Controller
                 $request->search,
                 fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
             )
+                ->with('fields')
                 ->orderByDesc('id')
-        );
+        )->map(fn (StockCategory $c) => $this->schema->formatCategory($c));
 
         return response()->json([
             'data'  => $categories,
@@ -47,44 +50,51 @@ class StockCategoryController extends Controller
     {
         $data = $request->validated();
 
-        $category = StockCategory::create([
-            'name' => $data['name'],
-        ]);
+        $category = StockCategory::create(['name' => $data['name']]);
+        $this->schema->syncFields($category, $data['fields'] ?? []);
 
         AuditService::log(
             action:      'create',
-            description: "إضافة فئة صنف: {$category->name}",
+            description: "إضافة قسم صنف: {$category->name}",
             tag:         'admin',
-            after:       $category->toArray(),
+            after:       $this->schema->formatCategory($category->fresh('fields')),
         );
 
         if ($request->expectsJson()) {
-            return response()->json($category, 201);
+            return response()->json($this->schema->formatCategory($category->fresh('fields')), 201);
         }
 
         return redirect()
-            ->route('admin.stock-categories')
-            ->with('success', "تم إضافة الفئة «{$category->name}» بنجاح.");
+            ->route('admin.catalog')
+            ->with('success', "تم إضافة القسم «{$category->name}» بنجاح.");
     }
 
     public function update(UpdateStockCategoryRequest $request, StockCategory $stockCategory): JsonResponse
     {
         $data = $request->validated();
+        $before = $this->schema->formatCategory($stockCategory->load('fields'));
 
-        $before = $stockCategory->only(['name']);
-        $stockCategory->update($data);
+        if (array_key_exists('name', $data)) {
+            $stockCategory->update(['name' => $data['name']]);
+        }
+
+        if (array_key_exists('fields', $data)) {
+            $this->schema->syncFields($stockCategory, $data['fields'] ?? []);
+        }
+
+        $fresh = $this->schema->formatCategory($stockCategory->fresh('fields'));
 
         AuditService::log(
             action:      'update',
-            description: "تعديل فئة صنف: {$stockCategory->name}",
+            description: "تعديل قسم صنف: {$stockCategory->name}",
             tag:         'admin',
             before:      $before,
-            after:       $stockCategory->fresh()->only(['name']),
+            after:       $fresh,
         );
 
         return response()->json([
-            'message'         => 'تم تحديث الفئة بنجاح.',
-            'stock_category'  => $stockCategory->fresh(),
+            'message'         => 'تم تحديث القسم بنجاح.',
+            'stock_category'  => $fresh,
         ]);
     }
 
@@ -92,7 +102,7 @@ class StockCategoryController extends Controller
     {
         if ($stockCategory->stockItems()->exists()) {
             return response()->json([
-                'message' => 'لا يمكن حذف الفئة — مرتبطة بأصناف مسجّلة.',
+                'message' => 'لا يمكن حذف القسم — مرتبط بأصناف مسجّلة.',
             ], 422);
         }
 
@@ -101,11 +111,11 @@ class StockCategoryController extends Controller
 
         AuditService::log(
             action:      'delete',
-            description: "حذف فئة صنف: {$before['name']}",
+            description: "حذف قسم صنف: {$before['name']}",
             tag:         'admin',
             before:      $before,
         );
 
-        return response()->json(['message' => 'تم حذف الفئة بنجاح.']);
+        return response()->json(['message' => 'تم حذف القسم بنجاح.']);
     }
 }

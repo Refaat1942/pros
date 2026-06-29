@@ -321,22 +321,16 @@
         }
 
         .pricing-table .col-spec {
-            width: 38%;
+            width: 50%;
             text-align: right;
         }
 
-        .pricing-table .col-code {
-            width: 12%;
-            text-align: center;
-            font-variant-numeric: tabular-nums;
-        }
-
         .pricing-table .col-amount {
-            width: 22%;
+            width: 26%;
         }
 
         .pricing-table .col-remarks {
-            width: 14%;
+            width: 16%;
         }
 
         .pricing-table .sub-head {
@@ -491,7 +485,7 @@
             </div>
             <div class="header-meta">
                 <div class="date-line">التاريخ: <span class="date-value">{{ $dateDisplay }}</span> م</div>
-                <div class="ref-line">عند الرد يذكر رقم: <span class="ref-value">{{ $refNo }}</span></div>
+                <div class="ref-line">{{ \App\Models\Quote::SERIAL_LABEL }}: <span class="ref-value">{{ $refNo }}</span></div>
             </div>
         </div>
     </header>
@@ -520,7 +514,6 @@
         <thead>
             <tr>
                 <th class="col-spec" rowspan="2">المواصفات</th>
-                <th class="col-code" rowspan="2">كود الصنف</th>
                 <th class="col-amount" colspan="2">المبلغ</th>
                 <th class="col-remarks" rowspan="2">ملاحظات</th>
             </tr>
@@ -539,7 +532,6 @@
                 @endphp
                 <tr>
                     <td class="col-spec">{{ $specLabel }}</td>
-                    <td class="col-code">{{ $item->stock_item_code ?? '' }}</td>
                     <td class="num">{{ str_pad((string) $lineSplit['piasters'], 2, '0', STR_PAD_LEFT) }}</td>
                     <td class="num">{{ number_format($lineSplit['pounds']) }}</td>
                     <td>&nbsp;</td>
@@ -548,7 +540,6 @@
             @for ($i = 0; $i < $emptyRows; $i++)
                 <tr>
                     <td class="col-spec">&nbsp;</td>
-                    <td class="col-code">&nbsp;</td>
                     <td class="num">&nbsp;</td>
                     <td class="num">&nbsp;</td>
                     <td>&nbsp;</td>
@@ -556,7 +547,6 @@
             @endfor
             <tr>
                 <td class="total-label">الإجمالي</td>
-                <td class="col-code">&nbsp;</td>
                 <td class="num">{{ $totalFmt['piasters'] }}</td>
                 <td class="num">{{ $totalFmt['pounds'] }}</td>
                 <td>&nbsp;</td>

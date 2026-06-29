@@ -7,7 +7,7 @@
 <div class="panel">
     <div class="panel-header">
         <h3>🔬 لوحة المخزون التفصيلية</h3>
-        <span style="font-size:13px;color:var(--text-muted)">أرصدة مطلقة، السعر، WAC، تاريخ الأسعار، والصلاحية.</span>
+        <span style="font-size:13px;color:var(--text-muted)">أرصدة مطلقة، السعر، WAC، تاريخ الأسعار، والصلاحية — المتاح السالب = طلب توريد.</span>
     </div>
 
     @if (!empty($stats))
@@ -34,9 +34,11 @@
                 <tr style="background:var(--surface-2,#f8fafc);">
                     <th style="padding:10px;text-align:right;">الكود / الباركود</th>
                     <th style="padding:10px;text-align:right;">الصنف</th>
+                    <th style="padding:10px;text-align:right;">القسم</th>
                     <th style="padding:10px;text-align:center;">الرصيد</th>
                     <th style="padding:10px;text-align:center;">محجوز</th>
                     <th style="padding:10px;text-align:center;">متاح</th>
+                    <th style="padding:10px;text-align:center;">طلب توريد</th>
                     <th style="padding:10px;text-align:center;">السعر</th>
                     <th style="padding:10px;text-align:center;">WAC</th>
                     <th style="padding:10px;text-align:center;">الصلاحية</th>
@@ -47,13 +49,19 @@
             <tbody id="invOverviewTable">
                 @forelse ($items as $item)
                     @php
-                        $available = max(0, (int) $item->qty - (int) $item->reserved);
+                        $available = $item->availableQty();
+                        $backorder = $item->backorderQty();
                         $expirySoon = $item->expiry_date && $item->expiry_date->lte($soon);
                         $displayPrice = (float) $item->price > 0
                             ? (float) $item->price
                             : max((float) $item->wac, (float) ($item->prices->max('amount') ?? 0));
                         $history = $item->prices->take(3)->map(fn ($p) => number_format((float) $p->amount, 2)
                             . ' (' . ($p->received_at?->format('Y-m-d') ?? '—') . ')')->implode(' • ');
+                        $availColor = $available < 0 ? '#dc2626' : ($available > 0 ? '#059669' : '#d97706');
+                        $schema = app(\App\Services\StockCategorySchemaService::class);
+                        $attrSummary = collect($schema->formatItemAttributes($item))
+                            ->map(fn ($a) => $a['label'] . ': ' . $a['display_value'])
+                            ->implode(' · ');
                     @endphp
                     <tr class="inv-overview-row" data-search="{{ strtolower($item->code . ' ' . $item->name) }}"
                         style="border-top:1px solid var(--border);">
@@ -62,9 +70,18 @@
                             <div style="font-size:11px;color:var(--text-muted);">{{ $item->barcode }}</div>
                         </td>
                         <td style="padding:8px;">{{ $item->name }}</td>
+                        <td style="padding:8px;font-size:12px;color:var(--text-muted);">
+                            <div>{{ $item->category?->name ?? '—' }}</div>
+                            @if ($attrSummary)
+                                <div style="font-size:11px;margin-top:4px;">{{ $attrSummary }}</div>
+                            @endif
+                        </td>
                         <td style="padding:8px;text-align:center;font-weight:700;">{{ (int) $item->qty }}</td>
                         <td style="padding:8px;text-align:center;color:#d97706;">{{ (int) $item->reserved }}</td>
-                        <td style="padding:8px;text-align:center;font-weight:700;color:{{ $available > 0 ? '#059669' : '#dc2626' }};">{{ $available }}</td>
+                        <td style="padding:8px;text-align:center;font-weight:700;color:{{ $availColor }};">{{ $available }}</td>
+                        <td style="padding:8px;text-align:center;font-weight:700;color:{{ $backorder > 0 ? '#dc2626' : 'var(--text-muted)' }};">
+                            {{ $backorder > 0 ? $backorder : '—' }}
+                        </td>
                         <td style="padding:8px;text-align:center;font-weight:700;">{{ number_format($displayPrice, 2) }}</td>
                         <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ number_format((float) $item->wac, 2) }}</td>
                         <td style="padding:8px;text-align:center;{{ $expirySoon ? 'color:#dc2626;font-weight:700;' : '' }}">
@@ -77,7 +94,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف.</td></tr>
+                    <tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف.</td></tr>
                 @endforelse
             </tbody>
         </table>

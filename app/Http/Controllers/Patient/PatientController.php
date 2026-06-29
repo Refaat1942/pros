@@ -30,7 +30,7 @@ class PatientController extends Controller
     public function index(Request $request): JsonResponse
     {
         $patients = $this->fetchForDashboard(
-            Patient::with('contractCompany:id,name,company_code,is_military')
+            Patient::with('contractCompany:id,name,company_code,is_military,is_contracted')
                 ->when($request->patient_type, fn ($q, $t) => $q->where('patient_type', $t))
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->contract_company_id, fn ($q, $id) => $q->where('contract_company_id', $id))
@@ -48,7 +48,7 @@ class PatientController extends Controller
         );
 
         return response()->json([
-            'data'  => $patients,
+            'data'  => collect($patients)->map(fn (Patient $p) => $this->formatPatientListRow($p))->values(),
             'total' => $patients->count(),
         ]);
     }
@@ -76,7 +76,7 @@ class PatientController extends Controller
     public function show(Patient $patient): JsonResponse
     {
         $patient->load([
-            'contractCompany:id,name,company_code,is_military',
+            'contractCompany:id,name,company_code,is_military,is_contracted',
             'cases' => fn ($q) => $q->latest()->limit(1),
         ]);
 
@@ -146,6 +146,7 @@ class PatientController extends Controller
             'status',
         ]) + [
             'queue_number' => $patient->id,
+            'entity'            => $patient->entityPresentation(),
             'tracking_url'    => $this->caseTrackingQrService->url($patient),
             'qr_svg'          => $this->caseTrackingQrService->svg($patient),
             'card_print_url'  => route('reception.patients.card.print', $patient),
@@ -153,5 +154,10 @@ class PatientController extends Controller
                 ? $patient->contractCompany
                 : null,
         ];
+    }
+
+    private function formatPatientListRow(Patient $patient): array
+    {
+        return $this->formatPatientCard($patient);
     }
 }

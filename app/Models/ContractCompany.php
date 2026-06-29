@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ContractBillingSplit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -15,11 +16,21 @@ class ContractCompany extends Model
         'company_code',
         'name',
         'is_military',
+        'is_contracted',
+        'discount_percent',
     ];
 
     protected $casts = [
-        'is_military' => 'boolean',
+        'is_military'       => 'boolean',
+        'is_contracted'     => 'boolean',
+        'discount_percent'  => 'decimal:2',
     ];
+
+    /** @return array{gross_total: float, patient_share: float, company_share: float, company_share_percent: float, patient_share_percent: float} */
+    public function billingSplit(float $grossTotal): array
+    {
+        return ContractBillingSplit::forCompany($this, $grossTotal);
+    }
 
     public function patients(): HasMany
     {

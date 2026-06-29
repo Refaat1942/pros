@@ -7,6 +7,7 @@ use App\Models\AppNotification;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Role;
+use App\Models\SpecEditRequest;
 use App\Models\UserDevice;
 
 /**
@@ -84,6 +85,71 @@ class NotificationService
             'body'  => 'تم تسليم الطرف للمريض {patient} (حالة {case}) وإغلاق الحالة.',
         ],
     ];
+
+    public function notifySpecEditRequested(SpecEditRequest $request): AppNotification
+    {
+        $request->loadMissing('caseRecord.patient:id,name', 'requestedBy:id,name');
+        $case    = $request->caseRecord;
+        $patient = $case?->patient?->name ?? 'غير معروف';
+        $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
+        $by      = $request->requestedBy?->name ?? 'فني التوصيف';
+
+        return $this->push(
+            roleSlug: Role::SLUG_ADMIN,
+            title:    '✏️ طلب تعديل توصيف فني',
+            body:     "طلب {$by} تعديل توصيف المريض {$patient} (حالة {$caseNo}) — بانتظار موافقة الإدارة.",
+            case:     $case,
+            event:    'spec_edit_requested',
+            data:     [
+                'spec_edit_request_id' => (string) $request->id,
+                'url'                  => '/admin/spec-edit-requests',
+            ],
+        );
+    }
+
+    public function notifySpecEditApproved(SpecEditRequest $request): AppNotification
+    {
+        $request->loadMissing('caseRecord.patient:id,name');
+        $case    = $request->caseRecord;
+        $patient = $case?->patient?->name ?? 'غير معروف';
+        $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
+
+        return $this->push(
+            roleSlug: Role::SLUG_SPEC,
+            title:    '✅ تم اعتماد تعديل التوصيف',
+            body:     "وافقت الإدارة على تعديل توصيف المريض {$patient} (حالة {$caseNo}) — التعديل مُطبَّق.",
+            case:     $case,
+            event:    'spec_edit_approved',
+            data:     [
+                'spec_edit_request_id' => (string) $request->id,
+                'url'                  => '/spec/spec',
+            ],
+        );
+    }
+
+    public function notifySpecEditRejected(SpecEditRequest $request): AppNotification
+    {
+        $request->loadMissing('caseRecord.patient:id,name');
+        $case    = $request->caseRecord;
+        $patient = $case?->patient?->name ?? 'غير معروف';
+        $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
+        $reason  = $request->rejectionReasonLabel() ?? '—';
+        $notes   = trim((string) $request->rejection_notes);
+        $suffix  = $notes !== '' ? " — {$notes}" : '';
+
+        return $this->push(
+            roleSlug: Role::SLUG_SPEC,
+            title:    '❌ رُفض طلب تعديل التوصيف',
+            body:     "رفضت الإدارة تعديل توصيف {$patient} (حالة {$caseNo}). السبب: {$reason}{$suffix}",
+            case:     $case,
+            event:    'spec_edit_rejected',
+            data:     [
+                'spec_edit_request_id' => (string) $request->id,
+                'rejection_reason'     => $reason,
+                'url'                  => '/spec/spec',
+            ],
+        );
+    }
 
     /**
      * يُطلق إشعار انتقال المرحلة للدور المستهدف.

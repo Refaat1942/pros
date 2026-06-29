@@ -756,6 +756,7 @@
 
     .qty-badge.ok  { background: rgba(5,150,105,0.1);  color: #047857; border: 1px solid rgba(5,150,105,0.25); }
     .qty-badge.low { background: rgba(220,38,38,0.08); color: #b91c1c; border: 1px solid rgba(220,38,38,0.2); }
+    .qty-badge.backorder { background: rgba(217,119,6,0.12); color: #b45309; border: 1px solid rgba(217,119,6,0.25); }
 
     .qty-bar-wrap {
       margin-top: 6px;
@@ -802,6 +803,12 @@
       border: 1px solid rgba(220,38,38,0.2);
     }
 
+    .stock-status.backorder {
+      background: rgba(217,119,6,0.12);
+      color: #b45309;
+      border: 1px solid rgba(217,119,6,0.25);
+    }
+
     .stock-status .status-dot {
       width: 7px;
       height: 7px;
@@ -811,6 +818,7 @@
 
     .stock-status.available .status-dot { background: #059669; box-shadow: 0 0 0 2px rgba(5,150,105,0.25); }
     .stock-status.low .status-dot      { background: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.2); animation: blink 1.5s infinite; }
+    .stock-status.backorder .status-dot { background: #d97706; box-shadow: 0 0 0 2px rgba(217,119,6,0.25); animation: blink 1.5s infinite; }
 
     @keyframes blink {
       0%, 100% { opacity: 1; }

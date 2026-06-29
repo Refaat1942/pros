@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
+use App\Support\ContractBillingSplit;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -73,7 +74,7 @@ final class CaseFinancialSummary
         $total ??= self::totalCost($case);
 
         if ($case->stage_key === CaseRecord::STAGE_DELIVERED && $total > 0) {
-            return $total;
+            return ContractBillingSplit::patientDue($case, $total);
         }
 
         return 0.0;
@@ -96,7 +97,7 @@ final class CaseFinancialSummary
         }
 
         if ((float) $case->paid <= 0) {
-            $updates['paid'] = $total;
+            $updates['paid'] = ContractBillingSplit::patientDue($case, $total);
         }
 
         if ($updates !== []) {

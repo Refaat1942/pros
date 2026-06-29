@@ -219,14 +219,21 @@ class Appointment extends Model
     /** الجهة المعروضة في قائمة الانتظار والتقارير. */
     public function displayEntity(): string
     {
-        if ($this->isMilitary()) {
-            return $this->relationLoaded('patient') && $this->patient
-                ? $this->patient->displayEntity()
-                : Patient::MILITARY_SOVEREIGN_ENTITY;
+        return $this->entityPresentation()['label'];
+    }
+
+    /** @return array{label: string, kind: string, badge: string, badge_class: string} */
+    public function entityPresentation(): array
+    {
+        if ($this->relationLoaded('patient') && $this->patient) {
+            return $this->patient->entityPresentation();
         }
 
-        return $this->company_name
-            ?? ($this->relationLoaded('patient') ? $this->patient?->displayEntity() : null)
-            ?? '—';
+        return \App\Support\PatientEntityPresenter::fromParts(
+            $this->patient_type,
+            null,
+            $this->company_name,
+            null,
+        );
     }
 }

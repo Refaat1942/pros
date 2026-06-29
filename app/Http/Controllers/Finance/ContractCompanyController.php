@@ -34,7 +34,7 @@ class ContractCompanyController extends Controller
                     fn ($q) => $q->where('is_military', $request->boolean('is_military'))
                 )
                 ->orderBy('name')
-                ->get(['id', 'name', 'company_code', 'is_military']);
+                ->get(['id', 'name', 'company_code', 'is_military', 'is_contracted', 'discount_percent']);
 
             return response()->json(['data' => $companies]);
         }
@@ -66,12 +66,16 @@ class ContractCompanyController extends Controller
     {
         $company = DB::transaction(function () use ($request) {
             $company = ContractCompany::create([
-                'company_code' => $this->generateCompanyCode(),
-                'name'         => $request->name,
-                'is_military'  => $request->boolean('is_military'),
+                'company_code'     => $this->generateCompanyCode(),
+                'name'             => $request->name,
+                'is_military'      => $request->boolean('is_military'),
+                'is_contracted'    => $request->boolean('is_contracted', true),
+                'discount_percent' => $request->input('discount_percent', 0),
             ]);
 
-            $this->contractDebtService->initialise($company);
+            if ($company->is_contracted) {
+                $this->contractDebtService->initialise($company);
+            }
 
             AuditService::log(
                 action:      'create',
@@ -106,16 +110,20 @@ class ContractCompanyController extends Controller
             }
         }
 
-        $before = $company->only(['name', 'is_military']);
+        $before = $company->only(['name', 'is_military', 'is_contracted', 'discount_percent']);
 
         $company->update($request->validated());
+
+        if ($company->is_contracted && ! $company->debt) {
+            $this->contractDebtService->initialise($company);
+        }
 
         AuditService::log(
             action:      'update',
             description: "تعديل جهة تعاقد {$company->company_code}",
             tag:         'financial',
             before:      $before,
-            after:       $company->only(['name', 'is_military']),
+            after:       $company->only(['name', 'is_military', 'is_contracted', 'discount_percent']),
         );
 
         return response()->json([

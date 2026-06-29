@@ -112,7 +112,7 @@ class OperationsPendingDeskTest extends TestCase
         $item->refresh();
 
         $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
-        $this->assertEquals(0, (int) $item->reserved);
+        $this->assertEquals(1, (int) $item->reserved, 'Spec submit reserves stock before operations approval');
 
         $this->actingAs($recep)
             ->getJson('/reception/quote/list')

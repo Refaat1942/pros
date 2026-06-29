@@ -5,6 +5,7 @@ namespace Tests\Feature\Patient;
 use App\Models\MilitaryRank;
 use App\Models\Patient;
 use App\Models\VisitType;
+use App\Support\PatientEntityPresenter;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -51,6 +52,27 @@ class StorePatientValidationTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors(['phone', 'national_id']);
+    }
+
+    public function test_store_civilian_cash_patient_without_company(): void
+    {
+        $user = $this->userWithRole('reception');
+        $visitType = VisitType::create(['name' => 'كشف نقدي']);
+
+        $response = $this->actingAs($user)->post(route('reception.patients.store'), [
+            'form'          => 'patient',
+            'name'          => 'مريض نقدي',
+            'patient_type'  => 'civilian',
+            'visit_type_id' => $visitType->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $patient = Patient::query()->where('name', 'مريض نقدي')->first();
+        $this->assertNotNull($patient);
+        $this->assertNull($patient->contract_company_id);
+        $this->assertSame('نقدي', $patient->displayEntity());
+        $this->assertSame(PatientEntityPresenter::KIND_CASH, $patient->entityPresentation()['kind']);
     }
 
     public function test_store_military_patient_without_company_or_sovereign_input(): void

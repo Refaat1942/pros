@@ -40,7 +40,7 @@ class OfficialPrintDocumentsTest extends TestCase
             ->assertOk()
             ->assertSee($quote->quote_no, false)
             ->assertSee('عرض سعر', false)
-            ->assertSee('عند الرد يذكر رقم', false)
+            ->assertSee(\App\Models\Quote::SERIAL_LABEL, false)
             ->assertSee('<svg', false)
             ->assertSee('onload="window.print()"', false);
     }

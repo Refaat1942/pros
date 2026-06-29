@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\CaseStage;
 use App\Enums\ManufacturingStage;
+use App\Enums\StockWarehouseType;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Patient;
@@ -142,12 +143,7 @@ class AdminCaseTrackingService
 
     private function bomStageLabel(?string $stage): string
     {
-        return match ($stage) {
-            Bom::STAGE_RAW      => 'خام',
-            Bom::STAGE_WIP      => 'تحت التشغيل',
-            Bom::STAGE_FINISHED => 'تام',
-            default             => '—',
-        };
+        return StockWarehouseType::labelForBomStage($stage);
     }
 
     private function bomBadgeClass(?string $stage): string

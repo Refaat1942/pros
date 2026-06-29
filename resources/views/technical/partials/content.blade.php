@@ -151,14 +151,14 @@
     <!-- BOM Section -->
     <div class="section-view" id="section-bom">
       <div id="analytics-bom">@include('partials.dashboard-analytics-empty', ['hide_charts' => true, 'stats' => [
-        ['icon' => '📦', 'label' => 'خام', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-        ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-        ['icon' => '✅', 'label' => 'تام', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '📦', 'label' => 'مخزن خام', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+        ['icon' => '🏭', 'label' => 'مخزن إنتاج', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '✅', 'label' => 'مخزن تسليم', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
         ['icon' => '💰', 'label' => 'قيمة إجمالية', 'value' => '0', 'bg' => 'rgba(124,58,237,0.1)'],
       ]])</div>
       <div class="panel inventory-wrap">
         <div class="panel-header">
-          <h3>📋 قوائم صرف المواد — خام → تحت التشغيل → تام</h3>
+          <h3>📋 قوائم صرف المواد — مخزن خام → مخزن إنتاج → مخزن تسليم</h3>
           <span class="badge" id="bomBadge">0 قوائم</span>
         </div>
 
@@ -168,9 +168,9 @@
           <input type="text" id="bomSearch" placeholder="بحث بالمريض أو أمر التشغيل...">
           <div class="filter-pills" id="bomFilters">
             <button class="filter-pill active" data-bomfilter="all">الكل</button>
-            <button class="filter-pill" data-bomfilter="raw">📦 خام</button>
-            <button class="filter-pill" data-bomfilter="wip">🏭 تحت التشغيل</button>
-            <button class="filter-pill" data-bomfilter="finished">✅ تام</button>
+            <button class="filter-pill" data-bomfilter="raw">📦 مخزن خام</button>
+            <button class="filter-pill" data-bomfilter="wip">🏭 مخزن إنتاج</button>
+            <button class="filter-pill" data-bomfilter="finished">✅ مخزن تسليم</button>
           </div>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportBom('excel')">📊 Excel</button>

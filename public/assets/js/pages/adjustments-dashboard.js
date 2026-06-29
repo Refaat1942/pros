@@ -134,15 +134,17 @@
       var maxQty = maxAddableQty(item);
       var disabled = maxQty < 1;
       var selected = selectedCode === item.code;
-      var label = item.code + ' — ' + item.name;
 
       if (disabled) {
         return '<li class="adj-picker-option is-disabled" aria-disabled="true">' +
-          esc(label) + ' <span class="adj-picker-muted">(غير متاح)</span></li>';
+          '<span class="adj-picker-code">' + esc(item.code) + '</span>' +
+          '<span class="adj-picker-name">' + esc(item.name) + ' <span class="adj-picker-muted">(غير متاح)</span></span></li>';
       }
 
       return '<li class="adj-picker-option' + (selected ? ' is-selected' : '') + '" role="option"' +
-        ' data-code="' + esc(item.code) + '" tabindex="0">' + esc(label) + '</li>';
+        ' data-code="' + esc(item.code) + '" tabindex="0">' +
+        '<span class="adj-picker-code">' + esc(item.code) + '</span>' +
+        '<span class="adj-picker-name">' + esc(item.name) + '</span></li>';
     }).join('');
   }
 
@@ -160,29 +162,38 @@
     var picker = $('adjItemPicker');
     var toggle = $('adjItemPickerToggle');
     var search = $('adjItemPickerSearch');
-    var modal = $('adjModal');
-    if (!picker) return;
+    var overlay = $('adjCatalogModal');
+    if (!overlay) return;
 
     pickerOpen = true;
-    picker.classList.add('is-open');
-    if (modal) modal.classList.add('adj-picker-open');
+    if (picker) picker.classList.add('is-open');
     if (toggle) toggle.setAttribute('aria-expanded', 'true');
 
     pickerSearchQuery = '';
     if (search) search.value = '';
     renderItemPickerList();
 
-    if (search) search.focus();
+    overlay.hidden = false;
+    overlay.classList.add('is-open');
+    document.body.classList.add('adj-catalog-open');
+
+    if (search) {
+      setTimeout(function () { search.focus(); }, 50);
+    }
   }
 
   function closeItemPicker() {
     var picker = $('adjItemPicker');
     var toggle = $('adjItemPickerToggle');
-    var modal = $('adjModal');
+    var overlay = $('adjCatalogModal');
     pickerOpen = false;
     if (picker) picker.classList.remove('is-open');
-    if (modal) modal.classList.remove('adj-picker-open');
     if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    if (overlay) {
+      overlay.classList.remove('is-open');
+      overlay.hidden = true;
+    }
+    document.body.classList.remove('adj-catalog-open');
   }
 
   function resetItemPicker() {
@@ -459,8 +470,40 @@
       });
   }
 
+  function getPendingAddItem() {
+    var code = getSelectedItemCode();
+    if (!code) return null;
+
+    var catalogItem = findCatalogItem(code);
+    if (!catalogItem || maxAddableQty(catalogItem) < 1) return null;
+
+    var qty = parseInt(($('adjItemQty') && $('adjItemQty').value) || '0', 10);
+    if (!qty || qty < 1) qty = 1;
+
+    return {
+      code: catalogItem.code,
+      name: catalogItem.name,
+      qty: qty,
+    };
+  }
+
   function completeAdjustments() {
     if (!activeCase || !window.axios) return;
+
+    var pending = getPendingAddItem();
+    if (pending) {
+      window.alert(
+        '⚠️ اخترت الصنف «' + pending.name + '» (كمية ' + pending.qty + ') ولم تؤكّد إضافته.\n\n' +
+        'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال للتكاليف».'
+      );
+      var addBtn = $('btnAddAdjItem');
+      if (addBtn) {
+        addBtn.focus();
+        addBtn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+      return;
+    }
+
     var btn = $('btnCompleteAdj');
     if (btn) btn.disabled = true;
 
@@ -493,6 +536,8 @@
     var pickerToggle = $('adjItemPickerToggle');
     var pickerSearch = $('adjItemPickerSearch');
     var pickerList = $('adjItemPickerList');
+    var catalogOverlay = $('adjCatalogModal');
+    var catalogClose = $('adjCatalogClose');
     var bomItemsBody = $('adjBomItems');
 
     if (bomItemsBody) {
@@ -532,9 +577,21 @@
       });
     }
 
-    document.addEventListener('click', function (e) {
-      if (!pickerOpen || !picker) return;
-      if (!picker.contains(e.target)) closeItemPicker();
+    if (catalogClose) {
+      catalogClose.addEventListener('click', closeItemPicker);
+    }
+
+    if (catalogOverlay) {
+      catalogOverlay.addEventListener('click', function (e) {
+        if (e.target === catalogOverlay) closeItemPicker();
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && pickerOpen) {
+        e.preventDefault();
+        closeItemPicker();
+      }
     });
 
     if (qtyInput) {

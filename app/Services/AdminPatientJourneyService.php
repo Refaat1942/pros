@@ -7,6 +7,7 @@ use App\Enums\ManufacturingStage;
 use App\Models\Appointment;
 use App\Models\ApprovalContract;
 use App\Models\AuditLog;
+use App\Enums\StockWarehouseType;
 use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
@@ -618,11 +619,6 @@ class AdminPatientJourneyService
 
     private function bomStageLabel(?string $stage): string
     {
-        return match ($stage) {
-            Bom::STAGE_RAW      => 'خام',
-            Bom::STAGE_WIP      => 'تحت التشغيل',
-            Bom::STAGE_FINISHED => 'مكتمل',
-            default             => $stage ?? '—',
-        };
+        return StockWarehouseType::labelForBomStage($stage);
     }
 }

@@ -14,9 +14,9 @@
   var state = { bomId: null, items: [], scanned: [], blocked: false };
 
   var STAGE_META = {
-    raw: { label: '📦 خام', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
-    wip: { label: '🏭 تم التحويل للورشة', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
-    finished: { label: '✅ تام', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    raw: { label: '📦 مخزن خام', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+    wip: { label: '🏭 مخزن إنتاج', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+    finished: { label: '✅ مخزن تسليم', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   };
 
   function $(id) { return document.getElementById(id); }
@@ -102,6 +102,22 @@
       }).join('');
   }
 
+  function revalidateAlarm() {
+    var expected = expectedBarcodes();
+    var bad = null;
+    for (var i = 0; i < state.scanned.length; i++) {
+      if (expected.indexOf(state.scanned[i]) === -1) {
+        bad = state.scanned[i];
+        break;
+      }
+    }
+    if (bad) {
+      showAlarm('باركود غير مطابق لأمر التشغيل: ' + bad + ' — تم إيقاف الصرف!');
+    } else {
+      hideAlarm();
+    }
+  }
+
   function renderScanned() {
     var el = $('scannedList');
     if (!el) return;
@@ -110,12 +126,24 @@
       return;
     }
     var expected = expectedBarcodes();
-    el.innerHTML = state.scanned.map(function (code) {
+    el.innerHTML = state.scanned.map(function (code, idx) {
       var ok = expected.indexOf(code) !== -1;
-      return '<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ' +
+      return '<span class="inline-flex items-center gap-1 rounded-full pl-3 pr-1 py-1 text-xs font-bold ' +
         (ok ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') + '">' +
-        (ok ? '✓' : '✗') + ' ' + esc(code) + '</span>';
+        (ok ? '✓' : '✗') + ' ' + esc(code) +
+        '<button type="button" class="btn-remove-scan ml-0.5 rounded-full w-5 h-5 inline-flex items-center justify-center ' +
+        (ok ? 'hover:bg-emerald-200' : 'hover:bg-red-200') + ' text-current leading-none" ' +
+        'data-scan-idx="' + idx + '" title="حذف المسح" aria-label="حذف ' + esc(code) + '">×</button></span>';
     }).join('');
+  }
+
+  function removeScan(index) {
+    if (index < 0 || index >= state.scanned.length) return;
+    state.scanned.splice(index, 1);
+    revalidateAlarm();
+    renderScanned();
+    clearBarcodeInputError();
+    if ($('barcodeInput')) $('barcodeInput').focus();
   }
 
   function clearBarcodeInputError() {
@@ -198,12 +226,7 @@
     }
     clearBarcodeInputError();
     state.scanned.push(code);
-    var expected = expectedBarcodes();
-    if (expected.indexOf(code) === -1) {
-      showAlarm('باركود غير مطابق لأمر التشغيل: ' + code + ' — تم إيقاف الصرف!');
-    } else {
-      hideAlarm();
-    }
+    revalidateAlarm();
     renderScanned();
     if ($('barcodeInput')) { $('barcodeInput').value = ''; $('barcodeInput').focus(); }
   }
@@ -430,6 +453,11 @@
     });
     $('barcodeInput') && $('barcodeInput').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); addScan(e.target.value); }
+    });
+    $('scannedList') && $('scannedList').addEventListener('click', function (e) {
+      var btn = e.target.closest('.btn-remove-scan');
+      if (!btn) return;
+      removeScan(parseInt(btn.getAttribute('data-scan-idx'), 10));
     });
     $('confirmDispense') && $('confirmDispense').addEventListener('click', confirmDispense);
   });

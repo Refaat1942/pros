@@ -77,7 +77,7 @@
 
     return '<tr class="pending-row" data-case-id="' + c.id + '" data-search="' + esc(search) + '">' +
       '<td><strong>' + esc(c.case_no) + '</strong>' +
-        '<div class="text-xs text-muted">' + esc(quoteNo) + '</div></td>' +
+        '<div class="text-xs text-muted" title="سريال عرض السعر">' + esc(quoteNo) + '</div></td>' +
       '<td>' + esc(c.patient && c.patient.name) + '</td>' +
       '<td><span class="patient-type-badge ' + (isMil ? 'military' : 'civilian') + '">' +
         (isMil ? '🪖 عسكري' : '🌐 مدني') + '</span></td>' +

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Adjustments\AdjustmentsController;
+use App\Http\Controllers\Adjustments\AdjustmentsHistoryController;
 use App\Http\Controllers\Dashboard\AdjustmentsDashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,5 +38,13 @@ Route::prefix('adjustments')
 
             Route::post('adjustments/{case}/complete', [AdjustmentsController::class, 'complete'])
                 ->name('adjustments.complete');
+        });
+
+        Route::middleware('dashboard.page:adjustments,history')->group(function () {
+            Route::get('history/list', [AdjustmentsHistoryController::class, 'index'])
+                ->name('history.list');
+
+            Route::get('history/export', [AdjustmentsHistoryController::class, 'export'])
+                ->name('history.export');
         });
     });

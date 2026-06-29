@@ -71,7 +71,7 @@ class SpecPipelineTest extends TestCase
         $this->assertEquals(1, $bom->items()->count());
 
         $stock = StockItem::where('code', 'RM-001')->first();
-        $this->assertEquals(0, $stock->reserved, 'Spec BOM must not reserve stock before operations approval');
+        $this->assertEquals(2, $stock->reserved, 'Spec submit must reserve items (backorder allowed)');
     }
 
     public function test_spec_api_create_endpoint_returns_catalog_without_qty(): void

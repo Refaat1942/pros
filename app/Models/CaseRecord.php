@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\ContractBillingSplit;
+use App\Support\PatientEntityPresenter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -150,7 +152,9 @@ class CaseRecord extends Model
 
     public function remainingAmount(): float
     {
-        return max(0, (float) $this->total_cost - (float) $this->paid);
+        $patientDue = ContractBillingSplit::patientDue($this);
+
+        return max(0, $patientDue - (float) $this->paid);
     }
 
     public function isMilitary(): bool
@@ -158,14 +162,21 @@ class CaseRecord extends Model
         return $this->patient_type === Patient::TYPE_MILITARY;
     }
 
-    /** الجهة المعروضة — مدني: جهة التعاقد، عسكري: القوات المسلحة. */
+    /** الجهة المعروضة — مدني: نقدي / جهة متعاقدة / غير متعاقدة، عسكري: القوات المسلحة. */
     public function displayEntity(): string
     {
-        if ($this->isMilitary()) {
-            return $this->sovereign_entity ?: Patient::MILITARY_SOVEREIGN_ENTITY;
-        }
+        return $this->entityPresentation()['label'];
+    }
 
-        return $this->company_name ?? '—';
+    /** @return array{label: string, kind: string, badge: string, badge_class: string} */
+    public function entityPresentation(): array
+    {
+        return PatientEntityPresenter::forCase($this);
+    }
+
+    public function isCashCivilian(): bool
+    {
+        return ! $this->isMilitary() && ! $this->contract_company_id;
     }
 
     protected static function booted(): void

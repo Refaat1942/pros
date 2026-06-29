@@ -13,6 +13,7 @@ enum StockUom: string
     case Liter  = 'لتر';
     case Set    = 'طقم';
     case Roll   = 'لفة';
+    case Kilo   = 'كيلو';
 
     public static function values(): array
     {

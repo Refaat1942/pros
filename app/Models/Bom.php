@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\StockWarehouseType;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,13 +27,15 @@ class Bom extends Model /// Bill of Materials  || "الروشتة التصنيع
         'quote_no',
         'patient_name',
         'stage',
+        'stock_reserved_at',
         'released_at',
         'finished_at',
     ];
 
     protected $casts = [
-        'released_at' => 'datetime',
-        'finished_at' => 'datetime',
+        'stock_reserved_at' => 'datetime',
+        'released_at'       => 'datetime',
+        'finished_at'       => 'datetime',
     ];
 
     public function caseRecord(): BelongsTo
@@ -57,5 +61,15 @@ class Bom extends Model /// Bill of Materials  || "الروشتة التصنيع
     public function totalValue(): float
     {
         return $this->items->sum(fn (BomItem $item) => (float) $item->unit_cost * $item->qty);
+    }
+
+    public function warehouseType(): ?StockWarehouseType
+    {
+        return StockWarehouseType::fromBomStage($this->stage);
+    }
+
+    public function warehouseLabel(): string
+    {
+        return StockWarehouseType::labelForBomStage($this->stage);
     }
 }

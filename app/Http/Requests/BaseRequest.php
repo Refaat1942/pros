@@ -192,6 +192,14 @@ class BaseRequest extends FormRequest
   }
 
   /** @return list<string> */
+  protected function signedQtyRules(bool $required = true): array
+  {
+    $rules = $required ? ['required'] : ['nullable'];
+
+    return array_merge($rules, ['integer', 'min:-999999', 'max:999999']);
+  }
+
+  /** @return list<string> */
   protected function positiveQtyRules(bool $required = true): array
   {
     $rules = $required ? ['required'] : ['nullable'];

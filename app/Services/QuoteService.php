@@ -25,7 +25,9 @@ class QuoteService
      */
     public function issue(PricingRequest $request, float $total): Quote
     {
-        $request->load('items', 'caseRecord');
+        $request->load('items', 'caseRecord.patient');
+
+        $total = round($total, 2);
 
         $existing = Quote::where('pricing_request_id', $request->id)->first();
 
@@ -175,6 +177,10 @@ class QuoteService
             ? ((int) substr($last, strlen($prefix)) + 1)
             : 1;
 
-        return sprintf('%s%04d', $prefix, $num);
+        do {
+            $quoteNo = sprintf('%s%04d', $prefix, $num++);
+        } while (Quote::where('quote_no', $quoteNo)->exists());
+
+        return $quoteNo;
     }
 }

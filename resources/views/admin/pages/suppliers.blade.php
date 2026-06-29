@@ -1,5 +1,6 @@
 @php
     $supplierList = $suppliers ?? collect();
+    $filters = $supplier_filters ?? [];
     $openSupplierModal = old('form') === 'supplier';
 @endphp
 <div class="section-view" id="section-suppliers">
@@ -8,50 +9,82 @@
             <h3>🏭 الموردون</h3>
             <button type="button" class="btn-add-rank" id="btnAddSupplier">➕ إضافة مورد</button>
         </div>
+
+        <form method="GET" action="{{ route('admin.suppliers') }}" class="supplier-filter-bar" id="supplierFilterForm">
+            <input type="hidden" name="section" value="suppliers">
+            <input type="text" name="search" id="supplierSearch" placeholder="🔍 بحث شامل..."
+                   value="{{ $filters['search'] ?? '' }}">
+            <select name="debt" id="supplierDebtFilter" aria-label="فلتر المديونية">
+                <option value="">كل الموردين</option>
+                <option value="with_debt" @selected(($filters['debt'] ?? '') === 'with_debt')>عليهم مديونية</option>
+                <option value="no_debt" @selected(($filters['debt'] ?? '') === 'no_debt')>بدون مديونية</option>
+            </select>
+            <label class="supplier-date-field">
+                <span>من</span>
+                <input type="date" name="from" id="supplierFrom" value="{{ $filters['from'] ?? '' }}">
+            </label>
+            <label class="supplier-date-field">
+                <span>إلى</span>
+                <input type="date" name="to" id="supplierTo" value="{{ $filters['to'] ?? '' }}">
+            </label>
+            <button type="submit" class="btn-action primary">تطبيق</button>
+            <a href="{{ route('admin.suppliers') }}" class="btn-action">مسح</a>
+        </form>
+
         <div class="data-toolbar">
             @include('admin.partials.bulk-action-bar', ['bulkBarId' => 'suppliersBulkBar'])
-            <input type="text" id="supplierSearch" placeholder="🔍 بحث بالاسم أو الهاتف أو البريد...">
             <span class="toolbar-count" id="supplierCount">{{ $supplierList->count() }} مورد</span>
             <div class="export-btns">
-                <button class="btn-export excel" onclick="exportSuppliers('excel')">📊 Excel</button>
-                <button class="btn-export pdf" onclick="exportSuppliers('pdf')">📄 PDF</button>
+                <button type="button" class="btn-export excel" id="btnExportSuppliersExcel">📊 Excel</button>
             </div>
         </div>
+
         <div class="panel-body">
             <table class="bulk-select-table" data-bulk-bar="suppliersBulkBar" data-bulk-delete-base="/admin/suppliers" data-paginate="10">
                 <thead>
                     <tr>
                         @include('admin.partials.bulk-select-th')
                         <th>#</th>
-                        <th>اسم المورد</th>
-                        <th>الهاتف</th>
-                        <th>البريد</th>
+                        <th>المورد / الشركة</th>
+                        <th>التواصل</th>
+                        <th>ضريبي / تجاري</th>
+                        <th class="num">أصناف</th>
+                        <th class="num">المديونية</th>
+                        <th class="num">أصناف المديونية</th>
                         <th style="width:180px;white-space:nowrap">إجراء</th>
                     </tr>
                 </thead>
                 <tbody id="suppliersTable" data-server-rendered="1">
                     @forelse ($supplierList as $supplier)
                         <tr data-supplier-id="{{ $supplier->id }}"
-                            data-name="{{ e($supplier->name) }}"
-                            data-phone="{{ e($supplier->phone ?? '') }}"
-                            data-email="{{ e($supplier->email ?? '') }}"
-                            data-address="{{ e($supplier->address ?? '') }}"
-                            data-notes="{{ e($supplier->notes ?? '') }}">
+                            data-can-delete="{{ ($supplier->can_delete ?? false) ? '1' : '0' }}">
                             @include('admin.partials.bulk-select-td', ['id' => $supplier->id])
                             <td>{{ $loop->iteration }}</td>
-                            <td><strong>{{ $supplier->name }}</strong></td>
-                            <td>{{ $supplier->phone ?: '—' }}</td>
-                            <td>{{ $supplier->email ?: '—' }}</td>
+                            <td>
+                                <strong>{{ $supplier->name }}</strong>
+                                @if ($supplier->address)
+                                    <div class="supplier-sub">{{ Str::limit($supplier->address, 60) }}</div>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($supplier->phone)<div>📞 {{ $supplier->phone }}</div>@endif
+                                @if ($supplier->fax)<div>📠 {{ $supplier->fax }}</div>@endif
+                                @if ($supplier->email)<div>{{ $supplier->email }}</div>@endif
+                                @if (! $supplier->phone && ! $supplier->fax && ! $supplier->email)—@endif
+                            </td>
+                            <td>
+                                @if ($supplier->tax_number)<div>ض: {{ $supplier->tax_number }}</div>@endif
+                                @if ($supplier->commercial_registry)<div>س: {{ $supplier->commercial_registry }}</div>@endif
+                                @if (! $supplier->tax_number && ! $supplier->commercial_registry)—@endif
+                            </td>
+                            <td class="num">{{ (int) ($supplier->linked_items_count ?? 0) }}</td>
+                            <td class="num">{{ number_format((float) ($supplier->debt_total ?? 0), 2) }}</td>
+                            <td class="num">{{ (int) ($supplier->debt_items_count ?? 0) }}</td>
                             <td>
                                 <div class="table-actions">
-                                    <button type="button"
-                                            class="btn-action"
-                                            onclick="openSupplierEditModal({{ $supplier->id }})">
-                                        ✏️ تعديل
-                                    </button>
-                                    <button type="button"
-                                            class="btn-action danger"
-                                            onclick="deleteSupplier({{ $supplier->id }}, {{ json_encode($supplier->name) }})">
+                                    <button type="button" class="btn-action" onclick="openSupplierEditModal({{ $supplier->id }})">✏️ تعديل</button>
+                                    <button type="button" class="btn-action danger"
+                                            onclick="deleteSupplier({{ $supplier->id }}, {{ json_encode($supplier->name) }}, {{ ($supplier->can_delete ?? false) ? 'true' : 'false' }})">
                                         🗑️ حذف
                                     </button>
                                 </div>
@@ -59,8 +92,8 @@
                         </tr>
                     @empty
                         <tr class="suppliers-empty-row">
-                            <td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">
-                                لا يوجد موردون — أضف مورداً من الزر أعلاه.
+                            <td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">
+                                لا يوجد موردون — أضف مورداً أو غيّر الفلاتر.
                             </td>
                         </tr>
                     @endforelse
@@ -70,112 +103,55 @@
     </div>
 </div>
 
-{{-- Add Supplier Modal --}}
-<div class="catalog-modal-overlay {{ $openSupplierModal ? 'open' : '' }}" id="supplierModal" role="dialog" aria-modal="true">
-    <div class="catalog-modal" style="max-width:480px;" onclick="event.stopPropagation()">
-        <div class="catalog-modal-header">
-            <div>
-                <h3>➕ إضافة مورد</h3>
-            </div>
-            <button type="button" class="catalog-modal-close" id="closeSupplierModal" aria-label="إغلاق">&times;</button>
-        </div>
-        <form method="POST" action="{{ route('admin.suppliers.store') }}" data-validate-form>
-            @csrf
-            <input type="hidden" name="form" value="supplier">
-            <div class="catalog-modal-body">
-                @if ($errors->any() && old('form') === 'supplier')
-                    <div class="v-error-msg" style="margin-bottom:12px;" role="alert">
-                        @foreach ($errors->all() as $error)
-                            <div>{{ $error }}</div>
-                        @endforeach
-                    </div>
-                @endif
-                <div class="form-group" style="margin-bottom:14px;">
-                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">اسم المورد <span style="color:#dc2626">*</span></label>
-                    <input type="text" name="name" class="form-control" value="{{ old('name') }}"
-                           data-v-rules="required,min:2,max:255" maxlength="255"
-                           placeholder="مثال: Ottobock Egypt"
-                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-                </div>
-                <div class="form-group" style="margin-bottom:14px;">
-                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">الهاتف</label>
-                    <input type="tel" name="phone" class="form-control" value="{{ old('phone') }}"
-                           data-v-rules="egyptian-mobile" maxlength="11" inputmode="numeric"
-                           placeholder="01xxxxxxxxx"
-                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-                </div>
-                <div class="form-group" style="margin-bottom:14px;">
-                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">البريد الإلكتروني</label>
-                    <input type="email" name="email" class="form-control" value="{{ old('email') }}"
-                           maxlength="191" placeholder="supplier@example.com"
-                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-                </div>
-                <div class="form-group" style="margin-bottom:14px;">
-                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">العنوان</label>
-                    <input type="text" name="address" class="form-control" value="{{ old('address') }}"
-                           maxlength="500" placeholder="العنوان (اختياري)"
-                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ملاحظات</label>
-                    <textarea name="notes" class="form-control" rows="2" maxlength="1000"
-                              placeholder="ملاحظات إضافية (اختياري)"
-                              style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;resize:vertical;">{{ old('notes') }}</textarea>
-                </div>
-            </div>
-            <div class="catalog-modal-footer">
-                <button type="button" class="btn-action" id="cancelSupplierModal">إلغاء</button>
-                <button type="submit" class="btn-action success">💾 حفظ</button>
-            </div>
-        </form>
-    </div>
-</div>
+<style>
+    .supplier-filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-end;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+    }
+    .supplier-filter-bar input[type="text"],
+    .supplier-filter-bar select {
+        min-width: 160px;
+        padding: 9px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-family: inherit;
+    }
+    .supplier-date-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+    }
+    .supplier-date-field input {
+        padding: 9px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+    .supplier-sub {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+    th.num, td.num { text-align: center; white-space: nowrap; }
+    .supplier-items-select {
+        width: 100%;
+        min-height: 120px;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-family: inherit;
+    }
+</style>
 
-{{-- Edit Supplier Modal --}}
-<div class="catalog-modal-overlay" id="supplierEditModal" role="dialog" aria-modal="true">
-    <div class="catalog-modal" style="max-width:480px;" onclick="event.stopPropagation()">
-        <div class="catalog-modal-header">
-            <div>
-                <h3>✏️ تعديل المورد</h3>
-            </div>
-            <button type="button" class="catalog-modal-close" id="closeSupplierEditModal" aria-label="إغلاق">&times;</button>
-        </div>
-        <input type="hidden" id="editSupplierId">
-        <div class="catalog-modal-body">
-            <div class="form-group" style="margin-bottom:14px;">
-                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">اسم المورد</label>
-                <input type="text" id="editSupplierName" maxlength="255" class="form-control"
-                       style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-            </div>
-            <div class="form-group" style="margin-bottom:14px;">
-                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">الهاتف</label>
-                <input type="tel" id="editSupplierPhone" maxlength="11" inputmode="numeric" class="form-control"
-                       style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-            </div>
-            <div class="form-group" style="margin-bottom:14px;">
-                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">البريد الإلكتروني</label>
-                <input type="email" id="editSupplierEmail" maxlength="191" class="form-control"
-                       style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-            </div>
-            <div class="form-group" style="margin-bottom:14px;">
-                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">العنوان</label>
-                <input type="text" id="editSupplierAddress" maxlength="500" class="form-control"
-                       style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-            </div>
-            <div class="form-group" style="margin-bottom:14px;">
-                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ملاحظات</label>
-                <textarea id="editSupplierNotes" rows="2" maxlength="1000" class="form-control"
-                          style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;resize:vertical;"></textarea>
-            </div>
-            <div id="supplierEditError"
-                 style="display:none;padding:10px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:13px;"></div>
-        </div>
-        <div class="catalog-modal-footer">
-            <button type="button" class="btn-action" id="cancelSupplierEditModal">إلغاء</button>
-            <button type="button" class="btn-action success" onclick="saveSupplierEdit()">💾 حفظ</button>
-        </div>
-    </div>
-</div>
+@include('admin.partials.supplier-modals', [
+    'openSupplierModal' => $openSupplierModal,
+])
 
 <script>
 (function () {
@@ -184,17 +160,49 @@
         return m ? m.getAttribute('content') : '';
     }
 
+    function buildExportUrl() {
+        var form = document.getElementById('supplierFilterForm');
+        if (!form) return '{{ route('admin.suppliers.export') }}';
+        var params = new URLSearchParams(new FormData(form));
+        params.delete('section');
+        var qs = params.toString();
+        return '{{ route('admin.suppliers.export') }}' + (qs ? '?' + qs : '');
+    }
+
+    var exportBtn = document.getElementById('btnExportSuppliersExcel');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function () {
+            window.location.href = buildExportUrl();
+        });
+    }
+
     window.openSupplierEditModal = function (id) {
-        var row = document.querySelector('tr[data-supplier-id="' + id + '"]');
-        if (!row) return;
-        document.getElementById('editSupplierId').value = id;
-        document.getElementById('editSupplierName').value = row.getAttribute('data-name') || '';
-        document.getElementById('editSupplierPhone').value = row.getAttribute('data-phone') || '';
-        document.getElementById('editSupplierEmail').value = row.getAttribute('data-email') || '';
-        document.getElementById('editSupplierAddress').value = row.getAttribute('data-address') || '';
-        document.getElementById('editSupplierNotes').value = row.getAttribute('data-notes') || '';
-        document.getElementById('supplierEditError').style.display = 'none';
-        document.getElementById('supplierEditModal').classList.add('open');
+        fetch('/admin/suppliers/' + id, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        })
+        .then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
+        .then(function (res) {
+            var s = res.supplier;
+            document.getElementById('editSupplierId').value = s.id;
+            document.getElementById('editSupplierName').value = s.name || '';
+            document.getElementById('editSupplierPhone').value = s.phone || '';
+            document.getElementById('editSupplierFax').value = s.fax || '';
+            document.getElementById('editSupplierEmail').value = s.email || '';
+            document.getElementById('editSupplierAddress').value = s.address || '';
+            document.getElementById('editSupplierTax').value = s.tax_number || '';
+            document.getElementById('editSupplierCommercial').value = s.commercial_registry || '';
+            document.getElementById('editSupplierBankName').value = s.bank_name || '';
+            document.getElementById('editSupplierBankBranch').value = s.bank_branch || '';
+            document.getElementById('editSupplierBankAccount').value = s.bank_account || '';
+            document.getElementById('editSupplierIban').value = s.iban || '';
+            document.getElementById('editSupplierNotes').value = s.notes || '';
+            document.getElementById('supplierEditError').style.display = 'none';
+            document.getElementById('supplierEditModal').classList.add('open');
+        })
+        .catch(function () {
+            alert('تعذّر تحميل بيانات المورد.');
+        });
     };
 
     window.closeSupplierEditModal = function () {
@@ -224,14 +232,19 @@
             body: JSON.stringify({
                 name: name,
                 phone: document.getElementById('editSupplierPhone').value.trim() || null,
+                fax: document.getElementById('editSupplierFax').value.trim() || null,
                 email: document.getElementById('editSupplierEmail').value.trim() || null,
                 address: document.getElementById('editSupplierAddress').value.trim() || null,
+                tax_number: document.getElementById('editSupplierTax').value.trim() || null,
+                commercial_registry: document.getElementById('editSupplierCommercial').value.trim() || null,
+                bank_name: document.getElementById('editSupplierBankName').value.trim() || null,
+                bank_branch: document.getElementById('editSupplierBankBranch').value.trim() || null,
+                bank_account: document.getElementById('editSupplierBankAccount').value.trim() || null,
+                iban: document.getElementById('editSupplierIban').value.trim() || null,
                 notes: document.getElementById('editSupplierNotes').value.trim() || null,
             }),
         })
-        .then(function (r) {
-            return r.ok ? r.json() : r.json().then(function (j) { throw j; });
-        })
+        .then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
         .then(function () {
             closeSupplierEditModal();
             window.location.reload();
@@ -247,7 +260,11 @@
         });
     };
 
-    window.deleteSupplier = function (id, name) {
+    window.deleteSupplier = function (id, name, canDelete) {
+        if (!canDelete) {
+            alert('لا يمكن حذف هذا المورد — له حركات مالية أو مديونية مسجّلة.');
+            return;
+        }
         if (!confirm('حذف «' + name + '»؟')) return;
         fetch('/admin/suppliers/' + id, {
             method: 'DELETE',
@@ -258,12 +275,8 @@
             },
             credentials: 'same-origin',
         })
-        .then(function (r) {
-            return r.ok ? r.json() : r.json().then(function (j) { throw j; });
-        })
-        .then(function () {
-            window.location.reload();
-        })
+        .then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
+        .then(function () { window.location.reload(); })
         .catch(function (err) {
             alert((err && err.message) ? err.message : 'تعذّر الحذف.');
         });
@@ -275,10 +288,5 @@
             if (e.target === editModal) closeSupplierEditModal();
         });
     }
-
-    var closeBtn = document.getElementById('closeSupplierEditModal');
-    var cancelBtn = document.getElementById('cancelSupplierEditModal');
-    if (closeBtn) closeBtn.addEventListener('click', closeSupplierEditModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeSupplierEditModal);
 })();
 </script>

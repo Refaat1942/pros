@@ -38,6 +38,7 @@ class ManufacturingDeskCaseFormatter
             'work_order_no', 'patient_type', 'path', 'quote_no',
         ]) + [
             'company_name'  => $case->displayEntity(),
+            'entity'        => $case->entityPresentation(),
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
             'work_order_print_url' => $case->work_order_no
                 ? route($printRouteName, $case)

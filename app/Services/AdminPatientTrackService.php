@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\CaseStage;
+use App\Support\PatientEntityPresenter;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Patient;
@@ -34,7 +34,7 @@ class AdminPatientTrackService
     public static function visitFilterOptions(): array
     {
         return VisitType::query()
-            ->orderBy('name')
+            ->ordered()
             ->get(['id', 'name'])
             ->map(fn (VisitType $type) => ['value' => $type->id, 'label' => $type->name])
             ->all();
@@ -58,7 +58,7 @@ class AdminPatientTrackService
 
         $patients = Patient::query()
             ->with([
-                'contractCompany:id,name,company_code,is_military',
+                'contractCompany:id,name,company_code,is_military,is_contracted',
                 'militaryRank:id,name',
                 'cases' => fn ($q) => $q
                     ->with([
@@ -150,13 +150,16 @@ class AdminPatientTrackService
             ? (int) round(($currentIndex / ($totalSteps - 1)) * 100)
             : 0;
 
+        $entity = PatientEntityPresenter::forPatient($patient);
+
         return [
             'id'               => $patient->id,
             'name'             => $patient->name,
             'phone'            => $patient->phone,
             'national_id'      => $patient->national_id,
             'patient_type'     => $patient->patient_type,
-            'company_name'     => $patient->displayEntity(),
+            'company_name'     => $entity['label'],
+            'entity'           => $entity,
             'case_no'          => $activeCase?->case_no,
             'stage_key'        => $this->resolveStageKey($activeCase, $appointment),
             'pathway'          => $tracking['pathway'],

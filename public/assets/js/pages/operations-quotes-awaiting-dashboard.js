@@ -45,6 +45,7 @@
       : '';
 
     return '<tr class="quotes-awaiting-row" data-quote-id="' + q.id + '" data-search="' + esc(search) + '">' +
+      '<td><strong class="font-mono text-xs">' + esc(q.quote_serial || q.quote_no) + '</strong></td>' +
       '<td><div>' + esc(q.patient_name) + '</div>' +
         '<div class="text-xs text-muted">' + esc(q.company_name || '—') + '</div></td>' +
       '<td><span class="patient-type-badge civilian">' + esc(q.stage_label || '—') + '</span></td>' +
@@ -92,7 +93,7 @@
         var tbody = $('quotesAwaitingTable');
         if (!tbody) return;
         if (!quotesCache.length) {
-          tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">لا توجد عروض بانتظار موافقة الجهة حالياً.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد عروض بانتظار موافقة الجهة حالياً.</td></tr>';
         } else {
           tbody.innerHTML = quotesCache.map(renderRow).join('');
         }

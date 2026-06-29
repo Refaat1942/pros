@@ -28,10 +28,6 @@ class StorePatientRequest extends BaseRequest
         $validator->after(function ($validator) {
             $type = $this->input('patient_type');
 
-            if ($type === Patient::TYPE_CIVILIAN && ! $this->filled('contract_company_id')) {
-                $validator->errors()->add('contract_company_id', 'جهة التعاقد مطلوبة للمريض المدني.');
-            }
-
             if ($type === Patient::TYPE_MILITARY && ! $this->filled('military_rank_id')) {
                 $validator->errors()->add('military_rank_id', 'الرتبة العسكرية مطلوبة للمريض العسكري.');
             }

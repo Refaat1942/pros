@@ -30,7 +30,8 @@ class AppointmentController extends Controller
         $date = $request->date ?? ClinicTime::todayDateString();
 
         $query = Appointment::with([
-            'patient:id,patient_code,name,patient_type,rank,created_at',
+            'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity',
+            'patient.contractCompany:id,name,is_contracted',
             'visitTypeRecord:id,name',
         ])
             ->whereDate('appointment_date', $date)
@@ -88,10 +89,20 @@ class AppointmentController extends Controller
 
     private function formatForReceptionList(Appointment $appointment): array
     {
+        $entity = $appointment->patient
+            ? $appointment->patient->entityPresentation()
+            : \App\Support\PatientEntityPresenter::fromParts(
+                $appointment->patient_type,
+                null,
+                $appointment->company_name,
+            );
+
         return $appointment->toArray() + [
             'queue_number'            => $appointment->patient_id,
             'patient_type'            => $appointment->patient_type ?? $appointment->patient?->patient_type,
             'patient_type_label'      => ($appointment->patient_type ?? $appointment->patient?->patient_type) === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
+            'entity'                  => $entity,
+            'company_name'            => $entity['label'],
             'registered_at_formatted' => $appointment->registeredAtFormatted(),
             'wait_label'              => $appointment->receptionDeskWaitLabel(),
             'wait_started_at'         => $appointment->registrationMoment()?->toIso8601String(),

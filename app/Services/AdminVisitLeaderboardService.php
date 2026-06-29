@@ -17,7 +17,7 @@ class AdminVisitLeaderboardService
     /** @return list<array{visit_type_id: int, visit_type: string, total_visits: int, patients: list<array{name: string, patient_type: string, visit_count: int}>}> */
     public function topPatientsByVisitType(): array
     {
-        $visitTypes = VisitType::query()->orderBy('name')->get(['id', 'name']);
+        $visitTypes = VisitType::query()->ordered()->get(['id', 'name']);
         $boards     = [];
 
         foreach ($visitTypes as $visitType) {

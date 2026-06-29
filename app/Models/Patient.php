@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PatientEntityPresenter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -78,16 +79,22 @@ class Patient extends Model
         return $this->patient_type === self::TYPE_MILITARY;
     }
 
-    /** الجهة المعروضة في الواجهات — للعسكري دائماً القوات المسلحة. */
+    /** مدني بدون جهة تعاقد — فوترة نقدية على حساب المريض. */
+    public function isCashCivilian(): bool
+    {
+        return ! $this->isMilitary() && ! $this->contract_company_id;
+    }
+
+    /** @return array{label: string, kind: string, badge: string, badge_class: string} */
+    public function entityPresentation(): array
+    {
+        return PatientEntityPresenter::forPatient($this);
+    }
+
+    /** الجهة المعروضة في الواجهات — للعسكري دائماً القوات المسلحة، للمدني النقدي أو اسم الجهة. */
     public function displayEntity(): string
     {
-        if ($this->isMilitary()) {
-            return $this->sovereign_entity ?: self::MILITARY_SOVEREIGN_ENTITY;
-        }
-
-        return $this->company_name
-            ?? ($this->relationLoaded('contractCompany') ? $this->contractCompany?->name : null)
-            ?? '—';
+        return $this->entityPresentation()['label'];
     }
 
     protected static function booted(): void

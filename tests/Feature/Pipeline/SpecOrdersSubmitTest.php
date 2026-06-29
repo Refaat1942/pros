@@ -196,12 +196,13 @@ class SpecOrdersSubmitTest extends TestCase
 
         $js = file_get_contents(public_path('assets/js/pages/spec-dashboard.js'));
         $this->assertStringNotContainsString('!DashboardValidation.validateField', $js);
+        $this->assertStringNotContainsString('الكمية يجب أن تكون 1 على الأقل', $js);
         $this->assertStringContainsString("axios.post('/spec/spec/' + state.specId + '/submit')", $js);
     }
 
-    public function test_spec_rejects_quantity_above_available_stock(): void
+    public function test_spec_allows_backorder_when_stock_insufficient(): void
     {
-        $this->stockItem('ITM-003', qty: 5);
+        $this->stockItem('ITM-003', qty: 0);
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -241,14 +242,83 @@ class SpecOrdersSubmitTest extends TestCase
             'locked'       => false,
         ]);
 
-        $this->actingAs($spec)
-            ->putJson("/spec/spec/{$draft->id}", [
-                'tech_notes' => 'كمية زائدة',
-                'items'      => [
-                    ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => 900],
-                ],
-            ])
-            ->assertStatus(422)
-            ->assertJsonFragment(['message' => 'الكمية المطلوبة للصنف «قدم Carbon Spring» غير متاحة — الكمية المتاحة: 5.']);
+        $this->actingAs($spec);
+
+        $this->putJson("/spec/spec/{$draft->id}", [
+            'tech_notes' => 'توصيف بعجز مخزني',
+            'items'      => [
+                ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => 2],
+            ],
+        ])->assertOk();
+
+        $this->postJson("/spec/spec/{$draft->id}/submit")
+            ->assertOk()
+            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS);
+
+        $stock = \App\Models\StockItem::where('code', 'ITM-003')->first();
+        $this->assertSame(2, $stock->reserved);
+        $this->assertSame(-2, $stock->availableQty());
+        $this->assertSame(2, $stock->backorderQty());
+    }
+
+    public function test_spec_accepts_negative_item_quantity(): void
+    {
+        $this->stockItem('ITM-003', qty: 10);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $doctor  = $this->userWithRole('doctor');
+        $spec    = $this->userWithRole('spec');
+
+        $this->actingAs($doctor);
+
+        $record = MedicalRecord::create([
+            'patient_id'     => $patient->id,
+            'patient_name'   => $patient->name,
+            'patient_type'   => $patient->patient_type,
+            'diagnosis'      => 'بتر فوق الركبة',
+            'doctor_name'    => $doctor->name,
+            'record_date'    => now()->toDateString(),
+            'status'         => MedicalRecord::STATUS_DRAFT,
+            'locked'         => false,
+        ]);
+
+        MedicalRecordItem::create([
+            'medical_record_id' => $record->id,
+            'stock_item_code'   => 'ITM-003',
+            'name'              => 'قدم Carbon Spring',
+            'qty'               => 1,
+        ]);
+
+        app(\App\Services\MedicalRecordService::class)->lock($record);
+
+        $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
+
+        $draft = TechOrderSpec::create([
+            'order_ref'    => $case->order_ref,
+            'case_id'      => $case->id,
+            'patient_name' => $patient->name,
+            'company_name' => $case->company_name,
+            'doctor_name'  => $doctor->name,
+            'locked'       => false,
+        ]);
+
+        $this->actingAs($spec);
+
+        $this->putJson("/spec/spec/{$draft->id}", [
+            'tech_notes' => 'تعديل كمية سالبة',
+            'items'      => [
+                ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => -1],
+            ],
+        ])->assertOk()
+            ->assertJsonPath('items.0.qty', -1);
+
+        $this->postJson("/spec/spec/{$draft->id}/submit")
+            ->assertOk()
+            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS)
+            ->assertJsonPath('spec.items.0.qty', -1);
+
+        $stock = \App\Models\StockItem::where('code', 'ITM-003')->first();
+        $this->assertSame(-1, $stock->reserved);
     }
 }

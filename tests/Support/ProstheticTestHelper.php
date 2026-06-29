@@ -72,9 +72,10 @@ trait ProstheticTestHelper
     protected function civilianCompany(string $name = 'التأمين الصحي'): ContractCompany
     {
         $company = ContractCompany::create([
-            'company_code' => 'CO-001',
-            'name'         => $name,
-            'is_military'  => false,
+            'company_code'  => 'CO-001',
+            'name'          => $name,
+            'is_military'   => false,
+            'is_contracted' => true,
         ]);
 
         ContractCompanyDebt::create([

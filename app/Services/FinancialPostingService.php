@@ -7,6 +7,8 @@ use App\Models\CaseRecord;
 use App\Models\ContractCompany;
 use App\Models\MilitaryDebt;
 use App\Models\Patient;
+use App\Support\ContractBillingSplit;
+use App\Support\PatientEntityPresenter;
 
 /**
  * ترحيل مالي — مدني (مديونية عند الصرف) أو عسكري (تكلفة سيادية عند التسليم).
@@ -29,7 +31,10 @@ class FinancialPostingService
             return;
         }
 
-        $this->postCivilianAmount($case, (float) ($case->quote_total ?? 0));
+        $this->postCivilianAmount(
+            $case,
+            ContractBillingSplit::companyDue($case, (float) ($case->quote_total ?? 0))
+        );
     }
 
     /**
@@ -45,18 +50,18 @@ class FinancialPostingService
             return;
         }
 
-        $amount = $this->resolveDispenseAmount($case, $bom);
+        $gross = $this->resolveDispenseGross($case, $bom);
 
-        if ($amount <= 0) {
+        if ($gross <= 0) {
             return;
         }
 
-        $this->postCivilianAmount($case, $amount);
+        $this->postCivilianAmount($case, ContractBillingSplit::companyDue($case, $gross));
 
         CaseRecord::where('id', $case->id)->update(['ledger_posted_at' => now()]);
     }
 
-    private function resolveDispenseAmount(CaseRecord $case, Bom $bom): float
+    private function resolveDispenseGross(CaseRecord $case, Bom $bom): float
     {
         $quoteTotal = (float) ($case->quote_total ?? 0);
 
@@ -71,12 +76,35 @@ class FinancialPostingService
 
     private function postCivilianAmount(CaseRecord $case, float $amount): void
     {
-        if (! $case->contract_company_id) {
-            abort(422, 'الحالة المدنية غير مرتبطة بجهة تعاقد.');
+        if (! PatientEntityPresenter::postsContractDebt($case)) {
+            AuditService::log(
+                action:      'post',
+                description: $case->isCashCivilian()
+                    ? 'ترحيل مدني نقدي — حساب المريض (بدون جهة تعاقد)'
+                    : 'ترحيل مدني — جهة غير متعاقدة (بدون مديونية)',
+                tag:         'financial',
+                after:       [
+                    'case_id' => $case->id,
+                    'amount'  => $amount,
+                    'mode'    => $case->entityPresentation()['kind'],
+                ],
+            );
+
+            return;
         }
 
         if ($amount <= 0) {
-            abort(422, 'مبلغ العرض غير صالح للترحيل المالي.');
+            AuditService::log(
+                action:      'post',
+                description: 'ترحيل مدني — لا حصة على الجهة (المريض يتحمّل كامل المبلغ)',
+                tag:         'financial',
+                after:       [
+                    'case_id'    => $case->id,
+                    'company_id' => $case->contract_company_id,
+                ],
+            );
+
+            return;
         }
 
         $company = ContractCompany::findOrFail($case->contract_company_id);

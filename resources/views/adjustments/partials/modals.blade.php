@@ -1,5 +1,5 @@
   <div class="modal-overlay" id="adjModal">
-    <div class="modal" style="max-width:720px;">
+    <div class="modal adj-modal">
       <div class="modal-header">
         <h3 id="adjModalTitle">🧩 مراجعة المعدلات</h3>
         <button type="button" class="modal-close" id="closeAdjModal">&times;</button>
@@ -35,19 +35,14 @@
           <h4 style="margin:0 0 10px;font-size:14px;">➕ إضافة بند</h4>
           <div class="adj-add-item-row">
             <div class="form-group adj-item-field">
-              <label for="adjItemPickerSearch">الصنف</label>
+              <label for="adjItemPickerToggle">الصنف</label>
               <div class="adj-item-picker" id="adjItemPicker">
                 <input type="hidden" id="adjItemValue" value="">
                 <button type="button" class="adj-picker-toggle form-control" id="adjItemPickerToggle"
-                        aria-haspopup="listbox" aria-expanded="false">
+                        aria-haspopup="dialog" aria-expanded="false" aria-controls="adjCatalogModal">
                   <span id="adjItemPickerLabel">— اختر الصنف —</span>
                   <span class="adj-picker-caret" aria-hidden="true">▾</span>
                 </button>
-                <div class="adj-picker-panel" id="adjItemPickerPanel">
-                  <input type="search" id="adjItemPickerSearch" class="adj-picker-search form-control"
-                         placeholder="🔍 بحث بالكود أو الاسم..." autocomplete="off">
-                  <ul class="adj-picker-list" id="adjItemPickerList" role="listbox"></ul>
-                </div>
               </div>
             </div>
             <div class="form-group adj-qty-field">
@@ -67,25 +62,39 @@
     </div>
   </div>
 
+  {{-- Popup كامل لاختيار الصنف --}}
+  <div class="adj-catalog-overlay" id="adjCatalogModal" role="dialog" aria-modal="true"
+       aria-labelledby="adjCatalogTitle" hidden>
+    <div class="adj-catalog-dialog" id="adjCatalogDialog" onclick="event.stopPropagation()">
+      <div class="adj-catalog-header">
+        <h3 id="adjCatalogTitle">🔍 اختيار صنف من الكاتلوج</h3>
+        <button type="button" class="adj-catalog-close" id="adjCatalogClose" aria-label="إغلاق">&times;</button>
+      </div>
+      <div class="adj-catalog-search-wrap">
+        <input type="search" id="adjItemPickerSearch" class="adj-catalog-search form-control"
+               placeholder="🔍 بحث بالكود أو الاسم..." autocomplete="off">
+      </div>
+      <ul class="adj-picker-list" id="adjItemPickerList" role="listbox"></ul>
+    </div>
+  </div>
+
   @include('partials.tech-notes-modal')
 
   <div class="toast" id="toast" aria-live="polite"></div>
 
   <style>
-    #adjModal.adj-picker-open .modal {
-      overflow: visible;
+    #adjModal .adj-modal {
+      max-width: min(1080px, 96vw);
+      width: 100%;
+      max-height: min(92vh, 900px);
     }
 
     #adjModal .modal-body {
       overflow-x: hidden;
     }
 
-    #adjModal.adj-picker-open .modal-body {
-      overflow: visible;
-    }
-
     #adjModal .bom-table-wrap {
-      max-height: min(36vh, 280px);
+      max-height: min(32vh, 240px);
       overflow: auto;
     }
 
@@ -95,17 +104,17 @@
       flex-wrap: wrap;
       align-items: flex-end;
       position: relative;
-      z-index: 5;
+      z-index: 1;
     }
 
     #adjModal .adj-item-field {
-      flex: 1 1 280px;
+      flex: 1 1 420px;
       min-width: 0;
       margin: 0;
     }
 
     #adjModal .adj-qty-field {
-      flex: 0 0 110px;
+      flex: 0 0 130px;
       margin: 0;
     }
 
@@ -121,7 +130,8 @@
 
     #adjModal .adj-picker-toggle {
       width: 100%;
-      min-height: 42px;
+      min-height: 48px;
+      font-size: 15px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -150,76 +160,150 @@
       box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
     }
 
-    #adjModal .adj-picker-panel {
+    .adj-catalog-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
       display: none;
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      left: 0;
-      z-index: 1200;
-      background: #fff;
-      border: 1px solid var(--border, #e2e8f0);
-      border-radius: 10px;
-      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.62);
+      backdrop-filter: blur(4px);
+    }
+
+    .adj-catalog-overlay.is-open {
+      display: flex;
+    }
+
+    body.adj-catalog-open {
       overflow: hidden;
     }
 
-    #adjModal .adj-item-picker.is-open .adj-picker-panel {
-      display: block;
+    .adj-catalog-dialog {
+      width: min(720px, 96vw);
+      max-height: min(88vh, 820px);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 28px 64px rgba(15, 23, 42, 0.28);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: adjCatalogIn 0.22s ease;
     }
 
-    #adjModal .adj-picker-search {
-      width: 100%;
-      border: 0;
+    @keyframes adjCatalogIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .adj-catalog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
       border-bottom: 1px solid var(--border, #e2e8f0);
-      border-radius: 0;
-      min-height: 42px;
-      box-shadow: none;
     }
 
-    #adjModal .adj-picker-search:focus {
-      outline: none;
-      box-shadow: inset 0 -2px 0 var(--primary, #d97706);
+    .adj-catalog-header h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
     }
 
-    #adjModal .adj-picker-list {
+    .adj-catalog-close {
+      border: 0;
+      background: transparent;
+      font-size: 28px;
+      line-height: 1;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+
+    .adj-catalog-close:hover {
+      color: #475569;
+    }
+
+    .adj-catalog-search-wrap {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border, #e2e8f0);
+      flex-shrink: 0;
+    }
+
+    .adj-catalog-search {
+      width: 100%;
+      min-height: 48px;
+      font-size: 15px;
+      border-radius: 10px;
+    }
+
+    .adj-catalog-overlay .adj-picker-list {
       list-style: none !important;
       margin: 0;
-      padding: 6px 0;
-      max-height: 220px;
+      padding: 8px 0;
+      flex: 1 1 auto;
+      min-height: 280px;
+      max-height: none;
       overflow-y: auto;
     }
 
-    #adjModal .adj-picker-list li {
+    .adj-catalog-overlay .adj-picker-list li {
       list-style: none !important;
     }
 
-    #adjModal .adj-picker-option {
-      padding: 10px 14px;
-      font-size: 13px;
+    .adj-catalog-overlay .adj-picker-option {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 14px 18px;
+      font-size: 15px;
+      line-height: 1.45;
       cursor: pointer;
       transition: background 0.15s;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.7);
     }
 
-    #adjModal .adj-picker-option:hover,
-    #adjModal .adj-picker-option.is-selected {
+    .adj-catalog-overlay .adj-picker-option:last-child {
+      border-bottom: 0;
+    }
+
+    .adj-catalog-overlay .adj-picker-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.02em;
+    }
+
+    .adj-catalog-overlay .adj-picker-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .adj-catalog-overlay .adj-picker-option:hover,
+    .adj-catalog-overlay .adj-picker-option.is-selected {
       background: rgba(217, 119, 6, 0.08);
     }
 
-    #adjModal .adj-picker-option.is-disabled {
+    .adj-catalog-overlay .adj-picker-option.is-disabled {
       color: var(--text-muted, #94a3b8);
       cursor: not-allowed;
     }
 
-    #adjModal .adj-picker-muted {
-      font-size: 12px;
+    .adj-catalog-overlay .adj-picker-muted {
+      font-size: 13px;
+      font-weight: 600;
     }
 
-    #adjModal .adj-picker-empty {
-      padding: 14px;
+    .adj-catalog-overlay .adj-picker-empty {
+      padding: 24px 18px;
       text-align: center;
       color: var(--text-muted, #94a3b8);
-      font-size: 13px;
+      font-size: 15px;
     }
 
     #adjModal .adj-col-action {

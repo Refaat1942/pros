@@ -7,6 +7,7 @@ use App\Enums\StockUom;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
+use App\Models\Supplier;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,12 +17,21 @@ use Illuminate\Support\Facades\DB;
  */
 class StockCatalogService
 {
+    public function __construct(private readonly StockCategorySchemaService $categorySchema)
+    {
+    }
+
     public function listForDashboard(?string $from = null, ?string $to = null): Collection
     {
         $range = $this->parseDateRange($from, $to);
 
         return StockItem::query()
-            ->with(['category:id,name', 'prices:id,stock_item_id,label,amount'])
+            ->with([
+                'category:id,name',
+                'prices:id,stock_item_id,label,amount',
+                'attributeValues.field',
+                'suppliers:id,name',
+            ])
             ->when($range['from'], fn ($q, Carbon $start) => $q->where('created_at', '>=', $start))
             ->when($range['to'], fn ($q, Carbon $end) => $q->where('created_at', '<=', $end))
             ->orderByDesc('id')
@@ -45,7 +55,7 @@ class StockCatalogService
 
     public function formatItem(StockItem $item): array
     {
-        $item->loadMissing(['category:id,name', 'prices:id,stock_item_id,label,amount']);
+        $item->loadMissing(['category:id,name', 'prices:id,stock_item_id,label,amount', 'attributeValues.field', 'suppliers:id,name']);
 
         return [
             'id'          => $item->id,
@@ -55,6 +65,11 @@ class StockCatalogService
             'spec'        => $item->spec,
             'category_id' => $item->category_id,
             'category'    => $item->category?->name ?? '',
+            'uom'         => $item->uom,
+            'attributes'  => $this->categorySchema->formatItemAttributes($item),
+            'attributes_map' => collect($this->categorySchema->formatItemAttributes($item))
+                ->mapWithKeys(fn (array $row) => [$row['field_key'] => $row['value']])
+                ->all(),
             'qty'         => (int) $item->qty,
             'reserved'    => (int) $item->reserved,
             'price'       => (float) $item->price,
@@ -69,6 +84,10 @@ class StockCatalogService
                 'id'     => (string) $p->id,
                 'label'  => $p->label,
                 'amount' => (float) $p->amount,
+            ])->values()->all(),
+            'suppliers'   => $item->suppliers->map(fn (Supplier $s) => [
+                'id'   => $s->id,
+                'name' => $s->name,
             ])->values()->all(),
         ];
     }
@@ -104,14 +123,24 @@ class StockCatalogService
 
             $this->syncStatus($item);
 
+            $this->categorySchema->syncItemAttributes(
+                $item,
+                isset($data['category_id']) ? (int) $data['category_id'] : null,
+                (array) ($data['attributes'] ?? []),
+            );
+
+            if (! empty($data['supplier_ids'])) {
+                $this->syncSuppliers($item, $data['supplier_ids']);
+            }
+
             AuditService::log(
                 action:      'create',
                 description: "إضافة صنف {$item->code} — {$item->name}",
                 tag:         'admin',
-                after:       $this->formatItem($item->fresh(['category', 'prices'])),
+                after:       $this->formatItem($item->fresh(['category', 'prices', 'attributeValues.field'])),
             );
 
-            return $item->fresh(['category', 'prices']);
+            return $item->fresh(['category', 'prices', 'attributeValues.field', 'suppliers']);
         });
     }
 
@@ -137,8 +166,20 @@ class StockCatalogService
                 ]);
             }
 
+            if (array_key_exists('attributes', $data)) {
+                $this->categorySchema->syncItemAttributes(
+                    $item,
+                    (int) ($data['category_id'] ?? $item->category_id),
+                    (array) $data['attributes'],
+                );
+            }
+
             if (array_key_exists('prices', $data)) {
                 $this->syncPrices($item, $data['prices'] ?? []);
+            }
+
+            if (array_key_exists('supplier_ids', $data)) {
+                $this->syncSuppliers($item, $data['supplier_ids'] ?? []);
             }
 
             $this->syncStatus($item->fresh());
@@ -148,11 +189,22 @@ class StockCatalogService
                 description: "تعديل صنف {$item->code}",
                 tag:         'admin',
                 before:      $before,
-                after:       $this->formatItem($item->fresh(['category', 'prices'])),
+                after:       $this->formatItem($item->fresh(['category', 'prices', 'attributeValues.field'])),
             );
 
-            return $item->fresh(['category', 'prices']);
+            return $item->fresh(['category', 'prices', 'attributeValues.field', 'suppliers']);
         });
+    }
+
+    /** @param  list<int>  $supplierIds */
+    public function syncSuppliers(StockItem $item, array $supplierIds): void
+    {
+        $ids = Supplier::query()
+            ->whereIn('id', $supplierIds)
+            ->pluck('id')
+            ->all();
+
+        $item->suppliers()->sync($ids);
     }
 
     public function delete(StockItem $item): void

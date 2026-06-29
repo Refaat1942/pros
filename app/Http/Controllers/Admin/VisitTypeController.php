@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ReorderVisitTypesRequest;
 use App\Http\Requests\Admin\StoreVisitTypeRequest;
 use App\Http\Requests\Admin\UpdateVisitTypeRequest;
 use App\Models\VisitType;
@@ -11,6 +12,7 @@ use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * إدارة أنواع الزيارات — يختار منها الاستقبال عند جدولة المريض.
@@ -23,8 +25,8 @@ class VisitTypeController extends Controller
     {
         if ($request->boolean('all')) {
             $types = VisitType::query()
-                ->orderBy('name')
-                ->get(['id', 'name']);
+                ->ordered()
+                ->get(['id', 'name', 'sort_order']);
 
             return response()->json(['data' => $types]);
         }
@@ -34,7 +36,7 @@ class VisitTypeController extends Controller
                 $request->search,
                 fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
             )
-                ->orderByDesc('id')
+                ->ordered()
         );
 
         return response()->json([
@@ -48,7 +50,8 @@ class VisitTypeController extends Controller
         $data = $request->validated();
 
         $type = VisitType::create([
-            'name' => $data['name'],
+            'name'       => $data['name'],
+            'sort_order' => (int) (VisitType::max('sort_order') ?? 0) + 10,
         ]);
 
         AuditService::log(
@@ -107,5 +110,28 @@ class VisitTypeController extends Controller
         );
 
         return response()->json(['message' => 'تم حذف نوع الزيارة بنجاح.']);
+    }
+
+    /**
+     * حفظ ترتيب أنواع الزيارات بعد السحب والإفلات.
+     */
+    public function reorder(ReorderVisitTypesRequest $request): JsonResponse
+    {
+        $ids = $request->validated('ids');
+
+        DB::transaction(function () use ($ids) {
+            foreach ($ids as $index => $id) {
+                VisitType::whereKey($id)->update(['sort_order' => ($index + 1) * 10]);
+            }
+        });
+
+        AuditService::log(
+            action:      'update',
+            description: 'إعادة ترتيب أنواع الزيارات',
+            tag:         'admin',
+            after:       ['order' => $ids],
+        );
+
+        return response()->json(['message' => 'تم حفظ الترتيب بنجاح.']);
     }
 }

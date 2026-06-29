@@ -207,12 +207,14 @@ class ChecklistFeaturesTest extends TestCase
     public function test_catalog_store_accepts_core_attributes_only(): void
     {
         $admin = $this->userWithRole('admin');
+        $supplier = $this->makeSupplier();
 
         $response = $this->actingAs($admin)->postJson(route('admin.catalog.store'), [
-            'name'   => 'صنف مبسّط',
-            'qty'    => 12,
-            'price'  => 150,
-            'prices' => [
+            'name'         => 'صنف مبسّط',
+            'qty'          => 12,
+            'price'        => 150,
+            'supplier_ids' => [$supplier->id],
+            'prices'       => [
                 ['label' => 'سعر مورد آخر', 'amount' => 175],
             ],
         ]);

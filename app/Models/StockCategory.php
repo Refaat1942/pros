@@ -18,4 +18,11 @@ class StockCategory extends Model
     {
         return $this->hasMany(StockItem::class, 'category_id');
     }
+
+    public function fields(): HasMany
+    {
+        return $this->hasMany(StockCategoryField::class, 'category_id')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
 }

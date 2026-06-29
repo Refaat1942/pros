@@ -15,11 +15,13 @@
 @endpush
 
 @php
+    use App\Enums\StockWarehouseType;
+
     $boms = $warehouse_boms ?? collect();
     $stageMeta = [
-        'raw'      => ['label' => '📦 خام', 'cls' => 'bg-amber-100 text-amber-800 border-amber-200'],
-        'wip'      => ['label' => '🏭 تم التحويل للورشة', 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
-        'finished' => ['label' => '✅ تام', 'cls' => 'bg-emerald-100 text-emerald-800 border-emerald-200'],
+        'raw'      => ['label' => StockWarehouseType::Raw->icon() . ' ' . StockWarehouseType::Raw->label(), 'cls' => 'bg-amber-100 text-amber-800 border-amber-200'],
+        'wip'      => ['label' => StockWarehouseType::Production->icon() . ' ' . StockWarehouseType::Production->label(), 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
+        'finished' => ['label' => StockWarehouseType::Delivery->icon() . ' ' . StockWarehouseType::Delivery->label(), 'cls' => 'bg-emerald-100 text-emerald-800 border-emerald-200'],
     ];
 @endphp
 
@@ -30,8 +32,8 @@
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="bomWarehouseRoot">
     <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
         <div>
-            <h3 class="font-bold text-slate-800">📋 قوائم صرف المواد — خام → تم التحويل للورشة → تام</h3>
-            <p class="text-xs text-slate-500 mt-1">صرف للورشة بالباركود — مطابقة صارمة مع بنود القائمة</p>
+            <h3 class="font-bold text-slate-800">📋 قوائم صرف المواد — مخزن خام → مخزن إنتاج → مخزن تسليم</h3>
+            <p class="text-xs text-slate-500 mt-1">الاستلام يدخل المخزن الخام · الصرف بالباركود ينقل للإنتاج · الإغلاق ينقل للتسليم</p>
         </div>
         <button type="button" id="btnRefreshBoms"
                 class="rounded-xl bg-wh text-white px-4 py-2 text-sm font-bold hover:bg-wh-dark transition-colors">
@@ -44,9 +46,9 @@
                class="flex-1 min-w-[200px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-wh/40">
         <div class="flex flex-wrap gap-2" id="bomFilters">
             <button type="button" class="bom-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
-            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-amber-100 text-amber-800" data-filter="raw">📦 خام</button>
-            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 تم التحويل للورشة</button>
-            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-800" data-filter="finished">✅ تام</button>
+            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-amber-100 text-amber-800" data-filter="raw">📦 مخزن خام</button>
+            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 مخزن إنتاج</button>
+            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-800" data-filter="finished">✅ مخزن تسليم</button>
         </div>
     </div>
 

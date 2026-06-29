@@ -66,17 +66,38 @@
                         </select>
                     </div>
                     <div class="form-group" id="grpCompany" style="display:{{ old('patient_type') === 'military' ? 'none' : '' }};">
-                        <label>جهة التعاقد <span id="companyRequired" style="color:red">*</span></label>
+                        <label>الفوترة / جهة التعاقد <span class="field-optional">(اختياري)</span></label>
                         <select class="form-control" name="contract_company_id" id="newCompanyId"
-                                data-v-rules="required,select" data-v-when="patient_type=civilian">
-                            <option value="">— اختر الجهة —</option>
-                            @foreach ($civilian_companies ?? [] as $co)
-                                <option value="{{ $co->id }}"
-                                    @selected((string) old('contract_company_id') === (string) $co->id)>
-                                    {{ $co->name }}
-                                </option>
-                            @endforeach
+                                data-v-when="patient_type=civilian">
+                            <option value="">💵 نقدي — حساب شخصي</option>
+                            @php
+                                $contracted = collect($civilian_companies ?? [])->where('is_contracted', true);
+                                $nonContracted = collect($civilian_companies ?? [])->where('is_contracted', false);
+                            @endphp
+                            @if ($contracted->isNotEmpty())
+                                <optgroup label="📑 هيئات متعاقدة">
+                                    @foreach ($contracted as $co)
+                                        <option value="{{ $co->id }}"
+                                            @selected((string) old('contract_company_id') === (string) $co->id)>
+                                            {{ $co->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if ($nonContracted->isNotEmpty())
+                                <optgroup label="🏷️ هيئات غير متعاقدة">
+                                    @foreach ($nonContracted as $co)
+                                        <option value="{{ $co->id }}"
+                                            @selected((string) old('contract_company_id') === (string) $co->id)>
+                                            {{ $co->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
                         </select>
+                        <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-top:6px;">
+                            بدون جهة = المريض يتحاسب <strong>نقداً</strong> على حسابه الشخصي.
+                        </p>
                     </div>
                     <div class="form-group" id="grpVisitType">
                         <label>نوع الزيارة <span style="color:red">*</span></label>

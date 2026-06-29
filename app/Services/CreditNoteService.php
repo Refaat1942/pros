@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\CaseRecord;
-use App\Models\ContractCompany;
+use App\Support\PatientEntityPresenter;
 use App\Models\CreditNote;
 use App\Models\Patient;
 use App\Models\User;
@@ -75,8 +75,8 @@ class CreditNoteService
             $case = CaseRecord::with('patient')->findOrFail($note->case_id);
             $this->assertCivilianDelivered($case);
 
-            if (! $case->contract_company_id) {
-                abort(422, 'الحالة غير مرتبطة بجهة تعاقد.');
+            if (! PatientEntityPresenter::postsContractDebt($case)) {
+                abort(422, 'إشعار الدائن متاح فقط لحالات جهة تعاقد متعاقدة.');
             }
 
             $company = ContractCompany::findOrFail($case->contract_company_id);

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\CaseStage;
+use App\Enums\StockWarehouseType;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Patient;
@@ -121,12 +122,11 @@ class ReceptionSelfServiceService
 
     private function bomStageLabel(?string $stage): ?string
     {
-        return match ($stage) {
-            Bom::STAGE_RAW      => 'مواد خام',
-            Bom::STAGE_WIP      => 'تحت التشغيل',
-            Bom::STAGE_FINISHED => 'تام — جاهز للتسليم',
-            default             => $stage ? $stage : null,
-        };
+        if (! $stage) {
+            return null;
+        }
+
+        return StockWarehouseType::labelForBomStage($stage);
     }
 
     private function queuePosition(?CaseRecord $case): ?int

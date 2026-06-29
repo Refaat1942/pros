@@ -452,7 +452,6 @@
             </div>
             <div class="pic-qr">
               <div class="pic-qr-image" id="picQr"></div>
-              <small id="picQrText">—</small>
             </div>
           </div>
           <div class="pic-foot">امسح الكود لمتابعة حالة الطلب وموعد التسليم</div>

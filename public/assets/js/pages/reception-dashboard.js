@@ -207,7 +207,7 @@
         '</div>' +
         '<div class="quote-body">' +
           '<div class="quote-meta">' +
-            '<div class="item"><div class="lbl">رقم العرض</div><div class="val">' + quote.id + '</div></div>' +
+            '<div class="item"><div class="lbl">سريال عرض السعر</div><div class="val">' + quote.id + '</div></div>' +
             '<div class="item"><div class="lbl">التاريخ</div><div class="val">' + quote.date + '</div></div>' +
             '<div class="item"><div class="lbl">اسم المريض</div><div class="val">' + quote.patient + '</div></div>' +
             '<div class="item"><div class="lbl">جهة التعاقد</div><div class="val">' + quote.company + '</div></div>' +
@@ -547,10 +547,12 @@
       var patient = row.patient || {};
       var visitTypeRel = row.visit_type_record || null;
       var visitTypeName = visitTypeRel && visitTypeRel.name ? visitTypeRel.name : null;
-      var isMilitary = (row.patient_type || patient.patient_type) === 'military';
-      var affiliation = isMilitary
-        ? (patient.rank || row.company_name || '—')
-        : (row.company_name || '—');
+      var entity = row.entity || (window.EntityBadges ? EntityBadges.resolve(row) : null);
+      var affiliation = entity && entity.label
+        ? entity.label
+        : ((row.patient_type || patient.patient_type) === 'military'
+          ? (patient.rank || row.company_name || '—')
+          : (row.company_name || '—'));
       return {
         id: row.id,
         date: displayDateFromIso(row.appointment_date),
@@ -559,6 +561,8 @@
         name: row.patient_name || patient.name || '—',
         phone: row.phone || '—',
         company: affiliation,
+        entity: entity,
+        entityHtml: window.EntityBadges ? EntityBadges.renderHtml(row) : affiliation,
         patient_type: row.patient_type || patient.patient_type || 'civilian',
         visitType: row.visit_type_id ? String(row.visit_type_id) : 'exam',
         visitTypeLabel: visitTypeName || getVisitMeta('exam').label,
@@ -703,9 +707,10 @@
         quoted: 'عرض سعر',
         done: 'مكتمل'
       };
-      var company = row.company_name ||
-        (row.contract_company && row.contract_company.name) ||
-        '—';
+      var entity = row.entity || (window.EntityBadges ? EntityBadges.resolve(row) : null);
+      var company = entity && entity.label
+        ? entity.label
+        : (row.company_name || (row.contract_company && row.contract_company.name) || '—');
       if (row.patient_type === 'military') {
         company = row.rank || company;
       }
@@ -715,6 +720,8 @@
         name: row.name || '—',
         phone: row.phone || '—',
         company: company,
+        entity: entity,
+        entityHtml: window.EntityBadges ? EntityBadges.renderHtml(row) : company,
         rank: row.rank || '',
         registered: displayDateFromIso(row.registered_at) || '—',
         lastVisit: displayDateFromIso(row.last_visit_at) || '—',
@@ -854,7 +861,7 @@
           '<td>' + patientTypeBadgeHtml(a.patient_type) + '</td>' +
           '<td><span class="visit-tag ' + vt.tagClass + '">' + visitLabel + '</span></td>' +
           '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + a.phone + '</td>' +
-          '<td>' + a.company + '</td>' +
+          '<td>' + (a.entityHtml || a.company) + '</td>' +
           '<td>' + getApptActionCell(a) + '</td>' +
           '</tr>';
       }).join('') || '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد مواعيد في هذا اليوم</td></tr>';
@@ -888,7 +895,7 @@
               '<td><strong>' + p.name + '</strong></td>' +
               '<td><strong>' + p.queueNumber + '</strong></td>' +
               '<td style="font-size:12px;color:var(--text-muted);direction:ltr;text-align:right;">' + p.phone + '</td>' +
-              '<td>' + p.company + '</td>' +
+              '<td>' + (p.entityHtml || p.company) + '</td>' +
               '<td>' + p.registered + '</td>' +
               '<td>' + p.lastVisit + '</td>' +
               '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="openPatientFile(\'' + p.phone + '\')">عرض الملف</button></td>' +
@@ -1324,14 +1331,26 @@
         .then(function (r) { return r.ok ? r.json() : { data: [] }; })
         .then(function (res) {
           var companies = res.data || [];
-          sel.innerHTML = '<option value="">— اختر الجهة —</option>';
-          companies.forEach(function (co) {
-            var opt = document.createElement('option');
-            opt.value = String(co.id);
-            opt.textContent = co.name;
-            opt.setAttribute('data-military', co.is_military ? '1' : '0');
-            sel.appendChild(opt);
-          });
+          sel.innerHTML = '<option value="">💵 نقدي — حساب شخصي</option>';
+          var contracted = companies.filter(function (co) { return !co.is_military && co.is_contracted !== false; });
+          var nonContracted = companies.filter(function (co) { return !co.is_military && co.is_contracted === false; });
+
+          function appendGroup(label, list) {
+            if (!list.length) return;
+            var group = document.createElement('optgroup');
+            group.label = label;
+            list.forEach(function (co) {
+              var opt = document.createElement('option');
+              opt.value = String(co.id);
+              opt.textContent = co.name;
+              opt.setAttribute('data-military', co.is_military ? '1' : '0');
+              group.appendChild(opt);
+            });
+            sel.appendChild(group);
+          }
+
+          appendGroup('📑 هيئات متعاقدة', contracted);
+          appendGroup('🏷️ هيئات غير متعاقدة', nonContracted);
           if (preserved && sel.querySelector('option[value="' + preserved + '"]')) {
             sel.value = preserved;
           }
@@ -1417,7 +1436,6 @@
         qrEl.innerHTML = data.qr_svg || '';
         qrEl.classList.toggle('has-svg', !!data.qr_svg);
       }
-      document.getElementById('picQrText').textContent = data.tracking_url || data.tracking_uid || data.patientQr || data.patient_qr || '—';
       var card = document.getElementById('patientIdCard');
       if (card) card.setAttribute('data-type', data.patientType || data.patient_type);
       window._patientCardPrintUrl = patientCardPrintUrl(data);

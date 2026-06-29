@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * التوصيف الفني المحفوظ — clinic_tech_order_specs
@@ -35,5 +36,16 @@ class TechOrderSpec extends Model
     public function items(): HasMany
     {
         return $this->hasMany(TechOrderSpecItem::class);
+    }
+
+    public function editRequests(): HasMany
+    {
+        return $this->hasMany(SpecEditRequest::class);
+    }
+
+    public function pendingEditRequest(): HasOne
+    {
+        return $this->hasOne(SpecEditRequest::class)
+            ->where('status', \App\Enums\SpecEditRequestStatus::Pending);
     }
 }

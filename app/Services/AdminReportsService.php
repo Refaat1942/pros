@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\StockWarehouseType;
 use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
@@ -159,9 +160,9 @@ class AdminReportsService
             ->get();
 
         $stageLabels = [
-            Bom::STAGE_RAW      => 'خام',
-            Bom::STAGE_WIP      => 'تحت التشغيل',
-            Bom::STAGE_FINISHED => 'تام',
+            Bom::STAGE_RAW      => StockWarehouseType::Raw->label(),
+            Bom::STAGE_WIP      => StockWarehouseType::Production->label(),
+            Bom::STAGE_FINISHED => StockWarehouseType::Delivery->label(),
         ];
 
         $summary = [

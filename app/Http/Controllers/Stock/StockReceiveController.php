@@ -112,11 +112,12 @@ class StockReceiveController extends Controller
             'barcode',
             'qty',
             'reserved',
-            'status',
             'last_moved_at',
         ]) + [
             'category'  => $item->category?->name,
             'available' => $item->availableQty(),
+            'backorder' => $item->backorderQty(),
+            'status'    => $item->isBackorder() ? 'backorder' : $item->status,
         ];
     }
 

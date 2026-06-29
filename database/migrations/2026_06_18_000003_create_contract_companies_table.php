@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('company_code')->unique(); // CO-001
             $table->string('name'); // اسم جهة التعاقد (تأمين، صحي، عسكري...)
-            $table->boolean('is_military')->default(false); // ⚠️ يُستنتج لاحقاً من اسم الجهة في JS
+            $table->boolean('is_military')->default(false);
+            $table->boolean('is_contracted')->default(true); // true = هيئة متعاقدة، false = غير متعاقدة
             $table->timestamps();
 
             $table->index('name');

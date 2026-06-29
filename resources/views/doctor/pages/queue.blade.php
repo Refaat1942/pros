@@ -80,7 +80,7 @@
                     {{ $pt === 'military' ? '🪖 عسكري' : '🌐 مدني' }}
                   </span>
                 </td>
-                <td>{{ $entity }}</td>
+                <td>@include('partials.patient-entity-cell', ['subject' => $appt])</td>
                 <td><span class="wait-time">{{ $appt->clinicWaitLabel() }}</span></td>
                 <td>{{ $appt->transferredAtFormatted() }}</td>
                 <td>

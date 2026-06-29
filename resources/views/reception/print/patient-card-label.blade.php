@@ -208,7 +208,6 @@
         {{-- تذييل --}}
         <div class="card-foot">
             امسح الكود لمتابعة حالة الطلب وموعد التسليم
-            <span class="track">{{ $trackingUrl }}</span>
         </div>
 
     </div>

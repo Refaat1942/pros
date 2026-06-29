@@ -23,6 +23,7 @@ class PublicTrackingService
      *     pathway: string,
      *     stage_label: string,
      *     current_index: int,
+     *     progress_percent: int,
      *     steps: list<array{key: string, label: string, status: string}>
      * }
      */
@@ -62,13 +63,19 @@ class PublicTrackingService
             return $step + ['status' => $status];
         }, $steps, array_keys($steps));
 
+        $totalSteps = count($mappedSteps);
+        $progressPercent = $totalSteps > 1
+            ? (int) round(($currentIndex / ($totalSteps - 1)) * 100)
+            : 0;
+
         return [
-            'tracking_uid'  => $uid,
-            'pathway'       => $pathway,
-            'stage_label'   => $this->publicStageLabel($case, $case === null, $isMilitary),
-            'current_index' => $currentIndex,
-            'steps'         => $mappedSteps,
-            'tracking_url'  => $this->trackingUidService->trackingUrl($uid),
+            'tracking_uid'      => $uid,
+            'pathway'           => $pathway,
+            'stage_label'       => $this->publicStageLabel($case, $case === null, $isMilitary),
+            'current_index'     => $currentIndex,
+            'progress_percent'  => $progressPercent,
+            'steps'             => $mappedSteps,
+            'tracking_url'      => $this->trackingUidService->trackingUrl($uid),
         ];
     }
 

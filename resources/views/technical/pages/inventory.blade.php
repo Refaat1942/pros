@@ -2,7 +2,7 @@
     $invStats = $inventory_stats ?? [
         ['icon' => '💚', 'label' => 'صحة المخزون', 'value' => '0/100', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
         ['icon' => '✅', 'label' => 'متوفر', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-        ['icon' => '⚠️', 'label' => 'منخفض', 'value' => '0', 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+        ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
         ['icon' => '🔒', 'label' => 'محجوز', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
     ];
 @endphp
@@ -28,6 +28,7 @@
             <button class="filter-pill active" data-filter="all">الكل</button>
             <button class="filter-pill" data-filter="ok">✓ متوفر</button>
             <button class="filter-pill" data-filter="low">⚠ منخفض</button>
+            <button class="filter-pill" data-filter="backorder">🛒 طلب توريد</button>
           </div>
           <div class="export-btns">
             <button class="btn-export excel" onclick="exportInventory('excel')">📊 Excel</button>

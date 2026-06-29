@@ -96,6 +96,7 @@ return [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
             'assets/js/pages/spec-dashboard.js',
+            'assets/js/pages/spec-edit-preview.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="spec"',
@@ -108,12 +109,15 @@ return [
         'sidebar' => ['icon' => '📏', 'title' => 'لوحة المعدلات', 'subtitle' => 'تجارب التركيب والمقاسات'],
         'pages' => [
             'adjustments' => ['title' => 'المعدلات — تجارب التركيب والمقاسات', 'icon' => '📏', 'label' => 'جدول المعدلات'],
+            'history'     => ['title' => 'المحوّلون للتكاليف', 'icon' => '📤', 'label' => 'سجل المحوّلين'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
             'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
+            'assets/js/shared/export-kit.js',
             'assets/js/pages/adjustments-dashboard.js',
+            'assets/js/pages/adjustments-history.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="adjustments"',
@@ -226,13 +230,14 @@ return [
             'reports-section' => ['title' => 'تفاصيل التقرير', 'icon' => '📄', 'label' => 'تفاصيل التقرير', 'hidden' => true],
             // ── مسار المرضى والحالات ───────────────────────────────────────────
             'patient-tracks' => ['title' => 'مسار المرضى — تتبع المراحل', 'icon' => '📍', 'label' => 'مسار المرضى'],
+            'spec-edit-requests' => ['title' => 'طلبات تعديل التوصيف', 'icon' => '✏️', 'label' => 'تعديل التوصيف'],
             'cases' => ['title' => 'متابعة الحالات', 'icon' => '📁', 'label' => 'متابعة الحالات'],
             'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
             // ── المخزون والتوريد ───────────────────────────────────────────────
             // 'stock-categories' => ['title' => 'فئات الأصناف', 'icon' => '🏷️', 'label' => 'فئات الأصناف'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
             'inventory-overview' => ['title' => 'لوحة المخزون التفصيلية', 'icon' => '🔬', 'label' => 'المخزون التفصيلي'],
-            // 'suppliers' => ['title' => 'الموردون', 'icon' => '🏭', 'label' => 'الموردون'],
+            'suppliers' => ['title' => 'الموردون', 'icon' => '🏭', 'label' => 'الموردون'],
             'returns' => ['title' => 'طلبات ارتجاع المواد — مراقبة وقراءة فقط', 'icon' => '↩️', 'label' => 'طلبات الارتجاع'],
             // ── التعاقد والمالية ───────────────────────────────────────────────
             'companies' => ['title' => 'جهات التعاقد', 'icon' => '🏢', 'label' => 'جهات التعاقد'],
@@ -259,6 +264,7 @@ return [
             'assets/js/shared/operations-desk.js',
             'assets/js/shared/bulk-table-select.js',
             'assets/js/pages/admin-dashboard.js',
+            'assets/js/pages/admin-spec-edit-requests.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => '',

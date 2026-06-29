@@ -4,8 +4,8 @@ use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Finance\CivilianDebtController;
 use App\Http\Controllers\Finance\MilitaryDebtController;
 use App\Http\Controllers\Admin\MilitaryRankController;
-use App\Http\Controllers\Admin\PermissionMatrixController;
-// use App\Http\Controllers\Admin\StockCategoryController;
+use App\Http\Controllers\Admin\SpecEditRequestController as AdminSpecEditRequestController;
+use App\Http\Controllers\Admin\StockCategoryController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
@@ -87,6 +87,12 @@ Route::prefix('admin')
         Route::get('catalog/export', [StockCatalogController::class, 'export'])
             ->name('catalog.export');
 
+        Route::get('catalog/sales-by-price', [StockCatalogController::class, 'salesByPrice'])
+            ->name('catalog.sales-by-price');
+
+        Route::get('catalog/sales-by-price/export', [StockCatalogController::class, 'exportSalesByPrice'])
+            ->name('catalog.sales-by-price.export');
+
         Route::post('catalog/import', [StockCatalogController::class, 'import'])
             ->middleware('can:import-inventory')
             ->name('catalog.import');
@@ -94,6 +100,19 @@ Route::prefix('admin')
         Route::get('catalog/{stockItem}/labels', [StockCatalogController::class, 'labels'])
             ->middleware('can:print-barcode')
             ->name('catalog.labels');
+
+        Route::get('catalog/{stockItem}/sales-stats', [StockCatalogController::class, 'salesStats'])
+            ->name('catalog.sales-stats');
+
+        // ── طلبات تعديل التوصيف ─────────────────────────────────────────────
+        Route::get('spec-edit-requests/list', [AdminSpecEditRequestController::class, 'index'])
+            ->name('spec-edit-requests.list');
+
+        Route::post('spec-edit-requests/{specEditRequest}/approve', [AdminSpecEditRequestController::class, 'approve'])
+            ->name('spec-edit-requests.approve');
+
+        Route::post('spec-edit-requests/{specEditRequest}/reject', [AdminSpecEditRequestController::class, 'reject'])
+            ->name('spec-edit-requests.reject');
 
         // ── مصفوفة الصلاحيات التفصيلية ──────────────────────────────────────
         Route::post('permissions', [PermissionMatrixController::class, 'update'])
@@ -116,6 +135,12 @@ Route::prefix('admin')
         // ── Suppliers ──────────────────────────────────────────────────────
         Route::get('suppliers/list', [SupplierController::class, 'index'])
             ->name('suppliers.list');
+
+        Route::get('suppliers/export', [SupplierController::class, 'export'])
+            ->name('suppliers.export');
+
+        Route::get('suppliers/{supplier}', [SupplierController::class, 'show'])
+            ->name('suppliers.show');
 
         Route::post('suppliers', [SupplierController::class, 'store'])
             ->name('suppliers.store');
@@ -155,18 +180,21 @@ Route::prefix('admin')
         Route::delete('visit-types/{visitType}', [VisitTypeController::class, 'destroy'])
             ->name('visit-types.destroy');
 
-        // ── Stock Categories — معطّل مؤقتاً ─────────────────────────────────
-        // Route::get('stock-categories/list', [StockCategoryController::class, 'index'])
-        //     ->name('stock-categories.list');
-        //
-        // Route::post('stock-categories', [StockCategoryController::class, 'store'])
-        //     ->name('stock-categories.store');
-        //
-        // Route::put('stock-categories/{stockCategory}', [StockCategoryController::class, 'update'])
-        //     ->name('stock-categories.update');
-        //
-        // Route::delete('stock-categories/{stockCategory}', [StockCategoryController::class, 'destroy'])
-        //     ->name('stock-categories.destroy');
+        Route::post('visit-types/reorder', [VisitTypeController::class, 'reorder'])
+            ->name('visit-types.reorder');
+
+        // ── Stock Categories (أقسام الأصناف + حقول ديناميكية) ───────────────
+        Route::get('stock-categories/list', [StockCategoryController::class, 'index'])
+            ->name('stock-categories.list');
+
+        Route::post('stock-categories', [StockCategoryController::class, 'store'])
+            ->name('stock-categories.store');
+
+        Route::put('stock-categories/{stockCategory}', [StockCategoryController::class, 'update'])
+            ->name('stock-categories.update');
+
+        Route::delete('stock-categories/{stockCategory}', [StockCategoryController::class, 'destroy'])
+            ->name('stock-categories.destroy');
 
         // ── Civilian contract company debts ───────────────────────────────
         Route::get('civilian-debts/list', [CivilianDebtController::class, 'index'])

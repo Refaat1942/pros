@@ -1,9 +1,15 @@
 @php
     /** قائمة مُنسّقة من StockCatalogService::formatItem (مصفوفات). */
     $items = collect($stock_items ?? []);
+    $categories = collect($stock_categories ?? []);
+    $catalogSuppliers = collect($suppliers ?? []);
     $dateFrom = $date_from ?? request()->query('from');
     $dateTo = $date_to ?? request()->query('to');
     $exportUrl = route('admin.catalog.export', array_filter([
+        'from' => $dateFrom,
+        'to'   => $dateTo,
+    ]));
+    $salesExportUrl = route('admin.catalog.sales-by-price.export', array_filter([
         'from' => $dateFrom,
         'to'   => $dateTo,
     ]));
@@ -47,17 +53,17 @@
 
         <div class="data-toolbar" style="flex-wrap:wrap;gap:8px;">
             <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث بالصنف أو الكود..." onkeyup="applySlimCatalogFilters()">
-            {{-- فلتر الفئات — معطّل مع صفحة فئات الأصناف
             <select id="catalogCategoryFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:160px;">
-                <option value="">🏷️ كل الفئات</option>
+                <option value="">🏷️ كل الأقسام</option>
                 @foreach ($categories as $cat)
-                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                    <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
                 @endforeach
             </select>
-            --}}
+            <button type="button" class="btn-action" id="btnManageStockCategories">🏷️ إدارة الأقسام</button>
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
             <a class="btn-action" href="{{ $exportUrl }}">📊 تصدير Excel</a>
+            <a class="btn-action" href="{{ $salesExportUrl }}" title="مرات البيع لكل سعر مسجّل — حالات مُسلَّمة">📈 بيع حسب السعر</a>
 
             @can('import-inventory')
                 <a class="btn-action" href="{{ route('admin.catalog.template') }}">⬇️ تنزيل القالب</a>
@@ -85,6 +91,15 @@
                     <input type="text" id="slimName" placeholder="مثال: ركبة هيدروليكية" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
                 </div>
                 <div>
+                    <label style="font-size:12px;font-weight:700;">القسم *</label>
+                    <select id="slimCategoryId" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
+                        <option value="">— اختر القسم —</option>
+                        @foreach ($categories as $cat)
+                            <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label style="font-size:12px;font-weight:700;">الكمية</label>
                     <input type="number" id="slimQty" min="0" value="0" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
                 </div>
@@ -92,6 +107,19 @@
                     <label style="font-size:12px;font-weight:700;">السعر</label>
                     <input type="number" id="slimPrice" min="0" step="0.01" value="0" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
                 </div>
+            </div>
+
+            <div id="slimCategoryFields" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
+
+            <div style="margin-top:14px;">
+                <label style="font-size:12px;font-weight:700;">المورد / الموردون *</label>
+                <select id="slimSupplierIds" multiple class="catalog-supplier-select" aria-label="الموردون"
+                        style="width:100%;min-height:100px;padding:8px;border:1px solid var(--border);border-radius:8px;margin-top:6px;">
+                    @foreach ($catalogSuppliers as $supplier)
+                        <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                    @endforeach
+                </select>
+                <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0;">اختر المورد الذي يورد هذا الصنف — Ctrl+Click للاختيار المتعدد</p>
             </div>
 
             {{-- أسعار إضافية — صنف بأكثر من سعر (اختياري) --}}
@@ -123,6 +151,8 @@
                     <tr style="background:var(--surface-2,#f8fafc);">
                         <th style="padding:10px;text-align:right;">الكود</th>
                         <th style="padding:10px;text-align:right;">الصنف</th>
+                        <th style="padding:10px;text-align:right;">القسم</th>
+                        <th style="padding:10px;text-align:right;">المورد</th>
                         <th style="padding:10px;text-align:center;">الكمية</th>
                         <th style="padding:10px;text-align:center;">أعلى سعر</th>
                         <th style="padding:10px;text-align:center;">أسعار إضافية</th>
@@ -138,6 +168,14 @@
                             style="border-top:1px solid var(--border);">
                             <td style="padding:8px;direction:ltr;text-align:right;"><strong>{{ $item['code'] ?? '' }}</strong></td>
                             <td style="padding:8px;">{{ $item['name'] ?? '' }}</td>
+                            <td style="padding:8px;color:var(--text-muted);">{{ $item['category'] ?? '—' }}</td>
+                            <td style="padding:8px;color:var(--text-muted);font-size:12px;">
+                                @if (!empty($item['suppliers']))
+                                    {{ collect($item['suppliers'])->pluck('name')->join('، ') }}
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td style="padding:8px;text-align:center;">{{ (int) ($item['qty'] ?? 0) }}</td>
                             <td style="padding:10px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['highest_price'] ?? $item['price'] ?? 0), 2) }}</td>
                             <td style="padding:8px;text-align:center;color:var(--text-muted);">
@@ -157,7 +195,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>
+                        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -180,6 +218,47 @@
         </div>
     </div>
 </div>
+
+<div class="catalog-modal-overlay" id="stockCategoriesModal" role="dialog" aria-modal="true">
+    <div class="catalog-modal" style="max-width:720px;" onclick="event.stopPropagation()">
+        <div class="catalog-modal-header">
+            <div><h3>🏷️ إدارة أقسام الأصناف</h3></div>
+            <button type="button" class="catalog-modal-close" id="closeStockCategoriesModal">&times;</button>
+        </div>
+        <div class="catalog-modal-body">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <p style="margin:0;font-size:13px;color:var(--text-muted);">حدّد حقول كل قسم (نص، رقم، قائمة، …) — تظهر تلقائياً عند إضافة صنف.</p>
+                <button type="button" class="btn-action primary" id="btnAddStockCategory">➕ قسم جديد</button>
+            </div>
+            <div id="stockCategoriesList"></div>
+            <div id="stockCategoryEditPanel" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                <input type="hidden" id="editStockCategoryId">
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:12px;font-weight:700;">اسم القسم</label>
+                    <input type="text" id="editStockCategoryName" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <strong style="font-size:13px;">حقول القسم</strong>
+                    <button type="button" class="btn-action" id="btnAddCategoryField">+ حقل</button>
+                </div>
+                <div id="stockCategoryFieldsBuilder"></div>
+                <div id="stockCategoryEditError" style="display:none;margin-top:10px;padding:8px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:12px;"></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                    <button type="button" class="btn-action" id="btnCancelStockCategory">إلغاء</button>
+                    <button type="button" class="btn-action success" id="btnSaveStockCategory">💾 حفظ القسم</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #stockCategoriesModal.catalog-modal-overlay {
+        position: fixed; inset: 0; background: rgba(15,23,42,0.45);
+        display: none; align-items: center; justify-content: center; z-index: 1300; padding: 16px;
+    }
+    #stockCategoriesModal.catalog-modal-overlay.open { display: flex; }
+</style>
 
 <style>
     #section-catalog .catalog-table-hint {
@@ -301,6 +380,18 @@
         font-size: 15px;
         color: var(--primary-dark, #5b21b6);
     }
+    #catalogViewModal .catalog-sales-stats-table .stat-zero {
+        color: var(--text-muted, #94a3b8);
+    }
+    #catalogViewModal .catalog-sales-stats-table .stat-hit {
+        font-weight: 800;
+        color: #15803d;
+    }
+    #catalogViewModal .catalog-sales-hint {
+        font-size: 12px;
+        color: var(--text-muted, #64748b);
+        margin: 0 0 10px;
+    }
 </style>
 
 <script>
@@ -360,7 +451,31 @@
         document.getElementById('slimEditCode').value = v.code || '';
         document.getElementById('slimExtraPrices').innerHTML = '';
         (v.prices || []).forEach(function (p) { window.addSlimPriceRow(p.amount); });
+        var supplierSelect = document.getElementById('slimSupplierIds');
+        if (supplierSelect) {
+            var ids = (v.suppliers || []).map(function (s) { return String(s.id); });
+            Array.prototype.forEach.call(supplierSelect.options, function (opt) {
+                opt.selected = ids.indexOf(opt.value) !== -1;
+            });
+        }
         document.getElementById('slimCatalogError').style.display = 'none';
+        if (window.CatalogSections) {
+            window.CatalogSections.prepareItemForm(v);
+        }
+    }
+
+    function collectSupplierIds() {
+        var select = document.getElementById('slimSupplierIds');
+        if (!select) return [];
+        return Array.prototype.filter.call(select.options, function (o) { return o.selected; })
+            .map(function (o) { return parseInt(o.value, 10); })
+            .filter(function (id) { return !isNaN(id); });
+    }
+
+    function supplierNamesLabel(item) {
+        var suppliers = item.suppliers || [];
+        if (!suppliers.length) return '—';
+        return suppliers.map(function (s) { return s.name; }).join('، ');
     }
 
     function collectExtraPrices() {
@@ -412,6 +527,36 @@
         return '<div class="catalog-detail-box"><div class="dl">' + label + '</div><div class="dv">' + value + '</div></div>';
     }
 
+    function renderCatalogSalesStats(containerId, stats) {
+        var el = document.getElementById(containerId);
+        if (!el) return;
+
+        var rows = stats.rows || [];
+        if (!rows.length) {
+            el.innerHTML = '<p style="color:var(--text-muted);text-align:center;">لا توجد أسعار أو مبيعات مسجّلة</p>';
+            return;
+        }
+
+        var html = '<p class="catalog-sales-hint">' + (stats.period_label || '') + ' — إجمالي: '
+            + (stats.total_sale_times || 0) + ' حالة · ' + (stats.total_sold_qty || 0) + ' قطعة</p>'
+            + '<table class="catalog-prices-table catalog-sales-stats-table"><thead><tr>'
+            + '<th>السعر (ج.م)</th><th>مسجّل</th><th>مرات البيع</th><th>الكمية المباعة</th>'
+            + '</tr></thead><tbody>'
+            + rows.map(function (row) {
+                var timesClass = row.sale_times > 0 ? 'stat-hit' : 'stat-zero';
+                var qtyClass = row.sold_qty > 0 ? 'stat-hit' : 'stat-zero';
+                return '<tr>'
+                    + '<td class="price-val">' + formatCatalogPrice(row.unit_price) + '</td>'
+                    + '<td>' + (row.registered ? '✓' : '—') + '</td>'
+                    + '<td class="' + timesClass + '">' + row.sale_times + '</td>'
+                    + '<td class="' + qtyClass + '">' + row.sold_qty + '</td>'
+                    + '</tr>';
+            }).join('')
+            + '</tbody></table>';
+
+        el.innerHTML = html;
+    }
+
     window.viewSlimCatalog = function (btn) {
         var row = btn.closest('tr');
         var item = JSON.parse(row.getAttribute('data-item'));
@@ -435,13 +580,37 @@
             + detailBox('كود الصنف', item.code || '—')
             + detailBox('الباركود', item.barcode || '—')
             + detailBox('الكمية', String(parseInt(item.qty, 10) || 0))
+            + detailBox('القسم', item.category || '—')
+            + detailBox('المورد', supplierNamesLabel(item))
+            + detailBox('خصائص القسم', window.CatalogSections ? window.CatalogSections.formatAttributesSummary(item) : '—')
             + detailBox('أعلى سعر', '<span class="catalog-price-cell">' + formatCatalogPrice(itemHighestPrice(item)) + '</span>')
             + '</div>'
             + '<h4 style="font-size:14px;font-weight:800;margin:0 0 10px;color:var(--secondary);">💰 جميع الأسعار</h4>'
-            + pricesHtml;
+            + pricesHtml
+            + '<h4 style="font-size:14px;font-weight:800;margin:16px 0 10px;color:var(--secondary);">📈 البيع حسب مستوى السعر</h4>'
+            + '<div id="catalogViewSalesStats"><p style="color:var(--text-muted);text-align:center;">جاري التحميل...</p></div>';
 
         modal.classList.add('open');
         modal.removeAttribute('hidden');
+
+        var params = new URLSearchParams();
+        var fromEl = document.getElementById('catalogDateFrom');
+        var toEl = document.getElementById('catalogDateTo');
+        if (fromEl && fromEl.value) params.set('from', fromEl.value);
+        if (toEl && toEl.value) params.set('to', toEl.value);
+
+        var statsUrl = @json(url('/admin/catalog')) + '/' + item.id + '/sales-stats' + (params.toString() ? ('?' + params.toString()) : '');
+
+        fetch(statsUrl, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        })
+            .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error('fetch failed')); })
+            .then(function (stats) { renderCatalogSalesStats('catalogViewSalesStats', stats); })
+            .catch(function () {
+                var el = document.getElementById('catalogViewSalesStats');
+                if (el) el.innerHTML = '<p style="color:#dc2626;text-align:center;">تعذّر تحميل إحصائيات البيع</p>';
+            });
     };
 
     function closeCatalogViewModal() {
@@ -462,8 +631,24 @@
         var err = document.getElementById('slimCatalogError');
         var name = document.getElementById('slimName').value.trim();
 
+        if (window.CatalogSections) {
+            var catErr = window.CatalogSections.validateBeforeSave();
+            if (catErr) {
+                err.textContent = catErr;
+                err.style.display = 'block';
+                return;
+            }
+        }
+
         if (!name) {
             err.textContent = 'يرجى إدخال اسم الصنف.';
+            err.style.display = 'block';
+            return;
+        }
+
+        var supplierIds = collectSupplierIds();
+        if (!supplierIds.length) {
+            err.textContent = 'يرجى اختيار مورد واحد على الأقل لهذا الصنف.';
             err.style.display = 'block';
             return;
         }
@@ -473,6 +658,9 @@
             qty: parseInt(document.getElementById('slimQty').value || '0', 10),
             price: parseFloat(document.getElementById('slimPrice').value || '0'),
             prices: collectExtraPrices(),
+            category_id: parseInt(document.getElementById('slimCategoryId').value || '0', 10) || null,
+            attributes: window.CatalogSections ? window.CatalogSections.collectAttributes() : {},
+            supplier_ids: supplierIds,
         };
 
         if (!id) {
@@ -541,6 +729,8 @@
         return '<tr class="catalog-slim-row" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             '<td style="padding:10px;direction:ltr;text-align:right;"><strong>' + (item.code || '') + '</strong></td>' +
             '<td style="padding:10px;">' + (item.name || '') + '</td>' +
+            '<td style="padding:10px;color:var(--text-muted);">' + (item.category || '—') + '</td>' +
+            '<td style="padding:10px;color:var(--text-muted);font-size:12px;">' + supplierNamesLabel(item) + '</td>' +
             '<td style="padding:10px;text-align:center;">' + (parseInt(item.qty, 10) || 0) + '</td>' +
             '<td style="padding:10px;text-align:center;" class="catalog-price-cell">' + formatCatalogPrice(highest) + '</td>' +
             '<td style="padding:10px;text-align:center;color:var(--text-muted);">' + extra + '</td>' +
@@ -561,7 +751,7 @@
         if (!tbody) return;
 
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>';
         } else {
             tbody.innerHTML = list.map(catalogRowHtml).join('');
         }
@@ -655,4 +845,15 @@
         });
     }
 })();
+</script>
+<script>
+window.__STOCK_CATEGORIES = @json($categories->values());
+</script>
+<script src="{{ asset('assets/js/pages/catalog-sections.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.CatalogSections && window.__STOCK_CATEGORIES) {
+        window.CatalogSections.init(window.__STOCK_CATEGORIES);
+    }
+});
 </script>

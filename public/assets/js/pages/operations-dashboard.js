@@ -45,7 +45,7 @@
         '<div class="text-xs text-slate-400">' + esc(c.case_no) + '</div></td>' +
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg ' +
         (isMil ? 'bg-indigo-100 text-indigo-700">🪖 عسكري' : 'bg-emerald-100 text-emerald-700">🌐 مدني') + '</span></td>' +
-      '<td class="px-4 py-3 text-slate-600">' + esc(c.company_name || '—') + '</td>' +
+      return '<td class="px-4 py-3 text-slate-600">' + (window.EntityBadges ? EntityBadges.renderHtml(c) : esc(c.company_name || '—')) + '</td>' +
       '<td class="px-4 py-3 text-center">' + renderItemsCell(c) + '</td>' +
       '<td class="px-4 py-3">' + renderActionCell(c) + '</td></tr>';
   }

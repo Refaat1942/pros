@@ -39,7 +39,7 @@
           <table data-paginate="10">
             <thead>
               <tr>
-                <th>رمز QR</th>
+                <th>سريال عرض السعر</th>
                 <th>المريض</th>
                 <th>جهة التعاقد</th>
                 <th>التاريخ</th>

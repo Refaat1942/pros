@@ -14,6 +14,11 @@ var pricingQueue = [];
 function normalizeInventoryItem(raw) {
   var qty = parseInt(raw.qty, 10) || 0;
   var reserved = parseInt(raw.reserved, 10) || 0;
+  var available = raw.available != null ? (parseInt(raw.available, 10) || 0) : (qty - reserved);
+  var backorder = raw.backorder != null ? (parseInt(raw.backorder, 10) || 0) : Math.max(0, reserved - qty);
+  var status = raw.status === 'backorder' || backorder > 0
+    ? 'backorder'
+    : (raw.status === 'low' ? 'low' : 'ok');
   return {
     id: raw.id,
     code: raw.code || '',
@@ -22,8 +27,9 @@ function normalizeInventoryItem(raw) {
     category: raw.category || '—',
     qty: qty,
     reserved: reserved,
-    available: raw.available != null ? (parseInt(raw.available, 10) || 0) : Math.max(0, qty - reserved),
-    status: raw.status === 'low' ? 'low' : 'ok',
+    available: available,
+    backorder: backorder,
+    status: status,
     lastMovedAt: raw.last_moved_at || raw.lastMovedAt || null
   };
 }
@@ -94,7 +100,7 @@ var sectionTitles = {
   orders: 'طلبات التوصيف — إرسال للتسعير',
   spec: 'معاينة التوصيف (بدون صرف)',
   pricing: 'طلبات مرسلة للتسعير',
-  bom: 'قوائم صرف المواد — خام / تحت التشغيل / تام',
+  bom: 'قوائم صرف المواد — مخزن خام / مخزن إنتاج / مخزن تسليم',
   returns: 'إذن ارتجاع — ورشة → مخزن',
   operations: 'مكتب التشغيل — أوامر الصرف والإنتاج',
   adjustments: 'المعدلات — تجارب التركيب والمقاسات'
@@ -209,9 +215,10 @@ function updateInventoryAnalyticsCards() {
   var health = computeInventoryHealth();
   var okCount = inventory.filter(function (i) { return i.status === 'ok'; }).length;
   var lowCount = inventory.filter(function (i) { return i.status === 'low'; }).length;
+  var backorderCount = inventory.filter(function (i) { return i.status === 'backorder'; }).length;
   values[0].textContent = health.score + '/100';
   values[1].textContent = String(okCount);
-  values[2].textContent = String(lowCount);
+  values[2].textContent = String(backorderCount);
   values[3].textContent = String(health.totalReserved);
 }
 
@@ -225,8 +232,14 @@ function renderInventory() {
 
   document.getElementById('inventoryTable').innerHTML = filtered.length ? filtered.map(function (item, idx) {
     var isLow = item.status === 'low';
+    var isBackorder = item.status === 'backorder';
     var reserved = item.reserved || 0;
-    var available = item.available != null ? item.available : Math.max(0, item.qty - reserved);
+    var available = item.available != null ? item.available : (item.qty - reserved);
+    var availClass = isBackorder ? 'backorder' : item.status;
+    var statusLabel = isBackorder
+      ? 'طلب توريد (' + (item.backorder || Math.max(0, reserved - item.qty)) + ')'
+      : (isLow ? 'كمية منخفضة' : 'متوفر');
+    var statusClass = isBackorder ? 'backorder' : (isLow ? 'low' : 'available');
     return '<tr>' +
       '<td style="color:var(--text-muted);font-weight:600;font-size:12px;width:40px;">' + (idx + 1) + '</td>' +
       '<td><div class="item-cell">' +
@@ -234,13 +247,13 @@ function renderInventory() {
       '</div></td>' +
       '<td><span class="spec-tag">' + item.spec + '</span></td>' +
       '<td class="qty-cell">' +
-      '<div class="qty-badge ' + item.status + '">' + available + '</div>' +
+      '<div class="qty-badge ' + availClass + '">' + available + '</div>' +
       '</td>' +
       '<td class="qty-cell"><span class="qty-reserved">' + reserved + '</span></td>' +
       '<td class="status-cell">' +
-      '<span class="stock-status ' + (isLow ? 'low' : 'available') + '">' +
+      '<span class="stock-status ' + statusClass + '">' +
       '<span class="status-dot"></span>' +
-      (isLow ? 'كمية منخفضة' : 'متوفر') +
+      statusLabel +
       '</span>' +
       '</td>' +
       '</tr>';
@@ -726,7 +739,7 @@ function confirmIssue() {
   updateInventoryAnalyticsCards();
   renderBomSection();
   if (typeof renderOperations === 'function') renderOperations();
-  showToast('✅ تم صرف الخامات بالباركود ونقل BOM لتحت التشغيل');
+  showToast('✅ تم صرف المواد — نقل من مخزن خام إلى مخزن إنتاج');
 }
 
 (function bindBarcode() {
@@ -1064,7 +1077,7 @@ function openReturnCreateModal() {
   var boms = InventoryReturns.getEligibleBoms();
   var sel = document.getElementById('returnBomSelect');
   if (!boms.length) {
-    showToast('⚠️ لا توجد BOM في «تحت التشغيل»');
+    showToast('⚠️ لا توجد BOM في «مخزن إنتاج»');
     return;
   }
   sel.innerHTML = boms.map(function (b) {
