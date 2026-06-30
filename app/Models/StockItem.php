@@ -27,6 +27,7 @@ class StockItem extends Model
         'barcode',
         'qty',
         'reserved',
+        'min_qty',
         'price',
         'expiry_date',
         'wac',
@@ -38,6 +39,7 @@ class StockItem extends Model
     protected $casts = [
         'qty'           => 'integer',
         'reserved'      => 'integer',
+        'min_qty'       => 'integer',
         'price'         => 'decimal:2',
         'expiry_date'   => 'date',
         'wac'           => 'decimal:4',
@@ -84,5 +86,31 @@ class StockItem extends Model
     public function isBackorder(): bool
     {
         return $this->backorderQty() > 0;
+    }
+
+    /** حد إعادة التوريد — إن لم يُحدَّد للصنف يُستخدم الافتراضي العام. */
+    public function reorderThreshold(): int
+    {
+        $min = (int) ($this->min_qty ?? 0);
+
+        return $min > 0 ? $min : self::LOW_QTY_THRESHOLD;
+    }
+
+    public function isBelowReorderPoint(?int $availableQty = null): bool
+    {
+        $available = $availableQty ?? $this->availableQty();
+
+        return $available <= $this->reorderThreshold();
+    }
+
+    public function recalculateAndSaveStatus(): void
+    {
+        $status = $this->isBelowReorderPoint()
+            ? self::STATUS_LOW
+            : self::STATUS_OK;
+
+        if ($this->status !== $status) {
+            $this->update(['status' => $status]);
+        }
     }
 }

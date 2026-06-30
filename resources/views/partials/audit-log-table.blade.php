@@ -23,7 +23,6 @@
                        autocomplete="off"
                        inputmode="numeric">
                 <button type="button" class="date-filter-picker" data-target="auditFilterDateFrom" title="اختر من التقويم" aria-label="اختر من التقويم">📅</button>
-                <input type="date" class="date-filter-native" tabindex="-1" aria-hidden="true">
             </span>
         </label>
         <label class="date-filter">
@@ -41,7 +40,6 @@
                        autocomplete="off"
                        inputmode="numeric">
                 <button type="button" class="date-filter-picker" data-target="auditFilterDateTo" title="اختر من التقويم" aria-label="اختر من التقويم">📅</button>
-                <input type="date" class="date-filter-native" tabindex="-1" aria-hidden="true">
             </span>
         </label>
     </div>
@@ -89,26 +87,3 @@
     </div>
 @endif
 
-<script>
-(function () {
-    document.querySelectorAll('.date-filter-picker').forEach(function (btn) {
-        var wrap = btn.closest('.date-filter-field');
-        var text = document.getElementById(btn.getAttribute('data-target'));
-        var native = wrap ? wrap.querySelector('.date-filter-native') : null;
-        if (!text || !native) return;
-
-        if (text.value) native.value = text.value;
-
-        btn.addEventListener('click', function () {
-            if (text.value) native.value = text.value;
-            if (typeof native.showPicker === 'function') native.showPicker();
-            else native.click();
-        });
-
-        native.addEventListener('change', function () {
-            text.value = native.value;
-            text.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-    });
-})();
-</script>

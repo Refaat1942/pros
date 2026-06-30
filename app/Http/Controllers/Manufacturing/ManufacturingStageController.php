@@ -52,7 +52,7 @@ class ManufacturingStageController extends Controller
     }
 
     /**
-     * تسليم الطرف وإغلاق الحالة — من مكتب التشغيل.
+     * تسليم الطرف وإغلاق الحالة — من المخزون.
      */
     public function deliver(CaseRecord $case): JsonResponse
     {

@@ -59,7 +59,7 @@
                     <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
                 @endforeach
             </select>
-            <button type="button" class="btn-action" id="btnManageStockCategories">🏷️ إدارة الأقسام</button>
+            <a href="{{ route('admin.stock-categories') }}" class="btn-action">🏷️ إدارة الأقسام</a>
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
             <a class="btn-action" href="{{ $exportUrl }}">📊 تصدير Excel</a>
@@ -166,17 +166,12 @@
                     <input type="text" id="slimName" placeholder="مثال: ركبة هيدروليكية" class="catalog-form-input">
                 </div>
                 <div>
-                    <label class="catalog-form-label">القسم *</label>
-                    <select id="slimCategoryId" class="catalog-form-input">
-                        <option value="">— اختر القسم —</option>
-                        @foreach ($categories as $cat)
-                            <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
                     <label class="catalog-form-label">الكمية</label>
                     <input type="number" id="slimQty" min="0" value="0" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">الحد الأدنى للصنف</label>
+                    <input type="number" id="slimMinQty" min="0" value="0" class="catalog-form-input" placeholder="مثال: 10">
                 </div>
                 <div>
                     <label class="catalog-form-label">السعر الأساسي</label>
@@ -184,18 +179,33 @@
                 </div>
             </div>
 
-            <div id="slimCategoryFields" class="catalog-form-grid catalog-form-grid--attrs"></div>
-
             <div class="catalog-supplier-picker">
                 <label class="catalog-form-label">المورد *</label>
-                <input type="search" id="slimSupplierSearch" class="catalog-form-input" placeholder="🔍 ابحث عن المورد..." autocomplete="off">
-                <select id="slimSupplierId" size="6" class="catalog-supplier-select" aria-label="المورد">
-                    <option value="">— اختر المورد —</option>
-                    @foreach ($catalogSuppliers as $supplier)
-                        <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                <div class="catalog-combobox" id="slimSupplierCombobox">
+                    <input type="hidden" id="slimSupplierId" value="">
+                    <button type="button" class="catalog-combobox__toggle" id="slimSupplierToggle" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="catalog-combobox__value is-placeholder" id="slimSupplierLabel">— اختر المورد —</span>
+                        <span class="catalog-combobox__arrow" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="catalog-combobox__dropdown" id="slimSupplierDropdown" hidden>
+                        <div class="catalog-combobox__search-wrap">
+                            <input type="search" id="slimSupplierSearch" class="catalog-combobox__search" placeholder="ابحث عن المورد..." autocomplete="off">
+                        </div>
+                        <ul class="catalog-combobox__list" id="slimSupplierList" role="listbox"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="catalog-category-section">
+                <label class="catalog-form-label" for="slimCategoryId">القسم *</label>
+                <select id="slimCategoryId" class="catalog-form-input">
+                    <option value="">— اختر القسم —</option>
+                    @foreach ($categories as $cat)
+                        <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
                     @endforeach
                 </select>
-                <p class="catalog-form-hint">مورد واحد فقط لكل صنف — ابحث بالاسم ثم اختر من القائمة.</p>
+                <p id="slimCategoryFieldsHeading" class="catalog-attrs-heading" style="display:none;margin:14px 0 8px;font-size:13px;font-weight:800;color:var(--secondary);"></p>
+                <div id="slimCategoryFields" class="catalog-form-grid catalog-form-grid--attrs"></div>
             </div>
 
             <div class="catalog-extra-prices">
@@ -229,47 +239,6 @@
         </div>
     </div>
 </div>
-
-<div class="catalog-modal-overlay" id="stockCategoriesModal" role="dialog" aria-modal="true">
-    <div class="catalog-modal" style="max-width:720px;" onclick="event.stopPropagation()">
-        <div class="catalog-modal-header">
-            <div><h3>🏷️ إدارة أقسام الأصناف</h3></div>
-            <button type="button" class="catalog-modal-close" id="closeStockCategoriesModal">&times;</button>
-        </div>
-        <div class="catalog-modal-body">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <p style="margin:0;font-size:13px;color:var(--text-muted);">حدّد حقول كل قسم (نص، رقم، قائمة، …) — تظهر تلقائياً عند إضافة صنف.</p>
-                <button type="button" class="btn-action primary" id="btnAddStockCategory">➕ قسم جديد</button>
-            </div>
-            <div id="stockCategoriesList"></div>
-            <div id="stockCategoryEditPanel" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                <input type="hidden" id="editStockCategoryId">
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:12px;font-weight:700;">اسم القسم</label>
-                    <input type="text" id="editStockCategoryName" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                    <strong style="font-size:13px;">حقول القسم</strong>
-                    <button type="button" class="btn-action" id="btnAddCategoryField">+ حقل</button>
-                </div>
-                <div id="stockCategoryFieldsBuilder"></div>
-                <div id="stockCategoryEditError" style="display:none;margin-top:10px;padding:8px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:12px;"></div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-                    <button type="button" class="btn-action" id="btnCancelStockCategory">إلغاء</button>
-                    <button type="button" class="btn-action success" id="btnSaveStockCategory">💾 حفظ القسم</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    #stockCategoriesModal.catalog-modal-overlay {
-        position: fixed; inset: 0; background: rgba(15,23,42,0.45);
-        display: none; align-items: center; justify-content: center; z-index: 1300; padding: 16px;
-    }
-    #stockCategoriesModal.catalog-modal-overlay.open { display: flex; }
-</style>
 
 <style>
     #section-catalog .catalog-table-hint {
@@ -377,16 +346,111 @@
         color: var(--text-muted, #64748b);
         margin: 6px 0 0;
     }
-    .catalog-supplier-picker {
+    .catalog-supplier-picker,
+    .catalog-category-section {
         margin-top: 14px;
     }
-    .catalog-supplier-select {
+    .catalog-combobox {
+        position: relative;
+    }
+    .catalog-combobox__toggle {
         width: 100%;
-        margin-top: 8px;
-        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 9px 12px;
         border: 1px solid var(--border, #e2e8f0);
         border-radius: 8px;
+        background: #fff;
         font-family: inherit;
+        font-size: 14px;
+        text-align: right;
+        cursor: pointer;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .catalog-combobox__toggle:hover {
+        border-color: #cbd5e1;
+    }
+    .catalog-combobox.is-open .catalog-combobox__toggle,
+    .catalog-combobox__toggle:focus {
+        outline: none;
+        border-color: var(--primary, #2563eb);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    .catalog-combobox__value {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--secondary, #334155);
+    }
+    .catalog-combobox__value.is-placeholder {
+        color: var(--text-muted, #64748b);
+    }
+    .catalog-combobox__arrow {
+        color: var(--text-muted, #64748b);
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+    .catalog-combobox__dropdown {
+        position: absolute;
+        z-index: 50;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+        overflow: hidden;
+    }
+    .catalog-combobox__search-wrap {
+        padding: 8px;
+        border-bottom: 1px solid var(--border, #e2e8f0);
+        background: #f8fafc;
+    }
+    .catalog-combobox__search {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 13px;
+    }
+    .catalog-combobox__search:focus {
+        outline: none;
+        border-color: var(--primary, #2563eb);
+    }
+    .catalog-combobox__list {
+        list-style: none;
+        margin: 0;
+        padding: 4px 0;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+    .catalog-combobox__option {
+        display: block;
+        width: 100%;
+        padding: 9px 12px;
+        border: none;
+        background: transparent;
+        font-family: inherit;
+        font-size: 13px;
+        text-align: right;
+        cursor: pointer;
+        color: var(--secondary, #334155);
+    }
+    .catalog-combobox__option:hover,
+    .catalog-combobox__option.is-selected {
+        background: #eff6ff;
+        color: var(--primary, #2563eb);
+    }
+    .catalog-combobox__empty {
+        padding: 12px;
+        font-size: 13px;
+        color: var(--text-muted, #64748b);
+        text-align: center;
     }
     .catalog-extra-prices {
         margin-top: 14px;
@@ -408,6 +472,31 @@
         border-radius: 8px;
         color: #dc2626;
         font-size: 12px;
+    }
+    .slim-attr-color {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 10px;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px;
+        background: #f8fafc;
+    }
+    .slim-attr-color-input {
+        width: 56px !important;
+        height: 40px;
+        padding: 2px !important;
+        border: 1px solid var(--border, #e2e8f0) !important;
+        border-radius: 8px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .slim-attr-color-value {
+        font-size: 13px;
+        font-weight: 600;
+        font-family: ui-monospace, monospace;
+        direction: ltr;
+        color: var(--secondary, #334155);
     }
     #catalogViewModal .catalog-modal {
         background: #fff;
@@ -535,49 +624,124 @@
         if (amount != null) row.querySelector('.slim-price-amount').value = amount;
     };
 
+    var supplierOptions = @json($catalogSuppliers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values());
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    function setSupplierValue(id, name) {
+        var hidden = document.getElementById('slimSupplierId');
+        var label = document.getElementById('slimSupplierLabel');
+        if (hidden) hidden.value = id ? String(id) : '';
+        if (label) {
+            label.textContent = name || '— اختر المورد —';
+            label.classList.toggle('is-placeholder', !name);
+        }
+        closeSupplierDropdown();
+    }
+
+    function renderSupplierList(filter) {
+        var list = document.getElementById('slimSupplierList');
+        if (!list) return;
+        var term = (filter || '').toLowerCase().trim();
+        var selectedId = document.getElementById('slimSupplierId')?.value || '';
+        var matches = supplierOptions.filter(function (s) {
+            return !term || String(s.name).toLowerCase().indexOf(term) !== -1;
+        });
+        if (!matches.length) {
+            list.innerHTML = '<li class="catalog-combobox__empty">لا توجد نتائج</li>';
+            return;
+        }
+        list.innerHTML = matches.map(function (s) {
+            var selected = String(s.id) === selectedId ? ' is-selected' : '';
+            return '<li><button type="button" class="catalog-combobox__option' + selected + '" data-id="' + s.id + '">' + escapeHtml(s.name) + '</button></li>';
+        }).join('');
+    }
+
+    function openSupplierDropdown() {
+        var combobox = document.getElementById('slimSupplierCombobox');
+        var dropdown = document.getElementById('slimSupplierDropdown');
+        var toggle = document.getElementById('slimSupplierToggle');
+        var search = document.getElementById('slimSupplierSearch');
+        if (!dropdown || !toggle) return;
+        dropdown.hidden = false;
+        combobox?.classList.add('is-open');
+        toggle.setAttribute('aria-expanded', 'true');
+        if (search) {
+            search.value = '';
+            renderSupplierList('');
+            search.focus();
+        }
+    }
+
+    function closeSupplierDropdown() {
+        var combobox = document.getElementById('slimSupplierCombobox');
+        var dropdown = document.getElementById('slimSupplierDropdown');
+        var toggle = document.getElementById('slimSupplierToggle');
+        if (dropdown) dropdown.hidden = true;
+        combobox?.classList.remove('is-open');
+        toggle?.setAttribute('aria-expanded', 'false');
+    }
+
+    function filterSupplierOptions() {
+        var search = document.getElementById('slimSupplierSearch');
+        renderSupplierList(search ? search.value : '');
+    }
+
+    document.getElementById('slimSupplierToggle')?.addEventListener('click', function () {
+        var dropdown = document.getElementById('slimSupplierDropdown');
+        if (dropdown && !dropdown.hidden) {
+            closeSupplierDropdown();
+        } else {
+            openSupplierDropdown();
+        }
+    });
+
+    document.getElementById('slimSupplierSearch')?.addEventListener('input', filterSupplierOptions);
+
+    document.getElementById('slimSupplierList')?.addEventListener('click', function (e) {
+        var btn = e.target.closest('.catalog-combobox__option');
+        if (!btn) return;
+        var id = btn.getAttribute('data-id');
+        var match = supplierOptions.find(function (s) { return String(s.id) === String(id); });
+        setSupplierValue(id, match ? match.name : '');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#slimSupplierCombobox')) {
+            closeSupplierDropdown();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeSupplierDropdown();
+    });
+
     function setForm(v) {
         document.getElementById('slimCode').value = v.code || '';
         document.getElementById('slimName').value = v.name || '';
         document.getElementById('slimQty').value = v.qty != null ? v.qty : 0;
+        document.getElementById('slimMinQty').value = v.min_qty != null ? v.min_qty : 0;
         document.getElementById('slimPrice').value = v.price != null ? v.price : 0;
         document.getElementById('slimEditId').value = v.id || '';
         document.getElementById('slimEditCode').value = v.code || '';
         document.getElementById('slimExtraPrices').innerHTML = '';
         (v.prices || []).forEach(function (p) { window.addSlimPriceRow(p.amount); });
-        var supplierSelect = document.getElementById('slimSupplierId');
-        if (supplierSelect) {
-            var first = (v.suppliers || [])[0];
-            supplierSelect.value = first ? String(first.id) : '';
-        }
-        var supplierSearch = document.getElementById('slimSupplierSearch');
-        if (supplierSearch) supplierSearch.value = '';
-        filterSupplierOptions();
+        var first = (v.suppliers || [])[0];
+        setSupplierValue(first ? first.id : '', first ? first.name : '');
         document.getElementById('slimCatalogError').style.display = 'none';
         if (window.CatalogSections) {
             window.CatalogSections.prepareItemForm(v);
         }
     }
 
-    function filterSupplierOptions() {
-        var term = (document.getElementById('slimSupplierSearch')?.value || '').toLowerCase().trim();
-        var select = document.getElementById('slimSupplierId');
-        if (!select) return;
-
-        Array.prototype.forEach.call(select.options, function (opt) {
-            if (!opt.value) {
-                opt.hidden = false;
-                return;
-            }
-            opt.hidden = !!(term && opt.textContent.toLowerCase().indexOf(term) === -1);
-        });
-    }
-
-    document.getElementById('slimSupplierSearch')?.addEventListener('input', filterSupplierOptions);
-
     function collectSupplierIds() {
-        var select = document.getElementById('slimSupplierId');
-        if (!select || !select.value) return [];
-        var id = parseInt(select.value, 10);
+        var hidden = document.getElementById('slimSupplierId');
+        if (!hidden || !hidden.value) return [];
+        var id = parseInt(hidden.value, 10);
         return !isNaN(id) && id > 0 ? [id] : [];
     }
 
@@ -608,6 +772,7 @@
     }
 
     function closeCatalogFormModal() {
+        closeSupplierDropdown();
         var modal = document.getElementById('catalogFormModal');
         if (!modal) return;
         modal.classList.remove('open');
@@ -705,6 +870,7 @@
             + detailBox('كود الصنف', item.code || '—')
             + detailBox('الباركود', item.barcode || '—')
             + detailBox('الكمية', String(parseInt(item.qty, 10) || 0))
+            + detailBox('الحد الأدنى', String(parseInt(item.min_qty, 10) || 0))
             + detailBox('القسم', item.category || '—')
             + detailBox('المورد', supplierNamesLabel(item))
             + detailBox('خصائص القسم', window.CatalogSections ? window.CatalogSections.formatAttributesSummary(item) : '—')
@@ -792,6 +958,7 @@
         var payload = {
             name: name,
             qty: parseInt(document.getElementById('slimQty').value || '0', 10),
+            min_qty: parseInt(document.getElementById('slimMinQty').value || '0', 10),
             price: parseFloat(document.getElementById('slimPrice').value || '0'),
             prices: collectExtraPrices(),
             category_id: parseInt(document.getElementById('slimCategoryId').value || '0', 10) || null,

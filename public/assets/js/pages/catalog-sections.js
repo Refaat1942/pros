@@ -3,6 +3,8 @@
  */
 window.CatalogSections = (function () {
   var categories = [];
+  var pageMode = false;
+  var activeCategoryId = null;
   var fieldTypes = [
     { value: 'text', label: 'نص' },
     { value: 'number', label: 'رقم' },
@@ -18,15 +20,31 @@ window.CatalogSections = (function () {
     return m ? m.getAttribute('content') : '';
   }
 
-  function init(list) {
+  function init(list, options) {
+    options = options || {};
+    pageMode = !!options.pageMode || !!document.getElementById('section-stock-categories');
     categories = Array.isArray(list) ? list : [];
-    bindSectionsModal();
+    if (pageMode) {
+      bindPageEditor();
+    } else {
+      bindSectionsModal();
+    }
     renderCategoryFilter();
     var sel = document.getElementById('slimCategoryId');
     if (sel) {
       sel.addEventListener('change', function () {
         renderDynamicFields(sel.value, {});
       });
+    }
+    document.addEventListener('input', function (e) {
+      if (e.target && e.target.classList && e.target.classList.contains('slim-attr-color-input')) {
+        var wrap = e.target.closest('.slim-attr-color');
+        var val = wrap && wrap.querySelector('.slim-attr-color-value');
+        if (val) val.textContent = e.target.value;
+      }
+    });
+    if (pageMode) {
+      renderCategoriesList();
     }
   }
 
@@ -55,13 +73,18 @@ window.CatalogSections = (function () {
 
   function renderDynamicFields(categoryId, values) {
     var box = document.getElementById('slimCategoryFields');
+    var heading = document.getElementById('slimCategoryFieldsHeading');
     if (!box) return;
     values = values || {};
     var cat = getCategory(categoryId);
+    if (heading) {
+      heading.style.display = cat && cat.fields && cat.fields.length ? '' : 'none';
+      if (cat && cat.fields && cat.fields.length) {
+        heading.textContent = '📋 حقول القسم — ' + cat.name;
+      }
+    }
     if (!cat || !cat.fields || !cat.fields.length) {
-      box.innerHTML = cat
-        ? '<p style="font-size:12px;color:var(--text-muted);margin:0;">لا توجد حقول مخصّصة لهذا القسم.</p>'
-        : '<p style="font-size:12px;color:var(--text-muted);margin:0;">اختر قسماً لعرض الحقول الخاصة به.</p>';
+      box.innerHTML = '';
       return;
     }
 
@@ -107,7 +130,10 @@ window.CatalogSections = (function () {
             escapeHtml(o.label) + '</label>';
         }).join('') + '</div>';
       case 'color':
-        return '<input type="color" class="slim-attr-input" data-key="' + field.field_key + '" value="' + (value || '#000000') + '" style="width:64px;height:40px;padding:2px;border:1px solid var(--border);border-radius:8px;">';
+        return '<div class="slim-attr-color">' +
+          '<input type="color" class="slim-attr-input slim-attr-color-input" data-key="' + field.field_key + '" value="' + (value || cfg.default || '#2563eb') + '">' +
+          '<span class="slim-attr-color-value">' + (value || cfg.default || '#2563eb') + '</span>' +
+          '</div>';
       case 'range':
         return '<div><input type="range" class="slim-attr-input" data-key="' + field.field_key + '" value="' + (value != null ? value : (cfg.min || 0)) + '" min="' + (cfg.min != null ? cfg.min : 0) + '" max="' + (cfg.max != null ? cfg.max : 100) + '" step="' + (cfg.step || 1) + '" style="width:100%;"><span class="slim-range-val" style="font-size:12px;color:var(--text-muted);">' + (value != null ? value : (cfg.min || 0)) + '</span></div>';
       default:
@@ -166,6 +192,12 @@ window.CatalogSections = (function () {
     renderDynamicFields(item.category_id || '', map);
   }
 
+  function bindPageEditor() {
+    document.getElementById('btnAddStockCategory')?.addEventListener('click', function () { editCategory(null); });
+    document.getElementById('btnSaveStockCategory')?.addEventListener('click', saveCategory);
+    document.getElementById('btnCancelStockCategory')?.addEventListener('click', cancelCategoryEdit);
+  }
+
   function bindSectionsModal() {
     var openBtn = document.getElementById('btnManageStockCategories');
     var modal = document.getElementById('stockCategoriesModal');
@@ -198,11 +230,15 @@ window.CatalogSections = (function () {
     }
     box.innerHTML = categories.map(function (c) {
       var fieldsCount = (c.fields || []).length;
-      return '<div class="stock-cat-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">' +
-        '<div><strong>' + escapeHtml(c.name) + '</strong><div style="font-size:11px;color:var(--text-muted);">' + fieldsCount + ' حقل</div></div>' +
-        '<div style="display:flex;gap:6px;">' +
-        '<button type="button" class="btn-action" data-edit-cat="' + c.id + '">✏️</button>' +
-        '<button type="button" class="btn-action danger" data-del-cat="' + c.id + '" data-cat-name="' + escapeHtml(c.name) + '">🗑️</button>' +
+      var active = pageMode && String(c.id) === String(activeCategoryId) ? ' is-active' : '';
+      return '<div class="stock-cat-row' + active + '">' +
+        '<div class="stock-cat-row__info">' +
+        '<strong class="stock-cat-row__name">' + escapeHtml(c.name) + '</strong>' +
+        '<span class="stock-cat-row__meta">' + fieldsCount + ' حقل</span>' +
+        '</div>' +
+        '<div class="stock-cat-row__actions">' +
+        '<button type="button" class="btn-action stock-cat-row__edit" data-edit-cat="' + c.id + '" title="تعديل">✏️</button>' +
+        '<button type="button" class="btn-action danger stock-cat-row__del" data-del-cat="' + c.id + '" data-cat-name="' + escapeHtml(c.name) + '" title="حذف">🗑️</button>' +
         '</div></div>';
     }).join('');
 
@@ -219,59 +255,281 @@ window.CatalogSections = (function () {
   }
 
   function editCategory(cat) {
-    document.getElementById('stockCategoryEditPanel').style.display = 'block';
+    activeCategoryId = cat ? cat.id : null;
+    var panel = document.getElementById('stockCategoryEditPanel');
+    var placeholder = document.getElementById('stockCategoryEditPlaceholder');
+    var title = document.getElementById('stockCategoryEditTitle');
+    if (panel) panel.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+    if (title) title.textContent = cat ? ('تعديل — ' + cat.name) : 'قسم جديد';
     document.getElementById('editStockCategoryId').value = cat ? cat.id : '';
     document.getElementById('editStockCategoryName').value = cat ? cat.name : '';
     renderFieldBuilder(cat ? cat.fields : []);
+    if (pageMode) renderCategoriesList();
   }
 
   function cancelCategoryEdit() {
-    document.getElementById('stockCategoryEditPanel').style.display = 'none';
-    document.getElementById('stockCategoryEditError').style.display = 'none';
+    activeCategoryId = null;
+    var panel = document.getElementById('stockCategoryEditPanel');
+    var placeholder = document.getElementById('stockCategoryEditPlaceholder');
+    if (pageMode) {
+      if (panel) panel.style.display = 'none';
+      if (placeholder) placeholder.style.display = '';
+      renderCategoriesList();
+    } else {
+      if (panel) panel.style.display = 'none';
+    }
+    var err = document.getElementById('stockCategoryEditError');
+    if (err) err.style.display = 'none';
+  }
+
+  function renderOptionsListHtml(options) {
+    var items = (options || []).map(function (o) { return o.label || o.value; }).filter(Boolean);
+    if (!items.length) {
+      return '<p class="fb-options-empty">لا توجد خيارات بعد — أضف خياراً أدناه.</p>';
+    }
+    return items.map(function (label, idx) {
+      return optionRowHtml(label, idx + 1);
+    }).join('');
+  }
+
+  function optionRowHtml(label, num) {
+    num = num || 1;
+    return '<div class="fb-option-row">' +
+      '<span class="fb-option-num">' + num + '</span>' +
+      '<input type="text" class="fb-option-input sc-form-control" value="' + escapeHtml(label || '') + '" placeholder="مثال: قطعة">' +
+      '<button type="button" class="fb-option-remove btn-action danger" data-remove-option title="حذف الخيار">×</button>' +
+      '</div>';
+  }
+
+  function reindexOptionRows(listEl) {
+    if (!listEl) return;
+    var rows = listEl.querySelectorAll('.fb-option-row');
+    rows.forEach(function (row, idx) {
+      var num = row.querySelector('.fb-option-num');
+      if (num) num.textContent = String(idx + 1);
+    });
+    var empty = listEl.querySelector('.fb-options-empty');
+    if (!rows.length && !empty) {
+      listEl.innerHTML = '<p class="fb-options-empty">لا توجد خيارات بعد — أضف خياراً أدناه.</p>';
+    } else if (rows.length && empty) {
+      empty.remove();
+    }
+    updateOptionsCount(listEl.closest('.fb-panel--options'));
+  }
+
+  function updateOptionsCount(panel) {
+    if (!panel) return;
+    var countEl = panel.querySelector('.fb-options-count');
+    if (!countEl) return;
+    var n = panel.querySelectorAll('.fb-option-row').length;
+    countEl.textContent = n ? (n + ' ' + (n === 1 ? 'خيار' : 'خيارات')) : 'بدون خيارات';
+  }
+
+  function addOptionToRow(fieldRow, value) {
+    value = (value || '').trim();
+    if (!value) return false;
+    var listEl = fieldRow.querySelector('.fb-options-list');
+    if (!listEl) return false;
+    var empty = listEl.querySelector('.fb-options-empty');
+    if (empty) empty.remove();
+    var count = listEl.querySelectorAll('.fb-option-row').length;
+    listEl.insertAdjacentHTML('beforeend', optionRowHtml(value, count + 1));
+    updateOptionsCount(fieldRow.querySelector('.fb-panel--options'));
+    return true;
+  }
+
+  function bindOptionsPanel(fieldRow) {
+    var panel = fieldRow.querySelector('.fb-panel--options');
+    if (!panel || panel.dataset.bound) return;
+    panel.dataset.bound = '1';
+
+    panel.querySelector('[data-add-option]')?.addEventListener('click', function () {
+      var input = panel.querySelector('.fb-option-new');
+      if (!input) return;
+      if (addOptionToRow(fieldRow, input.value)) {
+        input.value = '';
+        input.focus();
+      }
+    });
+
+    panel.querySelector('.fb-option-new')?.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (addOptionToRow(fieldRow, e.target.value)) {
+        e.target.value = '';
+      }
+    });
+
+    panel.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-remove-option]');
+      if (!btn) return;
+      var listEl = panel.querySelector('.fb-options-list');
+      btn.closest('.fb-option-row')?.remove();
+      reindexOptionRows(listEl);
+      updateOptionsCount(panel);
+    });
+  }
+
+  function collectOptionsFromFieldRow(row) {
+    var listEl = row.querySelector('.fb-options-list');
+    if (!listEl) return [];
+    return Array.from(listEl.querySelectorAll('.fb-option-input'))
+      .map(function (input) { return input.value.trim(); })
+      .filter(Boolean)
+      .map(function (line) { return { value: line, label: line }; });
   }
 
   function renderFieldBuilder(fields) {
     var box = document.getElementById('stockCategoryFieldsBuilder');
     if (!box) return;
     box.innerHTML = (fields || []).map(function (f, idx) { return fieldBuilderRow(f, idx); }).join('') ||
-      '<p style="font-size:12px;color:var(--text-muted);">أضف حقولاً لهذا القسم.</p>';
-    box.querySelectorAll('[data-remove-field]').forEach(function (btn) {
-      btn.addEventListener('click', function () { btn.closest('.field-builder-row').remove(); });
+      '<p class="field-builder-empty">لا توجد حقول — اضغط «+ حقل جديد» لإضافة أول حقل.</p>';
+    box.querySelectorAll('.field-builder-row').forEach(function (row, idx) {
+      var indexEl = row.querySelector('.field-builder-row__index');
+      if (indexEl) indexEl.textContent = 'حقل ' + (idx + 1);
+      bindFieldBuilderRow(row);
     });
+  }
+
+  function bindFieldBuilderRow(row) {
+    if (!row) return;
+    row.querySelector('[data-remove-field]')?.addEventListener('click', function () {
+      row.remove();
+      var box = document.getElementById('stockCategoryFieldsBuilder');
+      if (box && !box.querySelector('.field-builder-row')) {
+        box.innerHTML = '<p class="field-builder-empty">لا توجد حقول — اضغط «+ حقل جديد» لإضافة أول حقل.</p>';
+      } else {
+        box.querySelectorAll('.field-builder-row').forEach(function (r, i) {
+          var indexEl = r.querySelector('.field-builder-row__index');
+          if (indexEl) indexEl.textContent = 'حقل ' + (i + 1);
+        });
+      }
+    });
+    row.querySelector('.fb-type')?.addEventListener('change', function () {
+      updateFieldBuilderRow(row);
+    });
+    row.querySelector('.fb-default-color')?.addEventListener('input', function (e) {
+      var swatch = row.querySelector('.fb-color-swatch');
+      var val = row.querySelector('.fb-color-value');
+      if (swatch) swatch.style.background = e.target.value;
+      if (val) val.textContent = e.target.value;
+    });
+    bindOptionsPanel(row);
+    updateFieldBuilderRow(row);
+  }
+
+  function fieldTypeLabel(type) {
+    for (var i = 0; i < fieldTypes.length; i++) {
+      if (fieldTypes[i].value === type) return fieldTypes[i].label;
+    }
+    return type;
+  }
+
+  function updateFieldBuilderRow(row) {
+    var type = row.querySelector('.fb-type')?.value || 'text';
+    var needsOptions = ['list', 'radio', 'checkbox'].indexOf(type) !== -1;
+    var needsBounds = ['number', 'range'].indexOf(type) !== -1;
+    var isColor = type === 'color';
+
+    var badge = row.querySelector('.field-builder-row__type-badge');
+    if (badge) badge.textContent = fieldTypeLabel(type);
+
+    row.querySelectorAll('.fb-panel').forEach(function (panel) {
+      panel.hidden = true;
+    });
+
+    if (needsOptions) {
+      var optPanel = row.querySelector('.fb-panel--options');
+      if (optPanel) {
+        optPanel.hidden = false;
+        updateOptionsCount(optPanel);
+      }
+    }
+    if (needsBounds) {
+      var boundsPanel = row.querySelector('.fb-panel--bounds');
+      if (boundsPanel) boundsPanel.hidden = false;
+    }
+    if (isColor) {
+      var colorPanel = row.querySelector('.fb-panel--color');
+      if (colorPanel) colorPanel.hidden = false;
+    }
   }
 
   function fieldBuilderRow(field, idx) {
     field = field || { type: 'text', label: '', options: [], config: {}, required: false };
-    var optNeeds = ['list', 'radio', 'checkbox'].indexOf(field.type) !== -1;
     var cfg = field.config || {};
-    var optionsText = (field.options || []).map(function (o) { return o.label || o.value; }).join('\n');
-    return '<div class="field-builder-row" style="border:1px dashed var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">' +
+    var defaultColor = cfg.default || '#2563eb';
+    var fieldNum = (idx || 0) + 1;
+    var typeOptions = fieldTypes.map(function (t) {
+      return '<option value="' + t.value + '"' + (field.type === t.value ? ' selected' : '') + '>' + t.label + '</option>';
+    }).join('');
+    var optionsCount = (field.options || []).length;
+
+    return '<div class="field-builder-row">' +
       '<input type="hidden" class="fb-id" value="' + (field.id || '') + '">' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
-      '<input type="text" class="fb-label" placeholder="اسم الحقل" value="' + escapeHtml(field.label || '') + '" style="padding:8px;border:1px solid var(--border);border-radius:8px;">' +
-      '<select class="fb-type" style="padding:8px;border:1px solid var(--border);border-radius:8px;">' +
-      fieldTypes.map(function (t) {
-        return '<option value="' + t.value + '"' + (field.type === t.value ? ' selected' : '') + '>' + t.label + '</option>';
-      }).join('') +
-      '</select></div>' +
-      (optNeeds ? '<textarea class="fb-options" rows="2" placeholder="خيارات (سطر لكل خيار)" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:8px;">' + escapeHtml(optionsText) + '</textarea>' : '') +
-      '<div style="display:flex;gap:8px;margin-top:8px;align-items:center;">' +
-      '<label style="font-size:12px;"><input type="checkbox" class="fb-required"' + (field.required ? ' checked' : '') + '> مطلوب</label>' +
-      '<input type="number" class="fb-min" placeholder="min" value="' + (cfg.min != null ? cfg.min : '') + '" style="width:70px;padding:6px;border:1px solid var(--border);border-radius:6px;">' +
-      '<input type="number" class="fb-max" placeholder="max" value="' + (cfg.max != null ? cfg.max : '') + '" style="width:70px;padding:6px;border:1px solid var(--border);border-radius:6px;">' +
-      '<button type="button" class="btn-action danger" data-remove-field>×</button>' +
-      '</div></div>';
+      '<div class="field-builder-row__toolbar">' +
+        '<span class="field-builder-row__index">حقل ' + fieldNum + '</span>' +
+        '<span class="field-builder-row__type-badge">' + escapeHtml(fieldTypeLabel(field.type || 'text')) + '</span>' +
+        '<span class="field-builder-row__toolbar-spacer"></span>' +
+        '<label class="field-builder-row__required-toggle">' +
+          '<input type="checkbox" class="fb-required"' + (field.required ? ' checked' : '') + '> مطلوب' +
+        '</label>' +
+        '<button type="button" class="field-builder-row__remove btn-action danger" data-remove-field title="حذف الحقل">🗑 حذف</button>' +
+      '</div>' +
+      '<div class="field-builder-row__body">' +
+        '<div class="field-builder-row__label-wrap">' +
+          '<label class="field-builder-row__mini-label">اسم الحقل</label>' +
+          '<input type="text" class="fb-label sc-form-control" placeholder="مثال: عدد المسامير" value="' + escapeHtml(field.label || '') + '">' +
+        '</div>' +
+        '<div class="field-builder-row__type-wrap">' +
+          '<label class="field-builder-row__mini-label">نوع الحقل</label>' +
+          '<select class="fb-type sc-form-control">' + typeOptions + '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fb-panel fb-panel--options" hidden>' +
+        '<div class="fb-options-head">' +
+          '<span class="field-builder-row__mini-label">الخيارات</span>' +
+          '<span class="fb-options-count">' + (optionsCount ? optionsCount + ' ' + (optionsCount === 1 ? 'خيار' : 'خيارات') : 'بدون خيارات') + '</span>' +
+        '</div>' +
+        '<div class="fb-options-list">' + renderOptionsListHtml(field.options) + '</div>' +
+        '<div class="fb-options-add">' +
+          '<input type="text" class="fb-option-new sc-form-control" placeholder="اكتب خياراً جديداً…">' +
+          '<button type="button" class="btn-action primary fb-options-add-btn" data-add-option>+ إضافة</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fb-panel fb-panel--bounds" hidden>' +
+        '<div class="field-builder-row__bounds">' +
+          '<div><label class="field-builder-row__mini-label">الحد الأدنى</label><input type="number" class="fb-min sc-form-control" placeholder="مثال: 0" value="' + (cfg.min != null ? cfg.min : '') + '"></div>' +
+          '<div><label class="field-builder-row__mini-label">الحد الأقصى</label><input type="number" class="fb-max sc-form-control" placeholder="مثال: 100" value="' + (cfg.max != null ? cfg.max : '') + '"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fb-panel fb-panel--color" hidden>' +
+        '<div class="field-builder-row__color-preview">' +
+          '<span class="fb-color-swatch" style="background:' + escapeHtml(defaultColor) + ';"></span>' +
+          '<div class="field-builder-row__color-copy">' +
+            '<strong>منتقي ألوان</strong>' +
+            '<p>سيظهر للمستخدم منتقي لون عند إضافة صنف بهذا الحقل.</p>' +
+            '<div class="field-builder-row__color-picker">' +
+              '<label><span class="field-builder-row__mini-label">لون افتراضي (اختياري)</span>' +
+              '<input type="color" class="fb-default-color" value="' + escapeHtml(defaultColor) + '">' +
+              '<code class="fb-color-value">' + escapeHtml(defaultColor) + '</code></label>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
   }
 
   document.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'btnAddCategoryField') {
       var box = document.getElementById('stockCategoryFieldsBuilder');
       if (!box) return;
-      if (box.querySelector('p')) box.innerHTML = '';
+      var empty = box.querySelector('.field-builder-empty');
+      if (empty) empty.remove();
       box.insertAdjacentHTML('beforeend', fieldBuilderRow({}, 0));
-      box.querySelectorAll('[data-remove-field]').forEach(function (btn) {
-        btn.addEventListener('click', function () { btn.closest('.field-builder-row').remove(); });
-      });
+      var rows = box.querySelectorAll('.field-builder-row');
+      bindFieldBuilderRow(rows[rows.length - 1]);
     }
   });
 
@@ -280,16 +538,19 @@ window.CatalogSections = (function () {
       var type = row.querySelector('.fb-type').value;
       var options = [];
       if (['list', 'radio', 'checkbox'].indexOf(type) !== -1) {
-        (row.querySelector('.fb-options')?.value || '').split(/\n/).forEach(function (line) {
-          line = line.trim();
-          if (line) options.push({ value: line, label: line });
-        });
+        options = collectOptionsFromFieldRow(row);
       }
       var config = {};
-      var min = row.querySelector('.fb-min')?.value;
-      var max = row.querySelector('.fb-max')?.value;
-      if (min !== '') config.min = parseFloat(min);
-      if (max !== '') config.max = parseFloat(max);
+      if (['number', 'range'].indexOf(type) !== -1) {
+        var min = row.querySelector('.fb-min')?.value;
+        var max = row.querySelector('.fb-max')?.value;
+        if (min !== '') config.min = parseFloat(min);
+        if (max !== '') config.max = parseFloat(max);
+      }
+      if (type === 'color') {
+        var defaultColor = row.querySelector('.fb-default-color')?.value;
+        if (defaultColor) config.default = defaultColor;
+      }
       return {
         id: row.querySelector('.fb-id')?.value || null,
         label: row.querySelector('.fb-label')?.value.trim(),
@@ -338,7 +599,11 @@ window.CatalogSections = (function () {
       renderCategoriesList();
       renderCategoryFilter();
       populateCategorySelect(document.getElementById('slimCategoryId')?.value);
-      cancelCategoryEdit();
+      if (pageMode) {
+        editCategory(saved);
+      } else {
+        cancelCategoryEdit();
+      }
     })
     .catch(function (e) {
       err.textContent = (e && e.message) ? e.message : 'تعذّر الحفظ.';

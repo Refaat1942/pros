@@ -19,15 +19,11 @@
     $summary = $ops_summary ?? ['ready' => 0, 'done' => 0];
 @endphp
 
-<div id="analytics-operations">
-    @include('partials.dashboard-analytics-empty', ['stats' => $ops_stats ?? [], 'hide_charts' => true])
-</div>
-
 <div class="space-y-6" id="opsDeskRoot" data-cases-count="{{ $cases->count() }}">
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p class="text-sm text-slate-600 leading-relaxed">
             تظهر هنا الحالات التي <strong>أُتمِم تصنيعها في الورشة</strong> وجاهزة للتسليم.
-            اضغط <strong>تم التسليم</strong> لإغلاق الطلب وتسليم الطرف للمريض.
+            المخزون يُنهي الطلب بالضغط على <strong>تم التسليم</strong> بعد تسليم الطرف للمريض.
         </p>
         <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-center text-sm">
             <div class="rounded-xl bg-emerald-50 border border-emerald-100 py-3">
@@ -47,7 +43,7 @@
 
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
-            <h3 class="font-bold text-slate-800">✅ تسليم الطرف للعميل</h3>
+            <h3 class="font-bold text-slate-800">✅ تم التسليم — إغلاق الطلب</h3>
             <button type="button" id="btnRefreshOps"
                     class="rounded-xl bg-ops text-white px-4 py-2 text-sm font-bold hover:bg-ops-dark transition-colors">
                 ↻ تحديث

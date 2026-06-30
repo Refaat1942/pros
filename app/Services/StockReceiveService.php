@@ -65,17 +65,13 @@ class StockReceiveService
 
             $this->stockPriceService->recalcWac($item, $qty, $unitPrice);
 
-            $status = $balanceAfter <= StockItem::LOW_QTY_THRESHOLD
-                ? StockItem::STATUS_LOW
-                : StockItem::STATUS_OK;
-
             $item->update([
                 'qty'           => $balanceAfter,
-                'status'        => $status,
                 'last_moved_at' => $movedAt->toDateString(),
             ]);
 
             $item->refresh();
+            $item->recalculateAndSaveStatus();
 
             AuditService::log(
                 action:      'receive',

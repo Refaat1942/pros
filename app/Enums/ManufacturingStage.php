@@ -42,4 +42,14 @@ enum ManufacturingStage: string
 
         return self::tryFrom($key)?->label() ?? $key;
     }
+
+    /** تسميات مرحلة التصنيع في طابور الورشة. */
+    public static function workshopDeskLabelFor(?string $key): string
+    {
+        return match ($key) {
+            self::Issue->value    => 'قيد التصنيع',
+            self::Assembly->value => 'تم التصنيع',
+            default               => self::labelFor($key),
+        };
+    }
 }

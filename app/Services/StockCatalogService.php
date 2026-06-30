@@ -72,6 +72,7 @@ class StockCatalogService
                 ->all(),
             'qty'         => (int) $item->qty,
             'reserved'    => (int) $item->reserved,
+            'min_qty'     => (int) ($item->min_qty ?? 0),
             'price'       => (float) $item->price,
             'highest_price' => $this->highestPrice($item),
             'expiry_date' => $item->expiry_date?->toDateString(),
@@ -110,6 +111,7 @@ class StockCatalogService
                 'barcode'     => 'BC-' . $code,
                 'qty'         => $qty,
                 'reserved'    => 0,
+                'min_qty'     => max(0, (int) ($data['min_qty'] ?? 0)),
                 'price'       => $price,
                 'expiry_date' => $data['expiry_date'] ?? null,
                 'wac'         => $qty > 0 ? $price : 0,
@@ -154,6 +156,9 @@ class StockCatalogService
                 'name'        => $data['name'],
                 'spec'        => $data['spec'] ?? $item->spec,
                 'qty'         => (int) ($data['qty'] ?? $item->qty),
+                'min_qty'     => array_key_exists('min_qty', $data)
+                    ? max(0, (int) $data['min_qty'])
+                    : (int) ($item->min_qty ?? 0),
                 'price'       => $price,
                 'expiry_date' => $data['expiry_date'] ?? $item->expiry_date,
             ]);
@@ -296,13 +301,8 @@ class StockCatalogService
 
     private function syncStatus(StockItem $item): void
     {
-        $status = (int) $item->qty <= StockItem::LOW_QTY_THRESHOLD
-            ? StockItem::STATUS_LOW
-            : StockItem::STATUS_OK;
-
-        if ($item->status !== $status) {
-            $item->update(['status' => $status]);
-        }
+        $item->refresh();
+        $item->recalculateAndSaveStatus();
     }
 
     private function highestPrice(StockItem $item): float

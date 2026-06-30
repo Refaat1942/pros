@@ -15,6 +15,7 @@ class UpdateCatalogItemRequest extends BaseRequest
             'name'           => ['required', 'string', 'max:255'],
             'qty'            => ['nullable', 'integer', 'min:0'],
             'price'          => ['nullable', 'numeric', 'min:0'],
+            'min_qty'         => ['nullable', 'integer', 'min:0'],
             'expiry_date'    => ['nullable', 'date'],
 
             // أسعار إضافية (صنف بأكثر من سعر) — اختيارية.

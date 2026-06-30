@@ -13,8 +13,8 @@
   }
 
   var MFG_LABELS = {
-    warehouse: 'المخزن', issue: 'صرف خامات', workshop: 'الورشة', fitting: 'تجربة تركيب',
-    quality: 'مراقبة جودة', generation: 'توليد', assembly: 'تجميع', casting: 'صب',
+    warehouse: 'المخزن', issue: 'قيد التصنيع', workshop: 'الورشة', fitting: 'تجربة تركيب',
+    quality: 'مراقبة جودة', generation: 'توليد', assembly: 'تم التصنيع', casting: 'صب',
     finishing: 'تشطيب', closed: 'مغلق'
   };
 
@@ -60,18 +60,14 @@
   function updateSummary(summary) {
     summary = summary || {};
     if ($('sumWip')) $('sumWip').textContent = summary.wip != null ? summary.wip : 0;
-    if ($('sumMilitary')) $('sumMilitary').textContent = summary.military != null ? summary.military : 0;
-    if ($('sumCivilian')) $('sumCivilian').textContent = summary.civilian != null ? summary.civilian : 0;
     if ($('sumTotal')) $('sumTotal').textContent = summary.total_active != null ? summary.total_active : 0;
 
     var analytics = document.getElementById('analytics-workshop');
     if (!analytics) return;
     var values = analytics.querySelectorAll('.ck-stat-value');
-    if (values.length < 4) return;
+    if (values.length < 2) return;
     values[0].textContent = summary.wip != null ? summary.wip : 0;
-    values[1].textContent = summary.military != null ? summary.military : 0;
-    values[2].textContent = summary.civilian != null ? summary.civilian : 0;
-    values[3].textContent = summary.total_active != null ? summary.total_active : 0;
+    values[1].textContent = summary.total_active != null ? summary.total_active : 0;
   }
 
   function renderItemsCell(c) {

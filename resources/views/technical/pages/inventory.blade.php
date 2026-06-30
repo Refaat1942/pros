@@ -1,9 +1,9 @@
 @php
     $invStats = $inventory_stats ?? [
-        ['icon' => '💚', 'label' => 'صحة المخزون', 'value' => '0/100', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+        ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => '0', 'color' => '#4338ca', 'bg' => 'rgba(67,56,202,0.1)'],
         ['icon' => '✅', 'label' => 'متوفر', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
         ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
-        ['icon' => '🔒', 'label' => 'محجوز', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '⚠️', 'label' => 'كمية منخفضة', 'value' => '0', 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
     ];
 @endphp
 <div class="section-view" id="section-inventory">
@@ -17,13 +17,8 @@
           </div>
         </div>
 
-        <div class="inventory-readonly-banner">
-          <span>👁️</span>
-          <span><strong>عرض فقط</strong> — تعريف الأصناف وأسعارها من <strong>لوحة الإدارة</strong>. المخزون يعرض الكميات والتوفر فقط.</span>
-        </div>
-
         <div class="inventory-toolbar">
-          <input type="text" id="inventorySearch" placeholder="بحث بالصنف أو المواصفات...">
+          <input type="text" id="inventorySearch" placeholder="بحث بالكود أو اسم الصنف...">
           <div class="filter-pills" id="inventoryFilters">
             <button class="filter-pill active" data-filter="all">الكل</button>
             <button class="filter-pill" data-filter="ok">✓ متوفر</button>
@@ -40,18 +35,16 @@
           <table data-paginate="10" class="stock-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>الصنف</th>
-                <th>المواصفات</th>
-                <th class="col-qty">الكمية المتاحة</th>
-                <th class="col-reserved">محجوز</th>
+                <th>كود الصنف</th>
+                <th>اسم الصنف</th>
+                <th class="col-qty">الرصيد المتاح</th>
                 <th class="col-status">الحالة</th>
               </tr>
             </thead>
             <tbody id="inventoryTable" data-server-inventory="1"></tbody>
             <tfoot>
               <tr>
-                <td colspan="6" id="inventoryFooter"></td>
+                <td colspan="4" id="inventoryFooter"></td>
               </tr>
             </tfoot>
           </table>

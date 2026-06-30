@@ -83,9 +83,10 @@
 
         .header-brand {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 4mm;
+            justify-content: flex-start;
+            gap: 3mm;
         }
 
         .logo-placeholder,
@@ -259,7 +260,7 @@
         }
 
         body.embed-preview .header-brand {
-            gap: 5mm;
+            gap: 4mm;
         }
 
         /* ── Title ── */

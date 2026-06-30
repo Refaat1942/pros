@@ -8,13 +8,12 @@
       <div id="costingMeta" style="margin-bottom:12px;font-size:13px;color:var(--text-muted);"></div>
       <div class="bom-table-wrap">
         <table class="bom-table">
-          <thead>
+            <thead>
             <tr>
               <th>الكود</th>
               <th>الصنف</th>
               <th>الكمية</th>
-              <th>سعر الوحدة</th>
-              <th id="costingWacHeader" style="display:none;">WAC</th>
+              <th>المعيار</th>
               <th>الإجمالي</th>
             </tr>
           </thead>
@@ -39,7 +38,7 @@
             <strong id="costingDiscountAmount">—</strong>
           </div>
           <div class="costing-overhead-row costing-overhead-row--final">
-            <span>صافي إجمالي العرض</span>
+            <span>الاجمالي</span>
             <strong id="costingNetTotal">—</strong>
           </div>
         </div>
@@ -102,8 +101,13 @@
     color: var(--primary-dark, #5b21b6);
     font-size: 16px;
   }
+  .costing-criteria-cell {
+    max-width: 280px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-muted, #64748b);
+    white-space: normal;
+  }
 </style>
-
-@include('partials.tech-notes-modal')
 
 <div class="toast" id="toast" aria-live="polite"></div>

@@ -112,6 +112,7 @@ class StockReceiveController extends Controller
             'barcode',
             'qty',
             'reserved',
+            'min_qty',
             'last_moved_at',
         ]) + [
             'category'  => $item->category?->name,

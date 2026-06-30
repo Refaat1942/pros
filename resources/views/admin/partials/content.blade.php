@@ -2,7 +2,6 @@
     <div class="sidebar-brand">
       <div class="icon">⚙️</div>
       <h2>لوحة إدارة النظام</h2>
-      <span>المالك والرقابة</span>
     </div>
     <ul class="nav-menu">
       <li><a href="#" class="active" data-section="overview"><span class="nav-icon">📊</span> نظرة عامة</a></li>

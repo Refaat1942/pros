@@ -16,6 +16,7 @@
 
 @push('styles-late')
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
+    @include('partials.dashboard-date-filters-assets')
 @endpush
 
 @section('content')

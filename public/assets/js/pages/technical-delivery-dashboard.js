@@ -1,9 +1,9 @@
 /**
- * Operations Desk — delivery queue after workshop finishes manufacturing.
+ * Warehouse delivery desk — close cases after workshop finishes manufacturing.
  */
 (function () {
-  if (document.body.dataset.dashboard !== 'operations') return;
-  if (document.body.dataset.activePage !== 'operations') return;
+  if (document.body.dataset.dashboard !== 'inventory') return;
+  if (document.body.dataset.activePage !== 'delivery') return;
 
   var csrf = document.querySelector('meta[name="csrf-token"]');
   if (csrf && window.axios) {
@@ -34,6 +34,12 @@
     return printBtn + '<button type="button" class="btn-deliver-case text-xs font-bold rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700" data-case-id="' + c.id + '">✅ تم التسليم</button>';
   }
 
+  function renderItemsCell(c) {
+    var items = (c.bom && c.bom.items) || [];
+    if (!items.length) return '<span class="text-xs text-slate-400">—</span>';
+    return '<button type="button" class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50" data-case-id="' + c.id + '">عرض</button>';
+  }
+
   function renderRow(c) {
     var isMil = c.patient_type === 'military' || c.path === 'military';
     var search = [c.work_order_no, c.case_no, c.patient && c.patient.name].join(' ');
@@ -45,7 +51,7 @@
         '<div class="text-xs text-slate-400">' + esc(c.case_no) + '</div></td>' +
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg ' +
         (isMil ? 'bg-indigo-100 text-indigo-700">🪖 عسكري' : 'bg-emerald-100 text-emerald-700">🌐 مدني') + '</span></td>' +
-      return '<td class="px-4 py-3 text-slate-600">' + (window.EntityBadges ? EntityBadges.renderHtml(c) : esc(c.company_name || '—')) + '</td>' +
+      '<td class="px-4 py-3 text-slate-600">' + (window.EntityBadges ? EntityBadges.renderHtml(c) : esc(c.company_name || '—')) + '</td>' +
       '<td class="px-4 py-3 text-center">' + renderItemsCell(c) + '</td>' +
       '<td class="px-4 py-3">' + renderActionCell(c) + '</td></tr>';
   }
@@ -55,15 +61,6 @@
     if ($('sumReady')) $('sumReady').textContent = summary.ready != null ? summary.ready : 0;
     if ($('sumDone')) $('sumDone').textContent = summary.done != null ? summary.done : 0;
     if ($('sumTotal')) $('sumTotal').textContent = summary.total_active != null ? summary.total_active : 0;
-
-    var analytics = document.getElementById('analytics-operations');
-    if (!analytics) return;
-    var values = analytics.querySelectorAll('.ck-stat-value');
-    if (values.length < 4) return;
-    values[0].textContent = summary.ready != null ? summary.ready : 0;
-    values[1].textContent = summary.military != null ? summary.military : 0;
-    values[2].textContent = summary.civilian != null ? summary.civilian : 0;
-    values[3].textContent = summary.done != null ? summary.done : 0;
   }
 
   function bindTableEvents() {
@@ -85,7 +82,7 @@
     if (!window.confirm('تأكيد تسليم الطرف وإغلاق الطلب؟')) return;
 
     btn.disabled = true;
-    axios.post('/operations/operations/' + caseId + '/deliver')
+    axios.post('/technical/delivery/' + caseId + '/deliver')
       .then(function () {
         toast('✅ تم التسليم — أُغلق الطلب بنجاح');
         refreshList();
@@ -103,12 +100,6 @@
   function rowMatchesFilter(row) {
     if (activeOpsFilter === 'all') return true;
     return row.getAttribute('data-path') === activeOpsFilter;
-  }
-
-  function renderItemsCell(c) {
-    var items = (c.bom && c.bom.items) || [];
-    if (!items.length) return '<span class="text-xs text-slate-400">—</span>';
-    return '<button type="button" class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50" data-case-id="' + c.id + '">عرض</button>';
   }
 
   function openBomItemsModal(caseData) {
@@ -161,7 +152,7 @@
     var btn = $('btnRefreshOps');
     if (btn) { btn.disabled = true; btn.textContent = '↻ جاري التحديث...'; }
 
-    axios.get('/operations/operations/list')
+    axios.get('/technical/delivery/list')
       .then(function (res) {
         casesCache = res.data.data || [];
         var tbody = $('opsTableBody');

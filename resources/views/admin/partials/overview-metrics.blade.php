@@ -136,7 +136,7 @@
                         <th>أمر التشغيل</th>
                         <th>المرحلة</th>
                         <th>البنود</th>
-                        <th>قيمة BOM</th>
+                        <th>قيمة الاصناف</th>
                     </tr>
                 </thead>
                 <tbody id="bomAdminTable">

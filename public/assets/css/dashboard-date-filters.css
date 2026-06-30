@@ -1,0 +1,131 @@
+/* Flatpickr — Arabic RTL dashboard date filters */
+.flatpickr-calendar {
+    font-family: 'Tajawal', sans-serif;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14);
+    border: 1px solid var(--border, #e2e8f0);
+}
+
+.flatpickr-calendar.arrowTop::before,
+.flatpickr-calendar.arrowTop::after,
+.flatpickr-calendar.arrowBottom::before,
+.flatpickr-calendar.arrowBottom::after {
+    display: none;
+}
+
+.flatpickr-months .flatpickr-month {
+    height: 40px;
+}
+
+.flatpickr-current-month {
+    font-size: 14px;
+    font-weight: 700;
+    padding-top: 4px;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 700;
+}
+
+.flatpickr-weekdays {
+    background: #f8fafc;
+}
+
+.flatpickr-weekday {
+    font-weight: 700;
+    color: var(--text-muted, #64748b);
+    font-size: 12px;
+}
+
+.flatpickr-day {
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: var(--primary, #d97706);
+    border-color: var(--primary, #d97706);
+}
+
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover {
+    background: #b45309;
+    border-color: #b45309;
+}
+
+.flatpickr-day.today {
+    border-color: var(--primary, #d97706);
+}
+
+.flatpickr-day.today:hover {
+    background: rgba(217, 119, 6, 0.12);
+    border-color: var(--primary, #d97706);
+}
+
+span.flatpickr-weekday {
+    font-family: 'Tajawal', sans-serif;
+}
+
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+    fill: var(--secondary, #334155);
+    padding: 8px;
+}
+
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+    fill: var(--primary, #d97706);
+}
+
+/* Visible date field (altInput) in filter bars */
+.dashboard-date-alt,
+.reports-date-filter .flatpickr-input.form-control,
+.reports-date-filter .dashboard-date-alt,
+.data-toolbar .dashboard-date-alt,
+.adj-history-filter__field .dashboard-date-alt {
+    width: 100%;
+    min-width: 150px;
+    padding: 8px 12px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--secondary, #334155);
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.dashboard-date-alt:focus,
+.reports-date-filter .dashboard-date-alt:focus {
+    outline: none;
+    border-color: var(--primary, #d97706);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
+}
+
+.reports-date-filter label .flatpickr-wrapper,
+.data-toolbar .date-filter-field .flatpickr-wrapper {
+    display: block;
+    width: 100%;
+}
+
+.reports-date-filter input[type="date"].flatpickr-input,
+input[type="date"].flatpickr-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    padding: 0;
+    border: 0;
+}
+
+.data-toolbar .date-filter-field .dashboard-date-alt {
+    flex: 1;
+    min-width: 0;
+}

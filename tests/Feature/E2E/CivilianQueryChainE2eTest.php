@@ -229,9 +229,9 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertEquals(CaseRecord::STAGE_READY_DELIVERY, $case->stage_key);
         $this->assertContains($case->id, $queues->receptionDeliveryReadyCaseIds());
 
-        // ── Step 8: Operations final delivery — closed + invoice + archive ─
-        $this->actingAs($ops);
-        $close = $this->postJson("/operations/operations/{$case->id}/deliver");
+        // ── Step 8: Warehouse final delivery — closed + invoice + archive ─
+        $this->actingAs($tech);
+        $close = $this->postJson("/technical/delivery/{$case->id}/deliver");
         $close->assertOk()->assertJsonPath('closed', true);
 
         $case->refresh();

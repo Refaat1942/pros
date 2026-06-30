@@ -5,10 +5,14 @@ namespace Tests\Feature\Checklist;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Permission;
+use App\Models\StockCategory;
 use App\Models\StockItem;
+use App\Models\Supplier;
 use App\Services\MedicalRecordService;
 use App\Services\StockCatalogService;
 use App\Services\StockImportService;
+use Database\Seeders\StockCategorySeeder;
+use Database\Seeders\SupplierSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
@@ -154,6 +158,39 @@ class ChecklistFeaturesTest extends TestCase
             'name' => $arabicName,
         ]);
         $this->assertStringNotContainsString('?', StockItem::where('code', 'RM-560')->value('name'));
+    }
+
+    public function test_csv_import_supports_extended_template_columns(): void
+    {
+        $this->seed([StockCategorySeeder::class, SupplierSeeder::class]);
+
+        $contents = implode(',', StockImportService::HEADERS) . "\r\n"
+            . "RM-910,قماش اختبار,40,8,500,Blatchford Group,أقمشة ومواد خام,uom=متر\r\n";
+
+        $summary = app(StockImportService::class)->import(
+            UploadedFile::fake()->createWithContent('extended.csv', $contents),
+        );
+
+        $this->assertSame(1, $summary['created']);
+        $this->assertSame([], $summary['errors']);
+
+        $item = StockItem::where('code', 'RM-910')->with(['suppliers', 'attributeValues.field'])->firstOrFail();
+        $this->assertSame(8, (int) $item->min_qty);
+        $this->assertSame('Blatchford Group', $item->suppliers->first()?->name);
+        $this->assertSame('أقمشة ومواد خام', StockCategory::find($item->category_id)?->name);
+        $this->assertTrue(
+            $item->attributeValues->contains(fn ($row) => $row->field?->field_key === 'uom' && $row->value === 'متر'),
+        );
+    }
+
+    public function test_csv_template_includes_example_rows_for_new_columns(): void
+    {
+        $contents = app(StockImportService::class)->templateContents();
+
+        $this->assertStringContainsString(StockImportService::HEADERS[3], $contents);
+        $this->assertStringContainsString('Blatchford Group', $contents);
+        $this->assertStringContainsString('uom=متر;color=#1E40AF', $contents);
+        $this->assertSame(4, substr_count($contents, "\r\n"));
     }
 
     public function test_military_markup_engine_computes_selling_price_and_percentage(): void

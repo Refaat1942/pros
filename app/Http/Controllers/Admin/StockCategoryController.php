@@ -65,7 +65,7 @@ class StockCategoryController extends Controller
         }
 
         return redirect()
-            ->route('admin.catalog')
+            ->route('admin.stock-categories')
             ->with('success', "تم إضافة القسم «{$category->name}» بنجاح.");
     }
 

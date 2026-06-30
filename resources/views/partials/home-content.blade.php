@@ -117,5 +117,5 @@
 </div>
 
 <footer>
-    <p>  <span class="brand">Fratelanza</span> | نظام إدارة مركز إنتاج الأطراف الصناعية المتكامل</p>
+    <p>جميع الحقوق محفوظة &copy; {{ date('Y') }} <span class="brand">Fratelanza</span></p>
 </footer>

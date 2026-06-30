@@ -52,14 +52,8 @@ Route::prefix('operations')
             ->middleware('dashboard.page:operations,quotes-awaiting')
             ->name('quotes-awaiting.list');
 
-        // ── Operations delivery (تسليم للعميل) ────────────────────────────
-        Route::middleware('dashboard.page:operations,operations')->group(function () {
-            Route::get('operations/list', [ManufacturingStageController::class, 'index'])
-                ->name('operations.list');
-
-            Route::post('operations/{case}/deliver', [ManufacturingStageController::class, 'deliver'])
-                ->name('operations.deliver');
-        });
+        Route::redirect('operations', '/technical/delivery');
+        Route::redirect('operations/operations', '/technical/delivery');
 
         // ── Return requests (طلب ارتجاع مواد → المخزن) ─────────────────────
         Route::middleware('dashboard.page:operations,returns')->group(function () {

@@ -57,7 +57,7 @@ class DashboardPageDataService
             'admin.military-ranks'  => $this->adminMilitaryRanks(),
             'admin.visit-types'     => $this->adminVisitTypes(),
             'admin.costing-settings'=> $this->adminCostingSettings(),
-            // 'admin.stock-categories'=> $this->adminStockCategories(),
+            'admin.stock-categories'=> $this->adminStockCategories(),
             'admin.catalog'         => $this->adminCatalog(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
             'admin.general-view'    => $this->adminGeneralView(),
@@ -85,7 +85,7 @@ class DashboardPageDataService
             'spec.spec'             => $this->specPreview(),
             'adjustments.adjustments' => $this->adjustmentsHistory(),
             'adjustments.history'   => $this->adjustmentsHistory(),
-            'operations.operations' => $this->operationsDeliveryDesk(),
+            'technical.delivery'    => $this->operationsDeliveryDesk(),
             'workshop.workshop'     => $this->workshopDesk(),
             'workshop.statistics'   => $this->workshopStatistics(),
             'technical.inventory'   => $this->technicalInventory(),
@@ -165,16 +165,18 @@ class DashboardPageDataService
         ];
     }
 
-    /*
     private function adminStockCategories(): array
     {
+        $schema = app(\App\Services\StockCategorySchemaService::class);
+
         return [
             'stock_categories' => StockCategory::query()
-                ->orderByDesc('id')
-                ->get(),
+                ->with('fields')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (StockCategory $c) => $schema->formatCategory($c)),
         ];
     }
-    */
 
     private function adminCatalog(): array
     {
@@ -611,8 +613,6 @@ class DashboardPageDataService
             'workshop_cases'  => $cases,
             'workshop_stats'  => [
                 ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-                ['icon' => '🪖', 'label' => 'مسار عسكري', 'value' => (string) $milCount, 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
-                ['icon' => '🌐', 'label' => 'مسار مدني', 'value' => (string) $civCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📦', 'label' => 'إجمالي الأوامر', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
             'workshop_summary' => [
@@ -667,10 +667,10 @@ class DashboardPageDataService
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();
 
-        $okCount        = $items->filter(fn (StockItem $i) => $i->status === StockItem::STATUS_OK && ! $i->isBackorder())->count();
-        $lowCount       = $items->where('status', StockItem::STATUS_LOW)->count();
+        $okCount        = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_OK)->count();
+        $lowCount       = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_LOW)->count();
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
-        $reserved   = (int) $items->sum('reserved');
+        $totalCount     = $items->count();
 
         return [
             'inventory_items' => $items->map(fn (StockItem $item) => [
@@ -682,6 +682,7 @@ class DashboardPageDataService
                 'category_id'   => $item->category_id,
                 'qty'           => (int) $item->qty,
                 'reserved'      => (int) $item->reserved,
+                'min_qty'       => (int) ($item->min_qty ?? 0),
                 'available'     => $item->availableQty(),
                 'backorder'     => $item->backorderQty(),
                 'status'        => $item->isBackorder() ? 'backorder' : $item->status,
@@ -692,15 +693,15 @@ class DashboardPageDataService
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'inventory_stats' => [
-                ['icon' => '💚', 'label' => 'صحة المخزون', 'value' => $this->inventoryHealthLabel($items), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $totalCount, 'color' => '#4338ca', 'bg' => 'rgba(67,56,202,0.1)'],
                 ['icon' => '✅', 'label' => 'متوفر', 'value' => (string) $okCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
-                ['icon' => '🔒', 'label' => 'محجوز', 'value' => (string) $reserved, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['icon' => '⚠️', 'label' => 'كمية منخفضة', 'value' => (string) $lowCount, 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
             ],
         ];
     }
 
-    /** @param \Illuminate\Support\Collection<int, StockItem> $items */
+    /** @deprecated kept for other dashboards if referenced */
     private function inventoryHealthLabel($items): string
     {
         if ($items->isEmpty()) {

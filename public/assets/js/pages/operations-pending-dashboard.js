@@ -83,31 +83,11 @@
         (isMil ? '🪖 عسكري' : '🌐 مدني') + '</span></td>' +
       '<td>' + (total ? fmt(total) + ' ج.م' : '—') + '</td>' +
       '<td class="col-actions" style="white-space:nowrap;">' +
-        (window.TechNotesModal ? window.TechNotesModal.buttonHtml(c.tech_notes, c.case_no) : '') +
         printBtn +
         releaseBtn +
         approveBtn +
         reworkBtn +
       '</td></tr>';
-  }
-
-  function updateAnalytics(cases) {
-    var total = cases.length;
-    var mil = cases.filter(function (c) { return c.patient_type === 'military' || c.path === 'military'; }).length;
-    var withQuote = cases.filter(function (c) { return c.quote || c.quote_no; }).length;
-
-    if ($('pendingBadge')) $('pendingBadge').textContent = total;
-
-    var analytics = $('analytics-pending');
-    if (analytics) {
-      var values = analytics.querySelectorAll('.ck-stat-value');
-      if (values.length >= 4) {
-        values[0].textContent = total;
-        values[1].textContent = withQuote;
-        values[2].textContent = total - mil;
-        values[3].textContent = mil;
-      }
-    }
   }
 
   function bindTableEvents() {
@@ -148,9 +128,7 @@
         } else {
           tbody.innerHTML = casesCache.map(renderRow).join('');
           bindTableEvents();
-          if (window.TechNotesModal) window.TechNotesModal.bind();
         }
-        updateAnalytics(casesCache);
         if (window.TablePagination) TablePagination.refreshById('pendingTable');
         filterSearch();
       })

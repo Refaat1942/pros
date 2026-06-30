@@ -144,11 +144,10 @@ return [
         'title' => 'لوحة التشغيل — مركز الأطراف الصناعية',
         'layout' => 'layouts.operations',
         'default_page' => 'pending',
-        'sidebar' => ['icon' => '🎯', 'title' => 'مكتب التشغيل', 'subtitle' => 'الموافقات والتسليم'],
+        'sidebar' => ['icon' => '🎯', 'title' => 'مكتب التشغيل', 'subtitle' => 'الموافقات وعروض الأسعار'],
         'pages' => [
             'pending' => ['title' => 'مكتب التشغيل — موافقات وعروض الأسعار', 'icon' => '✅', 'label' => 'موافقات التشغيل'],
-            'quotes-awaiting' => ['title' => 'عروض الأسعار — بانتظار موافقة الجهة', 'icon' => '💰', 'label' => 'عروض بانتظار الموافقة'],
-            'operations' => ['title' => 'مكتب التشغيل — تسليم الطرف للعميل', 'icon' => '✅', 'label' => 'تسليم للعميل'],
+            'quotes-awaiting' => ['title' => 'عروض بانتظار الموافقة', 'icon' => '💰', 'label' => 'عروض بانتظار الموافقة'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
@@ -156,7 +155,6 @@ return [
             'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/pages/operations-pending-dashboard.js',
             'assets/js/pages/operations-quotes-awaiting-dashboard.js',
-            'assets/js/pages/operations-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="operations"',
@@ -194,6 +192,7 @@ return [
         'pages' => [
             'inventory' => ['title' => 'المخزون — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزون'],
             'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد للورشة'],
+            'delivery' => ['title' => 'المخزون — تسليم وإغلاق الطلبات', 'icon' => '✅', 'label' => 'تم التسليم'],
             'returns' => ['title' => 'استلام ارتجاع المواد — من الورشة', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
@@ -210,6 +209,7 @@ return [
             'assets/js/shared/inventory-returns.js',
             'assets/js/pages/technical-dashboard.js',
             'assets/js/pages/technical-bom-dashboard.js',
+            'assets/js/pages/technical-delivery-dashboard.js',
             'assets/js/pages/returns-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
@@ -220,7 +220,7 @@ return [
         'title' => 'لوحة إدارة النظام — مركز الأطراف الصناعية',
         'layout' => 'layouts.admin',
         'default_page' => 'overview',
-        'sidebar' => ['icon' => '⚙️', 'title' => 'لوحة إدارة النظام', 'subtitle' => 'المالك والرقابة'],
+        'sidebar' => ['icon' => '⚙️', 'title' => 'لوحة إدارة النظام'],
         'nav_groups' => [
             [
                 'label' => 'التقارير والمؤشرات',
@@ -235,7 +235,7 @@ return [
             [
                 'label' => 'المخزون والتوريد',
                 'icon'  => '📦',
-                'pages' => ['catalog', 'inventory-overview', 'suppliers', 'returns'],
+                'pages' => ['stock-categories', 'catalog', 'inventory-overview', 'suppliers', 'returns'],
             ],
             [
                 'label' => 'التعاقد والمالية',
@@ -261,7 +261,7 @@ return [
             'cases' => ['title' => 'متابعة المرضى', 'icon' => '📁', 'label' => 'متابعة المرضى'],
             'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
             // ── المخزون والتوريد ───────────────────────────────────────────────
-            // 'stock-categories' => ['title' => 'فئات الأصناف', 'icon' => '🏷️', 'label' => 'فئات الأصناف'],
+            'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'الأقسام'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
             'inventory-overview' => ['title' => 'متابعة حركة الأصناف', 'icon' => '🔬', 'label' => 'متابعة حركة الأصناف'],
             'suppliers' => ['title' => 'الموردون', 'icon' => '🏭', 'label' => 'الموردون'],

@@ -57,7 +57,6 @@
       '<td>' + (isMil ? '🪖 عسكري' : '🌐 مدني') + '</td>' +
       '<td>' + (c.computed_total != null ? fmt(c.computed_total) + ' ج.م' : '—') + '</td>' +
       '<td class="col-actions">' +
-        (window.TechNotesModal ? window.TechNotesModal.buttonHtml(c.tech_notes, c.case_no) : '') +
         '<button type="button" class="btn-action primary btn-open-costing" data-case-id="' + c.id + '">مراجعة</button>' +
       '</td></tr>';
   }
@@ -93,7 +92,6 @@
         } else {
           tbody.innerHTML = cases.map(renderRow).join('');
           bindTableEvents();
-          if (window.TechNotesModal) window.TechNotesModal.bind();
         }
         if (window.TablePagination) TablePagination.refreshById('costingTable');
         filterSearch();
@@ -172,7 +170,6 @@
         if ($('costingMeta')) {
           $('costingMeta').textContent = 'طلب: ' + (pricing.request_no || '—') + ' · ' + (c.pathway_label || '');
         }
-        if ($('costingWacHeader')) $('costingWacHeader').style.display = canInternal ? '' : 'none';
 
         var body = $('costingItemsBody');
         if (body) {
@@ -181,8 +178,7 @@
               '<td><code>' + esc(it.stock_item_code) + '</code></td>' +
               '<td>' + esc(it.name) + '</td>' +
               '<td>' + esc(it.qty) + '</td>' +
-              '<td>' + fmt(it.unit_price) + '</td>' +
-              (canInternal ? '<td>' + fmt(it.wac_unit) + '</td>' : '') +
+              '<td class="costing-criteria-cell">' + esc(it.criteria || '—') + '</td>' +
               '<td><strong>' + fmt(it.line_total) + '</strong></td></tr>';
           }).join('');
         }

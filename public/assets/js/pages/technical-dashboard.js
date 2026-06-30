@@ -29,6 +29,7 @@ function normalizeInventoryItem(raw) {
     reserved: reserved,
     available: available,
     backorder: backorder,
+    min_qty: parseInt(raw.min_qty, 10) || 0,
     status: status,
     lastMovedAt: raw.last_moved_at || raw.lastMovedAt || null
   };
@@ -63,10 +64,19 @@ function refreshPaginated() {
   });
 }
 
+function itemReorderThreshold(item) {
+  var min = parseInt(item.min_qty, 10);
+  return min > 0 ? min : StockCatalog.LOW_QTY_THRESHOLD;
+}
+
 function syncInventoryStatus() {
   inventory.forEach(function (item) {
-    if (item.qty <= StockCatalog.LOW_QTY_THRESHOLD) item.status = 'low';
-    else if (item.status !== 'low') item.status = 'ok';
+    if (item.backorder > 0) {
+      item.status = 'backorder';
+      return;
+    }
+    var available = item.available != null ? item.available : (item.qty - (item.reserved || 0));
+    item.status = available <= itemReorderThreshold(item) ? 'low' : 'ok';
   });
 }
 
@@ -165,9 +175,11 @@ function getFilteredOrders() {
 
 function exportInventory(type) {
   var data = getFilteredInventory();
-  var headers = ['الكود', 'الصنف', 'الفئة', 'المواصفات', 'الكمية', 'محجوز', 'الحالة'];
+  var headers = ['كود الصنف', 'اسم الصنف', 'الرصيد المتاح', 'الحالة'];
   var rows = data.map(function (i) {
-    return [i.code, i.name, i.category, i.spec, i.qty, i.reserved || 0, i.status === 'ok' ? 'متوفر' : 'منخفض'];
+    var available = i.available != null ? i.available : (i.qty - (i.reserved || 0));
+    var statusLabel = i.status === 'backorder' ? 'طلب توريد' : (i.status === 'low' ? 'كمية منخفضة' : 'متوفر');
+    return [i.code, i.name, available, statusLabel];
   });
   if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('المخزون'), headers, rows);
   else ExportKit.toPDF('توفر المخزون', headers, rows);
@@ -193,33 +205,19 @@ function exportOrders(type) {
   else ExportKit.toPDF('طلبات الصرف', headers, rows);
 }
 
-function computeInventoryHealth() {
-  if (!inventory.length) {
-    return { score: 0, availPct: 0, sufficientPct: 0, coverPct: 0, totalReserved: 0 };
-  }
-  var okCount = inventory.filter(function (i) { return i.status === 'ok'; }).length;
-  var availPct = Math.round((okCount / inventory.length) * 100);
-  var sufficientCount = inventory.filter(function (i) { return i.qty > StockCatalog.LOW_QTY_THRESHOLD; }).length;
-  var sufficientPct = Math.round((sufficientCount / inventory.length) * 100);
-  var totalReserved = inventory.reduce(function (s, i) { return s + (i.reserved || 0); }, 0);
-  var coverPct = Math.min(100, Math.round(((inventory.length - inventory.filter(function (i) { return i.status === 'low'; }).length) / inventory.length) * 100 + 15));
-  var score = Math.round(availPct * 0.4 + sufficientPct * 0.35 + coverPct * 0.25);
-  return { score: score, availPct: availPct, sufficientPct: sufficientPct, coverPct: coverPct, totalReserved: totalReserved };
-}
-
 function updateInventoryAnalyticsCards() {
   var el = document.getElementById('analytics-inventory-charts');
   if (!el) return;
   var values = el.querySelectorAll('.ck-stat-value');
   if (values.length < 4) return;
-  var health = computeInventoryHealth();
+  var total = inventory.length;
   var okCount = inventory.filter(function (i) { return i.status === 'ok'; }).length;
-  var lowCount = inventory.filter(function (i) { return i.status === 'low'; }).length;
   var backorderCount = inventory.filter(function (i) { return i.status === 'backorder'; }).length;
-  values[0].textContent = health.score + '/100';
+  var lowCount = inventory.filter(function (i) { return i.status === 'low'; }).length;
+  values[0].textContent = String(total);
   values[1].textContent = String(okCount);
   values[2].textContent = String(backorderCount);
-  values[3].textContent = String(health.totalReserved);
+  values[3].textContent = String(lowCount);
 }
 
 function renderInventory() {
@@ -230,26 +228,19 @@ function renderInventory() {
   document.getElementById('inventoryFooter').textContent =
     'عرض ' + filtered.length + ' من ' + inventory.length + ' أصناف';
 
-  document.getElementById('inventoryTable').innerHTML = filtered.length ? filtered.map(function (item, idx) {
+  document.getElementById('inventoryTable').innerHTML = filtered.length ? filtered.map(function (item) {
     var isLow = item.status === 'low';
     var isBackorder = item.status === 'backorder';
-    var reserved = item.reserved || 0;
-    var available = item.available != null ? item.available : (item.qty - reserved);
+    var available = item.available != null ? item.available : (item.qty - (item.reserved || 0));
     var availClass = isBackorder ? 'backorder' : item.status;
     var statusLabel = isBackorder
-      ? 'طلب توريد (' + (item.backorder || Math.max(0, reserved - item.qty)) + ')'
+      ? 'طلب توريد (' + (item.backorder || 0) + ')'
       : (isLow ? 'كمية منخفضة' : 'متوفر');
     var statusClass = isBackorder ? 'backorder' : (isLow ? 'low' : 'available');
     return '<tr>' +
-      '<td style="color:var(--text-muted);font-weight:600;font-size:12px;width:40px;">' + (idx + 1) + '</td>' +
-      '<td><div class="item-cell">' +
-      '<div class="item-name">' + item.name + '</div><div class="item-code">' + item.code + ' · ' + item.category + '</div>' +
-      '</div></td>' +
-      '<td><span class="spec-tag">' + item.spec + '</span></td>' +
-      '<td class="qty-cell">' +
-      '<div class="qty-badge ' + availClass + '">' + available + '</div>' +
-      '</td>' +
-      '<td class="qty-cell"><span class="qty-reserved">' + reserved + '</span></td>' +
+      '<td class="item-code-cell"><span class="item-code">' + item.code + '</span></td>' +
+      '<td><div class="item-name">' + item.name + '</div></td>' +
+      '<td class="qty-cell"><div class="qty-badge ' + availClass + '">' + available + '</div></td>' +
       '<td class="status-cell">' +
       '<span class="stock-status ' + statusClass + '">' +
       '<span class="status-dot"></span>' +
@@ -257,7 +248,7 @@ function renderInventory() {
       '</span>' +
       '</td>' +
       '</tr>';
-  }).join('') : '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد أصناف في المخزون — أضف الأصناف من لوحة الإدارة</td></tr>';
+  }).join('') : '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد أصناف في المخزون — أضف الأصناف من لوحة الإدارة</td></tr>';
   refreshPaginated('inventoryTable');
   updateInventoryAnalyticsCards();
 }

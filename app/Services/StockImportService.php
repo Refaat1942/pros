@@ -2,18 +2,24 @@
 
 namespace App\Services;
 
+use App\Models\StockCategory;
 use App\Models\StockItem;
+use App\Models\Supplier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * الرفع الجماعي للأصناف عبر CSV (أصلي — بدون حزم خارجية).
  *
- * الأعمدة (بالترتيب): كود الصنف، اسم الصنف، الكمية، السعر.
+ * الأعمدة (بالترتيب):
+ * كود الصنف، اسم الصنف، الكمية، الحد الأدنى للصنف، السعر، المورد، القسم، خصائص القسم.
+ *
  * عمود السعر يقبل أكثر من قيمة مفصولة بـ «;» أو «و» — الأول سعر أساسي والباقي أسعار إضافية.
- * مثال: 1500;2000 أو 1500 و 2200
+ * عمود خصائص القسم: مفتاح=قيمة مفصولة بـ «;» — مثال: uom=متر;color=#1E40AF
  *
  * يقوم بعملية upsert: إن وُجد الكود يُحدَّث، وإلا يُنشأ صنف جديد.
+ * الملفات القديمة (4 أعمدة بدون ترويسة) ما زالت مدعومة.
  */
 class StockImportService
 {
@@ -22,7 +28,11 @@ class StockImportService
         'كود الصنف',
         'اسم الصنف',
         'الكمية',
+        'الحد الأدنى للصنف',
         'السعر',
+        'المورد',
+        'القسم',
+        'خصائص القسم',
     ];
 
     public function __construct(private readonly StockCatalogService $catalogService)
@@ -37,7 +47,9 @@ class StockImportService
         $bom  = "\xEF\xBB\xBF";
         $rows = [
             self::HEADERS,
-            ['RM-100', 'مفصل ركبة ميكانيكي', '10', '1500;2000'],
+            ['RM-100', 'مفصل ركبة هيدروليكي', '10', '5', '15000;18000', 'Blatchford Group', 'مفاصل', ''],
+            ['RM-101', 'قماش تغليف', '50', '10', '850', 'Fillauer LLC', 'أقمشة ومواد خام', 'uom=متر;color=#1E40AF'],
+            ['RM-102', 'مسامير تثبيت M8', '200', '25', '120', 'Ottobock Egypt', 'مسامير وربط', 'uom=قطعة;size=M8'],
         ];
 
         $out = $bom;
@@ -58,11 +70,16 @@ class StockImportService
         $rows = [self::HEADERS];
 
         foreach ($items as $item) {
+            $supplier = ($item['suppliers'][0]['name'] ?? '') ?: '';
             $rows[] = [
                 (string) ($item['code'] ?? ''),
                 (string) ($item['name'] ?? ''),
                 (string) ((int) ($item['qty'] ?? 0)),
+                (string) ((int) ($item['min_qty'] ?? 0)),
                 $this->formatPriceColumn($item),
+                $supplier,
+                (string) ($item['category'] ?? ''),
+                $this->formatAttributesColumn($item),
             ];
         }
 
@@ -90,25 +107,27 @@ class StockImportService
 
         DB::transaction(function () use ($rows, &$created, &$updated, &$skipped, &$errors) {
             foreach ($rows as $lineNo => $cols) {
-                [$code, $name, $qtyRaw, $priceRaw] = $this->normalizeColumns($cols);
+                $parsed = $this->parseRowColumns($cols);
 
-                if ($code === '' && $name === '') {
-                    continue; // سطر فارغ
+                if ($parsed['code'] === '' && $parsed['name'] === '') {
+                    continue;
                 }
-                if ($name === '') {
+                if ($parsed['name'] === '') {
                     $skipped++;
                     $errors[] = "السطر {$lineNo}: اسم الصنف مفقود.";
+
                     continue;
                 }
 
-                $priceParts = $this->parsePriceList($priceRaw);
-                $mainPrice  = $priceParts[0] ?? 0.0;
+                $priceParts  = $this->parsePriceList($parsed['price_raw']);
+                $mainPrice   = $priceParts[0] ?? 0.0;
                 $extraPrices = array_slice($priceParts, 1);
 
                 $payload = [
-                    'code'   => $code !== '' ? $code : null,
-                    'name'   => $name,
-                    'qty'    => (int) $this->num($qtyRaw),
+                    'code'   => $parsed['code'] !== '' ? $parsed['code'] : null,
+                    'name'   => $parsed['name'],
+                    'qty'    => (int) $this->num($parsed['qty_raw']),
+                    'min_qty' => (int) $this->num($parsed['min_qty_raw']),
                     'price'  => $mainPrice,
                     'prices' => array_map(
                         fn (float $amount) => ['amount' => $amount],
@@ -116,21 +135,52 @@ class StockImportService
                     ),
                 ];
 
-                $existing = $code !== '' ? StockItem::where('code', $code)->first() : null;
+                if ($parsed['supplier_name'] !== '') {
+                    $supplier = $this->resolveSupplier($parsed['supplier_name']);
+                    if (! $supplier) {
+                        $skipped++;
+                        $errors[] = "السطر {$lineNo}: المورد «{$parsed['supplier_name']}» غير موجود.";
 
-                if ($existing) {
-                    $this->catalogService->update($existing, $payload);
-                    $updated++;
-                } else {
-                    $this->catalogService->create($payload);
-                    $created++;
+                        continue;
+                    }
+                    $payload['supplier_ids'] = [$supplier->id];
+                }
+
+                if ($parsed['category_name'] !== '') {
+                    $category = $this->resolveCategory($parsed['category_name']);
+                    if (! $category) {
+                        $skipped++;
+                        $errors[] = "السطر {$lineNo}: القسم «{$parsed['category_name']}» غير موجود.";
+
+                        continue;
+                    }
+                    $payload['category_id'] = $category->id;
+                }
+
+                if ($parsed['attributes_raw'] !== '') {
+                    $payload['attributes'] = $this->parseAttributes($parsed['attributes_raw']);
+                }
+
+                $existing = $parsed['code'] !== '' ? StockItem::where('code', $parsed['code'])->first() : null;
+
+                try {
+                    if ($existing) {
+                        $this->catalogService->update($existing, $payload);
+                        $updated++;
+                    } else {
+                        $this->catalogService->create($payload);
+                        $created++;
+                    }
+                } catch (ValidationException $e) {
+                    $skipped++;
+                    $errors[] = "السطر {$lineNo}: " . implode(' ', $e->validator->errors()->all());
                 }
             }
         });
 
         AuditService::log(
             action:      'import',
-            description: "رفع جماعي للأصناف — {$created} جديد، {$updated} محدَّث، {$skipped} متخطّى",
+            description: "رفع جماعي للأصناf — {$created} جديد، {$updated} محدَّث، {$skipped} متخطّى",
             tag:         'admin',
             after:       ['created' => $created, 'updated' => $updated, 'skipped' => $skipped],
         );
@@ -165,6 +215,110 @@ class StockImportService
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  list<string>  $cols
+     * @return array{
+     *   code:string,
+     *   name:string,
+     *   qty_raw:string,
+     *   min_qty_raw:string,
+     *   price_raw:string,
+     *   supplier_name:string,
+     *   category_name:string,
+     *   attributes_raw:string
+     * }
+     */
+    private function parseRowColumns(array $cols): array
+    {
+        if (count($cols) >= 7) {
+            return [
+                'code'            => trim((string) ($cols[0] ?? '')),
+                'name'            => trim((string) ($cols[1] ?? '')),
+                'qty_raw'         => trim((string) ($cols[2] ?? '')),
+                'min_qty_raw'     => trim((string) ($cols[3] ?? '')),
+                'price_raw'       => trim((string) ($cols[4] ?? '')),
+                'supplier_name'   => trim((string) ($cols[5] ?? '')),
+                'category_name'   => trim((string) ($cols[6] ?? '')),
+                'attributes_raw'  => trim((string) ($cols[7] ?? '')),
+            ];
+        }
+
+        $priceParts = array_slice($cols, 3);
+        $priceRaw   = implode(';', array_map(
+            fn ($part) => trim((string) $part),
+            $priceParts,
+        ));
+
+        return [
+            'code'            => trim((string) ($cols[0] ?? '')),
+            'name'            => trim((string) ($cols[1] ?? '')),
+            'qty_raw'         => trim((string) ($cols[2] ?? '')),
+            'min_qty_raw'     => '0',
+            'price_raw'       => $priceRaw,
+            'supplier_name'   => '',
+            'category_name'   => '',
+            'attributes_raw'  => '',
+        ];
+    }
+
+    private function resolveSupplier(string $name): ?Supplier
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return null;
+        }
+
+        return Supplier::query()
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])
+            ->first();
+    }
+
+    private function resolveCategory(string $name): ?StockCategory
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return null;
+        }
+
+        return StockCategory::query()
+            ->where('name', $name)
+            ->first();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parseAttributes(string $raw): array
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return [];
+        }
+
+        if (str_starts_with($raw, '{')) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        $out = [];
+        foreach (preg_split('/[;؛]/u', $raw) ?: [] as $pair) {
+            $pair = trim((string) $pair);
+            if ($pair === '' || ! str_contains($pair, '=')) {
+                continue;
+            }
+
+            [$key, $value] = explode('=', $pair, 2);
+            $key = trim($key);
+            if ($key !== '') {
+                $out[$key] = trim($value);
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -245,7 +399,6 @@ class StockImportService
         $score -= substr_count($text, '?') * 20;
         $score -= substr_count($text, "\u{FFFD}");
 
-        // تشويه شائع عند قراءة CP1256 كـ UTF-8
         if (preg_match('/[ÃØÙÚÛÅÂ]/u', $text)) {
             $score -= 80;
         }
@@ -260,7 +413,6 @@ class StockImportService
             return false;
         }
 
-        // نمط UTF-16 LE للنص اللاتيني: حرف ثم \x00
         if ($content[1] !== "\x00" || $content[3] !== "\x00") {
             return false;
         }
@@ -289,26 +441,9 @@ class StockImportService
         return $first === self::HEADERS[0]
             || str_contains($haystack, 'كود الصنف')
             || str_contains($haystack, 'اسم الصنف')
+            || str_contains($haystack, 'الحد الأدنى')
             || (str_contains($haystack, 'كود') && str_contains($haystack, 'السعر'))
             || $first === 'code';
-    }
-
-    /**
-     * @param  list<string>  $cols
-     * @return array{0:string,1:string,2:string,3:string}
-     */
-    private function normalizeColumns(array $cols): array
-    {
-        $code = trim((string) ($cols[0] ?? ''));
-        $name = trim((string) ($cols[1] ?? ''));
-        $qty  = trim((string) ($cols[2] ?? ''));
-        $priceParts = array_slice($cols, 3);
-        $priceRaw = implode(';', array_map(
-            fn ($part) => trim((string) $part),
-            $priceParts,
-        ));
-
-        return [$code, $name, $qty, $priceRaw];
     }
 
     /** @return list<string> */
@@ -325,8 +460,6 @@ class StockImportService
     }
 
     /**
-     * يفكّ عمود السعر إلى قائمة أرقام — مفصولة بـ «و» أو «;».
-     *
      * @return list<float>
      */
     private function parsePriceList(mixed $raw): array
@@ -386,6 +519,25 @@ class StockImportService
         }
 
         return $parts !== [] ? implode(';', $parts) : '0';
+    }
+
+    /** @param  array<string, mixed>  $item */
+    private function formatAttributesColumn(array $item): string
+    {
+        $map = $item['attributes_map'] ?? [];
+        if (! is_array($map) || $map === []) {
+            return '';
+        }
+
+        $parts = [];
+        foreach ($map as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+            $parts[] = $key . '=' . $value;
+        }
+
+        return implode(';', $parts);
     }
 
     private function formatAmount(float $value): string

@@ -358,6 +358,17 @@ class StockCategorySchemaService
             ->all();
     }
 
+    /** نص مختصر لعرض المعيار (حقول القسم الديناميكية) في التكاليف والعروض. */
+    public function formatCriteriaSummary(StockItem $item): string
+    {
+        $parts = collect($this->formatItemAttributes($item))
+            ->map(fn (array $row) => trim($row['label'] . ': ' . ($row['display_value'] ?? '—')))
+            ->filter(fn (string $line) => ! str_ends_with($line, ': —'))
+            ->values();
+
+        return $parts->isNotEmpty() ? $parts->implode(' · ') : '—';
+    }
+
     public function decodeStoredValue(StockCategoryField $field, ?string $stored): mixed
     {
         $type = StockCategoryFieldType::tryFrom($field->type) ?? StockCategoryFieldType::Text;

@@ -6,8 +6,11 @@ use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\Quote;
+use App\Models\StockCategory;
 use App\Models\TechOrderSpec;
 use App\Services\BomService;
+use App\Services\StockCatalogService;
+use App\Services\StockCategorySchemaService;
 use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -134,6 +137,52 @@ class CostingDashboardTest extends TestCase
         $this->assertEquals(300.00, (float) $response->json('pricing.internal_total'));
         $this->assertEquals(600.00, (float) $response->json('pricing.computed_total'));
         $this->assertEquals(600.00, (float) $response->json('pricing.overhead_breakdown.gross_before_discount'));
+        $response->assertJsonMissingPath('pricing.items.0.wac_unit');
+        $response->assertJsonStructure([
+            'pricing' => [
+                'items' => [['stock_item_code', 'name', 'qty', 'criteria', 'line_total']],
+            ],
+        ]);
+    }
+
+    public function test_costing_show_displays_dynamic_category_criteria(): void
+    {
+        $schema = app(StockCategorySchemaService::class);
+        $category = StockCategory::create(['name' => 'مفاصل صناعية']);
+        $schema->syncFields($category, [
+            ['label' => 'عدد القطع', 'type' => 'number', 'field_key' => 'pieces', 'required' => true],
+            ['label' => 'النوع', 'type' => 'text', 'field_key' => 'joint_type', 'required' => false],
+        ]);
+
+        $stock = app(StockCatalogService::class)->create([
+            'name'        => 'مفصل Carbon',
+            'code'        => 'RM-JOINT',
+            'qty'         => 10,
+            'price'       => 500,
+            'category_id' => $category->id,
+            'attributes'  => ['pieces' => 3, 'joint_type' => 'Spring'],
+        ]);
+
+        $supplier = $this->makeSupplier();
+        app(StockPriceService::class)->addBatch($stock, 10, 500.00, $supplier, 'INV-JOINT', now());
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-JOINT', 'qty' => 1],
+        ]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($this->userWithRole('costing'))
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk();
+
+        $criteria = (string) $response->json('pricing.items.0.criteria');
+        $this->assertStringContainsString('عدد القطع: 3', $criteria);
+        $this->assertStringContainsString('النوع: Spring', $criteria);
     }
 
     public function test_costing_total_includes_adjustment_bom_items(): void

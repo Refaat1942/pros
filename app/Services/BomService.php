@@ -709,13 +709,9 @@ class BomService
                         $stockItem->decrement('reserved', $reservedRelease);
                     }
 
-                    $newQty = $stockItem->fresh()->qty;
-                    $stockItem->update([
-                        'last_moved_at' => now()->toDateString(),
-                        'status'        => $newQty <= StockItem::LOW_QTY_THRESHOLD
-                            ? StockItem::STATUS_LOW
-                            : StockItem::STATUS_OK,
-                    ]);
+                    $stockItem->refresh();
+                    $stockItem->update(['last_moved_at' => now()->toDateString()]);
+                    $stockItem->recalculateAndSaveStatus();
 
                     $bomItem->update(['issued_qty' => $qty]);
                 }

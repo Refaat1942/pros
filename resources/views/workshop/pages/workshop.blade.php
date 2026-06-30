@@ -28,21 +28,11 @@
         <p class="text-sm text-slate-600 leading-relaxed">
             تظهر هنا الأوامر التي <strong>صُرفت موادها من المخزن</strong> وجاهزة للتصنيع في الورشة.
             بعد <strong>تم التصنيع</strong> تُحوَّل الحالة إلى مكتب التشغيل للتسليم للعميل.
-            يلتقي هنا المساران: <strong class="text-indigo-700">عسكري</strong> و
-            <strong class="text-emerald-700">مدني</strong>.
         </p>
-        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-center text-sm">
+        <div class="mt-4 grid grid-cols-2 gap-3 text-center text-sm max-w-md">
             <div class="rounded-xl bg-violet-50 border border-violet-100 py-3">
                 <div class="text-2xl font-bold text-violet-700" id="sumWip">{{ $summary['wip'] ?? 0 }}</div>
                 <div class="text-violet-600 mt-1">🏭 تحت التشغيل</div>
-            </div>
-            <div class="rounded-xl bg-indigo-50 border border-indigo-100 py-3">
-                <div class="text-2xl font-bold text-indigo-700" id="sumMilitary">{{ $summary['military'] ?? 0 }}</div>
-                <div class="text-indigo-600 mt-1">🪖 عسكري</div>
-            </div>
-            <div class="rounded-xl bg-emerald-50 border border-emerald-100 py-3">
-                <div class="text-2xl font-bold text-emerald-700" id="sumCivilian">{{ $summary['civilian'] ?? 0 }}</div>
-                <div class="text-emerald-600 mt-1">🌐 مدني</div>
             </div>
             <div class="rounded-xl bg-slate-50 border border-slate-100 py-3">
                 <div class="text-2xl font-bold text-slate-800" id="sumTotal">{{ $summary['total_active'] ?? $cases->count() }}</div>
@@ -89,7 +79,7 @@
                                 ? \App\Support\BomItemAggregator::uniqueCodeCount($case->bom->items)
                                 : 0;
                             $isMil = $case->isMilitary();
-                            $mfgLabel = \App\Enums\ManufacturingStage::labelFor($case->manufacturing_stage);
+                            $mfgLabel = \App\Enums\ManufacturingStage::workshopDeskLabelFor($case->manufacturing_stage);
                         @endphp
                         <tr class="workshop-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
                             data-search="{{ $case->work_order_no }} {{ $case->case_no }} {{ $case->patient?->name }}"

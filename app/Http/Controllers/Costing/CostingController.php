@@ -7,7 +7,7 @@ use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Services\CostingService;
 use App\Services\PricingService;
-use App\Services\StockPriceService;
+use App\Services\StockCategorySchemaService;
 use App\Support\CaseFinancialSummary;
 use App\Support\OverheadCostingEngine;
 use App\Traits\PaginationTrait;
@@ -25,8 +25,8 @@ class CostingController extends Controller
     public function __construct(
         private readonly CostingService $costingService,
         private readonly PricingService $pricingService,
-        private readonly StockPriceService $stockPriceService,
         private readonly OverheadCostingEngine $overheadCostingEngine,
+        private readonly StockCategorySchemaService $categorySchema,
     ) {
     }
 
@@ -69,7 +69,7 @@ class CostingController extends Controller
             'contractCompany:id,name,is_contracted,discount_percent',
             'techOrderSpec:id,case_id,tech_notes',
             'bom.items',
-            'pricingRequest.items',
+            'pricingRequest.items.stockItem.attributeValues.field',
         ]);
 
         $pricing = $case->pricingRequest;
@@ -77,10 +77,10 @@ class CostingController extends Controller
         if ($pricing && $case->bom) {
             $this->pricingService->syncItemsFromBom($case, $pricing);
             $this->pricingService->refreshLinePrices($pricing);
-            $pricing->refresh()->load('items');
+            $pricing->refresh()->load(['items.stockItem.attributeValues.field']);
         } elseif ($pricing && (float) $pricing->computed_total <= 0) {
             $this->pricingService->refreshLinePrices($pricing);
-            $pricing->refresh()->load('items');
+            $pricing->refresh()->load(['items.stockItem.attributeValues.field']);
         }
 
         return response()->json([
@@ -155,21 +155,18 @@ class CostingController extends Controller
                 'net_offer_total'       => $breakdown['net_offer_total'],
             ],
             'items' => $pricing->relationLoaded('items')
-                ? $pricing->items->map(function ($item) use ($canSeeInternal) {
-                    $wacUnit = $canSeeInternal
-                        ? $this->stockPriceService->wacUnitPrice($item->stock_item_code ?? '')
-                        : null;
+                ? $pricing->items->map(function ($item) {
+                    $stockItem = $item->relationLoaded('stockItem') ? $item->stockItem : null;
+                    $criteria = $stockItem
+                        ? $this->categorySchema->formatCriteriaSummary($stockItem)
+                        : '—';
 
                     return [
                         'stock_item_code' => $item->stock_item_code,
                         'name'            => $item->name,
                         'qty'             => $item->qty,
-                        'unit_price'      => (float) $item->unit_price,
+                        'criteria'        => $criteria,
                         'line_total'      => (float) $item->line_total,
-                        'wac_unit'        => $wacUnit,
-                        'wac_line_total'  => $wacUnit !== null
-                            ? round($item->qty * $wacUnit, 2)
-                            : null,
                     ];
                 })->values()
                 : [],

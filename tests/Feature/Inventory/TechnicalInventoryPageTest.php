@@ -40,6 +40,33 @@ class TechnicalInventoryPageTest extends TestCase
         $this->assertArrayNotHasKey('wac', $response->json('data.0'));
     }
 
+    public function test_item_min_qty_triggers_low_status_when_available_drops(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $supplier = $this->makeSupplier();
+
+        $this->actingAs($admin);
+
+        $response = $this->postJson('/admin/catalog', [
+            'name'         => 'صنف بحد أدنى',
+            'qty'          => 12,
+            'min_qty'      => 10,
+            'price'        => 100,
+            'supplier_ids' => [$supplier->id],
+        ]);
+
+        $response->assertCreated();
+        $item = \App\Models\StockItem::query()->where('name', 'صنف بحد أدنى')->firstOrFail();
+        $this->assertSame(\App\Models\StockItem::STATUS_OK, $item->status);
+
+        $item->update(['qty' => 10, 'reserved' => 2]);
+        $item->refresh();
+        $item->recalculateAndSaveStatus();
+        $item->refresh();
+
+        $this->assertSame(\App\Models\StockItem::STATUS_LOW, $item->status);
+    }
+
     public function test_technical_inventory_page_renders_with_items(): void
     {
         $user = $this->userWithRole('technical');

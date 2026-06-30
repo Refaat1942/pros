@@ -53,26 +53,6 @@
       '<td class="col-actions" style="white-space:nowrap;">' + printBtn + '</td></tr>';
   }
 
-  function updateAnalytics(quotes) {
-    var total = quotes.length;
-    var warehouse = quotes.filter(function (q) {
-      return q.stage_label && q.stage_label.indexOf('المخزن') !== -1;
-    }).length;
-
-    if ($('quotesAwaitingBadge')) $('quotesAwaitingBadge').textContent = total;
-
-    var analytics = $('analytics-quotes-awaiting');
-    if (analytics) {
-      var values = analytics.querySelectorAll('.ck-stat-value');
-      if (values.length >= 4) {
-        values[0].textContent = total;
-        values[1].textContent = total;
-        values[2].textContent = warehouse;
-        values[3].textContent = total;
-      }
-    }
-  }
-
   function filterSearch() {
     var q = ($('quotesAwaitingSearch') && $('quotesAwaitingSearch').value || '').trim().toLowerCase();
     document.querySelectorAll('.quotes-awaiting-row').forEach(function (row) {
@@ -97,7 +77,6 @@
         } else {
           tbody.innerHTML = quotesCache.map(renderRow).join('');
         }
-        updateAnalytics(quotesCache);
         if (window.TablePagination) TablePagination.refreshById('quotesAwaitingTable');
         filterSearch();
       })
