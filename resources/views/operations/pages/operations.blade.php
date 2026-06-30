@@ -56,7 +56,7 @@
 
         <div class="p-4 border-b border-slate-100 flex flex-wrap gap-3 items-center">
             <input type="search" id="opsSearch" placeholder="🔍 بحث WO / مريض / حالة..."
-                   class="flex-1 min-w-[200px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ops/40">
+                   class="flex-1 min-w-[280px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ops/40">
             <div class="flex flex-wrap gap-2" id="opsFilters">
                 <button type="button" class="ops-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
                 <button type="button" class="ops-filter rounded-full px-4 py-1.5 text-xs font-bold bg-indigo-100 text-indigo-700" data-filter="military">🪖 عسكري</button>

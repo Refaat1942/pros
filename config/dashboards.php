@@ -108,8 +108,8 @@ return [
         'default_page' => 'adjustments',
         'sidebar' => ['icon' => '📏', 'title' => 'لوحة المعدلات', 'subtitle' => 'تجارب التركيب والمقاسات'],
         'pages' => [
-            'adjustments' => ['title' => 'المعدلات — تجارب التركيب والمقاسات', 'icon' => '📏', 'label' => 'جدول المعدلات'],
-            'history'     => ['title' => 'المحوّلون للتكاليف', 'icon' => '📤', 'label' => 'سجل المحوّلين'],
+            'adjustments' => ['title' => 'المعدلات', 'icon' => '📏', 'label' => 'المعدلات'],
+            'history'     => ['title' => 'المحوّلون للتكاليف', 'icon' => '📤', 'label' => 'سجل المحوّلين', 'hidden' => true],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],

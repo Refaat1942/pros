@@ -7,7 +7,7 @@
           <h3>📏 المعدلات</h3>
           <div style="display:flex;align-items:center;gap:10px;">
             <input type="search" id="adjSearch" placeholder="🔍 بحث رقم الحالة / الطلب / مريض..."
-                   class="form-control" style="max-width:220px;">
+                   class="form-control table-search-input">
             <button type="button" class="btn-action primary" id="btnRefreshAdj">↻ تحديث</button>
             <span class="badge" id="adjBadge">0</span>
           </div>
@@ -29,4 +29,6 @@
           </table>
         </div>
       </div>
+
+      @include('adjustments.partials.history-panel')
     </div>

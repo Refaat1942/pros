@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-header-notifications.css') }}?v={{ filemtime(public_path('assets/css/dashboard-header-notifications.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/entity-badges.css') }}?v={{ filemtime(public_path('assets/css/entity-badges.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/dashboard-table-search.css') }}?v={{ filemtime(public_path('assets/css/dashboard-table-search.css')) }}">
 @endpush
 
 @section('content')

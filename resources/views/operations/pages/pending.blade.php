@@ -11,7 +11,7 @@
       <h3>✅ مكتب التشغيل — موافقات وعروض الأسعار</h3>
       <div style="display:flex;align-items:center;gap:10px;">
         <input type="search" id="pendingSearch" placeholder="🔍 بحث رقم الحالة / العرض / مريض..."
-               class="form-control" style="max-width:220px;">
+               class="form-control table-search-input">
         <button type="button" class="btn-action primary" id="btnRefreshPending">↻ تحديث</button>
         <span class="badge" id="pendingBadge">0</span>
       </div>

@@ -617,7 +617,7 @@
 
     .inventory-toolbar input {
       flex: 1;
-      min-width: 220px;
+      min-width: 280px;
       padding: 10px 16px 10px 40px;
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -670,7 +670,7 @@
       border-bottom: 1px solid var(--border); flex-wrap: wrap;
     }
     .orders-toolbar input {
-      flex: 1; min-width: 180px; padding: 9px 14px; border: 1px solid var(--border);
+      flex: 1; min-width: 280px; padding: 9px 14px; border: 1px solid var(--border);
       border-radius: 8px; font-family: 'Tajawal', sans-serif; font-size: 13px;
     }
 
@@ -1918,7 +1918,7 @@
     }
 
     .workshop-report-search {
-      min-width: 220px;
+      min-width: 280px;
       padding: 9px 14px;
       border: 1px solid var(--border, #e2e8f0);
       border-radius: 10px;
@@ -1993,4 +1993,142 @@
       #workshopStatsRoot .ck-charts { grid-template-columns: 1fr; }
       .workshop-report-cards,
       .workshop-report-cards--secondary { grid-template-columns: 1fr; }
+    }
+
+    /* ── Adjustments — transfer history filter ── */
+    .adj-history-panel {
+      margin-top: 24px;
+    }
+
+    .adj-history-filter {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
+    }
+
+    .adj-history-filter__form {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px 20px;
+    }
+
+    .adj-history-filter__fields {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 12px 16px;
+      flex: 1 1 420px;
+      min-width: 0;
+    }
+
+    .adj-history-filter__field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .adj-history-filter__field--date {
+      flex: 0 0 160px;
+    }
+
+    .adj-history-filter__field--search {
+      flex: 1 1 280px;
+      min-width: 240px;
+      max-width: 480px;
+    }
+
+    .adj-history-filter__label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--secondary);
+      line-height: 1.2;
+    }
+
+    .adj-history-filter__field .form-control {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 14px;
+      font-size: 14px;
+      border-radius: 10px;
+    }
+
+    .adj-history-filter__field input[type="date"].form-control {
+      color: var(--text);
+    }
+
+    .adj-history-filter__actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .adj-history-filter__actions .btn-action,
+    .adj-history-filter__actions .btn-export {
+      min-height: 42px;
+      padding: 10px 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    a.btn-action.adj-history-filter__clear {
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    a.btn-action.adj-history-filter__clear:hover {
+      background: #f1f5f9;
+      color: var(--text);
+    }
+
+    .adj-history-filter__count {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(124, 58, 237, 0.1);
+      color: #7c3aed;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+      .adj-history-filter {
+        padding: 14px 16px;
+      }
+
+      .adj-history-filter__form {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .adj-history-filter__fields,
+      .adj-history-filter__field--date,
+      .adj-history-filter__field--search {
+        flex: 1 1 100%;
+        max-width: none;
+        min-width: 0;
+      }
+
+      .adj-history-filter__actions {
+        width: 100%;
+      }
+
+      .adj-history-filter__actions .btn-action,
+      .adj-history-filter__actions .btn-export {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .adj-history-filter__count {
+        width: 100%;
+        text-align: center;
+      }
     }

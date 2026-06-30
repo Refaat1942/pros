@@ -3,7 +3,7 @@
     <h3>💰 التكاليف</h3>
     <div style="display:flex;align-items:center;gap:10px;">
       <input type="search" id="costingSearch" placeholder="🔍 بحث..."
-             class="form-control" style="max-width:200px;">
+             class="form-control table-search-input">
       <button type="button" class="btn-action primary" id="btnRefreshCosting">↻ تحديث</button>
       <span class="badge" id="costingBadge">0</span>
     </div>

@@ -1,0 +1,41 @@
+/**
+ * Table search inputs — wider across all dashboard panels.
+ */
+:root {
+  --dash-table-search-width: 320px;
+  --dash-table-search-min: 280px;
+}
+
+/* Panel header action row (adjustments, costing, operations, …) */
+.panel-header input[type="search"],
+.panel-header input.table-search-input {
+  width: var(--dash-table-search-width);
+  min-width: var(--dash-table-search-min);
+  max-width: min(420px, 100%) !important;
+  flex: 0 1 var(--dash-table-search-width);
+}
+
+/* Toolbars above data tables */
+.data-toolbar > input[type="text"],
+.data-toolbar > input[type="search"],
+.data-toolbar input[type="text"]:not(.date-filter-input):not(.date-filter-native):not([type="date"]),
+.data-toolbar input[type="search"],
+.inventory-toolbar > input,
+.orders-toolbar > input,
+.search-bar > input[type="text"],
+.search-bar > input[type="search"],
+.workshop-report-search {
+  min-width: var(--dash-table-search-min) !important;
+}
+
+.data-toolbar > input[type="text"],
+.data-toolbar > input[type="search"],
+.data-toolbar input[type="text"]:not(.date-filter-input):not(.date-filter-native),
+.data-toolbar input[type="search"] {
+  flex: 2 1 var(--dash-table-search-min);
+}
+
+/* Tailwind table search rows (spec, operations, workshop, technical BOM) */
+input[type="search"].rounded-xl {
+  min-width: var(--dash-table-search-min);
+}

@@ -41,7 +41,7 @@
         <input type="date" id="ordersDateTo" name="to" value="{{ $dateTo }}"
                class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-spec/40">
     </label>
-    <label class="flex flex-col gap-1 text-sm font-semibold text-slate-700 flex-1 min-w-[200px]">
+    <label class="flex flex-col gap-1 text-sm font-semibold text-slate-700 flex-1 min-w-[280px]">
         <span>بحث</span>
         <input type="search" id="ordersFilterSearch" name="search" value="{{ $ordersSearch }}"
                placeholder="اسم المريض أو رقم الحالة..."

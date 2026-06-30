@@ -11,7 +11,7 @@
       <h3>💰 عروض الأسعار — بانتظار موافقة الجهة</h3>
       <div style="display:flex;align-items:center;gap:10px;">
         <input type="search" id="quotesAwaitingSearch" placeholder="🔍 بحث سريال عرض السعر / المريض / الجهة..."
-               class="form-control" style="max-width:240px;">
+               class="form-control table-search-input">
         <button type="button" class="btn-action primary" id="btnRefreshQuotesAwaiting">↻ تحديث</button>
         <span class="badge" id="quotesAwaitingBadge">0</span>
       </div>

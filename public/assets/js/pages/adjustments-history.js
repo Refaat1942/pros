@@ -3,7 +3,7 @@
  */
 (function () {
   if (document.body.dataset.dashboard !== 'adjustments') return;
-  if (document.body.dataset.activePage !== 'history') return;
+  if (document.body.dataset.activePage !== 'adjustments') return;
 
   function $(id) { return document.getElementById(id); }
 

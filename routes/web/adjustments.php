@@ -11,7 +11,22 @@ use Illuminate\Support\Facades\Route;
 | Adjustments Dashboard — Blade pages
 |--------------------------------------------------------------------------
 */
-registerDashboardPages('adjustments', 'adjustments.', AdjustmentsDashboardController::class, 'adjustments');
+registerDashboardPages('adjustments', 'adjustments.', AdjustmentsDashboardController::class, 'adjustments', except: ['history']);
+
+Route::prefix('adjustments')
+    ->middleware(['auth', 'dashboard.guard'])
+    ->name('adjustments.')
+    ->group(function () {
+        Route::get('history', function () {
+            $params = array_filter([
+                'from'   => request()->query('from'),
+                'to'     => request()->query('to'),
+                'search' => request()->query('search'),
+            ], fn ($v) => $v !== null && $v !== '');
+
+            return redirect()->to(route('adjustments.adjustments', $params) . '#adj-history-section');
+        })->name('history');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -47,7 +62,7 @@ Route::prefix('adjustments')
                 ->name('adjustments.edit-request.store');
         });
 
-        Route::middleware('dashboard.page:adjustments,history')->group(function () {
+        Route::middleware('dashboard.page:adjustments,adjustments')->group(function () {
             Route::get('history/list', [AdjustmentsHistoryController::class, 'index'])
                 ->name('history.list');
 

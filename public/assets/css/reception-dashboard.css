@@ -312,7 +312,7 @@
 
     .search-bar input {
       flex: 1;
-      min-width: 200px;
+      min-width: 280px;
       padding: 10px 16px;
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -901,7 +901,7 @@
       padding: 9px 14px; border: 1px solid var(--border); border-radius: 8px;
       font-family: 'Tajawal', sans-serif; font-size: 13px; background: white; min-width: 130px;
     }
-    .data-toolbar input[type="text"] { flex: 1; min-width: 180px; }
+    .data-toolbar input[type="text"] { flex: 1; min-width: 280px; }
     .export-btns { display: flex; gap: 8px; margin-right: auto; }
     .btn-export {
       padding: 8px 14px; border-radius: 8px; font-family: 'Tajawal', sans-serif;

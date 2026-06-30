@@ -43,7 +43,7 @@
 
     <div class="p-4 border-b border-slate-100 flex flex-wrap gap-3 items-center">
         <input type="search" id="bomSearch" placeholder="🔍 بحث بالمريض أو أمر التشغيل أو رقم القائمة..."
-               class="flex-1 min-w-[200px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-wh/40">
+               class="flex-1 min-w-[280px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-wh/40">
         <div class="flex flex-wrap gap-2" id="bomFilters">
             <button type="button" class="bom-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
             <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-amber-100 text-amber-800" data-filter="raw">📦 مخزن خام</button>

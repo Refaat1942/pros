@@ -41,11 +41,15 @@ class AdjustmentsTransferHistoryTest extends TestCase
         $user = $this->userWithRole('adjustments');
 
         $this->actingAs($user)
-            ->get('/adjustments/history')
+            ->get('/adjustments/adjustments')
             ->assertOk()
-            ->assertSee('سجل المحوّلين من المعدلات للتكاليف', false)
+            ->assertSee('سجل المحوّلين للتكاليف', false)
             ->assertSee($case->patient->name, false)
             ->assertSee($case->case_no, false);
+
+        $this->actingAs($user)
+            ->get('/adjustments/history')
+            ->assertRedirect();
     }
 
     public function test_history_api_filters_by_patient_name(): void

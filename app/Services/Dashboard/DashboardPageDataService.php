@@ -83,6 +83,7 @@ class DashboardPageDataService
             'spec.orders'           => $this->specOrders(),
             'spec.pricing'          => $this->specPricing(),
             'spec.spec'             => $this->specPreview(),
+            'adjustments.adjustments' => $this->adjustmentsHistory(),
             'adjustments.history'   => $this->adjustmentsHistory(),
             'operations.operations' => $this->operationsDeliveryDesk(),
             'workshop.workshop'     => $this->workshopDesk(),
