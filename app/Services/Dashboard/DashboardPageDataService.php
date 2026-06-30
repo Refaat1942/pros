@@ -172,7 +172,7 @@ class DashboardPageDataService
         return [
             'stock_categories' => StockCategory::query()
                 ->with('fields')
-                ->orderBy('name')
+                ->orderByDesc('id')
                 ->get()
                 ->map(fn (StockCategory $c) => $schema->formatCategory($c)),
         ];

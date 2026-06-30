@@ -164,8 +164,11 @@ class ChecklistFeaturesTest extends TestCase
     {
         $this->seed([StockCategorySeeder::class, SupplierSeeder::class]);
 
+        $supplierId = Supplier::query()->where('name', 'Blatchford Group')->value('id');
+        $categoryId = StockCategory::query()->where('name', 'أقمشة ومواد خام')->value('id');
+
         $contents = implode(',', StockImportService::HEADERS) . "\r\n"
-            . "RM-910,قماش اختبار,40,8,500,Blatchford Group,أقمشة ومواد خام,uom=متر\r\n";
+            . "RM-910,قماش اختبار,40,8,500,{$supplierId},{$categoryId},قماش Lamination|متر\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('extended.csv', $contents),
@@ -183,14 +186,41 @@ class ChecklistFeaturesTest extends TestCase
         );
     }
 
-    public function test_csv_template_includes_example_rows_for_new_columns(): void
+    public function test_xlsx_template_includes_reference_sheets_and_id_columns(): void
     {
-        $contents = app(StockImportService::class)->templateContents();
+        $this->seed([StockCategorySeeder::class, SupplierSeeder::class]);
 
-        $this->assertStringContainsString(StockImportService::HEADERS[3], $contents);
-        $this->assertStringContainsString('Blatchford Group', $contents);
-        $this->assertStringContainsString('uom=متر;color=#1E40AF', $contents);
-        $this->assertSame(4, substr_count($contents, "\r\n"));
+        $bytes = app(StockImportService::class)->templateBinary();
+
+        $this->assertStringStartsWith('PK', $bytes);
+
+        $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'stock_tpl_test_' . uniqid('', true) . '.xlsx';
+        file_put_contents($path, $bytes);
+
+        $reader = new \OpenSpout\Reader\XLSX\Reader();
+        $reader->open($path);
+
+        $sheetNames = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            $sheetNames[] = $sheet->getName();
+        }
+
+        $reader->close();
+        @unlink($path);
+
+        $this->assertSame(
+            [
+                StockImportService::SHEET_ITEMS,
+                StockImportService::SHEET_SUPPLIERS,
+                StockImportService::SHEET_CATEGORIES,
+                StockImportService::SHEET_FIELDS,
+                StockImportService::SHEET_FIELD_OPTIONS,
+            ],
+            $sheetNames,
+        );
+        $this->assertSame('معرف المورد', StockImportService::HEADERS[5]);
+        $this->assertSame('معرف القسم', StockImportService::HEADERS[6]);
+        $this->assertSame('قيم الخصائص', StockImportService::HEADERS[7]);
     }
 
     public function test_military_markup_engine_computes_selling_price_and_percentage(): void

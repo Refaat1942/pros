@@ -23,7 +23,7 @@ class StockCategoryController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = StockCategory::query()->with('fields')->orderBy('name');
+        $query = StockCategory::query()->with('fields')->orderByDesc('id');
 
         if ($request->boolean('all') || $request->boolean('with_fields')) {
             $categories = $query->get()->map(fn (StockCategory $c) => $this->schema->formatCategory($c));

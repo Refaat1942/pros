@@ -85,7 +85,11 @@ class StockCategorySchemaService
             ];
 
             $fieldId = isset($row['id']) && is_numeric($row['id']) ? (int) $row['id'] : null;
-            if ($fieldId && $existing = $category->fields()->whereKey($fieldId)->first()) {
+            $existing = $fieldId
+                ? $category->fields()->whereKey($fieldId)->first()
+                : ($fieldKey !== '' ? $category->fields()->where('field_key', $fieldKey)->first() : null);
+
+            if ($existing) {
                 $existing->update($payload);
                 $keepIds[] = $existing->id;
                 continue;
@@ -310,7 +314,26 @@ class StockCategorySchemaService
     private function castChoice(StockCategoryField $field, mixed $raw): string
     {
         $value = trim((string) $raw);
-        $allowed = collect($field->options ?? [])->pluck('value')->all();
+        $options = collect($field->options ?? []);
+
+        foreach ($options as $option) {
+            if (! is_array($option)) {
+                continue;
+            }
+
+            $allowedValue = trim((string) ($option['value'] ?? ''));
+            $allowedLabel = trim((string) ($option['label'] ?? $allowedValue));
+
+            if ($value === $allowedValue || mb_strtolower($value) === mb_strtolower($allowedValue)) {
+                return $allowedValue;
+            }
+
+            if ($value === $allowedLabel || mb_strtolower($value) === mb_strtolower($allowedLabel)) {
+                return $allowedValue;
+            }
+        }
+
+        $allowed = $options->pluck('value')->all();
 
         if ($allowed && ! in_array($value, $allowed, true)) {
             throw new \InvalidArgumentException("اختيار غير صالح في «{$field->label}».");

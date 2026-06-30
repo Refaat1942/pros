@@ -128,17 +128,17 @@ class StockCatalogController extends Controller
     }
 
     /**
-     * تنزيل قالب CSV للرفع الجماعي (السمات الأساسية فقط).
+     * تنزيل قالب Excel للرفع الجماعي (مع تبويبات الموردين والأقسام).
      */
     public function template(StockImportService $importService): StreamedResponse
     {
-        $contents = $importService->templateContents();
-        $filename = 'قالب-الأصناف.csv';
+        $contents = $importService->templateBinary();
+        $filename = 'قالب-الأصناف.xlsx';
 
         return response()->streamDownload(function () use ($contents) {
             echo $contents;
         }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 
@@ -147,18 +147,18 @@ class StockCatalogController extends Controller
      */
     public function export(Request $request, StockImportService $importService): StreamedResponse
     {
-        $contents = $importService->exportContents(
+        $contents = $importService->exportBinary(
             $this->catalogService->listForDashboard(
                 $request->query('from'),
                 $request->query('to'),
             )
         );
-        $filename = 'الأصناف_والأسعار-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'الأصناف_والأسعار-' . now()->format('Y-m-d') . '.xlsx';
 
         return response()->streamDownload(function () use ($contents) {
             echo $contents;
         }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 
@@ -168,10 +168,10 @@ class StockCatalogController extends Controller
     public function import(Request $request, StockImportService $importService): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+            'file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:5120'],
         ], [
-            'file.required' => 'يرجى اختيار ملف CSV.',
-            'file.mimes'    => 'الملف يجب أن يكون بصيغة CSV.',
+            'file.required' => 'يرجى اختيار ملف Excel أو CSV.',
+            'file.mimes'    => 'الملف يجب أن يكون بصيغة Excel (.xlsx) أو CSV.',
         ]);
 
         $summary = $importService->import($request->file('file'));
@@ -259,7 +259,7 @@ class StockCatalogController extends Controller
             $request->query('search'),
         );
 
-        $filename = 'sales-by-price-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'sales-by-price-' . now()->format('Y-m-d') . '.xlsx';
 
         $headers = [
             'Content-Type'        => 'text/csv; charset=UTF-8',

@@ -73,27 +73,28 @@ window.CatalogSections = (function () {
 
   function renderDynamicFields(categoryId, values) {
     var box = document.getElementById('slimCategoryFields');
+    var wrap = document.getElementById('slimCategoryFieldsWrap');
     var heading = document.getElementById('slimCategoryFieldsHeading');
     if (!box) return;
     values = values || {};
     var cat = getCategory(categoryId);
-    if (heading) {
-      heading.style.display = cat && cat.fields && cat.fields.length ? '' : 'none';
-      if (cat && cat.fields && cat.fields.length) {
-        heading.textContent = '📋 حقول القسم — ' + cat.name;
-      }
+    var hasFields = !!(cat && cat.fields && cat.fields.length);
+
+    if (wrap) wrap.hidden = !hasFields;
+    if (heading && hasFields) {
+      heading.textContent = '📋 حقول القسم — ' + cat.name;
     }
-    if (!cat || !cat.fields || !cat.fields.length) {
+    if (!hasFields) {
       box.innerHTML = '';
       return;
     }
 
     box.innerHTML = cat.fields.map(function (field) {
-      var req = field.required ? ' <span style="color:#dc2626">*</span>' : '';
+      var req = field.required ? ' <span class="catalog-attr-card__req">*</span>' : '';
       var val = values[field.field_key];
-      return '<div class="slim-cat-field" data-key="' + escapeHtml(field.field_key) + '" data-type="' + field.type + '">' +
-        '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;">' + escapeHtml(field.label) + req + '</label>' +
-        renderFieldInput(field, val) +
+      return '<div class="catalog-attr-card slim-cat-field" data-key="' + escapeHtml(field.field_key) + '" data-type="' + field.type + '">' +
+        '<label class="catalog-attr-card__label">' + escapeHtml(field.label) + req + '</label>' +
+        '<div class="catalog-attr-card__body">' + renderFieldInput(field, val) + '</div>' +
         '</div>';
     }).join('');
   }
@@ -593,7 +594,7 @@ window.CatalogSections = (function () {
       if (id) {
         categories = categories.map(function (c) { return String(c.id) === String(id) ? saved : c; });
       } else {
-        categories.push(saved);
+        categories.unshift(saved);
       }
       window.__STOCK_CATEGORIES = categories;
       renderCategoriesList();

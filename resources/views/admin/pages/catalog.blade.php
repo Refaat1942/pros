@@ -69,8 +69,8 @@
                 <a class="btn-action" href="{{ route('admin.catalog.template') }}">⬇️ تنزيل القالب</a>
                 <form id="catalogImportForm" method="POST" action="{{ route('admin.catalog.import') }}" enctype="multipart/form-data" style="display:inline-flex;">
                     @csrf
-                    <input type="file" id="catalogImportFile" name="file" accept=".csv,text/csv" class="catalog-file-input" required>
-                    <label for="catalogImportFile" class="btn-action success catalog-file-label" id="catalogImportBtn">📤 ارفع ملف اكسيل</label>
+                    <input type="file" id="catalogImportFile" name="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" class="catalog-file-input" required>
+                    <label for="catalogImportFile" class="btn-action success catalog-file-label" id="catalogImportBtn" title="معرف المورد/القسم من تبويبات القالب — والخصائص: انسخ من «خيارات الحقول» مفصولة بـ |">📤 ارفع ملف Excel</label>
                 </form>
             @endcan
 
@@ -137,7 +137,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -156,7 +156,10 @@
         <div class="catalog-modal-body">
             <input type="hidden" id="slimEditId" value="">
             <input type="hidden" id="slimEditCode" value="">
-            <div class="catalog-form-grid">
+            <div class="catalog-form-cards">
+                <section class="catalog-form-card">
+                    <h4 class="catalog-form-card__title">📦 بيانات الصنf</h4>
+                    <div class="catalog-form-grid catalog-form-grid--basic">
                 <div>
                     <label class="catalog-form-label">كود الصنف / الباركود</label>
                     <input type="text" id="slimCode" placeholder="تلقائي إن تُرك فارغاً" class="catalog-form-input">
@@ -177,9 +180,12 @@
                     <label class="catalog-form-label">السعر الأساسي</label>
                     <input type="number" id="slimPrice" min="0" step="0.01" value="0" class="catalog-form-input">
                 </div>
-            </div>
+                    </div>
+                </section>
 
-            <div class="catalog-supplier-picker">
+                <section class="catalog-form-card">
+                    <h4 class="catalog-form-card__title">🏭 المورد</h4>
+                    <div class="catalog-supplier-picker">
                 <label class="catalog-form-label">المورد *</label>
                 <div class="catalog-combobox" id="slimSupplierCombobox">
                     <input type="hidden" id="slimSupplierId" value="">
@@ -194,9 +200,11 @@
                         <ul class="catalog-combobox__list" id="slimSupplierList" role="listbox"></ul>
                     </div>
                 </div>
-            </div>
+                    </div>
+                </section>
 
-            <div class="catalog-category-section">
+                <section class="catalog-form-card">
+                    <h4 class="catalog-form-card__title">📂 القسم</h4>
                 <label class="catalog-form-label" for="slimCategoryId">القسم *</label>
                 <select id="slimCategoryId" class="catalog-form-input">
                     <option value="">— اختر القسم —</option>
@@ -204,15 +212,22 @@
                         <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
                     @endforeach
                 </select>
-                <p id="slimCategoryFieldsHeading" class="catalog-attrs-heading" style="display:none;margin:14px 0 8px;font-size:13px;font-weight:800;color:var(--secondary);"></p>
-                <div id="slimCategoryFields" class="catalog-form-grid catalog-form-grid--attrs"></div>
-            </div>
+                </section>
 
-            <div class="catalog-extra-prices">
-                <div class="catalog-extra-prices__head">
-                    <button type="button" class="btn-action" onclick="addSlimPriceRow()">+ سعر إضافي</button>
+                <div id="slimCategoryFieldsWrap" class="catalog-form-card catalog-form-card--attrs" hidden>
+                    <h4 class="catalog-form-card__title" id="slimCategoryFieldsHeading">📋 حقول القسم</h4>
+                    <div id="slimCategoryFields" class="catalog-attr-cards"></div>
                 </div>
-                <div id="slimExtraPrices" class="catalog-extra-prices__list"></div>
+
+                <section class="catalog-form-card">
+                    <div class="catalog-extra-prices">
+                        <div class="catalog-extra-prices__head">
+                            <h4 class="catalog-form-card__title catalog-form-card__title--inline">💰 أسعار إضافية</h4>
+                            <button type="button" class="btn-action" onclick="addSlimPriceRow()">+ سعر إضافي</button>
+                        </div>
+                        <div id="slimExtraPrices" class="catalog-extra-prices__list"></div>
+                    </div>
+                </section>
             </div>
 
             <div id="slimCatalogError" class="catalog-form-error" style="display:none;"></div>
@@ -310,7 +325,7 @@
         display: flex;
     }
     #catalogFormModal .catalog-form-modal {
-        width: min(680px, 96vw);
+        width: min(960px, 96vw);
         max-height: 92vh;
         overflow: hidden;
         display: flex;
@@ -318,15 +333,65 @@
     }
     #catalogFormModal .catalog-modal-body {
         overflow-y: auto;
+        padding: 18px 22px;
+    }
+    .catalog-form-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .catalog-form-card {
+        background: #fff;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 12px;
         padding: 16px 18px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+    .catalog-form-card--attrs {
+        background: #f8fafc;
+    }
+    .catalog-form-card__title {
+        margin: 0 0 14px;
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--secondary, #334155);
+    }
+    .catalog-form-card__title--inline {
+        margin: 0;
     }
     .catalog-form-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 12px;
     }
-    .catalog-form-grid--attrs {
-        margin-top: 14px;
+    .catalog-form-grid--basic {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+    @media (min-width: 900px) {
+        .catalog-form-grid--basic {
+            grid-template-columns: repeat(5, 1fr);
+        }
+    }
+    .catalog-attr-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+    }
+    .catalog-attr-card {
+        background: #fff;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 10px;
+        padding: 14px;
+    }
+    .catalog-attr-card__label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--secondary, #334155);
+    }
+    .catalog-attr-card__req {
+        color: #dc2626;
     }
     .catalog-form-label {
         display: block;
@@ -346,9 +411,8 @@
         color: var(--text-muted, #64748b);
         margin: 6px 0 0;
     }
-    .catalog-supplier-picker,
-    .catalog-category-section {
-        margin-top: 14px;
+    .catalog-supplier-picker {
+        margin-top: 0;
     }
     .catalog-combobox {
         position: relative;
@@ -453,12 +517,14 @@
         text-align: center;
     }
     .catalog-extra-prices {
-        margin-top: 14px;
+        margin-top: 0;
     }
     .catalog-extra-prices__head {
         display: flex;
-        justify-content: flex-end;
-        margin-bottom: 8px;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
     }
     .catalog-extra-prices__list {
         display: flex;
@@ -1055,7 +1121,7 @@
         if (!tbody) return;
 
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>';
         } else {
             tbody.innerHTML = list.map(catalogRowHtml).join('');
         }
@@ -1086,7 +1152,7 @@
 
     function uploadCatalogFile() {
         if (!importForm || !fileInput || !fileInput.files || !fileInput.files[0]) {
-            showImportStatus('يرجى اختيار ملف CSV.', true);
+            showImportStatus('يرجى اختيار ملف Excel أو CSV.', true);
             return;
         }
 
