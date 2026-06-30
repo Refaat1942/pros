@@ -17,10 +17,6 @@
           <p style="margin:0;font-size:13px;color:#92400e;font-weight:700;">⏳ يوجد طلب تعديل معلّق — بانتظار موافقة الإدارة.</p>
         </div>
 
-        <p id="adjModalHint" style="margin:0 0 12px;color:var(--text-muted);font-size:13px;">
-          البنود الأصلية (الفني) للقراءة فقط. أضف بنوداً إضافية ثم أغلق المعدلات.
-        </p>
-
         <div class="bom-table-wrap">
           <table class="bom-table">
             <thead>
@@ -97,17 +93,19 @@
 
   <style>
     #adjModal .adj-modal {
-      max-width: min(1080px, 96vw);
+      max-width: min(1280px, 98vw);
       width: 100%;
-      max-height: min(92vh, 900px);
+      max-height: min(96vh, 960px);
     }
 
     #adjModal .modal-body {
       overflow-x: hidden;
+      overflow-y: auto;
+      max-height: calc(96vh - 72px);
     }
 
     #adjModal .bom-table-wrap {
-      max-height: min(32vh, 240px);
+      max-height: min(52vh, 480px);
       overflow: auto;
     }
 

@@ -20,6 +20,7 @@
     locked: false,
     submitting: false,
     loadingCase: false,
+    ordersExportRows: window.__SPEC_ORDERS_EXPORT || [],
   };
 
   function isMilitaryPatient(type) {
@@ -271,6 +272,119 @@
     setLockedUI(false);
     renderReworkBanner(null);
     clearError();
+  }
+
+  function updateOrdersStats(stats) {
+    if (!stats) return;
+    var todayEl = document.querySelector('#analytics-orders .ck-stat-value[data-stat-key="today_from_doctor"]');
+    var pendingEl = document.querySelector('#analytics-orders .ck-stat-value[data-stat-key="pending_spec"]');
+    if (todayEl && stats.today_from_doctor != null) {
+      todayEl.textContent = String(stats.today_from_doctor);
+    }
+    if (pendingEl && stats.pending_spec != null) {
+      pendingEl.textContent = String(stats.pending_spec);
+    }
+  }
+
+  function renderOrdersList(items) {
+    var list = $('ordersList');
+    if (!list) return;
+
+    if (!items || !items.length) {
+      list.innerHTML = '<li class="px-5 py-10 text-center text-slate-400 text-sm orders-empty-msg">لا توجد حالات بانتظار التوصيف الفني.</li>';
+      updateOrdersCounts();
+      if (window.TablePagination) TablePagination.refreshById('ordersList');
+      return;
+    }
+
+    list.innerHTML = items.map(function (item) {
+      var patient = item.patient || {};
+      var typeClass = item.patient_type === 'military' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700';
+      var typeLabel = item.patient_type === 'military' ? '🪖 عسكري' : '🌐 مدني';
+      var transferDate = item.created_at ? String(item.created_at).slice(0, 10) : '';
+      var searchHay = [patient.name, item.case_no, item.order_ref, item.display_entity].join(' ');
+
+      return '<li class="order-item cursor-pointer px-5 py-4 hover:bg-amber-50 transition-colors"' +
+        ' data-case-id="' + item.id + '"' +
+        ' data-transfer-date="' + transferDate + '"' +
+        ' data-search="' + searchHay + '">' +
+        '<div class="flex items-start justify-between gap-2">' +
+          '<div>' +
+            '<p class="font-bold text-slate-800">' + (patient.name || '—') + '</p>' +
+            '<p class="text-xs text-slate-500 mt-1">' + (item.case_no || '—') + ' · ' + (item.order_ref || '—') + '</p>' +
+            '<p class="text-xs text-slate-400 mt-1">' + (item.display_entity || '—') + '</p>' +
+          '</div>' +
+          '<span class="text-[11px] font-semibold px-2 py-1 rounded-lg ' + typeClass + '">' + typeLabel + '</span>' +
+        '</div></li>';
+    }).join('');
+
+    bindOrdersList();
+    updateOrdersCounts();
+    if (window.TablePagination) TablePagination.refreshById('ordersList');
+  }
+
+  function buildOrdersFilterParams() {
+    var params = new URLSearchParams();
+    var from = $('ordersDateFrom');
+    var to = $('ordersDateTo');
+    var search = $('ordersFilterSearch');
+    if (from && from.value) params.set('from', from.value);
+    if (to && to.value) params.set('to', to.value);
+    if (search && search.value.trim()) params.set('search', search.value.trim());
+    return params;
+  }
+
+  function syncOrdersExportLink() {
+    var link = document.querySelector('#specOrdersFilter a[download]');
+    if (!link) return;
+    var qs = buildOrdersFilterParams().toString();
+    link.href = '/spec/orders/export' + (qs ? '?' + qs : '');
+  }
+
+  function exportSpecOrders(type) {
+    var rows = state.ordersExportRows || [];
+    var headers = ['المريض', 'رقم الحالة', 'رقم الطلب', 'الجهة', 'النوع', 'تاريخ التحويل'];
+    var fromEl = $('ordersDateFrom');
+    var toEl = $('ordersDateTo');
+    var period = (fromEl && fromEl.value && toEl && toEl.value)
+      ? ('الفترة: ' + fromEl.value + ' — ' + toEl.value)
+      : 'كل الفترات';
+
+    if (!window.ExportKit) {
+      alert('أداة التصدير غير متاحة');
+      return;
+    }
+
+    if (type === 'excel') {
+      var qs = buildOrdersFilterParams().toString();
+      window.location.href = '/spec/orders/export' + (qs ? '?' + qs : '');
+      return;
+    }
+
+    ExportKit.toPDF('طلبات التوصيف الفني', headers, rows, period);
+  }
+
+  function bindOrdersFilter() {
+    var form = $('specOrdersFilter');
+    if (form) {
+      form.setAttribute('action', '/spec/orders');
+      form.setAttribute('method', 'GET');
+      form.addEventListener('submit', function (e) {
+        syncOrdersExportLink();
+      });
+      form.querySelectorAll('input').forEach(function (input) {
+        input.addEventListener('change', syncOrdersExportLink);
+      });
+    }
+
+    var pdfBtn = $('btnExportOrdersPdf');
+    if (pdfBtn) {
+      pdfBtn.addEventListener('click', function () {
+        exportSpecOrders('pdf');
+      });
+    }
+
+    syncOrdersExportLink();
   }
 
   function countOrders() {
@@ -573,6 +687,7 @@
   }
 
   bindOrdersList();
+  bindOrdersFilter();
   bindCatalogModal();
   bindActions();
   updateSubmitLabels('civilian');

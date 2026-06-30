@@ -87,7 +87,7 @@ return [
         'pages' => [
             'orders' => ['title' => 'طلبات التوصيف', 'icon' => '📥', 'label' => 'طلبات التوصيف'],
             'spec' => ['title' => 'معاينة التوصيف', 'icon' => '👁️', 'label' => 'معاينة التوصيف'],
-            'pricing' => ['title' => 'إرسال للتسعير', 'icon' => '💰', 'label' => 'إرسال للتسعير'],
+            // 'pricing' => ['title' => 'إرسال للتسعير', 'icon' => '💰', 'label' => 'إرسال للتسعير'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],

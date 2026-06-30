@@ -27,6 +27,10 @@ Route::prefix('spec')
             ->middleware('dashboard.page:spec,orders')
             ->name('orders.list');
 
+        Route::get('orders/export', [TechOrderSpecController::class, 'exportOrders'])
+            ->middleware('dashboard.page:spec,orders')
+            ->name('orders.export');
+
         // ── Spec (معاينة التوصيف) ──────────────────────────────────────────
         Route::middleware('dashboard.page:spec,spec')->group(function () {
             Route::get('spec/{case}', [TechOrderSpecController::class, 'create'])

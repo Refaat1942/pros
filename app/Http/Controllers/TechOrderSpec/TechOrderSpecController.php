@@ -11,19 +11,24 @@ use App\Models\MedicalRecord;
 use App\Models\PricingRequest;
 use App\Models\StockItem;
 use App\Models\TechOrderSpec;
+use App\Services\SpecOrdersService;
 use App\Services\SpecService;
 use App\Support\CaseDisplayStatus;
+use App\Support\ExportCsvFormat;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TechOrderSpecController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly SpecService $specService)
-    {
+    public function __construct(
+        private readonly SpecService $specService,
+        private readonly SpecOrdersService $ordersService,
+    ) {
     }
 
     /**
@@ -31,24 +36,57 @@ class TechOrderSpecController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $cases = $this->fetchForDashboard(
-            CaseRecord::with([
-                'patient:id,patient_code,name,patient_type',
-                'techOrderSpec:id,case_id,locked,submitted_at',
-            ])
-                ->where('stage_key', CaseRecord::STAGE_TECHNICAL)
-                ->when($request->search, fn ($q, $s) => $q->whereHas(
-                    'patient',
-                    fn ($q) => $q->where('name', 'like', "%{$s}%")
-                        ->orWhere('patient_code', 'like', "%{$s}%")
-                ))
-                ->orderByDesc('updated_at')
-                ->orderByDesc('id')
-        );
+        $range  = $this->ordersService->parseDateRange($request->query('from'), $request->query('to'));
+        $from   = $range['from'] ?? null;
+        $to     = $range['to'] ?? null;
+        $search = $request->query('search');
+
+        $cases = $this->ordersService->list($from, $to, $search);
+        $stats = $this->ordersService->stats($from, $to, $search);
 
         return response()->json([
-            'data'  => collect($cases)->map(fn ($c) => $this->formatCase($c))->values(),
-            'total' => $cases->count(),
+            'data'        => $cases->map(fn ($c) => $this->formatCase($c))->values(),
+            'stats'       => $stats,
+            'date_from'   => $from?->toDateString(),
+            'date_to'     => $to?->toDateString(),
+            'export_rows' => $cases->map(fn ($c) => $this->ordersService->exportRow($c))->values(),
+            'total'       => $cases->count(),
+        ]);
+    }
+
+    /**
+     * تصدير طلبات التوصيف حسب الفلتر (CSV).
+     */
+    public function exportOrders(Request $request): StreamedResponse
+    {
+        $range  = $this->ordersService->parseDateRange($request->query('from'), $request->query('to'));
+        $from   = $range['from'] ?? null;
+        $to     = $range['to'] ?? null;
+        $search = $request->query('search');
+
+        $report = $this->ordersService->exportReport($from, $to, $search);
+
+        $suffix = ($from && $to)
+            ? $from->format('Y-m-d') . '_' . $to->format('Y-m-d')
+            : 'all';
+        $filename = 'spec-orders-' . $suffix . '.csv';
+
+        $callback = function () use ($report) {
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($out, [$report['title']]);
+            fputcsv($out, [$report['period_label']]);
+            fputcsv($out, []);
+            fputcsv($out, ExportCsvFormat::row($report['headers']));
+            foreach ($report['rows'] as $row) {
+                fputcsv($out, ExportCsvFormat::row($row));
+            }
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 

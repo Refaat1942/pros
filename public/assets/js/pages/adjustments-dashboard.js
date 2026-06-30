@@ -307,7 +307,6 @@
     var completeBtn = $('btnCompleteAdj');
     var submitEditBtn = $('btnSubmitAdjEditRequest');
     var pendingBanner = $('adjPendingBanner');
-    var hint = $('adjModalHint');
 
     if (directSection) directSection.style.display = canEdit && !hasPending ? '' : 'none';
     if (completeBtn) completeBtn.hidden = !isDirect;
@@ -317,13 +316,6 @@
     }
     if (pendingBanner) {
       pendingBanner.hidden = isDirect || !hasPending;
-    }
-    if (hint) {
-      hint.textContent = isDirect
-        ? 'البنود الأصلية (الفني) للقراءة فقط. أضف بنوداً إضافية ثم أغلق المعدلات.'
-        : (hasPending
-          ? 'طلب التعديل قيد المراجعة — لا يمكن تعديل البنود حتى ترد الإدارة.'
-          : 'عدّل بنود المعدلات فقط (بنود الفني للقراءة). أرسل الطلب للإدارة قبل تأكيد التكاليف.');
     }
   }
 
@@ -418,7 +410,7 @@
     var isMil = c.patient_type === 'military' || c.path === 'military';
     var items = bomItemsOf(c);
     var search = [c.case_no, c.order_ref, c.patient && c.patient.name, c.stage_label].join(' ');
-    var btnLabel = c.can_modify_directly ? 'مراجعة وإضافة' : 'مراجعة / طلب تعديل';
+    var btnLabel = c.can_modify_directly ? 'فتح' : 'طلب تعديل';
 
     return '<tr class="adj-row" data-case-id="' + c.id + '" data-search="' + esc(search) + '">' +
       '<td><strong>' + esc(c.case_no) + '</strong><div class="text-xs text-muted">' + esc(c.order_ref) + '</div>' +
@@ -436,21 +428,13 @@
 
   function updateAnalytics(cases) {
     var total = cases.length;
-    var mil = cases.filter(function (c) { return c.patient_type === 'military' || c.path === 'military'; }).length;
-    var civ = total - mil;
-    var avg = total ? Math.round(cases.reduce(function (s, c) { return s + bomItemsOf(c).length; }, 0) / total) : 0;
 
     if ($('adjBadge')) $('adjBadge').textContent = total;
 
     var analytics = $('analytics-adjustments');
     if (analytics) {
       var values = analytics.querySelectorAll('.ck-stat-value');
-      if (values.length >= 4) {
-        values[0].textContent = total;
-        values[1].textContent = mil;
-        values[2].textContent = civ;
-        values[3].textContent = avg;
-      }
+      if (values[0]) values[0].textContent = total;
     }
   }
 

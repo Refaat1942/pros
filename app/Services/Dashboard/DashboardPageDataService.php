@@ -33,6 +33,7 @@ use App\Services\DoctorTransferService;
 use App\Services\ReceptionAnalyticsService;
 use App\Services\WorkshopAnalyticsService;
 use App\Services\SpecEditRequestService;
+use App\Services\SpecOrdersService;
 use App\Services\StockCatalogService;
 use App\Services\SettingService;
 use App\Services\SupplierService;
@@ -496,26 +497,23 @@ class DashboardPageDataService
 
     private function specOrders(): array
     {
-        $cases = CaseRecord::query()
-            ->with([
-                'patient:id,patient_code,name,patient_type,company_name',
-                'techOrderSpec:id,case_id,locked,submitted_at',
-            ])
-            ->where('stage_key', CaseRecord::STAGE_TECHNICAL)
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->get();
-
-        $todayStart = now()->startOfDay();
-        $todayFromDoctor = CaseRecord::query()
-            ->where('created_at', '>=', $todayStart)
-            ->count();
+        $service = app(SpecOrdersService::class);
+        $range   = $service->parseDateRange(request()->query('from'), request()->query('to'));
+        $from    = $range['from'] ?? null;
+        $to      = $range['to'] ?? null;
+        $search  = request()->query('search');
+        $cases   = $service->list($from, $to, $search);
+        $stats   = $service->stats($from, $to, $search);
 
         return [
-            'spec_cases'  => $cases,
-            'spec_stats'  => [
-                ['key' => 'today_from_doctor', 'icon' => '📅', 'label' => 'إجمالي المحولون من الطبيب اليوم', 'value' => (string) $todayFromDoctor, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['key' => 'pending_spec', 'icon' => '📥', 'label' => 'بانتظار التوصيف', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+            'spec_cases'            => $cases,
+            'spec_orders_date_from' => $from?->toDateString(),
+            'spec_orders_date_to'   => $to?->toDateString(),
+            'spec_orders_search'    => $search,
+            'spec_orders_export'    => $cases->map(fn (CaseRecord $c) => $service->exportRow($c))->values(),
+            'spec_stats'            => [
+                ['key' => 'today_from_doctor', 'icon' => '📅', 'label' => 'إجمالي المحولون من الطبيب اليوم', 'value' => (string) $stats['today_from_doctor'], 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['key' => 'pending_spec', 'icon' => '📥', 'label' => 'بانتظار التوصيف', 'value' => (string) $stats['pending_spec'], 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
                 ['icon' => '📊', 'label' => '—', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
                 ['icon' => '📊', 'label' => '—', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
             ],
