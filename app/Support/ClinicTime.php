@@ -27,6 +27,31 @@ final class ClinicTime
         return self::now()->toDateString();
     }
 
+    /**
+     * يوم العمل التشغيلي — يبدأ الساعة 01:00 صباحاً.
+     * (00:00–00:59 تُحسب ضمن اليوم السابق.)
+     */
+    public static function clinicDayDateString(?CarbonInterface $at = null): string
+    {
+        $at = ($at ?? self::now())->copy()->timezone(self::zone());
+
+        if ($at->hour < 1) {
+            return $at->copy()->subDay()->toDateString();
+        }
+
+        return $at->toDateString();
+    }
+
+    public static function clinicDayStart(?CarbonInterface $at = null): Carbon
+    {
+        return Carbon::parse(self::clinicDayDateString($at) . ' 01:00:00', self::zone());
+    }
+
+    public static function clinicDayEnd(?CarbonInterface $at = null): Carbon
+    {
+        return self::clinicDayStart($at)->copy()->addDay()->subSecond();
+    }
+
     public static function format(?CarbonInterface $value, string $pattern = 'd/m/Y H:i'): string
     {
         if (! $value) {

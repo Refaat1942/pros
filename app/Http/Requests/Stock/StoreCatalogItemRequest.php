@@ -29,7 +29,7 @@ class StoreCatalogItemRequest extends BaseRequest
             'spec'           => ['nullable', 'string', 'max:500'],
             'category_id'    => ['nullable', 'integer', 'exists:stock_categories,id'],
             'attributes'     => ['nullable', 'array'],
-            'supplier_ids'   => ['required', 'array', 'min:1'],
+            'supplier_ids'   => ['required', 'array', 'size:1'],
             'supplier_ids.*' => ['integer', 'exists:suppliers,id'],
         ];
     }
@@ -39,8 +39,8 @@ class StoreCatalogItemRequest extends BaseRequest
         return [
             'name.required' => 'يرجى إدخال اسم الصنف.',
             'code.unique'   => 'كود الصنف مستخدم مسبقاً.',
-            'supplier_ids.required' => 'يرجى اختيار مورد واحد على الأقل.',
-            'supplier_ids.min'      => 'يرجى اختيار مورد واحد على الأقل.',
+            'supplier_ids.required' => 'يرجى اختيار مورد واحد لهذا الصنف.',
+            'supplier_ids.size'     => 'يُسمح بمورد واحد فقط لكل صنف.',
         ];
     }
 }

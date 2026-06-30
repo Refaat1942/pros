@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\SpecEditRequestSource;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectSpecEditRequestRequest;
 use App\Models\SpecEditRequest;
@@ -37,8 +38,12 @@ class SpecEditRequestController extends Controller
     {
         $row = $this->editService->approve($specEditRequest, Auth::user());
 
+        $message = $row->source === SpecEditRequestSource::Adjustments
+            ? 'تم اعتماد تعديل بنود المعدلات وتطبيقها على قائمة المواد.'
+            : 'تم اعتماد تعديل التوصيف وتطبيقه على قائمة المواد.';
+
         return response()->json([
-            'message' => 'تم اعتماد التعديل وتطبيقه على التوصيف وقائمة المواد.',
+            'message' => $message,
             'request' => $this->editService->format($row),
         ]);
     }

@@ -21,4 +21,12 @@ class UpdateCompanyRequest extends BaseRequest
             'discount_percent' => ['sometimes', 'numeric', 'min:0', 'max:100'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'discount_percent.min' => 'نسبة الخصم لا يمكن أن تكون سالبة.',
+            'discount_percent.max' => 'نسبة الخصم لا يمكن أن تتجاوز 100%.',
+        ];
+    }
 }

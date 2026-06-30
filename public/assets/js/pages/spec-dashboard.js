@@ -38,9 +38,7 @@
     var submitBtn = $('btnSubmitSpec');
     var banner = $('specSubmittedBanner');
     if (submitBtn) {
-      submitBtn.textContent = isMilitaryPatient(patientType)
-        ? '📤 اعتماد وإرسال للتشغيل'
-        : '📤 اعتماد وإرسال';
+      submitBtn.textContent = '💾 حفظ';
     }
     var bannerText = $('specSubmittedBannerText');
     if (bannerText) {
@@ -143,7 +141,8 @@
   }
 
   function normalizeItemQty(qty, fallback) {
-    return parseItemQty(qty, fallback !== undefined ? fallback : 1);
+    var n = parseItemQty(qty, fallback !== undefined ? fallback : 1);
+    return n < 1 ? 1 : n;
   }
 
   function mapSpecItems(items) {
@@ -200,7 +199,7 @@
       return {
         stock_item_code: item.stock_item_code,
         name: item.name,
-        qty: parseItemQty(item.qty, 1),
+        qty: normalizeItemQty(item.qty, 1),
         uom: item.uom,
       };
     });
@@ -218,7 +217,7 @@
         '<td class="px-4 py-3 font-mono text-xs">' + item.stock_item_code + '</td>' +
         '<td class="px-4 py-3 font-semibold text-slate-800">' + item.name + '</td>' +
         '<td class="px-4 py-3 text-slate-500">' + (item.uom || '—') + '</td>' +
-        '<td class="px-4 py-3"><input type="number" step="1" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
+        '<td class="px-4 py-3"><input type="number" step="1" min="1" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
           (state.locked ? 'disabled' : '') +
           ' class="spec-qty-input w-20 rounded-lg border border-slate-200 px-2 py-1 text-center text-sm"></td>' +
         '<td class="px-4 py-3 text-center">' +
@@ -232,12 +231,12 @@
         input.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
         var i = parseInt(input.getAttribute('data-qty-idx'), 10);
         if (!isNaN(i) && state.items[i]) {
-          state.items[i].qty = parseItemQty(input.value, state.items[i].qty);
+          state.items[i].qty = normalizeItemQty(input.value, state.items[i].qty);
         }
       });
       input.addEventListener('change', function () {
         var i = parseInt(input.getAttribute('data-qty-idx'), 10);
-        var requested = parseItemQty(input.value, state.items[i].qty);
+        var requested = normalizeItemQty(input.value, state.items[i].qty);
         state.items[i].qty = requested;
         input.value = String(requested);
         renderItemsTable();
@@ -284,7 +283,7 @@
     if (badge) badge.textContent = String(count);
     var root = $('specOrdersRoot');
     if (root) root.dataset.casesCount = String(count);
-    var statValue = document.querySelector('#analytics-orders .ck-stat-value');
+    var statValue = document.querySelector('#analytics-orders .ck-stat-value[data-stat-key="pending_spec"]');
     if (statValue) statValue.textContent = String(count);
   }
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Appointment;
 use App\Models\ContractCompany;
 use App\Models\MilitaryRank;
 use App\Models\Patient;
@@ -74,10 +75,18 @@ class PatientService
                 after:       $this->auditSnapshot($patient),
             );
 
+            $clinicDay = ClinicTime::clinicDayDateString();
+            $nextQueue = (int) Appointment::query()
+                ->whereDate('clinic_day', $clinicDay)
+                ->lockForUpdate()
+                ->max('queue_number');
+
             $this->appointmentService->book([
                 'patient_id'       => $patient->id,
-                'appointment_date' => ClinicTime::todayDateString(),
+                'appointment_date' => $clinicDay,
                 'visit_type_id'    => $data['visit_type_id'],
+                'clinic_day'       => $clinicDay,
+                'queue_number'     => $nextQueue + 1,
             ]);
 
             return $patient->load('contractCompany');

@@ -20,6 +20,7 @@ class CostingService
         private readonly QuoteService $quoteService,
         private readonly OperationsService $operationsService,
         private readonly MilitaryMarkupService $militaryMarkupService,
+        private readonly SpecEditRequestService $editRequestService,
     ) {
     }
 
@@ -74,6 +75,8 @@ class CostingService
 
         DB::transaction(function () use ($case, $confirmedBy) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
+
+            $this->editRequestService->assertNoPendingForCase($case);
 
             $pricingRequest = $case->pricingRequest
                 ?? $this->pricingService->createAndCalculateForCase($case);

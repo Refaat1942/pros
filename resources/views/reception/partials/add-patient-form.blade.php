@@ -48,15 +48,37 @@
                     </div>
                     <div class="form-group">
                         <label>تصنيف المريض <span style="color:red">*</span></label>
-                        <select class="form-control" name="patient_type" id="newPatientType" data-v-rules="required,select">
-                            <option value="civilian" @selected(old('patient_type', 'civilian') === 'civilian')>🌐 مدني</option>
-                            <option value="military" @selected(old('patient_type') === 'military')>🪖 عسكري</option>
+                        @php
+                            $classification = old('patient_classification');
+                            if (! $classification) {
+                                if (old('patient_type') === 'military') {
+                                    $classification = 'military';
+                                } elseif (old('contract_company_id')) {
+                                    $classification = 'entity';
+                                } else {
+                                    $classification = 'cash';
+                                }
+                            }
+                        @endphp
+                        <select class="form-control" name="patient_classification" id="newPatientClassification" data-v-rules="required,select">
+                            <option value="cash" @selected($classification === 'cash')>💵 مدني — كاش</option>
+                            <option value="entity" @selected($classification === 'entity')>🏢 جهات</option>
+                            <option value="military" @selected($classification === 'military')>🪖 عسكري</option>
                         </select>
                     </div>
-                    <div class="form-group" id="grpRank" style="display:{{ old('patient_type') === 'military' ? '' : 'none' }};">
+                    <div class="form-group" id="grpEntityBilling" style="display:{{ $classification === 'entity' ? '' : 'none' }};">
+                        <label>نوع الجهة <span style="color:red">*</span></label>
+                        <select class="form-control" name="entity_billing_type" id="newEntityBillingType"
+                                data-v-rules="required,select" data-v-when="patient_classification=entity">
+                            <option value="">— اختر —</option>
+                            <option value="contracted" @selected(old('entity_billing_type') === 'contracted')>📑 متعاقد</option>
+                            <option value="non_contracted" @selected(old('entity_billing_type') === 'non_contracted')>🏷️ غير متعاقد</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="grpRank" style="display:{{ $classification === 'military' ? '' : 'none' }};">
                         <label>الرتبة العسكرية <span style="color:red">*</span></label>
                         <select class="form-control" name="military_rank_id" id="newRankId"
-                                data-v-rules="required,select" data-v-when="patient_type=military">
+                                data-v-rules="required,select" data-v-when="patient_classification=military">
                             <option value="">— اختر الرتبة —</option>
                             @foreach ($military_ranks ?? [] as $rank)
                                 <option value="{{ $rank->id }}" @selected((string) old('military_rank_id') === (string) $rank->id)>
@@ -65,38 +87,33 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="form-group" id="grpCompany" style="display:{{ old('patient_type') === 'military' ? 'none' : '' }};">
-                        <label>الفوترة / جهة التعاقد <span class="field-optional">(اختياري)</span></label>
+                    <div class="form-group" id="grpCompany" style="display:{{ ($classification === 'entity' && old('entity_billing_type')) ? '' : 'none' }};">
+                        <label>جهة التعاقد <span style="color:red">*</span></label>
                         <select class="form-control" name="contract_company_id" id="newCompanyId"
-                                data-v-when="patient_type=civilian">
-                            <option value="">💵 نقدي — حساب شخصي</option>
+                                data-v-rules="required,select" data-v-when="patient_classification=entity">
+                            <option value="">— اختر الجهة —</option>
                             @php
                                 $contracted = collect($civilian_companies ?? [])->where('is_contracted', true);
                                 $nonContracted = collect($civilian_companies ?? [])->where('is_contracted', false);
                             @endphp
-                            @if ($contracted->isNotEmpty())
-                                <optgroup label="📑 هيئات متعاقدة">
-                                    @foreach ($contracted as $co)
-                                        <option value="{{ $co->id }}"
-                                            @selected((string) old('contract_company_id') === (string) $co->id)>
-                                            {{ $co->name }}
-                                        </option>
-                                    @endforeach
-                                </optgroup>
-                            @endif
-                            @if ($nonContracted->isNotEmpty())
-                                <optgroup label="🏷️ هيئات غير متعاقدة">
-                                    @foreach ($nonContracted as $co)
-                                        <option value="{{ $co->id }}"
-                                            @selected((string) old('contract_company_id') === (string) $co->id)>
-                                            {{ $co->name }}
-                                        </option>
-                                    @endforeach
-                                </optgroup>
-                            @endif
+                            @foreach ($contracted as $co)
+                                <option value="{{ $co->id }}" data-is-contracted="1"
+                                    @selected((string) old('contract_company_id') === (string) $co->id)>
+                                    {{ $co->name }}
+                                </option>
+                            @endforeach
+                            @foreach ($nonContracted as $co)
+                                <option value="{{ $co->id }}" data-is-contracted="0"
+                                    @selected((string) old('contract_company_id') === (string) $co->id)>
+                                    {{ $co->name }}
+                                </option>
+                            @endforeach
                         </select>
-                        <p class="field-hint" style="font-size:11px;color:var(--text-muted);margin-top:6px;">
-                            بدون جهة = المريض يتحاسب <strong>نقداً</strong> على حسابه الشخصي.
+                    </div>
+                    <div class="form-group" id="grpCashHint" style="display:{{ $classification === 'cash' ? '' : 'none' }};">
+                        <label>الفوترة</label>
+                        <p class="field-hint" style="font-size:13px;color:var(--text-muted);margin:0;padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+                            💵 <strong>كاش</strong> — المريض يتحاسب نقداً على حسابه الشخصي.
                         </p>
                     </div>
                     <div class="form-group" id="grpVisitType">

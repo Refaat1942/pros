@@ -38,7 +38,8 @@ class PublicTrackingTest extends TestCase
         $response->assertSee('متابعة حالة الطلب');
         $response->assertSee('جاري التصنيع بالورشة');
         $response->assertSee('case-test1234');
-        $response->assertSee('نسبة الإنجاز');
+        $response->assertSee('حالة الطلب');
+        $response->assertDontSee('نسبة الإنجاز');
         $response->assertDontSee('← أنت هنا');
         $response->assertDontSee($patient->name);
         $response->assertDontSee('50000');
@@ -55,10 +56,10 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('تم التسجيل — في انتظار الكشف الطبي');
-        $response->assertSee('0%');
-        $response->assertSee('نسبة الإنجاز');
-        $response->assertDontSee('تسجيل واستقبال');
-        $response->assertDontSee('التسعير واعتماد التشغيل');
+        $response->assertSee('حالة الطلب');
+        $response->assertSee('تسجيل واستقبال');
+        $response->assertDontSee('نسبة الإنجاز');
+        $response->assertDontSee('0%');
         $response->assertDontSee('مسار مدني');
     }
 
@@ -84,10 +85,10 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('بمكتب التشغيل — بانتظار الاعتماد');
-        $response->assertSee('نسبة الإنجاز');
+        $response->assertSee('حالة الطلب');
+        $response->assertSee('التسعير واعتماد التشغيل');
+        $response->assertDontSee('نسبة الإنجاز');
         $response->assertDontSee('← أنت هنا');
-        $response->assertDontSee('التسعير واعتماد التشغيل');
-        $response->assertDontSee('جاري التصنيع بالورشة</p>');
     }
 
     public function test_civilian_cost_calc_stays_on_preparation_step_not_pricing(): void
@@ -112,10 +113,10 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('جاري احتساب التكاليف');
-        $response->assertSee('نسبة الإنجاز');
+        $response->assertSee('حالة الطلب');
+        $response->assertSee('التوصيف الفني والتحضير');
+        $response->assertDontSee('نسبة الإنجاز');
         $response->assertDontSee('← أنت هنا');
-        $response->assertDontSee('التوصيف الفني والتحضير');
-        $response->assertDontSee('التسعير واعتماد التشغيل');
     }
 
     public function test_military_pathway_shows_six_steps_without_pricing_gate(): void
@@ -127,7 +128,8 @@ class PublicTrackingTest extends TestCase
         $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
 
         $response->assertOk();
-        $response->assertSee('نسبة الإنجاز');
+        $response->assertSee('حالة الطلب');
+        $response->assertDontSee('نسبة الإنجاز');
         $response->assertDontSee('التسعير واعتماد التشغيل');
         $response->assertDontSee('مسار عسكري');
     }
@@ -154,9 +156,10 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('جاري التحضير للتصنيع');
-        $response->assertSee('نسبة الإنجاز');
+        $response->assertSee('حالة الطلب');
+        $response->assertSee('التوصيف الفني والتحضير');
+        $response->assertDontSee('نسبة الإنجاز');
         $response->assertDontSee('← أنت هنا');
-        $response->assertDontSee('التوصيف الفني والتحضير');
         $response->assertDontSee('التسعير واعتماد التشغيل');
     }
 
@@ -195,10 +198,10 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('بانتظار موافقة الجهة');
-        $response->assertSee('نسبة الإنجاز');
+        $response->assertSee('حالة الطلب');
+        $response->assertSee('التسعير واعتماد التشغيل');
+        $response->assertDontSee('نسبة الإنجاز');
         $response->assertDontSee('← أنت هنا');
-        $response->assertDontSee('التسعير واعتماد التشغيل');
-        $response->assertDontSee('جاري التصنيع بالورشة</p>');
     }
 
     public function test_invalid_tracking_uid_returns_404(): void

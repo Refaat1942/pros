@@ -39,7 +39,6 @@
                     id="username"
                     name="username"
                     value="{{ old('username') }}"
-                    placeholder="admin"
                     autocomplete="username"
                     class="{{ $errors->has('username') ? 'is-invalid' : '' }}"
                     autofocus

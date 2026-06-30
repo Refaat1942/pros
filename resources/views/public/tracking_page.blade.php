@@ -26,18 +26,37 @@
             <p class="text-xs text-slate-400 mt-3 font-mono" dir="ltr">{{ $tracking['tracking_uid'] }}</p>
         </div>
 
-        @php
-            $progressPct = $tracking['progress_percent'] ?? 0;
-        @endphp
-
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-            <p class="text-sm font-semibold text-slate-700 mb-4 text-center">نسبة الإنجاز</p>
-            <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
-                <div class="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                     style="width: {{ $progressPct }}%"></div>
-            </div>
-            <p class="text-2xl font-bold text-emerald-700 mt-4 text-center">{{ $progressPct }}%</p>
-            <p class="text-xs text-slate-400 mt-1 text-center">مكتمل</p>
+            <p class="text-sm font-semibold text-slate-700 mb-4 text-center">حالة الطلب</p>
+            <ul class="space-y-3">
+                @foreach ($tracking['steps'] ?? [] as $index => $step)
+                    @php
+                        $status = $step['status'] ?? 'pending';
+                        $isDone = $status === 'done';
+                        $isCurrent = $status === 'current';
+                    @endphp
+                    <li class="flex items-start gap-3 {{ $isCurrent ? '' : ($isDone ? 'opacity-90' : 'opacity-45') }}">
+                        <span @class([
+                            'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
+                            'bg-emerald-600 text-white' => $isCurrent,
+                            'bg-emerald-100 text-emerald-700' => $isDone,
+                            'bg-slate-100 text-slate-400' => ! $isDone && ! $isCurrent,
+                        ])>{{ $isDone ? '✓' : ($index + 1) }}</span>
+                        <div class="min-w-0">
+                            <p @class([
+                                'text-sm font-medium',
+                                'text-emerald-700' => $isCurrent,
+                                'text-slate-700' => ! $isCurrent,
+                            ])>{{ $step['label'] }}</p>
+                            @if ($isCurrent)
+                                <p class="text-xs text-emerald-600 mt-0.5">المرحلة الحالية</p>
+                            @elseif ($isDone)
+                                <p class="text-xs text-slate-400 mt-0.5">مكتمل</p>
+                            @endif
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
         </div>
 
         <footer class="text-center mt-8 text-xs text-slate-400 leading-relaxed">

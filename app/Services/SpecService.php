@@ -214,6 +214,11 @@ class SpecService
     {
         foreach ($items as $item) {
             $code = $item['stock_item_code'] ?? '';
+            $qty  = (int) ($item['qty'] ?? 0);
+
+            if ($qty < 1) {
+                abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
+            }
 
             if (! StockItem::where('code', $code)->exists()) {
                 throw new InvalidSpecItemException($code);

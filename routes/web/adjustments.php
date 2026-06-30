@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Adjustments\AdjustmentEditRequestController;
 use App\Http\Controllers\Adjustments\AdjustmentsController;
 use App\Http\Controllers\Adjustments\AdjustmentsHistoryController;
 use App\Http\Controllers\Dashboard\AdjustmentsDashboardController;
@@ -38,6 +39,12 @@ Route::prefix('adjustments')
 
             Route::post('adjustments/{case}/complete', [AdjustmentsController::class, 'complete'])
                 ->name('adjustments.complete');
+
+            Route::get('adjustments/{case}/edit-request', [AdjustmentEditRequestController::class, 'show'])
+                ->name('adjustments.edit-request.show');
+
+            Route::post('adjustments/{case}/edit-request', [AdjustmentEditRequestController::class, 'store'])
+                ->name('adjustments.edit-request.store');
         });
 
         Route::middleware('dashboard.page:adjustments,history')->group(function () {

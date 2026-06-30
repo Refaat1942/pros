@@ -12,7 +12,12 @@
           <p class="adj-rework-text" id="adjReworkReason" style="margin:0;font-size:13px;color:#7f1d1d;white-space:pre-wrap;line-height:1.6;"></p>
         </div>
 
-        <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px;">
+        <div id="adjPendingBanner" class="adj-pending-banner" hidden
+             style="margin:0 0 14px;padding:12px 14px;border-radius:10px;border:1px solid #fde68a;background:#fffbeb;">
+          <p style="margin:0;font-size:13px;color:#92400e;font-weight:700;">⏳ يوجد طلب تعديل معلّق — بانتظار موافقة الإدارة.</p>
+        </div>
+
+        <p id="adjModalHint" style="margin:0 0 12px;color:var(--text-muted);font-size:13px;">
           البنود الأصلية (الفني) للقراءة فقط. أضف بنوداً إضافية ثم أغلق المعدلات.
         </p>
 
@@ -31,7 +36,7 @@
           </table>
         </div>
 
-        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border,#e2e8f0);">
+        <div id="adjDirectModifySection" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border,#e2e8f0);">
           <h4 style="margin:0 0 10px;font-size:14px;">➕ إضافة بند</h4>
           <div class="adj-add-item-row">
             <div class="form-group adj-item-field">
@@ -40,7 +45,7 @@
                 <input type="hidden" id="adjItemValue" value="">
                 <button type="button" class="adj-picker-toggle form-control" id="adjItemPickerToggle"
                         aria-haspopup="dialog" aria-expanded="false" aria-controls="adjCatalogModal">
-                  <span id="adjItemPickerLabel">— اختر الصنف —</span>
+                  <span id="adjItemPickerLabel">— اختر صنف/أصناف —</span>
                   <span class="adj-picker-caret" aria-hidden="true">▾</span>
                 </button>
               </div>
@@ -54,9 +59,10 @@
           <div id="adjFormError" class="adj-form-error" style="display:none;" role="alert"></div>
         </div>
 
-        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button type="button" class="btn-view" id="btnCancelAdj">إغلاق النافذة</button>
           <button type="button" class="btn-action success" id="btnCompleteAdj">📤 إرسال للتكاليف</button>
+          <button type="button" class="btn-action primary" id="btnSubmitAdjEditRequest" hidden>📨 إرسال طلب التعديل للإدارة</button>
         </div>
       </div>
     </div>
@@ -75,6 +81,13 @@
                placeholder="🔍 بحث بالكود أو الاسم..." autocomplete="off">
       </div>
       <ul class="adj-picker-list" id="adjItemPickerList" role="listbox"></ul>
+      <div class="adj-catalog-footer">
+        <span id="adjCatalogSelectedHint" class="adj-catalog-selected-hint">حدّد الأصناف بالـ checkbox</span>
+        <div class="adj-catalog-footer-actions">
+          <button type="button" class="btn-action" id="btnAdjCatalogCancel">إلغاء</button>
+          <button type="button" class="btn-action primary" id="btnAdjCatalogAdd" disabled>إضافة المحدّد</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -255,19 +268,77 @@
     }
 
     .adj-catalog-overlay .adj-picker-option {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 14px 18px;
-      font-size: 15px;
-      line-height: 1.45;
-      cursor: pointer;
-      transition: background 0.15s;
+      display: block;
+      padding: 0;
+      margin: 0;
       border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+      cursor: default;
     }
 
     .adj-catalog-overlay .adj-picker-option:last-child {
       border-bottom: 0;
+    }
+
+    .adj-catalog-overlay .adj-picker-check-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 18px;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .adj-catalog-overlay .adj-picker-checkbox {
+      width: 18px;
+      height: 18px;
+      margin-top: 4px;
+      flex-shrink: 0;
+      accent-color: var(--primary, #d97706);
+      cursor: pointer;
+    }
+
+    .adj-catalog-overlay .adj-picker-check-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .adj-catalog-overlay .adj-picker-option.is-disabled .adj-picker-check-label {
+      cursor: not-allowed;
+      opacity: 0.72;
+    }
+
+    .adj-catalog-overlay .adj-picker-option.is-selected .adj-picker-check-label {
+      background: rgba(217, 119, 6, 0.08);
+    }
+
+    .adj-catalog-overlay .adj-picker-option:hover:not(.is-disabled) .adj-picker-check-label {
+      background: rgba(217, 119, 6, 0.06);
+    }
+
+    .adj-catalog-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border, #e2e8f0);
+      background: #fafafa;
+      flex-shrink: 0;
+    }
+
+    .adj-catalog-selected-hint {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted, #64748b);
+    }
+
+    .adj-catalog-footer-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
     }
 
     .adj-catalog-overlay .adj-picker-code {
@@ -286,7 +357,7 @@
 
     .adj-catalog-overlay .adj-picker-option:hover,
     .adj-catalog-overlay .adj-picker-option.is-selected {
-      background: rgba(217, 119, 6, 0.08);
+      background: transparent;
     }
 
     .adj-catalog-overlay .adj-picker-option.is-disabled {

@@ -13,7 +13,7 @@
                 <div class="ck-stat-icon" style="background:{{ $stat['bg'] ?? 'rgba(100,116,139,0.1)' }}">{{ $stat['icon'] }}</div>
                 <div>
                     <div class="ck-stat-label">{{ $stat['label'] }}</div>
-                    <div class="ck-stat-value" @if(!empty($stat['color'])) style="color:{{ $stat['color'] }}" @endif>{{ $stat['value'] }}</div>
+                    <div class="ck-stat-value" @if(!empty($stat['key'])) data-stat-key="{{ $stat['key'] }}" @endif @if(!empty($stat['color'])) style="color:{{ $stat['color'] }}" @endif>{{ $stat['value'] }}</div>
                 </div>
             </div>
         @endforeach

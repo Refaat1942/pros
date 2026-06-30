@@ -21,6 +21,8 @@ class StoreCompanyRequest extends BaseRequest
         return [
             'name.unique'        => 'اسم الجهة مستخدم مسبقاً.',
             'is_military.required' => 'يجب تحديد نوع الجهة (مدنية أو عسكرية).',
+            'discount_percent.min' => 'نسبة الخصم لا يمكن أن تكون سالبة.',
+            'discount_percent.max' => 'نسبة الخصم لا يمكن أن تتجاوز 100%.',
         ];
     }
 }

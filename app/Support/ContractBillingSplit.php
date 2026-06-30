@@ -8,8 +8,8 @@ use App\Models\ContractCompany;
 /**
  * توزيع تكلفة الحالة بين المريض (كاش) وجهة التعاقد (مديونية).
  *
- * discount_percent على الجهة = نسبة ما تتحمّله الجهة من الإجمالي (مثال 20% → 200 من 1000).
- * المريض يدفع الباقي (80% → 800) — سعر العرض/الفاتورة يبقى بالكامل.
+ * discount_percent على الجهة = نسبة الخصم من الإجمالي (مثال 20% على 1000 → المريض يدفع 800).
+ * الباقي يُسجَّل مديونية على الجهة المتعاقدة — سعر العرض/الفاتورة يبقى بالكامل.
  */
 final class ContractBillingSplit
 {
@@ -54,13 +54,13 @@ final class ContractBillingSplit
     public static function forCompany(ContractCompany $company, float $grossTotal): array
     {
         $gross = round(max(0, $grossTotal), 2);
-        $companyPct = min(100, max(0, (float) $company->discount_percent));
+        $discountPct = min(100, max(0, (float) $company->discount_percent));
 
-        if ($companyPct <= 0) {
+        if ($discountPct <= 0) {
             return self::patientPaysAll($gross);
         }
 
-        if ($companyPct >= 100) {
+        if ($discountPct >= 100) {
             return [
                 'gross_total'           => $gross,
                 'patient_share'         => 0.0,
@@ -70,15 +70,15 @@ final class ContractBillingSplit
             ];
         }
 
-        $companyShare = round($gross * ($companyPct / 100), 2);
-        $patientShare = round($gross - $companyShare, 2);
+        $patientShare = round($gross * (1 - $discountPct / 100), 2);
+        $companyShare = round($gross - $patientShare, 2);
 
         return [
             'gross_total'           => $gross,
             'patient_share'         => $patientShare,
             'company_share'         => $companyShare,
-            'company_share_percent' => $companyPct,
-            'patient_share_percent' => round(100 - $companyPct, 2),
+            'company_share_percent' => round($discountPct, 2),
+            'patient_share_percent' => round(100 - $discountPct, 2),
         ];
     }
 

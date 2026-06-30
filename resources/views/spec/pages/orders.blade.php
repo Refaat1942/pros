@@ -126,7 +126,7 @@
             <div class="flex flex-wrap gap-3 pt-2 items-center">
                 <button type="button" id="btnSubmitSpec"
                         class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600 text-white font-bold px-6 py-3 transition-colors">
-                    📤 اعتماد وإرسال
+                    💾 حفظ
                 </button>
                 <p id="specSubmittedBanner" class="hidden text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
                     <span id="specSubmittedBannerText">✅ تم الاعتماد</span><span id="specSubmittedRequestNo" class="font-mono"></span>

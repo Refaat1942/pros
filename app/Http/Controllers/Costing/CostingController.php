@@ -9,6 +9,7 @@ use App\Services\CostingService;
 use App\Services\PricingService;
 use App\Services\StockPriceService;
 use App\Support\CaseFinancialSummary;
+use App\Support\OverheadCostingEngine;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class CostingController extends Controller
         private readonly CostingService $costingService,
         private readonly PricingService $pricingService,
         private readonly StockPriceService $stockPriceService,
+        private readonly OverheadCostingEngine $overheadCostingEngine,
     ) {
     }
 
@@ -62,7 +64,9 @@ class CostingController extends Controller
         abort_unless($case->isInCostCalc(), 422, 'الحالة ليست في مرحلة التكاليف.');
 
         $case->load([
-            'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank',
+            'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank,contract_company_id',
+            'patient.contractCompany:id,name,is_contracted,discount_percent',
+            'contractCompany:id,name,is_contracted,discount_percent',
             'techOrderSpec:id,case_id,tech_notes',
             'bom.items',
             'pricingRequest.items',
@@ -81,7 +85,7 @@ class CostingController extends Controller
 
         return response()->json([
             'case'    => $this->formatSummary($case),
-            'pricing' => $pricing ? $this->formatPricingDetail($pricing) : null,
+            'pricing' => $pricing ? $this->formatPricingDetail($pricing, $case) : null,
             'bom'     => $case->bom ? [
                 'id'     => $case->bom->id,
                 'bom_no' => $case->bom->bom_no,
@@ -129,15 +133,27 @@ class CostingController extends Controller
         ];
     }
 
-    private function formatPricingDetail(PricingRequest $pricing): array
+    private function formatPricingDetail(PricingRequest $pricing, CaseRecord $case): array
     {
         $canSeeInternal = CaseFinancialSummary::canSeeInternalCost();
+        $company = $case->contractCompany ?? $case->patient?->contractCompany;
+        $breakdown = $this->overheadCostingEngine->calculate(
+            (float) $pricing->internal_total,
+            $company,
+        );
 
         return $pricing->only([
             'id', 'request_no', 'order_ref', 'patient_name', 'company_name',
             'request_date', 'items_count', 'computed_total', 'status_key',
         ]) + [
             'internal_total' => $canSeeInternal ? (float) $pricing->internal_total : null,
+            'materials_highest_total' => round((float) $pricing->items->sum('line_total'), 2),
+            'overhead_breakdown' => $canSeeInternal ? $breakdown : [
+                'gross_before_discount' => $breakdown['gross_before_discount'],
+                'discount_percent'      => $breakdown['discount_percent'],
+                'discount_amount'       => $breakdown['discount_amount'],
+                'net_offer_total'       => $breakdown['net_offer_total'],
+            ],
             'items' => $pricing->relationLoaded('items')
                 ? $pricing->items->map(function ($item) use ($canSeeInternal) {
                     $wacUnit = $canSeeInternal

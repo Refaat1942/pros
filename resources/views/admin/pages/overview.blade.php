@@ -1,61 +1,71 @@
-<div class="section-view" id="section-overview">
-    <div class="overview-cases-strip" id="overviewCasesStrip">
-      <button type="button" class="overview-case-link" data-goto-cases="waiting_return">
-        <strong>⏳ بانتظار رجوع العميل</strong>
-        <span id="overviewWaitingCount" style="color:#d97706" data-server-rendered="1">{{ $case_strip['waiting_return'] ?? 0 }}</span>
-      </button>
-      <button type="button" class="overview-case-link" data-goto-cases="in_progress">
-        <strong>🏭 تحت التنفيذ</strong>
-        <span id="overviewProgressCount" style="color:#0e7490" data-server-rendered="1">{{ $case_strip['in_progress'] ?? 0 }}</span>
-      </button>
-      <button type="button" class="overview-case-link" data-goto-cases="delivered">
-        <strong>✅ تم التسليم</strong>
-        <span id="overviewDeliveredCount" style="color:#059669" data-server-rendered="1">{{ $case_strip['delivered'] ?? 0 }}</span>
-      </button>
-    </div>
+<div class="section-view overview-page" id="section-overview" data-server-rendered="1">
 
-    @include('partials.workshop-overview-panel')
+    <form method="GET" action="{{ route('admin.overview') }}" class="reports-date-filter overview-date-filter" id="overviewDateFilter">
+        <label>
+            <span>من</span>
+            <input type="date" name="from" value="{{ $date_from ?? now()->startOfMonth()->toDateString() }}" required>
+        </label>
+        <label>
+            <span>إلى</span>
+            <input type="date" name="to" value="{{ $date_to ?? now()->toDateString() }}" required>
+        </label>
+        <button type="submit" class="btn-action primary">تطبيق الفترة</button>
+        <a href="{{ route('admin.overview.export', ['from' => $date_from ?? now()->startOfMonth()->toDateString(), 'to' => $date_to ?? now()->toDateString()]) }}"
+           class="btn-export excel"
+           download>📊 تصدير Excel</a>
+    </form>
 
-    @include('partials.operations-overview-panel')
-
-    @include('partials.visit-leaderboard-panel')
-
-    <div class="panel overview-employees-panel" id="employees">
-        <div class="panel-header">
-          <h3>👥 إدارة الموظفين</h3>
-          <span class="badge">{{ ($employees_preview ?? collect())->count() }} موظف</span>
+    <section class="overview-section overview-section--cycle" aria-labelledby="overviewCycleHeading">
+        <header class="overview-section-head">
+            <h2 id="overviewCycleHeading">🔄 دورة العمل — الطوابير الحية</h2>
+            <p>عدد الطلبات في كل لوحة — {{ $period_label ?? '' }} — {{ $cycle_total_active ?? 0 }} حالة نشطة في الفترة</p>
+        </header>
+        <div class="overview-cycle-grid" id="overviewCycleGrid">
+            @foreach ($cycle_cards ?? [] as $card)
+                <div class="overview-cycle-card" style="--cycle-color: {{ $card['color'] }}; --cycle-bg: {{ $card['bg'] }};" data-cycle-key="{{ $card['key'] }}">
+                    <span class="overview-cycle-card__icon" aria-hidden="true">{{ $card['icon'] }}</span>
+                    <div class="overview-cycle-card__body">
+                        <span class="overview-cycle-card__count" data-server-rendered="1">{{ $card['count'] }}</span>
+                        <span class="overview-cycle-card__label">{{ $card['label'] }}</span>
+                        <span class="overview-cycle-card__hint">{{ $card['hint'] }}</span>
+                    </div>
+                </div>
+                @unless ($loop->last)
+                    <span class="overview-cycle-arrow" aria-hidden="true">←</span>
+                @endunless
+            @endforeach
         </div>
-        <div class="panel-body">
-          <table data-paginate="10">
-            <thead>
-              <tr>
-                <th>الاسم</th>
-                <th>اسم المستخدم</th>
-                <th>الدور</th>
-                <th>الحالة</th>
-                <th>آخر دخول</th>
-                <th>إجراء</th>
-              </tr>
-            </thead>
-            <tbody id="employeesTable" data-server-rendered="1">
-              @isset($employees_preview)
-                @include('partials.employees-table-rows', [
-                    'employees' => $employees_preview,
-                    'show_bulk' => false,
-                ])
-              @endisset
-            </tbody>
-          </table>
-        </div>
-      </div>
+    </section>
 
-    <div class="panel audit-panel">
-      <div class="panel-header">
-        <h3>🔒 آخر حركات — سجل الرقابة</h3>
-        <span class="badge">آخر ٥</span>
-      </div>
-      <div class="panel-body" id="auditPreview" data-server-rendered="1">
-        @include('partials.audit-log-preview', ['audit_preview' => $audit_preview ?? collect()])
-      </div>
-    </div>
-    </div>
+    <section class="overview-section" aria-label="حالة الحالات">
+        <header class="overview-section-head overview-section-head--compact">
+            <h2>📂 متابعة الحالات</h2>
+            <p>انتقال سريع إلى قائمة الحالات — {{ $period_label ?? '' }}</p>
+        </header>
+        <div class="overview-cases-strip" id="overviewCasesStrip">
+            <button type="button" class="overview-case-link overview-case-link--wait" data-goto-cases="waiting_return">
+                <div class="overview-case-link__text">
+                    <strong>بانتظار رجوع العميل</strong>
+                    <span class="overview-case-link__hint">موافقات وتوقيعات</span>
+                </div>
+                <span id="overviewWaitingCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['waiting_return'] ?? 0 }}</span>
+            </button>
+            <button type="button" class="overview-case-link overview-case-link--progress" data-goto-cases="in_progress">
+                <div class="overview-case-link__text">
+                    <strong>تحت التنفيذ</strong>
+                    <span class="overview-case-link__hint">تصنيع وتشغيل</span>
+                </div>
+                <span id="overviewProgressCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['in_progress'] ?? 0 }}</span>
+            </button>
+            <button type="button" class="overview-case-link overview-case-link--done" data-goto-cases="delivered">
+                <div class="overview-case-link__text">
+                    <strong>تم التسليم</strong>
+                    <span class="overview-case-link__hint">حالات مُغلقة</span>
+                </div>
+                <span id="overviewDeliveredCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['delivered'] ?? 0 }}</span>
+            </button>
+        </div>
+    </section>
+
+    @include('admin.partials.overview-metrics')
+</div>

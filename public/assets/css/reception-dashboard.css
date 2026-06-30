@@ -1187,8 +1187,7 @@
     .pic-type { font-size:12px; font-weight:700; background: rgba(255,255,255,0.2); padding:3px 10px; border-radius:999px; }
     .pic-body { display:flex; justify-content:space-between; gap:16px; padding:18px 16px; }
     .pic-name { font-size:20px; font-weight:800; margin-bottom:6px; }
-    .pic-id, .pic-company, .pic-rank, .pic-queue { font-size:13px; opacity:0.95; margin-top:3px; }
-    .pic-queue strong { font-size:18px; letter-spacing:1px; }
+    .pic-id, .pic-company, .pic-rank, .pic-queue { font-size:13px; opacity:0.95; margin-top:3px; font-weight:400; }
     .pic-qr { text-align:center; }
     .pic-qr-image {
       width:84px; height:84px; margin:0 auto; border-radius:10px; background:#fff;

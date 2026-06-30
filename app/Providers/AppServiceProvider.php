@@ -35,11 +35,11 @@ class AppServiceProvider extends ServiceProvider
             'military_debt' => MilitaryDebt::class,
         ]);
 
-        View::composer('partials.dashboard-sidebar', function ($view) {
+        View::composer(['partials.dashboard-sidebar', 'partials.dashboard-header-actions'], function ($view) {
             $dashboardKey = $view->getData()['dashboardKey'] ?? '';
             $roleSlug     = Auth::user()?->role?->slug;
 
-            $badges = $view->getData()['sidebarBadges'] ?? [];
+            $badges = $view->getData()['sidebarBadges'] ?? $view->getData()['headerBadges'] ?? [];
 
             if ($roleSlug) {
                 $badges['notifications'] = AppNotification::forRole($roleSlug)->unread()->count();
@@ -49,7 +49,11 @@ class AppServiceProvider extends ServiceProvider
                 $badges['queue'] = app(DashboardQueueService::class)->doctorWaitingCount();
             }
 
-            $view->with('sidebarBadges', $badges);
+            if ($view->name() === 'partials.dashboard-sidebar') {
+                $view->with('sidebarBadges', $badges);
+            } else {
+                $view->with('headerBadges', $badges);
+            }
         });
     }
 }

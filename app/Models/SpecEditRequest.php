@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SpecEditRequestSource;
 use App\Enums\SpecEditRequestStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SpecEditRequest extends Model
 {
     protected $fillable = [
+        'source',
         'tech_order_spec_id',
         'case_id',
         'requested_by_user_id',
@@ -27,6 +29,7 @@ class SpecEditRequest extends Model
     ];
 
     protected $casts = [
+        'source'          => SpecEditRequestSource::class,
         'status'          => SpecEditRequestStatus::class,
         'original_items'  => 'array',
         'proposed_items'  => 'array',

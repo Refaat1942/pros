@@ -13,12 +13,12 @@
 
     <div class="panel inventory-wrap">
         <div class="panel-header">
-            <h3>✏️ طلبات تعديل التوصيف الفني</h3>
+            <h3>✏️ طلبات تعديل التوصيف والمعدلات</h3>
             <span class="badge" id="specEditReqCount">{{ $rows->count() }} طلب</span>
         </div>
 
         <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;">
-            يطلب فني التوصيف تعديل توصيف مُرسَل للمعدلات — راجع البنود المقترحة ثم وافق أو ارفض مع سبب.
+            طلبات تعديل من فني التوصيف (قبل التكاليف) أو من مكتب المعدلات (قبل تأكيد السعر) — راجع البنود ثم وافق أو ارفض.
         </p>
 
         <div class="data-toolbar" style="padding:0 24px 12px;flex-wrap:wrap;gap:8px;">

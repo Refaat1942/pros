@@ -4,101 +4,75 @@ namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Reports\Concerns\RendersAdminDashboard;
-use App\Models\AuditLog;
-use App\Models\CaseRecord;
-use App\Models\MilitaryDebt;
-use App\Models\User;
+use App\Services\AdminOverviewExportService;
+use App\Services\AdminOverviewService;
 use App\Services\AdminPatientTrackService;
-use App\Services\AdminVisitLeaderboardService;
-use App\Services\BiReportService;
-use App\Services\Dashboard\DashboardPageDataService;
+use App\Support\ExportCsvFormat;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminOverviewController extends Controller
 {
     use RendersAdminDashboard;
 
     public function __construct(
-        private readonly BiReportService $biReportService,
-        private readonly DashboardPageDataService $pageData,
         private readonly AdminPatientTrackService $patientTrackService,
-        private readonly AdminVisitLeaderboardService $visitLeaderboard,
+        private readonly AdminOverviewService $overview,
+        private readonly AdminOverviewExportService $exporter,
     ) {
     }
 
     /**
-     * نظرة عامة — KPIs + آخر 5 حركات رقابة.
+     * نظرة عامة — دورة العمل + مؤشرات مالية ومخزون.
      */
     public function index(Request $request): View
     {
-        $board1 = $this->biReportService->boardPatients();
-        $board2 = $this->biReportService->boardInventory();
-        $workshop = $this->pageData->resolve('workshop', 'workshop');
-        $ops      = $this->pageData->resolve('operations', 'operations');
+        $dates = $this->overview->parseDateRange(
+            $request->query('from'),
+            $request->query('to'),
+        );
 
-        return $this->adminPage('overview', array_merge($workshop, $ops, [
-            'open_cases'         => $board1['open_count'],
-            'ready_for_delivery' => CaseRecord::where('stage_key', CaseRecord::STAGE_READY_DELIVERY)->count(),
-            'sla_breached'       => $board1['sla_breached'],
-            'audit_preview'      => AuditLog::query()
-                ->latest('logged_at')
-                ->take(5)
-                ->get(['user_name', 'action', 'description', 'tag', 'logged_at']),
-            'overview_stats'     => [
-                [
-                    'icon'  => '📂',
-                    'label' => 'حالات مفتوحة',
-                    'value' => (string) $board1['open_count'],
-                    'color' => '#0e7490',
-                    'bg'    => 'rgba(14,116,144,0.1)',
-                ],
-                [
-                    'icon'  => '✅',
-                    'label' => 'جاهز للتسليم',
-                    'value' => (string) CaseRecord::where('stage_key', CaseRecord::STAGE_READY_DELIVERY)->count(),
-                    'color' => '#059669',
-                    'bg'    => 'rgba(5,150,105,0.1)',
-                ],
-                [
-                    'icon'  => '⏱️',
-                    'label' => 'تجاوز SLA',
-                    'value' => (string) $board1['sla_breached'],
-                    'color' => '#dc2626',
-                    'bg'    => 'rgba(220,38,38,0.1)',
-                ],
-                [
-                    'icon'  => '🪖',
-                    'label' => 'مديونيات عسكرية معلقة',
-                    'value' => number_format(
-                        (float) MilitaryDebt::query()
-                            ->whereColumn('total_cost', '>', 'collected')
-                            ->selectRaw('COALESCE(SUM(total_cost - collected), 0) as amt')
-                            ->value('amt'),
-                        0
-                    ) . ' ج.م',
-                    'color' => '#7c3aed',
-                    'bg'    => 'rgba(124,58,237,0.1)',
-                ],
-            ],
-            'case_strip' => [
-                'waiting_return' => app(\App\Services\AdminCaseTrackingService::class)->buckets()['counts']['waiting_return'],
-                'in_progress'    => CaseRecord::whereIn('stage_key', [
-                    CaseRecord::STAGE_MANUFACTURING,
-                    CaseRecord::STAGE_READY_DELIVERY,
-                ])->count(),
-                'delivered'      => CaseRecord::where('stage_key', CaseRecord::STAGE_DELIVERED)->count(),
-            ],
-            'inventory_health_pct' => $board2['item_count'] > 0
-                ? (int) round((($board2['item_count'] - $board2['low_stock']) / $board2['item_count']) * 100)
-                : 0,
-            'employees_preview' => User::query()
-                ->with('role:id,slug,label_ar')
-                ->orderByDesc('id')
-                ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at']),
-            'visit_leaderboards' => $this->visitLeaderboard->topPatientsByVisitType(),
-        ]));
+        return $this->adminPage('overview', $this->overview->pageData($dates['from'], $dates['to']));
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $dates = $this->overview->parseDateRange(
+            $request->query('from'),
+            $request->query('to'),
+        );
+
+        $report   = $this->exporter->build($dates['from'], $dates['to']);
+        $filename = $this->exportFilename($dates['from'], $dates['to']);
+
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($report) {
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($out, [$report['title']]);
+            fputcsv($out, [$report['period_label']]);
+            fputcsv($out, []);
+
+            foreach ($report['sections'] as $section) {
+                fputcsv($out, [$section['title']]);
+                fputcsv($out, ExportCsvFormat::row($section['headers']));
+                foreach ($section['rows'] as $row) {
+                    fputcsv($out, ExportCsvFormat::row($row));
+                }
+                fputcsv($out, []);
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     /** API: مسار المرضى النشطين */
@@ -112,5 +86,10 @@ class AdminOverviewController extends Controller
                 visitType: $request->query('visit_type'),
             )->values()
         );
+    }
+
+    private function exportFilename(Carbon $from, Carbon $to): string
+    {
+        return 'نظرة_عامة_' . $from->format('Y-m-d') . '_' . $to->format('Y-m-d') . '.csv';
     }
 }

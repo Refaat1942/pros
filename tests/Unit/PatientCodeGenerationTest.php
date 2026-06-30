@@ -32,6 +32,6 @@ class PatientCodeGenerationTest extends TestCase
         $this->actingAs($reception)
             ->getJson("/reception/patients/{$patient->id}")
             ->assertOk()
-            ->assertJsonPath('queue_number', $patient->id);
+            ->assertJsonPath('queue_number', 1);
     }
 }

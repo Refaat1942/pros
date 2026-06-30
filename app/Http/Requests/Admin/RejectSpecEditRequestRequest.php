@@ -17,7 +17,7 @@ class RejectSpecEditRequestRequest extends FormRequest
     {
         return [
             'rejection_reason_key' => [
-                'required',
+                'nullable',
                 'string',
                 Rule::in(array_keys(config('spec_edit.rejection_reasons', []))),
             ],
@@ -29,8 +29,7 @@ class RejectSpecEditRequestRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'rejection_reason_key.required' => 'يرجى اختيار سبب الرفض.',
-            'rejection_reason_key.in'       => 'سبب الرفض غير صالح.',
+            'rejection_reason_key.in' => 'سبب الرفض غير صالح.',
         ];
     }
 }

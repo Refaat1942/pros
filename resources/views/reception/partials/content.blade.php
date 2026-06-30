@@ -445,8 +445,8 @@
           <div class="pic-body">
             <div class="pic-info">
               <div class="pic-name" id="picName">—</div>
-              <div class="pic-id">رقم المريض: <strong id="picId">—</strong></div>
-              <div class="pic-queue" id="picQueueWrap">رقم الدور: <strong id="picQueue">—</strong></div>
+              <div class="pic-id">رقم المريض: <span id="picId">—</span></div>
+              <div class="pic-queue" id="picQueueWrap">رقم الدور: <span id="picQueue">—</span></div>
               <div class="pic-company" id="picCompany">—</div>
               <div class="pic-rank" id="picRank" style="display:none;"></div>
             </div>

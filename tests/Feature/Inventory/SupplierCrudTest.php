@@ -58,6 +58,24 @@ class SupplierCrudTest extends TestCase
         $this->assertTrue($supplier->fresh()->stockItems()->where('stock_items.id', $item->id)->exists());
     }
 
+    public function test_catalog_item_rejects_multiple_suppliers(): void
+    {
+        $admin     = $this->userWithRole('admin');
+        $supplier1 = Supplier::create(['name' => 'مورد 1']);
+        $supplier2 = Supplier::create(['name' => 'مورد 2']);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.catalog.store'), [
+                'name'         => 'صنف بموردين',
+                'code'         => 'ITM-MULTI-SUP',
+                'qty'          => 0,
+                'price'        => 100,
+                'supplier_ids' => [$supplier1->id, $supplier2->id],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['supplier_ids']);
+    }
+
     public function test_receive_increases_supplier_debt_and_links_item(): void
     {
         $user     = $this->userWithRole('technical');

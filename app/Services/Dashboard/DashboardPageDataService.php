@@ -23,6 +23,7 @@ use App\Models\ReturnNoteLine;
 use App\Models\StockMovement;
 use App\Models\Patient;
 use App\Services\AdminCivilianDebtService;
+use Carbon\Carbon;
 use App\Services\AdminCaseTrackingService;
 use App\Services\AdminPatientTrackService;
 use App\Services\AdminReportsService;
@@ -33,6 +34,7 @@ use App\Services\ReceptionAnalyticsService;
 use App\Services\WorkshopAnalyticsService;
 use App\Services\SpecEditRequestService;
 use App\Services\StockCatalogService;
+use App\Services\SettingService;
 use App\Services\SupplierService;
 use App\Services\StockPriceService;
 use App\Support\ClinicTime;
@@ -53,6 +55,7 @@ class DashboardPageDataService
             'admin.companies'       => $this->adminCompanies(),
             'admin.military-ranks'  => $this->adminMilitaryRanks(),
             'admin.visit-types'     => $this->adminVisitTypes(),
+            'admin.costing-settings'=> $this->adminCostingSettings(),
             // 'admin.stock-categories'=> $this->adminStockCategories(),
             'admin.catalog'         => $this->adminCatalog(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
@@ -150,6 +153,16 @@ class DashboardPageDataService
         ];
     }
 
+    private function adminCostingSettings(): array
+    {
+        $settings = app(SettingService::class);
+
+        return [
+            'overhead_rate_definitions' => $settings->overheadRateDefinitions(),
+            'overhead_rates_sum'        => $settings->overheadRatesSum(),
+        ];
+    }
+
     /*
     private function adminStockCategories(): array
     {
@@ -244,7 +257,18 @@ class DashboardPageDataService
 
     private function adminCases(): array
     {
-        $buckets = app(AdminCaseTrackingService::class)->buckets();
+        $from = request()->query('from')
+            ? Carbon::parse((string) request()->query('from'))->startOfDay()
+            : now()->startOfMonth();
+        $to = request()->query('to')
+            ? Carbon::parse((string) request()->query('to'))->endOfDay()
+            : now()->endOfDay();
+
+        if ($from->gt($to)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+
+        $buckets = app(AdminCaseTrackingService::class)->buckets($from, $to);
 
         return [
             'admin_case_buckets' => [
@@ -253,6 +277,8 @@ class DashboardPageDataService
                 'delivered'      => $buckets['delivered']->all(),
             ],
             'admin_case_counts' => $buckets['counts'],
+            'case_date_from'    => $from->toDateString(),
+            'case_date_to'      => $to->toDateString(),
         ];
     }
 
@@ -480,11 +506,16 @@ class DashboardPageDataService
             ->orderByDesc('id')
             ->get();
 
+        $todayStart = now()->startOfDay();
+        $todayFromDoctor = CaseRecord::query()
+            ->where('created_at', '>=', $todayStart)
+            ->count();
+
         return [
             'spec_cases'  => $cases,
             'spec_stats'  => [
-                ['icon' => '📥', 'label' => 'بانتظار التوصيف', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-                ['icon' => '📅', 'label' => 'اليوم', 'value' => (string) $cases->where('created_at', '>=', now()->startOfDay())->count(), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['key' => 'today_from_doctor', 'icon' => '📅', 'label' => 'إجمالي المحولون من الطبيب اليوم', 'value' => (string) $todayFromDoctor, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['key' => 'pending_spec', 'icon' => '📥', 'label' => 'بانتظار التوصيف', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
                 ['icon' => '📊', 'label' => '—', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
                 ['icon' => '📊', 'label' => '—', 'value' => '0', 'bg' => 'rgba(100,116,139,0.1)'],
             ],

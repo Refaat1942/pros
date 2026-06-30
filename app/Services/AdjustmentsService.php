@@ -19,6 +19,7 @@ class AdjustmentsService
     public function __construct(
         private readonly BomService $bomService,
         private readonly CostingService $costingService,
+        private readonly SpecEditRequestService $editRequestService,
     ) {
     }
 
@@ -53,6 +54,8 @@ class AdjustmentsService
      */
     public function complete(CaseRecord $case): CaseRecord
     {
+        $this->editRequestService->assertNoPendingForCase($case);
+
         $case = $this->costingService->receiveFromAdjustments($case);
         $case->clearReworkNotice();
 

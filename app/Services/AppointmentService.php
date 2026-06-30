@@ -21,6 +21,7 @@ class AppointmentService
     {
         return DB::transaction(function () use ($data) {
             $payload = $this->resolvePatientFields($data);
+            $payload = $this->assignQueueNumber($payload);
 
             $appointment = Appointment::create($payload);
 
@@ -122,6 +123,29 @@ class AppointmentService
         });
     }
 
+    private function assignQueueNumber(array $payload): array
+    {
+        if (! empty($payload['queue_number']) && ! empty($payload['clinic_day'])) {
+            return $payload;
+        }
+
+        $clinicDay = ClinicTime::clinicDayDateString();
+
+        $next = (int) Appointment::query()
+            ->whereDate('clinic_day', $clinicDay)
+            ->lockForUpdate()
+            ->max('queue_number');
+
+        $payload['clinic_day']   = $clinicDay;
+        $payload['queue_number'] = $next + 1;
+
+        if (empty($payload['appointment_date'])) {
+            $payload['appointment_date'] = $clinicDay;
+        }
+
+        return $payload;
+    }
+
     private function resolvePatientFields(array $data): array
     {
         $visitFields = $this->resolveVisitTypeFields($data);
@@ -131,7 +155,7 @@ class AppointmentService
 
             return [
                 'patient_id'        => $patient->id,
-                'appointment_date'  => $data['appointment_date'],
+                'appointment_date'  => $data['appointment_date'] ?? ClinicTime::clinicDayDateString(),
                 'appointment_time'  => $data['appointment_time'] ?? ClinicTime::now()->format('H:i'),
                 ...$visitFields,
                 'patient_name'      => $patient->name,
@@ -143,6 +167,8 @@ class AppointmentService
                 'status'            => Appointment::STATUS_WAITING,
                 'status_label'      => $this->statusLabel(Appointment::STATUS_WAITING),
                 'transferred_to_clinic' => false,
+                'clinic_day'        => $data['clinic_day'] ?? null,
+                'queue_number'      => $data['queue_number'] ?? null,
             ];
         }
 

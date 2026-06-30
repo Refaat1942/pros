@@ -3,6 +3,7 @@
 namespace App\Services\Notifications;
 
 use App\Enums\WorkflowEvent;
+use App\Enums\SpecEditRequestSource;
 use App\Models\AppNotification;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
@@ -86,69 +87,101 @@ class NotificationService
         ],
     ];
 
-    public function notifySpecEditRequested(SpecEditRequest $request): AppNotification
+    public function notifyEditRequestSubmitted(SpecEditRequest $request): AppNotification
     {
         $request->loadMissing('caseRecord.patient:id,name', 'requestedBy:id,name');
         $case    = $request->caseRecord;
         $patient = $case?->patient?->name ?? 'غير معروف';
         $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
-        $by      = $request->requestedBy?->name ?? 'فني التوصيف';
+        $by      = $request->requestedBy?->name ?? '—';
+
+        $isAdjustments = $request->source === SpecEditRequestSource::Adjustments;
 
         return $this->push(
             roleSlug: Role::SLUG_ADMIN,
-            title:    '✏️ طلب تعديل توصيف فني',
-            body:     "طلب {$by} تعديل توصيف المريض {$patient} (حالة {$caseNo}) — بانتظار موافقة الإدارة.",
+            title:    $isAdjustments ? '✏️ طلب تعديل بنود المعدلات' : '✏️ طلب تعديل التوصيف',
+            body:     $isAdjustments
+                ? "طلب {$by} تعديل بنود المعدلات للمريض {$patient} (حالة {$caseNo}) — بانتظار موافقة الإدارة."
+                : "طلب {$by} تعديل توصيف المريض {$patient} (حالة {$caseNo}) — بانتظار موافقة الإدارة.",
             case:     $case,
             event:    'spec_edit_requested',
             data:     [
                 'spec_edit_request_id' => (string) $request->id,
+                'source'               => $request->source->value,
                 'url'                  => '/admin/spec-edit-requests',
             ],
         );
     }
 
-    public function notifySpecEditApproved(SpecEditRequest $request): AppNotification
+    public function notifyEditRequestApproved(SpecEditRequest $request): AppNotification
     {
         $request->loadMissing('caseRecord.patient:id,name');
         $case    = $request->caseRecord;
         $patient = $case?->patient?->name ?? 'غير معروف';
         $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
 
+        $isAdjustments = $request->source === SpecEditRequestSource::Adjustments;
+
         return $this->push(
-            roleSlug: Role::SLUG_SPEC,
-            title:    '✅ تم اعتماد تعديل التوصيف',
-            body:     "وافقت الإدارة على تعديل توصيف المريض {$patient} (حالة {$caseNo}) — التعديل مُطبَّق.",
+            roleSlug: $isAdjustments ? Role::SLUG_ADJUSTMENTS : Role::SLUG_SPEC,
+            title:    $isAdjustments ? '✅ تم اعتماد تعديل بنود المعدلات' : '✅ تم اعتماد تعديل التوصيف',
+            body:     $isAdjustments
+                ? "وافقت الإدارة على تعديل بنود المعدلات للمريض {$patient} (حالة {$caseNo}) — التعديل مُطبَّق."
+                : "وافقت الإدارة على تعديل توصيف المريض {$patient} (حالة {$caseNo}) — التعديل مُطبَّق.",
             case:     $case,
             event:    'spec_edit_approved',
             data:     [
                 'spec_edit_request_id' => (string) $request->id,
-                'url'                  => '/spec/spec',
+                'source'               => $request->source->value,
+                'url'                  => $isAdjustments ? '/adjustments/adjustments' : '/spec/spec',
             ],
         );
     }
 
-    public function notifySpecEditRejected(SpecEditRequest $request): AppNotification
+    public function notifyEditRequestRejected(SpecEditRequest $request): AppNotification
     {
         $request->loadMissing('caseRecord.patient:id,name');
         $case    = $request->caseRecord;
         $patient = $case?->patient?->name ?? 'غير معروف';
         $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
-        $reason  = $request->rejectionReasonLabel() ?? '—';
+        $reason  = $request->rejectionReasonLabel();
         $notes   = trim((string) $request->rejection_notes);
-        $suffix  = $notes !== '' ? " — {$notes}" : '';
+        $reasonPart = '';
+
+        if ($reason || $notes !== '') {
+            $reasonPart = ' السبب: ' . ($reason ?: '—') . ($notes !== '' ? " — {$notes}" : '');
+        }
+
+        $isAdjustments = $request->source === SpecEditRequestSource::Adjustments;
 
         return $this->push(
-            roleSlug: Role::SLUG_SPEC,
-            title:    '❌ رُفض طلب تعديل التوصيف',
-            body:     "رفضت الإدارة تعديل توصيف {$patient} (حالة {$caseNo}). السبب: {$reason}{$suffix}",
+            roleSlug: $isAdjustments ? Role::SLUG_ADJUSTMENTS : Role::SLUG_SPEC,
+            title:    $isAdjustments ? '❌ رُفض طلب تعديل المعدلات' : '❌ رُفض طلب تعديل التوصيف',
+            body:     "رفضت الإدارة طلب تعديل {$patient} (حالة {$caseNo}).{$reasonPart}",
             case:     $case,
             event:    'spec_edit_rejected',
             data:     [
                 'spec_edit_request_id' => (string) $request->id,
+                'source'               => $request->source->value,
                 'rejection_reason'     => $reason,
-                'url'                  => '/spec/spec',
+                'url'                  => $isAdjustments ? '/adjustments/adjustments' : '/spec/spec',
             ],
         );
+    }
+
+    public function notifySpecEditRequested(SpecEditRequest $request): AppNotification
+    {
+        return $this->notifyEditRequestSubmitted($request);
+    }
+
+    public function notifySpecEditApproved(SpecEditRequest $request): AppNotification
+    {
+        return $this->notifyEditRequestApproved($request);
+    }
+
+    public function notifySpecEditRejected(SpecEditRequest $request): AppNotification
+    {
+        return $this->notifyEditRequestRejected($request);
     }
 
     /**

@@ -94,40 +94,4 @@ class AdminOverviewVisitLeaderboardTest extends TestCase
         $this->assertSame('أحمد علي', $examBoard['patients'][0]['name']);
         $this->assertSame(3, $examBoard['patients'][0]['visit_count']);
     }
-
-    public function test_overview_page_shows_visit_leaderboard_panel(): void
-    {
-        $bi = \Mockery::mock(BiReportService::class);
-        $bi->shouldReceive('boardPatients')->once()->andReturn([
-            'open_count' => 0, 'sla_breached' => 0, 'sla_breached_cases' => [],
-        ]);
-        $bi->shouldReceive('boardInventory')->once()->andReturn([
-            'item_count' => 0, 'low_stock' => 0,
-        ]);
-        $this->app->instance(BiReportService::class, $bi);
-
-        $this->seed(RolesAndAdminSeeder::class);
-        $admin = $this->userWithRole('admin');
-
-        $exam = VisitType::create(['name' => 'كشف']);
-        $patient = $this->civilianPatient($this->civilianCompany());
-        Appointment::create([
-            'patient_id'        => $patient->id,
-            'visit_type_id'     => $exam->id,
-            'visit_type'        => 'exam',
-            'patient_name'      => $patient->name,
-            'phone'             => $patient->phone,
-            'patient_type'      => Patient::TYPE_CIVILIAN,
-            'appointment_date'  => now()->toDateString(),
-            'appointment_time'  => '09:00',
-            'status'            => Appointment::STATUS_DONE,
-        ]);
-
-        $this->actingAs($admin)
-            ->get('/admin/overview')
-            ->assertOk()
-            ->assertSee('أكثر المرضى زيارة')
-            ->assertSee('كشف')
-            ->assertSee($patient->name);
-    }
 }

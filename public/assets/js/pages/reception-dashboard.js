@@ -1295,24 +1295,71 @@
       return meta ? meta.getAttribute('content') : '';
     }
 
-    function filterCompanyOptions(isMilitary) {
+    var companiesCache = [];
+
+    function syncPatientClassificationUI() {
+      var classSel = document.getElementById('newPatientClassification');
+      var classification = classSel ? classSel.value : 'cash';
+      var isMilitary = classification === 'military';
+      var isEntity = classification === 'entity';
+      var isCash = classification === 'cash';
+
+      var grpRank = document.getElementById('grpRank');
+      var grpEntityBilling = document.getElementById('grpEntityBilling');
       var grpCompany = document.getElementById('grpCompany');
-      if (grpCompany) grpCompany.style.display = isMilitary ? 'none' : '';
+      var grpCashHint = document.getElementById('grpCashHint');
+      var entityBillingSel = document.getElementById('newEntityBillingType');
+      var companySel = document.getElementById('newCompanyId');
+
+      if (grpRank) grpRank.style.display = isMilitary ? '' : 'none';
+      if (grpEntityBilling) grpEntityBilling.style.display = isEntity ? '' : 'none';
+      if (grpCashHint) grpCashHint.style.display = isCash ? '' : 'none';
+
+      if (!isEntity) {
+        if (grpCompany) grpCompany.style.display = 'none';
+        if (entityBillingSel && !isEntity) entityBillingSel.value = '';
+        if (companySel && !isEntity) companySel.value = '';
+      } else {
+        var billingType = entityBillingSel ? entityBillingSel.value : '';
+        if (grpCompany) grpCompany.style.display = billingType ? '' : 'none';
+        rebuildCompanyOptions(billingType);
+      }
+
+      if (isMilitary && companySel) companySel.value = '';
+      requestAnimationFrame(syncAddPatientFormHeight);
+    }
+
+    function rebuildCompanyOptions(billingType) {
       var sel = document.getElementById('newCompanyId');
       if (!sel) return;
-      if (isMilitary) {
-        sel.value = '';
-        return;
-      }
-      sel.querySelectorAll('option[data-military]').forEach(function(opt) {
-        var mil = opt.getAttribute('data-military') === '1';
-        opt.style.display = mil ? 'none' : '';
-        opt.disabled = mil;
+
+      var preserved = sel.value;
+      var wantContracted = billingType === 'contracted';
+      var wantNonContracted = billingType === 'non_contracted';
+
+      sel.innerHTML = '<option value="">— اختر الجهة —</option>';
+
+      companiesCache.forEach(function (co) {
+        if (co.is_military) return;
+        if (wantContracted && co.is_contracted === false) return;
+        if (wantNonContracted && co.is_contracted !== false) return;
+
+        var opt = document.createElement('option');
+        opt.value = String(co.id);
+        opt.textContent = co.name;
+        opt.setAttribute('data-is-contracted', co.is_contracted === false ? '0' : '1');
+        sel.appendChild(opt);
       });
-      if (sel.value) {
-        var selected = sel.querySelector('option[value="' + sel.value + '"]');
-        if (selected && selected.style.display === 'none') sel.value = '';
+
+      if (preserved && sel.querySelector('option[value="' + preserved + '"]')) {
+        sel.value = preserved;
+      } else {
+        sel.value = '';
       }
+    }
+
+    function filterCompanyOptions(isMilitary) {
+      syncPatientClassificationUI();
     }
 
     /**
@@ -1322,41 +1369,20 @@
       var sel = document.getElementById('newCompanyId');
       if (!sel) return Promise.resolve();
 
-      var preserved = sel.value;
-
       return fetch('/reception/lookup/companies?all=1', {
         headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         credentials: 'same-origin',
       })
         .then(function (r) { return r.ok ? r.json() : { data: [] }; })
         .then(function (res) {
-          var companies = res.data || [];
-          sel.innerHTML = '<option value="">💵 نقدي — حساب شخصي</option>';
-          var contracted = companies.filter(function (co) { return !co.is_military && co.is_contracted !== false; });
-          var nonContracted = companies.filter(function (co) { return !co.is_military && co.is_contracted === false; });
-
-          function appendGroup(label, list) {
-            if (!list.length) return;
-            var group = document.createElement('optgroup');
-            group.label = label;
-            list.forEach(function (co) {
-              var opt = document.createElement('option');
-              opt.value = String(co.id);
-              opt.textContent = co.name;
-              opt.setAttribute('data-military', co.is_military ? '1' : '0');
-              group.appendChild(opt);
-            });
-            sel.appendChild(group);
+          companiesCache = res.data || [];
+          var classSel = document.getElementById('newPatientClassification');
+          var entityBillingSel = document.getElementById('newEntityBillingType');
+          var billingType = entityBillingSel ? entityBillingSel.value : '';
+          if (classSel && classSel.value === 'entity' && billingType) {
+            rebuildCompanyOptions(billingType);
           }
-
-          appendGroup('📑 هيئات متعاقدة', contracted);
-          appendGroup('🏷️ هيئات غير متعاقدة', nonContracted);
-          if (preserved && sel.querySelector('option[value="' + preserved + '"]')) {
-            sel.value = preserved;
-          }
-          var patientTypeSel = document.getElementById('newPatientType');
-          var isMil = patientTypeSel && patientTypeSel.value === 'military';
-          filterCompanyOptions(isMil);
+          syncPatientClassificationUI();
         })
         .catch(function () { /* يبقى على خيارات السيرفر */ });
     }
@@ -1366,17 +1392,16 @@
       loadContractCompanies();
     }
 
-    // ── Patient-type change ─────────────────────────────────────────────────
-    var patientTypeSel = document.getElementById('newPatientType');
-    if (patientTypeSel) {
-      patientTypeSel.addEventListener('change', function() {
-        var isMil = patientTypeSel.value === 'military';
-        var grpRank = document.getElementById('grpRank');
-        if (grpRank) grpRank.style.display = isMil ? '' : 'none';
-        filterCompanyOptions(isMil);
-        requestAnimationFrame(syncAddPatientFormHeight);
-      });
-      filterCompanyOptions(patientTypeSel.value === 'military');
+    // ── Patient classification change ───────────────────────────────────────
+    var patientClassSel = document.getElementById('newPatientClassification');
+    if (patientClassSel) {
+      patientClassSel.addEventListener('change', syncPatientClassificationUI);
+      syncPatientClassificationUI();
+    }
+
+    var entityBillingSel = document.getElementById('newEntityBillingType');
+    if (entityBillingSel) {
+      entityBillingSel.addEventListener('change', syncPatientClassificationUI);
     }
 
     if (document.getElementById('addPatientFormWrap')?.classList.contains('open')) {
@@ -1464,9 +1489,10 @@
       if (document.getElementById('newNationalId')) document.getElementById('newNationalId').value = '';
       if (document.getElementById('newRankId')) document.getElementById('newRankId').value = '';
       if (document.getElementById('newCompanyId')) document.getElementById('newCompanyId').value = '';
-      document.getElementById('newPatientType').value = 'civilian';
-      document.getElementById('grpRank').style.display = 'none';
-      filterCompanyOptions(false);
+      if (document.getElementById('newEntityBillingType')) document.getElementById('newEntityBillingType').value = '';
+      var classSel = document.getElementById('newPatientClassification');
+      if (classSel) classSel.value = 'cash';
+      syncPatientClassificationUI();
       var errorEl = document.getElementById('patientFormError');
       if (errorEl) errorEl.style.display = 'none';
     }

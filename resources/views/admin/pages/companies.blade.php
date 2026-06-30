@@ -22,12 +22,12 @@
             <input type="text" name="name" placeholder="اسم الهيئة..." autocomplete="off"
                    data-v-rules="required,min:2,max:255" maxlength="255"
                    value="{{ old('name') }}">
-            <label class="company-discount-field" title="نسبة ما تتحمّله الجهة من إجمالي الفاتورة — الباقي على المريض">
-                <span>نسبة تحمّل الجهة %</span>
+            <label class="company-discount-field" title="نسبة الخصم على إجمالي الفاتورة — ما يدفعه المريض بعد الخصم">
+                <span>نسبة الخصم %</span>
                 <input type="number" name="discount_percent" min="0" max="100" step="0.01" value="{{ old('discount_percent', '0') }}" placeholder="0">
             </label>
             <button type="submit" class="btn-add-company">➕ إضافة جهة</button>
-            <p class="company-hint">أضف هيئة — متعاقدة (مديونية) أو غير متعاقدة (مرجع فقط). نسبة تحمّل الجهة = حصة المديونية على الشركة؛ المريض يدفع الباقي كاش والسعر الكامل يبقى على العرض.</p>
+            <p class="company-hint">أضف هيئة — متعاقدة (مديونية) أو غير متعاقدة (مرجع فقط). نسبة الخصم تُخصم من إجمالي السعر؛ مثال: خصم 20% على 1000 → المريض يدفع 800 فقط، والباقي يُسجَّل مديونية على الجهة المتعاقدة.</p>
         </form>
         <div class="data-toolbar">
             @include('admin.partials.bulk-action-bar', ['bulkBarId' => 'companiesBulkBar'])
@@ -42,7 +42,7 @@
                         <th style="width:48px">#</th>
                         <th>اسم الجهة</th>
                         <th>نوع الهيئة</th>
-                        <th style="width:110px">تحمّل الجهة</th>
+                        <th style="width:110px">نسبة الخصم</th>
                         <th style="width:180px;white-space:nowrap">إجراء</th>
                     </tr>
                 </thead>
@@ -130,11 +130,11 @@
                        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
             </div>
             <div class="form-group" style="margin-bottom:14px;">
-                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">نسبة تحمّل الجهة %</label>
+                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">نسبة الخصم %</label>
                 <input type="number" id="editCompanyDiscount" min="0" max="100" step="0.01" value="0"
                        class="form-control"
                        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-                <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0;">مثال 20% → الجهة 200 ج.م والمريض 800 من 1000 · 0 = المريض يدفع الكامل</p>
+                <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0;">مثال: خصم 20% على 1000 → المريض يدفع 800 فقط · 0 = بدون خصم</p>
             </div>
             <div id="companyEditError"
                  style="display:none;padding:10px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:13px;"></div>
@@ -176,7 +176,7 @@
             return;
         }
         if (isNaN(discount) || discount < 0 || discount > 100) {
-            errEl.textContent = 'نسبة تحمّل الجهة يجب أن تكون بين 0 و 100.';
+            errEl.textContent = 'نسبة الخصم يجب أن تكون بين 0 و 100.';
             errEl.style.display = 'block';
             return;
         }

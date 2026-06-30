@@ -191,8 +191,8 @@
         <div class="card-body">
             <div class="card-info">
                 <div class="pt-name">{{ $patient->name }}</div>
-                <div class="pt-row">رقم المريض: <b>{{ $patient->patient_code }}</b></div>
-                <div class="pt-row">رقم الدور: <b>{{ $queueNumber }}</b></div>
+                <div class="pt-row">رقم المريض: {{ $patient->patient_code }}</div>
+                <div class="pt-row">رقم الدور: {{ $queueNumber }}</div>
                 @if($rank)
                     <div class="pt-sub">الرتبة: {{ $rank }}</div>
                 @elseif($company)

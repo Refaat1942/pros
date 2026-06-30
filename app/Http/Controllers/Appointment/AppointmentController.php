@@ -98,7 +98,7 @@ class AppointmentController extends Controller
             );
 
         return $appointment->toArray() + [
-            'queue_number'            => $appointment->patient_id,
+            'queue_number'            => $appointment->queue_number,
             'patient_type'            => $appointment->patient_type ?? $appointment->patient?->patient_type,
             'patient_type_label'      => ($appointment->patient_type ?? $appointment->patient?->patient_type) === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
             'entity'                  => $entity,

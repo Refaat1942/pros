@@ -3,6 +3,7 @@
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Finance\CivilianDebtController;
 use App\Http\Controllers\Finance\MilitaryDebtController;
+use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Admin\SpecEditRequestController as AdminSpecEditRequestController;
 use App\Http\Controllers\Admin\StockCategoryController;
@@ -29,6 +30,8 @@ Route::prefix('admin')
     ->name('admin.')
     ->group(function () {
         Route::get('overview', [AdminOverviewController::class, 'index'])->name('overview');
+        Route::get('overview/export', [AdminOverviewController::class, 'export'])->name('overview.export');
+        Route::redirect('general-view', '/admin/overview', 301)->name('general-view');
         Route::get('patient-tracks/list', [AdminOverviewController::class, 'patientTracksApi'])->name('patient-tracks.list');
         Route::get('bi', [BiController::class, 'index'])->name('bi');
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit');
@@ -46,7 +49,7 @@ registerDashboardPages(
     'admin.',
     AdminDashboardController::class,
     'admin',
-    except: ['overview', 'bi', 'audit', 'reports', 'reports-section'],
+    except: ['overview', 'bi', 'audit', 'reports', 'reports-section', 'general-view'],
 );
 
 /*
@@ -166,6 +169,10 @@ Route::prefix('admin')
 
         Route::delete('military-ranks/{militaryRank}', [MilitaryRankController::class, 'destroy'])
             ->name('military-ranks.destroy');
+
+        // ── Costing overhead settings ───────────────────────────────────────
+        Route::put('costing-settings', [CostingSettingsController::class, 'update'])
+            ->name('costing-settings.update');
 
         // ── Visit Types — JSON API (الصفحة Blade: GET admin/visit-types) ─────
         Route::get('visit-types/list', [VisitTypeController::class, 'index'])

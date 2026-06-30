@@ -24,17 +24,18 @@ class AdjustmentsController extends Controller
     }
 
     /**
-     * الحالات الواردة في مرحلة المعدلات.
+     * الحالات في المعدلات أو بانتظار تأكيد التكاليف.
      */
     public function index(Request $request): JsonResponse
     {
         $cases = $this->fetchForDashboard(
-            CaseRecord::inAdjustments()
+            CaseRecord::inAdjustmentsDesk()
                 ->with([
                     'patient:id,patient_code,name,patient_type',
                     'techOrderSpec:id,case_id,tech_notes',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,source,qty',
+                    'pendingAdjustmentEditRequest:id,case_id,status,source',
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
@@ -55,12 +56,13 @@ class AdjustmentsController extends Controller
      */
     public function show(CaseRecord $case): JsonResponse
     {
-        abort_unless($case->isInAdjustments(), 422, 'الحالة ليست في مرحلة المعدلات.');
+        abort_unless($case->isInAdjustments() || $case->isInCostCalc(), 422, 'الحالة ليست في مرحلة المعدلات أو التكاليف.');
 
         $case->load([
             'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank',
             'techOrderSpec:id,case_id,tech_notes',
             'bom.items',
+            'pendingAdjustmentEditRequest',
         ]);
 
         $stockCatalog = StockItem::query()
@@ -80,9 +82,6 @@ class AdjustmentsController extends Controller
         ]);
     }
 
-    /**
-     * إضافة بنود مستشار المعدلات — لا مساس بالبنود الأصلية (الفني).
-     */
     public function addItems(StoreAdjustmentItemsRequest $request, CaseRecord $case): JsonResponse
     {
         $bom = $this->adjustmentsService->addItems($case, $request->validated('items'));
@@ -96,9 +95,6 @@ class AdjustmentsController extends Controller
         ], 201);
     }
 
-    /**
-     * حذف بند مستشار المعدلات — بنود الفني (source=spec) للقراءة فقط.
-     */
     public function removeItem(CaseRecord $case, BomItem $bomItem): JsonResponse
     {
         $bom = $this->adjustmentsService->removeItem($case, $bomItem);
@@ -112,9 +108,6 @@ class AdjustmentsController extends Controller
         ]);
     }
 
-    /**
-     * إغلاق المعدلات → دفع التكاليف → عرض السعر → مكتب التشغيل.
-     */
     public function complete(CaseRecord $case): JsonResponse
     {
         $case = $this->adjustmentsService->complete($case);
@@ -127,14 +120,20 @@ class AdjustmentsController extends Controller
 
     private function formatCase(CaseRecord $case): array
     {
+        $isCostCalc = $case->isInCostCalc();
+
         return $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'path',
             'company_name', 'rank', 'sovereign_entity', 'created_at',
         ]) + [
-            'pathway_label'  => $case->isMilitary() ? 'عسكري' : 'مدني',
-            'display_entity' => $case->displayEntity(),
-            'tech_notes'     => $case->resolvedTechNotes(),
-            'rework'         => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
+            'pathway_label'              => $case->isMilitary() ? 'عسكري' : 'مدني',
+            'display_entity'             => $case->displayEntity(),
+            'tech_notes'                 => $case->resolvedTechNotes(),
+            'rework'                     => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
+            'stage_label'                => $isCostCalc ? 'بانتظار التكاليف' : 'المعدلات',
+            'can_modify_directly'        => $case->isInAdjustments(),
+            'can_request_adjustment_edit'=> $isCostCalc && ! $case->pendingAdjustmentEditRequest,
+            'has_pending_edit_request'   => (bool) $case->pendingAdjustmentEditRequest,
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name'])
                 : null,
@@ -151,10 +150,6 @@ class AdjustmentsController extends Controller
         ];
     }
 
-    /**
-     * بند BOM للعرض — بلا أي تكلفة/سعر (عمى مالي لمستشار المعدلات).
-     * البنود الأصلية (الفني) محدّدة read_only=true.
-     */
     private function formatBomItem(BomItem $item): array
     {
         return [

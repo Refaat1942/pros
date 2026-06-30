@@ -21,6 +21,7 @@
 
 @push('styles-late')
     <link rel="stylesheet" href="{{ asset('assets/css/sidebar-logout.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/dashboard-header-notifications.css') }}?v={{ filemtime(public_path('assets/css/dashboard-header-notifications.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/entity-badges.css') }}?v={{ filemtime(public_path('assets/css/entity-badges.css')) }}">
 @endpush
@@ -37,10 +38,10 @@
                 <h1>{{ $pageTitle ?? $dashboardConfig['title'] }}</h1>
                 <p>{{ $dashboardConfig['sidebar']['subtitle'] ?? '' }}</p>
             </div>
-            <div class="user-chip">
-                <div class="avatar">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
-                <span>{{ auth()->user()->name }}</span>
-            </div>
+            @include('partials.dashboard-header-actions', [
+                'dashboardKey' => $dashboardKey,
+                'activePage' => $activePage ?? '',
+            ])
         </div>
 
         @include('partials.flash-messages')
@@ -57,6 +58,9 @@
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}?v={{ filemtime(public_path('assets/js/shared/table-pagination.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/entity-badges.js') }}?v={{ filemtime(public_path('assets/js/shared/entity-badges.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/tech-notes-modal.js') }}"></script>
+    @if (! empty($dashboardConfig['nav_groups']))
+        <script src="{{ asset('assets/js/shared/sidebar-nav-groups.js') }}?v={{ filemtime(public_path('assets/js/shared/sidebar-nav-groups.js')) }}"></script>
+    @endif
     @include('partials.firebase-web')
     <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)

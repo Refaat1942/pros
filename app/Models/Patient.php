@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\PatientEntityPresenter;
+use App\Support\ClinicTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -95,6 +96,17 @@ class Patient extends Model
     public function displayEntity(): string
     {
         return $this->entityPresentation()['label'];
+    }
+
+    /** رقم الدور ليوم العمل الحالي (يبدأ من 1 الساعة 01:00). */
+    public function clinicDayQueueNumber(?string $clinicDay = null): ?int
+    {
+        $clinicDay ??= ClinicTime::clinicDayDateString();
+
+        return $this->appointments()
+            ->whereDate('clinic_day', $clinicDay)
+            ->orderByDesc('id')
+            ->value('queue_number');
     }
 
     protected static function booted(): void

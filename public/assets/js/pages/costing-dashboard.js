@@ -105,6 +105,59 @@
       });
   }
 
+  function renderOverheadSummary(pricing, canInternal) {
+    var summary = $('costingOverheadSummary');
+    var breakdown = pricing.overhead_breakdown || {};
+    if (!summary) return;
+
+    summary.style.display = '';
+
+    var linesEl = $('costingOverheadLines');
+    if (linesEl) {
+      if (canInternal && breakdown.overheads && breakdown.overheads.length) {
+        linesEl.innerHTML = breakdown.overheads.map(function (row) {
+          return '<div class="costing-overhead-row">' +
+            '<span>' + esc(row.label) + ' (' + esc(row.rate) + '%)</span>' +
+            '<strong>' + fmt(row.amount) + ' ج.م</strong></div>';
+        }).join('');
+        linesEl.style.display = '';
+      } else {
+        linesEl.innerHTML = '';
+        linesEl.style.display = 'none';
+      }
+    }
+
+    if ($('costingWacRow')) {
+      $('costingWacRow').style.display = canInternal ? '' : 'none';
+    }
+    if ($('costingWacTotal') && canInternal) {
+      $('costingWacTotal').textContent = fmt(breakdown.wac_total != null ? breakdown.wac_total : pricing.internal_total) + ' ج.م';
+    }
+    if ($('costingGrossTotal')) {
+      $('costingGrossTotal').textContent = fmt(breakdown.gross_before_discount != null ? breakdown.gross_before_discount : pricing.computed_total) + ' ج.م';
+    }
+
+    var discountPct = parseFloat(breakdown.discount_percent || 0);
+    var discountRow = $('costingDiscountRow');
+    if (discountRow) {
+      if (discountPct > 0) {
+        discountRow.style.display = '';
+        if ($('costingDiscountLabel')) {
+          $('costingDiscountLabel').textContent = 'خصم جهة التعاقد (' + discountPct + '%)';
+        }
+        if ($('costingDiscountAmount')) {
+          $('costingDiscountAmount').textContent = '− ' + fmt(breakdown.discount_amount) + ' ج.م';
+        }
+      } else {
+        discountRow.style.display = 'none';
+      }
+    }
+
+    if ($('costingNetTotal')) {
+      $('costingNetTotal').textContent = fmt(breakdown.net_offer_total != null ? breakdown.net_offer_total : pricing.computed_total) + ' ج.م';
+    }
+  }
+
   function openModal(caseId) {
     activeCaseId = caseId;
     axios.get(SHOW_URL(caseId))
@@ -134,11 +187,7 @@
           }).join('');
         }
 
-        if ($('costingTotalDisplay')) $('costingTotalDisplay').textContent = fmt(pricing.computed_total) + ' ج.م';
-        if ($('costingInternalRow')) $('costingInternalRow').style.display = canInternal ? '' : 'none';
-        if ($('costingInternalDisplay') && canInternal) {
-          $('costingInternalDisplay').textContent = fmt(pricing.internal_total) + ' ج.م';
-        }
+        renderOverheadSummary(pricing, canInternal);
 
         var modal = $('costingModal');
         if (modal) modal.classList.add('visible');

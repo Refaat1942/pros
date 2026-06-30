@@ -34,10 +34,10 @@ return [
             'statistics' => ['title' => 'إحصائيات الاستقبال', 'icon' => '📊', 'label' => 'الإحصائيات'],
             'quote' => ['title' => 'عروض الأسعار', 'icon' => '💰', 'label' => 'عروض الأسعار'],
             // 'delivery' => ['title' => 'تسليم الطرف للمريض', 'icon' => '✅', 'label' => 'تسليم للمريض'], // نُقل لمكتب التشغيل
-            'contracts' => ['title' => 'العقود والاتفاقيات', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
-            'selfservice' => ['title' => 'متابعة حالة الطلب (خدمة ذاتية)', 'icon' => '📱', 'label' => 'متابعة الحالة (خدمة ذاتية)'],
+            // 'contracts' => ['title' => 'العقود والاتفاقيات', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
+            'selfservice' => ['title' => 'متابعة حالة الطلب (خدمة ذاتية)', 'icon' => '📱', 'label' => 'متابعة حالة الطلب'],
             'patients' => ['title' => 'سجل المرضى المسجلين', 'icon' => '👤', 'label' => 'المرضى'],
-            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/reception-dashboard.css'],
         'scripts' => [
@@ -65,7 +65,7 @@ return [
             'diagnosis' => ['title' => 'التشخيص الطبي', 'icon' => '📝', 'label' => 'التشخيص الطبي'],
             'records' => ['title' => 'السجل الطبي — التقارير المعتمدة', 'icon' => '📁', 'label' => 'السجل الطبي'],
             'transfer' => ['title' => 'الحالات المحولة للتوصيف', 'icon' => '📦', 'label' => 'المحولون للتوصيف'],
-            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/doctor-dashboard.css'],
         'scripts' => [
@@ -88,7 +88,7 @@ return [
             'orders' => ['title' => 'طلبات التوصيف', 'icon' => '📥', 'label' => 'طلبات التوصيف'],
             'spec' => ['title' => 'معاينة التوصيف', 'icon' => '👁️', 'label' => 'معاينة التوصيف'],
             'pricing' => ['title' => 'إرسال للتسعير', 'icon' => '💰', 'label' => 'إرسال للتسعير'],
-            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -110,7 +110,7 @@ return [
         'pages' => [
             'adjustments' => ['title' => 'المعدلات — تجارب التركيب والمقاسات', 'icon' => '📏', 'label' => 'جدول المعدلات'],
             'history'     => ['title' => 'المحوّلون للتكاليف', 'icon' => '📤', 'label' => 'سجل المحوّلين'],
-            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -149,7 +149,7 @@ return [
             'pending' => ['title' => 'مكتب التشغيل — موافقات وعروض الأسعار', 'icon' => '✅', 'label' => 'موافقات التشغيل'],
             'quotes-awaiting' => ['title' => 'عروض الأسعار — بانتظار موافقة الجهة', 'icon' => '💰', 'label' => 'عروض بانتظار الموافقة'],
             'operations' => ['title' => 'مكتب التشغيل — تسليم الطرف للعميل', 'icon' => '✅', 'label' => 'تسليم للعميل'],
-            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -171,7 +171,7 @@ return [
             'workshop' => ['title' => 'ورشة التصنيع — أوامر تحت التشغيل', 'icon' => '🏭', 'label' => 'طابور الورشة'],
             'returns' => ['title' => 'طلبات ارتجاع المواد — ورشة → مخزن', 'icon' => '↩️', 'label' => 'ارتجاع للمخزن'],
             'statistics' => ['title' => 'إحصائيات الورشة', 'icon' => '📊', 'label' => 'الإحصائيات'],
-            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -195,7 +195,7 @@ return [
             'inventory' => ['title' => 'المخزون — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزون'],
             'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد للورشة'],
             'returns' => ['title' => 'استلام ارتجاع المواد — من الورشة', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
-            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
@@ -221,36 +221,64 @@ return [
         'layout' => 'layouts.admin',
         'default_page' => 'overview',
         'sidebar' => ['icon' => '⚙️', 'title' => 'لوحة إدارة النظام', 'subtitle' => 'المالك والرقابة'],
+        'nav_groups' => [
+            [
+                'label' => 'التقارير والمؤشرات',
+                'icon'  => '📊',
+                'pages' => ['overview', 'bi', 'reports'],
+            ],
+            [
+                'label' => 'المرضى والحالات',
+                'icon'  => '🧭',
+                'pages' => ['patient-tracks', 'cases', 'spec-edit-requests', 'visit-types'],
+            ],
+            [
+                'label' => 'المخزون والتوريد',
+                'icon'  => '📦',
+                'pages' => ['catalog', 'inventory-overview', 'suppliers', 'returns'],
+            ],
+            [
+                'label' => 'التعاقد والمالية',
+                'icon'  => '💼',
+                'pages' => ['companies', 'contracts', 'civilian-debts'],
+            ],
+            [
+                'label' => 'الرقابة والنظام',
+                'icon'  => '⚙️',
+                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'costing-settings'],
+            ],
+        ],
         'pages' => [
             // ── نظرة عامة وتحليلات ──────────────────────────────────────────────
             'overview' => ['title' => 'لوحة المعلومات — الإدارة العليا', 'icon' => '📊', 'label' => 'نظرة عامة'],
             'bi' => ['title' => 'لوحات القيادة — 5 لوحات', 'icon' => '📡', 'label' => 'لوحات القيادة'],
-            'general-view' => ['title' => 'رؤية عامة — مؤشرات لحظية', 'icon' => '📈', 'label' => 'رؤية عامة'],
+            'general-view' => ['title' => 'رؤية عامة — مؤشرات لحظية', 'icon' => '📈', 'label' => 'رؤية عامة', 'hidden' => true],
             'reports' => ['title' => 'التقارير — تصدير وفلترة بالتاريخ', 'icon' => '📋', 'label' => 'التقارير'],
             'reports-section' => ['title' => 'تفاصيل التقرير', 'icon' => '📄', 'label' => 'تفاصيل التقرير', 'hidden' => true],
             // ── مسار المرضى والحالات ───────────────────────────────────────────
             'patient-tracks' => ['title' => 'مسار المرضى — تتبع المراحل', 'icon' => '📍', 'label' => 'مسار المرضى'],
-            'spec-edit-requests' => ['title' => 'طلبات تعديل التوصيف', 'icon' => '✏️', 'label' => 'تعديل التوصيف'],
-            'cases' => ['title' => 'متابعة الحالات', 'icon' => '📁', 'label' => 'متابعة الحالات'],
+            'spec-edit-requests' => ['title' => 'طلبات تعديل التوصيف والمعدلات', 'icon' => '✏️', 'label' => 'تعديل التوصيف والمعدلات'],
+            'cases' => ['title' => 'متابعة المرضى', 'icon' => '📁', 'label' => 'متابعة المرضى'],
             'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
             // ── المخزون والتوريد ───────────────────────────────────────────────
             // 'stock-categories' => ['title' => 'فئات الأصناف', 'icon' => '🏷️', 'label' => 'فئات الأصناف'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
-            'inventory-overview' => ['title' => 'لوحة المخزون التفصيلية', 'icon' => '🔬', 'label' => 'المخزون التفصيلي'],
+            'inventory-overview' => ['title' => 'متابعة حركة الأصناف', 'icon' => '🔬', 'label' => 'متابعة حركة الأصناف'],
             'suppliers' => ['title' => 'الموردون', 'icon' => '🏭', 'label' => 'الموردون'],
             'returns' => ['title' => 'طلبات ارتجاع المواد — مراقبة وقراءة فقط', 'icon' => '↩️', 'label' => 'طلبات الارتجاع'],
             // ── التعاقد والمالية ───────────────────────────────────────────────
             'companies' => ['title' => 'جهات التعاقد', 'icon' => '🏢', 'label' => 'جهات التعاقد'],
             'contracts' => ['title' => 'موافقات جهات التعاقد — أرشيف الاعتمادات المالية', 'icon' => '📑', 'label' => 'موافقات جهات التعاقد'],
-            'civilian-debts' => ['title' => 'مديونيات جهات التعاقد المدنية', 'icon' => '🌐', 'label' => 'مديونيات مدنية'],
-            'military-debts' => ['title' => 'مديونيات الجهات العسكرية', 'icon' => '🪖', 'label' => 'مديونيات عسكرية'],
+            'civilian-debts' => ['title' => 'المديونات — جهات التعاقد', 'icon' => '💰', 'label' => 'المديونات'],
+            'military-debts' => ['title' => 'مديونيات الجهات العسكرية', 'icon' => '🪖', 'label' => 'مديونيات عسكرية', 'hidden' => true],
             // ── الرقابة ────────────────────────────────────────────────────────
             'audit' => ['title' => 'سجل الرقابة الحصين — Immutable Audit Log', 'icon' => '🔒', 'label' => 'سجل الرقابة'],
             // ── إدارة النظام ───────────────────────────────────────────────────
             'employees' => ['title' => 'إدارة الموظفين ', 'icon' => '👥', 'label' => 'الموظفون'],
             'permissions' => ['title' => 'مصفوفة الصلاحيات', 'icon' => '🛡️', 'label' => 'الصلاحيات'],
             'military-ranks' => ['title' => 'الرتب العسكرية', 'icon' => '🪖', 'label' => 'الرتب العسكرية'],
-            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات'],
+            'costing-settings' => ['title' => 'إعدادات التكاليف الإضافية', 'icon' => '💰', 'label' => 'إعدادات التكاليف'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css'],
         'scripts' => [

@@ -42,4 +42,33 @@ class SpecBackorderInventoryTest extends TestCase
             ->assertJsonPath('data.0.backorder', 3)
             ->assertJsonPath('data.0.status', 'backorder');
     }
+
+    public function test_stock_receive_clears_backorder_and_leaves_available_qty(): void
+    {
+        $item = $this->stockItem('RM-BO-03', qty: 0);
+        $item->update(['reserved' => 5]);
+
+        $this->assertSame(5, $item->fresh()->backorderQty());
+        $this->assertSame(-5, $item->fresh()->availableQty());
+
+        $supplier = $this->makeSupplier();
+        $user = $this->userWithRole('technical');
+
+        $this->actingAs($user)
+            ->postJson('/technical/inventory/receive', [
+                'stock_item_id' => $item->id,
+                'supplier_id'   => $supplier->id,
+                'qty'           => 10,
+                'unit_price'    => 100,
+                'invoice_no'    => 'INV-BO-03',
+                'moved_at'      => now()->toDateString(),
+            ])
+            ->assertCreated();
+
+        $item->refresh();
+        $this->assertSame(10, $item->qty);
+        $this->assertSame(5, $item->reserved);
+        $this->assertSame(0, $item->backorderQty());
+        $this->assertSame(5, $item->availableQty());
+    }
 }

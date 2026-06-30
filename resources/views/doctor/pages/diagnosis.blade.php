@@ -59,14 +59,14 @@
 
             <div class="form-actions">
               <button type="submit" class="btn btn-primary" id="saveBtn">
-                💾 حفظ واعتماد التقرير
+                💾 حفظ
               </button>
               @can('skip-diagnosis')
                 @if ($appt)
                   <button type="button" class="btn btn-secondary" id="skipDiagnosisBtn"
                           data-skip-url="{{ route('doctor.diagnosis.skip', $appt->id) }}"
                           title="الكشف اختياري — ادفع الحالة مباشرةً للتوصيف">
-                    ⏭️ تخطّي الكشف ➜ التوصيف
+                    ⏭️ تخطّي الكشف ← التوصيف
                   </button>
                 @endif
               @endcan

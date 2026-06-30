@@ -261,7 +261,7 @@ class SpecOrdersSubmitTest extends TestCase
         $this->assertSame(2, $stock->backorderQty());
     }
 
-    public function test_spec_accepts_negative_item_quantity(): void
+    public function test_spec_rejects_negative_item_quantity(): void
     {
         $this->stockItem('ITM-003', qty: 10);
 
@@ -306,19 +306,11 @@ class SpecOrdersSubmitTest extends TestCase
         $this->actingAs($spec);
 
         $this->putJson("/spec/spec/{$draft->id}", [
-            'tech_notes' => 'تعديل كمية سالبة',
+            'tech_notes' => 'محاولة كمية سالبة',
             'items'      => [
                 ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => -1],
             ],
-        ])->assertOk()
-            ->assertJsonPath('items.0.qty', -1);
-
-        $this->postJson("/spec/spec/{$draft->id}/submit")
-            ->assertOk()
-            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS)
-            ->assertJsonPath('spec.items.0.qty', -1);
-
-        $stock = \App\Models\StockItem::where('code', 'ITM-003')->first();
-        $this->assertSame(-1, $stock->reserved);
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['items.0.qty']);
     }
 }

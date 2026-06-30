@@ -112,6 +112,10 @@ class BomService
                 $code = $row['stock_item_code'];
                 $qty  = (int) $row['qty'];
 
+                if ($qty < 1) {
+                    abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
+                }
+
                 if (! StockItem::where('code', $code)->exists()) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
@@ -142,7 +146,7 @@ class BomService
     }
 
     /**
-     * حجز بنود BOM كطلب توريد — يُسمح بتجاوز الرصيد (متاح سالب / backorder).
+     * حجز بنود BOM كطلب توريد — يُسمح بتجاوز الرصيد (متاح سالب / backorder عند العجز).
      */
     public function reserveBackorderForBom(Bom $bom): void
     {
@@ -175,7 +179,7 @@ class BomService
     }
 
     /**
-     * عكس تأثير حجز BOM على reserved (يدعم الكميات السالبة).
+     * عكس تأثير حجز BOM على reserved.
      */
     private function reverseReservedDelta(StockItem $stockItem, int $qty): void
     {
@@ -355,15 +359,62 @@ class BomService
     }
 
     /**
+     * استبدال بنود المعدلات فقط — دون مساس ببنود التوصيف الفني.
+     *
+     * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
+     */
+    public function replaceAdjustmentSourceItems(CaseRecord $case, array $items): Bom
+    {
+        return DB::transaction(function () use ($case, $items) {
+            $bom = Bom::where('case_id', $case->id)->lockForUpdate()->first();
+
+            if (! $bom) {
+                abort(422, 'لا توجد قائمة مواد لهذه الحالة.');
+            }
+
+            if ($bom->stage !== Bom::STAGE_RAW) {
+                abort(422, 'لا يمكن تعديل بنود المعدلات — قائمة المواد لم تعد في مرحلة الإعداد.');
+            }
+
+            $bom->items()->where('source', BomItem::SOURCE_ADJUSTMENT)->delete();
+
+            foreach ($items as $row) {
+                $code = $row['stock_item_code'];
+                $qty  = (int) $row['qty'];
+
+                if (! StockItem::where('code', $code)->exists()) {
+                    abort(422, "الصنف غير موجود: {$code}");
+                }
+
+                BomItem::create([
+                    'bom_id'          => $bom->id,
+                    'stock_item_code' => $code,
+                    'name'            => $row['name'] ?? $code,
+                    'source'          => BomItem::SOURCE_ADJUSTMENT,
+                    'qty'             => $qty,
+                    'unit_cost'       => 0,
+                    'issued_qty'      => 0,
+                    'returned_qty'    => 0,
+                ]);
+            }
+
+            AuditService::log(
+                action:      'update',
+                description: "تحديث بنود المعدلات في BOM — {$bom->bom_no}",
+                tag:         'spec',
+                after:       ['bom_id' => $bom->id, 'items' => $items],
+            );
+
+            return $bom->fresh()->load('items');
+        });
+    }
+
+    /**
      * حذف بند أضافه مستشار المعدلات — بنود الفني (source=spec) غير قابلة للحذف.
      */
     public function removeAdjustmentItem(CaseRecord $case, BomItem $item): Bom
     {
         return DB::transaction(function () use ($case, $item) {
-            if ($case->stage_key !== CaseRecord::STAGE_ADJUSTMENTS) {
-                abort(422, 'الحالة ليست في مرحلة المعدلات.');
-            }
-
             $bom = Bom::where('case_id', $case->id)->lockForUpdate()->first();
 
             if (! $bom || $item->bom_id !== $bom->id) {

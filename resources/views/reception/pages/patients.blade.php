@@ -1,5 +1,4 @@
 <div class="tab-content" id="tab-patients">
-@include('reception.partials.add-patient-form', ['show_toggle' => false])
       <div class="panel">
         <div class="panel-header">
           <h3>👤 سجل المرضى المسجلين</h3>
@@ -21,7 +20,6 @@
             <button class="btn-export excel" onclick="exportPatients('excel')">📊 Excel</button>
             <button class="btn-export pdf" onclick="exportPatients('pdf')">📄 PDF</button>
           </div>
-          <button class="btn btn-primary" style="padding:10px 20px;" onclick="openAddPatientForm()">➕ مريض جديد</button>
         </div>
         <div class="panel-body">
           <table data-paginate="10">

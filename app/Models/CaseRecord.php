@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\SpecEditRequestSource;
+use App\Enums\SpecEditRequestStatus;
 use App\Support\ContractBillingSplit;
 use App\Support\PatientEntityPresenter;
 use Illuminate\Database\Eloquent\Builder;
@@ -130,6 +132,13 @@ class CaseRecord extends Model
         return $this->hasOne(TechOrderSpec::class, 'case_id');
     }
 
+    public function pendingAdjustmentEditRequest(): HasOne
+    {
+        return $this->hasOne(SpecEditRequest::class, 'case_id')
+            ->where('source', SpecEditRequestSource::Adjustments)
+            ->where('status', SpecEditRequestStatus::Pending);
+    }
+
     public function quotes(): HasMany
     {
         return $this->hasMany(Quote::class, 'case_id');
@@ -194,6 +203,12 @@ class CaseRecord extends Model
     public function scopeInAdjustments(Builder $query): Builder
     {
         return $query->where('stage_key', self::STAGE_ADJUSTMENTS);
+    }
+
+    /** حالات في المعدلات أو بانتظار تأكيد التكاليف (قبل اعتماد السعر). */
+    public function scopeInAdjustmentsDesk(Builder $query): Builder
+    {
+        return $query->whereIn('stage_key', [self::STAGE_ADJUSTMENTS, self::STAGE_COST_CALC]);
     }
 
     /** حالات في مرحلة التكاليف — بانتظار التأكيد اليدوي. */

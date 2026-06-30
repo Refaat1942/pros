@@ -872,7 +872,8 @@
       var diagnosisForm = document.getElementById('diagnosisForm');
       if (diagnosisForm) diagnosisForm.reset();
       if (recommendationsSelect) recommendationsSelect.reset();
-      document.getElementById('waitingCount').textContent = queue.length;
+      var waitingCountEl = document.getElementById('waitingCount');
+      if (waitingCountEl) waitingCountEl.textContent = queue.length;
       document.getElementById('queueBadge').textContent = queue.length;
       renderQueue();
       switchSection('transfer');

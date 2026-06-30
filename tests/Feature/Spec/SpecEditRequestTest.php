@@ -143,7 +143,7 @@ class SpecEditRequestTest extends TestCase
         );
     }
 
-    public function test_admin_reject_requires_reason_and_notifies_spec(): void
+    public function test_admin_reject_without_reason_and_notifies_spec(): void
     {
         ['draft' => $draft, 'spec' => $specUser] = $this->submitSpecToAdjustments();
 
@@ -160,7 +160,31 @@ class SpecEditRequestTest extends TestCase
 
         $this->actingAs($admin)
             ->postJson(route('admin.spec-edit-requests.reject', $request), [])
-            ->assertStatus(422);
+            ->assertOk()
+            ->assertJsonPath('request.status', SpecEditRequestStatus::Rejected->value);
+
+        $notification = AppNotification::forRole(Role::SLUG_SPEC)
+            ->where('event', 'spec_edit_rejected')
+            ->first();
+
+        $this->assertNotNull($notification);
+        $this->assertStringContainsString('رفضت الإدارة', $notification->body);
+    }
+
+    public function test_admin_reject_with_reason_includes_reason_in_notification(): void
+    {
+        ['draft' => $draft, 'spec' => $specUser] = $this->submitSpecToAdjustments();
+
+        $this->actingAs($specUser)
+            ->postJson(route('spec.spec.edit-request.store', $draft), [
+                'items' => [
+                    ['stock_item_code' => 'RM-EDIT-A', 'name' => 'صنف A', 'qty' => 2],
+                ],
+            ])
+            ->assertCreated();
+
+        $request = SpecEditRequest::firstOrFail();
+        $admin   = $this->userWithRole('admin');
 
         $this->actingAs($admin)
             ->postJson(route('admin.spec-edit-requests.reject', $request), [

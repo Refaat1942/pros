@@ -6,7 +6,7 @@
 @endphp
 <div class="panel">
     <div class="panel-header">
-        <h3>🔬 لوحة المخزون التفصيلية</h3>
+        <h3>🔬 متابعة حركة الأصناف</h3>
         <span style="font-size:13px;color:var(--text-muted)">أرصدة مطلقة، السعر، WAC، تاريخ الأسعار، والصلاحية — المتاح السالب = طلب توريد.</span>
     </div>
 

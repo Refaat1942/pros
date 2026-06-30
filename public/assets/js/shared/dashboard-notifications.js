@@ -48,10 +48,31 @@
 
     beep();
     toast(title + (body ? ' — ' + body : ''));
+    bumpHeaderNotifBadge();
 
     if ('Notification' in window && Notification.permission === 'granted') {
       try { new Notification(title, { body: body, dir: 'rtl', lang: 'ar', icon: '/favicon.ico' }); } catch (e) { /* صامت */ }
     }
+  }
+
+  function bumpHeaderNotifBadge() {
+    var badge = document.getElementById('headerNotifBadge');
+    var bell = document.getElementById('headerNotifBell');
+    if (!bell) return;
+
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'dashboard-notif-badge';
+      badge.id = 'headerNotifBadge';
+      bell.appendChild(badge);
+    }
+
+    var count = parseInt(badge.textContent, 10) || 0;
+    count += 1;
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.hidden = false;
+    badge.classList.remove('is-hidden');
+    bell.setAttribute('aria-label', 'الإشعارات — ' + count + ' غير مقروء');
   }
 
   document.addEventListener('DOMContentLoaded', function () {

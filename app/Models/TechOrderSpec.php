@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\SpecEditRequestSource;
+use App\Enums\SpecEditRequestStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -46,6 +48,7 @@ class TechOrderSpec extends Model
     public function pendingEditRequest(): HasOne
     {
         return $this->hasOne(SpecEditRequest::class)
-            ->where('status', \App\Enums\SpecEditRequestStatus::Pending);
+            ->where('source', SpecEditRequestSource::Spec)
+            ->where('status', SpecEditRequestStatus::Pending);
     }
 }

@@ -77,67 +77,6 @@
             <span class="toolbar-count" id="catalogSlimCount">{{ $items->count() }} صنف</span>
         </div>
 
-        {{-- نموذج مبسّط: السمات الأساسية فقط --}}
-        <div class="catalog-form" id="catalogSlimForm" style="display:none;padding:16px;border:1px solid var(--border);border-radius:10px;margin:0 16px 12px;">
-            <input type="hidden" id="slimEditId" value="">
-            <input type="hidden" id="slimEditCode" value="">
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-                <div>
-                    <label style="font-size:12px;font-weight:700;">كود الصنف / الباركود</label>
-                    <input type="text" id="slimCode" placeholder="تلقائي إن تُرك فارغاً" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
-                </div>
-                <div>
-                    <label style="font-size:12px;font-weight:700;">اسم الصنف *</label>
-                    <input type="text" id="slimName" placeholder="مثال: ركبة هيدروليكية" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
-                </div>
-                <div>
-                    <label style="font-size:12px;font-weight:700;">القسم *</label>
-                    <select id="slimCategoryId" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
-                        <option value="">— اختر القسم —</option>
-                        @foreach ($categories as $cat)
-                            <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:12px;font-weight:700;">الكمية</label>
-                    <input type="number" id="slimQty" min="0" value="0" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
-                </div>
-                <div>
-                    <label style="font-size:12px;font-weight:700;">السعر</label>
-                    <input type="number" id="slimPrice" min="0" step="0.01" value="0" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;">
-                </div>
-            </div>
-
-            <div id="slimCategoryFields" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
-
-            <div style="margin-top:14px;">
-                <label style="font-size:12px;font-weight:700;">المورد / الموردون *</label>
-                <select id="slimSupplierIds" multiple class="catalog-supplier-select" aria-label="الموردون"
-                        style="width:100%;min-height:100px;padding:8px;border:1px solid var(--border);border-radius:8px;margin-top:6px;">
-                    @foreach ($catalogSuppliers as $supplier)
-                        <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
-                    @endforeach
-                </select>
-                <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0;">اختر المورد الذي يورد هذا الصنف — Ctrl+Click للاختيار المتعدد</p>
-            </div>
-
-            {{-- أسعار إضافية — صنف بأكثر من سعر (اختياري) --}}
-            <div style="margin-top:14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                    {{-- <label style="font-size:12px;font-weight:700;">أسعار إضافية (لو ليه أكثر من سعر)</label> --}}
-                    <button type="button" class="btn-action" onclick="addSlimPriceRow()">+ سعر إضافي</button>
-                </div>
-                <div id="slimExtraPrices" style="margin-top:8px;display:flex;flex-direction:column;gap:8px;"></div>
-            </div>
-
-            <div id="slimCatalogError" style="display:none;margin-top:10px;padding:8px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:12px;"></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-                <button type="button" class="btn-action" onclick="closeSlimCatalogForm()">إلغاء</button>
-                <button type="button" class="btn-action success" onclick="saveSlimCatalog()">💾 حفظ الصنف</button>
-            </div>
-        </div>
-
         <p class="catalog-table-hint">
             💡 لإضافة أكثر من سعر لنفس الصنف في ملف Excel/CSV، اكتب الأسعار في عمود «السعر» مفصولة بعلامة
             <strong>;</strong>
@@ -154,6 +93,7 @@
                         <th style="padding:10px;text-align:right;">القسم</th>
                         <th style="padding:10px;text-align:right;">المورد</th>
                         <th style="padding:10px;text-align:center;">الكمية</th>
+                        <th style="padding:10px;text-align:center;">سعر التكلفة</th>
                         <th style="padding:10px;text-align:center;">أعلى سعر</th>
                         <th style="padding:10px;text-align:center;">أسعار إضافية</th>
                         <th style="padding:10px;text-align:center;min-width:280px;">إجراء</th>
@@ -162,6 +102,7 @@
                 <tbody id="catalogSlimTable">
                     @forelse ($items as $item)
                         <tr class="catalog-slim-row"
+                            data-item-id="{{ $item['id'] ?? '' }}"
                             data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['category'] ?? '')) }}"
                             data-category-id="{{ $item['category_id'] ?? '' }}"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
@@ -177,6 +118,7 @@
                                 @endif
                             </td>
                             <td style="padding:8px;text-align:center;">{{ (int) ($item['qty'] ?? 0) }}</td>
+                            <td style="padding:10px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['price'] ?? 0), 2) }}</td>
                             <td style="padding:10px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['highest_price'] ?? $item['price'] ?? 0), 2) }}</td>
                             <td style="padding:8px;text-align:center;color:var(--text-muted);">
                                 @if (!empty($item['prices']))
@@ -195,10 +137,79 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="catalog-modal-overlay" id="catalogFormModal" role="dialog" aria-modal="true" hidden>
+    <div class="catalog-modal catalog-form-modal" onclick="event.stopPropagation()">
+        <div class="catalog-modal-header">
+            <div>
+                <h3 id="catalogFormModalTitle">➕ إضافة صنف</h3>
+            </div>
+            <button type="button" class="catalog-modal-close" id="catalogFormClose" aria-label="إغلاق">&times;</button>
+        </div>
+        <div class="catalog-modal-body">
+            <input type="hidden" id="slimEditId" value="">
+            <input type="hidden" id="slimEditCode" value="">
+            <div class="catalog-form-grid">
+                <div>
+                    <label class="catalog-form-label">كود الصنف / الباركود</label>
+                    <input type="text" id="slimCode" placeholder="تلقائي إن تُرك فارغاً" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">اسم الصنف *</label>
+                    <input type="text" id="slimName" placeholder="مثال: ركبة هيدروليكية" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">القسم *</label>
+                    <select id="slimCategoryId" class="catalog-form-input">
+                        <option value="">— اختر القسم —</option>
+                        @foreach ($categories as $cat)
+                            <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="catalog-form-label">الكمية</label>
+                    <input type="number" id="slimQty" min="0" value="0" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">السعر الأساسي</label>
+                    <input type="number" id="slimPrice" min="0" step="0.01" value="0" class="catalog-form-input">
+                </div>
+            </div>
+
+            <div id="slimCategoryFields" class="catalog-form-grid catalog-form-grid--attrs"></div>
+
+            <div class="catalog-supplier-picker">
+                <label class="catalog-form-label">المورد *</label>
+                <input type="search" id="slimSupplierSearch" class="catalog-form-input" placeholder="🔍 ابحث عن المورد..." autocomplete="off">
+                <select id="slimSupplierId" size="6" class="catalog-supplier-select" aria-label="المورد">
+                    <option value="">— اختر المورد —</option>
+                    @foreach ($catalogSuppliers as $supplier)
+                        <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                    @endforeach
+                </select>
+                <p class="catalog-form-hint">مورد واحد فقط لكل صنف — ابحث بالاسم ثم اختر من القائمة.</p>
+            </div>
+
+            <div class="catalog-extra-prices">
+                <div class="catalog-extra-prices__head">
+                    <button type="button" class="btn-action" onclick="addSlimPriceRow()">+ سعر إضافي</button>
+                </div>
+                <div id="slimExtraPrices" class="catalog-extra-prices__list"></div>
+            </div>
+
+            <div id="slimCatalogError" class="catalog-form-error" style="display:none;"></div>
+        </div>
+        <div class="catalog-modal-footer">
+            <button type="button" class="btn-action" onclick="closeSlimCatalogForm()">إلغاء</button>
+            <button type="button" class="btn-action success" onclick="saveSlimCatalog()">💾 حفظ الصنف</button>
         </div>
     </div>
 </div>
@@ -315,6 +326,88 @@
     }
     #catalogViewModal.catalog-modal-overlay.open {
         display: flex;
+    }
+    #catalogFormModal.catalog-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1250;
+        padding: 16px;
+    }
+    #catalogFormModal.catalog-modal-overlay.open {
+        display: flex;
+    }
+    #catalogFormModal .catalog-form-modal {
+        width: min(680px, 96vw);
+        max-height: 92vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    #catalogFormModal .catalog-modal-body {
+        overflow-y: auto;
+        padding: 16px 18px;
+    }
+    .catalog-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+    }
+    .catalog-form-grid--attrs {
+        margin-top: 14px;
+    }
+    .catalog-form-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+    .catalog-form-input {
+        width: 100%;
+        padding: 9px;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px;
+        font-family: inherit;
+    }
+    .catalog-form-hint {
+        font-size: 12px;
+        color: var(--text-muted, #64748b);
+        margin: 6px 0 0;
+    }
+    .catalog-supplier-picker {
+        margin-top: 14px;
+    }
+    .catalog-supplier-select {
+        width: 100%;
+        margin-top: 8px;
+        padding: 8px;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px;
+        font-family: inherit;
+    }
+    .catalog-extra-prices {
+        margin-top: 14px;
+    }
+    .catalog-extra-prices__head {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 8px;
+    }
+    .catalog-extra-prices__list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .catalog-form-error {
+        margin-top: 10px;
+        padding: 8px;
+        background: #fee2e2;
+        border-radius: 8px;
+        color: #dc2626;
+        font-size: 12px;
     }
     #catalogViewModal .catalog-modal {
         background: #fff;
@@ -451,25 +544,41 @@
         document.getElementById('slimEditCode').value = v.code || '';
         document.getElementById('slimExtraPrices').innerHTML = '';
         (v.prices || []).forEach(function (p) { window.addSlimPriceRow(p.amount); });
-        var supplierSelect = document.getElementById('slimSupplierIds');
+        var supplierSelect = document.getElementById('slimSupplierId');
         if (supplierSelect) {
-            var ids = (v.suppliers || []).map(function (s) { return String(s.id); });
-            Array.prototype.forEach.call(supplierSelect.options, function (opt) {
-                opt.selected = ids.indexOf(opt.value) !== -1;
-            });
+            var first = (v.suppliers || [])[0];
+            supplierSelect.value = first ? String(first.id) : '';
         }
+        var supplierSearch = document.getElementById('slimSupplierSearch');
+        if (supplierSearch) supplierSearch.value = '';
+        filterSupplierOptions();
         document.getElementById('slimCatalogError').style.display = 'none';
         if (window.CatalogSections) {
             window.CatalogSections.prepareItemForm(v);
         }
     }
 
+    function filterSupplierOptions() {
+        var term = (document.getElementById('slimSupplierSearch')?.value || '').toLowerCase().trim();
+        var select = document.getElementById('slimSupplierId');
+        if (!select) return;
+
+        Array.prototype.forEach.call(select.options, function (opt) {
+            if (!opt.value) {
+                opt.hidden = false;
+                return;
+            }
+            opt.hidden = !!(term && opt.textContent.toLowerCase().indexOf(term) === -1);
+        });
+    }
+
+    document.getElementById('slimSupplierSearch')?.addEventListener('input', filterSupplierOptions);
+
     function collectSupplierIds() {
-        var select = document.getElementById('slimSupplierIds');
-        if (!select) return [];
-        return Array.prototype.filter.call(select.options, function (o) { return o.selected; })
-            .map(function (o) { return parseInt(o.value, 10); })
-            .filter(function (id) { return !isNaN(id); });
+        var select = document.getElementById('slimSupplierId');
+        if (!select || !select.value) return [];
+        var id = parseInt(select.value, 10);
+        return !isNaN(id) && id > 0 ? [id] : [];
     }
 
     function supplierNamesLabel(item) {
@@ -489,22 +598,38 @@
         return rows;
     }
 
+    function openCatalogFormModal(title) {
+        var modal = document.getElementById('catalogFormModal');
+        var titleEl = document.getElementById('catalogFormModalTitle');
+        if (titleEl) titleEl.textContent = title || '➕ إضافة صنف';
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.removeAttribute('hidden');
+    }
+
+    function closeCatalogFormModal() {
+        var modal = document.getElementById('catalogFormModal');
+        if (!modal) return;
+        modal.classList.remove('open');
+        modal.setAttribute('hidden', '');
+    }
+
     window.openSlimCatalogForm = function () {
         setForm({});
         document.getElementById('slimCode').disabled = false;
-        document.getElementById('catalogSlimForm').style.display = 'block';
+        openCatalogFormModal('➕ إضافة صنف');
     };
 
     window.closeSlimCatalogForm = function () {
-        document.getElementById('catalogSlimForm').style.display = 'none';
+        closeCatalogFormModal();
     };
 
     window.editSlimCatalog = function (btn) {
         var row = btn.closest('tr');
         var data = JSON.parse(row.getAttribute('data-item'));
         setForm(data);
-        document.getElementById('slimCode').disabled = true; // الكود غير قابل للتعديل
-        document.getElementById('catalogSlimForm').style.display = 'block';
+        document.getElementById('slimCode').disabled = true;
+        openCatalogFormModal('✏️ تعديل صنف');
     };
 
     function itemHighestPrice(item) {
@@ -583,6 +708,7 @@
             + detailBox('القسم', item.category || '—')
             + detailBox('المورد', supplierNamesLabel(item))
             + detailBox('خصائص القسم', window.CatalogSections ? window.CatalogSections.formatAttributesSummary(item) : '—')
+            + detailBox('السعر الأساسي', '<span class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</span>')
             + detailBox('أعلى سعر', '<span class="catalog-price-cell">' + formatCatalogPrice(itemHighestPrice(item)) + '</span>')
             + '</div>'
             + '<h4 style="font-size:14px;font-weight:800;margin:0 0 10px;color:var(--secondary);">💰 جميع الأسعار</h4>'
@@ -626,6 +752,11 @@
         if (e.target === this) closeCatalogViewModal();
     });
 
+    document.getElementById('catalogFormClose')?.addEventListener('click', closeCatalogFormModal);
+    document.getElementById('catalogFormModal')?.addEventListener('click', function (e) {
+        if (e.target === this) closeCatalogFormModal();
+    });
+
     window.saveSlimCatalog = function () {
         var id = document.getElementById('slimEditId').value;
         var err = document.getElementById('slimCatalogError');
@@ -648,7 +779,12 @@
 
         var supplierIds = collectSupplierIds();
         if (!supplierIds.length) {
-            err.textContent = 'يرجى اختيار مورد واحد على الأقل لهذا الصنف.';
+            err.textContent = 'يرجى اختيار مورد واحد لهذا الصنف.';
+            err.style.display = 'block';
+            return;
+        }
+        if (supplierIds.length > 1) {
+            err.textContent = 'يُسمح بمورد واحد فقط لكل صنف.';
             err.style.display = 'block';
             return;
         }
@@ -726,12 +862,13 @@
             ? (item.prices.length + ' سعر')
             : '—';
         var labelsUrl = '/admin/catalog/' + item.id + '/labels';
-        return '<tr class="catalog-slim-row" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
+        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             '<td style="padding:10px;direction:ltr;text-align:right;"><strong>' + (item.code || '') + '</strong></td>' +
             '<td style="padding:10px;">' + (item.name || '') + '</td>' +
             '<td style="padding:10px;color:var(--text-muted);">' + (item.category || '—') + '</td>' +
             '<td style="padding:10px;color:var(--text-muted);font-size:12px;">' + supplierNamesLabel(item) + '</td>' +
             '<td style="padding:10px;text-align:center;">' + (parseInt(item.qty, 10) || 0) + '</td>' +
+            '<td style="padding:10px;text-align:center;" class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</td>' +
             '<td style="padding:10px;text-align:center;" class="catalog-price-cell">' + formatCatalogPrice(highest) + '</td>' +
             '<td style="padding:10px;text-align:center;color:var(--text-muted);">' + extra + '</td>' +
             '<td style="padding:10px;text-align:center;white-space:nowrap;">' +
@@ -751,7 +888,7 @@
         if (!tbody) return;
 
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف CSV.</td></tr>';
         } else {
             tbody.innerHTML = list.map(catalogRowHtml).join('');
         }
@@ -854,6 +991,15 @@ window.__STOCK_CATEGORIES = @json($categories->values());
 document.addEventListener('DOMContentLoaded', function () {
     if (window.CatalogSections && window.__STOCK_CATEGORIES) {
         window.CatalogSections.init(window.__STOCK_CATEGORIES);
+    }
+
+    var itemId = new URLSearchParams(window.location.search).get('item');
+    if (itemId && typeof window.viewSlimCatalog === 'function') {
+        var row = document.querySelector('#catalogSlimTable tr.catalog-slim-row[data-item-id="' + itemId + '"]');
+        var btn = row ? row.querySelector('button[onclick*="viewSlimCatalog"]') : null;
+        if (btn) {
+            window.viewSlimCatalog(btn);
+        }
     }
 });
 </script>

@@ -220,7 +220,7 @@
       overview: 'لوحة المعلومات — الإدارة العليا',
       bi: 'لوحات القيادة — 5 لوحات',
       catalog: 'الأصناف والأسعار',
-      cases: 'متابعة الحالات',
+      cases: 'متابعة المرضى',
       employees: 'إدارة الموظفين',
       companies: 'جهات التعاقد',
       debts: 'مديونيات جهات التعاقد',
@@ -355,9 +355,9 @@
 
       var filtered = getFilteredCases();
       var titles = {
-        waiting_return: '📁 الحالات — بانتظار رجوع العميل',
-        in_progress: '📁 الحالات — تحت التنفيذ',
-        delivered: '📁 الحالات — تم التسليم'
+        waiting_return: '📁 المرضى — بانتظار رجوع العميل',
+        in_progress: '📁 المرضى — تحت التنفيذ',
+        delivered: '📁 المرضى — تم التسليم'
       };
       document.getElementById('casesPanelTitle').textContent = titles[casesFilter] || titles.waiting_return;
       document.getElementById('casesPanelBadge').textContent = filtered.length + ' حالة';

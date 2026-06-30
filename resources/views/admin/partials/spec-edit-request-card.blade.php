@@ -16,6 +16,7 @@
             </div>
             <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
                 طلب بواسطة: {{ $row['requested_by'] ?? '—' }}
+                · <span class="badge" style="font-size:11px;">{{ $row['source_label'] ?? 'توصيف فني' }}</span>
             </div>
         </div>
         <span class="badge {{ $row['status_badge_class'] ?? '' }}">{{ $row['status_label'] ?? $status }}</span>
@@ -62,9 +63,9 @@
                style="text-decoration:none;">
                 🖨️ طباعة التوصيف
             </a>
-            <button type="button" class="btn-action success spec-edit-approve-btn" data-id="{{ $row['id'] }}">✅ موافقة</button>
+            <button type="button" class="btn-action success spec-edit-approve-btn" data-id="{{ $row['id'] }}" data-source="{{ $row['source'] ?? 'spec' }}">✅ موافقة</button>
             <select class="spec-edit-reject-reason" data-id="{{ $row['id'] }}" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;min-width:180px;">
-                <option value="">— سبب الرفض —</option>
+                <option value="">— سبب الرفض (اختياري) —</option>
                 @foreach ($reasons as $key => $label)
                     <option value="{{ $key }}">{{ $label }}</option>
                 @endforeach

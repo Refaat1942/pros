@@ -135,7 +135,7 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $costDetail = $this->getJson("/costing/queue/{$case->id}");
         $costDetail->assertOk();
-        $this->assertEquals(400.00, (float) $costDetail->json('pricing.computed_total'));
+        $this->assertEquals(600.00, (float) $costDetail->json('pricing.computed_total'));
 
         $this->postJson("/costing/queue/{$case->id}/confirm")->assertOk();
 

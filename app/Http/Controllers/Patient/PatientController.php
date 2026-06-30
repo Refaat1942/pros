@@ -9,6 +9,7 @@ use App\Models\Patient;
 use App\Services\CaseTrackingQrService;
 use App\Services\PatientService;
 use App\Traits\PaginationTrait;
+use App\Support\ClinicTime;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -104,7 +105,7 @@ class PatientController extends Controller
         return view('reception.print.patient-card-label', [
             'patient'     => $patient,
             'typeLabel'   => $patient->isMilitary() ? 'عسكري' : 'مدني',
-            'queueNumber' => $patient->id,
+            'queueNumber' => $patient->clinicDayQueueNumber() ?? '—',
             'company'     => $patient->isMilitary() ? null : $patient->displayEntity(),
             'rank'        => $patient->isMilitary() ? ($patient->rank ?: null) : null,
             'trackingUrl' => $this->caseTrackingQrService->url($patient),
@@ -145,7 +146,7 @@ class PatientController extends Controller
             'last_visit_at',
             'status',
         ]) + [
-            'queue_number' => $patient->id,
+            'queue_number' => $patient->clinicDayQueueNumber(),
             'entity'            => $patient->entityPresentation(),
             'tracking_url'    => $this->caseTrackingQrService->url($patient),
             'qr_svg'          => $this->caseTrackingQrService->svg($patient),

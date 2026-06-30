@@ -16,13 +16,13 @@ class ContractCompanyDiscountTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_admin_can_create_company_with_company_share_percent(): void
+    public function test_admin_can_create_company_with_discount_percent(): void
     {
         $admin = $this->userWithRole('admin');
 
         $this->actingAs($admin)
             ->postJson(route('admin.companies.store'), [
-                'name'             => 'جهة تحمّل اختبار',
+                'name'             => 'جهة خصم اختبار',
                 'is_military'      => false,
                 'is_contracted'    => true,
                 'discount_percent' => 15,
@@ -30,15 +30,15 @@ class ContractCompanyDiscountTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseHas('contract_companies', [
-            'name'             => 'جهة تحمّل اختبار',
+            'name'             => 'جهة خصم اختبار',
             'discount_percent' => 15,
         ]);
     }
 
-    public function test_admin_can_update_company_share_percent(): void
+    public function test_admin_can_update_company_discount_percent(): void
     {
         $admin   = $this->userWithRole('admin');
-        $company = $this->civilianCompany('شركة تحديث تحمّل');
+        $company = $this->civilianCompany('شركة تحديث خصم');
         $company->update(['discount_percent' => 5]);
 
         $this->actingAs($admin)
@@ -50,7 +50,7 @@ class ContractCompanyDiscountTest extends TestCase
         $this->assertSame('20.00', $company->fresh()->discount_percent);
     }
 
-    public function test_billing_split_helper_divides_gross_between_patient_and_company(): void
+    public function test_billing_split_applies_discount_to_patient_share(): void
     {
         $company = ContractCompany::create([
             'company_code'     => 'CO-SPLIT',
@@ -66,6 +66,7 @@ class ContractCompanyDiscountTest extends TestCase
         $this->assertSame(800.0, $split['patient_share']);
         $this->assertSame(200.0, $split['company_share']);
         $this->assertSame(20.0, $split['company_share_percent']);
+        $this->assertSame(80.0, $split['patient_share_percent']);
 
         $company->update(['discount_percent' => 0]);
         $splitZero = $company->fresh()->billingSplit(1000);

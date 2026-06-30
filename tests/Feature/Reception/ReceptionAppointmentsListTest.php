@@ -29,7 +29,7 @@ class ReceptionAppointmentsListTest extends TestCase
                 ],
             ])
             ->assertJsonPath('data.0.patient_name', 'مريض توقيت الاستقبال')
-            ->assertJsonPath('data.0.queue_number', $patient->id);
+            ->assertJsonPath('data.0.queue_number', 1);
     }
 
     public function test_appointments_list_filters_by_patient_type(): void

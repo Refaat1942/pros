@@ -24,6 +24,8 @@ class Appointment extends Model
 
     protected $fillable = [
         'patient_id',
+        'queue_number',
+        'clinic_day',
         'appointment_date',
         'appointment_time',
         'visit_type_id',
@@ -40,6 +42,7 @@ class Appointment extends Model
 
     protected $casts = [
         'appointment_date'          => 'date',
+        'clinic_day'                => 'date',
         'transferred_to_clinic'     => 'boolean',
         'transferred_to_clinic_at'  => 'datetime',
     ];

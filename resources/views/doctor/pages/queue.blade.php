@@ -2,8 +2,6 @@
     $queue = $queue_appointments ?? collect();
     $queueDate = $queue_date ?? \App\Support\ClinicTime::todayDateString();
     $todayTotal = $queue_today_total ?? $queue->count();
-    $waitingCount = $queue_waiting_count ?? $queue->count();
-    $examinedCount = $queue_examined_count ?? 0;
     $receptionPendingCount = $queue_reception_pending_count ?? 0;
 @endphp
 <div class="stats-row">
@@ -19,20 +17,6 @@
         <div class="info">
           <div class="label">في الاستقبال — لم يُحوَّلوا</div>
           <div class="value" id="receptionPendingCount" style="color:#d97706;">{{ $receptionPendingCount }}</div>
-        </div>
-      </div>
-      <div class="stat-mini">
-        <div class="icon">⏳</div>
-        <div class="info">
-          <div class="label">في الانتظار</div>
-          <div class="value" id="waitingCount">{{ $waitingCount }}</div>
-        </div>
-      </div>
-      <div class="stat-mini">
-        <div class="icon">✅</div>
-        <div class="info">
-          <div class="label">تم الفحص</div>
-          <div class="value" id="examinedCount">{{ $examinedCount }}</div>
         </div>
       </div>
     </div>

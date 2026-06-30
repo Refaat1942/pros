@@ -1,8 +1,21 @@
 @php
     $counts = $admin_case_counts ?? ['waiting_return' => 0, 'in_progress' => 0, 'delivered' => 0];
     $buckets = $admin_case_buckets ?? ['waiting_return' => [], 'in_progress' => [], 'delivered' => []];
+    $dateFrom = $case_date_from ?? now()->startOfMonth()->toDateString();
+    $dateTo = $case_date_to ?? now()->toDateString();
 @endphp
 <div class="section-view" id="section-cases">
+      <form method="GET" action="{{ route('admin.cases') }}" class="reports-date-filter cases-date-filter">
+        <label>
+          <span>من</span>
+          <input type="date" name="from" value="{{ $dateFrom }}" required>
+        </label>
+        <label>
+          <span>إلى</span>
+          <input type="date" name="to" value="{{ $dateTo }}" required>
+        </label>
+        <button type="submit" class="btn-action primary">تطبيق الفترة</button>
+      </form>
       <div class="cases-quick-grid" id="casesQuickGrid">
         <button type="button" class="cases-quick-btn waiting active" data-cases-filter="waiting_return">
           <span class="cq-icon">⏳</span>
@@ -25,7 +38,7 @@
       </div>
       <div class="panel">
         <div class="panel-header">
-          <h3 id="casesPanelTitle">📁 الحالات — بانتظار رجوع العميل</h3>
+          <h3 id="casesPanelTitle">📁 المرضى — بانتظار رجوع العميل</h3>
           <span class="badge" id="casesPanelBadge">{{ ($counts['waiting_return'] ?? 0) }} حالة</span>
         </div>
         <p class="cases-panel-hint" id="casesPanelHint" style="display:none"></p>

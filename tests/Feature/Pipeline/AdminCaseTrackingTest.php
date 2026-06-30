@@ -116,6 +116,40 @@ class AdminCaseTrackingTest extends TestCase
         $this->assertArrayHasKey('admin_case_buckets', $data);
         $this->assertGreaterThanOrEqual(1, count($data['admin_case_buckets']['in_progress']));
         $this->assertGreaterThanOrEqual(1, $data['admin_case_counts']['in_progress']);
+        $this->assertArrayHasKey('case_date_from', $data);
+        $this->assertArrayHasKey('case_date_to', $data);
+    }
+
+    public function test_cases_buckets_respect_date_range_filter(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case->update(['delivered_at' => now()->subMonths(2)]);
+
+        $recent = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $recent->update(['delivered_at' => now()]);
+
+        $from = now()->startOfMonth();
+        $to = now()->endOfDay();
+
+        $filtered = app(AdminCaseTrackingService::class)->buckets($from, $to);
+        $all = app(AdminCaseTrackingService::class)->buckets();
+
+        $this->assertGreaterThanOrEqual(2, $all['counts']['delivered']);
+        $this->assertSame(1, $filtered['counts']['delivered']);
+        $this->assertSame((string) $recent->id, $filtered['delivered']->first()['id'] ?? null);
+    }
+
+    public function test_admin_cases_page_shows_date_filter_and_patient_tracking_label(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get('/admin/cases')
+            ->assertOk()
+            ->assertSee('متابعة المرضى', false)
+            ->assertSee('cases-date-filter', false)
+            ->assertSee('تطبيق الفترة', false);
     }
 
     public function test_case_row_includes_patient_phone_for_search(): void

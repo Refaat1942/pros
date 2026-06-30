@@ -131,7 +131,9 @@ class CostingDashboardTest extends TestCase
             ->assertOk();
 
         $response->assertJsonPath('can_see_internal', true);
-        $this->assertEquals(400.00, (float) $response->json('pricing.computed_total'));
+        $this->assertEquals(300.00, (float) $response->json('pricing.internal_total'));
+        $this->assertEquals(600.00, (float) $response->json('pricing.computed_total'));
+        $this->assertEquals(600.00, (float) $response->json('pricing.overhead_breakdown.gross_before_discount'));
     }
 
     public function test_costing_total_includes_adjustment_bom_items(): void
@@ -189,8 +191,9 @@ class CostingDashboardTest extends TestCase
             ->getJson("/costing/queue/{$case->id}")
             ->assertOk();
 
-        // RM-001 ×2 @200 + RM-002 ×1 @1000
-        $this->assertEquals(1400.00, (float) $response->json('pricing.computed_total'));
+        // RM-001 ×2 @150 WAC + RM-002 ×1 @550 WAC → internal 850 → gross 1700
+        $this->assertEquals(1700.00, (float) $response->json('pricing.computed_total'));
+        $this->assertEquals(850.00, (float) $response->json('pricing.internal_total'));
         $this->assertCount(2, $response->json('pricing.items'));
     }
 

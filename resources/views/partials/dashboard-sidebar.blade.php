@@ -2,7 +2,9 @@
     $cfg = config("dashboards.{$dashboardKey}");
     $pages = $cfg['pages'] ?? [];
     $sidebar = $cfg['sidebar'] ?? [];
+    $navGroups = $cfg['nav_groups'] ?? null;
     $routePrefix = $dashboardKey . '.';
+    $groupedSlugs = [];
 @endphp
 <aside class="sidebar">
     <div class="sidebar-brand">
@@ -11,31 +13,54 @@
         <span>{{ $sidebar['subtitle'] ?? '' }}</span>
     </div>
     <div class="sidebar-nav-scroll">
-        <ul class="nav-menu">
-            @foreach ($pages as $slug => $page)
-                @continue(! empty($page['hidden']))
-                @continue(! auth()->user()?->canViewDashboardPage($dashboardKey, $slug))
-                @php
-                    $badgeCount = (int) (($sidebarBadges ?? [])[$slug] ?? 0);
-                    $showNavBadge = $badgeCount > 0
-                        || ($slug === 'queue' && array_key_exists('queue', $sidebarBadges ?? []));
-                    $badgeTitle = match ($slug) {
-                        'queue' => 'في الانتظار',
-                        'pricing' => 'بانتظار الاعتماد',
-                        default => '',
-                    };
-                @endphp
-                <li>
-                    <a href="{{ route($routePrefix . $slug) }}"
-                       class="{{ ($activePage ?? '') === $slug ? 'active' : '' }}">
-                        <span class="nav-icon">{{ $page['icon'] }}</span>
-                        <span class="nav-label">{{ $page['label'] }}</span>
-                        @if ($showNavBadge)
-                            <span class="nav-badge" id="{{ $slug === 'pricing' ? 'sidebarPricingBadge' : ($slug === 'queue' ? 'sidebarQueueBadge' : '') }}" @if($badgeTitle) title="{{ $badgeTitle }}" @endif>{{ $badgeCount }}</span>
-                        @endif
-                    </a>
-                </li>
-            @endforeach
+        <ul class="nav-menu{{ $navGroups ? ' nav-menu--grouped' : '' }}">
+            @if ($navGroups)
+                @foreach ($navGroups as $group)
+                    @php
+                        $groupPages = [];
+                        foreach ($group['pages'] ?? [] as $slug) {
+                            if (! isset($pages[$slug]) || ! empty($pages[$slug]['hidden'])) {
+                                continue;
+                            }
+                            if (! auth()->user()?->canViewDashboardPage($dashboardKey, $slug)) {
+                                continue;
+                            }
+                            $groupPages[$slug] = $pages[$slug];
+                            $groupedSlugs[] = $slug;
+                        }
+                        $isOpen = in_array($activePage ?? '', array_keys($groupPages), true);
+                    @endphp
+                    @if ($groupPages !== [])
+                        <li class="nav-group{{ $isOpen ? ' is-open' : '' }}">
+                            <button type="button"
+                                    class="nav-group-toggle"
+                                    aria-expanded="{{ $isOpen ? 'true' : 'false' }}">
+                                <span class="nav-icon">{{ $group['icon'] ?? '📁' }}</span>
+                                <span class="nav-group-label">{{ $group['label'] }}</span>
+                                <span class="nav-group-caret" aria-hidden="true">▾</span>
+                            </button>
+                            <ul class="nav-group-items">
+                                @foreach ($groupPages as $slug => $page)
+                                    @include('partials.dashboard-nav-item', compact('slug', 'page', 'routePrefix', 'activePage'))
+                                @endforeach
+                            </ul>
+                        </li>
+                    @endif
+                @endforeach
+
+                @foreach ($pages as $slug => $page)
+                    @continue(! empty($page['hidden']))
+                    @continue(in_array($slug, $groupedSlugs, true))
+                    @continue(! auth()->user()?->canViewDashboardPage($dashboardKey, $slug))
+                    @include('partials.dashboard-nav-item', compact('slug', 'page', 'routePrefix', 'activePage'))
+                @endforeach
+            @else
+                @foreach ($pages as $slug => $page)
+                    @continue(! empty($page['hidden']))
+                    @continue(! auth()->user()?->canViewDashboardPage($dashboardKey, $slug))
+                    @include('partials.dashboard-nav-item', compact('slug', 'page', 'routePrefix', 'activePage'))
+                @endforeach
+            @endif
         </ul>
     </div>
     <div class="sidebar-footer">

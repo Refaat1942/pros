@@ -16,7 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * متابعة الحالات — لوحة الأدمن (بانتظار رجوع / تحت التنفيذ / تم التسليم).
+ * متابعة المرضى — لوحة الأدمن (بانتظار رجوع / تحت التنفيذ / تم التسليم).
  */
 class AdminCaseTrackingService
 {
@@ -25,9 +25,12 @@ class AdminCaseTrackingService
     }
 
     /** @return array{waiting_return: Collection<int, array>, in_progress: Collection<int, array>, delivered: Collection<int, array>, counts: array{waiting_return: int, in_progress: int, delivered: int}} */
-    public function buckets(): array
+    public function buckets(?Carbon $from = null, ?Carbon $to = null): array
     {
-        $waiting = $this->waitingReturnCases();
+        $from = $from?->copy()->startOfDay();
+        $to   = $to?->copy()->endOfDay();
+
+        $waiting = $this->waitingReturnCases($from, $to);
         $waitingIds = $waiting->pluck('id')->all();
 
         $progress = CaseRecord::query()
@@ -37,6 +40,7 @@ class AdminCaseTrackingService
                 CaseRecord::STAGE_READY_DELIVERY,
             ])
             ->when($waitingIds !== [], fn ($q) => $q->whereNotIn('id', $waitingIds))
+            ->when($from && $to, fn ($q) => $q->whereBetween('updated_at', [$from, $to]))
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
@@ -45,6 +49,7 @@ class AdminCaseTrackingService
         $delivered = CaseRecord::query()
             ->with($this->caseRelations())
             ->where('stage_key', CaseRecord::STAGE_DELIVERED)
+            ->when($from && $to, fn ($q) => $q->whereBetween('delivered_at', [$from, $to]))
             ->orderByDesc('delivered_at')
             ->orderByDesc('id')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
@@ -67,13 +72,14 @@ class AdminCaseTrackingService
      *
      * @return Collection<int, CaseRecord>
      */
-    private function waitingReturnCases(): Collection
+    private function waitingReturnCases(?Carbon $from = null, ?Carbon $to = null): Collection
     {
         return CaseRecord::query()
             ->with($this->caseRelations())
             ->where('patient_type', Patient::TYPE_CIVILIAN)
             ->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED)
             ->whereHas('quotes', fn ($q) => $q->where('status', Quote::STATUS_ISSUED))
+            ->when($from && $to, fn ($q) => $q->whereBetween('updated_at', [$from, $to]))
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
