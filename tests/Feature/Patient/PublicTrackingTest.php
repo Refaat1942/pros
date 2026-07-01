@@ -4,6 +4,7 @@ namespace Tests\Feature\Patient;
 
 use App\Models\CaseRecord;
 use App\Models\Patient;
+use App\Services\PublicTrackingService;
 use Illuminate\Support\Str;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -18,7 +19,7 @@ class PublicTrackingTest extends TestCase
         $patient = $this->civilianPatient($company);
         $patient->update(['tracking_uid' => 'case-test1234']);
 
-        $case = CaseRecord::create([
+        CaseRecord::create([
             'case_no'             => 'C-2026-0001',
             'order_ref'           => 'ORD-0001',
             'tracking_uid'        => $patient->tracking_uid,
@@ -32,21 +33,26 @@ class PublicTrackingTest extends TestCase
             'total_cost'          => 40000,
         ]);
 
+        $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
+
         $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
 
         $response->assertOk();
         $response->assertSee('متابعة حالة الطلب');
-        $response->assertSee('جاري التصنيع بالورشة');
-        $response->assertSee('case-test1234');
         $response->assertSee('حالة الطلب');
-        $response->assertDontSee('نسبة الإنجاز');
-        $response->assertDontSee('← أنت هنا');
+        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertSee('role="progressbar"', false);
+        $response->assertSee('case-test1234');
+        $response->assertDontSee('جاري التصنيع بالورشة');
+        $response->assertDontSee('تسجيل واستقبال');
+        $response->assertDontSee('المرحلة الحالية');
+        $response->assertDontSee('لا تُعرض تفاصيل مالية');
         $response->assertDontSee($patient->name);
         $response->assertDontSee('50000');
         $response->assertDontSee('40000');
     }
 
-    public function test_public_tracking_before_case_created_shows_registered_step(): void
+    public function test_public_tracking_before_case_created_shows_zero_percent(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -55,15 +61,14 @@ class PublicTrackingTest extends TestCase
         $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
 
         $response->assertOk();
-        $response->assertSee('تم التسجيل — في انتظار الكشف الطبي');
         $response->assertSee('حالة الطلب');
-        $response->assertSee('تسجيل واستقبال');
-        $response->assertDontSee('نسبة الإنجاز');
-        $response->assertDontSee('0%');
+        $response->assertSee('0%');
+        $response->assertDontSee('تم التسجيل — في انتظار الكشف الطبي');
+        $response->assertDontSee('تسجيل واستقبال');
         $response->assertDontSee('مسار مدني');
     }
 
-    public function test_civilian_operations_shows_approval_step_not_manufacturing(): void
+    public function test_civilian_operations_shows_progress_percent_only(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -81,17 +86,18 @@ class PublicTrackingTest extends TestCase
             'stage_key'           => CaseRecord::STAGE_OPERATIONS,
         ]);
 
+        $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
+
         $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
 
         $response->assertOk();
-        $response->assertSee('بمكتب التشغيل — بانتظار الاعتماد');
         $response->assertSee('حالة الطلب');
-        $response->assertSee('التسعير واعتماد التشغيل');
-        $response->assertDontSee('نسبة الإنجاز');
-        $response->assertDontSee('← أنت هنا');
+        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertDontSee('بمكتب التشغيل — بانتظار الاعتماد');
+        $response->assertDontSee('التسعير واعتماد التشغيل');
     }
 
-    public function test_civilian_cost_calc_stays_on_preparation_step_not_pricing(): void
+    public function test_civilian_cost_calc_shows_progress_percent_only(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -109,17 +115,18 @@ class PublicTrackingTest extends TestCase
             'stage_key'           => CaseRecord::STAGE_COST_CALC,
         ]);
 
+        $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
+
         $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
 
         $response->assertOk();
-        $response->assertSee('جاري احتساب التكاليف');
         $response->assertSee('حالة الطلب');
-        $response->assertSee('التوصيف الفني والتحضير');
-        $response->assertDontSee('نسبة الإنجاز');
-        $response->assertDontSee('← أنت هنا');
+        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertDontSee('جاري احتساب التكاليف');
+        $response->assertDontSee('التوصيف الفني والتحضير');
     }
 
-    public function test_military_pathway_shows_six_steps_without_pricing_gate(): void
+    public function test_military_pathway_shows_progress_without_pricing_gate_labels(): void
     {
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
@@ -129,12 +136,12 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('حالة الطلب');
-        $response->assertDontSee('نسبة الإنجاز');
+        $response->assertSee('0%');
         $response->assertDontSee('التسعير واعتماد التشغيل');
         $response->assertDontSee('مسار عسكري');
     }
 
-    public function test_military_pre_manufacturing_shows_preparation_label(): void
+    public function test_military_pre_manufacturing_shows_progress_percent_only(): void
     {
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
@@ -152,18 +159,19 @@ class PublicTrackingTest extends TestCase
             'stage_key'           => CaseRecord::STAGE_COST_CALC,
         ]);
 
+        $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
+
         $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
 
         $response->assertOk();
-        $response->assertSee('جاري التحضير للتصنيع');
         $response->assertSee('حالة الطلب');
-        $response->assertSee('التوصيف الفني والتحضير');
-        $response->assertDontSee('نسبة الإنجاز');
-        $response->assertDontSee('← أنت هنا');
+        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertDontSee('جاري التحضير للتصنيع');
+        $response->assertDontSee('التوصيف الفني والتحضير');
         $response->assertDontSee('التسعير واعتماد التشغيل');
     }
 
-    public function test_civilian_issued_quote_at_warehouse_shows_entity_approval_wait(): void
+    public function test_civilian_issued_quote_at_warehouse_shows_progress_percent_only(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -194,14 +202,15 @@ class PublicTrackingTest extends TestCase
             'total'        => 95000,
         ]);
 
+        $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
+
         $response = $this->get(route('public.track.case', ['uid' => $patient->tracking_uid]));
 
         $response->assertOk();
-        $response->assertSee('بانتظار موافقة الجهة');
         $response->assertSee('حالة الطلب');
-        $response->assertSee('التسعير واعتماد التشغيل');
-        $response->assertDontSee('نسبة الإنجاز');
-        $response->assertDontSee('← أنت هنا');
+        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertDontSee('بانتظار موافقة الجهة');
+        $response->assertDontSee('التسعير واعتماد التشغيل');
     }
 
     public function test_invalid_tracking_uid_returns_404(): void
