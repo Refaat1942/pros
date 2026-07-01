@@ -10,11 +10,11 @@
   </div>
 
   <div class="panel-hint" role="note" aria-label="تعليمات لوحة التكاليف">
-    <p class="panel-hint__text">
+    {{-- <p class="panel-hint__text">
       <span class="panel-hint__label">تنبيه</span>
       الحالات الواردة من <strong>المعدلات</strong> — راجع التكلفة <strong>للقراءة فقط</strong>،
       ثم من نافذة المراجعة اضغط <strong>«تأكيد عرض سعر»</strong> لإصدار العرض وتحويل الحالة لمكتب التشغيل.
-    </p>
+    </p> --}}
   </div>
 
   <div class="bom-table-wrap">
