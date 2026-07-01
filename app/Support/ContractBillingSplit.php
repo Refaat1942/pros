@@ -8,8 +8,9 @@ use App\Models\ContractCompany;
 /**
  * توزيع تكلفة الحالة بين المريض (كاش) وجهة التعاقد (مديونية).
  *
- * discount_percent = خصم يتحمّله المريض من الإجمالي (مثال 10% على 4000 → المريض يدفع 3600).
- * جهة التعاقد تُفوتر بالإجمالي الكامل — الخصم لا يُخصم من مستحقّها.
+ * discount_percent = نسبة خصم على إجمالي الفاتورة للجهة المتعاقدة.
+ * المستحق على الجهة = الإجمالي بعد خصم النسبة (مثال 10% على 4000 → 3600).
+ * المريض يدفع نفس الصافي بعد الخصم على عرض السعر.
  */
 final class ContractBillingSplit
 {
@@ -75,7 +76,7 @@ final class ContractBillingSplit
         return [
             'gross_total'           => $gross,
             'patient_share'         => $patientShare,
-            'company_share'         => $gross,
+            'company_share'         => $patientShare,
             'company_share_percent' => round($discountPct, 2),
             'patient_share_percent' => round(100 - $discountPct, 2),
         ];
@@ -92,7 +93,20 @@ final class ContractBillingSplit
             return 0.0;
         }
 
-        return round(max(0, $grossTotal ?? self::grossTotal($case)), 2);
+        $gross = round(max(0, $grossTotal ?? self::grossTotal($case)), 2);
+
+        if ($gross <= 0) {
+            return 0.0;
+        }
+
+        $case->loadMissing('contractCompany');
+        $discountPct = min(100, max(0, (float) ($case->contractCompany?->discount_percent ?? 0)));
+
+        if ($discountPct <= 0 || $discountPct >= 100) {
+            return $gross;
+        }
+
+        return round($gross * (1 - $discountPct / 100), 2);
     }
 
     public static function grossTotal(CaseRecord $case): float
