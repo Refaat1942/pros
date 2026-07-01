@@ -92,12 +92,12 @@
     var btn = ev.currentTarget;
     var caseId = btn.getAttribute('data-case-id');
     if (!caseId || !window.axios) return;
-    if (!window.confirm('تأكيد تم التصنيع؟ ستُحوَّل الحالة لمكتب التشغيل للتسليم.')) return;
+    if (!window.confirm('تأكيد تم التصنيع؟ ستُحوَّل الحالة إلى المخزن لإتمام التسليم وإغلاق الطلب.')) return;
 
     btn.disabled = true;
     axios.post('/workshop/workshop/' + caseId + '/finish-quality')
       .then(function () {
-        toast('✅ تم التصنيع — الحالة جاهزة للتسليم في مكتب التشغيل');
+        toast('✅ تم التصنيع — الحالة جاهزة للتسليم في المخزن');
         refreshList();
       })
       .catch(function (err) {

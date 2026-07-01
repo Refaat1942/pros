@@ -58,7 +58,8 @@
               company:     q.company_name,
               orderRef:    q.order_ref,
               date:        displayDateFromIso(q.quote_date),
-              total:       parseFloat(q.total) || 0,
+              total:       parseFloat(q.display_total != null ? q.display_total : q.total) || 0,
+              grossTotal:  parseFloat(q.gross_total != null ? q.gross_total : q.total) || 0,
               status:      q.status,
               statusLabel: q.status_label,
               items:       (q.items || []).map(function (i) {
@@ -1739,7 +1740,11 @@
           var refEl2    = document.getElementById('ocrLetterRef');
 
           if (nameEl)    nameEl.value    = extracted.patient_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.patient : '');
-          if (amountEl)  amountEl.value  = extracted.approved_amount != null ? extracted.approved_amount : (_ocrCurrentQuote ? _ocrCurrentQuote.total : '');
+          if (amountEl)  amountEl.value  = extracted.approved_amount != null
+            ? extracted.approved_amount
+            : (res.quote && res.quote.display_total != null
+              ? res.quote.display_total
+              : (_ocrCurrentQuote ? _ocrCurrentQuote.total : ''));
           if (companyEl) companyEl.value = extracted.company_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.company : '');
           if (refEl2)    refEl2.value    = extracted.letter_ref      || '';
 

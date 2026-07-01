@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Quote;
 use App\Http\Controllers\Controller;
 use App\Models\Quote;
 use App\Services\OcrLetterExtractionService;
+use App\Support\QuotePrintPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -51,7 +52,7 @@ class OcrExtractController extends Controller
             ],
         ]);
 
-        $quote = Quote::with(['caseRecord.patient'])
+        $quote = Quote::with(['caseRecord.patient', 'caseRecord.contractCompany'])
             ->where('quote_no', $request->input('quote_no'))
             ->first();
 
@@ -72,6 +73,7 @@ class OcrExtractController extends Controller
         $path     = $file->storeAs('approval_letters', $filename, 'public');
 
         $extracted = $this->extractionService->extractFromUpload($file, $quote);
+        $printTotals = QuotePrintPresenter::fromQuote($quote);
 
         return response()->json([
             'stored_path' => $path,
@@ -87,9 +89,11 @@ class OcrExtractController extends Controller
                 'raw_text_length' => $extracted['raw_text_length'],
             ],
             'quote' => [
-                'quote_no' => $quote->quote_no,
-                'total'    => (float) $quote->total,
-                'status'   => $quote->status,
+                'quote_no'      => $quote->quote_no,
+                'total'         => (float) $quote->total,
+                'display_total' => $printTotals['display_total'],
+                'gross_total'   => $printTotals['gross_total'],
+                'status'        => $quote->status,
             ],
         ]);
     }

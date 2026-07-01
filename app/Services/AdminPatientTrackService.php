@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CaseStage;
 use App\Support\PatientEntityPresenter;
 use App\Models\Appointment;
 use App\Models\CaseRecord;

@@ -140,8 +140,6 @@ class SupplierService
                 $s->bank_account ?? '—',
                 $s->iban ?? '—',
                 (string) ($s->linked_items_count ?? 0),
-                number_format($s->debt_total ?? 0, 2, '.', ''),
-                number_format($s->debt_items_count ?? 0, 0, '.', ''),
                 $s->created_at?->format('Y-m-d') ?? '—',
             ]);
         })->all();
@@ -162,8 +160,6 @@ class SupplierService
                 'رقم الحساب',
                 'IBAN',
                 'عدد الأصناف المرتبطة',
-                'إجمالي المديونية',
-                'أصناف المديونية',
                 'تاريخ الإضافة',
             ],
         ] + ['rows' => $rows];

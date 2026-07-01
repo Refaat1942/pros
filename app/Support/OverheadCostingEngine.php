@@ -6,7 +6,10 @@ use App\Models\ContractCompany;
 use App\Services\SettingService;
 
 /**
- * محرك حساب التكاليف الإضافية (Overhead) — نسب ديناميكية فوق WAC المواد.
+ * محرك حساب التكاليف الإضافية (Overhead) — نسب ديناميكية فوق إجمالي المواد (أعلى سعر شراء).
+ *
+ * إجمالي السعر قبل الخصم = مجموع بنود BOM (توصيف + معدلات) بأعلى سعر مسجّل.
+ * بنود النسب تُوزّع هذا الإجمالي — لا تُضاف فوق WAC الداخلي.
  */
 final class OverheadCostingEngine
 {
@@ -16,6 +19,7 @@ final class OverheadCostingEngine
 
     /**
      * @return array{
+     *     materials_total: float,
      *     wac_total: float,
      *     overheads: list<array{key: string, label: string, rate: float, amount: float}>,
      *     overhead_total: float,
@@ -26,16 +30,16 @@ final class OverheadCostingEngine
      *     rates_sum: float
      * }
      */
-    public function calculate(float $wacTotal, ?ContractCompany $company = null): array
+    public function calculate(float $materialsTotal, ?ContractCompany $company = null): array
     {
-        $wac = round(max(0, $wacTotal), 2);
+        $materials = round(max(0, $materialsTotal), 2);
         $definitions = $this->settings->overheadRateDefinitions();
 
         $overheads = [];
         $overheadTotal = 0.0;
 
         foreach ($definitions as $definition) {
-            $amount = round($wac * ($definition['rate'] / 100), 2);
+            $amount = round($materials * ($definition['rate'] / 100), 2);
             $overheadTotal += $amount;
 
             $overheads[] = [
@@ -47,7 +51,7 @@ final class OverheadCostingEngine
         }
 
         $overheadTotal = round($overheadTotal, 2);
-        $grossBeforeDiscount = round($wac + $overheadTotal, 2);
+        $grossBeforeDiscount = $materials;
 
         $discountPct = 0.0;
         if ($company instanceof ContractCompany && $company->is_contracted) {
@@ -61,7 +65,8 @@ final class OverheadCostingEngine
         $netOffer = round($grossBeforeDiscount - $discountAmount, 2);
 
         return [
-            'wac_total'             => $wac,
+            'materials_total'       => $materials,
+            'wac_total'             => $materials,
             'overheads'             => $overheads,
             'overhead_total'        => $overheadTotal,
             'gross_before_discount' => $grossBeforeDiscount,
@@ -72,8 +77,8 @@ final class OverheadCostingEngine
         ];
     }
 
-    public function grossBeforeDiscount(float $wacTotal): float
+    public function grossBeforeDiscount(float $materialsTotal): float
     {
-        return $this->calculate($wacTotal)['gross_before_discount'];
+        return round(max(0, $materialsTotal), 2);
     }
 }

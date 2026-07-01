@@ -3,9 +3,16 @@
 
     $case       = $quote->caseRecord;
     $quoteDate  = $quote->quote_date ?? now();
-    $totalSplit = ArabicAmount::split((float) $quote->total);
-    $totalFmt   = ArabicAmount::splitFormatted((float) $quote->total);
-    $amountWords = ArabicAmount::tafqeet((float) $quote->total);
+    $totals     = $printTotals ?? ['display_total' => (float) $quote->total, 'has_discount' => false, 'discount_percent' => 0, 'discount_amount' => 0, 'gross_total' => (float) $quote->total];
+    $totalSplit = ArabicAmount::split((float) $totals['display_total']);
+    $totalFmt   = ArabicAmount::splitFormatted((float) $totals['display_total']);
+    $amountWords = ArabicAmount::tafqeet((float) $totals['display_total']);
+    $grossFmt   = ! empty($totals['has_discount'])
+        ? ArabicAmount::splitFormatted((float) $totals['gross_total'])
+        : null;
+    $discountFmt = ! empty($totals['has_discount'])
+        ? ArabicAmount::splitFormatted((float) $totals['discount_amount'])
+        : null;
     $refNo      = $quote->quote_no;
     $letterRef  = $quote->order_ref ?: ($case?->order_ref ?? '—');
     $minRows    = max($quote->items->count(), 5);
@@ -546,6 +553,20 @@
                     <td>&nbsp;</td>
                 </tr>
             @endfor
+            @if (! empty($totals['has_discount']))
+                <tr>
+                    <td class="total-label">الإجمالي قبل الخصم</td>
+                    <td class="num">{{ $grossFmt['piasters'] }}</td>
+                    <td class="num">{{ $grossFmt['pounds'] }}</td>
+                    <td>&nbsp;</td>
+                </tr>
+                <tr>
+                    <td class="total-label">خصم جهة التعاقد ({{ rtrim(rtrim(number_format((float) $totals['discount_percent'], 2, '.', ''), '0'), '.') }}%)</td>
+                    <td class="num">− {{ $discountFmt['piasters'] }}</td>
+                    <td class="num">− {{ $discountFmt['pounds'] }}</td>
+                    <td>&nbsp;</td>
+                </tr>
+            @endif
             <tr>
                 <td class="total-label">الإجمالي</td>
                 <td class="num">{{ $totalFmt['piasters'] }}</td>

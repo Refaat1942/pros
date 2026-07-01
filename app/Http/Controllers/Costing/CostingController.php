@@ -137,17 +137,15 @@ class CostingController extends Controller
     {
         $canSeeInternal = CaseFinancialSummary::canSeeInternalCost();
         $company = $case->contractCompany ?? $case->patient?->contractCompany;
-        $breakdown = $this->overheadCostingEngine->calculate(
-            (float) $pricing->internal_total,
-            $company,
-        );
+        $materialsTotal = round((float) $pricing->items->sum('line_total'), 2);
+        $breakdown = $this->overheadCostingEngine->calculate($materialsTotal, $company);
 
         return $pricing->only([
             'id', 'request_no', 'order_ref', 'patient_name', 'company_name',
             'request_date', 'items_count', 'computed_total', 'status_key',
         ]) + [
             'internal_total' => $canSeeInternal ? (float) $pricing->internal_total : null,
-            'materials_highest_total' => round((float) $pricing->items->sum('line_total'), 2),
+            'materials_highest_total' => $materialsTotal,
             'overhead_breakdown' => $canSeeInternal ? $breakdown : [
                 'gross_before_discount' => $breakdown['gross_before_discount'],
                 'discount_percent'      => $breakdown['discount_percent'],

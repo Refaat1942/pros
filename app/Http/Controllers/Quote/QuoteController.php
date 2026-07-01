@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\QuoteQrService;
 use App\Services\QuoteService;
+use App\Support\QuotePrintPresenter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,8 @@ class QuoteController extends Controller
     {
         $quotes = $this->fetchForDashboard(
             Quote::with([
-                'caseRecord:id,case_no,stage_key,patient_type,work_order_no',
+                'caseRecord:id,case_no,stage_key,patient_type,work_order_no,contract_company_id',
+                'caseRecord.contractCompany:id,is_contracted,discount_percent',
                 'items',
             ])
                 ->whereHas('caseRecord', fn ($q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
@@ -70,7 +72,7 @@ class QuoteController extends Controller
      */
     public function print(Request $request, Quote $quote): View
     {
-        $quote->load(['items', 'caseRecord']);
+        $quote->load(['items', 'caseRecord.contractCompany']);
 
         abort_unless(
             $quote->caseRecord?->patient_type === Patient::TYPE_CIVILIAN,
@@ -79,6 +81,7 @@ class QuoteController extends Controller
 
         return view('quotes.print', [
             'quote'      => $quote,
+            'printTotals' => \App\Support\QuotePrintPresenter::fromQuote($quote),
             'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
             'embed'      => $request->boolean('embed'),
             'autoPrint'  => ! $request->boolean('embed'),
@@ -103,6 +106,8 @@ class QuoteController extends Controller
 
     private function formatQuote(Quote $quote): array
     {
+        $printTotals = QuotePrintPresenter::fromQuote($quote);
+
         return $quote->only([
             'id',
             'quote_no',
@@ -115,6 +120,9 @@ class QuoteController extends Controller
             'status_label',
             'total',
         ]) + [
+            'gross_total'   => $printTotals['gross_total'],
+            'display_total' => $printTotals['display_total'],
+            'discount_percent' => $printTotals['discount_percent'],
             'quote_serial' => $quote->quote_no,
             'quote_serial_label' => Quote::SERIAL_LABEL,
             'items' => $quote->relationLoaded('items')

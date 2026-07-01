@@ -124,10 +124,7 @@ class AdminReportsService
                 ? (int) round((($itemCount - $lowStock) / $itemCount) * 100)
                 : 0,
             'low_stock_items'  => $lowStockItems,
-            'issues_this_month' => StockMovement::query()
-                ->where('movement_type', StockMovement::TYPE_ISSUE)
-                ->whereBetween('moved_at', [$monthStart, $monthEnd])
-                ->sum('quantity'),
+            'issues_this_month' => $this->warehouseIssuesInPeriod($monthStart, $monthEnd),
             'active_batches'   => StockItemPrice::query()->where('qty', '>', 0)->count(),
             'batch_samples'      => StockItemPrice::query()
                 ->with('stockItem:id,code,name')
@@ -143,6 +140,24 @@ class AdminReportsService
                 ])
                 ->all(),
         ];
+    }
+
+    /**
+     * وحدات صرف المخزن خلال الفترة — من حركات الصرف (كمية موجبة) أو بنود BOM المُصرفة.
+     */
+    private function warehouseIssuesInPeriod(\Carbon\Carbon $start, \Carbon\Carbon $end): int
+    {
+        $fromMovements = (int) StockMovement::query()
+            ->where('movement_type', StockMovement::TYPE_ISSUE)
+            ->whereBetween('moved_at', [$start, $end])
+            ->sum(DB::raw('ABS(quantity)'));
+
+        $fromBomItems = (int) BomItem::query()
+            ->where('issued_qty', '>', 0)
+            ->whereHas('bom', fn ($q) => $q->whereBetween('released_at', [$start, $end]))
+            ->sum('issued_qty');
+
+        return max($fromMovements, $fromBomItems);
     }
 
     /** @return array<string, mixed> */

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Finance;
 
+use App\Models\Bom;
+use App\Models\CaseRecord;
 use App\Models\ContractCompany;
 use App\Models\ContractCompanyDebt;
 use App\Models\PricingRequest;
@@ -101,6 +103,41 @@ class ContractCompanyDiscountTest extends TestCase
         $this->assertSame(1000.0, (float) $quote->total);
     }
 
+    public function test_quote_print_shows_net_total_after_contract_discount(): void
+    {
+        $company = $this->civilianCompany('التأمين الصحي');
+        $company->update(['discount_percent' => 10]);
+
+        $patient = $this->civilianPatient($company);
+        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_COST_CALC);
+        $case->update(['contract_company_id' => $company->id]);
+
+        $pricing = PricingRequest::create([
+            'request_no'     => 'PR-PRINT-001',
+            'case_id'        => $case->id,
+            'patient_type'   => 'civilian',
+            'order_ref'      => $case->order_ref,
+            'patient_name'   => $patient->name,
+            'company_name'   => $company->name,
+            'request_date'   => now()->toDateString(),
+            'status_key'     => 'awaiting_admin_approval',
+            'computed_total' => 4000,
+        ]);
+
+        $quote = app(QuoteService::class)->issue($pricing, 4000.0);
+        $quote->update(['status' => Quote::STATUS_ISSUED]);
+
+        $ops = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->get(route('operations.quote.print', $quote))
+            ->assertOk()
+            ->assertSee('خصم جهة التعاقد', false)
+            ->assertSee('10%', false)
+            ->assertSee('3,600', false)
+            ->assertSee('4,000', false);
+    }
+
     public function test_financial_posting_records_only_company_share_as_debt(): void
     {
         $company = $this->civilianCompany('تأمين 20%');
@@ -123,5 +160,36 @@ class ContractCompanyDiscountTest extends TestCase
         $split = ContractBillingSplit::forCase($case->fresh(['contractCompany']), 1000);
         $this->assertSame(800.0, $split['patient_share']);
         $this->assertSame(200.0, $split['company_share']);
+    }
+
+    public function test_work_order_print_shows_net_amount_after_contract_discount(): void
+    {
+        $company = $this->civilianCompany('التأمين الصحي');
+        $company->update(['discount_percent' => 10]);
+
+        $patient = $this->civilianPatient($company);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update([
+            'contract_company_id' => $company->id,
+            'work_order_no'       => 'WO-2026-0001',
+            'quote_total'         => 4000,
+            'quote_no'            => 'QT-2026-0001',
+        ]);
+
+        Bom::create([
+            'case_id'      => $case->id,
+            'bom_no'       => 'BOM-WO-001',
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'stage'        => Bom::STAGE_WIP,
+        ]);
+
+        $ops = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->get(route('operations.work-order.print', $case))
+            ->assertOk()
+            ->assertSee('3,600', false)
+            ->assertSee('WO-2026-0001', false);
     }
 }

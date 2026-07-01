@@ -27,7 +27,7 @@
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p class="text-sm text-slate-600 leading-relaxed">
             تظهر هنا الأوامر التي <strong>صُرفت موادها من المخزن</strong> وجاهزة للتصنيع في الورشة.
-            بعد <strong>تم التصنيع</strong> تُحوَّل الحالة إلى مكتب التشغيل للتسليم للعميل.
+            بعد <strong>تم التصنيع</strong> تُحوَّل الحالة إلى <strong>المخزن</strong> لإتمام التسليم وإغلاق الطلب.
         </p>
         <div class="mt-4 grid grid-cols-2 gap-3 text-center text-sm max-w-md">
             <div class="rounded-xl bg-violet-50 border border-violet-100 py-3">

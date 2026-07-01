@@ -6,6 +6,7 @@ use App\Exceptions\OcrMismatchException;
 use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
 use App\Models\Quote;
+use App\Support\QuotePrintPresenter;
 
 /**
  * معالجة خطاب الموافقة — استخراج OCR ومطابقة عرض السعر المجمّد.
@@ -93,7 +94,7 @@ class OcrApprovalService
             'quote_id'        => $quote->id,
             'patient_name'    => $extracted['patient_name'] ?? $quote->patient_name,
             'company_name'    => $extracted['company_name'] ?? $quote->company_name,
-            'approved_amount' => $extracted['approved_amount'] ?? $quote->total,
+            'approved_amount' => $extracted['approved_amount'] ?? QuotePrintPresenter::approvedAmount($quote),
             'approval_date'   => now()->toDateString(),
             'work_order_no'   => $case->work_order_no,
             'letter_path'     => $extracted['letter_path'] ?? null,
@@ -118,12 +119,12 @@ class OcrApprovalService
 
         if (isset($extracted['approved_amount'])) {
             $ocrAmount      = round((float) $extracted['approved_amount'], 2);
-            $expectedAmount = round((float) $quote->total, 2);
+            $expectedAmount = round(QuotePrintPresenter::approvedAmount($quote), 2);
 
             if (abs($ocrAmount - $expectedAmount) >= 0.01) {
                 throw OcrMismatchException::forField(
                     'القيمة المالية',
-                    "المستخرج {$ocrAmount} ≠ عرض السعر {$expectedAmount}"
+                    "المستخرج {$ocrAmount} ≠ المبلغ المعتمد {$expectedAmount}"
                 );
             }
         }

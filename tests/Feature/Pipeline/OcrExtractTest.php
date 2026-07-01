@@ -55,6 +55,42 @@ class OcrExtractTest extends TestCase
         $this->assertSame('2026-06-24', $response->json('extracted.letter_date'));
     }
 
+    public function test_ocr_extract_uses_net_amount_when_company_has_discount(): void
+    {
+        $company = $this->civilianCompany('التأمين الصحي');
+        $company->update(['discount_percent' => 10]);
+
+        $item = $this->stockItem('RM-001', qty: 10, wac: 100.00);
+        app(\App\Services\StockPriceService::class)->addBatch(
+            $item, 10, 200.00, $this->makeSupplier(), 'INV-001', now()
+        );
+
+        $patient = $this->civilianPatient($company);
+        $case    = $this->operationsReadyCase($patient);
+        $case->update(['contract_company_id' => $company->id]);
+
+        $ops = $this->userWithRole('operations');
+        $this->actingAs($ops)
+            ->postJson("/operations/pending/{$case->id}/release-quote")
+            ->assertOk();
+
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $quote->update(['total' => 4000]);
+
+        $recep = $this->userWithRole('reception');
+        $file  = UploadedFile::fake()->image('letter.webp');
+
+        $response = $this->actingAs($recep)
+            ->postJson('/reception/ocr/extract', [
+                'quote_no'    => $quote->quote_no,
+                'letter_file' => $file,
+            ])
+            ->assertOk();
+
+        $this->assertEquals(3600.0, (float) $response->json('extracted.approved_amount'));
+        $this->assertEquals(3600.0, (float) $response->json('quote.display_total'));
+    }
+
     public function test_extract_endpoint_accepts_webp_image(): void
     {
         $item = $this->stockItem('RM-001', qty: 10, wac: 100.00);

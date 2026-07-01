@@ -135,8 +135,8 @@ class CostingDashboardTest extends TestCase
 
         $response->assertJsonPath('can_see_internal', true);
         $this->assertEquals(300.00, (float) $response->json('pricing.internal_total'));
-        $this->assertEquals(600.00, (float) $response->json('pricing.computed_total'));
-        $this->assertEquals(600.00, (float) $response->json('pricing.overhead_breakdown.gross_before_discount'));
+        $this->assertEquals(400.00, (float) $response->json('pricing.computed_total'));
+        $this->assertEquals(400.00, (float) $response->json('pricing.overhead_breakdown.gross_before_discount'));
         $response->assertJsonMissingPath('pricing.items.0.wac_unit');
         $response->assertJsonStructure([
             'pricing' => [
@@ -183,6 +183,49 @@ class CostingDashboardTest extends TestCase
         $criteria = (string) $response->json('pricing.items.0.criteria');
         $this->assertStringContainsString('عدد القطع: 3', $criteria);
         $this->assertStringContainsString('النوع: Spring', $criteria);
+    }
+
+    public function test_costing_overhead_includes_same_code_from_spec_and_adjustments(): void
+    {
+        $item = $this->stockItem('ITM-001', qty: 20, wac: 1000.00);
+        $supplier = $this->makeSupplier();
+        app(StockPriceService::class)->addBatch($item, 20, 2000.00, $supplier, 'INV-ITM-001', now());
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'ITM-001', 'qty' => 1],
+        ]);
+
+        $adjustments = $this->userWithRole('adjustments');
+
+        $this->actingAs($adjustments)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [
+                    ['stock_item_code' => 'ITM-001', 'name' => 'ركبه هيدروليكيه', 'qty' => 1],
+                ],
+            ])
+            ->assertCreated();
+
+        $this->actingAs($adjustments)
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($this->userWithRole('costing'))
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk();
+
+        // بند توصيف + بند معدلات لنفس الصنف → النسب على إجمالي المواد (4000) وليس WAC فقط
+        $this->assertCount(2, $response->json('pricing.items'));
+        $this->assertEquals(4000.00, (float) $response->json('pricing.materials_highest_total'));
+        $this->assertEquals(3000.00, (float) $response->json('pricing.internal_total'));
+        $this->assertEquals(4000.00, (float) $response->json('pricing.overhead_breakdown.materials_total'));
+
+        $overheads = collect($response->json('pricing.overhead_breakdown.overheads'));
+        $this->assertEquals(1200.00, (float) $overheads->first()['amount']);
+        $this->assertEquals(4000.00, round($overheads->sum('amount'), 2));
+        $this->assertEquals(4000.00, (float) $response->json('pricing.overhead_breakdown.gross_before_discount'));
+        $this->assertEquals(4000.00, (float) $response->json('pricing.computed_total'));
     }
 
     public function test_costing_total_includes_adjustment_bom_items(): void
@@ -240,8 +283,8 @@ class CostingDashboardTest extends TestCase
             ->getJson("/costing/queue/{$case->id}")
             ->assertOk();
 
-        // RM-001 ×2 @150 WAC + RM-002 ×1 @550 WAC → internal 850 → gross 1700
-        $this->assertEquals(1700.00, (float) $response->json('pricing.computed_total'));
+        // RM-001 ×2 @200 + RM-002 ×1 @1000 → materials 1400
+        $this->assertEquals(1400.00, (float) $response->json('pricing.computed_total'));
         $this->assertEquals(850.00, (float) $response->json('pricing.internal_total'));
         $this->assertCount(2, $response->json('pricing.items'));
     }

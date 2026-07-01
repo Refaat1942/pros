@@ -1,4 +1,6 @@
 @php
+    use App\Support\CaseFinancialSummary;
+
     $patient = $case->patient;
     $bom     = $case->bom;
     $items   = $bom?->items ?? collect();
@@ -7,7 +9,7 @@
     $dateDisplay = now()->format('d/m/Y');
     $approvalNo = $case->quote_no ?? '—';
     $approvalDate = $case->approval_date?->format('d/m/Y') ?? '—';
-    $valueDisplay = number_format((float) ($case->quote_total ?: $case->total_cost), 0);
+    $valueDisplay = number_format(CaseFinancialSummary::billableAmount($case), 0);
 @endphp
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">

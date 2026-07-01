@@ -113,4 +113,20 @@ class DoctorQueueStatsTest extends TestCase
         $this->assertNotNull($appointment->transferred_to_clinic_at);
         $this->assertTrue($appointment->transferred_to_clinic_at->greaterThanOrEqualTo($patient->created_at));
     }
+
+    public function test_doctor_queue_shows_contract_entity_for_civilian_patient(): void
+    {
+        $company = $this->civilianCompany('التأمين الصحي');
+        $recep   = $this->userWithRole('reception');
+        $doctor  = $this->userWithRole('doctor');
+
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'احمد عرفه');
+        $this->transferPatientToClinicHttp($recep, $patient);
+
+        $this->actingAs($doctor)
+            ->get('/doctor/queue')
+            ->assertOk()
+            ->assertSee('التأمين الصحي', false)
+            ->assertSee('متعاقد', false);
+    }
 }

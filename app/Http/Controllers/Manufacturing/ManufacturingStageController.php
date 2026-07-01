@@ -89,7 +89,7 @@ class ManufacturingStageController extends Controller
     {
         abort_unless($case->work_order_no, 404, 'لا يوجد أمر تشغيل لهذه الحالة.');
 
-        $case->load(['patient', 'bom.items']);
+        $case->load(['patient', 'contractCompany', 'bom.items']);
 
         abort_unless($case->bom, 404, 'لا توجد BOM مرتبطة بهذه الحالة.');
 

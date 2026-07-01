@@ -576,6 +576,70 @@ class AdminReportsPageTest extends TestCase
         $this->assertNotEmpty($hub['report_sections']);
     }
 
+    public function test_overview_warehouse_issues_counts_abs_issue_movements(): void
+    {
+        $item = $this->stockItem('RM-ISSUE-RPT', qty: 20, wac: 40.00);
+
+        StockMovement::create([
+            'stock_item_id' => $item->id,
+            'movement_type' => StockMovement::TYPE_ISSUE,
+            'quantity'      => -3,
+            'unit_cost'     => 40.00,
+            'balance_after' => 17,
+            'moved_at'      => now(),
+        ]);
+
+        $from = now()->startOfDay();
+        $to   = now()->endOfDay();
+        $reports = app(AdminReportsService::class)->build($from, $to);
+
+        $this->assertSame(3, $reports['inventory']['issues_this_month']);
+    }
+
+    public function test_overview_warehouse_issues_falls_back_to_bom_released_items(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
+
+        $bom = Bom::create([
+            'case_id'      => $case->id,
+            'bom_no'       => 'BOM-ISSUE-RPT',
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'stage'        => Bom::STAGE_WIP,
+            'released_at'  => now(),
+        ]);
+
+        BomItem::create([
+            'bom_id'          => $bom->id,
+            'stock_item_code' => 'RM-001',
+            'name'            => 'صنف RM-001',
+            'qty'             => 2,
+            'unit_cost'       => 100.00,
+            'issued_qty'      => 2,
+        ]);
+
+        $from = now()->startOfDay();
+        $to   = now()->endOfDay();
+        $reports = app(AdminReportsService::class)->build($from, $to);
+
+        $this->assertSame(2, $reports['inventory']['issues_this_month']);
+    }
+
+    public function test_overview_warehouse_issues_includes_dispense_via_release_to_wip(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $this->dispensedManufacturingCase($patient, ['RM-001']);
+
+        $from = now()->startOfDay();
+        $to   = now()->endOfDay();
+        $reports = app(AdminReportsService::class)->build($from, $to);
+
+        $this->assertGreaterThanOrEqual(1, $reports['inventory']['issues_this_month']);
+    }
+
     private function seedStockForReturnsReport(): void
     {
         $item = $this->stockItem('RM-001', qty: 20);

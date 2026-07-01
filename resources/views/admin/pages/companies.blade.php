@@ -14,20 +14,26 @@
                 <h3>🏢 جهات التعاقد</h3>
             <span class="badge" id="companiesBadge">{{ $companyList->count() }} جهة</span>
         </div>
-        <form method="POST" action="{{ route('admin.companies.store') }}" class="company-add-bar" data-validate-form>
+        <form method="POST" action="{{ route('admin.companies.store') }}" class="company-add-bar" data-validate-form id="companyAddForm">
             @csrf
             <input type="hidden" name="form" value="company">
             <input type="hidden" name="is_military" value="0">
-            <input type="hidden" name="is_contracted" value="1">
             <input type="text" name="name" placeholder="اسم الهيئة..." autocomplete="off"
                    data-v-rules="required,min:2,max:255" maxlength="255"
                    value="{{ old('name') }}">
-            <label class="company-discount-field" title="نسبة الخصم على إجمالي الفاتورة — ما يدفعه المريض بعد الخصم">
+            <label class="company-field">
+                <span>نوع الهيئة</span>
+                <select name="is_contracted" id="companyIsContracted" aria-label="نوع الهيئة">
+                    @php $contractedOld = old('is_contracted', '1'); @endphp
+                    <option value="1" @selected(! in_array($contractedOld, ['0', 0, false], true))>متعاقدة</option>
+                    <option value="0" @selected(in_array($contractedOld, ['0', 0, false], true))>غير متعاقدة</option>
+                </select>
+            </label>
+            <label class="company-discount-field" id="companyDiscountField" title="نسبة الخصم على إجمالي الفاتورة — ما يدفعه المريض بعد الخصم">
                 <span>نسبة الخصم %</span>
-                <input type="number" name="discount_percent" min="0" max="100" step="0.01" value="{{ old('discount_percent', '0') }}" placeholder="0">
+                <input type="number" name="discount_percent" id="companyDiscountInput" min="0" max="100" step="0.01" value="{{ old('discount_percent', '0') }}" placeholder="0">
             </label>
             <button type="submit" class="btn-add-company">➕ إضافة جهة</button>
-            <p class="company-hint">أضف هيئة — متعاقدة (مديونية) أو غير متعاقدة (مرجع فقط). نسبة الخصم تُخصم من إجمالي السعر؛ مثال: خصم 20% على 1000 → المريض يدفع 800 فقط، والباقي يُسجَّل مديونية على الجهة المتعاقدة.</p>
         </form>
         <div class="data-toolbar">
             @include('admin.partials.bulk-action-bar', ['bulkBarId' => 'companiesBulkBar'])
@@ -64,7 +70,7 @@
                                 <div class="table-actions">
                                     <button type="button"
                                             class="btn-action"
-                                            onclick="openCompanyEditModal({{ $company->id }}, {{ json_encode($company->name) }}, {{ json_encode((float) ($company->discount_percent ?? 0)) }})">
+                                            onclick="openCompanyEditModal({{ $company->id }}, {{ json_encode($company->name) }}, {{ $company->is_contracted ? 'true' : 'false' }}, {{ json_encode((float) ($company->discount_percent ?? 0)) }})">
                                         ✏️ تعديل
                                     </button>
                                     <button type="button"
@@ -95,6 +101,7 @@
         align-items: flex-end;
         gap: 10px;
     }
+    .company-field,
     .company-discount-field {
         display: flex;
         flex-direction: column;
@@ -103,12 +110,23 @@
         font-weight: 700;
         color: var(--text-muted);
     }
+    .company-field select,
     .company-discount-field input {
-        width: 110px;
         padding: 10px;
         border: 1px solid var(--border);
         border-radius: 8px;
         font-family: inherit;
+        background: #fff;
+    }
+    .company-field select {
+        min-width: 140px;
+    }
+    .company-discount-field input {
+        width: 110px;
+    }
+    .company-discount-field.is-hidden,
+    #editCompanyDiscountGroup.is-hidden {
+        display: none;
     }
 </style>
 
@@ -130,11 +148,19 @@
                        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
             </div>
             <div class="form-group" style="margin-bottom:14px;">
+                <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">نوع الهيئة</label>
+                <select id="editCompanyIsContracted"
+                        class="form-control"
+                        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+                    <option value="1">متعاقدة</option>
+                    <option value="0">غير متعاقدة</option>
+                </select>
+            </div>
+            <div class="form-group" id="editCompanyDiscountGroup" style="margin-bottom:14px;">
                 <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">نسبة الخصم %</label>
                 <input type="number" id="editCompanyDiscount" min="0" max="100" step="0.01" value="0"
                        class="form-control"
                        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-                <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0;">مثال: خصم 20% على 1000 → المريض يدفع 800 فقط · 0 = بدون خصم</p>
             </div>
             <div id="companyEditError"
                  style="display:none;padding:10px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:13px;"></div>
@@ -153,10 +179,46 @@
         return m ? m.getAttribute('content') : '';
     }
 
-    window.openCompanyEditModal = function (id, name, discountPercent) {
+    function toggleCompanyDiscount(show, discountInput) {
+        if (!discountInput) return;
+        var wrap = discountInput.closest('.company-discount-field') || document.getElementById('editCompanyDiscountGroup');
+        if (wrap) {
+            wrap.classList.toggle('is-hidden', !show);
+        }
+        discountInput.disabled = !show;
+        if (!show) {
+            discountInput.value = '0';
+        }
+    }
+
+    function isCompanyContracted(selectEl) {
+        return selectEl && String(selectEl.value) === '1';
+    }
+
+    var addContractSelect = document.getElementById('companyIsContracted');
+    var addDiscountInput = document.getElementById('companyDiscountInput');
+    if (addContractSelect && addDiscountInput) {
+        var syncAddDiscount = function () {
+            toggleCompanyDiscount(isCompanyContracted(addContractSelect), addDiscountInput);
+        };
+        addContractSelect.addEventListener('change', syncAddDiscount);
+        syncAddDiscount();
+    }
+
+    var editContractSelect = document.getElementById('editCompanyIsContracted');
+    var editDiscountInput = document.getElementById('editCompanyDiscount');
+    if (editContractSelect && editDiscountInput) {
+        editContractSelect.addEventListener('change', function () {
+            toggleCompanyDiscount(isCompanyContracted(editContractSelect), editDiscountInput);
+        });
+    }
+
+    window.openCompanyEditModal = function (id, name, isContracted, discountPercent) {
         document.getElementById('editCompanyId').value = id;
         document.getElementById('editCompanyName').value = name;
-        document.getElementById('editCompanyDiscount').value = discountPercent != null ? discountPercent : 0;
+        editContractSelect.value = isContracted ? '1' : '0';
+        editDiscountInput.value = discountPercent != null ? discountPercent : 0;
+        toggleCompanyDiscount(!!isContracted, editDiscountInput);
         document.getElementById('companyEditError').style.display = 'none';
         document.getElementById('companyEditModal').classList.add('open');
     };
@@ -168,14 +230,17 @@
     window.saveCompanyEdit = function () {
         var id = document.getElementById('editCompanyId').value;
         var name = document.getElementById('editCompanyName').value.trim();
-        var discount = parseFloat(document.getElementById('editCompanyDiscount').value || '0');
+        var isContracted = isCompanyContracted(editContractSelect);
+        var discount = isContracted
+            ? parseFloat(document.getElementById('editCompanyDiscount').value || '0')
+            : 0;
         var errEl = document.getElementById('companyEditError');
         if (!name || name.length < 2) {
             errEl.textContent = 'يرجى إدخال اسم صالح (حرفان على الأقل).';
             errEl.style.display = 'block';
             return;
         }
-        if (isNaN(discount) || discount < 0 || discount > 100) {
+        if (isContracted && (isNaN(discount) || discount < 0 || discount > 100)) {
             errEl.textContent = 'نسبة الخصم يجب أن تكون بين 0 و 100.';
             errEl.style.display = 'block';
             return;
@@ -189,7 +254,11 @@
                 'X-Requested-With': 'XMLHttpRequest',
             },
             credentials: 'same-origin',
-            body: JSON.stringify({ name: name, discount_percent: discount }),
+            body: JSON.stringify({
+                name: name,
+                is_contracted: isContracted,
+                discount_percent: discount,
+            }),
         })
         .then(function (r) {
             return r.ok ? r.json() : r.json().then(function (j) { throw j; });

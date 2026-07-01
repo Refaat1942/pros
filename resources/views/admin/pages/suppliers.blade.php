@@ -49,8 +49,6 @@
                         <th>التواصل</th>
                         <th>ضريبي / تجاري</th>
                         <th class="num">أصناف</th>
-                        <th class="num">المديونية</th>
-                        <th class="num">أصناف المديونية</th>
                         <th style="width:180px;white-space:nowrap">إجراء</th>
                     </tr>
                 </thead>
@@ -78,8 +76,6 @@
                                 @if (! $supplier->tax_number && ! $supplier->commercial_registry)—@endif
                             </td>
                             <td class="num">{{ (int) ($supplier->linked_items_count ?? 0) }}</td>
-                            <td class="num">{{ number_format((float) ($supplier->debt_total ?? 0), 2) }}</td>
-                            <td class="num">{{ (int) ($supplier->debt_items_count ?? 0) }}</td>
                             <td>
                                 <div class="table-actions">
                                     <button type="button" class="btn-action" onclick="openSupplierEditModal({{ $supplier->id }})">✏️ تعديل</button>
@@ -92,7 +88,7 @@
                         </tr>
                     @empty
                         <tr class="suppliers-empty-row">
-                            <td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">
+                            <td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">
                                 لا يوجد موردون — أضف مورداً أو غيّر الفلاتر.
                             </td>
                         </tr>

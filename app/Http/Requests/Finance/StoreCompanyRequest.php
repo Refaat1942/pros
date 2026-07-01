@@ -25,4 +25,11 @@ class StoreCompanyRequest extends BaseRequest
             'discount_percent.max' => 'نسبة الخصم لا يمكن أن تتجاوز 100%.',
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        if (! $this->boolean('is_contracted')) {
+            $this->merge(['discount_percent' => 0]);
+        }
+    }
 }

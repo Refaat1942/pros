@@ -81,6 +81,12 @@ class CostingService
             $pricingRequest = $case->pricingRequest
                 ?? $this->pricingService->createAndCalculateForCase($case);
 
+            if ($case->bom && $pricingRequest) {
+                $this->pricingService->syncItemsFromBom($case, $pricingRequest);
+                $this->pricingService->refreshLinePrices($pricingRequest);
+                $pricingRequest->refresh();
+            }
+
             $this->workflowService->advance($case->fresh(), WorkflowEvent::CostingCompleted->value);
 
             if (! $case->fresh()->isMilitary()) {

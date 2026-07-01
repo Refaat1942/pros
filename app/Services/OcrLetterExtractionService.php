@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Quote;
 use App\Support\OcrLetterParser;
+use App\Support\QuotePrintPresenter;
 use Illuminate\Http\UploadedFile;
 
 /**
@@ -24,14 +25,15 @@ class OcrLetterExtractionService
      */
     public function extractFromUpload(UploadedFile $file, Quote $quote): array
     {
-        $quote->loadMissing(['caseRecord.patient']);
+        $quote->loadMissing(['caseRecord.patient', 'caseRecord.contractCompany']);
 
         $case    = $quote->caseRecord;
         $patient = $case?->patient;
+        $approvedAmount = QuotePrintPresenter::approvedAmount($quote);
 
         $hints = [
             'patient_hint' => $patient?->name ?? $quote->patient_name,
-            'amount_hint'  => (float) $quote->total,
+            'amount_hint'  => $approvedAmount,
             'company_hint' => $case?->company_name ?? $quote->company_name,
         ];
 

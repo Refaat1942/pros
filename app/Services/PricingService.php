@@ -8,7 +8,6 @@ use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
-use App\Support\OverheadCostingEngine;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -16,7 +15,7 @@ use Illuminate\Support\Facades\Log;
  * محرك التكاليف (الخطوة 5 — التكاليف).
  *
  * يحتسب رقمين لكل حالة من BOM النهائي (بنود الفني + بنود مستشار المعدلات):
- *   - computed_total : WAC + مصاريف إضافية (Overhead) — إجمالي السعر قبل خصم الجهة.
+ *   - computed_total : مجموع المواد (أعلى سعر شراء) — توصيف + معدلات — قبل خصم الجهة.
  *   - internal_total : متوسط التكلفة المرجح (WAC) — التكلفة الحقيقية لحساب الربح،
  *                      تظهر للأدمن فقط.
  *
@@ -26,7 +25,6 @@ class PricingService
 {
     public function __construct(
         private readonly StockPriceService $stockPriceService,
-        private readonly OverheadCostingEngine $overheadCostingEngine,
     ) {
     }
 
@@ -122,6 +120,7 @@ class PricingService
 
     /**
      * احتساب تكلفة طلب التسعير — أعلى سعر شراء (عرض السعر) + WAC (داخلي).
+     * computed_total = مجموع qty × أعلى سعر (توصيف + معدلات).
      */
     public function calculate(PricingRequest $request): float
     {
@@ -168,12 +167,11 @@ class PricingService
 
             $total    = round($total, 2);
             $internal = round($internal, 2);
-            $gross    = $this->overheadCostingEngine->grossBeforeDiscount($internal);
 
             $before = $request->only(['status_key', 'computed_total', 'internal_total']);
 
             $request->update([
-                'computed_total' => $gross,
+                'computed_total' => $total,
                 'internal_total' => $internal,
                 'status_key'     => PricingRequestStatus::AwaitingAdminApproval->value,
             ]);
@@ -186,13 +184,13 @@ class PricingService
                 after:       [
                     'request_no'     => $request->request_no,
                     'status_key'     => PricingRequestStatus::AwaitingAdminApproval->value,
-                    'computed_total' => $gross,
+                    'computed_total' => $total,
                     'internal_total' => $internal,
                     'lines'          => $lines,
                 ],
             );
 
-            return $gross;
+            return $total;
         });
     }
 
@@ -233,14 +231,13 @@ class PricingService
 
             $total    = round($total, 2);
             $internal = round($internal, 2);
-            $gross    = $this->overheadCostingEngine->grossBeforeDiscount($internal);
 
             $request->update([
-                'computed_total' => $gross,
+                'computed_total' => $total,
                 'internal_total' => $internal,
             ]);
 
-            return $gross;
+            return $total;
         });
     }
 

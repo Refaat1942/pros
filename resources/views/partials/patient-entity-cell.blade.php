@@ -1,11 +1,13 @@
 {{--
     عرض جهة المريض / الفوترة مع شارة النوع.
-    @param Patient|CaseRecord|array|null $subject
+    @param Patient|CaseRecord|Appointment|array|null $subject
     @param array|null $entity — presentation array من PatientEntityPresenter
 --}}
 @php
     if (! isset($entity)) {
-        if ($subject instanceof \App\Models\Patient || $subject instanceof \App\Models\CaseRecord) {
+        if ($subject instanceof \App\Models\Patient
+            || $subject instanceof \App\Models\CaseRecord
+            || $subject instanceof \App\Models\Appointment) {
             $entity = $subject->entityPresentation();
         } elseif (is_array($subject) && isset($subject['entity'])) {
             $entity = $subject['entity'];

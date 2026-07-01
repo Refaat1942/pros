@@ -52,11 +52,11 @@
               @php
                   $diagnosisUrl = route('doctor.diagnosis', ['appointment' => $appt->id]);
                   $pt = $appt->patient_type ?? 'civilian';
-                  $entity = $appt->displayEntity();
+                  $entitySearch = $appt->displayEntity();
               @endphp
               <tr class="queue-row-clickable"
                   data-href="{{ $diagnosisUrl }}"
-                  data-search="{{ $appt->patient_name }} {{ $entity }}">
+                  data-search="{{ $appt->patient_name }} {{ $entitySearch }}">
                 <td>{{ $loop->iteration }}</td>
                 <td>
                   <strong>{{ $appt->patient_name }}</strong>

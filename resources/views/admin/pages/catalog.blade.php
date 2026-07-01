@@ -59,7 +59,6 @@
                     <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
                 @endforeach
             </select>
-            <a href="{{ route('admin.stock-categories') }}" class="btn-action">🏷️ إدارة الأقسام</a>
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
             <a class="btn-action" href="{{ $exportUrl }}">📊 تصدير Excel</a>
@@ -85,7 +84,7 @@
         </p>
 
         <div class="panel-body" style="overflow-x:auto;">
-            <table class="catalog-slim-table" style="width:100%;border-collapse:collapse;">
+            <table class="catalog-slim-table" id="catalogItemsTable" data-paginate="10" style="width:100%;border-collapse:collapse;">
                 <thead>
                     <tr style="background:var(--surface-2,#f8fafc);">
                         <th style="padding:10px;text-align:right;">الكود</th>
@@ -105,6 +104,7 @@
                             data-item-id="{{ $item['id'] ?? '' }}"
                             data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['category'] ?? '')) }}"
                             data-category-id="{{ $item['category_id'] ?? '' }}"
+                            data-filter-hidden="0"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
                             style="border-top:1px solid var(--border);">
                             <td style="padding:8px;direction:ltr;text-align:right;"><strong>{{ $item['code'] ?? '' }}</strong></td>
@@ -662,9 +662,14 @@
             var matchSearch = !term || hay.indexOf(term) !== -1;
             var matchCat = !catId || rowCat === catId;
             var show = matchSearch && matchCat;
-            row.style.display = show ? '' : 'none';
+            row.dataset.filterHidden = show ? '0' : '1';
             if (show) visible++;
         });
+
+        var tbody = document.getElementById('catalogSlimTable');
+        if (tbody && window.TablePagination && TablePagination.repaginate) {
+            TablePagination.repaginate(tbody);
+        }
 
         var countEl = document.getElementById('catalogSlimCount');
         if (countEl) {
@@ -1095,7 +1100,7 @@
             ? (item.prices.length + ' سعر')
             : '—';
         var labelsUrl = '/admin/catalog/' + item.id + '/labels';
-        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
+        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             '<td style="padding:10px;direction:ltr;text-align:right;"><strong>' + (item.code || '') + '</strong></td>' +
             '<td style="padding:10px;">' + (item.name || '') + '</td>' +
             '<td style="padding:10px;color:var(--text-muted);">' + (item.category || '—') + '</td>' +
@@ -1130,6 +1135,11 @@
         if (countEl) countEl.textContent = label;
         if (badge) badge.textContent = label;
         window.applySlimCatalogFilters();
+
+        var table = document.getElementById('catalogItemsTable');
+        if (table && window.TablePagination && TablePagination.refresh) {
+            TablePagination.refresh(table);
+        }
     };
 
     function showImportStatus(message, isError, errors) {
@@ -1224,6 +1234,10 @@ window.__STOCK_CATEGORIES = @json($categories->values());
 document.addEventListener('DOMContentLoaded', function () {
     if (window.CatalogSections && window.__STOCK_CATEGORIES) {
         window.CatalogSections.init(window.__STOCK_CATEGORIES);
+    }
+
+    if (typeof window.applySlimCatalogFilters === 'function') {
+        window.applySlimCatalogFilters();
     }
 
     var itemId = new URLSearchParams(window.location.search).get('item');

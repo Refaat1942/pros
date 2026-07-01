@@ -63,6 +63,20 @@ final class CaseFinancialSummary
         return 0.0;
     }
 
+    /** المبلغ المعروض للفوترة/الطباعة — صافٍ بعد خصم جهة التعاقد. */
+    public static function billableAmount(CaseRecord $case): float
+    {
+        $case->loadMissing('contractCompany');
+
+        $gross = ContractBillingSplit::grossTotal($case);
+
+        if ($gross <= 0) {
+            $gross = self::totalCost($case);
+        }
+
+        return ContractBillingSplit::patientDue($case, $gross);
+    }
+
     public static function paidAmount(CaseRecord $case, ?float $total = null): float
     {
         $paid = (float) ($case->paid ?? 0);

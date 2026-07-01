@@ -129,7 +129,7 @@
       $('costingWacRow').style.display = canInternal ? '' : 'none';
     }
     if ($('costingWacTotal') && canInternal) {
-      $('costingWacTotal').textContent = fmt(breakdown.wac_total != null ? breakdown.wac_total : pricing.internal_total) + ' ج.م';
+      $('costingWacTotal').textContent = fmt(pricing.internal_total) + ' ج.م';
     }
     if ($('costingGrossTotal')) {
       $('costingGrossTotal').textContent = fmt(breakdown.gross_before_discount != null ? breakdown.gross_before_discount : pricing.computed_total) + ' ج.م';
