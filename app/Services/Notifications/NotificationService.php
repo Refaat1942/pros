@@ -76,9 +76,9 @@ class NotificationService
             'body'  => 'تم صرف مواد المريض {patient} (حالة {case}) — الطلب جاهز للتصنيع في الورشة.',
         ],
         WorkflowEvent::BomFinished->value => [
-            'role'  => Role::SLUG_OPERATIONS,
-            'title' => '✅ طرف جاهز للتسليم',
-            'body'  => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه — جاهز للتسليم من مكتب التشغيل.',
+            'role'  => Role::SLUG_TECHNICAL,
+            'title' => '✅ طرف جاهز للتسليم — المخزن',
+            'body'  => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه في الورشة — جاهز للتسليم وإغلاق الطلب من المخزن.',
         ],
         WorkflowEvent::Delivered->value => [
             'role'  => Role::SLUG_ADMIN,

@@ -37,7 +37,7 @@ class AdminOverviewExportService
 
         $strip = $data['case_strip'] ?? [];
         $caseRows = [
-            ['بانتظار رجوع العميل', (string) ($strip['waiting_return'] ?? 0)],
+            ['بانتظار موافقة جهات التعاقد', (string) ($strip['waiting_return'] ?? 0)],
             ['تحت التنفيذ', (string) ($strip['in_progress'] ?? 0)],
             ['تم التسليم', (string) ($strip['delivered'] ?? 0)],
         ];

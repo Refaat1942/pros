@@ -6,7 +6,7 @@
             <div class="bi-row"><span>🌐 مدني</span><strong style="color:#0e7490">0</strong></div>
             <div class="bi-row"><span>🪖 عسكري</span><strong style="color:#b45309">0</strong></div>
             <div class="bi-row"><span>متوسط مدة إنجاز الحالة</span><strong>0 يوم</strong></div>
-            <div class="bi-row"><span>حالات مفتوحة</span><strong>0</strong></div>
+            <div class="bi-row"><span>حالات قيد المسار</span><strong>0</strong></div>
             <div class="bi-sub">⏱️ حالات متأخرة عن الموعد المتفق (21 يوم):
                 <ul class="bi-list">
                     <li style="color:var(--accent,#059669)">لا توجد حالات متأخرة عن الموعد المتفق ✅</li>

@@ -15,8 +15,7 @@
 @endpush
 
 @php
-    $cases   = $workshop_cases ?? collect();
-    $summary = $workshop_summary ?? ['wip' => 0, 'military' => 0, 'civilian' => 0, 'total_active' => 0];
+    $cases = $workshop_cases ?? collect();
 @endphp
 
 <div id="analytics-workshop">
@@ -24,23 +23,6 @@
 </div>
 
 <div class="space-y-6" id="workshopDeskRoot" data-cases-count="{{ $cases->count() }}">
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p class="text-sm text-slate-600 leading-relaxed">
-            تظهر هنا الأوامر التي <strong>صُرفت موادها من المخزن</strong> وجاهزة للتصنيع في الورشة.
-            بعد <strong>تم التصنيع</strong> تُحوَّل الحالة إلى <strong>المخزن</strong> لإتمام التسليم وإغلاق الطلب.
-        </p>
-        <div class="mt-4 grid grid-cols-2 gap-3 text-center text-sm max-w-md">
-            <div class="rounded-xl bg-violet-50 border border-violet-100 py-3">
-                <div class="text-2xl font-bold text-violet-700" id="sumWip">{{ $summary['wip'] ?? 0 }}</div>
-                <div class="text-violet-600 mt-1">🏭 تحت التشغيل</div>
-            </div>
-            <div class="rounded-xl bg-slate-50 border border-slate-100 py-3">
-                <div class="text-2xl font-bold text-slate-800" id="sumTotal">{{ $summary['total_active'] ?? $cases->count() }}</div>
-                <div class="text-slate-500 mt-1">🎯 إجمالي الأوامر</div>
-            </div>
-        </div>
-    </div>
-
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
             <h3 class="font-bold text-slate-800">🏭 طابور ورشة التصنيع</h3>

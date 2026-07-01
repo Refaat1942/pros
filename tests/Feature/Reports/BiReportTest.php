@@ -123,18 +123,23 @@ class BiReportTest extends TestCase
 
     public function test_admin_can_view_bi_dashboard(): void
     {
-        // Mock the service to avoid MySQL-specific SQL (DATEDIFF/CURDATE) in SQLite test env
         $mock = $this->mock(BiReportService::class);
-        $mock->shouldReceive('boardPatients')->once()->andReturn(['total_cases' => 0, 'civilian_count' => 0, 'military_count' => 0, 'by_stage' => [], 'sla_breaches' => [], 'avg_turnaround' => 0]);
-        $mock->shouldReceive('boardInventory')->once()->andReturn(['items' => [], 'low_stock_items' => [], 'total_wac_value' => 0]);
-        $mock->shouldReceive('boardOperations')->once()->andReturn(['in_production' => 0, 'ready_delivery' => 0, 'stage_counts' => []]);
-        $mock->shouldReceive('boardEntitiesAndCosts')->once()->andReturn(['top_debtors' => [], 'total_due' => 0, 'total_collected' => 0]);
-        $mock->shouldReceive('boardPurchasing')->once()->andReturn(['top_suppliers' => []]);
+        $mock->shouldReceive('boardPatients')->andReturn(['total_cases' => 0, 'civilian_count' => 0, 'military_count' => 0, 'by_stage' => [], 'sla_breaches' => [], 'avg_turnaround' => 0]);
+        $mock->shouldReceive('boardInventory')->andReturn(['items' => [], 'low_stock_items' => [], 'total_wac_value' => 0]);
+        $mock->shouldReceive('boardOperations')->andReturn(['in_production' => 0, 'ready_delivery' => 0, 'stage_counts' => []]);
+        $mock->shouldReceive('boardEntitiesAndCosts')->andReturn(['top_debtors' => [], 'total_due' => 0, 'total_collected' => 0]);
+        $mock->shouldReceive('boardPurchasing')->andReturn(['top_suppliers' => []]);
 
         $admin = $this->userWithRole('admin');
         $this->actingAs($admin);
 
-        $this->get('/admin/bi')->assertOk();
+        $this->get('/admin/bi')
+            ->assertRedirect('/admin/overview#overview-bi');
+
+        $this->get('/admin/overview')
+            ->assertOk()
+            ->assertSee('id="overview-bi"', false)
+            ->assertSee('id="bi-board-1"', false);
     }
 
     public function test_non_admin_cannot_view_bi_dashboard(): void

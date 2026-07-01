@@ -25,7 +25,7 @@
     $opsSteps = [
         ['key' => 'dispense', 'label' => 'بانتظار الصرف', 'val' => (int) ($b3['awaiting_dispense'] ?? 0), 'tone' => 'amber'],
         ['key' => 'workshop', 'label' => 'داخل الورش', 'val' => (int) ($b3['in_workshop'] ?? 0), 'tone' => 'purple'],
-        ['key' => 'open', 'label' => 'أوامر مفتوحة', 'val' => (int) ($b3['open_work_orders'] ?? 0), 'tone' => 'indigo'],
+        ['key' => 'open', 'label' => 'أوامر تشغيل', 'val' => (int) ($b3['open_work_orders'] ?? 0), 'tone' => 'indigo'],
         ['key' => 'ready', 'label' => 'جاهز للتسليم', 'val' => (int) ($b3['ready_for_delivery'] ?? 0), 'tone' => 'green'],
     ];
 @endphp
@@ -60,7 +60,7 @@
                     <div class="bi-kpi-value bi-tone-amber">{{ $milCount }}</div>
                 </div>
                 <div class="bi-kpi">
-                    <div class="bi-kpi-label">حالات مفتوحة</div>
+                    <div class="bi-kpi-label">حالات قيد المسار</div>
                     <div class="bi-kpi-value">{{ $b1['open_count'] ?? 0 }}</div>
                 </div>
             </div>
@@ -132,7 +132,6 @@
                     <p>القيمة المالية الإجمالية — متوسط التكلفة المرجح</p>
                     <div class="bi-inventory-tags">
                         <span>{{ $itemCount }} صنف</span>
-                        <span class="bi-inventory-tags--warn">{{ $lowStock }} ناقص</span>
                     </div>
                 </div>
             </div>

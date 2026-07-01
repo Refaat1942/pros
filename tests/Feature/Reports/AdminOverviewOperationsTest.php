@@ -4,27 +4,18 @@ namespace Tests\Feature\Reports;
 
 use App\Models\CaseRecord;
 use App\Models\Quote;
-use App\Services\BiReportService;
 use Tests\Support\ProstheticTestHelper;
+use Tests\Support\StubsBiReportForOverview;
 use Tests\TestCase;
 
 class AdminOverviewOperationsTest extends TestCase
 {
     use ProstheticTestHelper;
-
-    private function stubBiReportServiceForOverview(
-        int $requestCount = 1,
-        array $inventoryBoard = ['item_count' => 0, 'low_stock' => 0, 'stagnant_items' => [], 'total_value' => 0],
-        array $operationsBoard = ['open_work_orders' => 0, 'awaiting_dispense' => 0, 'in_workshop' => 0, 'ready_for_delivery' => 0],
-    ): void {
-        $mock = $this->mock(BiReportService::class);
-        $mock->shouldReceive('boardInventory')->times($requestCount)->andReturn($inventoryBoard);
-        $mock->shouldReceive('boardOperations')->times($requestCount)->andReturn($operationsBoard);
-    }
+    use StubsBiReportForOverview;
 
     public function test_overview_operations_count_increases_when_case_enters_operations_desk(): void
     {
-        $this->stubBiReportServiceForOverview(2);
+        $this->stubBiReportServiceForOverview();
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);

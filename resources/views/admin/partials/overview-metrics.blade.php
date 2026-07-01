@@ -17,9 +17,6 @@
             <div class="overview-metric-value overview-metric-value--success">
                 {{ number_format((float) ($financial['monthly_revenue'] ?? 0), 2) }} <small>ج.م</small>
             </div>
-            <p class="overview-metric-hint">
-                {{ (int) ($financial['delivered_count'] ?? 0) }} حالة مدنية مُسلّمة
-            </p>
         </div>
 
         <div class="report-card overview-metric-card">

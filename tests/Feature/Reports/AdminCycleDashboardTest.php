@@ -6,15 +6,16 @@ use App\Models\Appointment;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\AdminCycleDashboardService;
-use App\Services\BiReportService;
 use App\Services\BomService;
 use Database\Seeders\RolesAndAdminSeeder;
 use Tests\Support\ProstheticTestHelper;
+use Tests\Support\StubsBiReportForOverview;
 use Tests\TestCase;
 
 class AdminCycleDashboardTest extends TestCase
 {
     use ProstheticTestHelper;
+    use StubsBiReportForOverview;
 
     public function test_cycle_service_counts_cases_per_dashboard_queue(): void
     {
@@ -73,14 +74,12 @@ class AdminCycleDashboardTest extends TestCase
             ['stock_item_code' => $item->code, 'qty' => 1],
         ]);
 
-        $mock = $this->mock(BiReportService::class);
-        $mock->shouldReceive('boardInventory')->once()->andReturn([
+        $this->stubBiReportServiceForOverview([
             'item_count'     => 1,
             'low_stock'      => 0,
             'stagnant_items' => [],
             'total_value'    => 0,
-        ]);
-        $mock->shouldReceive('boardOperations')->once()->andReturn([
+        ], [
             'open_work_orders' => 0, 'awaiting_dispense' => 1, 'in_workshop' => 0, 'ready_for_delivery' => 0,
         ]);
 
@@ -109,13 +108,7 @@ class AdminCycleDashboardTest extends TestCase
         $this->seed(RolesAndAdminSeeder::class);
         $admin = $this->userWithRole('admin');
 
-        $mock = $this->mock(BiReportService::class);
-        $mock->shouldReceive('boardInventory')->once()->andReturn([
-            'item_count' => 0, 'low_stock' => 0, 'stagnant_items' => [], 'total_value' => 0,
-        ]);
-        $mock->shouldReceive('boardOperations')->once()->andReturn([
-            'open_work_orders' => 0, 'awaiting_dispense' => 0, 'in_workshop' => 0, 'ready_for_delivery' => 0,
-        ]);
+        $this->stubBiReportServiceForOverview();
 
         $from = now()->startOfMonth()->toDateString();
         $to   = now()->toDateString();

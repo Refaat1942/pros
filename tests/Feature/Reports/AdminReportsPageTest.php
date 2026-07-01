@@ -19,11 +19,13 @@ use App\Services\ReturnNoteService;
 use App\Services\StockPriceService;
 use Database\Seeders\RolesAndAdminSeeder;
 use Tests\Support\ProstheticTestHelper;
+use Tests\Support\StubsBiReportForOverview;
 use Tests\TestCase;
 
 class AdminReportsPageTest extends TestCase
 {
     use ProstheticTestHelper;
+    use StubsBiReportForOverview;
 
     public function test_reports_service_returns_financial_and_bom_data(): void
     {
@@ -80,15 +82,11 @@ class AdminReportsPageTest extends TestCase
             'delivered_at' => now(),
         ]);
 
-        $mock = $this->mock(BiReportService::class);
-        $mock->shouldReceive('boardInventory')->once()->andReturn([
+        $this->stubBiReportServiceForOverview([
             'item_count'     => 1,
             'low_stock'      => 0,
             'stagnant_items' => [],
             'total_value'    => 0,
-        ]);
-        $mock->shouldReceive('boardOperations')->once()->andReturn([
-            'open_work_orders' => 0, 'awaiting_dispense' => 0, 'in_workshop' => 0, 'ready_for_delivery' => 0,
         ]);
 
         $this->actingAs($admin)
@@ -98,7 +96,9 @@ class AdminReportsPageTest extends TestCase
             ->assertSee('overview-date-filter', false)
             ->assertSee('المالية والإيرادات', false)
             ->assertSee('الإيرادات الشهرية')
-            ->assertSee('صحة المخزون');
+            ->assertSee('صحة المخزون')
+            ->assertSee('id="overview-bi"', false)
+            ->assertSee('id="bi-board-1"', false);
 
         $this->actingAs($admin)
             ->get('/admin/general-view')

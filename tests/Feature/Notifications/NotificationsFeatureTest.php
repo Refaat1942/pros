@@ -76,6 +76,55 @@ class NotificationsFeatureTest extends TestCase
         );
     }
 
+    public function test_workshop_finish_notifies_warehouse(): void
+    {
+        $item = $this->stockItem('RM-001', qty: 10);
+        app(\App\Services\StockPriceService::class)->addBatch(
+            $item,
+            10,
+            200.0,
+            $this->makeSupplier(),
+            'INV-NOTIF',
+            now(),
+        );
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('workshop');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-NOTIF-01']);
+        $this->actingAs($user);
+
+        $bom = app(\App\Services\BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+        app(\App\Services\BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+
+        $this->assertSame(
+            0,
+            AppNotification::forRole(Role::SLUG_TECHNICAL)
+                ->where('event', WorkflowEvent::BomFinished->value)
+                ->count(),
+        );
+
+        $this->postJson("/workshop/workshop/{$case->id}/finish-quality")->assertOk();
+
+        $notification = AppNotification::forRole(Role::SLUG_TECHNICAL)
+            ->where('event', WorkflowEvent::BomFinished->value)
+            ->first();
+
+        $this->assertNotNull($notification);
+        $this->assertSame($case->id, $notification->case_id);
+        $this->assertStringContainsString($patient->name, $notification->body);
+        $this->assertStringContainsString('المخزن', $notification->title);
+        $this->assertSame(
+            0,
+            AppNotification::forRole(Role::SLUG_OPERATIONS)
+                ->where('event', WorkflowEvent::BomFinished->value)
+                ->count(),
+        );
+    }
+
     public function test_login_registers_device_id_and_type(): void
     {
         $this->userWithRole('reception');

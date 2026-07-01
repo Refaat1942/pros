@@ -17,6 +17,7 @@ class AdminOverviewService
         private readonly AdminReportsHubService $hub,
         private readonly AdminReportsService $reports,
         private readonly AdminCycleDashboardService $cycle,
+        private readonly BiReportService $biReports,
     ) {
     }
 
@@ -39,6 +40,11 @@ class AdminOverviewService
             'cycle_cards'        => $this->cycle->build($from, $to),
             'cycle_total_active' => $this->cycle->totalActive($from, $to),
             'case_strip'         => $this->caseStripCounts($from, $to),
+            'board1'             => $this->biReports->boardPatients(),
+            'board2'             => $this->biReports->boardInventory(),
+            'board3'             => $this->biReports->boardOperations(),
+            'board4'             => $this->biReports->boardEntitiesAndCosts(),
+            'board5'             => $this->biReports->boardPurchasing(),
         ];
     }
 

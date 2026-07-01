@@ -15,7 +15,6 @@ use App\Http\Controllers\Reports\AdminCaseController;
 use App\Http\Controllers\Reports\AdminOverviewController;
 use App\Http\Controllers\Reports\AdminReportsHubController;
 use App\Http\Controllers\Reports\AuditLogController;
-use App\Http\Controllers\Reports\BiController;
 use App\Http\Controllers\Stock\StockCatalogController;
 use App\Http\Controllers\Stock\SupplierController;
 use Illuminate\Support\Facades\Route;
@@ -33,7 +32,7 @@ Route::prefix('admin')
         Route::get('overview/export', [AdminOverviewController::class, 'export'])->name('overview.export');
         Route::redirect('general-view', '/admin/overview', 301)->name('general-view');
         Route::get('patient-tracks/list', [AdminOverviewController::class, 'patientTracksApi'])->name('patient-tracks.list');
-        Route::get('bi', [BiController::class, 'index'])->name('bi');
+        Route::redirect('bi', '/admin/overview#overview-bi', 301)->name('bi');
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit');
 
         Route::get('reports', [AdminReportsHubController::class, 'index'])->name('reports');

@@ -59,8 +59,6 @@
 
   function updateSummary(summary) {
     summary = summary || {};
-    if ($('sumWip')) $('sumWip').textContent = summary.wip != null ? summary.wip : 0;
-    if ($('sumTotal')) $('sumTotal').textContent = summary.total_active != null ? summary.total_active : 0;
 
     var analytics = document.getElementById('analytics-workshop');
     if (!analytics) return;

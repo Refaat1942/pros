@@ -45,7 +45,7 @@
         <div class="overview-cases-strip" id="overviewCasesStrip">
             <button type="button" class="overview-case-link overview-case-link--wait" data-goto-cases="waiting_return">
                 <div class="overview-case-link__text">
-                    <strong>بانتظار رجوع العميل</strong>
+                    <strong>بانتظار موافقة جهات التعاقد</strong>
                     <span class="overview-case-link__hint">موافقات وتوقيعات</span>
                 </div>
                 <span id="overviewWaitingCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['waiting_return'] ?? 0 }}</span>
@@ -68,4 +68,6 @@
     </section>
 
     @include('admin.partials.overview-metrics')
+
+    @include('admin.partials.overview-bi')
 </div>
