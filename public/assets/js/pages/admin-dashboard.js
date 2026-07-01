@@ -372,8 +372,8 @@
           hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/الورشة. التسليم للمريض يتم بعد BOM «تام» فقط.';
           hintEl.style.display = 'block';
         } else {
-          hintEl.innerHTML = 'تقرير مالي: إجمالي التكلفة للحالات المسلّمة.';
-          hintEl.style.display = 'block';
+          hintEl.innerHTML = '';
+          hintEl.style.display = 'none';
         }
       }
 

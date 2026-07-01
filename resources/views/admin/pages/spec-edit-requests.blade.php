@@ -17,13 +17,11 @@
             <span class="badge" id="specEditReqCount">{{ $rows->count() }} طلب</span>
         </div>
 
-        <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;">
-            طلبات تعديل من فني التوصيف (قبل التكاليف) أو من مكتب المعدلات (قبل تأكيد السعر) — راجع البنود ثم وافق أو ارفض.
-        </p>
 
-        <div class="data-toolbar" style="padding:0 24px 12px;flex-wrap:wrap;gap:8px;">
-            <input type="search" id="specEditReqSearch" placeholder="🔍 بحث بالمريض أو رقم الحالة...">
-            <select id="specEditReqStatus" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+        <div class="data-toolbar spec-edit-requests-toolbar">
+            <input type="text" id="specEditReqSearch" class="table-search-input"
+                   placeholder="🔍 بحث بالمريض أو رقم الحالة..." autocomplete="off">
+            <select id="specEditReqStatus" aria-label="فلتر الحالة">
                 <option value="">كل الحالات</option>
                 <option value="pending" selected>بانتظار الموافقة</option>
                 <option value="approved">مُعتمد</option>

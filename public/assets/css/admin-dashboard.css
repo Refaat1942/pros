@@ -1154,6 +1154,25 @@
         min-width: 140px;
         background: #fff;
     }
+
+    /* طلبات تعديل التوصيف */
+    .spec-edit-requests-toolbar {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .spec-edit-requests-toolbar .table-search-input {
+        flex: 0 1 var(--dash-table-search-width, 320px);
+        width: min(var(--dash-table-search-width, 320px), 100%);
+        max-width: 420px;
+        min-width: 220px;
+    }
+    .spec-edit-requests-toolbar select {
+        min-width: 160px;
+        flex-shrink: 0;
+    }
+    .spec-edit-requests-toolbar .toolbar-count {
+        margin-right: auto;
+    }
     #civDebtTable .num {
         text-align: left;
         direction: ltr;
