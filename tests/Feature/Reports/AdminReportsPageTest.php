@@ -7,6 +7,7 @@ use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\ContractCompany;
 use App\Models\Patient;
+use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
 use App\Models\StockMovement;
@@ -383,9 +384,7 @@ class AdminReportsPageTest extends TestCase
             ['الكود', 'اسم الصنف', 'الكمية', 'آخر حركة', 'الحالة'],
             $report['headers'],
         );
-        $this->assertSame('1', collect($report['summary'])->firstWhere('label', 'أصناف راكدة')['value'] ?? null);
-        $this->assertSame('1', collect($report['summary'])->firstWhere('label', 'أصناف شغالة')['value'] ?? null);
-        $this->assertSame('1', collect($report['summary'])->firstWhere('label', 'أصناف منخفضة')['value'] ?? null);
+        $this->assertSame([], $report['summary']);
 
         $stagnantRow = collect($report['rows'])->first(fn ($row) => ($row[0] ?? '') === 'RM-STAG-RPT');
         $activeRow = collect($report['rows'])->first(fn ($row) => ($row[0] ?? '') === 'RM-ACT-RPT');
@@ -398,9 +397,7 @@ class AdminReportsPageTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/reports/inventory?from=' . $from . '&to=' . $to)
             ->assertOk()
-            ->assertSee('أصناف راكدة', false)
-            ->assertSee('أصناف شغالة', false)
-            ->assertSee('أصناف منخفضة', false)
+            ->assertDontSee('reports-summary-grid', false)
             ->assertSee('ركبة راكدة', false)
             ->assertSee('قدم شغالة', false)
             ->assertDontSee('حركات صرف', false)
@@ -545,6 +542,30 @@ class AdminReportsPageTest extends TestCase
             ->assertSee('الموردون', false)
             ->assertSee($supplier->name, false)
             ->assertSee('reports-date-filter', false);
+    }
+
+    public function test_stock_categories_report_renders_for_date_range(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $category = StockCategory::create(['name' => 'قسم تقرير الاختبار']);
+
+        $from = now()->startOfMonth()->toDateString();
+        $to = now()->toDateString();
+
+        $hub = app(AdminReportsHubService::class);
+        $dates = $hub->parseDateRange($from, $to);
+        $report = $hub->build('stock-categories', $dates['from'], $dates['to']);
+
+        $this->assertSame('أقسام الأصناف', $report['title']);
+        $this->assertSame([], $report['summary']);
+        $this->assertContains($category->name, array_column($report['rows'], 0));
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/stock-categories?from=' . $from . '&to=' . $to)
+            ->assertOk()
+            ->assertSee('أقسام الأصناف', false)
+            ->assertSee($category->name, false)
+            ->assertDontSee('reports-summary-grid', false);
     }
 
     public function test_reports_hub_does_not_list_internal_reports_section_page(): void

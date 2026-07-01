@@ -12,9 +12,9 @@ use App\Models\ContractCompanyDebt;
 use App\Models\DebtCollectionEntry;
 use App\Models\Patient;
 use App\Models\ReturnNote;
-use App\Enums\SpecEditRequestStatus;
 use App\Models\SpecEditRequest;
 use App\Models\Supplier;
+use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
 use App\Models\StockMovement;
@@ -49,6 +49,7 @@ class AdminReportsHubService
             'spec-edit-requests' => 'مسار المرضى والحالات',
             'visit-types'        => 'مسار المرضى والحالات',
             'catalog'            => 'المخزون والتوريد',
+            'stock-categories'   => 'المخزون والتوريد',
             'inventory-overview' => 'المخزون والتوريد',
             'suppliers'          => 'المخزون والتوريد',
             'returns'            => 'المخزون والتوريد',
@@ -116,6 +117,7 @@ class AdminReportsHubService
             'cases'              => $this->buildCases($from, $to),
             'spec-edit-requests' => $this->buildSpecEditRequests($from, $to),
             'visit-types'        => $this->buildVisitTypes($from, $to),
+            'stock-categories'   => $this->buildStockCategories($from, $to),
             'catalog'            => $this->buildCatalog($from, $to),
             'inventory-overview' => $this->buildInventoryMovements($from, $to),
             'suppliers'          => $this->buildSuppliers($from, $to),
@@ -178,15 +180,8 @@ class AdminReportsHubService
             ->limit(500)
             ->get();
 
-        $counts = [
-            'stagnant' => 0,
-            'active'   => 0,
-            'low'      => 0,
-        ];
-
-        $rows = $items->map(function (StockItem $item) use ($stagnantCutoff, &$counts) {
+        $rows = $items->map(function (StockItem $item) use ($stagnantCutoff) {
             $status = $this->stockActivityStatus($item, $stagnantCutoff);
-            $counts[$status === 'راكدة' ? 'stagnant' : ($status === 'شغالة' ? 'active' : 'low')]++;
 
             return [
                 $item->code ?? '—',
@@ -200,12 +195,7 @@ class AdminReportsHubService
         return [
             'title'        => 'تحليلات المخزون',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'أصناف راكدة', 'value' => (string) $counts['stagnant']],
-                ['label' => 'أصناف شغالة', 'value' => (string) $counts['active']],
-                ['label' => 'أصناف منخفضة', 'value' => (string) $counts['low']],
-                ['label' => 'إجمالي الأصناف', 'value' => (string) $items->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['الكود', 'اسم الصنف', 'الكمية', 'آخر حركة', 'الحالة'],
             'rows'         => $rows,
         ];
@@ -232,9 +222,7 @@ class AdminReportsHubService
         return [
             'title'        => 'التشغيل والأوامر',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'أوامر محدّثة في الفترة', 'value' => (string) $cases->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['أمر التشغيل', 'المريض', 'المرحلة', 'آخر تحديث'],
             'rows'         => $rows,
         ];
@@ -257,9 +245,7 @@ class AdminReportsHubService
         return [
             'title'        => 'قوائم BOM',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'قوائم BOM', 'value' => (string) count($rows)],
-            ],
+            'summary'      => [],
             'headers'      => ['المريض', 'أمر التشغيل', 'المرحلة', 'البنود', 'قيمة BOM'],
             'rows'         => $rows,
         ];
@@ -286,9 +272,7 @@ class AdminReportsHubService
         return [
             'title'        => 'مسار المرضى — حالات جديدة',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'حالات فُتحت', 'value' => (string) $cases->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['المريض', 'رقم الحالة', 'الجهة', 'المرحلة', 'تاريخ الفتح'],
             'rows'         => $rows,
         ];
@@ -318,9 +302,7 @@ class AdminReportsHubService
         return [
             'title'        => 'متابعة الحالات',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'حالات نشطة/محدّثة', 'value' => (string) $cases->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['رقم الحالة', 'المريض', 'المرحلة', 'أمر التشغيل', 'التاريخ'],
             'rows'         => $rows,
         ];
@@ -344,11 +326,33 @@ class AdminReportsHubService
         return [
             'title'        => 'أنواع الزيارات',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'إجمالي المواعيد', 'value' => (string) $appointments->count()],
-                ['label' => 'أنواع مختلفة', 'value' => (string) $grouped->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['نوع الزيارة', 'العدد'],
+            'rows'         => $rows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildStockCategories(Carbon $from, Carbon $to): array
+    {
+        $categories = StockCategory::query()
+            ->withCount(['stockItems', 'fields'])
+            ->orderBy('name')
+            ->limit(500)
+            ->get();
+
+        $rows = $categories->map(fn (StockCategory $category) => [
+            $category->name ?? '—',
+            (string) $category->stock_items_count,
+            (string) $category->fields_count,
+            ClinicTime::format($category->created_at, 'd/m/Y'),
+        ])->values()->all();
+
+        return [
+            'title'        => 'أقسام الأصناف',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary'      => [],
+            'headers'      => ['القسم', 'عدد الأصناف', 'حقول مخصصة', 'تاريخ الإضافة'],
             'rows'         => $rows,
         ];
     }
@@ -386,9 +390,7 @@ class AdminReportsHubService
         return [
             'title'        => 'الأصناف والأسعار — دفعات جديدة',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'دفعات أسعار', 'value' => (string) $batches->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['الكود', 'الصنف', 'السعر', 'الكمية', 'تاريخ الاستلام', 'أسعار متعددة'],
             'rows'         => $rows,
             'row_actions'  => $rowActions,
@@ -416,9 +418,7 @@ class AdminReportsHubService
         return [
             'title'        => 'متابعة حركة الأصناف',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'حركات مخزون', 'value' => (string) $movements->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['التاريخ', 'النوع', 'الكود', 'اسم الصنف', 'الكمية'],
             'rows'         => $rows,
         ];
@@ -494,9 +494,7 @@ class AdminReportsHubService
         return [
             'title'        => 'طلبات الارتجاع',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'طلبات مُستلَمة من المخزن', 'value' => (string) $notes->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['رقم الطلب', 'المريض', 'أمر التشغيل', 'البنود', 'تاريخ الاستلام'],
             'rows'         => $rows,
             'row_actions'  => $rowActions,
@@ -527,17 +525,10 @@ class AdminReportsHubService
             ClinicTime::format($r->created_at, 'd/m/Y'),
         ])->values()->all();
 
-        $pending = $requests->filter(
-            fn (SpecEditRequest $r) => $r->status === SpecEditRequestStatus::Pending
-        )->count();
-
         return [
             'title'        => 'طلبات تعديل التوصيف',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'طلبات', 'value' => (string) $requests->count()],
-                ['label' => 'معلّقة', 'value' => (string) $pending],
-            ],
+            'summary'      => [],
             'headers'      => ['رقم الحالة', 'المريض', 'مرجع الطلب', 'الحالة', 'طلب بواسطة', 'البنود', 'التاريخ'],
             'rows'         => $rows,
         ];
@@ -561,15 +552,10 @@ class AdminReportsHubService
             ClinicTime::format($s->created_at, 'd/m/Y'),
         ])->values()->all();
 
-        $withDebt = $suppliers->filter(fn (Supplier $s) => ($s->debt_total ?? 0) > 0)->count();
-
         return [
             'title'        => 'الموردون',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'موردون', 'value' => (string) $suppliers->count()],
-                ['label' => 'عليهم مديونية', 'value' => (string) $withDebt],
-            ],
+            'summary'      => [],
             'headers'      => ['المورد', 'الهاتف', 'البريد', 'أصناف مرتبطة', 'المديونية', 'تاريخ الإضافة'],
             'rows'         => $rows,
         ];
@@ -595,9 +581,7 @@ class AdminReportsHubService
         return [
             'title'        => 'جهات التعاقد',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'جهات أُضيفت', 'value' => (string) $companies->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['الكود', 'الاسم', 'النوع', 'الجهة', 'التصنيف'],
             'rows'         => $rows,
         ];
@@ -626,10 +610,7 @@ class AdminReportsHubService
         return [
             'title'        => 'موافقات جهات التعاقد',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'موافقات', 'value' => (string) $contracts->count()],
-                ['label' => 'إجمالي معتمد', 'value' => number_format($contracts->sum('approved_amount'), 2) . ' ج.م'],
-            ],
+            'summary'      => [],
             'headers'      => ['رقم العقد', 'المريض', 'الجهة', 'المبلغ', 'التاريخ'],
             'rows'         => $rows,
         ];
@@ -660,10 +641,7 @@ class AdminReportsHubService
         return [
             'title'        => 'المديونات',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'عمليات تحصيل', 'value' => (string) $entries->count()],
-                ['label' => 'إجمالي محصّل', 'value' => number_format($entries->sum('amount'), 2) . ' ج.م'],
-            ],
+            'summary'      => [],
             'headers'      => ['التاريخ', 'الجهة', 'المبلغ'],
             'rows'         => $rows,
         ];
@@ -689,9 +667,7 @@ class AdminReportsHubService
         return [
             'title'        => 'سجل الرقابة',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [
-                ['label' => 'عمليات مسجّلة', 'value' => (string) $logs->count()],
-            ],
+            'summary'      => [],
             'headers'      => ['التاريخ', 'المستخدم', 'الإجراء', 'الوسم', 'الوصف'],
             'rows'         => $rows,
         ];

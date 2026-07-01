@@ -196,9 +196,6 @@
                 <span class="bi-card-index">اللوحة 4</span>
                 <h4>الجهات والتكاليف</h4>
             </div>
-            @if (!empty($b4['net_debts']))
-                <span class="bi-card-chip bi-card-chip--warn">صافي مستحق: {{ $fmtMoney($b4['net_debts']) }} ج.م</span>
-            @endif
         </header>
         <div class="bi-card-body">
             <div class="bi-kpi-grid bi-kpi-grid--4">
@@ -219,32 +216,6 @@
                     <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4['military_debt_collected'] ?? 0) }} <small>ج.م</small></div>
                 </div>
             </div>
-
-            @if(!empty($b4['company_debts']))
-                <div class="bi-section-title">📋 تفصيل جهات التعاقد المدنية</div>
-                <div class="bi-table-wrap">
-                    <table class="bi-table" data-paginate="10">
-                        <thead>
-                            <tr>
-                                <th class="text">الجهة</th>
-                                <th class="num">مستحق (ج.م)</th>
-                                <th class="num">محصّل</th>
-                                <th class="num">المتبقي</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($b4['company_debts'] as $debt)
-                                <tr>
-                                    <td class="text">{{ $debt['company_name'] ?? '—' }}</td>
-                                    <td class="num">{{ $fmtMoney($debt['due'] ?? 0) }}</td>
-                                    <td class="num bi-tone-green">{{ $fmtMoney($debt['collected'] ?? 0) }}</td>
-                                    <td class="num"><strong>{{ $fmtMoney($debt['remaining'] ?? 0) }}</strong></td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
         </div>
     </article>
 

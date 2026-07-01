@@ -66,7 +66,7 @@ class ContractCompanyDiscountTest extends TestCase
 
         $this->assertSame(1000.0, $split['gross_total']);
         $this->assertSame(800.0, $split['patient_share']);
-        $this->assertSame(200.0, $split['company_share']);
+        $this->assertSame(1000.0, $split['company_share']);
         $this->assertSame(20.0, $split['company_share_percent']);
         $this->assertSame(80.0, $split['patient_share_percent']);
 
@@ -138,7 +138,7 @@ class ContractCompanyDiscountTest extends TestCase
             ->assertSee('4,000', false);
     }
 
-    public function test_financial_posting_records_only_company_share_as_debt(): void
+    public function test_financial_posting_records_full_gross_as_entity_debt(): void
     {
         $company = $this->civilianCompany('تأمين 20%');
         $company->update(['discount_percent' => 20]);
@@ -155,11 +155,11 @@ class ContractCompanyDiscountTest extends TestCase
         $debt = ContractCompanyDebt::where('contract_company_id', $company->id)->first();
 
         $this->assertNotNull($debt);
-        $this->assertSame(200.0, (float) $debt->due);
+        $this->assertSame(1000.0, (float) $debt->due);
 
         $split = ContractBillingSplit::forCase($case->fresh(['contractCompany']), 1000);
         $this->assertSame(800.0, $split['patient_share']);
-        $this->assertSame(200.0, $split['company_share']);
+        $this->assertSame(1000.0, $split['company_share']);
     }
 
     public function test_work_order_print_shows_net_amount_after_contract_discount(): void

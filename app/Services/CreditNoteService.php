@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CaseRecord;
+use App\Models\ContractCompany;
 use App\Support\PatientEntityPresenter;
 use App\Models\CreditNote;
 use App\Models\Patient;

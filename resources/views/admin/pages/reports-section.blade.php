@@ -17,11 +17,14 @@
 @endphp
 <div class="section-view" id="section-reports-section" data-server-rendered="1">
     <div class="reports-section-toolbar">
-        <a href="{{ route('admin.reports') }}" class="btn-action">← العودة للتقارير</a>
         <div class="reports-section-heading">
             <h3>{{ ($meta['icon'] ?? '📄') . ' ' . ($report['title'] ?? $meta['label'] ?? 'تقرير') }}</h3>
             <p class="reports-section-period">{{ $report['period_label'] ?? '' }}</p>
         </div>
+        <a href="{{ route('admin.reports') }}" class="reports-back-link">
+            <span class="reports-back-link__icon" aria-hidden="true">←</span>
+            <span>العودة للتقارير</span>
+        </a>
     </div>
 
     <form method="GET" action="{{ route('admin.reports.section', $report_section) }}" class="reports-date-filter">
