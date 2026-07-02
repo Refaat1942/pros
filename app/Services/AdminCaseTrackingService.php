@@ -24,7 +24,7 @@ class AdminCaseTrackingService
     {
     }
 
-    /** @return array{waiting_return: Collection<int, array>, in_progress: Collection<int, array>, delivered: Collection<int, array>, counts: array{waiting_return: int, in_progress: int, delivered: int}} */
+    /** @return array{waiting_return: Collection<int, array>, awaiting_cashier: Collection<int, array>, in_progress: Collection<int, array>, delivered: Collection<int, array>, counts: array{waiting_return: int, awaiting_cashier: int, in_progress: int, delivered: int}} */
     public function buckets(?Carbon $from = null, ?Carbon $to = null): array
     {
         $from = $from?->copy()->startOfDay();
@@ -32,6 +32,15 @@ class AdminCaseTrackingService
 
         $waiting = $this->waitingReturnCases($from, $to);
         $waitingIds = $waiting->pluck('id')->all();
+
+        $awaitingCashier = CaseRecord::query()
+            ->with($this->caseRelations())
+            ->awaitingCashier()
+            ->when($from && $to, fn ($q) => $q->whereBetween('updated_at', [$from, $to]))
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
 
         $progress = CaseRecord::query()
             ->with($this->caseRelations())
@@ -56,13 +65,15 @@ class AdminCaseTrackingService
             ->get();
 
         return [
-            'waiting_return' => $waiting->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
-            'in_progress'    => $progress->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
-            'delivered'      => $delivered->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
-            'counts'         => [
-                'waiting_return' => $waiting->count(),
-                'in_progress'    => $progress->count(),
-                'delivered'      => $delivered->count(),
+            'waiting_return'   => $waiting->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
+            'awaiting_cashier' => $awaitingCashier->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
+            'in_progress'      => $progress->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
+            'delivered'        => $delivered->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
+            'counts'           => [
+                'waiting_return'   => $waiting->count(),
+                'awaiting_cashier' => $awaitingCashier->count(),
+                'in_progress'      => $progress->count(),
+                'delivered'        => $delivered->count(),
             ],
         ];
     }
@@ -78,6 +89,7 @@ class AdminCaseTrackingService
             ->with($this->caseRelations())
             ->where('patient_type', Patient::TYPE_CIVILIAN)
             ->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED)
+            ->where('stage_key', '!=', CaseRecord::STAGE_CASHIER)
             ->whereHas('quotes', fn ($q) => $q->where('status', Quote::STATUS_ISSUED))
             ->when($from && $to, fn ($q) => $q->whereBetween('updated_at', [$from, $to]))
             ->orderByDesc('updated_at')

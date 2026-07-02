@@ -99,6 +99,18 @@ class DashboardQueueService
         return $this->countCasesAtStage(CaseRecord::STAGE_OPERATIONS, $from, $to);
     }
 
+    /** حالات نقدية بانتظار تحصيل الدفع في الخزنة (مسار الكاش). */
+    public function cashierQueueCount(?Carbon $from = null, ?Carbon $to = null): int
+    {
+        $query = CaseRecord::query()->awaitingCashier();
+
+        if ($from && $to) {
+            $query->whereBetween('updated_at', [$from, $to]);
+        }
+
+        return $query->count();
+    }
+
     public function workshopQueueCount(?Carbon $from = null, ?Carbon $to = null): int
     {
         $query = CaseRecord::query()->workshopDeskQueue();

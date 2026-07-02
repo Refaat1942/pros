@@ -280,9 +280,10 @@ class DashboardPageDataService
 
         return [
             'admin_case_buckets' => [
-                'waiting_return' => $buckets['waiting_return']->all(),
-                'in_progress'    => $buckets['in_progress']->all(),
-                'delivered'      => $buckets['delivered']->all(),
+                'waiting_return'   => $buckets['waiting_return']->all(),
+                'awaiting_cashier' => $buckets['awaiting_cashier']->all(),
+                'in_progress'      => $buckets['in_progress']->all(),
+                'delivered'        => $buckets['delivered']->all(),
             ],
             'admin_case_counts' => $buckets['counts'],
             'case_date_from'    => $from->toDateString(),

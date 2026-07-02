@@ -7,6 +7,7 @@ use App\Models\CaseRecord;
 use App\Models\ContractCompanyDebt;
 use App\Models\MilitaryDebt;
 use App\Models\Patient;
+use App\Models\Payment;
 use App\Models\StockItem;
 use App\Models\Supplier;
 
@@ -156,12 +157,17 @@ class BiReportService
 
         $netDebts = collect($companyDebts)->sum('remaining');
 
+        $cashCollected = (float) Payment::query()->sum('amount');
+        $cashAwaiting = CaseRecord::query()->awaitingCashier()->count();
+
         return [
             'civilian_cumulative_cost' => round($civilianCumulative, 2),
             'military_aggregated_cost' => round($militaryAggregated, 2),
             'military_debt_pending'    => round($militaryDebtPending, 2),
             'military_debt_collected'  => round($militaryDebtCollected, 2),
             'net_debts'                => round($netDebts, 2),
+            'cash_collected_total'     => round($cashCollected, 2),
+            'cash_awaiting_payment'    => $cashAwaiting,
             'company_debts'            => $companyDebts,
         ];
     }

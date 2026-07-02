@@ -240,4 +240,29 @@ class AdminCaseTrackingTest extends TestCase
         $this->assertSame(1800.0, $row['totalCost']);
         $this->assertSame(1800.0, $row['paid']);
     }
+
+    public function test_cash_patient_at_cashier_appears_in_awaiting_cashier_bucket_not_waiting_return(): void
+    {
+        $patient = $this->cashPatient();
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_CASHIER);
+        $case->update(['quote_no' => 'QT-CASH-01', 'quote_date' => now()->toDateString()]);
+
+        Quote::create([
+            'case_id'      => $case->id,
+            'quote_no'     => 'QT-CASH-01',
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $case->company_name,
+            'quote_date'   => now()->toDateString(),
+            'status'       => Quote::STATUS_ISSUED,
+            'status_label' => 'بانتظار الدفع في الخزنة',
+            'total'        => 1500,
+        ]);
+
+        $buckets = app(AdminCaseTrackingService::class)->buckets();
+
+        $this->assertSame(0, $buckets['counts']['waiting_return']);
+        $this->assertSame(1, $buckets['counts']['awaiting_cashier']);
+        $this->assertSame('QT-CASH-01', $buckets['awaiting_cashier']->first()['quoteId']);
+    }
 }

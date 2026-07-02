@@ -1,6 +1,6 @@
 @php
-    $counts = $admin_case_counts ?? ['waiting_return' => 0, 'in_progress' => 0, 'delivered' => 0];
-    $buckets = $admin_case_buckets ?? ['waiting_return' => [], 'in_progress' => [], 'delivered' => []];
+    $counts = $admin_case_counts ?? ['waiting_return' => 0, 'awaiting_cashier' => 0, 'in_progress' => 0, 'delivered' => 0];
+    $buckets = $admin_case_buckets ?? ['waiting_return' => [], 'awaiting_cashier' => [], 'in_progress' => [], 'delivered' => []];
     $dateFrom = $case_date_from ?? now()->startOfMonth()->toDateString();
     $dateTo = $case_date_to ?? now()->toDateString();
 @endphp
@@ -22,6 +22,12 @@
           <span class="cq-title">بانتظار رجوع العميل</span>
           <span class="cq-desc">تم إصدار عرض السعر وخرج المريض — لم يعد بعد بخطاب الموافقة</span>
           <span class="cq-count" id="casesWaitingCount">{{ $counts['waiting_return'] ?? 0 }}</span>
+        </button>
+        <button type="button" class="cases-quick-btn cashier" data-cases-filter="awaiting_cashier">
+          <span class="cq-icon">💵</span>
+          <span class="cq-title">بانتظار الدفع — الخزنة</span>
+          <span class="cq-desc">مرضى الكاش — عرض سعر صادر وبانتظار تحصيل المبلغ</span>
+          <span class="cq-count" id="casesCashierCount">{{ $counts['awaiting_cashier'] ?? 0 }}</span>
         </button>
         <button type="button" class="cases-quick-btn progress" data-cases-filter="in_progress">
           <span class="cq-icon">🏭</span>

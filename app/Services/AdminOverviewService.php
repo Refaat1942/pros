@@ -48,13 +48,19 @@ class AdminOverviewService
         ];
     }
 
-    /** @return array{waiting_return: int, in_progress: int, delivered: int} */
+    /** @return array{waiting_return: int, awaiting_cashier: int, in_progress: int, delivered: int} */
     public function caseStripCounts(Carbon $from, Carbon $to): array
     {
         $waiting = CaseRecord::query()
             ->where('patient_type', Patient::TYPE_CIVILIAN)
             ->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED)
+            ->where('stage_key', '!=', CaseRecord::STAGE_CASHIER)
             ->whereHas('quotes', fn ($q) => $q->where('status', Quote::STATUS_ISSUED))
+            ->whereBetween('updated_at', [$from, $to])
+            ->count();
+
+        $awaitingCashier = CaseRecord::query()
+            ->awaitingCashier()
             ->whereBetween('updated_at', [$from, $to])
             ->count();
 
@@ -72,9 +78,10 @@ class AdminOverviewService
             ->count();
 
         return [
-            'waiting_return' => $waiting,
-            'in_progress'    => $inProgress,
-            'delivered'      => $delivered,
+            'waiting_return'   => $waiting,
+            'awaiting_cashier' => $awaitingCashier,
+            'in_progress'      => $inProgress,
+            'delivered'        => $delivered,
         ];
     }
 

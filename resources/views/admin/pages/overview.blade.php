@@ -51,6 +51,13 @@
                 </div>
                 <span id="overviewWaitingCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['waiting_return'] ?? 0 }}</span>
             </button>
+            <button type="button" class="overview-case-link overview-case-link--cashier" data-goto-cases="awaiting_cashier">
+                <div class="overview-case-link__text">
+                    <strong>بانتظار الدفع النقدي — الخزنة</strong>
+                    <span class="overview-case-link__hint">مرضى الكاش — تحصيل المبلغ</span>
+                </div>
+                <span id="overviewCashierCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['awaiting_cashier'] ?? 0 }}</span>
+            </button>
             <button type="button" class="overview-case-link overview-case-link--progress" data-goto-cases="in_progress">
                 <div class="overview-case-link__text">
                     <strong>تحت التنفيذ</strong>

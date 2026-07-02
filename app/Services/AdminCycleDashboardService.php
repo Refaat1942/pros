@@ -66,6 +66,15 @@ class AdminCycleDashboardService
                 'bg'    => 'rgba(79,70,229,0.1)',
             ],
             [
+                'key'   => 'cashier',
+                'icon'  => '💵',
+                'label' => 'الخزنة',
+                'hint'  => 'بانتظار تحصيل الدفع النقدي',
+                'count' => $this->queues->cashierQueueCount($from, $to),
+                'color' => '#0e7490',
+                'bg'    => 'rgba(14,116,144,0.12)',
+            ],
+            [
                 'key'   => 'workshop',
                 'icon'  => '🏭',
                 'label' => 'ورشة التصنيع',

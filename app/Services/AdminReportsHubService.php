@@ -167,28 +167,10 @@ class AdminReportsHubService
             number_format((float) $p->amount, 2) . ' ج.م',
         ])->values()->all();
 
-        $total = (float) $payments->sum('amount');
-
-        $summary = [
-            ['label' => 'إجمالي المُحصّل', 'value' => number_format($total, 2) . ' ج.م'],
-            ['label' => 'عدد الدفعات', 'value' => (string) $payments->count()],
-        ];
-
-        foreach (PaymentMethod::cases() as $method) {
-            $group = $payments->where('method', $method->value);
-            if ($group->isEmpty()) {
-                continue;
-            }
-            $summary[] = [
-                'label' => $method->label(),
-                'value' => number_format((float) $group->sum('amount'), 2) . ' ج.م',
-            ];
-        }
-
         return [
             'title'        => 'التحصيل النقدي — الخزنة',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => $summary,
+            'summary'      => [],
             'headers'      => ['التاريخ', 'رقم الدفعة', 'المريض', 'رقم الحالة', 'الوسيلة', 'رقم العملية', 'المُحصِّل', 'المبلغ'],
             'rows'         => $rows,
         ];

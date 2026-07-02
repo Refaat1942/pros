@@ -59,6 +59,19 @@ class AdminCycleDashboardTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $cards['operations']['count']);
     }
 
+    public function test_cycle_service_counts_cashier_queue(): void
+    {
+        $case = $this->caseAtStage($this->cashPatient(), CaseRecord::STAGE_CASHIER);
+        $case->touch();
+
+        $from = now()->subDays(30)->startOfDay();
+        $to   = now()->addDay()->endOfDay();
+        $cards = collect(app(AdminCycleDashboardService::class)->build($from, $to))->keyBy('key');
+
+        $this->assertSame(1, $cards['cashier']['count']);
+        $this->assertSame('الخزنة', $cards['cashier']['label']);
+    }
+
     public function test_overview_page_shows_cycle_dashboard_cards(): void
     {
         $this->seed(RolesAndAdminSeeder::class);
@@ -95,6 +108,8 @@ class AdminCycleDashboardTest extends TestCase
             ->assertSee('التوصيف الفني')
             ->assertSee('المعدلات')
             ->assertSee('مكتب التشغيل')
+            ->assertSee('الخزنة')
+            ->assertSee('بانتظار تحصيل الدفع النقدي', false)
             ->assertSee('ورشة التصنيع')
             ->assertSee('المخزن')
             ->assertDontSee('أوامر التحضير المعلقة', false)

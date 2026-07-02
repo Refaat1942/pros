@@ -2,7 +2,7 @@
     var casesFilter = 'waiting_return';
     var casesSearchTerm = '';
     var casesPatientTypeFilter = '';
-    var adminCaseBuckets = window.__ADMIN_CASE_BUCKETS || { waiting_return: [], in_progress: [], delivered: [] };
+    var adminCaseBuckets = window.__ADMIN_CASE_BUCKETS || { waiting_return: [], awaiting_cashier: [], in_progress: [], delivered: [] };
     var catalogItems = [];
     var catalogSearchTerm = '';
     var catalogCategoryFilter = 'all';
@@ -314,12 +314,15 @@
       if (document.getElementById('overviewWaitingCount') &&
           document.getElementById('overviewWaitingCount').dataset.serverRendered === '1') return;
       var waiting = getAdminCaseBucket('waiting_return').length;
+      var cashier = getAdminCaseBucket('awaiting_cashier').length;
       var progress = getAdminCaseBucket('in_progress').length;
       var delivered = getAdminCaseBucket('delivered').length;
       var ow = document.getElementById('overviewWaitingCount');
+      var oc = document.getElementById('overviewCashierCount');
       var op = document.getElementById('overviewProgressCount');
       var od = document.getElementById('overviewDeliveredCount');
       if (ow) ow.textContent = waiting;
+      if (oc) oc.textContent = cashier;
       if (op) op.textContent = progress;
       if (od) od.textContent = delivered;
     }
@@ -346,16 +349,23 @@
 
     function renderCasesSection() {
       var waiting = getAdminCaseBucket('waiting_return');
+      var cashier = getAdminCaseBucket('awaiting_cashier');
       var progress = getAdminCaseBucket('in_progress');
       var delivered = getAdminCaseBucket('delivered');
-      document.getElementById('casesWaitingCount').textContent = waiting.length;
-      document.getElementById('casesProgressCount').textContent = progress.length;
-      document.getElementById('casesDeliveredCount').textContent = delivered.length;
+      var casesWaitingCount = document.getElementById('casesWaitingCount');
+      var casesCashierCount = document.getElementById('casesCashierCount');
+      var casesProgressCount = document.getElementById('casesProgressCount');
+      var casesDeliveredCount = document.getElementById('casesDeliveredCount');
+      if (casesWaitingCount) casesWaitingCount.textContent = waiting.length;
+      if (casesCashierCount) casesCashierCount.textContent = cashier.length;
+      if (casesProgressCount) casesProgressCount.textContent = progress.length;
+      if (casesDeliveredCount) casesDeliveredCount.textContent = delivered.length;
       renderOverviewCasesCounts();
 
       var filtered = getFilteredCases();
       var titles = {
         waiting_return: '📁 المرضى — بانتظار رجوع العميل',
+        awaiting_cashier: '💵 المرضى — بانتظار الدفع في الخزنة',
         in_progress: '📁 المرضى — تحت التنفيذ',
         delivered: '📁 المرضى — تم التسليم'
       };
@@ -368,6 +378,9 @@
         if (casesFilter === 'waiting_return') {
           hintEl.innerHTML = '';
           hintEl.style.display = 'none';
+        } else if (casesFilter === 'awaiting_cashier') {
+          hintEl.innerHTML = 'مرضى الكاش — صدر لهم عرض سعر من مكتب التشغيل وبانتظار تحصيل المبلغ في الخزنة قبل الصرف من المخزن.';
+          hintEl.style.display = 'block';
         } else if (casesFilter === 'in_progress') {
           hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/الورشة. التسليم للمريض يتم بعد BOM «تام» فقط.';
           hintEl.style.display = 'block';
@@ -394,6 +407,20 @@
             '<td>' + (c.quoteRefHtml || c.quoteId || '—') + '</td>' +
             '<td>' + (c.quoteDate || '—') + '</td>' +
             '<td><span class="' + daysCls.trim() + '">⏱ ' + days + ' يوم</span></td>' +
+            '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
+            caseViewCell(c.id) +
+            '</tr>';
+        }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
+      } else if (casesFilter === 'awaiting_cashier') {
+        head.innerHTML = '<tr><th>المريض</th><th>جهة التعاقد</th><th>سريال عرض السعر</th><th>تاريخ العرض</th><th>إجمالي العرض</th>' + pipelineCol + viewCol + '</tr>';
+        body.innerHTML = filtered.length ? filtered.map(function(c) {
+          var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
+          return '<tr>' +
+            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
+            '<td>' + c.company + '</td>' +
+            '<td>' + (c.quoteRefHtml || c.quoteId || '—') + '</td>' +
+            '<td>' + (c.quoteDate || '—') + '</td>' +
+            '<td class="pricing-total-cell">' + CasesWorkflow.formatMoney(c.totalCost) + '</td>' +
             '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
             caseViewCell(c.id) +
             '</tr>';
@@ -442,6 +469,12 @@
         rows = filtered.map(function(c) {
           return [c.patient, c.company, c.quoteId, c.pricingRef || '—', ExportKit.formatDateForExport(c.quoteDate), c.quoteDaysWaiting || 0, c.stageLabel];
         });
+      } else if (casesFilter === 'awaiting_cashier') {
+        title = 'حالات بانتظار الدفع في الخزنة';
+        headers = ['المريض', 'جهة التعاقد', 'سريال عرض السعر', 'تاريخ العرض', 'إجمالي العرض', 'الحالة'];
+        rows = filtered.map(function(c) {
+          return [c.patient, c.company, c.quoteId, ExportKit.formatDateForExport(c.quoteDate), c.totalCost, c.stageLabel];
+        });
       } else if (casesFilter === 'in_progress') {
         title = 'حالات تحت التنفيذ';
         headers = ['المريض', 'جهة التعاقد', 'مرحلة الشغل', 'BOM', 'تاريخ الموافقة'];
@@ -458,6 +491,7 @@
       if (type === 'excel') {
         var caseNames = {
           waiting_return: 'حالات_بانتظار_رجوع_العميل',
+          awaiting_cashier: 'حالات_بانتظار_الدفع_الخزنة',
           in_progress: 'حالات_تحت_التنفيذ',
           delivered: 'حالات_مسلّمة'
         };

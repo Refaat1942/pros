@@ -204,6 +204,14 @@
                     <div class="bi-kpi-value bi-tone-cyan">{{ $fmtMoney($b4['civilian_cumulative_cost'] ?? 0) }} <small>ج.م</small></div>
                 </div>
                 <div class="bi-kpi">
+                    <div class="bi-kpi-label">💵 محصّل نقدي — الخزنة</div>
+                    <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4['cash_collected_total'] ?? 0) }} <small>ج.م</small></div>
+                </div>
+                <div class="bi-kpi">
+                    <div class="bi-kpi-label">💵 بانتظار الدفع — الخزنة</div>
+                    <div class="bi-kpi-value bi-tone-cyan">{{ $b4['cash_awaiting_payment'] ?? 0 }}</div>
+                </div>
+                <div class="bi-kpi">
                     <div class="bi-kpi-label">التكلفة المجمعة — عسكري</div>
                     <div class="bi-kpi-value bi-tone-amber">{{ $fmtMoney($b4['military_aggregated_cost'] ?? 0) }} <small>ج.م</small></div>
                 </div>

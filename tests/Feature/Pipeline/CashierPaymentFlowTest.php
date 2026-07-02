@@ -137,7 +137,7 @@ class CashierPaymentFlowTest extends TestCase
 
         $this->assertSame('التحصيل النقدي — الخزنة', $report['title']);
         $this->assertCount(1, $report['rows']);
-        $this->assertNotEmpty($report['summary']);
+        $this->assertSame([], $report['summary']);
     }
 
     /** يقود مريض كاش حتى مرحلة الخزنة (بانتظار الدفع). */
