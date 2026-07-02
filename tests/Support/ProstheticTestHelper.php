@@ -32,6 +32,7 @@ trait ProstheticTestHelper
             'adjustments' => 'فني تعديلات',
             'costing'     => 'فني تكاليف',
             'operations'  => 'مكتب عمليات',
+            'cashier'     => 'موظف الخزنة',
             'workshop'    => 'ورشة التصنيع',
             'technical'   => 'مسؤول مخزن',
         ];
@@ -127,6 +128,24 @@ trait ProstheticTestHelper
             'patient_type'        => Patient::TYPE_CIVILIAN,
             'contract_company_id' => $company->id,
             'company_name'        => $company->name,
+            'registered_at'       => now()->toDateString(),
+            'status'              => Patient::STATUS_ACTIVE,
+        ]);
+    }
+
+    /** مريض مدني على نفقته الشخصية (كاش) — بلا جهة تعاقد. */
+    protected function cashPatient(): Patient
+    {
+        return Patient::create([
+            'patient_code'        => '200002',
+            'patient_qr'          => 'QR-200002',
+            'tracking_uid'        => 'case-cash0002',
+            'name'                => 'سارة كاش',
+            'phone'               => '01000000009',
+            'national_id'         => '29901010100009',
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'contract_company_id' => null,
+            'company_name'        => null,
             'registered_at'       => now()->toDateString(),
             'status'              => Patient::STATUS_ACTIVE,
         ]);

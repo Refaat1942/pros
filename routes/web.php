@@ -25,6 +25,7 @@ foreach ([
     'adjustments',
     'costing',
     'operations',
+    'cashier',
     'workshop',
     'technical',
     'admin',

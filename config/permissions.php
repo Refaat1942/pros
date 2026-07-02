@@ -12,6 +12,7 @@ return [
         'adjustments' => ['label_ar' => 'لوحة المعدلات', 'icon' => '📏'],
         'costing'     => ['label_ar' => 'لوحة التكاليف', 'icon' => '💰'],
         'operations'  => ['label_ar' => 'مكتب التشغيل', 'icon' => '🎯'],
+        'cashier'     => ['label_ar' => 'الخزنة', 'icon' => '💵'],
         'workshop'    => ['label_ar' => 'ورشة التصنيع', 'icon' => '🏭'],
         'technical'   => ['label_ar' => 'لوحة المخزون', 'icon' => '📦'],
         'admin'       => ['label_ar' => 'لوحة الإدارة', 'icon' => '⚙️'],
@@ -37,6 +38,10 @@ return [
         'approve-pricing' => [
             'label_ar'  => 'اعتماد التسعير في مكتب التشغيل',
             'dashboard' => 'operations',
+        ],
+        'confirm-cash-payment' => [
+            'label_ar'  => 'تأكيد استلام المبلغ في الخزنة',
+            'dashboard' => 'cashier',
         ],
         'manage-inventory' => [
             'label_ar'  => 'إدارة كتالوج الأصناف (إضافة/تعديل/حذف)',
@@ -68,6 +73,7 @@ return [
         'doctor'      => ['skip-diagnosis'],
         'costing'     => ['view-costs'],
         'operations'  => ['approve-pricing', 'view-costs', 'print-quote'],
+        'cashier'     => ['confirm-cash-payment', 'print-quote'],
         'technical'   => [],
         'spec'        => [],
         'adjustments' => [],

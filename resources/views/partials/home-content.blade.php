@@ -65,7 +65,7 @@
             <a href="{{ route('dashboard.login', 'costing') }}" class="role-card costing">
                 <div class="icon-wrap">💰</div>
                 <h2>التكاليف</h2>
-                {{-- <p>لوحة بسيطة ومستقلة — مراجعة تكلفة الحالات الواردة من المعدلات (للقراءة فقط) ثم تأكيد وإصدار عرض السعر.</p> --}}
+                <p>مراجعة تكلفة الحالات الواردة من المعدلات، تأكيد أعلى سعر شراء، ثم إصدار عرض السعر وتحويلها لمكتب التشغيل.</p>
                 <span class="enter-btn">
                     الدخول للوحة التكاليف
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

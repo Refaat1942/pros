@@ -55,6 +55,16 @@ class NotificationService
             'title' => '🎯 حالة بانتظار مكتب التشغيل',
             'body'  => 'المريض {patient} (حالة {case}) بانتظار اعتماد مكتب التشغيل وإصدار أمر الصرف.',
         ],
+        WorkflowEvent::SentToCashier->value => [
+            'role'  => Role::SLUG_CASHIER,
+            'title' => '💵 مريض بانتظار الدفع في الخزنة',
+            'body'  => 'المريض {patient} (حالة {case}) صدر له عرض سعر نقدي — بانتظار تحصيل المبلغ في الخزنة.',
+        ],
+        WorkflowEvent::CashierPaid->value => [
+            'role'  => Role::SLUG_TECHNICAL,
+            'title' => '📦 أمر صرف جديد للمخزن (دفع نقدي)',
+            'body'  => 'المريض {patient} (حالة {case}) سدد المبلغ في الخزنة — جاهز للصرف بالباركود من المخزن.',
+        ],
         WorkflowEvent::OperationsApproved->value => [
             'role'  => Role::SLUG_TECHNICAL,
             'title' => '📦 أمر صرف جديد للمخزن',

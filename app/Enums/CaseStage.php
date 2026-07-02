@@ -16,6 +16,7 @@ enum CaseStage: string
     case CostCalc      = 'cost_calc';
     case Quote         = 'quote';
     case Operations    = 'operations';
+    case Cashier       = 'cashier';
     case Manufacturing = 'manufacturing';
     case ReadyDelivery = 'ready_delivery';
     case Delivered     = 'delivered';
@@ -30,6 +31,7 @@ enum CaseStage: string
             self::CostCalc      => 'حساب التكاليف',
             self::Quote         => 'عرض السعر',
             self::Operations    => 'مكتب التشغيل',
+            self::Cashier       => 'بانتظار الدفع في الخزنة',
             self::Manufacturing => 'جاري التصنيع',
             self::ReadyDelivery => 'جاهز للتسليم',
             self::Delivered     => 'تم التسليم',
@@ -74,6 +76,7 @@ enum CaseStage: string
             self::Quote->value         => 'badge-warning',
             self::Operations->value,
             'waiting_return'             => 'badge-warning',
+            self::Cashier->value       => 'badge-warning',
             self::Manufacturing->value => 'badge-info',
             self::ReadyDelivery->value => 'badge-success',
             self::Delivered->value     => 'badge-success',
@@ -88,6 +91,7 @@ enum CaseStage: string
             self::Adjustments->value,
             self::CostCalc->value,
             self::Quote->value,
+            self::Cashier->value,
             self::Operations->value => [
                 'class' => 'bg-amber-100 text-amber-800',
                 'bg'    => 'bg-amber-100',

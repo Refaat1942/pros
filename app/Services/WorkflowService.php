@@ -59,6 +59,18 @@ class WorkflowService
             'to'   => CaseRecord::STAGE_OPERATIONS,
             'mfg'  => null,
         ],
+        // مكتب التشغيل (كاش): إصدار عرض السعر → بانتظار الدفع في الخزنة.
+        WorkflowEvent::SentToCashier->value => [
+            'from' => [CaseRecord::STAGE_OPERATIONS],
+            'to'   => CaseRecord::STAGE_CASHIER,
+            'mfg'  => null,
+        ],
+        // الخزنة: تأكيد استلام المبلغ → المخزن للصرف (حجز فوري في الخلفية).
+        WorkflowEvent::CashierPaid->value => [
+            'from' => [CaseRecord::STAGE_CASHIER],
+            'to'   => CaseRecord::STAGE_MANUFACTURING,
+            'mfg'  => CaseRecord::MFG_WAREHOUSE,
+        ],
         // مكتب التشغيل: اعتماد → المخزن للصرف (حجز فوري في الخلفية).
         WorkflowEvent::OperationsApproved->value => [
             'from' => [CaseRecord::STAGE_OPERATIONS],

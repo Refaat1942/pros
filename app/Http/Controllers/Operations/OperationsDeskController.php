@@ -100,6 +100,24 @@ class OperationsDeskController extends Controller
         }
 
         $quote = Quote::where('case_id', $case->id)->orderByDesc('id')->firstOrFail();
+
+        // مسار الكاش: المريض على نفقته الشخصية (بلا جهة تعاقد) ⬅️ تحويل تلقائي للخزنة.
+        if ($case->isCashCivilian()) {
+            $case = $this->operationsService->sendToCashier($case, $quote);
+            $quote = $quote->fresh();
+
+            return response()->json([
+                'message' => 'تم إصدار عرض السعر — حُوّلت الحالة للخزنة لتحصيل الدفع النقدي.',
+                'quote'   => [
+                    'id'           => $quote->id,
+                    'quote_no'     => $quote->quote_no,
+                    'status'       => $quote->status,
+                    'status_label' => $quote->status_label,
+                ],
+                'case' => $case->only(['id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no']),
+            ]);
+        }
+
         $quote = $this->quoteService->releaseToReception($quote);
         $case  = $case->fresh();
 
@@ -199,8 +217,9 @@ class OperationsDeskController extends Controller
 
         return $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'path', 'quote_no',
-        ]) + [
+        ]        ) + [
             'pathway_label'  => $case->isMilitary() ? 'عسكري' : 'مدني',
+            'is_cash'        => $case->isCashCivilian(),
             'display_entity' => $case->displayEntity(),
             'tech_notes'     => $case->resolvedTechNotes(),
             'quote_total'    => (float) $case->quote_total,

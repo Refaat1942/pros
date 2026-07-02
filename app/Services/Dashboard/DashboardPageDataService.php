@@ -9,6 +9,8 @@ use App\Models\CaseRecord;
 use App\Models\ContractCompany;
 use App\Models\MedicalRecord;
 use App\Models\MilitaryRank;
+use App\Models\Payment;
+use App\Enums\PaymentMethod;
 use App\Models\PricingRequest;
 use App\Models\Role;
 use App\Models\Supplier;
@@ -86,6 +88,8 @@ class DashboardPageDataService
             'adjustments.adjustments' => $this->adjustmentsHistory(),
             'adjustments.history'   => $this->adjustmentsHistory(),
             'technical.delivery'    => $this->operationsDeliveryDesk(),
+            'cashier.payments'      => $this->cashierPayments(),
+            'cashier.statistics'    => $this->cashierStatistics(),
             'workshop.workshop'     => $this->workshopDesk(),
             'workshop.statistics'   => $this->workshopStatistics(),
             'technical.inventory'   => $this->technicalInventory(),
@@ -588,6 +592,76 @@ class DashboardPageDataService
     {
         return [
             'workshop_analytics' => app(WorkshopAnalyticsService::class)->build(),
+        ];
+    }
+
+    private function cashierPayments(): array
+    {
+        $cases = CaseRecord::query()
+            ->awaitingCashier()
+            ->with([
+                'patient:id,patient_code,name,phone',
+                'quotes:id,case_id,quote_no,total,status',
+            ])
+            ->orderByDesc('updated_at')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
+
+        $awaitingAmount = $cases->sum(fn (CaseRecord $c) => (float) ($c->quotes->sortByDesc('id')->first()?->total ?? $c->quote_total ?? 0));
+
+        $today          = Payment::query()->whereDate('received_at', today());
+        $todayCount     = (clone $today)->count();
+        $todayAmount    = (clone $today)->sum('amount');
+
+        return [
+            'cashier_cases'   => $cases,
+            'payment_methods' => collect(PaymentMethod::cases())
+                ->map(fn (PaymentMethod $m) => ['value' => $m->value, 'label' => $m->label()])
+                ->values()
+                ->all(),
+            'cashier_stats'   => [
+                ['icon' => '💵', 'label' => 'بانتظار الدفع', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => '⏳', 'label' => 'قيمة بانتظار التحصيل', 'value' => number_format($awaitingAmount, 0) . ' ج.م', 'color' => '#b45309', 'bg' => 'rgba(217,119,6,0.08)'],
+                ['icon' => '✅', 'label' => 'دفعات اليوم', 'value' => (string) $todayCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '💰', 'label' => 'محصّل اليوم', 'value' => number_format($todayAmount, 0) . ' ج.م', 'color' => '#047857', 'bg' => 'rgba(5,150,105,0.08)'],
+            ],
+        ];
+    }
+
+    private function cashierStatistics(): array
+    {
+        $monthStart = now()->startOfMonth();
+
+        $payments = Payment::query()
+            ->with('caseRecord:id,case_no')
+            ->orderByDesc('received_at')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
+
+        $monthPayments = $payments->filter(fn (Payment $p) => $p->received_at && $p->received_at->gte($monthStart));
+
+        $byMethod = collect(PaymentMethod::cases())->map(function (PaymentMethod $m) use ($monthPayments) {
+            $group = $monthPayments->where('method', $m->value);
+
+            return [
+                'method' => $m->label(),
+                'count'  => $group->count(),
+                'total'  => (float) $group->sum('amount'),
+            ];
+        })->values()->all();
+
+        $todayAmount = (float) $payments->filter(fn (Payment $p) => $p->received_at && $p->received_at->isToday())->sum('amount');
+        $monthAmount = (float) $monthPayments->sum('amount');
+
+        return [
+            'cashier_payments'     => $payments,
+            'cashier_by_method'    => $byMethod,
+            'cashier_stats_totals' => [
+                ['icon' => '📅', 'label' => 'محصّل اليوم', 'value' => number_format($todayAmount, 0) . ' ج.م', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '🗓️', 'label' => 'محصّل هذا الشهر', 'value' => number_format($monthAmount, 0) . ' ج.م', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['icon' => '🧾', 'label' => 'عدد الدفعات (الشهر)', 'value' => (string) $monthPayments->count(), 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+                ['icon' => '💰', 'label' => 'إجمالي الدفعات', 'value' => (string) $payments->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+            ],
         ];
     }
 

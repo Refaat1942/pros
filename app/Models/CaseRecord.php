@@ -26,6 +26,7 @@ class CaseRecord extends Model
     public const STAGE_COST_CALC = 'cost_calc';
     public const STAGE_QUOTE = 'quote';
     public const STAGE_OPERATIONS = 'operations';
+    public const STAGE_CASHIER = 'cashier';
     public const STAGE_MANUFACTURING = 'manufacturing';
     public const STAGE_READY_DELIVERY = 'ready_delivery';
     public const STAGE_DELIVERED = 'delivered';
@@ -221,6 +222,17 @@ class CaseRecord extends Model
     public function scopeAtOperations(Builder $query): Builder
     {
         return $query->where('stage_key', self::STAGE_OPERATIONS);
+    }
+
+    /** حالات نقدية بانتظار تحصيل الدفع في الخزنة (مسار الكاش الأوتوماتيكي). */
+    public function scopeAwaitingCashier(Builder $query): Builder
+    {
+        return $query->where('stage_key', self::STAGE_CASHIER);
+    }
+
+    public function isAwaitingCashier(): bool
+    {
+        return $this->stage_key === self::STAGE_CASHIER;
     }
 
     /** حالات دخلت الورشة فعلياً بعد صرف/تحويل BOM من المخزن. */

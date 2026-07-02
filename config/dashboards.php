@@ -161,6 +161,27 @@ return [
         'body_attributes' => 'data-dashboard="operations"',
         'guard' => 'operations',
     ],
+    'cashier' => [
+        'title' => 'لوحة الخزنة — مركز الأطراف الصناعية',
+        'layout' => 'layouts.dashboard-page',
+        'default_page' => 'payments',
+        'sidebar' => ['icon' => '💵', 'title' => 'الخزنة', 'subtitle' => 'تحصيل الدفع'],
+        'pages' => [
+            'payments' => ['title' => 'الخزنة — بانتظار الدفع النقدي', 'icon' => '💵', 'label' => 'تحصيل الدفع'],
+            'statistics' => ['title' => 'إحصائيات الخزنة — التحصيل النقدي', 'icon' => '📊', 'label' => 'الإحصائيات'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
+        ],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
+        'scripts' => [
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
+            'assets/js/shared/export-kit.js',
+            'assets/js/shared/charts-kit.js',
+            'assets/js/pages/cashier-dashboard.js',
+            'assets/js/shared/dashboard-mobile.js',
+        ],
+        'body_attributes' => 'data-dashboard="cashier"',
+        'guard' => 'cashier',
+    ],
     'workshop' => [
         'title' => 'لوحة ورشة التصنيع — مركز الأطراف الصناعية',
         'layout' => 'layouts.workshop',

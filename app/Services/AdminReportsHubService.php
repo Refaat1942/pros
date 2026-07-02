@@ -11,6 +11,8 @@ use App\Models\ContractCompany;
 use App\Models\ContractCompanyDebt;
 use App\Models\DebtCollectionEntry;
 use App\Models\Patient;
+use App\Models\Payment;
+use App\Enums\PaymentMethod;
 use App\Models\ReturnNote;
 use App\Models\SpecEditRequest;
 use App\Models\Supplier;
@@ -82,6 +84,7 @@ class AdminReportsHubService
         }
 
         foreach ([
+            ['id' => 'cash-income', 'label' => 'التحصيل النقدي — الخزنة', 'icon' => '💵', 'group' => 'التعاقد والمالية', 'description' => 'المبالغ النقدية المُحصّلة من الخزنة (كاش / إنستاباي / فودافون كاش)'],
             ['id' => 'financial', 'label' => 'الإيرادات والمالية', 'icon' => '💰', 'group' => 'رؤية عامة', 'description' => 'إيرادات التسليم وأوامر التشغيل'],
             ['id' => 'inventory', 'label' => 'تحليلات المخزون', 'icon' => '📦', 'group' => 'رؤية عامة', 'description' => 'الأصناف الراكدة والشغالة ومنخفضة المخزون'],
             ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير والورشة'],
@@ -109,6 +112,7 @@ class AdminReportsHubService
         $to   = $to->copy()->endOfDay();
 
         return match ($section) {
+            'cash-income'        => $this->buildCashIncome($from, $to),
             'financial'          => $this->buildFinancial($from, $to),
             'inventory'          => $this->buildInventoryAnalytics($from, $to),
             'operations'         => $this->buildOperations($from, $to),
@@ -139,6 +143,54 @@ class AdminReportsHubService
         return [
             'from' => $fromDate->copy()->startOfDay(),
             'to'   => $toDate->copy()->endOfDay(),
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildCashIncome(Carbon $from, Carbon $to): array
+    {
+        $payments = Payment::query()
+            ->with('caseRecord:id,case_no')
+            ->whereBetween('received_at', [$from, $to])
+            ->orderByDesc('received_at')
+            ->limit(1000)
+            ->get();
+
+        $rows = $payments->map(fn (Payment $p) => [
+            ClinicTime::format($p->received_at, 'd/m/Y H:i'),
+            $p->payment_no ?? '—',
+            $p->patient_name ?? '—',
+            $p->caseRecord?->case_no ?? '—',
+            PaymentMethod::labelFor($p->method),
+            $p->reference ?? '—',
+            $p->received_by ?? '—',
+            number_format((float) $p->amount, 2) . ' ج.م',
+        ])->values()->all();
+
+        $total = (float) $payments->sum('amount');
+
+        $summary = [
+            ['label' => 'إجمالي المُحصّل', 'value' => number_format($total, 2) . ' ج.م'],
+            ['label' => 'عدد الدفعات', 'value' => (string) $payments->count()],
+        ];
+
+        foreach (PaymentMethod::cases() as $method) {
+            $group = $payments->where('method', $method->value);
+            if ($group->isEmpty()) {
+                continue;
+            }
+            $summary[] = [
+                'label' => $method->label(),
+                'value' => number_format((float) $group->sum('amount'), 2) . ' ج.م',
+            ];
+        }
+
+        return [
+            'title'        => 'التحصيل النقدي — الخزنة',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary'      => $summary,
+            'headers'      => ['التاريخ', 'رقم الدفعة', 'المريض', 'رقم الحالة', 'الوسيلة', 'رقم العملية', 'المُحصِّل', 'المبلغ'],
+            'rows'         => $rows,
         ];
     }
 
