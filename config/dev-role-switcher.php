@@ -13,6 +13,7 @@ return [
         'adjustments' => ['label' => 'المعدلات', 'route' => 'adjustments.dashboard'],
         'costing'     => ['label' => 'التكاليف', 'route' => 'costing.dashboard'],
         'operations'  => ['label' => 'التشغيل', 'route' => 'operations.dashboard'],
+        'cashier'     => ['label' => 'الخزنة', 'route' => 'cashier.dashboard'],
         'workshop'    => ['label' => 'ورشة التصنيع', 'route' => 'workshop.dashboard'],
         'technical'   => ['label' => 'المخزن', 'route' => 'technical.dashboard'],
     ],

@@ -269,6 +269,9 @@
     .role-card.operations { --card-accent: #0e7490; }
     .role-card.operations .icon-wrap { background: rgba(14, 116, 144, 0.12); color: #0e7490; }
 
+    .role-card.cashier { --card-accent: #047857; }
+    .role-card.cashier .icon-wrap { background: rgba(4, 120, 87, 0.12); color: #047857; }
+
     .role-card.workshop { --card-accent: #7c3aed; }
     .role-card.workshop .icon-wrap { background: rgba(124, 58, 237, 0.12); color: #7c3aed; }
 

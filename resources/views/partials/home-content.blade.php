@@ -82,6 +82,16 @@
                 </span>
             </a>
 
+            <a href="{{ route('dashboard.login', 'cashier') }}" class="role-card cashier">
+                <div class="icon-wrap">💵</div>
+                <h2>الخزنة</h2>
+                <p>تحصيل الدفع النقدي للمرضى على نفقتهم الشخصية — نقدي، إنستاباي، أو فودافون كاش — ثم تحويل الحالة تلقائياً للمخزن.</p>
+                <span class="enter-btn">
+                    الدخول للوحة الخزنة
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+            </a>
+
             <a href="{{ route('dashboard.login', 'workshop') }}" class="role-card workshop">
                 <div class="icon-wrap">🏭</div>
                 <h2>ورشة التصنيع</h2>
