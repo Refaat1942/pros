@@ -35,6 +35,15 @@
      * تحميل عروض الأسعار من الخادم — يُستدعى عند تحميل صفحة "عروض الأسعار".
      * يُعبئ مصفوفة quotations ثم يُعيد رسم الجدول.
      */
+    /**
+     * تسمية جهة الفوترة للعرض — مدني كاش بدون company_name.
+     */
+    function quoteCompanyLabel(name) {
+      var s = (name == null || name === undefined) ? '' : String(name).trim();
+      if (!s || s.toLowerCase() === 'null') return 'كاش';
+      return s;
+    }
+
     function fetchServerQuotes() {
       if (document.body.dataset.activePage !== 'quote') return;
 
@@ -55,7 +64,7 @@
               _dbId:       q.id,
               printUrl:    q.print_url || null,
               patient:     q.patient_name,
-              company:     q.company_name,
+              company:     quoteCompanyLabel(q.company_name),
               orderRef:    q.order_ref,
               date:        displayDateFromIso(q.quote_date),
               total:       parseFloat(q.display_total != null ? q.display_total : q.total) || 0,
@@ -1833,7 +1842,9 @@
       _ocrLetterDate   = null;
 
       var refEl = document.getElementById('ocrQuoteRef');
-      if (refEl) refEl.textContent = quote.id + ' — ' + quote.patient + ' / ' + quote.company;
+      if (refEl) {
+        refEl.textContent = quote.id + ' — ' + quote.patient + ' / ' + quoteCompanyLabel(quote.company);
+      }
 
       var fi = document.getElementById('ocrFileInput');
       if (fi) fi.value = '';
@@ -1918,7 +1929,7 @@
             : (res.quote && res.quote.display_total != null
               ? res.quote.display_total
               : (_ocrCurrentQuote ? _ocrCurrentQuote.total : ''));
-          if (companyEl) companyEl.value = extracted.company_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.company : '');
+          if (companyEl) companyEl.value = extracted.company_name || (_ocrCurrentQuote ? quoteCompanyLabel(_ocrCurrentQuote.company) : '');
           if (refEl2)    refEl2.value    = extracted.letter_ref      || '';
 
           _ocrLetterDate = extracted.letter_date || null;

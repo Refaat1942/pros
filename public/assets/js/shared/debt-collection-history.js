@@ -62,7 +62,7 @@
       '<table class="debt-collection-table">' +
         '<thead><tr>' +
           '<th>#</th><th>التاريخ</th><th class="num">المبلغ</th>' +
-          '<th class="num">المحصّل التراكمي</th><th class="num">المتبقي بعدها</th><th>بواسطة</th>' +
+          '<th class="num">المحصّل التراكمي</th><th class="num">المتبقي</th><th>بواسطة</th>' +
         '</tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table></div>';
