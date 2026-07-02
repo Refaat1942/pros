@@ -103,15 +103,52 @@ class PrototypeSeedData
     $list = [];
     $i = 1;
     foreach (array_keys($names) as $name) {
-      $list[] = [
-        'company_code' => 'CO-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT),
-        'name' => $name,
-        'is_military' => (bool) preg_match('/قوات|مسلح|عسكر|سياد/u', $name),
-      ];
+      $list[] = array_merge(
+        self::contractCompanyProfile($name),
+        [
+          'company_code' => 'CO-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT),
+          'name'         => $name,
+        ],
+      );
       $i++;
     }
 
     return $list;
+  }
+
+  /**
+   * @return array{is_military: bool, is_contracted: bool, discount_percent: float}
+   */
+  public static function contractCompanyProfile(string $name): array
+  {
+    $isMilitary = (bool) preg_match('/قوات|مسلح|عسكر|سياد/u', $name);
+
+    if ($isMilitary) {
+      return [
+        'is_military'      => true,
+        'is_contracted'    => false,
+        'discount_percent' => 0,
+      ];
+    }
+
+    $discounts = [
+      'التأمين الصحي'           => 10,
+      'هيئة التأمين الصحي'      => 10,
+      'التأمين الوطني'          => 15,
+      'شركة التأمين الوطني'     => 15,
+      'مصر للتأمين'             => 10,
+      'شركة مصر للتأمين'        => 10,
+      'صندوق ذوي الإعاقة'       => 20,
+      'صندوق رعاية ذوي الإعاقة' => 20,
+      'مجلس الدفاع المدني'      => 0,
+      'وزارة الداخلية — التأمين'=> 5,
+    ];
+
+    return [
+      'is_military'      => false,
+      'is_contracted'    => true,
+      'discount_percent' => (float) ($discounts[$name] ?? 5),
+    ];
   }
 
   /** credit-notes.js DEFAULT_DEBTS */
@@ -135,6 +172,13 @@ class PrototypeSeedData
       [
         'code' => 'ITM-001', 'name' => 'ركبة هيدروليكية', 'spec' => 'Medium — Ottobock',
         'qty' => 10, 'reserved' => 0, 'category' => 'مفاصل', 'status' => 'ok', 'lastMoved' => null,
+        'attributes' => [
+          'joint_type'     => 'knee',
+          'mechanism'      => 'hydraulic',
+          'activity_level' => 'K3',
+          'side'           => 'universal',
+          'uom'            => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-001-1', 'label' => 'دفعة محلية', 'supplier' => 'النيل للتوريدات', 'supplierType' => 'محلي', 'itemCode' => 'ITM-001-01', 'amount' => 1000],
         ],
@@ -142,6 +186,13 @@ class PrototypeSeedData
       [
         'code' => 'ITM-002', 'name' => 'ركبة Polycentric', 'spec' => 'Large',
         'qty' => 3, 'reserved' => 1, 'category' => 'مفاصل', 'status' => 'low', 'lastMoved' => null,
+        'attributes' => [
+          'joint_type'     => 'knee',
+          'mechanism'      => 'polycentric',
+          'activity_level' => 'K2',
+          'side'           => 'right',
+          'uom'            => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-002-1', 'label' => 'Össur', 'supplier' => 'Össur Middle East', 'supplierType' => 'مستورد', 'itemCode' => 'ITM-002-01', 'amount' => 72000],
           ['id' => 'PR-002-2', 'label' => 'Proteor', 'supplier' => 'Proteor France', 'supplierType' => 'OEM', 'itemCode' => 'ITM-002-02', 'amount' => 68000],
@@ -150,6 +201,12 @@ class PrototypeSeedData
       [
         'code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'spec' => '8 طبقات',
         'qty' => 12, 'reserved' => 3, 'category' => 'أقدام', 'status' => 'ok', 'lastMoved' => null,
+        'attributes' => [
+          'foot_type'          => 'carbon_spring',
+          'size_class'         => 'M',
+          'max_patient_weight' => 90,
+          'uom'                => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-003-1', 'label' => 'Blatchford', 'supplier' => 'Blatchford Group', 'supplierType' => 'مستورد', 'itemCode' => 'ITM-003-01', 'amount' => 55000],
         ],
@@ -157,6 +214,11 @@ class PrototypeSeedData
       [
         'code' => 'ITM-004', 'name' => 'بطانة Silicone', 'spec' => 'Medium',
         'qty' => 24, 'reserved' => 0, 'category' => 'بطانات', 'status' => 'ok', 'lastMoved' => null,
+        'attributes' => [
+          'liner_type' => 'silicone',
+          'size'       => 'M',
+          'uom'        => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-004-1', 'label' => 'محلي', 'supplier' => 'الإسكندرية الطبية', 'supplierType' => 'محلي', 'itemCode' => 'ITM-004-01', 'amount' => 8500],
           ['id' => 'PR-004-2', 'label' => 'Ottobock', 'supplier' => 'Ottobock Egypt', 'supplierType' => 'OEM', 'itemCode' => 'ITM-004-02', 'amount' => 12000],
@@ -165,6 +227,11 @@ class PrototypeSeedData
       [
         'code' => 'ITM-005', 'name' => 'محول Pyramidal', 'spec' => 'Standard',
         'qty' => 18, 'reserved' => 2, 'category' => 'محولات', 'status' => 'ok', 'lastMoved' => null,
+        'attributes' => [
+          'adapter_type'    => 'pyramidal',
+          'connector_size'  => '30mm',
+          'uom'             => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-005-1', 'label' => 'Standard', 'supplier' => 'Ottobock Egypt', 'supplierType' => 'موزّع', 'itemCode' => 'ITM-005-01', 'amount' => 15000],
         ],
@@ -172,6 +239,10 @@ class PrototypeSeedData
       [
         'code' => 'ITM-006', 'name' => 'Pin Lock', 'spec' => '30mm',
         'qty' => 2, 'reserved' => 1, 'category' => 'إكسسوارات', 'status' => 'low', 'lastMoved' => null,
+        'attributes' => [
+          'accessory_type' => 'pin_lock',
+          'uom'            => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-006-1', 'label' => 'محلي', 'supplier' => 'النيل للتوريدات', 'supplierType' => 'محلي', 'itemCode' => 'ITM-006-01', 'amount' => 3200],
           ['id' => 'PR-006-2', 'label' => 'Ottobock', 'supplier' => 'Ottobock Egypt', 'supplierType' => 'OEM', 'itemCode' => 'ITM-006-02', 'amount' => 5800],
@@ -180,6 +251,10 @@ class PrototypeSeedData
       [
         'code' => 'ITM-007', 'name' => 'غطاء تجميلي', 'spec' => 'Wide',
         'qty' => 12, 'reserved' => 0, 'category' => 'إكسسوارات', 'status' => 'ok', 'lastMoved' => '20/10/2025',
+        'attributes' => [
+          'accessory_type' => 'cosmetic_cover',
+          'uom'            => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-007-1', 'label' => 'Wide Cover', 'supplier' => 'Proteor France', 'supplierType' => 'مستورد', 'itemCode' => 'ITM-007-01', 'amount' => 18000],
         ],
@@ -187,6 +262,11 @@ class PrototypeSeedData
       [
         'code' => 'ITM-008', 'name' => 'بطانة Gel', 'spec' => 'Medium',
         'qty' => 8, 'reserved' => 1, 'category' => 'بطانات', 'status' => 'ok', 'lastMoved' => null,
+        'attributes' => [
+          'liner_type' => 'gel',
+          'size'       => 'M',
+          'uom'        => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-008-1', 'label' => 'Gel Liner', 'supplier' => 'Össur Middle East', 'supplierType' => 'مستورد', 'itemCode' => 'ITM-008-01', 'amount' => 9500],
         ],
@@ -194,6 +274,11 @@ class PrototypeSeedData
       [
         'code' => 'ITM-009', 'name' => 'جوارب تجويف', 'spec' => '3 أزواج',
         'qty' => 56, 'reserved' => 0, 'category' => 'بطانات', 'status' => 'ok', 'lastMoved' => '02/09/2025',
+        'attributes' => [
+          'liner_type' => 'stump_sock',
+          'size'       => 'M',
+          'uom'        => 'طقم',
+        ],
         'prices' => [
           ['id' => 'PR-009-1', 'label' => 'محلي', 'supplier' => 'الإسكندرية الطبية', 'supplierType' => 'محلي', 'itemCode' => 'ITM-009-01', 'amount' => 450],
         ],
@@ -201,6 +286,13 @@ class PrototypeSeedData
       [
         'code' => 'ITM-010', 'name' => 'مفصل كوع', 'spec' => 'Small — Mechanical',
         'qty' => 10, 'reserved' => 0, 'category' => 'مفاصل', 'status' => 'ok', 'lastMoved' => null,
+        'attributes' => [
+          'joint_type'     => 'elbow',
+          'mechanism'      => 'mechanical',
+          'activity_level' => 'K2',
+          'side'           => 'universal',
+          'uom'            => 'قطعة',
+        ],
         'prices' => [
           ['id' => 'PR-010-1', 'label' => 'Mechanical', 'supplier' => 'Ottobock Egypt', 'supplierType' => 'OEM', 'itemCode' => 'ITM-010-01', 'amount' => 1000],
         ],

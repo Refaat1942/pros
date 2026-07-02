@@ -20,6 +20,14 @@ window.CatalogSections = (function () {
     return m ? m.getAttribute('content') : '';
   }
 
+  function showToast(msg, isError) {
+    if (window.DashboardToast) {
+      window.DashboardToast.show(msg, { id: 'toast', isError: !!isError });
+      return;
+    }
+    alert(msg);
+  }
+
   function init(list, options) {
     options = options || {};
     pageMode = !!options.pageMode || !!document.getElementById('section-stock-categories');
@@ -600,6 +608,13 @@ window.CatalogSections = (function () {
       renderCategoriesList();
       renderCategoryFilter();
       populateCategorySelect(document.getElementById('slimCategoryId')?.value);
+      err.style.display = 'none';
+      err.textContent = '';
+      showToast(
+        data.message || (id
+          ? 'تم تحديث القسم بنجاح.'
+          : ('تم إضافة القسم «' + (saved.name || name) + '» بنجاح.')),
+      );
       if (pageMode) {
         editCategory(saved);
       } else {
@@ -607,12 +622,14 @@ window.CatalogSections = (function () {
       }
     })
     .catch(function (e) {
-      err.textContent = (e && e.message) ? e.message : 'تعذّر الحفظ.';
+      var message = (e && e.message) ? e.message : 'تعذّر الحفظ.';
       if (e && e.errors) {
         var first = Object.values(e.errors)[0];
-        if (first && first[0]) err.textContent = first[0];
+        if (first && first[0]) message = first[0];
       }
+      err.textContent = message;
       err.style.display = 'block';
+      showToast(message, true);
     });
   }
 

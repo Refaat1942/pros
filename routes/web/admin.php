@@ -89,12 +89,6 @@ Route::prefix('admin')
         Route::get('catalog/export', [StockCatalogController::class, 'export'])
             ->name('catalog.export');
 
-        Route::get('catalog/sales-by-price', [StockCatalogController::class, 'salesByPrice'])
-            ->name('catalog.sales-by-price');
-
-        Route::get('catalog/sales-by-price/export', [StockCatalogController::class, 'exportSalesByPrice'])
-            ->name('catalog.sales-by-price.export');
-
         Route::post('catalog/import', [StockCatalogController::class, 'import'])
             ->middleware('can:import-inventory')
             ->name('catalog.import');

@@ -58,74 +58,6 @@ class StockItemSalesStatsService
         ];
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public function report(?Carbon $from = null, ?Carbon $to = null, ?string $search = null): array
-    {
-        $query = StockItem::query()
-            ->with('prices:id,stock_item_id,amount')
-            ->when($search, fn ($q, $term) => $q->where(function ($q) use ($term) {
-                $q->where('name', 'like', "%{$term}%")
-                    ->orWhere('code', 'like', "%{$term}%")
-                    ->orWhere('barcode', 'like', "%{$term}%");
-            }))
-            ->orderBy('code');
-
-        $salesByCode = $this->salesAggregatesByItem($from, $to);
-
-        return $query->get()
-            ->flatMap(function (StockItem $item) use ($salesByCode) {
-                $registered = $this->registeredPriceAmounts($item);
-                $sales      = $salesByCode->get($item->code, collect());
-                $rows       = $this->mergePriceRows($registered, $sales);
-
-                if ($rows->every(fn (array $row) => $row['sale_times'] === 0 && $row['sold_qty'] === 0)) {
-                    return [];
-                }
-
-                return $rows->map(fn (array $row) => [
-                    'item_code'  => $item->code,
-                    'item_name'  => $item->name,
-                    'unit_price' => $row['unit_price'],
-                    'registered' => $row['registered'],
-                    'sale_times' => $row['sale_times'],
-                    'sold_qty'   => $row['sold_qty'],
-                ])->all();
-            })
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @return array{title: string, period_label: string, headers: list<string>, rows: list<list<string>>}
-     */
-    public function exportReport(?Carbon $from = null, ?Carbon $to = null, ?string $search = null): array
-    {
-        $rows = $this->report($from, $to, $search);
-
-        return [
-            'title'        => 'إحصائيات البيع حسب مستوى السعر',
-            'period_label' => $this->periodLabel($from, $to),
-            'headers'      => [
-                'كود الصنف',
-                'اسم الصنف',
-                'السعر (ج.م)',
-                'مسجّل في الدليل',
-                'مرات البيع',
-                'الكمية المباعة',
-            ],
-            'rows' => array_map(fn (array $row) => [
-                $row['item_code'],
-                $row['item_name'],
-                number_format((float) $row['unit_price'], 2, '.', ''),
-                $row['registered'] ? 'نعم' : 'لا',
-                (string) $row['sale_times'],
-                (string) $row['sold_qty'],
-            ], $rows),
-        ];
-    }
-
     /** @return list<float> */
     private function registeredPriceAmounts(StockItem $item): array
     {
@@ -160,24 +92,6 @@ class StockItemSalesStatsService
             ->groupBy('pricing_request_items.unit_price')
             ->get()
             ->keyBy(fn ($row) => $this->priceKey((float) $row->unit_price));
-    }
-
-    /** @return Collection<string, Collection<string, object>> */
-    private function salesAggregatesByItem(?Carbon $from, ?Carbon $to): Collection
-    {
-        return $this->baseSalesQuery($from, $to)
-            ->select([
-                'pricing_request_items.stock_item_code',
-                'pricing_request_items.unit_price',
-                DB::raw('SUM(pricing_request_items.qty) as sold_qty'),
-                DB::raw('COUNT(DISTINCT cases.id) as sale_times'),
-            ])
-            ->groupBy('pricing_request_items.stock_item_code', 'pricing_request_items.unit_price')
-            ->get()
-            ->groupBy('stock_item_code')
-            ->map(fn (Collection $group) => $group->keyBy(
-                fn ($row) => $this->priceKey((float) $row->unit_price)
-            ));
     }
 
     private function baseSalesQuery(?Carbon $from, ?Carbon $to, ?string $stockItemCode = null)

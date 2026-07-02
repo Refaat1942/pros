@@ -12,7 +12,6 @@ use App\Services\StockCatalogService;
 use App\Services\StockImportService;
 use App\Services\StockItemSalesStatsService;
 use App\Services\StockPriceService;
-use App\Support\ExportCsvFormat;
 use App\Support\Barcode\Code128;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
@@ -216,69 +215,5 @@ class StockCatalogController extends Controller
         return response()->json(
             $this->salesStatsService->breakdownForItem($stockItem, $range['from'], $range['to'])
         );
-    }
-
-    /**
-     * تقرير شامل — كل الأصناف × مستويات الأسعار.
-     */
-    public function salesByPrice(Request $request): JsonResponse
-    {
-        $range = $this->salesStatsService->parseDateRange(
-            $request->query('from'),
-            $request->query('to'),
-        );
-
-        $rows = $this->salesStatsService->report(
-            $range['from'],
-            $range['to'],
-            $request->query('search'),
-        );
-
-        return response()->json([
-            'data'          => $rows,
-            'total'         => count($rows),
-            'period_label'  => $this->salesStatsService->exportReport($range['from'], $range['to'])['period_label'],
-            'date_from'     => $range['from']?->toDateString(),
-            'date_to'       => $range['to']?->toDateString(),
-        ]);
-    }
-
-    /**
-     * تصدير CSV — إحصائيات البيع حسب مستوى السعر.
-     */
-    public function exportSalesByPrice(Request $request): StreamedResponse
-    {
-        $range = $this->salesStatsService->parseDateRange(
-            $request->query('from'),
-            $request->query('to'),
-        );
-
-        $report = $this->salesStatsService->exportReport(
-            $range['from'],
-            $range['to'],
-            $request->query('search'),
-        );
-
-        $filename = 'sales-by-price-' . now()->format('Y-m-d') . '.xlsx';
-
-        $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-
-        $callback = function () use ($report) {
-            $out = fopen('php://output', 'w');
-            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
-            fputcsv($out, [$report['title']]);
-            fputcsv($out, [$report['period_label']]);
-            fputcsv($out, []);
-            fputcsv($out, ExportCsvFormat::row($report['headers']));
-            foreach ($report['rows'] as $row) {
-                fputcsv($out, ExportCsvFormat::row($row));
-            }
-            fclose($out);
-        };
-
-        return response()->stream($callback, 200, $headers);
     }
 }

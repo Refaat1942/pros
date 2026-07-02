@@ -22,15 +22,15 @@ class DatabaseSeeder extends Seeder
             RolesAndAdminSeeder::class,
 
             // ── بيانات أساسية ───────────────────────────────────────────────
-            // ContractCompanySeeder::class,
+            ContractCompanySeeder::class,
             // MilitaryRankSeeder::class,
-            // VisitTypeSeeder::class,
-            // StockCategorySeeder::class,
+            VisitTypeSeeder::class,
+            StockCategorySeeder::class,
 
-            // // ── موردون ومخزون ───────────────────────────────────────────────
+            // ── موردون ومخزون ───────────────────────────────────────────────
             // ContractCompanyDebtSeeder::class,
-            // SupplierSeeder::class,
-            // InventorySeeder::class,
+            SupplierSeeder::class,
+            InventorySeeder::class,
 
             // // ── مسار المريض والحالات ────────────────────────────────────────
             // PatientSeeder::class,

@@ -33,8 +33,9 @@ class StockCategoryDynamicFieldsTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $response->assertJsonPath('name', 'أقمشة');
-        $this->assertCount(1, $response->json('fields'));
+        $response->assertJsonPath('stock_category.name', 'أقمشة');
+        $response->assertJsonPath('message', 'تم إضافة القسم «أقمشة» بنجاح.');
+        $this->assertCount(1, $response->json('stock_category.fields'));
     }
 
     public function test_catalog_item_stores_category_attributes(): void

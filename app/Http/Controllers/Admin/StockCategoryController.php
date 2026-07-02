@@ -61,7 +61,10 @@ class StockCategoryController extends Controller
         );
 
         if ($request->expectsJson()) {
-            return response()->json($this->schema->formatCategory($category->fresh('fields')), 201);
+            return response()->json([
+                'message'        => "تم إضافة القسم «{$category->name}» بنجاح.",
+                'stock_category' => $this->schema->formatCategory($category->fresh('fields')),
+            ], 201);
         }
 
         return redirect()

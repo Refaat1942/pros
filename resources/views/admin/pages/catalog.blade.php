@@ -9,10 +9,6 @@
         'from' => $dateFrom,
         'to'   => $dateTo,
     ]));
-    $salesExportUrl = route('admin.catalog.sales-by-price.export', array_filter([
-        'from' => $dateFrom,
-        'to'   => $dateTo,
-    ]));
     // $categories = collect($stock_categories ?? []);
 @endphp
 <div class="section-view" id="section-catalog">
@@ -62,7 +58,6 @@
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
             <a class="btn-action" href="{{ $exportUrl }}">📊 تصدير Excel</a>
-            <a class="btn-action" href="{{ $salesExportUrl }}" title="مرات البيع لكل سعر مسجّل — حالات مُسلَّمة">📈 بيع حسب السعر</a>
 
             @can('import-inventory')
                 <a class="btn-action" href="{{ route('admin.catalog.template') }}">⬇️ تنزيل القالب</a>

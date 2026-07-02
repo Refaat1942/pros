@@ -86,28 +86,6 @@ class StockItemSalesStatsTest extends TestCase
             ->assertJsonPath('rows.0.sale_times', 1);
     }
 
-    public function test_admin_can_export_sales_by_price_csv(): void
-    {
-        $admin = $this->userWithRole('admin');
-        $item  = $this->stockItem('RM-CSV', qty: 10, wac: 25);
-        $item->update(['price' => 25]);
-
-        $patient = $this->civilianPatient($this->civilianCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
-        $case->update(['delivered_at' => now()]);
-        $this->attachPricingLine($case, 'RM-CSV', 25, 1);
-
-        $response = $this->actingAs($admin)
-            ->get(route('admin.catalog.sales-by-price.export'));
-
-        $response->assertOk();
-        $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
-
-        $body = $response->streamedContent();
-        $this->assertStringContainsString('RM-CSV', $body);
-        $this->assertStringContainsString('25.00', $body);
-    }
-
     private function attachPricingLine(CaseRecord $case, string $code, float $unitPrice, int $qty): PricingRequest
     {
         static $seq = 0;
