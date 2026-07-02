@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Notifications;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppNotification;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Auth;
  */
 class NotificationController extends Controller
 {
+    public function __construct(private readonly NotificationService $notifications)
+    {
+    }
+
     /**
      * تعليم إشعار واحد كمقروء — للدور الحالي فقط.
      */
@@ -34,13 +39,7 @@ class NotificationController extends Controller
     {
         $roleSlug = Auth::user()?->role?->slug;
 
-        if ($roleSlug === null) {
-            return back();
-        }
-
-        $updated = AppNotification::forRole($roleSlug)
-            ->unread()
-            ->update(['read_at' => now()]);
+        $updated = $this->notifications->markAllReadForRole($roleSlug);
 
         return back()->with('status', $updated > 0
             ? "تم تعليم {$updated} إشعاراً كمقروء."

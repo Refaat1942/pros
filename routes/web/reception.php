@@ -52,6 +52,12 @@ Route::prefix('reception')
             Route::put('appointments/{appointment}', [AppointmentController::class, 'update'])
                 ->name('appointments.update');
 
+            Route::patch('appointments/{appointment}/correct', [AppointmentController::class, 'correct'])
+                ->name('appointments.correct');
+
+            Route::delete('appointments/{appointment}', [AppointmentController::class, 'destroy'])
+                ->name('appointments.destroy');
+
             Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])
                 ->name('appointments.update-status');
         });

@@ -266,14 +266,13 @@ class AdminReportsHubService
             $c->case_no ?? '—',
             $c->company_name ?? $c->contractCompany?->name ?? '—',
             CaseStage::labelFor($c->stage_key),
-            ClinicTime::format($c->created_at, 'd/m/Y'),
         ])->values()->all();
 
         return [
             'title'        => 'مسار المرضى — حالات جديدة',
             'period_label' => $this->periodLabel($from, $to),
             'summary'      => [],
-            'headers'      => ['المريض', 'رقم الحالة', 'الجهة', 'المرحلة', 'تاريخ الفتح'],
+            'headers'      => ['المريض', 'رقم الحالة', 'الجهة', 'المرحلة'],
             'rows'         => $rows,
         ];
     }

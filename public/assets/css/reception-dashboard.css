@@ -1324,3 +1324,35 @@
         grid-template-columns: 1fr;
       }
     }
+
+    .appt-actions {
+      display: inline-flex;
+      flex-wrap: nowrap;
+      gap: 4px;
+      align-items: center;
+      justify-content: flex-start;
+      white-space: nowrap;
+    }
+
+    .appt-actions .btn {
+      padding: 5px 9px;
+      font-size: 11px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    #tab-appointments table th:last-child,
+    #tab-appointments table td:last-child {
+      white-space: nowrap;
+      width: 1%;
+    }
+
+    .appt-actions .btn-danger {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .appt-actions .btn-danger:hover {
+      background: #fee2e2;
+    }

@@ -95,9 +95,10 @@ class AdminReportsPageTest extends TestCase
             ->assertOk()
             ->assertSee('data-server-rendered="1"', false)
             ->assertSee('overview-date-filter', false)
-            ->assertSee('المالية والإيرادات', false)
-            ->assertSee('الإيرادات الشهرية')
-            ->assertSee('صحة المخزون')
+            ->assertSee('مسح الفلتر', false)
+            ->assertSee('دورة العمل — الطوابير الحية', false)
+            ->assertDontSee('overview-metrics-row', false)
+            ->assertDontSee('المالية والإيرادات', false)
             ->assertSee('id="overview-bi"', false)
             ->assertSee('id="bi-board-1"', false);
 

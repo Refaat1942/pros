@@ -31,7 +31,7 @@ use App\Services\AdjustmentsTransferHistoryService;
 use App\Services\BomService;
 use App\Services\DoctorTransferService;
 use App\Services\ReceptionAnalyticsService;
-use App\Services\WorkshopAnalyticsService;
+use App\Services\Notifications\NotificationService;
 use App\Services\SpecEditRequestService;
 use App\Services\SpecOrdersService;
 use App\Services\StockCatalogService;
@@ -895,6 +895,10 @@ class DashboardPageDataService
     private function notificationsInbox(): array
     {
         $roleSlug = auth()->user()?->role?->slug ?? '';
+
+        if ($roleSlug !== '') {
+            app(NotificationService::class)->markAllReadForRole($roleSlug);
+        }
 
         $base = AppNotification::query()->forRole($roleSlug);
 

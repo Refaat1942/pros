@@ -20,9 +20,9 @@
 
   function $(id) { return document.getElementById(id); }
 
-  function toast(msg, isError) {
+  function toast(msg, isError, extra) {
     if (window.DashboardToast) {
-      window.DashboardToast.show(msg, { id: 'toast', isError: !!isError });
+      window.DashboardToast.show(msg, Object.assign({ id: 'toast', isError: !!isError }, extra || {}));
       return;
     }
     alert(msg);
@@ -90,12 +90,18 @@
     var btn = ev.currentTarget;
     var caseId = btn.getAttribute('data-case-id');
     if (!caseId || !window.axios) return;
-    if (!window.confirm('تأكيد تم التصنيع؟ ستُحوَّل الحالة إلى المخزن لإتمام التسليم وإغلاق الطلب.')) return;
+    if (!window.confirm('تأكيد تم التصنيع؟\n\nبعد الإتمام يُرجى توجيه العميل إلى المخزن لاستلام الطرف وإتمام التسليم.')) return;
 
     btn.disabled = true;
     axios.post('/workshop/workshop/' + caseId + '/finish-quality')
-      .then(function () {
-        toast('✅ تم التصنيع — الحالة جاهزة للتسليم في المخزن');
+      .then(function (res) {
+        var message = (res.data && res.data.message)
+          || 'تم التصنيع — يُرجى توجيه العميل إلى المخزن للتسليم.';
+        toast(message, false, {
+          title: 'تم التصنيع',
+          type: 'success',
+          duration: 8000,
+        });
         refreshList();
       })
       .catch(function (err) {

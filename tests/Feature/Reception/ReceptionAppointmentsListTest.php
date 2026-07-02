@@ -94,4 +94,67 @@ class ReceptionAppointmentsListTest extends TestCase
 
         \Carbon\Carbon::setTestNow();
     }
+
+    public function test_reception_can_correct_waiting_appointment(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'اسم خاطئ');
+
+        $appointment = \App\Models\Appointment::query()
+            ->where('patient_id', $patient->id)
+            ->firstOrFail();
+
+        $visitType = $this->defaultVisitType();
+
+        $this->actingAs($recep)
+            ->patchJson("/reception/appointments/{$appointment->id}/correct", [
+                'name'                => 'اسم صحيح',
+                'phone'               => '01099998888',
+                'national_id'         => '29901010100999',
+                'visit_type_id'       => $visitType->id,
+                'contract_company_id' => $company->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('patient_name', 'اسم صحيح')
+            ->assertJsonPath('phone', '01099998888');
+
+        $this->assertSame('اسم صحيح', $patient->fresh()->name);
+    }
+
+    public function test_reception_can_delete_waiting_appointment_and_orphan_patient(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض للحذف');
+
+        $appointment = \App\Models\Appointment::query()
+            ->where('patient_id', $patient->id)
+            ->firstOrFail();
+
+        $this->actingAs($recep)
+            ->deleteJson("/reception/appointments/{$appointment->id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'تم حذف الموعد بنجاح.');
+
+        $this->assertDatabaseMissing('appointments', ['id' => $appointment->id]);
+        $this->assertDatabaseMissing('patients', ['id' => $patient->id]);
+    }
+
+    public function test_reception_cannot_delete_transferred_appointment(): void
+    {
+        $company = $this->civilianCompany();
+        $recep   = $this->userWithRole('reception');
+        $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض محوّل');
+
+        $this->transferPatientToClinicHttp($recep, $patient);
+
+        $appointment = \App\Models\Appointment::query()
+            ->where('patient_id', $patient->id)
+            ->firstOrFail();
+
+        $this->actingAs($recep)
+            ->deleteJson("/reception/appointments/{$appointment->id}")
+            ->assertStatus(422);
+    }
 }

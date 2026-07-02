@@ -91,7 +91,7 @@ class WorkshopQueueController extends Controller
         $case->refresh()->load(['patient:id,patient_code,name', 'bom']);
 
         return response()->json([
-            'message' => 'تم التصنيع — الحالة جاهزة للتسليم.',
+            'message' => 'تم التصنيع — يُرجى توجيه العميل إلى المخزن للتسليم.',
             'case'    => ManufacturingDeskCaseFormatter::format($case, 'workshop.work-order.print'),
             'bom'     => $bom->only(['id', 'bom_no', 'stage', 'finished_at']),
         ]);

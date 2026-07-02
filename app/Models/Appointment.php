@@ -194,6 +194,12 @@ class Appointment extends Model
         return $this->patient_type === Patient::TYPE_MILITARY;
     }
 
+    /** تعديل أو حذف من الاستقبال — قبل التحويل للعيادة فقط. */
+    public function isReceptionEditable(): bool
+    {
+        return $this->status === self::STATUS_WAITING && ! $this->transferred_to_clinic;
+    }
+
     /** اسم نوع الزيارة للعرض — من جدول visit_types وليس المعرّف. */
     public function displayVisitType(): string
     {

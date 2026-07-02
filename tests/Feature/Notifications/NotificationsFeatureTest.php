@@ -193,7 +193,7 @@ class NotificationsFeatureTest extends TestCase
             ->assertSee('تعليم الكل كمقروء');
     }
 
-    public function test_notifications_page_filters_unread_only(): void
+    public function test_notifications_page_unread_filter_empty_after_auto_mark(): void
     {
         $user = $this->userWithRole('spec');
 
@@ -212,8 +212,10 @@ class NotificationsFeatureTest extends TestCase
         $this->actingAs($user)
             ->get('/spec/notifications?filter=unread')
             ->assertOk()
-            ->assertSee('جديد')
-            ->assertDontSee('>مقروء<', false);
+            ->assertSee('لا توجد إشعارات غير مقروءة')
+            ->assertDontSee('notif-pill-new', false);
+
+        $this->assertSame(0, AppNotification::forRole(Role::SLUG_SPEC)->unread()->count());
     }
 
     public function test_mark_all_read_clears_unread_for_role(): void
@@ -228,6 +230,23 @@ class NotificationsFeatureTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(0, AppNotification::forRole(Role::SLUG_OPERATIONS)->unread()->count());
+    }
+
+    public function test_notifications_page_marks_all_as_read_on_visit(): void
+    {
+        $user = $this->userWithRole('technical');
+
+        AppNotification::create(['role_slug' => Role::SLUG_TECHNICAL, 'title' => 'صرف', 'body' => 'أمر جديد']);
+        AppNotification::create(['role_slug' => Role::SLUG_TECHNICAL, 'title' => 'تسليم', 'body' => 'طرف جاهز']);
+        AppNotification::create(['role_slug' => Role::SLUG_DOCTOR, 'title' => 'طبيب', 'body' => 'لا يُمس']);
+
+        $this->actingAs($user)
+            ->get('/technical/notifications')
+            ->assertOk()
+            ->assertSee('سجل الإشعارات');
+
+        $this->assertSame(0, AppNotification::forRole(Role::SLUG_TECHNICAL)->unread()->count());
+        $this->assertSame(1, AppNotification::forRole(Role::SLUG_DOCTOR)->unread()->count());
     }
 
     public function test_reception_notified_when_last_patient_exam_is_locked(): void

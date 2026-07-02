@@ -285,6 +285,20 @@ class NotificationService
     }
 
     /**
+     * تعليم كل إشعارات دور/لوحة كمقروءة — عند فتح صفحة الإشعارات أو زر «تعليم الكل».
+     */
+    public function markAllReadForRole(?string $roleSlug): int
+    {
+        if ($roleSlug === null || $roleSlug === '') {
+            return 0;
+        }
+
+        return AppNotification::forRole($roleSlug)
+            ->unread()
+            ->update(['read_at' => now()]);
+    }
+
+    /**
      * أجهزة (FCM tokens) كل مستخدمي دور معيّن.
      *
      * @return list<string>

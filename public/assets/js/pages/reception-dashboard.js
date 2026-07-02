@@ -556,20 +556,26 @@
           : (row.company_name || '—'));
       return {
         id: row.id,
+        patientId: row.patient_id || patient.id || null,
         date: displayDateFromIso(row.appointment_date),
         time: row.appointment_time ? String(row.appointment_time).substring(0, 5) : '—',
         queueNumber: row.queue_number != null ? String(row.queue_number) : (row.patient_id != null ? String(row.patient_id) : '—'),
         name: row.patient_name || patient.name || '—',
-        phone: row.phone || '—',
+        phone: row.phone || patient.phone || '—',
+        nationalId: patient.national_id || '',
+        contractCompanyId: patient.contract_company_id || null,
+        militaryRankId: patient.military_rank_id || null,
         company: affiliation,
         entity: entity,
         entityHtml: window.EntityBadges ? EntityBadges.renderHtml(row) : affiliation,
         patient_type: row.patient_type || patient.patient_type || 'civilian',
         visitType: row.visit_type_id ? String(row.visit_type_id) : 'exam',
-        visitTypeLabel: visitTypeName || getVisitMeta('exam').label,
+        visitTypeId: row.visit_type_id || null,
+        visitTypeLabel: visitTypeName || row.visit_type_label || getVisitMeta('exam').label,
         status: row.status || 'waiting',
         statusLabel: row.status_label || row.status || 'waiting',
         transferredToClinic: !!row.transferred_to_clinic,
+        canEdit: !!row.can_edit,
         registeredAt: row.registered_at_formatted || '—',
         waitLabel: row.wait_label || '—',
         waitStartedAt: row.wait_started_at || row.created_at || null,
@@ -811,7 +817,159 @@
       if (a.transferredToClinic || a.status === 'in_clinic') {
         return '<span style="font-size:12px;font-weight:700;color:#059669;">✅ تم التحويل للعيادة</span>';
       }
-      return '<button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="transferAppointmentToClinic(' + a.id + ')">تحويل</button>';
+      if (!a.canEdit) {
+        return '<span style="font-size:12px;color:var(--text-muted);">—</span>';
+      }
+      return '<div class="appt-actions">' +
+        '<button type="button" class="btn btn-secondary appt-actions__transfer" onclick="transferAppointmentToClinic(' + a.id + ')">تحويل</button>' +
+        '<button type="button" class="btn btn-danger appt-actions__delete" onclick="deleteAppointment(' + a.id + ')">حذف</button>' +
+        '</div>';
+    }
+
+    function cloneSelectOptions(sourceId, targetId, includeBlank) {
+      var source = document.getElementById(sourceId);
+      var target = document.getElementById(targetId);
+      if (!source || !target) return;
+      var html = includeBlank ? target.innerHTML : '';
+      Array.prototype.slice.call(source.options).forEach(function(opt) {
+        if (!opt.value && !includeBlank) return;
+        html += '<option value="' + opt.value + '">' + opt.textContent + '</option>';
+      });
+      target.innerHTML = html;
+    }
+
+    function closeEditAppointmentModal() {
+      var modal = document.getElementById('editAppointmentModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function openEditAppointmentModal(id) {
+      var appt = appointments.find(function(a) { return a.id === id; });
+      if (!appt || !appt.canEdit) return;
+
+      cloneSelectOptions('newVisitTypeId', 'editVisitTypeId', false);
+      cloneSelectOptions('newCompanyId', 'editCompanyId', true);
+      cloneSelectOptions('newRankId', 'editRankId', true);
+
+      document.getElementById('editAppointmentId').value = String(appt.id);
+      document.getElementById('editPatientName').value = appt.name === '—' ? '' : appt.name;
+      document.getElementById('editPatientPhone').value = appt.phone === '—' ? '' : appt.phone;
+      document.getElementById('editNationalId').value = appt.nationalId || '';
+      document.getElementById('editVisitTypeId').value = appt.visitTypeId ? String(appt.visitTypeId) : '';
+
+      var isMilitary = appt.patient_type === 'military';
+      document.getElementById('grpEditCompany').style.display = isMilitary ? 'none' : '';
+      document.getElementById('grpEditRank').style.display = isMilitary ? '' : 'none';
+
+      if (!isMilitary && appt.contractCompanyId) {
+        document.getElementById('editCompanyId').value = String(appt.contractCompanyId);
+      } else {
+        document.getElementById('editCompanyId').value = '';
+      }
+
+      if (isMilitary && appt.militaryRankId) {
+        document.getElementById('editRankId').value = String(appt.militaryRankId);
+      } else {
+        document.getElementById('editRankId').value = '';
+      }
+
+      document.getElementById('editAppointmentModal').style.display = 'flex';
+    }
+
+    function saveEditAppointment() {
+      var id = parseInt(document.getElementById('editAppointmentId').value, 10);
+      var appt = appointments.find(function(a) { return a.id === id; });
+      if (!appt || !appt.canEdit) return;
+
+      var payload = {
+        name: (document.getElementById('editPatientName').value || '').trim(),
+        phone: (document.getElementById('editPatientPhone').value || '').trim() || null,
+        national_id: (document.getElementById('editNationalId').value || '').trim() || null,
+        visit_type_id: parseInt(document.getElementById('editVisitTypeId').value, 10)
+      };
+
+      if (appt.patient_type === 'military') {
+        payload.military_rank_id = parseInt(document.getElementById('editRankId').value, 10) || null;
+      } else {
+        var companyVal = document.getElementById('editCompanyId').value;
+        payload.contract_company_id = companyVal ? parseInt(companyVal, 10) : null;
+      }
+
+      if (!payload.name) {
+        showToast('اسم المريض مطلوب', true);
+        return;
+      }
+      if (!payload.visit_type_id) {
+        showToast('نوع الزيارة مطلوب', true);
+        return;
+      }
+      if (appt.patient_type === 'military' && !payload.military_rank_id) {
+        showToast('الرتبة العسكرية مطلوبة', true);
+        return;
+      }
+
+      fetch('/reception/appointments/' + id + '/correct', {
+        method: 'PATCH',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken()
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      })
+        .then(function(res) {
+          if (!res.ok) return res.json().then(function(j) { throw j; });
+          return res.json();
+        })
+        .then(function(row) {
+          var mapped = mapAppointmentFromApi(row);
+          var idx = appointments.findIndex(function(a) { return a.id === id; });
+          if (idx !== -1) appointments[idx] = mapped;
+          closeEditAppointmentModal();
+          renderAppointments();
+          renderCalendar();
+          renderReceptionAnalytics();
+          showToast('تم تحديث بيانات الموعد');
+        })
+        .catch(function(err) {
+          var msg = (err && err.message) ? err.message : 'تعذّر حفظ التعديلات';
+          if (err && err.errors) {
+            msg = Object.values(err.errors).flat().join(' — ');
+          }
+          showToast(msg, true);
+        });
+    }
+
+    function deleteAppointment(id) {
+      var appt = appointments.find(function(a) { return a.id === id; });
+      if (!appt || !appt.canEdit) return;
+      if (!window.confirm('حذف موعد «' + appt.name + '»؟\nسيتم حذف ملف المريض أيضاً إذا لم يُحوَّل للعيادة ولم تبدأ له حالة.')) return;
+
+      fetch('/reception/appointments/' + id, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken()
+        },
+        credentials: 'same-origin'
+      })
+        .then(function(res) {
+          if (!res.ok) return res.json().then(function(j) { throw j; });
+          return res.json();
+        })
+        .then(function() {
+          appointments = appointments.filter(function(a) { return a.id !== id; });
+          renderAppointments();
+          renderCalendar();
+          renderReceptionAnalytics();
+          showToast('تم حذف الموعد');
+        })
+        .catch(function(err) {
+          showToast((err && err.message) ? err.message : 'تعذّر حذف الموعد', true);
+        });
     }
 
     function transferAppointmentToClinic(id) {
@@ -987,6 +1145,8 @@
     }
     window.deliverCase = deliverCase;
     window.transferAppointmentToClinic = transferAppointmentToClinic;
+    window.openEditAppointmentModal = openEditAppointmentModal;
+    window.deleteAppointment = deleteAppointment;
 
     function renderDeliveryTable() {
       var tbody = document.getElementById('deliveryTable');
@@ -1289,6 +1449,19 @@
 
     var btnCancelAddPatient = document.getElementById('btnCancelAddPatient');
     if (btnCancelAddPatient) btnCancelAddPatient.addEventListener('click', closeAddPatientForm);
+
+    var btnSaveEditAppointment = document.getElementById('btnSaveEditAppointment');
+    if (btnSaveEditAppointment) btnSaveEditAppointment.addEventListener('click', saveEditAppointment);
+    var btnCancelEditAppointment = document.getElementById('btnCancelEditAppointment');
+    if (btnCancelEditAppointment) btnCancelEditAppointment.addEventListener('click', closeEditAppointmentModal);
+    var btnCloseEditAppointmentModal = document.getElementById('closeEditAppointmentModal');
+    if (btnCloseEditAppointmentModal) btnCloseEditAppointmentModal.addEventListener('click', closeEditAppointmentModal);
+    var editAppointmentModal = document.getElementById('editAppointmentModal');
+    if (editAppointmentModal) {
+      editAppointmentModal.addEventListener('click', function(e) {
+        if (e.target === editAppointmentModal) closeEditAppointmentModal();
+      });
+    }
 
     // ── CSRF helper ────────────────────────────────────────────────────────
     function getCsrfToken() {

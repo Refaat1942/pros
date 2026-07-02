@@ -10,6 +10,7 @@
             <input type="date" name="to" value="{{ $date_to ?? now()->toDateString() }}" required>
         </label>
         <button type="submit" class="btn-action primary">تطبيق الفترة</button>
+        <a href="{{ route('admin.overview') }}" class="btn-action">مسح الفلتر</a>
         <a href="{{ route('admin.overview.export', ['from' => $date_from ?? now()->startOfMonth()->toDateString(), 'to' => $date_to ?? now()->toDateString()]) }}"
            class="btn-export excel"
            download>📊 تصدير Excel</a>
@@ -66,8 +67,6 @@
             </button>
         </div>
     </section>
-
-    @include('admin.partials.overview-metrics')
 
     @include('admin.partials.overview-bi')
 </div>

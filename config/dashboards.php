@@ -130,6 +130,7 @@ return [
         'sidebar' => ['icon' => '💰', 'title' => 'لوحة التكاليف', 'subtitle' => 'مراجعة وإصدار العرض'],
         'pages' => [
             'costing' => ['title' => 'التكاليف', 'icon' => '💰', 'label' => 'التكاليف'],
+            'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [

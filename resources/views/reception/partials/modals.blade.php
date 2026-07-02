@@ -46,7 +46,7 @@
       {{-- Header --}}
       <div style="background:linear-gradient(135deg,#059669,#0d9488);color:#fff;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <div>
-          <h3 style="font-size:16px;font-weight:700;margin:0;">📄 رفع خطاب موافقة الجهة الضامنة (OCR)</h3>
+          <h3 style="font-size:16px;font-weight:700;margin:0;">📄 رفع خطاب موافقة الجهة الضامنة</h3>
           <p style="font-size:12px;opacity:.85;margin:4px 0 0;" id="ocrQuoteRef">—</p>
         </div>
         <button type="button" id="btnCloseOcrModal"
@@ -225,6 +225,58 @@
           <button class="btn btn-secondary" id="btnClosePatientCard">إغلاق</button>
           <button class="btn btn-primary" id="btnPrintPatientCard" type="button">🖨️ طباعة البطاقة</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  {{-- Edit appointment / patient data (before clinic transfer) --}}
+  <div class="modal-overlay" id="editAppointmentModal" style="display:none;">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>✏️ تعديل بيانات الموعد</h3>
+        <button type="button" class="modal-close" id="closeEditAppointmentModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 14px;">
+          يمكن التعديل أو الحذف فقط قبل تحويل المريض للعيادة.
+        </p>
+        <form id="editAppointmentForm">
+          <input type="hidden" id="editAppointmentId" value="">
+          <div class="add-patient-form-grid">
+            <div class="form-group">
+              <label>اسم المريض <span style="color:red">*</span></label>
+              <input type="text" class="form-control" id="editPatientName" maxlength="255" required>
+            </div>
+            <div class="form-group">
+              <label>رقم الهاتف</label>
+              <input type="tel" class="form-control" id="editPatientPhone" maxlength="11" inputmode="numeric">
+            </div>
+            <div class="form-group">
+              <label>الرقم القومي</label>
+              <input type="text" class="form-control" id="editNationalId" maxlength="14" inputmode="numeric">
+            </div>
+            <div class="form-group">
+              <label>نوع الزيارة <span style="color:red">*</span></label>
+              <select class="form-control" id="editVisitTypeId" required></select>
+            </div>
+            <div class="form-group" id="grpEditCompany" style="display:none;">
+              <label>جهة التعاقد</label>
+              <select class="form-control" id="editCompanyId">
+                <option value="">— كاش / بدون جهة —</option>
+              </select>
+            </div>
+            <div class="form-group" id="grpEditRank" style="display:none;">
+              <label>الرتبة العسكرية <span style="color:red">*</span></label>
+              <select class="form-control" id="editRankId">
+                <option value="">— اختر الرتبة —</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border);">
+        <button type="button" class="btn btn-secondary" id="btnCancelEditAppointment">إلغاء</button>
+        <button type="button" class="btn btn-primary" id="btnSaveEditAppointment">💾 حفظ التعديلات</button>
       </div>
     </div>
   </div>

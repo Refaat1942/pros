@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Appointment;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Appointment\CorrectAppointmentRequest;
 use App\Http\Requests\Appointment\StoreAppointmentRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentStatusRequest;
@@ -30,7 +31,7 @@ class AppointmentController extends Controller
         $date = $request->date ?? ClinicTime::todayDateString();
 
         $query = Appointment::with([
-            'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity',
+            'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity,national_id,military_rank_id',
             'patient.contractCompany:id,name,is_contracted',
             'visitTypeRecord:id,name',
         ])
@@ -70,6 +71,23 @@ class AppointmentController extends Controller
         return response()->json($appointment);
     }
 
+    public function correct(CorrectAppointmentRequest $request, Appointment $appointment): JsonResponse
+    {
+        $appointment = $this->appointmentService->correctReceptionEntry(
+            $appointment,
+            $request->validated(),
+        );
+
+        return response()->json($this->formatForReceptionList($appointment));
+    }
+
+    public function destroy(Appointment $appointment): JsonResponse
+    {
+        $this->appointmentService->removeReceptionEntry($appointment);
+
+        return response()->json(['message' => 'تم حذف الموعد بنجاح.']);
+    }
+
     public function updateStatus(UpdateAppointmentStatusRequest $request, Appointment $appointment): JsonResponse
     {
         try {
@@ -99,6 +117,10 @@ class AppointmentController extends Controller
 
         return $appointment->toArray() + [
             'queue_number'            => $appointment->queue_number,
+            'visit_type_id'           => $appointment->visit_type_id,
+            'visit_type_label'        => $appointment->displayVisitType(),
+            'patient_id'              => $appointment->patient_id,
+            'can_edit'                => $appointment->isReceptionEditable(),
             'patient_type'            => $appointment->patient_type ?? $appointment->patient?->patient_type,
             'patient_type_label'      => ($appointment->patient_type ?? $appointment->patient?->patient_type) === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
             'entity'                  => $entity,

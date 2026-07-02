@@ -49,7 +49,7 @@ class OperationsQualityFinishTest extends TestCase
         $response = $this->postJson("/workshop/workshop/{$case->id}/finish-quality");
 
         $response->assertOk()
-            ->assertJsonPath('message', 'تم التصنيع — الحالة جاهزة للتسليم.')
+            ->assertJsonPath('message', 'تم التصنيع — يُرجى توجيه العميل إلى المخزن للتسليم.')
             ->assertJsonPath('bom.stage', Bom::STAGE_FINISHED);
 
         $case->refresh();
