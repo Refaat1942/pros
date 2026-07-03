@@ -1238,9 +1238,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var itemId = new URLSearchParams(window.location.search).get('item');
     if (itemId && typeof window.viewSlimCatalog === 'function') {
         var row = document.querySelector('#catalogSlimTable tr.catalog-slim-row[data-item-id="' + itemId + '"]');
-        var btn = row ? row.querySelector('button[onclick*="viewSlimCatalog"]') : null;
-        if (btn) {
-            window.viewSlimCatalog(btn);
+        if (row) {
+            var btn = row.querySelector('button[onclick*="viewSlimCatalog"]');
+            window.viewSlimCatalog(btn || row);
         }
     }
 });

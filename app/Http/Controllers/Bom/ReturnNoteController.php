@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Bom\CompleteReturnNoteRequest;
 use App\Http\Requests\Bom\StoreReturnNoteRequest;
 use App\Models\Bom;
+use App\Models\BomItem;
 use App\Models\ReturnNote;
 use App\Models\StockItem;
 use App\Services\ReturnNoteService;
@@ -66,8 +67,18 @@ class ReturnNoteController extends Controller
             }))
             ->orderByDesc('updated_at')
             ->limit(50)
-            ->get()
-            ->filter(fn (Bom $b) => $b->items->contains(fn ($i) => $i->returnableQty() > 0))
+            ->get();
+
+        $pendingByItem = BomItem::pendingReturnQtyMapForBoms($boms);
+
+        $boms = $boms
+            ->filter(function (Bom $b) use ($pendingByItem) {
+                return $b->items->contains(function ($i) use ($pendingByItem) {
+                    $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
+
+                    return $i->returnRequestMaxQty($pending) > 0;
+                });
+            })
             ->values();
 
         $barcodes = \App\Models\StockItem::whereIn(
@@ -76,21 +87,32 @@ class ReturnNoteController extends Controller
         )->pluck('barcode', 'code');
 
         return response()->json([
-            'boms' => $boms->map(fn (Bom $b) => [
+            'boms' => $boms->map(function (Bom $b) use ($pendingByItem, $barcodes) {
+                return [
                 'id'            => $b->id,
                 'bom_no'        => $b->bom_no,
                 'patient_name'  => $b->patient_name,
                 'order_ref'     => $b->order_ref,
                 'work_order_no' => $b->caseRecord?->work_order_no,
                 'items'         => $b->items
-                    ->filter(fn ($i) => $i->returnableQty() > 0)
-                    ->map(fn ($i) => [
+                    ->filter(function ($i) use ($pendingByItem) {
+                        $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
+
+                        return $i->returnRequestMaxQty($pending) > 0;
+                    })
+                    ->map(function ($i) use ($pendingByItem, $barcodes) {
+                        $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
+
+                        return [
                         'stock_item_code' => $i->stock_item_code,
                         'name'            => $i->name,
-                        'returnable_qty'  => $i->returnableQty(),
+                        'returnable_qty'  => $i->returnRequestMaxQty($pending),
+                        'issued_qty'      => $i->returnableQty(),
                         'barcode'         => $barcodes[$i->stock_item_code] ?? null,
-                    ])->values(),
-            ]),
+                    ];
+                    })->values(),
+            ];
+            }),
         ]);
     }
 

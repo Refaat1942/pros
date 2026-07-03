@@ -44,7 +44,7 @@
     <label class="flex flex-col gap-1 text-sm font-semibold text-slate-700 flex-1 min-w-[280px]">
         <span>بحث</span>
         <input type="search" id="ordersFilterSearch" name="search" value="{{ $ordersSearch }}"
-               placeholder="اسم المريض أو رقم الحالة..."
+               placeholder="اسم المريض أو رقم المريض أو رقم الحالة..."
                class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-spec/40">
     </label>
     <button type="submit" class="rounded-xl bg-spec hover:bg-spec-dark text-white text-sm font-bold px-5 py-2.5 transition-colors">
@@ -75,7 +75,7 @@
             <span class="text-xs font-bold bg-spec text-white px-3 py-1 rounded-full" id="ordersCount">{{ $cases->count() }}</span>
         </div>
         <div class="p-4 border-b border-slate-100">
-            <input type="search" id="ordersSearch" placeholder="🔍 بحث بالمريض أو رقم الحالة..."
+            <input type="search" id="ordersSearch" placeholder="🔍 بحث بالمريض أو رقم المريض أو رقم الحالة..."
                    class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-spec/40">
         </div>
         <ul class="max-h-[520px] overflow-y-auto divide-y divide-slate-100" id="ordersList" data-paginate="10">
@@ -83,11 +83,16 @@
                 <li class="order-item cursor-pointer px-5 py-4 hover:bg-amber-50 transition-colors"
                     data-case-id="{{ $case->id }}"
                     data-transfer-date="{{ $case->created_at?->toDateString() }}"
-                    data-search="{{ $case->patient?->name }} {{ $case->case_no }} {{ $case->order_ref }} {{ $case->displayEntity() }}">
+                    data-search="{{ trim(($case->patient?->name ?? '') . ' ' . ($case->patient?->patient_code ?? '') . ' ' . $case->case_no . ' ' . $case->order_ref . ' ' . $case->displayEntity()) }}">
                     <div class="flex items-start justify-between gap-2">
                         <div>
                             <p class="font-bold text-slate-800">{{ $case->patient?->name ?? '—' }}</p>
-                            <p class="text-xs text-slate-500 mt-1">{{ $case->case_no }} · {{ $case->order_ref }}</p>
+                            <p class="text-xs text-slate-500 mt-1">
+                                @if ($case->patient?->patient_code)
+                                    <span class="font-mono">{{ $case->patient->patient_code }}</span> ·
+                                @endif
+                                {{ $case->case_no }} · {{ $case->order_ref }}
+                            </p>
                             <p class="text-xs text-slate-400 mt-1">{{ $case->displayEntity() }}</p>
                         </div>
                         <span class="text-[11px] font-semibold px-2 py-1 rounded-lg {{ $case->patient_type === 'military' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700' }}">

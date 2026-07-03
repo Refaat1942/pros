@@ -198,16 +198,14 @@ class BomLifecycleTest extends TestCase
         ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
 
-        // صفّان بنفس الكود — يُصرف بباركود واحد لكل كود صنف فريد
+        // بند واحد بكمية 2 — يُسمح بارتجاع 1 فقط (يبقى 1 في الورشة)
         $bom = app(BomService::class)->create($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 1],
-            ['stock_item_code' => 'RM-001', 'qty' => 1],
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
 
         $qtyAfterDispense = $item->fresh()->qty;  // 18
 
-        // Reuse the same user from prepareCase — do NOT create a new one (email conflict)
         $returnNote = app(ReturnNoteService::class)->create($bom, [
             ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
         ], 'قطعة فائضة', $user);
@@ -221,5 +219,72 @@ class BomLifecycleTest extends TestCase
         $item->refresh();
         $this->assertEquals($qtyAfterDispense + 1, $item->qty,
             'Returned stock must be added back to inventory');
+    }
+
+    public function test_can_return_single_dispensed_unit(): void
+    {
+        ['case' => $case, 'user' => $user] = $this->prepareCase();
+        $this->actingAs($user);
+
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+
+        $note = app(ReturnNoteService::class)->create($bom->fresh(), [
+            ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
+        ], 'ارتجاع وحدة واحدة', $user);
+
+        $this->assertSame(1, $note->lines->first()->qty_requested);
+    }
+
+    public function test_cannot_request_second_return_when_pending_covers_single_unit(): void
+    {
+        ['case' => $case, 'user' => $user] = $this->prepareCase();
+        $this->actingAs($user);
+
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+
+        app(ReturnNoteService::class)->create($bom->fresh(), [
+            ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
+        ], 'طلب أول', $user);
+
+        try {
+            app(ReturnNoteService::class)->create($bom->fresh(), [
+                ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
+            ], 'طلب ثانٍ', $user);
+            $this->fail('Expected duplicate return request to be rejected.');
+        } catch (HttpException $e) {
+            $this->assertSame(422, $e->getStatusCode());
+        }
+    }
+
+    public function test_can_return_partial_qty_leaving_one_in_workshop(): void
+    {
+        ['case' => $case, 'user' => $user] = $this->prepareCase();
+        $this->actingAs($user);
+
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 4],
+        ]);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+
+        $note = app(ReturnNoteService::class)->create($bom->fresh(), [
+            ['stock_item_code' => 'RM-001', 'qty' => 3, 'name' => 'صنف RM-001'],
+        ], 'فائض جزئي', $user);
+
+        $this->assertSame(3, $note->lines->first()->qty_requested);
+
+        try {
+            app(ReturnNoteService::class)->create($bom->fresh(), [
+                ['stock_item_code' => 'RM-001', 'qty' => 4, 'name' => 'صنف RM-001'],
+            ], 'محاولة ارتجاع كامل', $user);
+            $this->fail('Expected full-quantity return to be rejected.');
+        } catch (HttpException $e) {
+            $this->assertSame(422, $e->getStatusCode());
+        }
     }
 }

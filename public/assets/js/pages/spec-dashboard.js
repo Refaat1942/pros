@@ -302,7 +302,9 @@
       var typeClass = item.patient_type === 'military' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700';
       var typeLabel = item.patient_type === 'military' ? '🪖 عسكري' : '🌐 مدني';
       var transferDate = item.created_at ? String(item.created_at).slice(0, 10) : '';
-      var searchHay = [patient.name, item.case_no, item.order_ref, item.display_entity].join(' ');
+      var searchHay = [patient.name, patient.patient_code, item.case_no, item.order_ref, item.display_entity]
+        .filter(Boolean)
+        .join(' ');
 
       return '<li class="order-item cursor-pointer px-5 py-4 hover:bg-amber-50 transition-colors"' +
         ' data-case-id="' + item.id + '"' +
@@ -311,7 +313,10 @@
         '<div class="flex items-start justify-between gap-2">' +
           '<div>' +
             '<p class="font-bold text-slate-800">' + (patient.name || '—') + '</p>' +
-            '<p class="text-xs text-slate-500 mt-1">' + (item.case_no || '—') + ' · ' + (item.order_ref || '—') + '</p>' +
+            '<p class="text-xs text-slate-500 mt-1">' +
+              (patient.patient_code ? '<span class="font-mono">' + patient.patient_code + '</span> · ' : '') +
+              (item.case_no || '—') + ' · ' + (item.order_ref || '—') +
+            '</p>' +
             '<p class="text-xs text-slate-400 mt-1">' + (item.display_entity || '—') + '</p>' +
           '</div>' +
           '<span class="text-[11px] font-semibold px-2 py-1 rounded-lg ' + typeClass + '">' + typeLabel + '</span>' +

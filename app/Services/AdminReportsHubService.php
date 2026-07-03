@@ -89,7 +89,7 @@ class AdminReportsHubService
             ['id' => 'financial', 'label' => 'الإيرادات والمالية', 'icon' => '💰', 'group' => 'رؤية عامة', 'description' => 'إيرادات التسليم وأوامر التشغيل'],
             ['id' => 'inventory', 'label' => 'تحليلات المخزون', 'icon' => '📦', 'group' => 'رؤية عامة', 'description' => 'الأصناف الراكدة والشغالة ومنخفضة المخزون'],
             ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير والورشة'],
-            ['id' => 'bom', 'label' => 'قوائم BOM', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم BOM حسب Highest Batch Cost'],
+            ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
         ] as $extra) {
             $cards[] = $extra;
         }
@@ -283,10 +283,10 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'قوائم BOM',
+            'title'        => 'قوائم المواد',
             'period_label' => $this->periodLabel($from, $to),
             'summary'      => [],
-            'headers'      => ['المريض', 'أمر التشغيل', 'المرحلة', 'البنود', 'قيمة BOM'],
+            'headers'      => ['المريض', 'أمر التشغيل', 'المرحلة', 'البنود', 'قيمة قائمة المواد'],
             'rows'         => $rows,
         ];
     }
@@ -487,7 +487,7 @@ class AdminReportsHubService
         })->values()->all();
 
         return [
-            'title'        => 'الأصناف والأسعار — دفعات جديدة',
+            'title'        => 'الأصناف والأسعار',
             'period_label' => $this->periodLabel($from, $to),
             'summary'      => [],
             'headers'      => ['الكود', 'الصنف', 'السعر', 'الكمية', 'تاريخ الاستلام', 'أسعار متعددة'],

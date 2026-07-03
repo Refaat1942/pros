@@ -52,7 +52,7 @@
 
     <div class="panel">
         <div class="panel-body">
-            <table class="data-table" data-paginate="15" data-export-table>
+            <table class="data-table" data-paginate="15">
                 <thead>
                     <tr>
                         @foreach ($headers as $header)

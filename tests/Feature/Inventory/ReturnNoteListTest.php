@@ -14,6 +14,29 @@ class ReturnNoteListTest extends TestCase
 {
     use ProstheticTestHelper;
 
+    public function test_workshop_returns_create_lists_single_qty_wip_bom(): void
+    {
+        $this->seedStock();
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user    = $this->userWithRole('workshop');
+        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0501']);
+
+        $this->actingAs($user);
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+        $bom->items()->update(['unit_cost' => 200]);
+        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+
+        $this->getJson('/workshop/returns/create')
+            ->assertOk()
+            ->assertJsonPath('boms.0.bom_no', $bom->fresh()->bom_no)
+            ->assertJsonPath('boms.0.items.0.returnable_qty', 1);
+    }
+
     public function test_workshop_returns_create_lists_wip_boms_with_returnable_items(): void
     {
         $this->seedStock();
@@ -34,7 +57,8 @@ class ReturnNoteListTest extends TestCase
         $this->getJson('/workshop/returns/create')
             ->assertOk()
             ->assertJsonPath('boms.0.bom_no', $bom->fresh()->bom_no)
-            ->assertJsonPath('boms.0.items.0.returnable_qty', 2);
+            ->assertJsonPath('boms.0.items.0.returnable_qty', 1)
+            ->assertJsonPath('boms.0.items.0.issued_qty', 2);
     }
 
     public function test_workshop_returns_list_shows_existing_return_notes(): void
@@ -48,7 +72,7 @@ class ReturnNoteListTest extends TestCase
 
         $this->actingAs($user);
         $bom = app(BomService::class)->createSpecRaw($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 1],
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
         app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
@@ -89,8 +113,13 @@ class ReturnNoteListTest extends TestCase
             $ops,
         );
 
-        $completedBom = app(BomService::class)->createSpecRaw($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        $completedCase = $this->caseAtStage(
+            $this->cashPatient(),
+            \App\Models\CaseRecord::STAGE_MANUFACTURING,
+            \App\Models\CaseRecord::MFG_WAREHOUSE,
+        );
+        $completedBom = app(BomService::class)->createSpecRaw($completedCase, [
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $completedBom->items()->update(['unit_cost' => 200]);
         app(BomService::class)->releaseToWip($completedBom->fresh(), ['BC-RM-001']);

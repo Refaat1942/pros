@@ -134,7 +134,7 @@ class AdminPatientTrackService
         if (! $activeCase && $appointment) {
             $tracking['stage_label'] = match ($appointment->status) {
                 Appointment::STATUS_WAITING   => 'في الاستقبال — بانتظار التحويل للعيادة',
-                Appointment::STATUS_IN_CLINIC => 'في العيادة — بانتظار الطبيب',
+                Appointment::STATUS_IN_CLINIC => 'في العيادة',
                 default                       => $tracking['stage_label'],
             };
 

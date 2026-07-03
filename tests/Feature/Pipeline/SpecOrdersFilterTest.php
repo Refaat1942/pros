@@ -74,6 +74,64 @@ class SpecOrdersFilterTest extends TestCase
             ->assertJsonPath('data.0.order_ref', 'ORD-2026-9202');
     }
 
+    public function test_spec_orders_filters_by_patient_code(): void
+    {
+        $company  = $this->civilianCompany();
+        $specUser = $this->userWithRole('spec');
+
+        $targetPatient = Patient::create([
+            'patient_code'        => '930001',
+            'patient_qr'          => 'QR-930001',
+            'tracking_uid'        => 'spec-search-target',
+            'name'                => 'مريض بحث',
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'contract_company_id' => $company->id,
+            'company_name'        => $company->name,
+            'registered_at'       => now()->toDateString(),
+            'status'              => Patient::STATUS_ACTIVE,
+        ]);
+
+        $otherPatient = Patient::create([
+            'patient_code'        => '930002',
+            'patient_qr'          => 'QR-930002',
+            'tracking_uid'        => 'spec-search-other',
+            'name'                => 'مريض آخر',
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'contract_company_id' => $company->id,
+            'company_name'        => $company->name,
+            'registered_at'       => now()->toDateString(),
+            'status'              => Patient::STATUS_ACTIVE,
+        ]);
+
+        CaseRecord::create([
+            'case_no'             => 'CASE-2026-9301',
+            'order_ref'           => 'ORD-2026-9301',
+            'patient_id'          => $targetPatient->id,
+            'contract_company_id' => $company->id,
+            'company_name'        => $company->name,
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'path'                => CaseRecord::PATH_STANDARD,
+            'stage_key'           => CaseRecord::STAGE_TECHNICAL,
+        ]);
+
+        CaseRecord::create([
+            'case_no'             => 'CASE-2026-9302',
+            'order_ref'           => 'ORD-2026-9302',
+            'patient_id'          => $otherPatient->id,
+            'contract_company_id' => $company->id,
+            'company_name'        => $company->name,
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'path'                => CaseRecord::PATH_STANDARD,
+            'stage_key'           => CaseRecord::STAGE_TECHNICAL,
+        ]);
+
+        $this->actingAs($specUser)
+            ->getJson('/spec/orders/list?search=930001')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.patient.patient_code', '930001');
+    }
+
     public function test_spec_orders_export_respects_date_filter(): void
     {
         $company  = $this->civilianCompany();

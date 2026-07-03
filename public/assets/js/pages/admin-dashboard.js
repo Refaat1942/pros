@@ -2486,7 +2486,7 @@
 
     (function bindAdminExcelExports() {
       document.addEventListener('click', function (event) {
-        var tableBtn = event.target.closest('[data-export-table]');
+        var tableBtn = event.target.closest('button[data-export-table], a[data-export-table], .btn-export[data-export-table]');
         if (tableBtn && window.ExportKit && ExportKit.fromVisibleTable) {
           event.preventDefault();
           ExportKit.fromVisibleTable(tableBtn.getAttribute('data-export-table'), {
