@@ -33,7 +33,6 @@
         </div>
 
         <div id="adjDirectModifySection" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border,#e2e8f0);">
-          <h4 style="margin:0 0 10px;font-size:14px;">➕ إضافة بند</h4>
           <div class="adj-add-item-row">
             <div class="form-group adj-item-field">
               <label for="adjItemPickerToggle">الصنف</label>

@@ -26,8 +26,8 @@ Route::prefix('doctor')
             ->middleware('dashboard.page:doctor,queue')
             ->name('queue.list');
 
-        // ── Diagnosis (التشخيص الطبي) ──────────────────────────────────────
-        Route::middleware('dashboard.page:doctor,diagnosis')->group(function () {
+        // ── Medical exam API (من قائمة الانتظار) ───────────────────────────
+        Route::middleware('dashboard.page:doctor,queue')->group(function () {
             Route::get('diagnosis/{appointment}', [MedicalRecordController::class, 'create'])
                 ->name('diagnosis.create');
 
@@ -37,6 +37,12 @@ Route::prefix('doctor')
             Route::post('diagnosis/{appointment}/skip', [MedicalRecordController::class, 'skip'])
                 ->name('diagnosis.skip');
         });
+
+        Route::get('diagnosis', function () {
+            $appointment = request()->query('appointment');
+
+            return redirect()->route('doctor.queue', $appointment ? ['appointment' => $appointment] : []);
+        })->name('diagnosis.legacy');
 
         // ── Records (السجل الطبي) ──────────────────────────────────────────
         Route::middleware('dashboard.page:doctor,records')->group(function () {

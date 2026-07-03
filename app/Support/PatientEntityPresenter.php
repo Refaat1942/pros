@@ -108,6 +108,21 @@ final class PatientEntityPresenter
         return (bool) ($company?->is_contracted);
     }
 
+    /** عرض عمود «الجهة» — نقدي بدون جهة تعاقد يظهر كـ — */
+    public static function forColumn(array $entity): array
+    {
+        if (($entity['kind'] ?? '') === self::KIND_CASH) {
+            return [
+                'label'       => '—',
+                'kind'        => self::KIND_CASH,
+                'badge'       => '',
+                'badge_class' => '',
+            ];
+        }
+
+        return $entity;
+    }
+
     /** @return array{label: string, kind: string, badge: string, badge_class: string} */
     private static function cash(): array
     {

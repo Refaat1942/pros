@@ -89,8 +89,7 @@
                     </div>
                     <div class="form-group" id="grpCompany" style="display:{{ ($classification === 'entity' && old('entity_billing_type')) ? '' : 'none' }};">
                         <label>جهة التعاقد <span style="color:red">*</span></label>
-                        <select class="form-control" name="contract_company_id" id="newCompanyId"
-                                data-v-rules="required,select" data-v-when="patient_classification=entity">
+                        <select class="form-control" name="contract_company_id" id="newCompanyId">
                             <option value="">— اختر الجهة —</option>
                             @php
                                 $contracted = collect($civilian_companies ?? [])->where('is_contracted', true);
@@ -109,6 +108,15 @@
                                 </option>
                             @endforeach
                         </select>
+                        <div id="grpNewCompany" class="add-company-inline" style="display:none;margin-top:10px;">
+                            <label class="add-company-inline__label">أو أضف جهة غير متعاقدة جديدة</label>
+                            <div class="add-company-inline__row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;">
+                                <input type="text" class="form-control" id="newCompanyName" placeholder="اسم الجهة الجديدة"
+                                       maxlength="255" autocomplete="off" style="flex:1;min-width:180px;">
+                                <button type="button" class="btn btn-secondary" id="btnAddNewCompany" style="white-space:nowrap;">➕ إضافة للقائمة</button>
+                            </div>
+                            <p class="field-hint" id="newCompanyAddStatus" style="margin:6px 0 0;font-size:12px;color:var(--text-muted);"></p>
+                        </div>
                     </div>
                     <div class="form-group" id="grpCashHint" style="display:{{ $classification === 'cash' ? '' : 'none' }};">
                         <label>الفوترة</label>

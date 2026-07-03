@@ -14,6 +14,6 @@ class CaseStageLegacyLabelTest extends TestCase
 
     public function test_legacy_waiting_return_label_is_arabic(): void
     {
-        $this->assertSame('بانتظار رجوع العميل', CaseStage::labelFor('waiting_return'));
+        $this->assertSame('بانتظار موافقة الجهة', CaseStage::labelFor('waiting_return'));
     }
 }

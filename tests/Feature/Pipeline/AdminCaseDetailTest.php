@@ -6,6 +6,7 @@ use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
 use App\Models\MilitaryRank;
 use App\Models\Patient;
+use App\Models\Payment;
 use App\Models\Quote;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -195,6 +196,54 @@ class AdminCaseDetailTest extends TestCase
         $response->assertJsonPath('patient.sovereign', Patient::MILITARY_SOVEREIGN_ENTITY);
         $response->assertJsonPath('patient.company', null);
         $response->assertJsonPath('patient.rank', 'نقيب');
+    }
+
+    public function test_admin_case_detail_shows_paid_cash_quote_status_not_awaiting_cashier(): void
+    {
+        $patient = $this->cashPatient();
+        $admin   = $this->userWithRole('admin');
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case->update([
+            'quote_no'      => 'QT-2026-CASH1',
+            'quote_total'   => 1000.00,
+            'paid'          => 1000.00,
+            'work_order_no' => 'WO-2026-0001',
+            'delivered_at'  => now(),
+        ]);
+
+        Quote::create([
+            'quote_no'     => 'QT-2026-CASH1',
+            'case_id'      => $case->id,
+            'order_ref'    => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => null,
+            'quote_date'   => now()->toDateString(),
+            'status'       => Quote::STATUS_ISSUED,
+            'status_label' => 'بانتظار الدفع في الخزنة',
+            'total'        => 1000.00,
+        ]);
+
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+
+        Payment::create([
+            'payment_no'    => 'PAY-2026-0001',
+            'case_id'       => $case->id,
+            'quote_id'      => $quote->id,
+            'patient_id'    => $patient->id,
+            'patient_name'  => $patient->name,
+            'amount'        => 1000.00,
+            'method'        => 'vodafone_cash',
+            'reference'     => 'VF-998877',
+            'received_by'   => 'موظف الخزنة',
+            'received_at'   => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson('/admin/cases/' . $case->id . '/detail')
+            ->assertOk()
+            ->assertJsonPath('quote.status_label', 'تم الدفع في الخزنة')
+            ->assertJsonPath('payment.method', 'vodafone_cash')
+            ->assertJsonPath('payment.method_label', 'فودافون كاش');
     }
 
     public function test_admin_case_quote_print_returns_print_view(): void

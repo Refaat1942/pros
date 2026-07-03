@@ -205,7 +205,7 @@ class OperationsDeskController extends Controller
         }
 
         if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
-            return 'بانتظار رجوع العميل';
+            return 'بانتظار موافقة الجهة';
         }
 
         return $case->stage_key;

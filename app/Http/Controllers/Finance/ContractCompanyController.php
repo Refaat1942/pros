@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Finance;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\StoreCompanyRequest;
 use App\Http\Requests\Finance\UpdateCompanyRequest;
+use App\Http\Requests\Reception\StoreReceptionCompanyRequest;
 use App\Models\ContractCompany;
 use App\Services\AuditService;
 use App\Services\ContractDebtService;
@@ -57,6 +58,52 @@ class ContractCompanyController extends Controller
             'data'  => $companies,
             'total' => $companies->count(),
         ]);
+    }
+
+    /**
+     * الاستقبال — إضافة جهة مدنية غير متعاقدة للقائمة (اختيار فوري عند تسجيل المريض).
+     */
+    public function storeFromReception(StoreReceptionCompanyRequest $request): JsonResponse
+    {
+        $name = trim($request->validated('name'));
+
+        $existing = ContractCompany::query()
+            ->where('name', $name)
+            ->where('is_military', false)
+            ->first();
+
+        if ($existing) {
+            if ($existing->is_contracted) {
+                return response()->json([
+                    'message' => 'هذه الجهة مسجّلة كمتعاقدة — اخترها من القائمة تحت «متعاقد».',
+                ], 422);
+            }
+
+            return response()->json([
+                'message' => 'الجهة موجودة مسبقاً — تم اختيارها.',
+                'data'    => $this->companyLookupPayload($existing),
+            ]);
+        }
+
+        $company = ContractCompany::create([
+            'company_code'     => $this->generateCompanyCode(),
+            'name'             => $name,
+            'is_military'      => false,
+            'is_contracted'    => false,
+            'discount_percent' => 0,
+        ]);
+
+        AuditService::log(
+            action:      'create',
+            description: "إضافة جهة غير متعاقدة من الاستقبال — {$company->company_code} — {$company->name}",
+            tag:         'reception',
+            after:       $company->toArray(),
+        );
+
+        return response()->json([
+            'message' => 'تمت إضافة الجهة — يمكنك الآن حفظ المريض.',
+            'data'    => $this->companyLookupPayload($company),
+        ], 201);
     }
 
     /**
@@ -167,5 +214,18 @@ class ContractCompanyController extends Controller
         $num  = $last ? ((int) ltrim(substr($last, 3), '0') ?: 0) + 1 : 1;
 
         return sprintf('CO-%03d', $num);
+    }
+
+    /** @return array{id: int, name: string, company_code: string, is_military: bool, is_contracted: bool, discount_percent: float|string|null} */
+    private function companyLookupPayload(ContractCompany $company): array
+    {
+        return [
+            'id'               => $company->id,
+            'name'             => $company->name,
+            'company_code'     => $company->company_code,
+            'is_military'      => (bool) $company->is_military,
+            'is_contracted'    => (bool) $company->is_contracted,
+            'discount_percent' => $company->discount_percent,
+        ];
     }
 }

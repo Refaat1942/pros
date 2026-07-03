@@ -19,7 +19,7 @@
       <div class="cases-quick-grid" id="casesQuickGrid">
         <button type="button" class="cases-quick-btn waiting active" data-cases-filter="waiting_return">
           <span class="cq-icon">⏳</span>
-          <span class="cq-title">بانتظار رجوع العميل</span>
+          <span class="cq-title">بانتظار موافقة الجهة</span>
           <span class="cq-desc">تم إصدار عرض السعر وخرج المريض — لم يعد بعد بخطاب الموافقة</span>
           <span class="cq-count" id="casesWaitingCount">{{ $counts['waiting_return'] ?? 0 }}</span>
         </button>
@@ -44,7 +44,7 @@
       </div>
       <div class="panel">
         <div class="panel-header">
-          <h3 id="casesPanelTitle">📁 المرضى — بانتظار رجوع العميل</h3>
+          <h3 id="casesPanelTitle">📁 المرضى — بانتظار موافقة الجهة</h3>
           <span class="badge" id="casesPanelBadge">{{ ($counts['waiting_return'] ?? 0) }} حالة</span>
         </div>
         <p class="cases-panel-hint" id="casesPanelHint" style="display:none"></p>

@@ -23,7 +23,7 @@ $dashboards = [
         'prepend' => [
             'queue' => ['class:stats-row'],
         ],
-        'pages' => ['queue', 'diagnosis', 'records', 'transfer'],
+        'pages' => ['queue', 'records', 'transfer'],
     ],
     'spec' => [
         'prefix' => 'section-',

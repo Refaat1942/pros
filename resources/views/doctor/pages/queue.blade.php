@@ -50,12 +50,11 @@
           <tbody id="queueTable" data-server-rendered="1">
             @forelse ($queue as $appt)
               @php
-                  $diagnosisUrl = route('doctor.diagnosis', ['appointment' => $appt->id]);
                   $pt = $appt->patient_type ?? 'civilian';
                   $entitySearch = $appt->displayEntity();
               @endphp
               <tr class="queue-row-clickable"
-                  data-href="{{ $diagnosisUrl }}"
+                  data-appointment-id="{{ $appt->id }}"
                   data-search="{{ $appt->patient_name }} {{ $entitySearch }}">
                 <td>{{ $loop->iteration }}</td>
                 <td>
@@ -64,13 +63,13 @@
                     {{ $pt === 'military' ? '🪖 عسكري' : '🌐 مدني' }}
                   </span>
                 </td>
-                <td>@include('partials.patient-entity-cell', ['subject' => $appt])</td>
+                <td>@include('partials.patient-entity-cell', ['subject' => $appt, 'column' => true])</td>
                 <td><span class="wait-time">{{ $appt->clinicWaitLabel() }}</span></td>
                 <td>{{ $appt->transferredAtFormatted() }}</td>
                 <td>
-                  <a href="{{ $diagnosisUrl }}" class="btn-action" onclick="event.stopPropagation()">
+                  <button type="button" class="btn-action primary doctor-exam-open-btn" data-appointment-id="{{ $appt->id }}" onclick="event.stopPropagation()">
                     📝 فحص
-                  </a>
+                  </button>
                 </td>
               </tr>
             @empty

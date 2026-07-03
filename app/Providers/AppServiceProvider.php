@@ -8,6 +8,7 @@ use App\Models\ContractCompanyDebt;
 use App\Models\MilitaryDebt;
 use App\Models\ReturnNote;
 use App\Services\Dashboard\DashboardQueueService;
+use App\Services\SpecEditRequestService;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +48,10 @@ class AppServiceProvider extends ServiceProvider
 
             if ($dashboardKey === 'doctor') {
                 $badges['queue'] = app(DashboardQueueService::class)->doctorWaitingCount();
+            }
+
+            if ($dashboardKey === 'admin') {
+                $badges['spec-edit-requests'] = app(SpecEditRequestService::class)->pendingCount();
             }
 
             if ($view->name() === 'partials.dashboard-sidebar') {

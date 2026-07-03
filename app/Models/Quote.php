@@ -62,4 +62,35 @@ class Quote extends Model
     {
         return $this->hasMany(QuoteItem::class);
     }
+
+    /**
+     * تسمية حالة العرض للعرض — تُصحّح البيانات القديمة إن دُفعت في الخزنة ولم يُحدَّث السجل.
+     */
+    public function resolvedStatusLabel(?CaseRecord $case = null): string
+    {
+        if ($this->status === self::STATUS_APPROVED) {
+            return $this->status_label ?: 'معتمد';
+        }
+
+        $case ??= $this->relationLoaded('caseRecord') ? $this->caseRecord : null;
+
+        if ($case && $this->status_label === 'بانتظار الدفع في الخزنة' && $this->cashierPaymentSettled($case)) {
+            return 'تم الدفع في الخزنة';
+        }
+
+        return $this->status_label ?: ($this->status ?? '—');
+    }
+
+    private function cashierPaymentSettled(CaseRecord $case): bool
+    {
+        if ($case->isAwaitingCashier()) {
+            return false;
+        }
+
+        if ((float) $case->paid > 0) {
+            return true;
+        }
+
+        return Payment::where('case_id', $case->id)->exists();
+    }
 }

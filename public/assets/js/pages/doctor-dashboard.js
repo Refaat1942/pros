@@ -621,11 +621,19 @@
       var tbody = document.getElementById('queueTable');
       if (!tbody || tbody.dataset.serverRendered !== '1') return;
 
-      tbody.querySelectorAll('tr.queue-row-clickable[data-href]').forEach(function(row) {
-        row.addEventListener('click', function() {
-          window.location.href = row.getAttribute('data-href');
+      function bindExamOpen(el) {
+        el.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var id = el.getAttribute('data-appointment-id');
+          if (id) openDoctorExamModal(id);
         });
+      }
+
+      tbody.querySelectorAll('tr.queue-row-clickable[data-appointment-id]').forEach(function(row) {
+        bindExamOpen(row);
       });
+      tbody.querySelectorAll('.doctor-exam-open-btn[data-appointment-id]').forEach(bindExamOpen);
 
       var searchInput = document.getElementById('queueSearch');
       if (searchInput) {
@@ -895,6 +903,215 @@
     function renderDoctorAnalytics() {
       return;
     }
+
+    var doctorExamState = { appointmentId: null, loading: false };
+
+    function showDoctorExamError(msg) {
+      var el = document.getElementById('doctorExamError');
+      if (!el) { if (msg) alert(msg); return; }
+      if (!msg) {
+        el.style.display = 'none';
+        el.textContent = '';
+        return;
+      }
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function closeDoctorExamModal() {
+      var modal = document.getElementById('doctorExamModal');
+      if (!modal) return;
+      modal.classList.remove('open');
+      modal.hidden = true;
+      document.body.style.overflow = '';
+      doctorExamState.appointmentId = null;
+      showDoctorExamError('');
+      var form = document.getElementById('doctorExamForm');
+      if (form) form.reset();
+      var skipBtn = document.getElementById('doctorExamSkip');
+      if (skipBtn) skipBtn.style.display = 'none';
+      if (window.history.replaceState) {
+        var url = new URL(window.location.href);
+        url.searchParams.delete('appointment');
+        window.history.replaceState({}, '', url.pathname + (url.search || ''));
+      }
+    }
+
+    function patientEntityLabel(patient) {
+      if (!patient) return '—';
+      if (patient.patient_type === 'military') {
+        return patient.sovereign_entity || MILITARY_ENTITY;
+      }
+      if (!patient.contract_company_id) return '—';
+      return patient.company_name || '—';
+    }
+
+    function formatExamPatientMeta(patient) {
+      if (!patient) return '—';
+      var code = patient.patient_code || '—';
+      if (patient.patient_type === 'military') {
+        return code + ' — ' + (patient.sovereign_entity || MILITARY_ENTITY);
+      }
+      if (!patient.contract_company_id) {
+        return code;
+      }
+      return code + ' — جهة التعاقد: ' + (patient.company_name || '—');
+    }
+
+    function openDoctorExamModal(appointmentId) {
+      var modal = document.getElementById('doctorExamModal');
+      if (!modal || doctorExamState.loading) return;
+
+      doctorExamState.loading = true;
+      showDoctorExamError('');
+
+      fetch('/doctor/diagnosis/' + appointmentId, {
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.message || 'تعذّر تحميل بيانات المريض.');
+            return data;
+          });
+        })
+        .then(function (data) {
+          var appt = data.appointment || {};
+          var patient = appt.patient || {};
+          var draft = data.draft || null;
+          doctorExamState.appointmentId = appointmentId;
+
+          var title = document.getElementById('doctorExamModalTitle');
+          var meta = document.getElementById('doctorExamModalMeta');
+          if (title) title.textContent = '📝 التشخيص — ' + (appt.patient_name || patient.name || 'مريض');
+          if (meta) {
+            meta.textContent = formatExamPatientMeta(patient);
+          }
+
+          var silent = document.getElementById('doctorExamSilentNote');
+          if (silent) silent.style.display = patient.patient_type === 'military' ? 'flex' : 'none';
+
+          var patientIdEl = document.getElementById('doctorExamPatientId');
+          var apptIdEl = document.getElementById('doctorExamAppointmentId');
+          var recordIdEl = document.getElementById('doctorExamRecordId');
+          var diagnosisEl = document.getElementById('doctorExamDiagnosis');
+          var prescriptionEl = document.getElementById('doctorExamPrescription');
+          if (patientIdEl) patientIdEl.value = patient.id || appt.patient_id || '';
+          if (apptIdEl) apptIdEl.value = appt.id || appointmentId;
+          if (recordIdEl) recordIdEl.value = draft && draft.id ? draft.id : '';
+          if (diagnosisEl) diagnosisEl.value = draft && draft.diagnosis ? draft.diagnosis : '';
+          if (prescriptionEl) prescriptionEl.value = draft && draft.prescription ? draft.prescription : '';
+
+          var skipBtn = document.getElementById('doctorExamSkip');
+          if (skipBtn) skipBtn.style.display = '';
+
+          modal.hidden = false;
+          modal.classList.add('open');
+          document.body.style.overflow = 'hidden';
+        })
+        .catch(function (err) {
+          showDoctorExamError(err.message || 'تعذّر فتح نموذج الكشف.');
+        })
+        .finally(function () {
+          doctorExamState.loading = false;
+        });
+    }
+
+    function submitDoctorExamModal() {
+      var form = document.getElementById('doctorExamForm');
+      if (!form) return;
+
+      var diagnosisEl = document.getElementById('doctorExamDiagnosis');
+      if (!diagnosisEl || !diagnosisEl.value.trim()) {
+        showDoctorExamError('يرجى تعبئة التشخيص الدقيق.');
+        return;
+      }
+
+      var saveBtn = document.getElementById('doctorExamSave');
+      if (saveBtn) saveBtn.disabled = true;
+      showDoctorExamError('');
+
+      var formData = new FormData(form);
+      formData.set('lock', '1');
+
+      fetch('/doctor/diagnosis', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+        body: formData,
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.message || 'تعذّر حفظ التشخيص.');
+            return data;
+          });
+        })
+        .then(function () {
+          closeDoctorExamModal();
+          window.location.reload();
+        })
+        .catch(function (err) {
+          showDoctorExamError(err.message || 'تعذّر حفظ التشخيص.');
+        })
+        .finally(function () {
+          if (saveBtn) saveBtn.disabled = false;
+        });
+    }
+
+    function skipDoctorExamModal() {
+      if (!doctorExamState.appointmentId) return;
+      if (!confirm('تخطّي الكشف الطبي ودفع الحالة مباشرةً للتوصيف؟ لن يُسجَّل تقرير طبي.')) return;
+
+      var skipBtn = document.getElementById('doctorExamSkip');
+      if (skipBtn) skipBtn.disabled = true;
+
+      fetch('/doctor/diagnosis/' + doctorExamState.appointmentId + '/skip', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.message || 'تعذّر تخطّي الكشف.');
+            return data;
+          });
+        })
+        .then(function () {
+          closeDoctorExamModal();
+          window.location.reload();
+        })
+        .catch(function (err) {
+          showDoctorExamError(err.message || 'تعذّر تخطّي الكشف.');
+        })
+        .finally(function () {
+          if (skipBtn) skipBtn.disabled = false;
+        });
+    }
+
+    bindIfPresent('doctorExamModalClose', 'click', closeDoctorExamModal);
+    bindIfPresent('doctorExamCancel', 'click', closeDoctorExamModal);
+    bindIfPresent('doctorExamSave', 'click', submitDoctorExamModal);
+    bindIfPresent('doctorExamSkip', 'click', skipDoctorExamModal);
+    bindIfPresent('doctorExamModal', 'click', function (e) {
+      if (e.target && e.target.id === 'doctorExamModal') closeDoctorExamModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.getElementById('doctorExamModal')?.classList.contains('open')) {
+        closeDoctorExamModal();
+      }
+    });
+
     renderDoctorAnalytics();
     initServerQueueRows();
     initServerRecordsRows();
@@ -902,3 +1119,8 @@
     if (document.getElementById('queueTable')) renderQueue();
     if (document.getElementById('recordsTable')) loadRecords();
     if (document.getElementById('transferredTable')) loadTransfers();
+
+    if (activePage === 'queue') {
+      var queueAppt = new URLSearchParams(window.location.search).get('appointment');
+      if (queueAppt) openDoctorExamModal(queueAppt);
+    }

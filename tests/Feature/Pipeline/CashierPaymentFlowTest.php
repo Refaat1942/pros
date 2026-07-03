@@ -103,6 +103,10 @@ class CashierPaymentFlowTest extends TestCase
         $payment = Payment::where('case_id', $case->id)->firstOrFail();
         $this->assertSame('instapay', $payment->method);
         $this->assertGreaterThan(0, (float) $payment->amount);
+
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $this->assertSame(Quote::STATUS_APPROVED, $quote->status);
+        $this->assertSame('تم الدفع في الخزنة', $quote->status_label);
     }
 
     public function test_cashier_confirm_rejects_invalid_method(): void

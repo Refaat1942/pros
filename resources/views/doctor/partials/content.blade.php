@@ -10,7 +10,6 @@
     </div> -->
     <ul class="nav-menu">
       <li><a href="#" class="active" data-section="queue"><span class="nav-icon">📋</span> قائمة الانتظار</a></li>
-      <li><a href="#" data-section="diagnosis"><span class="nav-icon">📝</span> التشخيص الطبي</a></li>
       <li><a href="#" data-section="records"><span class="nav-icon">📁</span> السجل الطبي</a></li>
       <li><a href="#" data-section="transfer"><span class="nav-icon">📦</span> المحولون للتوصيف</a></li>
     </ul>

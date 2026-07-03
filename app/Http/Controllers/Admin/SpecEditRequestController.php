@@ -24,12 +24,10 @@ class SpecEditRequestController extends Controller
             $request->query('search'),
         );
 
-        $pending = collect($rows)->where('status', 'pending')->count();
-
         return response()->json([
             'data'    => $rows,
             'total'   => count($rows),
-            'pending' => $pending,
+            'pending' => $this->editService->pendingCount(),
             'rejection_reasons' => config('spec_edit.rejection_reasons', []),
         ]);
     }
@@ -57,8 +55,12 @@ class SpecEditRequestController extends Controller
             $request->validated('rejection_notes'),
         );
 
+        $message = $row->source === SpecEditRequestSource::Adjustments
+            ? 'تم رفض طلب التعديل — أُرسل إشعار للمعدلات.'
+            : 'تم رفض طلب التعديل — أُرسل إشعار للفني.';
+
         return response()->json([
-            'message' => 'تم رفض طلب التعديل — أُرسل إشعار للفني.',
+            'message' => $message,
             'request' => $this->editService->format($row),
         ]);
     }

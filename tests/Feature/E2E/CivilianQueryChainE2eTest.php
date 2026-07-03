@@ -70,7 +70,7 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $appointmentId = collect($queue->json('data'))->firstWhere('patient_id', $patient->id)['id'];
 
-        $diagPage = $this->get('/doctor/diagnosis?appointment=' . $appointmentId);
+        $diagPage = $this->get('/doctor/queue?appointment=' . $appointmentId);
         $diagPage->assertOk();
         $this->assertStringNotContainsString('wac', strtolower($diagPage->getContent()));
         $this->assertStringNotContainsString('quote_total', strtolower($diagPage->getContent()));

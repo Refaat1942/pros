@@ -33,6 +33,40 @@ class ClinicTimeTest extends TestCase
         );
     }
 
+    public function test_parse_date_range_returns_null_when_dates_omitted(): void
+    {
+        config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
+
+        $range = ClinicTime::parseDateRange(null, null);
+
+        $this->assertNull($range['from']);
+        $this->assertNull($range['to']);
+    }
+
+    public function test_parse_date_range_uses_clinic_calendar_not_utc(): void
+    {
+        config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
+
+        $range = ClinicTime::parseDateRange('2026-07-01', '2026-07-03');
+
+        $this->assertSame('2026-07-01', $range['from']->toDateString());
+        $this->assertSame('2026-07-03', $range['to']->toDateString());
+        $this->assertSame(
+            '01/07/2026 — 03/07/2026',
+            ClinicTime::format($range['from'], 'd/m/Y') . ' — ' . ClinicTime::format($range['to'], 'd/m/Y'),
+        );
+    }
+
+    public function test_parse_date_range_swaps_inverted_bounds(): void
+    {
+        config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
+
+        $range = ClinicTime::parseDateRange('2026-07-10', '2026-07-01');
+
+        $this->assertSame('2026-07-01', $range['from']->toDateString());
+        $this->assertSame('2026-07-10', $range['to']->toDateString());
+    }
+
     public function test_appointment_transfer_time_uses_clinic_timezone(): void
     {
         config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);

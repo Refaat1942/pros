@@ -129,4 +129,19 @@ class DoctorQueueStatsTest extends TestCase
             ->assertSee('التأمين الصحي', false)
             ->assertSee('متعاقد', false);
     }
+
+    public function test_doctor_queue_shows_dash_for_cash_civilian_without_contract_entity(): void
+    {
+        $recep  = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
+
+        $patient = $this->registerCashPatientHttp($recep, 'مريض نقدي الطبيب');
+        $this->transferPatientToClinicHttp($recep, $patient);
+
+        $response = $this->actingAs($doctor)->get('/doctor/queue');
+
+        $response->assertOk()
+            ->assertSee('entity-cell__label', false)
+            ->assertDontSee('entity-badge--cash', false);
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
+use App\Support\ClinicTime;
 use App\Services\Dashboard\DashboardQueueService;
 use Carbon\Carbon;
 
@@ -24,7 +25,12 @@ class AdminOverviewService
     /** @return array{from: Carbon, to: Carbon} */
     public function parseDateRange(?string $from, ?string $to): array
     {
-        return $this->hub->parseDateRange($from, $to);
+        $range = $this->hub->parseDateRange($from, $to);
+
+        return [
+            'from' => $range['from'] ?? ClinicTime::now()->copy()->startOfMonth()->startOfDay(),
+            'to'   => $range['to'] ?? ClinicTime::now()->copy()->endOfDay(),
+        ];
     }
 
     /** @return array<string, mixed> */

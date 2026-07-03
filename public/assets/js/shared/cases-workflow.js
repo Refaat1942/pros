@@ -11,7 +11,7 @@ var CasesWorkflow = (function () {
     { key: 'cost_calc', label: 'حساب تكلفة' },
     { key: 'admin_approval', label: 'انتظار موافقة الأدمن' },
     { key: 'quote', label: 'عرض سعر' },
-    { key: 'waiting_return', label: 'انتظار رجوع العميل' },
+    { key: 'waiting_return', label: 'بانتظار موافقة الجهة' },
     { key: 'manufacturing', label: 'جاري التصنيع' },
     { key: 'delivered', label: 'تم التسليم' }
   ];

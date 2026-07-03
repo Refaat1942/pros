@@ -13,6 +13,8 @@ use App\Models\TechOrderSpec;
 use App\Models\TechOrderSpecItem;
 use App\Models\User;
 use App\Services\Notifications\NotificationService;
+use App\Support\ClinicTime;
+use App\Support\SpecEditRequestItemDiff;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -29,9 +31,9 @@ class SpecEditRequestService
 
     public function canRequestSpecEdit(TechOrderSpec $spec): bool
     {
-        $spec->loadMissing('caseRecord', 'pendingEditRequest');
+        $spec->loadMissing('caseRecord', 'pendingEditRequest', 'rejectedSpecEditRequest');
 
-        if (! $spec->locked || $spec->pendingEditRequest) {
+        if (! $spec->locked || $spec->pendingEditRequest || $spec->rejectedSpecEditRequest) {
             return false;
         }
 
@@ -73,6 +75,12 @@ class SpecEditRequestService
     public function submitSpecEdit(TechOrderSpec $spec, User $requester, array $items, ?string $techNotes): SpecEditRequest
     {
         if (! $this->canRequestSpecEdit($spec)) {
+            $spec->loadMissing('rejectedSpecEditRequest', 'pendingEditRequest');
+
+            if ($spec->rejectedSpecEditRequest) {
+                abort(422, 'تم رفض طلب تعديل سابق من الإدارة — لا يمكن إرسال طلب جديد على هذا التوصيف.');
+            }
+
             abort(422, 'لا يمكن طلب تعديل التوصيف — تأكد أن الحالة في المعدلات ولم تُرسَل للتكاليف بعد، ولا يوجد طلب معلّق.');
         }
 
@@ -225,11 +233,18 @@ class SpecEditRequestService
             );
 
             $this->notifications->notifyEditRequestRejected(
-                $request->fresh()->load('caseRecord.patient')
+                $request->fresh()->load('caseRecord.patient', 'requestedBy.role')
             );
 
             return $request->fresh(['techOrderSpec.items', 'caseRecord', 'requestedBy', 'reviewedBy']);
         });
+    }
+
+    public function pendingCount(): int
+    {
+        return SpecEditRequest::query()
+            ->where('status', SpecEditRequestStatus::Pending)
+            ->count();
     }
 
     /** @return list<array<string, mixed>> */
@@ -262,6 +277,10 @@ class SpecEditRequestService
     {
         $request->loadMissing('techOrderSpec', 'caseRecord', 'requestedBy', 'reviewedBy');
 
+        $originalItems = $request->original_items ?? [];
+        $proposedItems = $request->proposed_items ?? [];
+        $modifiedItems = SpecEditRequestItemDiff::modifiedItems($originalItems, $proposedItems);
+
         return [
             'id'                    => $request->id,
             'source'                => $request->source->value,
@@ -276,14 +295,16 @@ class SpecEditRequestService
             'stage_key'             => $request->caseRecord?->stage_key,
             'requested_by'          => $request->requestedBy?->name,
             'requested_at'          => $request->created_at?->toIso8601String(),
-            'requested_at_label'    => $request->created_at?->format('d/m/Y H:i'),
+            'requested_at_label'    => ClinicTime::format($request->created_at),
             'reviewed_by'           => $request->reviewedBy?->name,
-            'reviewed_at_label'     => $request->reviewed_at?->format('d/m/Y H:i'),
+            'reviewed_at_label'     => ClinicTime::format($request->reviewed_at),
             'rejection_reason_key'  => $request->rejection_reason_key,
             'rejection_reason_label'=> $request->rejectionReasonLabel(),
             'rejection_notes'       => $request->rejection_notes,
-            'original_items'        => $request->original_items ?? [],
-            'proposed_items'        => $request->proposed_items ?? [],
+            'original_items'        => $originalItems,
+            'proposed_items'        => $proposedItems,
+            'modified_items'        => $modifiedItems,
+            'modified_summary'      => SpecEditRequestItemDiff::summaryText($modifiedItems),
             'original_tech_notes'   => $request->original_tech_notes,
             'proposed_tech_notes'   => $request->proposed_tech_notes,
             'tech_order_spec_id'    => $request->tech_order_spec_id,
@@ -329,7 +350,7 @@ class SpecEditRequestService
                 after:       ['spec_edit_request_id' => $request->id],
             );
 
-            $this->notifications->notifyEditRequestApproved($request->fresh()->load('caseRecord.patient'));
+            $this->notifications->notifyEditRequestApproved($request->fresh()->load('caseRecord.patient', 'requestedBy.role'));
 
             return $request->fresh(['techOrderSpec.items', 'caseRecord', 'requestedBy', 'reviewedBy']);
         });
@@ -369,7 +390,7 @@ class SpecEditRequestService
                 after:       ['spec_edit_request_id' => $request->id],
             );
 
-            $this->notifications->notifyEditRequestApproved($request->fresh()->load('caseRecord.patient'));
+            $this->notifications->notifyEditRequestApproved($request->fresh()->load('caseRecord.patient', 'requestedBy.role'));
 
             return $request->fresh(['techOrderSpec.items', 'caseRecord', 'requestedBy', 'reviewedBy']);
         });

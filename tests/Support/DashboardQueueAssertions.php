@@ -53,6 +53,23 @@ trait DashboardQueueAssertions
         return Patient::where('name', $name)->firstOrFail();
     }
 
+    protected function registerCashPatientHttp(User $reception, string $name = 'مريض نقدي'): Patient
+    {
+        $this->actingAs($reception);
+        $visitType = $this->defaultVisitType();
+
+        $response = $this->postJson('/reception/patients', [
+            'name'          => $name,
+            'patient_type'  => Patient::TYPE_CIVILIAN,
+            'visit_type_id' => $visitType->id,
+            'phone'         => '01099998888',
+        ]);
+
+        $response->assertCreated();
+
+        return Patient::where('name', $name)->firstOrFail();
+    }
+
     protected function registerMilitaryPatientHttp(
         User $reception,
         ContractCompany $company,

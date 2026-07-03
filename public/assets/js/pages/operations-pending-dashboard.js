@@ -58,7 +58,7 @@
       ? '<a href="' + esc(quote.print_url) + '" target="_blank" rel="noopener" class="btn-action" style="margin-left:4px;">🖨️ طباعة عرض السعر</a>'
       : (isMil ? '<span class="text-xs text-muted">بدون عرض (عسكري)</span>' : '');
 
-    var releaseLabel = c.is_cash ? '💵 إصدار عرض سعر → الخزنة' : '📤 إصدار عرض سعر';
+    var releaseLabel = c.is_cash ? '💵 إصدار عرض سعر ← الخزنة' : '📤 إصدار عرض سعر';
     var issuedLabel = c.is_cash ? 'حُوّل للخزنة' : 'صُدر للاستقبال';
     var releaseBtn = (!isMil && quote && quote.status === 'pending')
       ? '<button type="button" class="btn-action btn-release-quote" data-case-id="' + c.id + '" style="margin-left:4px;background:#dbeafe;color:#1d4ed8;">' + releaseLabel + '</button>'

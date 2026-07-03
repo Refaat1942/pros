@@ -22,6 +22,7 @@ class CashierPaymentService
 {
     public function __construct(
         private readonly OperationsService $operationsService,
+        private readonly QuoteService $quoteService,
     ) {
     }
 
@@ -75,6 +76,10 @@ class CashierPaymentService
 
             // 3) تحديث المبلغ المدفوع على الحالة.
             CaseRecord::where('id', $case->id)->update(['paid' => $amount]);
+
+            if ($quote) {
+                $this->quoteService->markPaidAtCashier($quote);
+            }
 
             AuditService::log(
                 action:      'payment',

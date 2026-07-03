@@ -23,10 +23,20 @@
             $entity = ['label' => '—', 'kind' => '', 'badge' => '', 'badge_class' => ''];
         }
     }
+
+    if (! empty($column)) {
+        $entity = \App\Support\PatientEntityPresenter::forColumn($entity);
+    }
 @endphp
 <div class="entity-cell">
-    <span class="entity-cell__label">{{ $entity['label'] ?? '—' }}</span>
-    @if (! empty($entity['badge']))
+    @php
+        $isCash = ($entity['kind'] ?? '') === \App\Support\PatientEntityPresenter::KIND_CASH;
+        $showLabel = ! $isCash || ! empty($column);
+    @endphp
+    @if ($showLabel)
+        <span class="entity-cell__label">{{ $entity['label'] ?? '—' }}</span>
+    @endif
+    @if (! empty($entity['badge']) && ! ($isCash && ! empty($column)))
         <span class="{{ $entity['badge_class'] ?? 'entity-badge' }}">{{ $entity['badge'] }}</span>
     @endif
 </div>

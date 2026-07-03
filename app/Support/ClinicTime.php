@@ -60,4 +60,27 @@ final class ClinicTime
 
         return $value->copy()->timezone(self::zone())->format($pattern);
     }
+
+    /**
+     * @return array{from: ?Carbon, to: ?Carbon}
+     */
+    public static function parseDateRange(?string $from, ?string $to): array
+    {
+        $fromDate = ($from !== null && $from !== '')
+            ? Carbon::parse($from, self::zone())->startOfDay()
+            : null;
+
+        $toDate = ($to !== null && $to !== '')
+            ? Carbon::parse($to, self::zone())->endOfDay()
+            : null;
+
+        if ($fromDate && $toDate && $fromDate->gt($toDate)) {
+            [$fromDate, $toDate] = [
+                $toDate->copy()->startOfDay(),
+                $fromDate->copy()->endOfDay(),
+            ];
+        }
+
+        return ['from' => $fromDate, 'to' => $toDate];
+    }
 }

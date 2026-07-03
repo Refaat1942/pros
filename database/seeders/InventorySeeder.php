@@ -71,6 +71,7 @@ class InventorySeeder extends Seeder
                     'supplier_item_code' => $price['itemCode'],
                     'amount'             => $price['amount'],
                     'qty'                => max(1, (int) ($price['qty'] ?? 1)),
+                    'received_at'        => PrototypeSeedData::parseDate($row['lastMoved'] ?? '01/06/2026')?->toDateString(),
                 ]);
             }
 

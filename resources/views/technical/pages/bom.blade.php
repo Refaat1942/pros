@@ -20,7 +20,7 @@
     $boms = $warehouse_boms ?? collect();
     $stageMeta = [
         'raw'      => ['label' => StockWarehouseType::Raw->icon() . ' ' . StockWarehouseType::Raw->label(), 'cls' => 'bg-amber-100 text-amber-800 border-amber-200'],
-        'wip'      => ['label' => StockWarehouseType::Production->icon() . ' ' . StockWarehouseType::Production->label(), 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
+        'wip'      => ['label' => '🏭 قيد التصنيع', 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
         'finished' => ['label' => StockWarehouseType::Delivery->icon() . ' ' . StockWarehouseType::Delivery->label(), 'cls' => 'bg-emerald-100 text-emerald-800 border-emerald-200'],
     ];
 @endphp
@@ -47,7 +47,7 @@
         <div class="flex flex-wrap gap-2" id="bomFilters">
             <button type="button" class="bom-filter active rounded-full px-4 py-1.5 text-xs font-bold bg-slate-800 text-white" data-filter="all">الكل</button>
             <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-amber-100 text-amber-800" data-filter="raw">📦 مخزن خام</button>
-            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 مخزن إنتاج</button>
+            <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-cyan-100 text-cyan-800" data-filter="wip">🏭 قيد التصنيع</button>
             <button type="button" class="bom-filter rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-800" data-filter="finished">✅ مخزن تسليم</button>
         </div>
     </div>

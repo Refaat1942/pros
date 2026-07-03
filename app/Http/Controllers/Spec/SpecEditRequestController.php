@@ -24,7 +24,7 @@ class SpecEditRequestController extends Controller
     {
         abort_unless($spec->locked, 422, 'التوصيف لم يُرسَل بعد.');
 
-        $spec->load(['items', 'caseRecord', 'pendingEditRequest']);
+        $spec->load(['items', 'caseRecord', 'pendingEditRequest', 'rejectedSpecEditRequest']);
 
         $stockCatalog = StockItem::query()
             ->orderBy('code')
@@ -43,6 +43,9 @@ class SpecEditRequestController extends Controller
             'can_request_edit'  => $this->editService->canRequestEdit($spec),
             'pending_request'   => $spec->pendingEditRequest
                 ? $this->editService->format($spec->pendingEditRequest)
+                : null,
+            'rejected_request'  => $spec->rejectedSpecEditRequest
+                ? $this->editService->format($spec->rejectedSpecEditRequest)
                 : null,
             'case_stage'        => $spec->caseRecord?->stage_key,
             'stock_catalog'     => $stockCatalog,

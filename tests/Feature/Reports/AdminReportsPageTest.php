@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Reports;
 
+use App\Models\Appointment;
 use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
@@ -18,6 +19,7 @@ use App\Services\BomService;
 use App\Services\Dashboard\DashboardPageDataService;
 use App\Services\ReturnNoteService;
 use App\Services\StockPriceService;
+use Carbon\Carbon;
 use Database\Seeders\RolesAndAdminSeeder;
 use Tests\Support\ProstheticTestHelper;
 use Tests\Support\StubsBiReportForOverview;
@@ -262,6 +264,130 @@ class AdminReportsPageTest extends TestCase
             ->assertDontSee('إجمالي الإيراد', false)
             ->assertDontSee('إجمالي التكلفة', false)
             ->assertDontSee('>تاريخ التسليم<', false);
+    }
+
+    public function test_catalog_report_includes_batches_without_received_at_using_created_at(): void
+    {
+        config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
+        Carbon::setTestNow(Carbon::parse('2026-07-03 12:00:00', 'Africa/Cairo'));
+
+        $admin = $this->userWithRole('admin');
+        $item = $this->stockItem('NULL-RCV-CAT', qty: 5, wac: 100.00);
+
+        StockItemPrice::query()->create([
+            'stock_item_id' => $item->id,
+            'price_ref'     => 'PR-NULL-RCV-1',
+            'amount'        => 100.00,
+            'qty'           => 5,
+        ]);
+
+        $from = '2026-07-03';
+        $to = '2026-07-03';
+
+        $hub = app(AdminReportsHubService::class);
+        $dates = $hub->parseDateRange($from, $to);
+        $report = $hub->build('catalog', $dates['from'], $dates['to']);
+
+        $this->assertNotEmpty($report['rows']);
+        $this->assertSame('NULL-RCV-CAT', $report['rows'][0][0] ?? null);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/catalog?from=' . $from . '&to=' . $to)
+            ->assertOk()
+            ->assertSee('NULL-RCV-CAT', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_patient_tracks_report_includes_reception_patients_without_cases(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $visit = $this->defaultVisitType();
+        $patient = Patient::create([
+            'patient_code'        => '100901',
+            'patient_qr'          => 'QR-100901',
+            'tracking_uid'        => 'case-test0901',
+            'name'                => 'مريض الاستقبال',
+            'phone'               => '01000000901',
+            'national_id'         => '29901010100901',
+            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'contract_company_id' => null,
+            'company_name'        => null,
+            'registered_at'       => now()->toDateString(),
+            'status'              => Patient::STATUS_ACTIVE,
+        ]);
+
+        Appointment::create([
+            'patient_id'       => $patient->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => '09:00',
+            'visit_type_id'    => $visit->id,
+            'visit_type'       => $visit->name,
+            'patient_name'     => $patient->name,
+            'phone'            => $patient->phone,
+            'patient_type'     => $patient->patient_type,
+            'status'           => Appointment::STATUS_WAITING,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/patient-tracks')
+            ->assertOk()
+            ->assertSee('مريض الاستقبال', false)
+            ->assertSee('في الاستقبال', false);
+    }
+
+    public function test_patient_tracks_report_shows_all_cases_without_date_filter(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/patient-tracks')
+            ->assertOk()
+            ->assertSee($patient->name, false)
+            ->assertSee($case->case_no, false);
+    }
+
+    public function test_patient_tracks_report_filters_when_dates_applied(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-03 12:00:00', 'Africa/Cairo'));
+        config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
+
+        $admin = $this->userWithRole('admin');
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/patient-tracks?from=2026-06-01&to=2026-06-01')
+            ->assertOk()
+            ->assertDontSee($patient->name, false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_catalog_report_period_label_matches_selected_dates(): void
+    {
+        config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
+
+        $admin = $this->userWithRole('admin');
+        $from = '2026-07-01';
+        $to = '2026-07-03';
+
+        $hub = app(AdminReportsHubService::class);
+        $dates = $hub->parseDateRange($from, $to);
+        $report = $hub->build('catalog', $dates['from'], $dates['to']);
+
+        $this->assertSame('01/07/2026 — 03/07/2026', $report['period_label']);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/catalog?from=' . $from . '&to=' . $to)
+            ->assertOk()
+            ->assertDontSee('reports-section-period', false)
+            ->assertSee('value="' . $from . '"', false)
+            ->assertSee('value="' . $to . '"', false);
     }
 
     public function test_catalog_report_shows_multi_price_flag_and_view_action(): void
@@ -575,7 +701,9 @@ class AdminReportsPageTest extends TestCase
         $ids = collect($hub->sections())->pluck('id')->all();
 
         $this->assertNotContains('reports-section', $ids);
+        $this->assertNotContains('costing-settings', $ids);
         $this->assertNull($hub->sectionMeta('reports-section'));
+        $this->assertNull($hub->sectionMeta('costing-settings'));
     }
 
     public function test_reports_section_slug_returns_not_found(): void

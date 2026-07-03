@@ -54,7 +54,7 @@ enum CaseStage: string
     {
         return match ($key) {
             'admin_approval' => 'انتظار موافقة الأدمن',
-            'waiting_return' => 'بانتظار رجوع العميل',
+            'waiting_return' => 'بانتظار موافقة الجهة',
             default          => null,
         };
     }

@@ -43,7 +43,7 @@
 
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
-            <h3 class="font-bold text-slate-800">✅ تم التسليم — إغلاق الطلب</h3>
+            <h3 class="font-bold text-slate-800">✅ تسليم للمرضى — إغلاق الطلب</h3>
             <button type="button" id="btnRefreshOps"
                     class="rounded-xl bg-ops text-white px-4 py-2 text-sm font-bold hover:bg-ops-dark transition-colors">
                 ↻ تحديث

@@ -6,6 +6,7 @@ use App\Models\ApprovalContract;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\Patient;
+use App\Models\Payment;
 use App\Models\Quote;
 use App\Support\CaseDisplayStatus;
 use App\Support\CaseFinancialSummary;
@@ -29,6 +30,7 @@ class AdminCaseDetailService
         ]);
 
         $quote    = $this->resolveQuote($case);
+        $payment  = $this->resolvePayment($case);
         $contract = ApprovalContract::query()
             ->where('case_id', $case->id)
             ->orderByDesc('id')
@@ -77,13 +79,14 @@ class AdminCaseDetailService
                 'id'           => $quote->id,
                 'quote_no'     => $quote->quote_no,
                 'status'       => $quote->status,
-                'status_label' => $quote->status_label,
+                'status_label' => $quote->resolvedStatusLabel($case),
                 'quote_date'   => $quote->quote_date?->format('d/m/Y'),
                 'total'        => (float) $quote->total,
                 'company_name' => $quote->company_name,
                 'items'          => $this->mapQuoteItems($case, $quote),
                 'print_url'    => route('admin.cases.quote', $case),
             ] : null,
+            'payment' => $payment,
             'approval' => $contract ? [
                 'contract_no'    => $contract->contract_no,
                 'letter_ref'     => $contract->letter_ref,
@@ -115,6 +118,29 @@ class AdminCaseDetailService
         }
 
         return $case->quotes->first();
+    }
+
+    /** @return array<string, mixed>|null */
+    private function resolvePayment(CaseRecord $case): ?array
+    {
+        $payment = Payment::query()
+            ->where('case_id', $case->id)
+            ->orderByDesc('received_at')
+            ->first();
+
+        if (! $payment) {
+            return null;
+        }
+
+        return [
+            'payment_no'    => $payment->payment_no,
+            'method'        => $payment->method,
+            'method_label'  => $payment->methodLabel(),
+            'amount'        => (float) $payment->amount,
+            'reference'     => $payment->reference,
+            'received_by'   => $payment->received_by,
+            'received_at'   => ClinicTime::format($payment->received_at),
+        ];
     }
 
     /** @return list<array<string, mixed>> */

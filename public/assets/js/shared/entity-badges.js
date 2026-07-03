@@ -64,18 +64,32 @@
 
   function renderHtml(input) {
     var entity = resolveEntity(input);
+    var showLabel = entity.kind !== 'cash';
+    var label = entity.label || '—';
     var badge = entity.badge
       ? '<span class="' + esc(entity.badge_class || 'entity-badge') + '">' + esc(entity.badge) + '</span>'
       : '';
 
     return '<div class="entity-cell">'
-      + '<span class="entity-cell__label">' + esc(entity.label || '—') + '</span>'
+      + (showLabel ? '<span class="entity-cell__label">' + esc(label) + '</span>' : '')
       + badge
       + '</div>';
+  }
+
+  function renderColumnHtml(input) {
+    var entity = resolveEntity(input);
+    if (entity.kind === 'cash') {
+      return entity.badge
+        ? '<div class="entity-cell"><span class="' + esc(entity.badge_class || 'entity-badge') + '">' + esc(entity.badge) + '</span></div>'
+        : '<div class="entity-cell"><span class="entity-cell__label">—</span></div>';
+    }
+
+    return renderHtml(input);
   }
 
   global.EntityBadges = {
     resolve: resolveEntity,
     renderHtml: renderHtml,
+    renderColumnHtml: renderColumnHtml,
   };
 })(typeof window !== 'undefined' ? window : this);

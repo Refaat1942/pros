@@ -1,5 +1,7 @@
   <div class="toast" id="toast"></div>
 
+  @include('doctor.partials.exam-modal')
+
   <div class="record-modal-overlay" id="recordDetailModal" role="dialog" aria-modal="true" aria-labelledby="recordModalTitle">
     <div class="record-modal" onclick="event.stopPropagation()">
       <div class="record-modal-header">

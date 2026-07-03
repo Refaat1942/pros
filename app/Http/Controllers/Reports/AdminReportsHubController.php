@@ -40,8 +40,8 @@ class AdminReportsHubController extends Controller
             'report_section'  => $section,
             'section_meta'    => $this->hub->sectionMeta($section),
             'report_data'     => $this->hub->build($section, $dates['from'], $dates['to']),
-            'date_from'       => $dates['from']->toDateString(),
-            'date_to'         => $dates['to']->toDateString(),
+            'date_from'       => $dates['from']?->toDateString() ?? '',
+            'date_to'         => $dates['to']?->toDateString() ?? '',
         ]);
     }
 
@@ -87,11 +87,15 @@ class AdminReportsHubController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    private function exportFilename(string $title, Carbon $from, Carbon $to): string
+    private function exportFilename(string $title, ?Carbon $from, ?Carbon $to): string
     {
         $base = preg_replace('/\s+/u', '_', trim($title));
         $base = preg_replace('/[^\p{L}\p{N}_-]+/u', '', $base) ?: 'تقرير';
 
-        return $base . '_' . $from->format('Y-m-d') . '_' . $to->format('Y-m-d') . '.csv';
+        $suffix = ($from && $to)
+            ? $from->format('Y-m-d') . '_' . $to->format('Y-m-d')
+            : 'all';
+
+        return $base . '_' . $suffix . '.csv';
     }
 }

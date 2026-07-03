@@ -107,6 +107,50 @@ class AdjustmentEditRequestTest extends TestCase
         );
     }
 
+    public function test_admin_reject_adjustment_edit_response_mentions_adjustments(): void
+    {
+        $case = $this->caseInCostCalc();
+        $adjUser = $this->userWithRole('adjustments');
+
+        $this->actingAs($adjUser)
+            ->postJson(route('adjustments.adjustments.edit-request.store', $case), [
+                'items' => [
+                    ['stock_item_code' => 'RM-ADJ-B', 'name' => 'صنف B', 'qty' => 3],
+                ],
+            ])
+            ->assertCreated();
+
+        $request = SpecEditRequest::where('case_id', $case->id)->firstOrFail();
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.spec-edit-requests.reject', $request), [])
+            ->assertOk()
+            ->assertJsonPath('message', 'تم رفض طلب التعديل — أُرسل إشعار للمعدلات.');
+    }
+
+    public function test_adjustment_edit_request_with_removed_item_lists_deletion_in_modified_items(): void
+    {
+        $case = $this->caseInCostCalc();
+        $adjUser = $this->userWithRole('adjustments');
+
+        $this->actingAs($adjUser)
+            ->postJson(route('adjustments.adjustments.edit-request.store', $case), [
+                'items' => [],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('request.modified_items.0.change', 'removed')
+            ->assertJsonPath('request.modified_items.0.stock_item_code', 'RM-ADJ-B');
+
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->getJson('/admin/spec-edit-requests/list?status=pending')
+            ->assertOk()
+            ->assertJsonPath('data.0.modified_items.0.change', 'removed')
+            ->assertJsonPath('data.0.modified_summary', 'حذف: صنف B (×2)');
+    }
+
     public function test_complete_blocked_while_pending_adjustment_edit(): void
     {
         $this->stockItem('RM-ADJ-A', qty: 20);

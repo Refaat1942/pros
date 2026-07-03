@@ -12,7 +12,6 @@
         <div class="panel-header">
           <h3>📦 توفر المخزون — الكميات المتاحة</h3>
           <div style="display:flex;align-items:center;gap:10px;">
-            <button type="button" class="btn-action primary" id="btnReceiveStock">📥 استلام وارد</button>
             <span class="badge" id="inventoryBadge">0 صنف</span>
           </div>
         </div>
@@ -53,5 +52,4 @@
     </div>
 <script>
 window.__INVENTORY_ITEMS = @json($inventory_items ?? []);
-window.__INVENTORY_SUPPLIERS = @json($inventory_suppliers ?? []);
 </script>

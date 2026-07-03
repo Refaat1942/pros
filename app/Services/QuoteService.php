@@ -193,6 +193,35 @@ class QuoteService
         });
     }
 
+    /**
+     * تأكيد تحصيل الدفع في الخزنة — يُغلق بوابة الدفع على عرض السعر.
+     */
+    public function markPaidAtCashier(Quote $quote): Quote
+    {
+        if ($quote->status === Quote::STATUS_APPROVED) {
+            return $quote;
+        }
+
+        $before = $quote->only(['status', 'status_label']);
+
+        return DB::transaction(function () use ($quote, $before) {
+            $quote->update([
+                'status'       => Quote::STATUS_APPROVED,
+                'status_label' => 'تم الدفع في الخزنة',
+            ]);
+
+            AuditService::log(
+                action:      'approve',
+                description: "تأكيد الدفع النقدي في الخزنة — {$quote->quote_no}",
+                tag:         'quotes',
+                before:      $before,
+                after:       $quote->only(['status', 'status_label']),
+            );
+
+            return $quote->fresh()->load('items');
+        });
+    }
+
     private function nextQuoteNo(): string
     {
         $year   = now()->year;

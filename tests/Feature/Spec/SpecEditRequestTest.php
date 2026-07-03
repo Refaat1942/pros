@@ -161,7 +161,8 @@ class SpecEditRequestTest extends TestCase
         $this->actingAs($admin)
             ->postJson(route('admin.spec-edit-requests.reject', $request), [])
             ->assertOk()
-            ->assertJsonPath('request.status', SpecEditRequestStatus::Rejected->value);
+            ->assertJsonPath('request.status', SpecEditRequestStatus::Rejected->value)
+            ->assertJsonPath('message', 'تم رفض طلب التعديل — أُرسل إشعار للفني.');
 
         $notification = AppNotification::forRole(Role::SLUG_SPEC)
             ->where('event', 'spec_edit_rejected')
@@ -171,7 +172,7 @@ class SpecEditRequestTest extends TestCase
         $this->assertStringContainsString('رفضت الإدارة', $notification->body);
     }
 
-    public function test_admin_reject_with_reason_includes_reason_in_notification(): void
+    public function test_admin_reject_with_notes_includes_notes_in_notification(): void
     {
         ['draft' => $draft, 'spec' => $specUser] = $this->submitSpecToAdjustments();
 
@@ -188,8 +189,7 @@ class SpecEditRequestTest extends TestCase
 
         $this->actingAs($admin)
             ->postJson(route('admin.spec-edit-requests.reject', $request), [
-                'rejection_reason_key' => 'invalid_qty',
-                'rejection_notes'      => 'الكمية مبالغ فيها',
+                'rejection_notes' => 'الكمية مبالغ فيها',
             ])
             ->assertOk()
             ->assertJsonPath('request.status', SpecEditRequestStatus::Rejected->value);
@@ -199,8 +199,42 @@ class SpecEditRequestTest extends TestCase
             ->first();
 
         $this->assertNotNull($notification);
-        $this->assertStringContainsString('كميات غير منطقية', $notification->body);
         $this->assertStringContainsString('الكمية مبالغ فيها', $notification->body);
+    }
+
+    public function test_admin_requester_receives_reject_notification_on_admin_role(): void
+    {
+        ['draft' => $draft] = $this->submitSpecToAdjustments();
+
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->postJson(route('spec.spec.edit-request.store', $draft), [
+                'items' => [
+                    ['stock_item_code' => 'RM-EDIT-B', 'name' => 'صنف B', 'qty' => 1],
+                ],
+            ])
+            ->assertCreated();
+
+        $request = SpecEditRequest::latest('id')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.spec-edit-requests.reject', $request), [
+                'rejection_notes' => 'مرفوض من الاختبار',
+            ])
+            ->assertOk();
+
+        $this->assertNotNull(
+            AppNotification::forRole(Role::SLUG_SPEC)
+                ->where('event', 'spec_edit_rejected')
+                ->first()
+        );
+
+        $this->assertNotNull(
+            AppNotification::forRole(Role::SLUG_ADMIN)
+                ->where('event', 'spec_edit_rejected')
+                ->first()
+        );
     }
 
     public function test_cannot_submit_second_pending_request(): void
@@ -220,5 +254,88 @@ class SpecEditRequestTest extends TestCase
         $this->actingAs($specUser)
             ->postJson(route('spec.spec.edit-request.store', $draft), $payload)
             ->assertStatus(422);
+    }
+
+    public function test_cannot_submit_edit_after_admin_rejection(): void
+    {
+        ['draft' => $draft, 'spec' => $specUser] = $this->submitSpecToAdjustments();
+
+        $this->actingAs($specUser)
+            ->postJson(route('spec.spec.edit-request.store', $draft), [
+                'items' => [
+                    ['stock_item_code' => 'RM-EDIT-A', 'name' => 'صنف A', 'qty' => 2],
+                ],
+            ])
+            ->assertCreated();
+
+        $request = SpecEditRequest::firstOrFail();
+        $admin   = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.spec-edit-requests.reject', $request), [
+                'rejection_notes' => 'غير مناسب',
+            ])
+            ->assertOk();
+
+        $this->actingAs($specUser)
+            ->postJson(route('spec.spec.edit-request.store', $draft), [
+                'items' => [
+                    ['stock_item_code' => 'RM-EDIT-B', 'name' => 'صنف B', 'qty' => 1],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'تم رفض طلب تعديل سابق من الإدارة — لا يمكن إرسال طلب جديد على هذا التوصيف.']);
+
+        $this->actingAs($specUser)
+            ->get('/spec/spec')
+            ->assertOk()
+            ->assertSee('رُفض طلب التعديل', false)
+            ->assertSee('لا يمكن إرسال طلب جديد', false);
+    }
+
+    public function test_spec_preview_page_shows_original_and_proposed_edit_items(): void
+    {
+        ['draft' => $draft, 'spec' => $specUser] = $this->submitSpecToAdjustments();
+
+        $this->actingAs($specUser)
+            ->postJson(route('spec.spec.edit-request.store', $draft), [
+                'tech_notes' => 'استبدال الصنف',
+                'items'      => [
+                    ['stock_item_code' => 'RM-EDIT-B', 'name' => 'صنف B', 'qty' => 2],
+                ],
+            ])
+            ->assertCreated();
+
+        $response = $this->actingAs($specUser)->get('/spec/spec');
+
+        $response->assertOk()
+            ->assertSee('التوصيف الأساسي', false)
+            ->assertSee('بنود طلب التعديل', false)
+            ->assertSee('RM-EDIT-A', false)
+            ->assertSee('RM-EDIT-B', false)
+            ->assertSee('استبدال الصنف', false);
+    }
+
+    public function test_admin_sidebar_shows_pending_count_beside_spec_edit_requests_link(): void
+    {
+        ['draft' => $draft, 'spec' => $specUser] = $this->submitSpecToAdjustments();
+
+        $this->actingAs($specUser)
+            ->postJson(route('spec.spec.edit-request.store', $draft), [
+                'tech_notes' => 'تعديل',
+                'items'      => [
+                    ['stock_item_code' => 'RM-EDIT-B', 'name' => 'صنف B', 'qty' => 1],
+                ],
+            ])
+            ->assertCreated();
+
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get('/admin/spec-edit-requests')
+            ->assertOk()
+            ->assertSee('id="sidebarSpecEditReqBadge"', false)
+            ->assertSee('>1</span>', false)
+            ->assertSee('title="بانتظار الموافقة"', false);
     }
 }

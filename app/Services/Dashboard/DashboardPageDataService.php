@@ -13,6 +13,8 @@ use App\Models\Payment;
 use App\Enums\PaymentMethod;
 use App\Models\PricingRequest;
 use App\Models\Role;
+use App\Models\SpecEditRequest;
+use App\Enums\SpecEditRequestStatus;
 use App\Models\Supplier;
 use App\Models\StockCategory;
 use App\Models\StockItem;
@@ -79,7 +81,6 @@ class DashboardPageDataService
             'reception.delivery'    => $this->receptionDelivery(),
             'reception.contracts'   => $this->contractsPage(isAdmin: false),
             'doctor.queue'          => $this->doctorQueue(),
-            'doctor.diagnosis'      => $this->doctorDiagnosis(),
             'doctor.records'        => $this->doctorRecords(),
             'doctor.transfer'       => $this->doctorTransfers(),
             'spec.orders'           => $this->specOrders(),
@@ -431,32 +432,6 @@ class DashboardPageDataService
         ];
     }
 
-    private function doctorDiagnosis(): array
-    {
-        $appointment = null;
-        $draft       = null;
-
-        if ($id = request()->integer('appointment')) {
-            $appointment = Appointment::with('patient')->find($id);
-
-            if ($appointment && $appointment->status !== Appointment::STATUS_IN_CLINIC) {
-                $appointment = null;
-            }
-
-            if ($appointment) {
-                $draft = MedicalRecord::where('appointment_id', $appointment->id)
-                    ->where('locked', false)
-                    ->first();
-            }
-        }
-
-        return [
-            'selected_appointment' => $appointment,
-            'selected_patient'     => $appointment?->patient,
-            'draft_record'         => $draft,
-        ];
-    }
-
     private function doctorRecords(): array
     {
         $records = MedicalRecord::query()
@@ -558,7 +533,8 @@ class DashboardPageDataService
             ->with([
                 'items',
                 'caseRecord:id,case_no,order_ref,stage_key',
-                'pendingEditRequest:id,tech_order_spec_id,status,created_at',
+                'pendingEditRequest',
+                'rejectedSpecEditRequest',
             ])
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
@@ -566,6 +542,7 @@ class DashboardPageDataService
             ->get();
 
         $editService = app(SpecEditRequestService::class);
+        $rejectedCount = $specs->filter(fn ($s) => $s->rejectedSpecEditRequest && ! $s->pendingEditRequest)->count();
 
         return [
             'submitted_specs' => $specs,
@@ -573,6 +550,13 @@ class DashboardPageDataService
                 'total'    => $specs->count(),
                 'editable' => $specs->filter(fn ($s) => $editService->canRequestEdit($s))->count(),
                 'pending'  => $specs->filter(fn ($s) => $s->pendingEditRequest)->count(),
+                'rejected' => $rejectedCount,
+            ],
+            'spec_preview_stats' => [
+                ['icon' => '📋', 'label' => 'توصيفات مُرسَلة', 'value' => (string) $specs->count(), 'color' => '#475569', 'bg' => 'rgba(100,116,139,0.1)'],
+                ['icon' => '✏️', 'label' => 'قابل للتعديل', 'value' => (string) $specs->filter(fn ($s) => $editService->canRequestEdit($s))->count(), 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
+                ['icon' => '⏳', 'label' => 'طلب معلّق', 'value' => (string) $specs->filter(fn ($s) => $s->pendingEditRequest)->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => '❌', 'label' => 'طلب مرفوض', 'value' => (string) $rejectedCount, 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
             ],
         ];
     }
@@ -582,9 +566,19 @@ class DashboardPageDataService
         $service = app(SpecEditRequestService::class);
         $rows    = $service->listForAdmin('pending');
 
+        $pending  = $service->pendingCount();
+        $approved = SpecEditRequest::where('status', SpecEditRequestStatus::Approved)->count();
+        $rejected = SpecEditRequest::where('status', SpecEditRequestStatus::Rejected)->count();
+
         return [
             'spec_edit_requests' => $rows,
-            'spec_edit_pending'  => count($rows),
+            'spec_edit_pending'  => $pending,
+            'spec_edit_stats'    => [
+                ['icon' => '⏳', 'label' => 'معلّق', 'value' => (string) $pending, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
+                ['icon' => '✅', 'label' => 'مُعتمد', 'value' => (string) $approved, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.12)'],
+                ['icon' => '❌', 'label' => 'مرفوض', 'value' => (string) $rejected, 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.12)'],
+                ['icon' => '📋', 'label' => 'إجمالي', 'value' => (string) ($pending + $approved + $rejected), 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.12)'],
+            ],
             'rejection_reasons'  => config('spec_edit.rejection_reasons', []),
         ];
     }
@@ -813,7 +807,7 @@ class DashboardPageDataService
             'warehouse_boms' => $boms,
             'bom_stats'      => [
                 ['icon' => StockWarehouseType::Raw->icon(), 'label' => StockWarehouseType::Raw->label(), 'value' => (string) $rawCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-                ['icon' => StockWarehouseType::Production->icon(), 'label' => StockWarehouseType::Production->label(), 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['icon' => StockWarehouseType::Production->icon(), 'label' => 'قيد التصنيع', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => StockWarehouseType::Delivery->icon(), 'label' => StockWarehouseType::Delivery->label(), 'value' => (string) $finCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📋', 'label' => 'إجمالي القوائم', 'value' => (string) $boms->count(), 'bg' => 'rgba(124,58,237,0.1)'],
             ],

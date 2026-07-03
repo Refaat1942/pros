@@ -35,6 +35,7 @@ class AdminReportsHubService
     public function __construct(
         private readonly AdminReportsService $snapshotReports,
         private readonly SupplierService $supplierService,
+        private readonly AdminPatientTrackService $patientTracks,
     ) {
     }
 
@@ -42,7 +43,7 @@ class AdminReportsHubService
     public function sections(): array
     {
         $pages = config('dashboards.admin.pages', []);
-        $skip = ['overview', 'bi', 'general-view', 'reports', 'reports-section', 'permissions', 'employees', 'notifications', 'military-ranks', 'military-debts'];
+        $skip = ['overview', 'bi', 'general-view', 'reports', 'reports-section', 'permissions', 'employees', 'notifications', 'military-ranks', 'military-debts', 'costing-settings'];
 
         $cards = [];
         $groups = [
@@ -102,14 +103,14 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    public function build(string $section, Carbon $from, Carbon $to): array
+    public function build(string $section, ?Carbon $from, ?Carbon $to): array
     {
-        if ($from->gt($to)) {
+        if ($from && $to && $from->gt($to)) {
             [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
         }
 
-        $from = $from->copy()->startOfDay();
-        $to   = $to->copy()->endOfDay();
+        $from = $from?->copy()->startOfDay();
+        $to   = $to?->copy()->endOfDay();
 
         return match ($section) {
             'cash-income'        => $this->buildCashIncome($from, $to),
@@ -134,24 +135,21 @@ class AdminReportsHubService
         };
     }
 
-    /** @return array{from: Carbon, to: Carbon} */
+    /** @return array{from: ?Carbon, to: ?Carbon} */
     public function parseDateRange(?string $from, ?string $to): array
     {
-        $fromDate = $from ? Carbon::parse($from) : now()->startOfMonth();
-        $toDate   = $to ? Carbon::parse($to) : now();
-
-        return [
-            'from' => $fromDate->copy()->startOfDay(),
-            'to'   => $toDate->copy()->endOfDay(),
-        ];
+        return ClinicTime::parseDateRange($from, $to);
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildCashIncome(Carbon $from, Carbon $to): array
+    private function buildCashIncome(?Carbon $from, ?Carbon $to): array
     {
-        $payments = Payment::query()
-            ->with('caseRecord:id,case_no')
-            ->whereBetween('received_at', [$from, $to])
+        $payments = $this->constrainDateRange(
+            Payment::query()->with('caseRecord:id,case_no'),
+            'received_at',
+            $from,
+            $to,
+        )
             ->orderByDesc('received_at')
             ->limit(1000)
             ->get();
@@ -177,13 +175,17 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildFinancial(Carbon $from, Carbon $to): array
+    private function buildFinancial(?Carbon $from, ?Carbon $to): array
     {
-        $delivered = CaseRecord::query()
-            ->with('patient:id,name')
-            ->where('patient_type', Patient::TYPE_CIVILIAN)
-            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
-            ->whereBetween('delivered_at', [$from, $to])
+        $delivered = $this->constrainDateRange(
+            CaseRecord::query()
+                ->with('patient:id,name')
+                ->where('patient_type', Patient::TYPE_CIVILIAN)
+                ->where('stage_key', CaseRecord::STAGE_DELIVERED),
+            'delivered_at',
+            $from,
+            $to,
+        )
             ->orderByDesc('delivered_at')
             ->get();
 
@@ -205,9 +207,9 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildInventoryAnalytics(Carbon $from, Carbon $to): array
+    private function buildInventoryAnalytics(?Carbon $from, ?Carbon $to): array
     {
-        $stagnantCutoff = $to->copy()->subDays(180)->startOfDay();
+        $stagnantCutoff = ($to ?? ClinicTime::now())->copy()->subDays(180)->startOfDay();
 
         $items = StockItem::query()
             ->orderBy('code')
@@ -236,12 +238,16 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildOperations(Carbon $from, Carbon $to): array
+    private function buildOperations(?Carbon $from, ?Carbon $to): array
     {
-        $cases = CaseRecord::query()
-            ->with('patient:id,name')
-            ->whereNotNull('work_order_no')
-            ->whereBetween('updated_at', [$from, $to])
+        $cases = $this->constrainDateRange(
+            CaseRecord::query()
+                ->with('patient:id,name')
+                ->whereNotNull('work_order_no'),
+            'updated_at',
+            $from,
+            $to,
+        )
             ->orderByDesc('updated_at')
             ->limit(500)
             ->get();
@@ -263,7 +269,7 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildBom(Carbon $from, Carbon $to): array
+    private function buildBom(?Carbon $from, ?Carbon $to): array
     {
         $snapshot = $this->snapshotReports->build($from, $to);
         $bomRows  = $snapshot['bom']['rows'] ?? [];
@@ -286,24 +292,23 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildPatientTracks(Carbon $from, Carbon $to): array
+    private function buildPatientTracks(?Carbon $from, ?Carbon $to): array
     {
-        $cases = CaseRecord::query()
-            ->with(['patient:id,name,patient_code', 'contractCompany:id,name'])
-            ->whereBetween('created_at', [$from, $to])
-            ->orderByDesc('created_at')
-            ->limit(500)
-            ->get();
+        $tracks = $this->filterPatientTracksByDate(
+            $this->patientTracks->list(limit: 500),
+            $from,
+            $to,
+        );
 
-        $rows = $cases->map(fn (CaseRecord $c) => [
-            $c->patient?->name ?? '—',
-            $c->case_no ?? '—',
-            $c->company_name ?? $c->contractCompany?->name ?? '—',
-            CaseStage::labelFor($c->stage_key),
+        $rows = $tracks->map(fn (array $track) => [
+            $track['name'] ?? '—',
+            $track['case_no'] ?? '—',
+            $track['company_name'] ?? '—',
+            $track['stage_label'] ?? CaseStage::labelFor($track['stage_key'] ?? ''),
         ])->values()->all();
 
         return [
-            'title'        => 'مسار المرضى — حالات جديدة',
+            'title'        => 'مسار المرضى',
             'period_label' => $this->periodLabel($from, $to),
             'summary'      => [],
             'headers'      => ['المريض', 'رقم الحالة', 'الجهة', 'المرحلة'],
@@ -311,14 +316,66 @@ class AdminReportsHubService
         ];
     }
 
+    /** @param  Collection<int, array<string, mixed>>  $tracks */
+    private function filterPatientTracksByDate(Collection $tracks, ?Carbon $from, ?Carbon $to): Collection
+    {
+        if (! $from && ! $to) {
+            return $tracks;
+        }
+
+        return $tracks
+            ->filter(function (array $track) use ($from, $to) {
+                $at = $this->patientTrackFilterDate($track);
+
+                if (! $at) {
+                    return true;
+                }
+
+                if ($from && $at->lt($from)) {
+                    return false;
+                }
+
+                if ($to && $at->gt($to)) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->values();
+    }
+
+    /** @param  array<string, mixed>  $track */
+    private function patientTrackFilterDate(array $track): ?Carbon
+    {
+        $details = $track['patient_details'] ?? [];
+        $registered = $details['registered_at'] ?? null;
+
+        if ($registered) {
+            return Carbon::parse($registered, ClinicTime::zone())->startOfDay();
+        }
+
+        foreach ($details['cases'] ?? [] as $case) {
+            if (! empty($case['created_at'])) {
+                return Carbon::parse($case['created_at'], ClinicTime::zone())->startOfDay();
+            }
+        }
+
+        return null;
+    }
+
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildCases(Carbon $from, Carbon $to): array
+    private function buildCases(?Carbon $from, ?Carbon $to): array
     {
         $cases = CaseRecord::query()
             ->with('patient:id,name')
-            ->where(function ($q) use ($from, $to) {
-                $q->whereBetween('updated_at', [$from, $to])
-                    ->orWhereBetween('delivered_at', [$from, $to]);
+            ->when($from || $to, function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->where(function ($q2) use ($from, $to) {
+                        $this->constrainDateRange($q2, 'updated_at', $from, $to);
+                    })->orWhere(function ($q2) use ($from, $to) {
+                        $this->constrainDateRange($q2, 'delivered_at', $from, $to);
+                    });
+                });
             })
             ->orderByDesc('updated_at')
             ->limit(500)
@@ -342,11 +399,19 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildVisitTypes(Carbon $from, Carbon $to): array
+    private function buildVisitTypes(?Carbon $from, ?Carbon $to): array
     {
         $appointments = Appointment::query()
             ->with('visitTypeRecord:id,name')
-            ->whereBetween('appointment_date', [$from->toDateString(), $to->toDateString()])
+            ->when($from || $to, function ($q) use ($from, $to) {
+                if ($from && $to) {
+                    $q->whereBetween('appointment_date', [$from->toDateString(), $to->toDateString()]);
+                } elseif ($from) {
+                    $q->where('appointment_date', '>=', $from->toDateString());
+                } else {
+                    $q->where('appointment_date', '<=', $to->toDateString());
+                }
+            })
             ->get();
 
         $grouped = $appointments->groupBy(fn (Appointment $a) => $a->displayVisitType());
@@ -366,7 +431,7 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildStockCategories(Carbon $from, Carbon $to): array
+    private function buildStockCategories(?Carbon $from, ?Carbon $to): array
     {
         $categories = StockCategory::query()
             ->withCount(['stockItems', 'fields'])
@@ -391,12 +456,12 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildCatalog(Carbon $from, Carbon $to): array
+    private function buildCatalog(?Carbon $from, ?Carbon $to): array
     {
-        $batches = StockItemPrice::query()
+        $batches = $this->priceBatchesInDateRange($from, $to)
             ->with(['stockItem' => fn ($q) => $q->select('id', 'code', 'name')->withCount('prices')])
-            ->whereBetween('received_at', [$from, $to])
-            ->orderByDesc('received_at')
+            ->orderByRaw('COALESCE(received_at, DATE(created_at)) DESC')
+            ->orderByDesc('id')
             ->limit(500)
             ->get();
 
@@ -405,6 +470,7 @@ class AdminReportsHubService
         $rows = $batches->map(function (StockItemPrice $p) use (&$rowActions) {
             $priceCount = (int) ($p->stockItem?->prices_count ?? 0);
             $multiPrice = $priceCount > 1;
+            $receivedAt = $p->received_at ?? $p->created_at;
 
             $rowActions[] = [
                 'stock_item_id' => (int) $p->stock_item_id,
@@ -415,7 +481,7 @@ class AdminReportsHubService
                 $p->stockItem?->name ?? '—',
                 number_format((float) $p->amount, 2) . ' ج.م',
                 (string) $p->qty,
-                ClinicTime::format($p->received_at, 'd/m/Y'),
+                ClinicTime::format($receivedAt, 'd/m/Y'),
                 $multiPrice ? ('نعم (' . $priceCount . ' أسعار)') : 'لا',
             ];
         })->values()->all();
@@ -430,12 +496,46 @@ class AdminReportsHubService
         ];
     }
 
-    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildInventoryMovements(Carbon $from, Carbon $to): array
+    /** @param \Illuminate\Database\Eloquent\Builder<StockItemPrice> $query */
+    private function priceBatchesInDateRange(?Carbon $from, ?Carbon $to): \Illuminate\Database\Eloquent\Builder
     {
-        $movements = StockMovement::query()
-            ->with('stockItem:id,code,name')
-            ->whereBetween('moved_at', [$from, $to])
+        if (! $from && ! $to) {
+            return StockItemPrice::query();
+        }
+
+        $fromDate = $from ? ClinicTime::format($from, 'Y-m-d') : null;
+        $toDate   = $to ? ClinicTime::format($to, 'Y-m-d') : null;
+
+        return StockItemPrice::query()->where(function ($q) use ($from, $to, $fromDate, $toDate) {
+            $q->where(function ($inner) use ($fromDate, $toDate) {
+                $inner->whereNotNull('received_at');
+                if ($fromDate) {
+                    $inner->whereDate('received_at', '>=', $fromDate);
+                }
+                if ($toDate) {
+                    $inner->whereDate('received_at', '<=', $toDate);
+                }
+            })->orWhere(function ($inner) use ($from, $to) {
+                $inner->whereNull('received_at');
+                if ($from) {
+                    $inner->where('created_at', '>=', $from);
+                }
+                if ($to) {
+                    $inner->where('created_at', '<=', $to);
+                }
+            });
+        });
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildInventoryMovements(?Carbon $from, ?Carbon $to): array
+    {
+        $movements = $this->constrainDateRange(
+            StockMovement::query()->with('stockItem:id,code,name'),
+            'moved_at',
+            $from,
+            $to,
+        )
             ->orderByDesc('moved_at')
             ->limit(500)
             ->get();
@@ -481,13 +581,13 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>, row_actions: list<array<string, mixed>>} */
-    private function buildReturns(Carbon $from, Carbon $to): array
+    private function buildReturns(?Carbon $from, ?Carbon $to): array
     {
         $notes = ReturnNote::query()
             ->with('lines')
             ->whereIn('status', [ReturnNote::STATUS_PARTIAL, ReturnNote::STATUS_COMPLETED])
             ->whereHas('lines', fn ($q) => $q->where('qty_returned', '>', 0))
-            ->whereBetween('updated_at', [$from, $to])
+            ->when($from || $to, fn ($q) => $this->constrainDateRange($q, 'updated_at', $from, $to))
             ->orderByDesc('updated_at')
             ->limit(500)
             ->get();
@@ -535,15 +635,18 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildSpecEditRequests(Carbon $from, Carbon $to): array
+    private function buildSpecEditRequests(?Carbon $from, ?Carbon $to): array
     {
-        $requests = SpecEditRequest::query()
-            ->with([
+        $requests = $this->constrainDateRange(
+            SpecEditRequest::query()->with([
                 'techOrderSpec:id,order_ref,patient_name',
                 'caseRecord:id,case_no,order_ref',
                 'requestedBy:id,name',
-            ])
-            ->whereBetween('created_at', [$from, $to])
+            ]),
+            'created_at',
+            $from,
+            $to,
+        )
             ->orderByDesc('created_at')
             ->limit(500)
             ->get();
@@ -568,12 +671,12 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildSuppliers(Carbon $from, Carbon $to): array
+    private function buildSuppliers(?Carbon $from, ?Carbon $to): array
     {
         $suppliers = $this->supplierService->listForAdmin(
             null,
-            $from->toDateString(),
-            $to->toDateString(),
+            $from?->toDateString(),
+            $to?->toDateString(),
         );
 
         $rows = $suppliers->map(fn (Supplier $s) => [
@@ -595,10 +698,14 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildCompanies(Carbon $from, Carbon $to): array
+    private function buildCompanies(?Carbon $from, ?Carbon $to): array
     {
-        $companies = ContractCompany::query()
-            ->whereBetween('created_at', [$from, $to])
+        $companies = $this->constrainDateRange(
+            ContractCompany::query(),
+            'created_at',
+            $from,
+            $to,
+        )
             ->orderByDesc('created_at')
             ->limit(500)
             ->get();
@@ -621,12 +728,23 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildContracts(Carbon $from, Carbon $to): array
+    private function buildContracts(?Carbon $from, ?Carbon $to): array
     {
         $contracts = ApprovalContract::query()
-            ->where(function ($q) use ($from, $to) {
-                $q->whereBetween('approval_date', [$from->toDateString(), $to->toDateString()])
-                    ->orWhereBetween('created_at', [$from, $to]);
+            ->when($from || $to, function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->where(function ($q2) use ($from, $to) {
+                        if ($from && $to) {
+                            $q2->whereBetween('approval_date', [$from->toDateString(), $to->toDateString()]);
+                        } elseif ($from) {
+                            $q2->where('approval_date', '>=', $from->toDateString());
+                        } else {
+                            $q2->where('approval_date', '<=', $to->toDateString());
+                        }
+                    })->orWhere(function ($q2) use ($from, $to) {
+                        $this->constrainDateRange($q2, 'created_at', $from, $to);
+                    });
+                });
             })
             ->orderByDesc('created_at')
             ->limit(500)
@@ -650,12 +768,16 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildCivilianDebts(Carbon $from, Carbon $to): array
+    private function buildCivilianDebts(?Carbon $from, ?Carbon $to): array
     {
-        $entries = DebtCollectionEntry::query()
-            ->with(['payable' => fn ($q) => $q->with('contractCompany:id,name,company_code')])
-            ->where('payable_type', ContractCompanyDebt::class)
-            ->whereBetween('collected_at', [$from, $to])
+        $entries = $this->constrainDateRange(
+            DebtCollectionEntry::query()
+                ->with(['payable' => fn ($q) => $q->with('contractCompany:id,name,company_code')])
+                ->where('payable_type', ContractCompanyDebt::class),
+            'collected_at',
+            $from,
+            $to,
+        )
             ->orderByDesc('collected_at')
             ->limit(500)
             ->get();
@@ -681,10 +803,14 @@ class AdminReportsHubService
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    private function buildAudit(Carbon $from, Carbon $to): array
+    private function buildAudit(?Carbon $from, ?Carbon $to): array
     {
-        $logs = AuditLog::query()
-            ->whereBetween('logged_at', [$from, $to])
+        $logs = $this->constrainDateRange(
+            AuditLog::query(),
+            'logged_at',
+            $from,
+            $to,
+        )
             ->orderByDesc('logged_at')
             ->limit(500)
             ->get();
@@ -706,9 +832,44 @@ class AdminReportsHubService
         ];
     }
 
-    private function periodLabel(Carbon $from, Carbon $to): string
+    private function periodLabel(?Carbon $from, ?Carbon $to): string
     {
-        return ClinicTime::format($from, 'd/m/Y') . ' — ' . ClinicTime::format($to, 'd/m/Y');
+        if (! $from && ! $to) {
+            return '';
+        }
+
+        if ($from && $to) {
+            return ClinicTime::format($from, 'd/m/Y') . ' — ' . ClinicTime::format($to, 'd/m/Y');
+        }
+
+        if ($from) {
+            return 'من ' . ClinicTime::format($from, 'd/m/Y');
+        }
+
+        return 'حتى ' . ClinicTime::format($to, 'd/m/Y');
+    }
+
+    /**
+     * @template T of \Illuminate\Database\Eloquent\Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private function constrainDateRange($query, string $column, ?Carbon $from, ?Carbon $to)
+    {
+        if ($from && $to) {
+            return $query->whereBetween($column, [$from, $to]);
+        }
+
+        if ($from) {
+            return $query->where($column, '>=', $from);
+        }
+
+        if ($to) {
+            return $query->where($column, '<=', $to);
+        }
+
+        return $query;
     }
 
     private function companyBillingTypeLabel(ContractCompany $company): string

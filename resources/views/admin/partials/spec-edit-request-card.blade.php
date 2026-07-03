@@ -1,6 +1,5 @@
 @php
     $row = $row ?? [];
-    $reasons = $reasons ?? [];
     $status = $row['status'] ?? 'pending';
 @endphp
 <article class="spec-edit-req-card panel" style="margin:0;padding:16px;"
@@ -45,12 +44,9 @@
         <p style="font-size:12px;margin:0 0 12px;color:var(--text-muted);"><strong>ملاحظات مقترحة:</strong> {{ $row['proposed_tech_notes'] }}</p>
     @endif
 
-    @if ($status === 'rejected')
+    @if ($status === 'rejected' && !empty($row['rejection_notes']))
         <p style="font-size:12px;margin:0;color:#b91c1c;background:#fef2f2;padding:8px 10px;border-radius:8px;">
-            <strong>سبب الرفض:</strong> {{ $row['rejection_reason_label'] ?? '—' }}
-            @if (!empty($row['rejection_notes']))
-                — {{ $row['rejection_notes'] }}
-            @endif
+            <strong>ملاحظة الرفض:</strong> {{ $row['rejection_notes'] }}
         </p>
     @endif
 
@@ -64,13 +60,7 @@
                 🖨️ طباعة التوصيف
             </a>
             <button type="button" class="btn-action success spec-edit-approve-btn" data-id="{{ $row['id'] }}" data-source="{{ $row['source'] ?? 'spec' }}">✅ موافقة</button>
-            <select class="spec-edit-reject-reason" data-id="{{ $row['id'] }}" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;min-width:180px;">
-                <option value="">— سبب الرفض (اختياري) —</option>
-                @foreach ($reasons as $key => $label)
-                    <option value="{{ $key }}">{{ $label }}</option>
-                @endforeach
-            </select>
-            <input type="text" class="spec-edit-reject-notes" data-id="{{ $row['id'] }}" placeholder="ملاحظة إضافية (اختياري)" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;flex:1;min-width:160px;">
+            <input type="text" class="spec-edit-reject-notes" data-id="{{ $row['id'] }}" placeholder="ملاحظة (اختياري)" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;flex:1;min-width:200px;">
             <button type="button" class="btn-action danger spec-edit-reject-btn" data-id="{{ $row['id'] }}">❌ رفض</button>
         </div>
     @endif

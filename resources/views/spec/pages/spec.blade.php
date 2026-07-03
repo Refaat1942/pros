@@ -1,155 +1,197 @@
 @php
     use App\Services\SpecEditRequestService;
+    use App\Support\ClinicTime;
 
     $specs = collect($submitted_specs ?? []);
-    $stats = $spec_edit_stats ?? ['total' => 0, 'editable' => 0, 'pending' => 0];
+    $stats = $spec_edit_stats ?? ['total' => 0, 'editable' => 0, 'pending' => 0, 'rejected' => 0];
     $editService = app(SpecEditRequestService::class);
+    $submittedAtLabel = fn ($spec) => $spec->updated_at
+        ? ClinicTime::format($spec->updated_at)
+        : ($spec->submitted_at ? ClinicTime::format($spec->submitted_at, 'd/m/Y') : '—');
+
+    $exportRows = $specs->map(function ($spec) use ($editService, $submittedAtLabel) {
+        $pending = $spec->pendingEditRequest;
+        $rejected = $spec->rejectedSpecEditRequest;
+        $canEdit = $editService->canRequestEdit($spec);
+
+        if ($pending) {
+            $status = 'طلب تعديل معلّق';
+        } elseif ($rejected) {
+            $status = 'رُفض طلب التعديل';
+        } elseif ($canEdit) {
+            $status = 'قابل للتعديل';
+        } else {
+            $status = 'مُرسَل';
+        }
+
+        $itemsSummary = $spec->items
+            ->map(fn ($i) => ($i->stock_item_code ?: '—') . ' × ' . $i->qty)
+            ->implode(' | ');
+
+        return [
+            'patient'       => $spec->patient_name,
+            'case_no'       => $spec->caseRecord?->case_no ?? '—',
+            'order_ref'     => $spec->order_ref,
+            'submitted_at'  => $submittedAtLabel($spec),
+            'items_count'   => $spec->items->count(),
+            'status'        => $status,
+            'items_summary' => $itemsSummary ?: '—',
+            'search'        => strtolower(trim(implode(' ', [
+                $spec->patient_name,
+                $spec->order_ref,
+                $spec->caseRecord?->case_no,
+                $status,
+                $itemsSummary,
+            ]))),
+        ];
+    })->values();
 @endphp
 
 @push('styles')
-<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    .spec-preview-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:0 24px 16px; }
+    .spec-preview-toolbar .toolbar-count { margin-right:auto; font-size:13px; color:var(--text-muted); font-weight:700; }
+    .spec-preview-items-source { display:none !important; }
+    .spec-preview-detail-grid { display:grid; gap:16px; }
+    .spec-preview-detail-grid--dual { grid-template-columns:1fr; }
+    @media (min-width: 992px) { .spec-preview-detail-grid--dual { grid-template-columns:1fr 1fr; } }
+    .spec-preview-detail-label { margin:0 0 8px; font-size:12px; font-weight:800; color:var(--text-muted); }
+    .spec-preview-detail-label.is-pending { color:#6d28d9; }
+    .spec-preview-detail-label.is-rejected { color:#b91c1c; }
+    .spec-preview-detail-label span { font-weight:500; }
+    .spec-preview-detail-wrap--pending .bom-table thead { background:#f5f3ff; }
+    .spec-preview-detail-wrap--rejected .bom-table thead { background:#fef2f2; }
+    .spec-preview-note { margin:10px 0 0; padding:10px 12px; border-radius:10px; font-size:13px; line-height:1.6; }
+    .spec-preview-note.is-muted { background:#f1f5f9; color:#475569; }
+    .spec-preview-note.is-pending { background:#f5f3ff; border:1px solid #ede9fe; color:#5b21b6; }
+    .spec-preview-note.is-rejected { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+    .spec-status-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap; }
+    .spec-status-badge--sent { background:#ecfdf5; color:#047857; }
+    .spec-status-badge--editable { background:#f5f3ff; color:#6d28d9; }
+    .spec-status-badge--pending { background:#fffbeb; color:#b45309; }
+    .spec-status-badge--rejected { background:#fef2f2; color:#b91c1c; }
+    .spec-preview-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+</style>
 @endpush
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="specPreviewRoot">
-    <div class="px-5 py-4 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <h3 class="font-bold text-slate-800">👁️ معاينة التوصيفات المُرسَلة</h3>
-            <p class="text-xs text-slate-500 mt-1">يمكن طلب تعديل التوصيف أثناء وجود الحالة في المعدلات — يتطلب موافقة الإدارة</p>
+<div class="section-view" id="section-spec-preview">
+    <div id="analytics-spec-preview">
+        @include('partials.dashboard-analytics-empty', [
+            'stats' => $spec_preview_stats ?? [],
+            'hide_charts' => true,
+        ])
+    </div>
+
+    <div class="panel inventory-wrap" id="specPreviewRoot">
+        <div class="panel-header">
+            <div>
+                <h3>👁️ معاينة التوصيفات المُرسَلة</h3>
+                <p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);">
+                    جدول التوصيفات — يمكن طلب التعديل أثناء وجود الحالة في المعدلات (موافقة الإدارة)
+                </p>
+            </div>
+            <span class="badge" id="specPreviewCount">{{ $specs->count() }} توصيف</span>
         </div>
-        <div class="flex gap-2 text-xs">
-            <span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-700">{{ $stats['total'] ?? 0 }} مُرسَل</span>
-            <span class="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700">{{ $stats['editable'] ?? 0 }} قابل للتعديل</span>
-            <span class="px-2 py-1 rounded-lg bg-amber-50 text-amber-700">{{ $stats['pending'] ?? 0 }} طلب معلّق</span>
+
+        <div class="spec-preview-toolbar data-toolbar">
+            <input type="search" id="specPreviewSearch" class="form-control table-search-input"
+                   placeholder="🔍 بحث بالمريض أو رقم الحالة أو الصنف..." autocomplete="off">
+            <div class="export-btns">
+                <button type="button" class="btn-export excel" id="btnSpecPreviewExcel">📊 Excel</button>
+                <button type="button" class="btn-export pdf" id="btnSpecPreviewPdf">📄 PDF</button>
+            </div>
+            <span class="toolbar-count" id="specPreviewVisibleCount">{{ $specs->count() }} ظاهر</span>
+        </div>
+
+        <div class="bom-table-wrap">
+            <table data-paginate="10" class="bom-table" id="specPreviewTable">
+                <thead>
+                    <tr>
+                        <th>اسم المريض</th>
+                        <th>رقم الحالة</th>
+                        <th>مرجع الطلب</th>
+                        <th>تاريخ الإرسال</th>
+                        <th>عدد البنود</th>
+                        <th>الحالة</th>
+                        <th class="col-actions">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="specPreviewTableBody">
+                    @forelse ($specs as $spec)
+                        @php
+                            $canEdit = $editService->canRequestEdit($spec);
+                            $pending = $spec->pendingEditRequest;
+                            $rejected = $spec->rejectedSpecEditRequest;
+                            $editRequest = $pending ?? $rejected;
+                            $stage = $spec->caseRecord?->stage_key;
+
+                            if ($pending) {
+                                $statusClass = 'spec-status-badge--pending';
+                                $statusLabel = '⏳ طلب تعديل معلّق';
+                            } elseif ($rejected) {
+                                $statusClass = 'spec-status-badge--rejected';
+                                $statusLabel = '❌ رُفض طلب التعديل';
+                            } elseif ($canEdit) {
+                                $statusClass = 'spec-status-badge--editable';
+                                $statusLabel = '✏️ قابل للتعديل';
+                            } else {
+                                $statusClass = 'spec-status-badge--sent';
+                                $statusLabel = 'مُرسَل';
+                            }
+
+                            $searchHay = strtolower(implode(' ', [
+                                $spec->patient_name,
+                                $spec->order_ref,
+                                $spec->caseRecord?->case_no,
+                                $statusLabel,
+                                $spec->items->pluck('stock_item_code')->implode(' '),
+                                $spec->items->pluck('name')->implode(' '),
+                            ]));
+                        @endphp
+                        <tr class="spec-preview-row" data-spec-id="{{ $spec->id }}" data-search="{{ $searchHay }}">
+                            <td><strong>{{ $spec->patient_name }}</strong></td>
+                            <td>{{ $spec->caseRecord?->case_no ?? '—' }}</td>
+                            <td>{{ $spec->order_ref }}</td>
+                            <td>{{ $submittedAtLabel($spec) }}</td>
+                            <td>{{ $spec->items->count() }}</td>
+                            <td><span class="spec-status-badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
+                            <td>
+                                <div class="spec-preview-actions">
+                                    <button type="button" class="btn-action spec-preview-toggle-btn" data-spec-id="{{ $spec->id }}">📦 البنود</button>
+                                    @if ($canEdit)
+                                        <button type="button" class="btn-action primary spec-edit-open-btn" data-spec-id="{{ $spec->id }}">✏️ طلب تعديل</button>
+                                    @endif
+                                    <a href="{{ route('spec.spec.print', $spec) }}?embed=1"
+                                       target="_blank" rel="noopener" class="btn-action">🖨️ طباعة</a>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="empty-cell">لا توجد توصيفات مُرسَلة بعد.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
-    <div class="divide-y divide-slate-100">
-        @forelse ($specs as $spec)
-            @php
-                $canEdit = $editService->canRequestEdit($spec);
-                $pending = $spec->pendingEditRequest;
-                $stage = $spec->caseRecord?->stage_key;
-            @endphp
-            <details class="group px-5 py-4" data-spec-id="{{ $spec->id }}">
-                <summary class="cursor-pointer list-none flex items-center justify-between gap-3">
-                    <div>
-                        <p class="font-bold text-slate-800">{{ $spec->patient_name }}</p>
-                        <p class="text-xs text-slate-500 mt-1">
-                            {{ $spec->order_ref }}
-                            · {{ $spec->caseRecord?->case_no }}
-                            · {{ $spec->updated_at?->format('d/m/Y H:i') ?? $spec->submitted_at?->format('d/m/Y') }}
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-2 flex-wrap justify-end">
-                        @if ($pending)
-                            <span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">⏳ طلب تعديل معلّق</span>
-                        @elseif ($canEdit)
-                            <span class="text-xs font-semibold text-violet-700 bg-violet-50 px-2 py-1 rounded-lg">✏️ قابل للتعديل</span>
-                        @else
-                            <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">مُرسَل</span>
-                        @endif
-                        @if ($canEdit)
-                            <button type="button"
-                                class="spec-edit-open-btn text-xs font-bold px-3 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
-                                data-spec-id="{{ $spec->id }}">
-                                ✏️ طلب تعديل
-                            </button>
-                        @endif
-                        <a href="{{ route('spec.spec.print', $spec) }}?embed=1"
-                           target="_blank"
-                           rel="noopener"
-                           class="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-700 text-white hover:bg-slate-800 no-underline inline-block"
-                           onclick="event.stopPropagation();">
-                            🖨️ طباعة
-                        </a>
-                    </div>
-                </summary>
-                <div class="mt-4 overflow-x-auto rounded-xl border border-slate-100">
-                    <table data-paginate="10" class="min-w-full text-sm">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-3 py-2 text-right">الكود</th>
-                                <th class="px-3 py-2 text-right">الصنف</th>
-                                <th class="px-3 py-2 text-right">الكمية</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            @foreach ($spec->items as $item)
-                                <tr>
-                                    <td class="px-3 py-2 font-mono text-xs">{{ $item->stock_item_code }}</td>
-                                    <td class="px-3 py-2">{{ $item->name }}</td>
-                                    <td class="px-3 py-2">{{ $item->qty }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @if ($spec->tech_notes)
-                    <p class="mt-3 text-sm text-slate-600"><strong>ملاحظات:</strong> {{ $spec->tech_notes }}</p>
-                @endif
-                @if ($stage && $stage !== 'adjustments')
-                    <p class="mt-2 text-xs text-slate-500">المرحلة الحالية: {{ $stage }} — التعديل غير متاح بعد تجاوز المعدلات.</p>
-                @endif
-            </details>
-        @empty
-            <p class="px-5 py-10 text-center text-slate-400">لا توجد توصيفات مُرسَلة بعد.</p>
-        @endforelse
-    </div>
+
+    @foreach ($specs as $spec)
+        @php
+            $pending = $spec->pendingEditRequest;
+            $rejected = $spec->rejectedSpecEditRequest;
+            $editRequest = $pending ?? $rejected;
+            $stage = $spec->caseRecord?->stage_key;
+        @endphp
+        <div class="spec-preview-items-source" id="spec-preview-items-source-{{ $spec->id }}" hidden>
+            @include('spec.partials.preview-spec-detail', compact('spec', 'editRequest', 'pending', 'rejected', 'stage'))
+        </div>
+    @endforeach
 </div>
 
-<div id="specEditModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <div>
-                <h4 class="font-bold text-slate-800" id="specEditModalTitle">✏️ طلب تعديل التوصيف</h4>
-                <p class="text-xs text-slate-500 mt-1" id="specEditModalMeta"></p>
-            </div>
-            <button type="button" id="specEditModalClose" class="text-slate-400 hover:text-slate-700 text-xl font-bold">×</button>
-        </div>
-        <div class="p-5 overflow-y-auto flex-1 space-y-4">
-            <p class="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-                التعديل لا يُطبَّق مباشرة — يُرسل للإدارة للموافقة أو الرفض مع إشعار لك بالنتيجة.
-            </p>
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظات فنية</label>
-                <textarea id="specEditNotes" rows="2" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></textarea>
-            </div>
-            <div>
-                <div class="flex items-center justify-between mb-2">
-                    <label class="text-xs font-bold text-slate-600">البنود المقترحة</label>
-                    <button type="button" id="specEditAddItem" class="text-xs font-bold text-violet-700 hover:text-violet-900">+ إضافة صنف</button>
-                </div>
-                <div class="overflow-x-auto rounded-xl border border-slate-100">
-                    <table class="min-w-full text-sm">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-3 py-2 text-right">الكود</th>
-                                <th class="px-3 py-2 text-right">الصنف</th>
-                                <th class="px-3 py-2 text-right">الكمية</th>
-                                <th class="px-3 py-2"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="specEditItemsBody"></tbody>
-                    </table>
-                </div>
-            </div>
-            <p id="specEditError" class="hidden text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3"></p>
-        </div>
-        <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-2">
-            <button type="button" id="specEditCancel" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-600">إلغاء</button>
-            <button type="button" id="specEditSubmit" class="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700">📤 إرسال للإدارة</button>
-        </div>
-    </div>
-</div>
+<script>
+    window.__SPEC_PREVIEW_EXPORT = @json($exportRows);
+</script>
 
-<div id="specEditCatalogModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/40 p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
-        <div class="px-4 py-3 border-b flex justify-between items-center">
-            <h5 class="font-bold text-slate-800">اختر صنفاً</h5>
-            <button type="button" id="specEditCatalogClose" class="text-slate-400 text-xl">×</button>
-        </div>
-        <div class="p-4">
-            <input type="search" id="specEditCatalogSearch" placeholder="بحث..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm mb-3">
-        </div>
-        <div id="specEditCatalogList" class="overflow-y-auto px-4 pb-4 flex-1"></div>
-    </div>
-</div>
+@include('spec.partials.preview-edit-modals')
+@include('spec.partials.preview-items-modal')

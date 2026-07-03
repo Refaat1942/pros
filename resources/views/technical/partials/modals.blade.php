@@ -28,49 +28,6 @@
     </div>
   </div>
 
-  <!-- Receive Stock (Inward) Modal -->
-  <div class="modal-overlay" id="receiveModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>📥 حركة وارد بالباركود — تحديث WAC</h3>
-        <button type="button" class="modal-close" id="closeReceiveModal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="receive-grid">
-          <div class="form-group"><label>الصنف</label>
-            <select class="form-control" id="rcvItem" data-v-rules="required,select"></select>
-          </div>
-          <div class="form-group"><label>الكمية الواردة</label>
-            <input type="number" class="form-control" id="rcvQty" min="1" max="999999" value="10"
-                   data-v-rules="required,integer,minValue:1,maxValue:999999">
-          </div>
-          <div class="form-group"><label>سعر الشراء (للوحدة)</label>
-            <input type="number" class="form-control" id="rcvAmount" min="0.01" step="0.01" value="0"
-                   data-v-rules="required,money">
-          </div>
-          <div class="form-group"><label>المورد</label>
-            <select class="form-control" id="rcvSupplier" data-v-rules="required,select">
-              <option value="">— اختر المورد —</option>
-            </select>
-          </div>
-          <div class="form-group"><label>رقم فاتورة الشراء</label>
-            <input type="text" class="form-control" id="rcvInvoice" placeholder="INV-..."
-                   data-v-rules="required,min:1,max:100" maxlength="100">
-          </div>
-          <div class="form-group"><label>تاريخ التوريد</label>
-            <input type="date" class="form-control" id="rcvDate" value=""
-                   data-v-rules="required,date,dateFuture" max="{{ now()->toDateString() }}">
-          </div>
-        </div>
-        <div class="receive-wac" id="rcvWacPreview">—</div>
-        <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
-          <button type="button" class="btn-view" id="btnCancelReceive">إلغاء</button>
-          <button type="button" class="btn-action success" id="btnConfirmReceive">تأكيد الاستلام</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Return receipt — barcode confirm -->
   <div class="modal-overlay" id="returnScanModal">
     <div class="modal modal-return modal-return-scan">

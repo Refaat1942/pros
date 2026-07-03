@@ -25,12 +25,12 @@
     var el = $('specEditError');
     if (!el) { alert(msg); return; }
     el.textContent = msg;
-    el.classList.remove('hidden');
+    el.style.display = 'block';
   }
 
   function clearError() {
     var el = $('specEditError');
-    if (el) el.classList.add('hidden');
+    if (el) el.style.display = 'none';
   }
 
   function parseItemQty(value, fallback) {
@@ -59,20 +59,37 @@
     });
   }
 
-  function openModal() {
-    var modal = $('specEditModal');
-    if (modal) {
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
+  function lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  function unlockBodyScrollIfNoModal() {
+    if (!document.querySelector('.modal-overlay.visible')) {
+      document.body.style.overflow = '';
     }
   }
 
+  function openOverlay(id) {
+    var modal = $(id);
+    if (!modal) return;
+    modal.classList.add('visible');
+    lockBodyScroll();
+  }
+
+  function closeOverlay(id) {
+    var modal = $(id);
+    if (!modal) return;
+    modal.classList.remove('visible');
+    unlockBodyScrollIfNoModal();
+  }
+
+  function openModal() {
+    openOverlay('specEditModal');
+  }
+
   function closeModal() {
-    var modal = $('specEditModal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
+    closeOverlay('specEditModal');
+    closeOverlay('specEditCatalogModal');
     state.specId = null;
     state.items = [];
     state.catalog = [];
@@ -83,15 +100,15 @@
     var tbody = $('specEditItemsBody');
     if (!tbody) return;
     if (!state.items.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="px-3 py-6 text-center text-slate-400">أضف بنداً واحداً على الأقل</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">أضف بنداً واحداً على الأقل</td></tr>';
       return;
     }
     tbody.innerHTML = state.items.map(function (item, idx) {
       return '<tr>' +
-        '<td class="px-3 py-2 font-mono text-xs">' + item.stock_item_code + '</td>' +
-        '<td class="px-3 py-2">' + item.name + '</td>' +
-        '<td class="px-3 py-2"><input type="number" step="1" value="' + item.qty + '" data-edit-qty="' + idx + '" class="w-20 rounded-lg border border-slate-200 px-2 py-1 text-center text-sm"></td>' +
-        '<td class="px-3 py-2 text-center"><button type="button" data-edit-remove="' + idx + '" class="text-red-500 font-bold">✕</button></td>' +
+        '<td class="font-mono">' + item.stock_item_code + '</td>' +
+        '<td>' + item.name + '</td>' +
+        '<td><input type="number" step="1" min="1" value="' + item.qty + '" data-edit-qty="' + idx + '" class="form-control" style="width:80px;text-align:center;padding:6px 8px;"></td>' +
+        '<td style="text-align:center;"><button type="button" data-edit-remove="' + idx + '" class="btn-action" style="color:#b91c1c;padding:4px 8px;">✕</button></td>' +
         '</tr>';
     }).join('');
 
@@ -130,10 +147,10 @@
     list.innerHTML = items.map(function (item) {
       var used = state.items.some(function (i) { return i.stock_item_code === item.code; });
       return '<button type="button" data-pick="' + item.code + '" ' + (used ? 'disabled' : '') +
-        ' class="w-full text-right px-3 py-2 rounded-xl hover:bg-violet-50 border border-transparent hover:border-violet-100 mb-1 disabled:opacity-40">' +
-        '<span class="font-mono text-xs text-slate-500">' + item.code + '</span> ' +
-        '<span class="font-bold text-slate-800">' + item.name + '</span></button>';
-    }).join('') || '<p class="text-center text-slate-400 py-4">لا توجد أصناف</p>';
+        ' style="display:block;width:100%;text-align:right;padding:10px 12px;margin-bottom:6px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;' + (used ? 'opacity:.45;cursor:not-allowed;' : '') + '">' +
+        '<span style="font-family:monospace;font-size:12px;color:#64748b;">' + item.code + '</span> ' +
+        '<span style="font-weight:700;color:#1e293b;">' + item.name + '</span></button>';
+    }).join('') || '<p style="text-align:center;color:#94a3b8;padding:16px 0;">لا توجد أصناف</p>';
 
     list.querySelectorAll('[data-pick]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -142,8 +159,7 @@
         if (!item) return;
         state.items.push({ stock_item_code: item.code, name: item.name, qty: 1 });
         renderItems();
-        $('specEditCatalogModal').classList.add('hidden');
-        $('specEditCatalogModal').classList.remove('flex');
+        closeOverlay('specEditCatalogModal');
       });
     });
   }
@@ -157,7 +173,10 @@
       .then(function (res) {
         var data = res.data;
         if (!data.can_request_edit) {
-          showError('لا يمكن طلب تعديل هذا التوصيف حالياً.');
+          var msg = data.rejected_request
+            ? 'تم رفض طلب التعديل من الإدارة — لا يمكن إرسال طلب جديد على هذا التوصيف.'
+            : 'لا يمكن طلب تعديل هذا التوصيف حالياً.';
+          showError(msg);
           return;
         }
         state.specId = specId;
@@ -242,19 +261,108 @@
   });
 
   $('specEditAddItem')?.addEventListener('click', function () {
-    var modal = $('specEditCatalogModal');
-    if (!modal) return;
     renderCatalog('');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    if ($('specEditCatalogSearch')) $('specEditCatalogSearch').value = '';
+    openOverlay('specEditCatalogModal');
   });
 
   $('specEditCatalogClose')?.addEventListener('click', function () {
-    var modal = $('specEditCatalogModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    closeOverlay('specEditCatalogModal');
+  });
+  $('specEditCatalogModal')?.addEventListener('click', function (e) {
+    if (e.target === $('specEditCatalogModal')) closeOverlay('specEditCatalogModal');
   });
   $('specEditCatalogSearch')?.addEventListener('input', function () {
     renderCatalog($('specEditCatalogSearch').value);
   });
+
+  function openSpecPreviewItemsModal(specId) {
+    var source = document.getElementById('spec-preview-items-source-' + specId);
+    var body = $('specPreviewItemsModalBody');
+    var modal = $('specPreviewItemsModal');
+    if (!source || !body || !modal) return;
+
+    var row = document.querySelector('.spec-preview-row[data-spec-id="' + specId + '"]');
+    var patientName = row && row.querySelector('td strong') ? row.querySelector('td strong').textContent : '';
+    var title = $('specPreviewItemsModalTitle');
+    if (title) {
+      title.textContent = patientName ? '📦 بنود التوصيف — ' + patientName : '📦 بنود التوصيف';
+    }
+
+    body.innerHTML = source.innerHTML;
+    openOverlay('specPreviewItemsModal');
+  }
+
+  function closeSpecPreviewItemsModal() {
+    closeOverlay('specPreviewItemsModal');
+    var body = $('specPreviewItemsModalBody');
+    if (body) body.innerHTML = '';
+  }
+
+  function applySpecPreviewSearch() {
+    var term = ($('specPreviewSearch')?.value || '').trim().toLowerCase();
+    var visible = 0;
+    document.querySelectorAll('.spec-preview-row').forEach(function (row) {
+      var hay = row.getAttribute('data-search') || '';
+      var show = !term || hay.indexOf(term) !== -1;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    if ($('specPreviewVisibleCount')) {
+      $('specPreviewVisibleCount').textContent = visible + ' ظاهر';
+    }
+    if (window.refreshPaginated) window.refreshPaginated('specPreviewTableBody');
+  }
+
+  function exportSpecPreview(type) {
+    var allRows = window.__SPEC_PREVIEW_EXPORT || [];
+    var term = ($('specPreviewSearch')?.value || '').trim().toLowerCase();
+    var rows = allRows.filter(function (r) {
+      return !term || (r.search || '').indexOf(term) !== -1;
+    }).map(function (r) {
+      return [r.patient, r.case_no, r.order_ref, r.submitted_at, r.items_count, r.status, r.items_summary];
+    });
+    var headers = ['اسم المريض', 'رقم الحالة', 'مرجع الطلب', 'تاريخ الإرسال', 'عدد البنود', 'الحالة', 'البنود'];
+    if (!window.ExportKit) {
+      alert('أداة التصدير غير متاحة');
+      return;
+    }
+    if (type === 'excel') {
+      ExportKit.toExcel(ExportKit.buildFilename('معاينة_التوصيفات'), headers, rows);
+      return;
+    }
+    ExportKit.toPDF('معاينة التوصيفات المُرسَلة', headers, rows, 'لوحة التوصيف الفني');
+  }
+
+  document.querySelectorAll('.spec-preview-toggle-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openSpecPreviewItemsModal(btn.getAttribute('data-spec-id'));
+    });
+  });
+
+  $('specPreviewItemsModalClose')?.addEventListener('click', closeSpecPreviewItemsModal);
+  $('specPreviewItemsModalDone')?.addEventListener('click', closeSpecPreviewItemsModal);
+  $('specPreviewItemsModal')?.addEventListener('click', function (e) {
+    if (e.target === $('specPreviewItemsModal')) closeSpecPreviewItemsModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if ($('specEditCatalogModal')?.classList.contains('visible')) {
+      closeOverlay('specEditCatalogModal');
+      return;
+    }
+    if ($('specEditModal')?.classList.contains('visible')) {
+      closeModal();
+      return;
+    }
+    if ($('specPreviewItemsModal')?.classList.contains('visible')) {
+      closeSpecPreviewItemsModal();
+    }
+  });
+
+  $('specPreviewSearch')?.addEventListener('input', applySpecPreviewSearch);
+  $('btnSpecPreviewExcel')?.addEventListener('click', function () { exportSpecPreview('excel'); });
+  $('btnSpecPreviewPdf')?.addEventListener('click', function () { exportSpecPreview('pdf'); });
 })();

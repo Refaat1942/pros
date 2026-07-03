@@ -11,6 +11,7 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Support\CaseDisplayStatus;
 use App\Support\CaseFinancialSummary;
+use App\Support\PatientEntityPresenter;
 use App\Support\ClinicTime;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -123,7 +124,7 @@ class AdminCaseTrackingService
             'caseNo'              => $case->case_no,
             'patient'             => $case->patient?->name ?? '—',
             'patientPhone'        => $case->patient?->phone,
-            'company'             => $case->displayEntity(),
+            'company'             => $this->contractCompanyColumn($case),
             'patientType'         => $case->patient_type,
             'orderRef'            => $case->order_ref,
             'quoteId'             => $case->quote_no,
@@ -150,6 +151,17 @@ class AdminCaseTrackingService
             'canDeliver'          => $canDel,
             'deliverBlockReason'  => $canDel ? null : $this->deliverBlockReason($case, $bom),
         ];
+    }
+
+    private function contractCompanyColumn(CaseRecord $case): string
+    {
+        if ($case->isCashCivilian()) {
+            return '—';
+        }
+
+        $label = $case->displayEntity();
+
+        return $label === PatientEntityPresenter::CASH_LABEL ? '—' : $label;
     }
 
     private function pipelineHtml(CaseRecord $case, string $label): string

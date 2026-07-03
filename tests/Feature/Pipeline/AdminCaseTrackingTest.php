@@ -241,6 +241,33 @@ class AdminCaseTrackingTest extends TestCase
         $this->assertSame(1800.0, $row['paid']);
     }
 
+    public function test_cash_civilian_shows_dash_in_contract_company_column(): void
+    {
+        $patient = $this->cashPatient();
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case->update(['delivered_at' => now()]);
+
+        $row = app(AdminCaseTrackingService::class)->buckets()['delivered']
+            ->firstWhere('id', (string) $case->id);
+
+        $this->assertNotNull($row);
+        $this->assertSame('—', $row['company']);
+    }
+
+    public function test_contracted_civilian_shows_company_name_in_contract_company_column(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case->update(['delivered_at' => now()]);
+
+        $row = app(AdminCaseTrackingService::class)->buckets()['delivered']
+            ->firstWhere('id', (string) $case->id);
+
+        $this->assertNotNull($row);
+        $this->assertSame($patient->displayEntity(), $row['company']);
+        $this->assertNotSame('—', $row['company']);
+    }
+
     public function test_cash_patient_at_cashier_appears_in_awaiting_cashier_bucket_not_waiting_return(): void
     {
         $patient = $this->cashPatient();

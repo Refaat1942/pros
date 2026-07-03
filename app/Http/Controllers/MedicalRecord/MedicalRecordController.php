@@ -74,7 +74,7 @@ class MedicalRecordController extends Controller
             'يجب تحويل المريض من الاستقبال قبل بدء الكشف.'
         );
 
-        $appointment->load('patient:id,patient_code,name,national_id,patient_type,company_name,sovereign_entity,phone');
+        $appointment->load('patient:id,patient_code,name,national_id,patient_type,company_name,sovereign_entity,phone,contract_company_id');
 
         $draft = MedicalRecord::where('appointment_id', $appointment->id)
             ->where('locked', false)
@@ -240,7 +240,7 @@ class MedicalRecordController extends Controller
             'transferred_at_formatted' => $appointment->transferredAtFormatted(),
             'wait_label'     => $appointment->clinicWaitLabel(),
             'patient'        => $appointment->relationLoaded('patient') && $appointment->patient
-                ? $appointment->patient->only(['id', 'patient_code', 'name', 'national_id', 'patient_type', 'company_name', 'sovereign_entity'])
+                ? $appointment->patient->only(['id', 'patient_code', 'name', 'national_id', 'patient_type', 'company_name', 'sovereign_entity', 'contract_company_id'])
                     + ['display_entity' => $appointment->patient->displayEntity()]
                 : null,
         ];

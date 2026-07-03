@@ -41,6 +41,9 @@ Route::prefix('reception')
         Route::get('lookup/companies', [ContractCompanyController::class, 'index'])
             ->name('lookup.companies');
 
+        Route::post('lookup/companies', [ContractCompanyController::class, 'storeFromReception'])
+            ->name('lookup.companies.store');
+
         // ── Appointments ───────────────────────────────────────────────────
         Route::middleware('dashboard.page:reception,appointments')->group(function () {
             Route::get('appointments/list', [AppointmentController::class, 'index'])

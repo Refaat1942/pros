@@ -364,7 +364,7 @@
 
       var filtered = getFilteredCases();
       var titles = {
-        waiting_return: '📁 المرضى — بانتظار رجوع العميل',
+        waiting_return: '📁 المرضى — بانتظار موافقة الجهة',
         awaiting_cashier: '💵 المرضى — بانتظار الدفع في الخزنة',
         in_progress: '📁 المرضى — تحت التنفيذ',
         delivered: '📁 المرضى — تم التسليم'
@@ -464,7 +464,7 @@
       var filtered = getFilteredCases();
       var headers, rows, title;
       if (casesFilter === 'waiting_return') {
-        title = 'حالات بانتظار رجوع العميل';
+        title = 'حالات بانتظار موافقة الجهة';
         headers = ['المريض', 'جهة التعاقد', 'سريال عرض السعر', 'مرجع التسعير', 'تاريخ العرض', 'أيام الانتظار', 'الحالة'];
         rows = filtered.map(function(c) {
           return [c.patient, c.company, c.quoteId, c.pricingRef || '—', ExportKit.formatDateForExport(c.quoteDate), c.quoteDaysWaiting || 0, c.stageLabel];
@@ -490,7 +490,7 @@
       }
       if (type === 'excel') {
         var caseNames = {
-          waiting_return: 'حالات_بانتظار_رجوع_العميل',
+          waiting_return: 'حالات_بانتظار_موافقة_الجهة',
           awaiting_cashier: 'حالات_بانتظار_الدفع_الخزنة',
           in_progress: 'حالات_تحت_التنفيذ',
           delivered: 'حالات_مسلّمة'
@@ -545,6 +545,7 @@
       var c = data.case || {};
       var p = data.patient || {};
       var q = data.quote;
+      var pay = data.payment;
       var a = data.approval;
 
       if (title) title.textContent = 'تفاصيل الحالة';
@@ -568,6 +569,7 @@
         caseDetailBox('تاريخ ووقت التسليم', escapeHtml(c.delivered_at)) +
         caseDetailBox('إجمالي التكلفة', c.total_cost != null ? CasesWorkflow.formatMoney(c.total_cost) : '—') +
         caseDetailBox('المدفوع', c.paid != null ? '<span class="case-detail-paid">' + CasesWorkflow.formatMoney(c.paid) + '</span>' : '—') +
+        (pay && pay.method_label ? caseDetailBox('طريقة الدفع', escapeHtml(pay.method_label)) : '') +
         '</div></div>';
 
       var quoteSection = '';
@@ -588,6 +590,8 @@
           caseDetailBox('الحالة', escapeHtml(q.status_label || q.status)) +
           caseDetailBox('الإجمالي', CasesWorkflow.formatMoney(q.total)) +
           caseDetailBox('الجهة', escapeHtml(q.company_name)) +
+          (pay && pay.method_label ? caseDetailBox('وسيلة الدفع', escapeHtml(pay.method_label)) : '') +
+          (pay && pay.received_at ? caseDetailBox('تاريخ التحصيل', escapeHtml(pay.received_at)) : '') +
           '</div>' +
           '<div class="case-detail-actions">' +
           '<a href="' + escapeHtml(q.print_url) + '" target="_blank" rel="noopener" class="btn-case-doc">🖨️ فتح للطباعة / PDF</a>' +

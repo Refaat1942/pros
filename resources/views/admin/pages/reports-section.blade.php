@@ -8,18 +8,17 @@
     $showCatalogActions = $section === 'catalog' && $rowActions !== [];
     $showReturnsActions = $section === 'returns' && $rowActions !== [];
     $showRowActions = $showCatalogActions || $showReturnsActions;
-    $exportUrl = route('admin.reports.export', [
+    $exportUrl = route('admin.reports.export', array_filter([
         'section' => $report_section,
-        'from'    => $date_from,
-        'to'      => $date_to,
-    ]);
+        'from'    => $date_from ?: null,
+        'to'      => $date_to ?: null,
+    ]));
     $summary = $report['summary'] ?? [];
 @endphp
 <div class="section-view" id="section-reports-section" data-server-rendered="1">
     <div class="reports-section-toolbar">
         <div class="reports-section-heading">
             <h3>{{ ($meta['icon'] ?? '📄') . ' ' . ($report['title'] ?? $meta['label'] ?? 'تقرير') }}</h3>
-            <p class="reports-section-period">{{ $report['period_label'] ?? '' }}</p>
         </div>
         <a href="{{ route('admin.reports') }}" class="reports-back-link">
             <span class="reports-back-link__icon" aria-hidden="true">←</span>
@@ -30,11 +29,11 @@
     <form method="GET" action="{{ route('admin.reports.section', $report_section) }}" class="reports-date-filter">
         <label>
             <span>من</span>
-            <input type="date" name="from" value="{{ $date_from }}" required>
+            <input type="date" name="from" value="{{ $date_from }}">
         </label>
         <label>
             <span>إلى</span>
-            <input type="date" name="to" value="{{ $date_to }}" required>
+            <input type="date" name="to" value="{{ $date_to }}">
         </label>
         <button type="submit" class="btn-action primary">تطبيق الفترة</button>
         <a href="{{ $exportUrl }}" class="btn-export excel" download>📊 تصدير Excel</a>
@@ -99,7 +98,7 @@
                     @empty
                         <tr>
                             <td colspan="{{ max(count($headers) + ($showRowActions ? 1 : 0), 1) }}" class="empty-cell">
-                                لا توجد بيانات في هذه الفترة.
+                                {{ ($date_from || $date_to) ? 'لا توجد بيانات في هذه الفترة.' : 'لا توجد بيانات.' }}
                             </td>
                         </tr>
                     @endforelse

@@ -15,7 +15,7 @@
 
   var STAGE_META = {
     raw: { label: '📦 مخزن خام', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
-    wip: { label: '🏭 مخزن إنتاج', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+    wip: { label: '🏭 قيد التصنيع', cls: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
     finished: { label: '✅ مخزن تسليم', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   };
 

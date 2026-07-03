@@ -51,4 +51,13 @@ class TechOrderSpec extends Model
             ->where('source', SpecEditRequestSource::Spec)
             ->where('status', SpecEditRequestStatus::Pending);
     }
+
+    public function rejectedSpecEditRequest(): HasOne
+    {
+        return $this->hasOne(SpecEditRequest::class)
+            ->ofMany(['id' => 'max'], function ($query) {
+                $query->where('source', SpecEditRequestSource::Spec)
+                    ->where('status', SpecEditRequestStatus::Rejected);
+            });
+    }
 }

@@ -576,7 +576,7 @@
         militaryRankId: patient.military_rank_id || null,
         company: affiliation,
         entity: entity,
-        entityHtml: window.EntityBadges ? EntityBadges.renderHtml(row) : affiliation,
+        entityHtml: window.EntityBadges ? EntityBadges.renderColumnHtml(row) : affiliation,
         patient_type: row.patient_type || patient.patient_type || 'civilian',
         visitType: row.visit_type_id ? String(row.visit_type_id) : 'exam',
         visitTypeId: row.visit_type_id || null,
@@ -737,7 +737,7 @@
         phone: row.phone || '—',
         company: company,
         entity: entity,
-        entityHtml: window.EntityBadges ? EntityBadges.renderHtml(row) : company,
+        entityHtml: window.EntityBadges ? EntityBadges.renderColumnHtml(row) : company,
         rank: row.rank || '',
         registered: displayDateFromIso(row.registered_at) || '—',
         lastVisit: displayDateFromIso(row.last_visit_at) || '—',
@@ -802,7 +802,7 @@
 
     function exportAppointments(type) {
       var data = getFilteredAppointments();
-      var headers = ['التاريخ', 'الوقت', 'رقم الدور', 'تاريخ الإضافة', 'وقت الانتظار', 'اسم المريض', 'نوع المريض', 'نوع الزيارة', 'رقم الهاتف', 'جهة التعاقد / الرتبة'];
+      var headers = ['التاريخ', 'الوقت', 'رقم الدور', 'تاريخ الإضافة', 'وقت الانتظار', 'اسم المريض', 'نوع المريض', 'نوع الزيارة', 'رقم الهاتف', 'الجهة'];
       var rows = data.map(function(a) {
         var vt = getVisitMeta(a.visitType);
         var typeLabel = CasesWorkflow.getPatientTypeLabel(a.patient_type);
@@ -814,7 +814,7 @@
 
     function exportPatients(type) {
       var data = getFilteredPatients((document.getElementById('patientSearch') || {}).value.trim());
-      var headers = ['اسم المريض', 'رقم الدور', 'رقم الهاتف', 'جهة التعاقد / الرتبة', 'تاريخ التسجيل', 'آخر زيارة'];
+      var headers = ['اسم المريض', 'رقم الدور', 'رقم الهاتف', 'الجهة', 'تاريخ التسجيل', 'آخر زيارة'];
       var rows = data.map(function(p) {
         return [p.name, p.queueNumber, p.phone, p.company, p.registered, p.lastVisit];
       });
@@ -1491,6 +1491,7 @@
       var grpEntityBilling = document.getElementById('grpEntityBilling');
       var grpCompany = document.getElementById('grpCompany');
       var grpCashHint = document.getElementById('grpCashHint');
+      var grpNewCompany = document.getElementById('grpNewCompany');
       var entityBillingSel = document.getElementById('newEntityBillingType');
       var companySel = document.getElementById('newCompanyId');
 
@@ -1500,16 +1501,42 @@
 
       if (!isEntity) {
         if (grpCompany) grpCompany.style.display = 'none';
+        if (grpNewCompany) grpNewCompany.style.display = 'none';
         if (entityBillingSel && !isEntity) entityBillingSel.value = '';
         if (companySel && !isEntity) companySel.value = '';
       } else {
         var billingType = entityBillingSel ? entityBillingSel.value : '';
         if (grpCompany) grpCompany.style.display = billingType ? '' : 'none';
+        if (grpNewCompany) grpNewCompany.style.display = billingType === 'non_contracted' ? '' : 'none';
         rebuildCompanyOptions(billingType);
       }
 
       if (isMilitary && companySel) companySel.value = '';
+      syncCompanyFieldValidation();
       requestAnimationFrame(syncAddPatientFormHeight);
+    }
+
+    function syncCompanyFieldValidation() {
+      var classSel = document.getElementById('newPatientClassification');
+      var billingSel = document.getElementById('newEntityBillingType');
+      var companySel = document.getElementById('newCompanyId');
+      if (!companySel) return;
+
+      var active = classSel && classSel.value === 'entity' && billingSel && billingSel.value;
+      var form = document.getElementById('addPatientForm');
+
+      if (active) {
+        companySel.setAttribute('data-v-rules', 'required,select');
+      } else {
+        companySel.removeAttribute('data-v-rules');
+        if (window.DashboardValidation) {
+          window.DashboardValidation.clearInvalid(companySel);
+        }
+      }
+
+      if (active && form && window.DashboardValidation) {
+        window.DashboardValidation.validateField(companySel, form);
+      }
     }
 
     function rebuildCompanyOptions(billingType) {
@@ -1539,6 +1566,97 @@
       } else {
         sel.value = '';
       }
+    }
+
+    function setNewCompanyStatus(message, isError) {
+      var el = document.getElementById('newCompanyAddStatus');
+      if (!el) return;
+      el.textContent = message || '';
+      el.style.color = isError ? '#b91c1c' : 'var(--text-muted)';
+    }
+
+    function upsertCompanyInCache(company) {
+      if (!company || company.id == null) return;
+      var id = Number(company.id);
+      var idx = companiesCache.findIndex(function (c) { return Number(c.id) === id; });
+      var normalized = {
+        id: id,
+        name: company.name,
+        company_code: company.company_code || '',
+        is_military: !!company.is_military,
+        is_contracted: company.is_contracted !== false,
+        discount_percent: company.discount_percent,
+      };
+      if (idx >= 0) {
+        companiesCache[idx] = normalized;
+      } else {
+        companiesCache.push(normalized);
+      }
+      companiesCache.sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
+      });
+    }
+
+    function addNewContractCompany() {
+      var nameInput = document.getElementById('newCompanyName');
+      var billingSel = document.getElementById('newEntityBillingType');
+      if (!nameInput || !billingSel || billingSel.value !== 'non_contracted') return;
+
+      var name = (nameInput.value || '').trim();
+      if (name.length < 2) {
+        setNewCompanyStatus('أدخل اسم الجهة (حرفين على الأقل).', true);
+        return;
+      }
+
+      var btn = document.getElementById('btnAddNewCompany');
+      if (btn) btn.disabled = true;
+      setNewCompanyStatus('جاري الحفظ...', false);
+
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+      fetch('/reception/lookup/companies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrf,
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ name: name }),
+      })
+        .then(function (r) {
+          return r.json().then(function (body) {
+            if (!r.ok) throw new Error((body && body.message) || 'تعذّر إضافة الجهة.');
+            return body;
+          });
+        })
+        .then(function (res) {
+          var company = res.data;
+          upsertCompanyInCache(company);
+          rebuildCompanyOptions('non_contracted');
+          var sel = document.getElementById('newCompanyId');
+          var form = document.getElementById('addPatientForm');
+          if (sel && company && company.id) {
+            sel.value = String(company.id);
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          if (sel && window.DashboardValidation) {
+            window.DashboardValidation.clearInvalid(sel);
+            if (form) window.DashboardValidation.validateField(sel, form);
+          }
+          nameInput.value = '';
+          setNewCompanyStatus(res.message || 'تمت إضافة الجهة واختيارها — يمكنك حفظ المريض.', false);
+          if (typeof showToast === 'function') showToast('✅ ' + (res.message || 'تمت إضافة الجهة'));
+        })
+        .catch(function (err) {
+          setNewCompanyStatus(err.message || 'تعذّر إضافة الجهة.', true);
+          if (typeof showToast === 'function') showToast('⚠️ ' + (err.message || 'تعذّر إضافة الجهة'));
+        })
+        .finally(function () {
+          if (btn) btn.disabled = false;
+        });
     }
 
     function filterCompanyOptions(isMilitary) {
@@ -1585,6 +1703,20 @@
     var entityBillingSel = document.getElementById('newEntityBillingType');
     if (entityBillingSel) {
       entityBillingSel.addEventListener('change', syncPatientClassificationUI);
+    }
+
+    var btnAddNewCompany = document.getElementById('btnAddNewCompany');
+    if (btnAddNewCompany) {
+      btnAddNewCompany.addEventListener('click', addNewContractCompany);
+    }
+    var newCompanyNameInput = document.getElementById('newCompanyName');
+    if (newCompanyNameInput) {
+      newCompanyNameInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addNewContractCompany();
+        }
+      });
     }
 
     if (document.getElementById('addPatientFormWrap')?.classList.contains('open')) {

@@ -23,7 +23,7 @@ class OperationsListRefreshTest extends TestCase
             ->assertOk()
             ->assertSee('id="btnRefreshOps"', false)
             ->assertSee('id="opsTableBody"', false)
-            ->assertSee('تم التسليم', false);
+            ->assertSee('تسليم للمرضى', false);
     }
 
     public function test_delivery_list_returns_only_ready_delivery_cases(): void

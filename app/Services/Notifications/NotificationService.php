@@ -125,22 +125,23 @@ class NotificationService
 
     public function notifyEditRequestApproved(SpecEditRequest $request): AppNotification
     {
-        $request->loadMissing('caseRecord.patient:id,name');
+        $request->loadMissing('caseRecord.patient:id,name', 'requestedBy.role:id,slug');
         $case    = $request->caseRecord;
         $patient = $case?->patient?->name ?? 'غير معروف';
         $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
 
         $isAdjustments = $request->source === SpecEditRequestSource::Adjustments;
+        $departmentRole = $isAdjustments ? Role::SLUG_ADJUSTMENTS : Role::SLUG_SPEC;
 
-        return $this->push(
-            roleSlug: $isAdjustments ? Role::SLUG_ADJUSTMENTS : Role::SLUG_SPEC,
-            title:    $isAdjustments ? '✅ تم اعتماد تعديل بنود المعدلات' : '✅ تم اعتماد تعديل التوصيف',
-            body:     $isAdjustments
+        return $this->pushEditRequestOutcome(
+            request:        $request,
+            departmentRole: $departmentRole,
+            title:          $isAdjustments ? '✅ تم اعتماد تعديل بنود المعدلات' : '✅ تم اعتماد تعديل التوصيف',
+            body:           $isAdjustments
                 ? "وافقت الإدارة على تعديل بنود المعدلات للمريض {$patient} (حالة {$caseNo}) — التعديل مُطبَّق."
                 : "وافقت الإدارة على تعديل توصيف المريض {$patient} (حالة {$caseNo}) — التعديل مُطبَّق.",
-            case:     $case,
-            event:    'spec_edit_approved',
-            data:     [
+            event:          'spec_edit_approved',
+            data:           [
                 'spec_edit_request_id' => (string) $request->id,
                 'source'               => $request->source->value,
                 'url'                  => $isAdjustments ? '/adjustments/adjustments' : '/spec/spec',
@@ -150,7 +151,7 @@ class NotificationService
 
     public function notifyEditRequestRejected(SpecEditRequest $request): AppNotification
     {
-        $request->loadMissing('caseRecord.patient:id,name');
+        $request->loadMissing('caseRecord.patient:id,name', 'requestedBy.role:id,slug');
         $case    = $request->caseRecord;
         $patient = $case?->patient?->name ?? 'غير معروف';
         $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
@@ -159,18 +160,19 @@ class NotificationService
         $reasonPart = '';
 
         if ($reason || $notes !== '') {
-            $reasonPart = ' السبب: ' . ($reason ?: '—') . ($notes !== '' ? " — {$notes}" : '');
+            $reasonPart = ' السبب: ' . ($notes !== '' ? $notes : $reason);
         }
 
         $isAdjustments = $request->source === SpecEditRequestSource::Adjustments;
+        $departmentRole = $isAdjustments ? Role::SLUG_ADJUSTMENTS : Role::SLUG_SPEC;
 
-        return $this->push(
-            roleSlug: $isAdjustments ? Role::SLUG_ADJUSTMENTS : Role::SLUG_SPEC,
-            title:    $isAdjustments ? '❌ رُفض طلب تعديل المعدلات' : '❌ رُفض طلب تعديل التوصيف',
-            body:     "رفضت الإدارة طلب تعديل {$patient} (حالة {$caseNo}).{$reasonPart}",
-            case:     $case,
-            event:    'spec_edit_rejected',
-            data:     [
+        return $this->pushEditRequestOutcome(
+            request:        $request,
+            departmentRole: $departmentRole,
+            title:          $isAdjustments ? '❌ رُفض طلب تعديل المعدلات' : '❌ رُفض طلب تعديل التوصيف',
+            body:           "رفضت الإدارة طلب تعديل {$patient} (حالة {$caseNo}).{$reasonPart}",
+            event:          'spec_edit_rejected',
+            data:           [
                 'spec_edit_request_id' => (string) $request->id,
                 'source'               => $request->source->value,
                 'rejection_reason'     => $reason,
@@ -243,6 +245,43 @@ class NotificationService
                 'case_id'         => (string) ($case?->id ?? ''),
                 'case_no'         => (string) ($case?->case_no ?? ''),
             ], array_map('strval', $data)));
+        }
+
+        return $notification;
+    }
+
+    /**
+     * إشعار نتيجة طلب التعديل — للوحة القسم + دور مقدّم الطلب إن اختلف (مثلاً أدمن يعمل من لوحة التوصيف).
+     */
+    private function pushEditRequestOutcome(
+        SpecEditRequest $request,
+        string $departmentRole,
+        string $title,
+        string $body,
+        string $event,
+        array $data,
+    ): AppNotification {
+        $case = $request->caseRecord;
+
+        $notification = $this->push(
+            roleSlug: $departmentRole,
+            title:    $title,
+            body:     $body,
+            case:     $case,
+            event:    $event,
+            data:     $data,
+        );
+
+        $requesterRole = $request->requestedBy?->role?->slug;
+        if ($requesterRole && $requesterRole !== $departmentRole) {
+            $this->push(
+                roleSlug: $requesterRole,
+                title:    $title,
+                body:     $body,
+                case:     $case,
+                event:    $event,
+                data:     $data,
+            );
         }
 
         return $notification;

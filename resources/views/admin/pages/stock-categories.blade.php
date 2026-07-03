@@ -2,14 +2,14 @@
     $categories = collect($stock_categories ?? []);
 @endphp
 <div class="section-view stock-categories-page" id="section-stock-categories" data-page-mode="1">
-    <div class="panel">
-        <div class="panel-header">
+<div class="panel">
+    <div class="panel-header">
             <h3>🏷️ أقسام الأصناف</h3>
             <div style="display:flex;align-items:center;gap:10px;">
                 <button type="button" class="btn-action primary" id="btnAddStockCategory">➕ قسم جديد</button>
                 <span class="badge">{{ $categories->count() }} قسم</span>
-            </div>
-        </div>
+    </div>
+</div>
 
         <p class="stock-categories-intro">
             عرّف لكل قسم الحقول الخاصة به (نص، رقم، قائمة، …). عند إضافة صنف في
@@ -31,29 +31,29 @@
                         <div class="sc-form-group">
                             <label class="sc-form-label" for="editStockCategoryName">اسم القسم <span class="sc-form-required">*</span></label>
                             <input type="text" id="editStockCategoryName" class="sc-form-control" maxlength="100" placeholder="مثال: مفاصل صناعية">
-                        </div>
+        </div>
 
                         <div class="stock-categories-fields-section">
                             <div class="stock-categories-fields-head">
                                 <div>
                                     <strong class="stock-categories-fields-title">حقول القسم</strong>
                                     <p class="stock-categories-fields-hint">حدّد الخصائص التي تظهر عند إضافة صنف لهذا القسم</p>
-                                </div>
+                </div>
                                 <button type="button" class="btn-action primary" id="btnAddCategoryField">+ حقل جديد</button>
-                            </div>
+            </div>
                             <div id="stockCategoryFieldsBuilder" class="stock-categories-fields-builder"></div>
-                        </div>
+            </div>
 
                         <div id="stockCategoryEditError" class="sc-form-error" style="display:none;"></div>
                         <div class="stock-categories-editor-actions">
                             <button type="button" class="btn-action" id="btnCancelStockCategory">إلغاء</button>
                             <button type="button" class="btn-action success" id="btnSaveStockCategory">💾 حفظ القسم</button>
-                        </div>
-                    </div>
-                </div>
+    </div>
+</div>
+            </div>
                 <div id="stockCategoryEditPlaceholder" class="stock-categories-placeholder">
                     <p>اختر قسماً من القائمة للتعديل، أو اضغط «قسم جديد».</p>
-                </div>
+        </div>
             </div>
         </div>
     </div>

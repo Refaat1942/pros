@@ -1159,19 +1159,39 @@
     .spec-edit-requests-toolbar {
         flex-wrap: wrap;
         gap: 10px;
+        align-items: center;
+    }
+    .spec-edit-requests-toolbar .table-search-input,
+    .spec-edit-requests-toolbar select {
+        padding: 9px 14px;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px;
+        font-family: 'Tajawal', sans-serif;
+        font-size: 13px;
+        background: #fff;
+        min-height: 40px;
     }
     .spec-edit-requests-toolbar .table-search-input {
-        flex: 0 1 var(--dash-table-search-width, 320px);
-        width: min(var(--dash-table-search-width, 320px), 100%);
-        max-width: 420px;
+        flex: 1 1 280px;
         min-width: 220px;
+        max-width: 420px;
     }
     .spec-edit-requests-toolbar select {
-        min-width: 160px;
+        min-width: 168px;
         flex-shrink: 0;
+        cursor: pointer;
     }
     .spec-edit-requests-toolbar .toolbar-count {
-        margin-right: auto;
+        margin-inline-start: auto;
+        white-space: nowrap;
+    }
+    .spec-edit-requests-toolbar .export-btns {
+        margin-inline-start: 0;
+        margin-right: 0;
+    }
+    .spec-edit-requests-toolbar #specEditReqRefresh {
+        flex-shrink: 0;
+        white-space: nowrap;
     }
     #civDebtTable .num {
         text-align: left;
@@ -2311,11 +2331,14 @@
       display: flex; align-items: center; gap: 10px; padding: 14px 20px;
       border-bottom: 1px solid var(--border); flex-wrap: wrap; background: #fafafa;
     }
-    .data-toolbar input[type="text"], .data-toolbar select {
+    .data-toolbar input[type="text"],
+    .data-toolbar input[type="search"],
+    .data-toolbar select {
       padding: 9px 14px; border: 1px solid var(--border); border-radius: 8px;
       font-family: 'Tajawal', sans-serif; font-size: 13px; background: white; min-width: 130px;
     }
-    .data-toolbar input[type="text"] { flex: 1; min-width: 280px; }
+    .data-toolbar input[type="text"],
+    .data-toolbar input[type="search"] { flex: 1; min-width: 280px; }
     .data-toolbar .date-filter-group {
       display: flex;
       align-items: flex-end;
@@ -2390,7 +2413,8 @@
       box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
       border-radius: 8px;
     }
-    .data-toolbar input:focus, .data-toolbar select:focus {
+    .data-toolbar input:focus, .data-toolbar select:focus,
+    .data-toolbar input[type="search"]:focus {
       outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
     }
     .export-btns { display: flex; gap: 8px; margin-right: auto; flex-shrink: 0; }
