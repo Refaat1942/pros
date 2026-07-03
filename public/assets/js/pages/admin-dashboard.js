@@ -402,7 +402,7 @@
           var daysCls = days >= 14 ? ' days-wait-badge urgent' : ' days-wait-badge';
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
-            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
+            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span></td>' +
             '<td>' + c.company + '</td>' +
             '<td>' + (c.quoteRefHtml || c.quoteId || '—') + '</td>' +
             '<td>' + (c.quoteDate || '—') + '</td>' +
@@ -416,7 +416,7 @@
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
-            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
+            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span></td>' +
             '<td>' + c.company + '</td>' +
             '<td>' + (c.quoteRefHtml || c.quoteId || '—') + '</td>' +
             '<td>' + (c.quoteDate || '—') + '</td>' +
@@ -433,7 +433,7 @@
           var bomCls = bom ? bom.badgeClass : 'default';
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
-            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
+            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span></td>' +
             '<td>' + c.company + '</td>' +
             '<td><span class="stage-badge progress">' + (c.manufacturingLabel || '—') + '</span></td>' +
             '<td><span class="stage-badge ' + bomCls + '">' + bomLabel + '</span></td>' +
@@ -447,7 +447,7 @@
         body.innerHTML = filtered.length ? filtered.map(function(c) {
           var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
           return '<tr>' +
-            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
+            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span></td>' +
             '<td>' + c.company + '</td>' +
             '<td class="pricing-total-cell">' + CasesWorkflow.formatMoney(c.totalCost) + '</td>' +
             '<td>' + (c.deliveredAt || '—') + '</td>' +
@@ -568,8 +568,8 @@
         caseDetailBox('مرحلة الحالة', escapeHtml(c.stage_label)) +
         caseDetailBox('تاريخ ووقت التسليم', escapeHtml(c.delivered_at)) +
         caseDetailBox('إجمالي التكلفة', c.total_cost != null ? CasesWorkflow.formatMoney(c.total_cost) : '—') +
-        caseDetailBox('المدفوع', c.paid != null ? '<span class="case-detail-paid">' + CasesWorkflow.formatMoney(c.paid) + '</span>' : '—') +
-        (pay && pay.method_label ? caseDetailBox('طريقة الدفع', escapeHtml(pay.method_label)) : '') +
+        caseDetailBox('المدفوع', data.is_military ? '—' : (c.paid != null ? '<span class="case-detail-paid">' + CasesWorkflow.formatMoney(c.paid) + '</span>' : '—')) +
+        (!data.is_military && pay && pay.method_label ? caseDetailBox('طريقة الدفع', escapeHtml(pay.method_label)) : '') +
         '</div></div>';
 
       var quoteSection = '';

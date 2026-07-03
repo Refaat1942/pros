@@ -37,8 +37,8 @@
             <input type="text" id="apptSearch" placeholder="🔍 بحث بالاسم أو الهاتف أو رقم الدور...">
             <select id="apptTypeFilter" aria-label="فلتر النوع">
               <option value="all">مدني وعسكري</option>
-              <option value="civilian">🌐 مدني</option>
-              <option value="military">🪖 عسكري</option>
+              <option value="civilian">مدني</option>
+              <option value="military">عسكري</option>
             </select>
             <select id="apptStatusFilter">
               <option value="all">كل الحالات</option>

@@ -797,7 +797,7 @@
 
     function patientTypeBadgeHtml(patientType) {
       var tm = CasesWorkflow.getPatientTypeMeta(patientType);
-      return '<span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span>';
+      return '<span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span>';
     }
 
     function exportAppointments(type) {
@@ -1171,7 +1171,7 @@
         var bom = BomInventory.getByCaseId(c.id);
         var tmeta = CasesWorkflow.getPatientTypeMeta(c.patientType);
         return '<tr>' +
-          '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tmeta.badge + '">' + tmeta.icon + ' ' + tmeta.label + '</span></td>' +
+          '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tmeta.badge + '">' + (tmeta.icon ? tmeta.icon + ' ' : '') + tmeta.label + '</span></td>' +
           '<td>' + c.company + '</td>' +
           '<td>' + (c.workOrderNo || c.orderRef) + '</td>' +
           '<td><span class="stage-badge done">' + BomInventory.getStageLabel(bom ? bom.stage : 'finished') + '</span></td>' +
@@ -1222,8 +1222,8 @@
       var tracking = data.tracking || {};
       var active = data.active_case;
       var typeBadge = p.patient_type === 'military'
-        ? '<span class="patient-type-badge military">🪖 عسكري</span>'
-        : '<span class="patient-type-badge civilian">🌐 مدني</span>';
+        ? '<span class="patient-type-badge military">عسكري</span>'
+        : '<span class="patient-type-badge civilian">مدني</span>';
       var pathwayLabel = tracking.pathway === 'military' ? 'مسار عسكري' : 'مسار مدني';
 
       return '<div class="selfservice-result">' +

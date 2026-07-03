@@ -30,8 +30,8 @@ var CasesWorkflow = (function () {
   ];
 
   var PATIENT_TYPES = {
-    civilian: { label: 'مدني', icon: '🌐', badge: 'civilian' },
-    military: { label: 'عسكري', icon: '🪖', badge: 'military' }
+    civilian: { label: 'مدني', icon: '', badge: 'civilian' },
+    military: { label: 'عسكري', icon: '', badge: 'military' }
   };
 
   function noop() {}

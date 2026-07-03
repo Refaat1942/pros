@@ -60,7 +60,7 @@
                 <td>
                   <strong>{{ $appt->patient_name }}</strong>
                   <span class="patient-type-badge {{ $pt === 'military' ? 'military' : 'civilian' }}">
-                    {{ $pt === 'military' ? '🪖 عسكري' : '🌐 مدني' }}
+                    {{ $pt === 'military' ? 'عسكري' : 'مدني' }}
                   </span>
                 </td>
                 <td>@include('partials.patient-entity-cell', ['subject' => $appt, 'column' => true])</td>

@@ -16,8 +16,8 @@
     var transferred = [];
 
     var PT_META = {
-      civilian: { label: 'مدني', icon: '🌐', badge: 'civilian' },
-      military: { label: 'عسكري', icon: '🪖', badge: 'military' }
+      civilian: { label: 'مدني', icon: '', badge: 'civilian' },
+      military: { label: 'عسكري', icon: '', badge: 'military' }
     };
     var MILITARY_ENTITY = (window.__DOCTOR_CONFIG && window.__DOCTOR_CONFIG.militaryEntity) || 'القوات المسلحة';
     function ptMeta(t) { return PT_META[t] || PT_META.civilian; }
@@ -148,7 +148,7 @@
       document.getElementById('recordModalTitle').textContent = item.name;
       var tm = ptMeta(item.patientType);
       document.getElementById('recordModalMeta').innerHTML =
-        '<span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span> · ' +
+        '<span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span> · ' +
         formatTransferStatusMeta(item.status, item.statusGroup);
 
       document.getElementById('recordModalBody').innerHTML =
@@ -174,7 +174,7 @@
       var tm = ptMeta(record.patientType);
       document.getElementById('recordModalTitle').textContent = record.name;
       document.getElementById('recordModalMeta').innerHTML =
-        '<span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span> · ' + escHtml(record.date);
+        '<span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span> · ' + escHtml(record.date);
 
       document.getElementById('recordModalBody').innerHTML =
         '<div class="record-detail-grid">' +
@@ -670,7 +670,7 @@
         var tm = ptMeta(p.patientType);
         return '<tr class="' + selected + '" data-id="' + p.id + '">' +
           '<td><span class="queue-num">' + (i + 1) + '</span></td>' +
-          '<td><strong>' + p.name + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + tm.icon + ' ' + tm.label + '</span></td>' +
+          '<td><strong>' + p.name + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span></td>' +
           '<td>' + p.company + '</td>' +
           '<td><span class="wait-time">' + p.wait + '</span></td>' +
           '</tr>';
@@ -707,7 +707,7 @@
       selectedPatient = queue.find(function(p) { return p.id === id; });
       if (!selectedPatient) return;
       var tm = ptMeta(selectedPatient.patientType);
-      var typeTxt = ' | التصنيف: ' + tm.icon + ' ' + tm.label + (selectedPatient.rank ? ' (' + selectedPatient.rank + ')' : '');
+      var typeTxt = ' | التصنيف: ' + (tm.icon ? tm.icon + ' ' : '') + tm.label + (selectedPatient.rank ? ' (' + selectedPatient.rank + ')' : '');
       var patientBar = document.getElementById('patientBar');
       if (patientBar) patientBar.classList.add('visible');
       var selectedPatientName = document.getElementById('selectedPatientName');
