@@ -728,7 +728,7 @@
         ? entity.label
         : (row.company_name || (row.contract_company && row.contract_company.name) || '—');
       if (row.patient_type === 'military') {
-        company = row.rank || company;
+        company = 'القوات المسلحة';
       }
       return {
         id: row.id,
