@@ -33,13 +33,13 @@ class DatabaseSeeder extends Seeder
             InventorySeeder::class,
 
             // // ── مسار المريض والحالات ────────────────────────────────────────
-            // PatientSeeder::class,
-            // CaseSeeder::class,
-            // PricingSeeder::class,
-            // QuoteSeeder::class,
-            // BomSeeder::class,
-            // ReturnNoteSeeder::class,
-            // CreditNoteSeeder::class,
+            PatientSeeder::class,
+            CaseSeeder::class,
+            PricingSeeder::class,
+            QuoteSeeder::class,
+            BomSeeder::class,
+            ReturnNoteSeeder::class,
+            CreditNoteSeeder::class,
         ]);
     }
 }
