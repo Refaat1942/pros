@@ -43,13 +43,14 @@
     var printBtn = q.print_url
       ? '<a href="' + esc(q.print_url) + '" target="_blank" rel="noopener" class="btn-action">🖨️ طباعة عرض السعر</a>'
       : '';
+    var total = q.display_total != null ? q.display_total : q.total;
 
     return '<tr class="quotes-awaiting-row" data-quote-id="' + q.id + '" data-search="' + esc(search) + '">' +
       '<td><strong class="font-mono text-xs">' + esc(q.quote_serial || q.quote_no) + '</strong></td>' +
       '<td><div>' + esc(q.patient_name) + '</div>' +
         '<div class="text-xs text-muted">' + esc(q.company_name || '—') + '</div></td>' +
       '<td><span class="patient-type-badge civilian">' + esc(q.stage_label || '—') + '</span></td>' +
-      '<td>' + (q.total ? fmt(q.total) + ' ج.م' : '—') + '</td>' +
+      '<td>' + (total ? fmt(total) + ' ج.م' : '—') + '</td>' +
       '<td class="col-actions" style="white-space:nowrap;">' + printBtn + '</td></tr>';
   }
 

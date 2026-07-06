@@ -9,6 +9,7 @@ use App\Models\Quote;
 use App\Services\OperationsService;
 use App\Services\QuoteService;
 use App\Support\CaseFinancialSummary;
+use App\Support\QuotePrintPresenter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,8 +36,9 @@ class OperationsDeskController extends Controller
     {
         $quotes = $this->fetchForDashboard(
             Quote::with([
-                'caseRecord:id,case_no,order_ref,stage_key,manufacturing_stage,work_order_no,patient_type,company_name,approval_date',
+                'caseRecord:id,case_no,order_ref,stage_key,manufacturing_stage,work_order_no,patient_type,company_name,approval_date,contract_company_id',
                 'caseRecord.patient:id,patient_code,name',
+                'caseRecord.contractCompany:id,name,discount_percent,is_contracted',
             ])
                 ->where('status', Quote::STATUS_ISSUED)
                 ->whereHas('caseRecord', fn ($q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
@@ -66,6 +68,7 @@ class OperationsDeskController extends Controller
             CaseRecord::atOperations()
                 ->with([
                     'patient:id,patient_code,name,patient_type',
+                    'contractCompany:id,name,discount_percent,is_contracted',
                     'techOrderSpec:id,case_id,tech_notes',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,source,qty',
@@ -174,11 +177,16 @@ class OperationsDeskController extends Controller
     private function formatIssuedQuote(Quote $quote): array
     {
         $case = $quote->relationLoaded('caseRecord') ? $quote->caseRecord : null;
+        $printTotals = QuotePrintPresenter::fromQuote($quote);
 
         return $quote->only([
             'id', 'quote_no', 'order_ref', 'case_id', 'patient_name', 'company_name',
             'quote_date', 'status', 'status_label', 'total',
         ]) + [
+            'gross_total'        => $printTotals['gross_total'],
+            'display_total'      => $printTotals['display_total'],
+            'discount_percent'   => $printTotals['discount_percent'],
+            'has_discount'       => $printTotals['has_discount'],
             'quote_serial'       => $quote->quote_no,
             'quote_serial_label' => Quote::SERIAL_LABEL,
             'issued_at'      => $quote->updated_at?->toIso8601String(),
@@ -214,6 +222,8 @@ class OperationsDeskController extends Controller
     private function formatPending(CaseRecord $case): array
     {
         $quote = $case->relationLoaded('quotes') ? $case->quotes->sortByDesc('id')->first() : null;
+        $printTotals = $quote ? QuotePrintPresenter::fromQuote($quote) : null;
+        $displayTotal = $printTotals['display_total'] ?? (float) $case->quote_total;
 
         return $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'path', 'quote_no',
@@ -222,13 +232,18 @@ class OperationsDeskController extends Controller
             'is_cash'        => $case->isCashCivilian(),
             'display_entity' => $case->displayEntity(),
             'tech_notes'     => $case->resolvedTechNotes(),
-            'quote_total'    => (float) $case->quote_total,
+            'quote_total'    => $displayTotal,
+            'display_quote_total' => $displayTotal,
             'quote'          => $quote ? [
-                'id'        => $quote->id,
-                'quote_no'  => $quote->quote_no,
-                'total'     => (float) $quote->total,
-                'status'    => $quote->status,
-                'print_url' => route('operations.quote.print', $quote),
+                'id'               => $quote->id,
+                'quote_no'         => $quote->quote_no,
+                'total'            => (float) $quote->total,
+                'display_total'    => $printTotals['display_total'],
+                'gross_total'      => $printTotals['gross_total'],
+                'discount_percent' => $printTotals['discount_percent'],
+                'has_discount'     => $printTotals['has_discount'],
+                'status'           => $quote->status,
+                'print_url'        => route('operations.quote.print', $quote),
             ] : null,
             // التكلفة الداخلية (WAC) للأدمن فقط — لقياس الربح.
             'internal_cost'  => CaseFinancialSummary::canSeeInternalCost()

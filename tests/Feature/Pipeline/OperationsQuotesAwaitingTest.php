@@ -13,6 +13,29 @@ class OperationsQuotesAwaitingTest extends TestCase
 {
     use ProstheticTestHelper;
 
+    public function test_issued_quotes_list_shows_discounted_display_total(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $company = $this->civilianCompany('التأمين الصحي');
+        $company->update(['discount_percent' => 10]);
+
+        $patient = $this->civilianPatient($company);
+        $case = $this->operationsReadyCase($patient);
+        $case->update(['contract_company_id' => $company->id, 'quote_total' => 2000]);
+
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $quote->update(['total' => 2000]);
+
+        $ops = $this->userWithRole('operations');
+        app(QuoteService::class)->releaseToReception($quote->fresh());
+
+        $this->actingAs($ops)
+            ->getJson('/operations/quotes-awaiting/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.display_total', 1800)
+            ->assertJsonPath('data.0.discount_percent', 10);
+    }
+
     public function test_issued_quotes_appear_in_operations_awaiting_list(): void
     {
         $this->stockItem('RM-001', qty: 10);

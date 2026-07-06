@@ -15,6 +15,38 @@ class OperationsPendingDeskTest extends TestCase
 {
     use ProstheticTestHelper;
 
+    public function test_pending_list_shows_discounted_quote_total_for_contract_company(): void
+    {
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        app(\App\Services\StockPriceService::class)->addBatch(
+            \App\Models\StockItem::first(),
+            10,
+            200.00,
+            $this->makeSupplier(),
+            'INV-001',
+            now()
+        );
+
+        $company = $this->civilianCompany('التأمين الصحي');
+        $company->update(['discount_percent' => 10]);
+
+        $patient = $this->civilianPatient($company);
+        $case = $this->operationsReadyCase($patient);
+        $case->update(['contract_company_id' => $company->id, 'quote_total' => 2000]);
+
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $quote->update(['total' => 2000]);
+
+        $ops = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->getJson('/operations/pending/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.quote.total', 2000)
+            ->assertJsonPath('data.0.quote.display_total', 1800)
+            ->assertJsonPath('data.0.display_quote_total', 1800);
+    }
+
     public function test_pending_list_shows_civilian_operations_cases_with_quote(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);

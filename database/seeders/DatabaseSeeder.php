@@ -23,12 +23,12 @@ class DatabaseSeeder extends Seeder
 
             // ── بيانات أساسية ───────────────────────────────────────────────
             ContractCompanySeeder::class,
-            // MilitaryRankSeeder::class,
+            MilitaryRankSeeder::class,
             VisitTypeSeeder::class,
             StockCategorySeeder::class,
 
             // ── موردون ومخزون ───────────────────────────────────────────────
-            // ContractCompanyDebtSeeder::class,
+            ContractCompanyDebtSeeder::class,
             SupplierSeeder::class,
             InventorySeeder::class,
 

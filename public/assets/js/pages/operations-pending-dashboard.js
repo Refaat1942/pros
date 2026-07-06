@@ -53,7 +53,9 @@
     var isMil = c.patient_type === 'military' || c.path === 'military';
     var quote = c.quote || null;
     var quoteNo = quote ? quote.quote_no : (c.quote_no || '—');
-    var total = quote ? quote.total : c.quote_total;
+    var total = quote
+      ? (quote.display_total != null ? quote.display_total : quote.total)
+      : (c.display_quote_total != null ? c.display_quote_total : c.quote_total);
     var printBtn = quote && quote.print_url
       ? '<a href="' + esc(quote.print_url) + '" target="_blank" rel="noopener" class="btn-action" style="margin-left:4px;">🖨️ طباعة عرض السعر</a>'
       : (isMil ? '<span class="text-xs text-muted">بدون عرض (عسكري)</span>' : '');
