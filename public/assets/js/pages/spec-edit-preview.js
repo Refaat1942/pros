@@ -322,7 +322,7 @@
     }).map(function (r) {
       return [r.patient, r.case_no, r.order_ref, r.submitted_at, r.items_count, r.status, r.items_summary];
     });
-    var headers = ['اسم المريض', 'رقم الحالة', 'مرجع الطلب', 'تاريخ الإرسال', 'عدد البنود', 'الحالة', 'البنود'];
+    var headers = ['اسم المريض', 'رقم الحالة', 'مرجع الطلب', 'تاريخ الإرسال', 'عدد الأصناف', 'الحالة', 'البنود'];
     if (!window.ExportKit) {
       alert('أداة التصدير غير متاحة');
       return;

@@ -187,7 +187,7 @@ function exportInventory(type) {
 
 function exportPricing(type) {
   var data = getFilteredPricing();
-  var headers = ['رقم الطلب', 'أمر التشغيل', 'المريض', 'جهة التعاقد', 'التاريخ', 'البنود', 'الحالة'];
+  var headers = ['رقم الطلب', 'أمر التشغيل', 'المريض', 'جهة التعاقد', 'التاريخ', 'عدد الأصناف', 'الحالة'];
   var rows = data.map(function (p) {
     return [p.id, p.orderRef, p.patient, p.company, p.date, p.items, p.statusLabel];
   });
@@ -624,7 +624,7 @@ function getFilteredBom() {
 
 function exportBom(type) {
   var data = getFilteredBom();
-  var headers = ['رقم BOM', 'المريض', 'أمر التشغيل', 'المرحلة', 'عدد البنود', 'تاريخ الإنشاء'];
+    var headers = ['رقم BOM', 'المريض', 'أمر التشغيل', 'المرحلة', 'عدد الأصناف', 'تاريخ الإنشاء'];
   var rows = data.map(function (b) {
     return [
       b.id,

@@ -19,7 +19,7 @@
                 <th>الحالة / الطلب</th>
                 <th>المريض</th>
                 <th>النوع</th>
-                <th>عدد البنود</th>
+                <th>عدد الأصناف</th>
                 <th class="col-actions">إجراء</th>
               </tr>
             </thead>

@@ -185,7 +185,7 @@
                 <th>المريض</th>
                 <th>أمر التشغيل</th>
                 <th>المرحلة</th>
-                <th>البنود</th>
+                <th>عدد الأصناف</th>
                 <th class="col-actions">إجراء</th>
               </tr>
             </thead>

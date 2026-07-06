@@ -206,7 +206,7 @@
                 <th>رقم الطلب</th>
                 <th>المريض</th>
                 <th>التاريخ</th>
-                <th class="col-center">البنود</th>
+                <th class="col-center">عدد الأصناف</th>
                 <th class="col-center">الحالة / التقدم</th>
                 <th class="col-actions">إجراء</th>
               </tr>

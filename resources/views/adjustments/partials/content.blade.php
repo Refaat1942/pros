@@ -49,7 +49,7 @@
                 <th>الحالة</th>
                 <th>المريض</th>
                 <th>المسار</th>
-                <th>عدد البنود</th>
+                <th>عدد الأصناف</th>
                 <th class="col-actions">إجراء</th>
               </tr>
             </thead>

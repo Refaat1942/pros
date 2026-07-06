@@ -40,7 +40,7 @@
                 <th>المريض</th>
                 <th>التصنيف</th>
                 <th>مرحلة BOM / الشغل</th>
-                <th>البنود</th>
+                <th>عدد الأصناف</th>
                 <th class="col-actions">إجراء</th>
               </tr>
             </thead>

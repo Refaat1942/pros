@@ -50,7 +50,7 @@
                         <th class="px-4 py-3 text-right font-bold">المريض</th>
                         <th class="px-4 py-3 text-right font-bold">المسار</th>
                         <th class="px-4 py-3 text-right font-bold">مرحلة التصنيع</th>
-                        <th class="px-4 py-3 text-right font-bold">البنود</th>
+                        <th class="px-4 py-3 text-right font-bold">عدد الأصناف</th>
                         <th class="px-4 py-3 text-right font-bold">إجراء</th>
                     </tr>
                 </thead>

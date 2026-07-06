@@ -50,7 +50,7 @@
                     <th class="px-4 py-3 text-right font-bold">رقم الطلب</th>
                     <th class="px-4 py-3 text-right font-bold">المريض</th>
                     <th class="px-4 py-3 text-right font-bold">التاريخ</th>
-                    <th class="px-4 py-3 text-right font-bold">البنود</th>
+                    <th class="px-4 py-3 text-right font-bold">عدد الأصناف</th>
                     <th class="px-4 py-3 text-right font-bold">الحالة</th>
                 </tr>
             </thead>

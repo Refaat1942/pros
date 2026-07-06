@@ -207,7 +207,7 @@ class AdminPatientJourneyService
                 'حفظ التوصيف الفني',
                 array_filter([
                     $spec->doctor_name ? 'الطبيب: ' . $spec->doctor_name : null,
-                    'عدد البنود: ' . $itemCount,
+                    'عدد الأصناف: ' . $itemCount,
                     $spec->tech_notes ? 'ملاحظات: ' . \Illuminate\Support\Str::limit($spec->tech_notes, 100) : null,
                 ])
             );
