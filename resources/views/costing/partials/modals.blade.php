@@ -33,27 +33,30 @@
           </div>
 
           <div id="costingBreakdown" class="costing-breakdown">
-            <h4 class="costing-breakdown__title">📊 تفصيل التكلفة وسعر البيع</h4>
-            <div class="costing-overhead-row">
-              <span>إجمالي المواد (أعلى سعر شراء)</span>
-              <strong id="costingMaterialsTotal">—</strong>
-            </div>
-            <div id="costingComponentLines" class="costing-breakdown__lines"></div>
-            <div class="costing-overhead-row" id="costingComponentsTotalRow" style="display:none;">
-              <span>إجمالي المكوّنات</span>
-              <strong id="costingComponentsTotal">—</strong>
-            </div>
-            <div class="costing-overhead-row costing-overhead-row--highlight">
-              <span>إجمالي التكلفة</span>
-              <strong id="costingTotalCost">—</strong>
-            </div>
-            <div class="costing-overhead-row costing-overhead-row--muted" id="costingWacRow" style="display:none;">
-              <span>التكلفة الداخلية (WAC)</span>
-              <strong id="costingWacTotal">—</strong>
-            </div>
-            <div class="costing-overhead-row" id="costingProfitRow">
-              <span id="costingProfitLabel">هامش الربح</span>
-              <strong id="costingProfitAmount">—</strong>
+            <h4 class="costing-breakdown__title" id="costingBreakdownTitle">📊 تفصيل التكلفة وسعر البيع</h4>
+            {{-- التفاصيل الداخلية (نِسَب/مكوّنات/تكلفة) تظهر للأدمن فقط --}}
+            <div id="costingInternalRows" style="display:contents;">
+              <div class="costing-overhead-row">
+                <span>إجمالي المواد (أعلى سعر شراء)</span>
+                <strong id="costingMaterialsTotal">—</strong>
+              </div>
+              <div id="costingComponentLines" class="costing-breakdown__lines"></div>
+              <div class="costing-overhead-row" id="costingComponentsTotalRow" style="display:none;">
+                <span>إجمالي المكوّنات</span>
+                <strong id="costingComponentsTotal">—</strong>
+              </div>
+              <div class="costing-overhead-row costing-overhead-row--highlight">
+                <span>إجمالي التكلفة</span>
+                <strong id="costingTotalCost">—</strong>
+              </div>
+              <div class="costing-overhead-row costing-overhead-row--muted" id="costingWacRow" style="display:none;">
+                <span>التكلفة الداخلية (WAC)</span>
+                <strong id="costingWacTotal">—</strong>
+              </div>
+              <div class="costing-overhead-row" id="costingProfitRow">
+                <span id="costingProfitLabel">هامش الربح</span>
+                <strong id="costingProfitAmount">—</strong>
+              </div>
             </div>
             <div class="costing-overhead-row costing-overhead-row--final">
               <span>سعر البيع (عرض السعر)</span>

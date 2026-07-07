@@ -358,9 +358,16 @@ class CostingDashboardTest extends TestCase
             ->postJson("/costing/queue/{$case->id}/mode", ['mode' => 'quick_dispense'])
             ->assertOk();
 
-        $this->assertEquals(400.0, (float) $response->json('costing.materials_total'));
-        $this->assertEquals(0.0, (float) $response->json('costing.components_total'));
+        // موظف التكاليف (غير أدمن) يرى سعر البيع فقط — لا نِسَب/مكوّنات.
         $this->assertEquals(560.0, (float) $response->json('costing.selling_price'));
+        $this->assertNull($response->json('costing.components_total'));
+        $this->assertNull($response->json('costing.materials_total'));
+
+        // الحساب الداخلي محفوظ في لقطة طلب التسعير.
+        $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
+        $this->assertEquals(400.0, (float) $pricing->computed_total);
+        $this->assertEquals(0.0, (float) $pricing->components_total);
+        $this->assertEquals(560.0, (float) $pricing->selling_price);
     }
 
     public function test_setting_limb_mode_adds_components_then_profit(): void
@@ -376,9 +383,41 @@ class CostingDashboardTest extends TestCase
             ->postJson("/costing/queue/{$case->id}/mode", ['mode' => 'prosthetic_limb'])
             ->assertOk();
 
-        $this->assertEquals(400.0, (float) $response->json('costing.components_total'));
-        $this->assertEquals(800.0, (float) $response->json('costing.total_cost'));
+        // موظف التكاليف يرى سعر البيع فقط.
         $this->assertEquals(1560.0, (float) $response->json('costing.selling_price'));
+        $this->assertNull($response->json('costing.total_cost'));
+
+        // الحساب الداخلي محفوظ في لقطة طلب التسعير.
+        $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
+        $this->assertEquals(400.0, (float) $pricing->components_total);
+        $this->assertEquals(800.0, (float) $pricing->total_cost);
+        $this->assertEquals(1560.0, (float) $pricing->selling_price);
+    }
+
+    public function test_costing_hides_rates_and_components_from_non_admin(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($costing)
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk();
+
+        // موظف التكاليف ليس أدمن — لا يرى النِسَب ولا المكوّنات.
+        $this->assertFalse((bool) $response->json('can_see_rates'));
+        $this->assertNull($response->json('costing.profit_rate'));
+        $this->assertNull($response->json('costing.components'));
+        $this->assertNull($response->json('costing.total_cost'));
+        $this->assertNotNull($response->json('costing.selling_price'));
+
+        // قائمة الأنماط للواجهة بلا نِسَب.
+        $modes = $response->json('costing_modes');
+        $this->assertNotEmpty($modes);
+        $this->assertArrayNotHasKey('profit_rate', $modes[0]);
+        $this->assertArrayHasKey('label', $modes[0]);
     }
 
     public function test_confirm_uses_selling_price_as_quote_amount(): void

@@ -92,11 +92,15 @@ class CostingController extends Controller
             $pricing->load(['items.stockItem.attributeValues.field']);
         }
 
+        $canSeeRates = $this->canSeeRates();
+
         return response()->json([
             'case' => $this->formatSummary($case),
             'pricing' => $pricing ? $this->formatPricingDetail($pricing, $case) : null,
-            'costing' => $pricing ? $this->formatCostingBreakdown($pricing) : null,
-            'costing_modes' => $this->modeService->allModes(),
+            'costing' => $pricing ? $this->formatCostingBreakdown($pricing, $canSeeRates) : null,
+            'costing_modes' => $canSeeRates
+                ? $this->modeService->allModes()
+                : $this->sanitizeModes($this->modeService->allModes()),
             'bom' => $case->bom ? [
                 'id' => $case->bom->id,
                 'bom_no' => $case->bom->bom_no,
@@ -105,7 +109,30 @@ class CostingController extends Controller
                 ]))->values(),
             ] : null,
             'can_see_internal' => CaseFinancialSummary::canSeeInternalCost(),
+            'can_see_rates' => $canSeeRates,
         ]);
+    }
+
+    /**
+     * نِسَب/مكوّنات التكاليف وهامش الربح تظهر للأدمن فقط.
+     */
+    private function canSeeRates(): bool
+    {
+        return (bool) Auth::user()?->isAdmin();
+    }
+
+    /**
+     * إخفاء النِسَب والمكوّنات عن غير الأدمن — يبقى الاسم والمفتاح فقط لاختيار النمط.
+     *
+     * @param  array<int, array<string, mixed>>  $modes
+     * @return array<int, array{key: string, label: string}>
+     */
+    private function sanitizeModes(array $modes): array
+    {
+        return array_map(fn (array $m) => [
+            'key' => $m['key'],
+            'label' => $m['label'],
+        ], $modes);
     }
 
     /**
@@ -121,7 +148,7 @@ class CostingController extends Controller
 
         return response()->json([
             'message' => 'تم تحديث نمط التكاليف.',
-            'costing' => $this->formatCostingBreakdown($pricing),
+            'costing' => $this->formatCostingBreakdown($pricing, $this->canSeeRates()),
         ]);
     }
 
@@ -166,9 +193,18 @@ class CostingController extends Controller
     /**
      * تفصيل التكاليف الجديد (نمط + مكوّنات + ربح + سعر بيع) — الأساس لعرض السعر.
      */
-    private function formatCostingBreakdown(PricingRequest $pricing): array
+    private function formatCostingBreakdown(PricingRequest $pricing, bool $canSeeRates = true): array
     {
         $breakdown = $this->snapshotService->breakdown($pricing);
+
+        // غير الأدمن: سعر البيع واسم النمط فقط — بدون نِسَب أو مكوّنات أو تكلفة داخلية.
+        if (! $canSeeRates) {
+            return [
+                'mode_key' => $pricing->costing_mode,
+                'mode_label' => $breakdown['mode_label'],
+                'selling_price' => $breakdown['selling_price'],
+            ];
+        }
 
         return [
             'mode_key' => $pricing->costing_mode,

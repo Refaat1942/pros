@@ -21,6 +21,7 @@
   var refreshInFlight = false;
   var costingModes = [];
   var canSeeInternal = false;
+  var canSeeRates = false;
   var currentInternalTotal = 0;
 
   function $(id) { return document.getElementById(id); }
@@ -114,24 +115,37 @@
     var opts = ['<option value="">— بدون نمط (المواد فقط) —</option>'];
     costingModes.forEach(function (m) {
       var selected = m.key === currentKey ? ' selected' : '';
-      opts.push('<option value="' + esc(m.key) + '"' + selected + '>' + esc(m.label) +
-        ' (ربح ' + esc(m.profit_rate) + '%)</option>');
+      // النِسَب تظهر للأدمن فقط — غير الأدمن يرى اسم النمط فقط.
+      var suffix = (canSeeRates && m.profit_rate != null) ? ' (ربح ' + esc(m.profit_rate) + '%)' : '';
+      opts.push('<option value="' + esc(m.key) + '"' + selected + '>' + esc(m.label) + suffix + '</option>');
     });
     select.innerHTML = opts.join('');
 
     var hint = $('costingModeHint');
     if (hint) {
       var mode = costingModes.filter(function (m) { return m.key === currentKey; })[0];
-      hint.textContent = mode
-        ? (mode.has_components
-            ? 'المكوّنات نسبة من المواد، ثم يُضاف هامش الربح على إجمالي التكلفة.'
-            : 'صرف سريع: هامش ربح مباشر على المواد بدون مكوّنات.')
-        : 'اختر نمط التكاليف لاحتساب سعر البيع.';
+      if (mode && canSeeRates) {
+        hint.textContent = mode.has_components
+          ? 'المكوّنات نسبة من المواد، ثم يُضاف هامش الربح على إجمالي التكلفة.'
+          : 'صرف سريع: هامش ربح مباشر على المواد بدون مكوّنات.';
+      } else {
+        hint.textContent = 'اختر نمط التكاليف لاحتساب سعر البيع.';
+      }
     }
   }
 
   function renderBreakdown(costing) {
     if (!costing) return;
+
+    // غير الأدمن: يظهر سعر البيع فقط — تُخفى كل التفاصيل الداخلية.
+    var internal = $('costingInternalRows');
+    if (internal) internal.style.display = canSeeRates ? 'contents' : 'none';
+    if ($('costingBreakdownTitle')) {
+      $('costingBreakdownTitle').textContent = canSeeRates ? '📊 تفصيل التكلفة وسعر البيع' : '💰 سعر البيع';
+    }
+    if ($('costingSellingPrice')) $('costingSellingPrice').textContent = fmt(costing.selling_price) + ' ج.م';
+
+    if (!canSeeRates) return;
 
     if ($('costingMaterialsTotal')) $('costingMaterialsTotal').textContent = fmt(costing.materials_total) + ' ج.م';
 
@@ -179,6 +193,7 @@
         var costing = res.data.costing || null;
         costingModes = res.data.costing_modes || [];
         canSeeInternal = !!res.data.can_see_internal;
+        canSeeRates = !!res.data.can_see_rates;
         currentInternalTotal = pricing.internal_total || 0;
 
         if ($('costingModalTitle')) {
