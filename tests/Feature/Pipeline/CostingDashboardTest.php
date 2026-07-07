@@ -394,6 +394,28 @@ class CostingDashboardTest extends TestCase
         $this->assertEquals(1560.0, (float) $pricing->selling_price);
     }
 
+    public function test_costing_recomputes_selling_from_live_bom(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        // محاكاة تعديل المعدلات بعد الاستلام: الكمية 2 ← 3 في BOM الحيّ.
+        $bomItem = $case->fresh()->bom->items()->first();
+        $bomItem->update(['qty' => 3]);
+
+        $response = $this->actingAs($costing)
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk();
+
+        // بلا نمط: سعر البيع = المواد = 3 × 200 = 600 (يُعاد احتسابه من BOM تلقائياً).
+        $this->assertEquals(600.0, (float) $response->json('costing.selling_price'));
+        $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
+        $this->assertEquals(600.0, (float) $pricing->computed_total);
+    }
+
     public function test_costing_hides_rates_and_components_from_non_admin(): void
     {
         $costing = $this->userWithRole('costing');
