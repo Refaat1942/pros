@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\SpecEditRequestController as AdminSpecEditRequest
 use App\Http\Controllers\Admin\StockCategoryController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\PermissionMatrixController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Reports\AdminCaseController;

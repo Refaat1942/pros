@@ -42,6 +42,7 @@ use App\Services\StockCatalogService;
 use App\Services\SettingService;
 use App\Services\SupplierService;
 use App\Services\StockPriceService;
+use App\Services\WorkshopAnalyticsService;
 use App\Support\ClinicTime;
 
 /**

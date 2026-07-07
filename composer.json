@@ -11,7 +11,7 @@
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
-        "openspout/openspout": "^5.7",
+        "openspout/openspout": "^4.28",
         "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {
