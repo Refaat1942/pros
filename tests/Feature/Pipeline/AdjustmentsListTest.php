@@ -4,6 +4,7 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\BomItem;
 use App\Models\CaseRecord;
+use App\Models\StockItem;
 use App\Models\TechOrderSpec;
 use App\Services\BomService;
 use App\Services\StockPriceService;
@@ -278,7 +279,7 @@ class AdjustmentsListTest extends TestCase
         $this->assertSame(5, (int) $adjItem->fresh()->qty);
     }
 
-    public function test_editing_adjustment_qty_above_available_is_rejected(): void
+    public function test_editing_adjustment_qty_above_available_allows_backorder(): void
     {
         $this->seedStockWithPriceBatch();
         $this->stockItem('RM-002', qty: 3);
@@ -299,12 +300,16 @@ class AdjustmentsListTest extends TestCase
 
         $adjItem = BomItem::where('stock_item_code', 'RM-002')->where('source', BomItem::SOURCE_ADJUSTMENT)->firstOrFail();
 
-        // متاح متبقٍ = 3 - 2 = 1، فزيادة الكمية إلى 10 (فرق 8) تتجاوز المتاح.
+        // يُسمح بتجاوز المتاح — الزيادة إلى 10 تُسجَّل كـ backorder (متاح سالب).
         $this->actingAs($user)
             ->patchJson("/adjustments/adjustments/{$case->id}/items/{$adjItem->id}", ['qty' => 10])
-            ->assertStatus(422);
+            ->assertOk();
 
-        $this->assertSame(2, (int) $adjItem->fresh()->qty);
+        $this->assertSame(10, (int) $adjItem->fresh()->qty);
+
+        // RM-002: رصيد 3، محجوز 10 ⇒ متاح = -7 (backorder).
+        $stock = StockItem::where('code', 'RM-002')->firstOrFail();
+        $this->assertSame(-7, $stock->availableQty());
     }
 
     public function test_warehouse_bom_api_merges_spec_and_adjustment_lines_with_same_code(): void
@@ -410,7 +415,7 @@ class AdjustmentsListTest extends TestCase
             ->assertJsonPath('message', 'الصنف المختار غير موجود في المخزون.');
     }
 
-    public function test_adding_item_with_qty_above_available_returns_error(): void
+    public function test_adding_item_with_qty_above_available_allows_backorder(): void
     {
         $this->seedStockWithPriceBatch();
         $this->stockItem('RM-002', qty: 2);
@@ -424,14 +429,18 @@ class AdjustmentsListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
+        // يُسمح بطلب كمية أكبر من المتاح — يُسجَّل رصيد سالب (backorder).
         $this->actingAs($user)
             ->postJson("/adjustments/adjustments/{$case->id}/items", [
                 'items' => [
                     ['stock_item_code' => 'RM-002', 'name' => 'مكوّن مستشار', 'qty' => 5],
                 ],
             ])
-            ->assertStatus(422)
-            ->assertJsonFragment(['message' => 'الكمية المطلوبة (5) تتجاوز المتاح للصنف RM-002 — الحد الأقصى: 2.']);
+            ->assertCreated();
+
+        // RM-002: رصيد 2، محجوز 5 ⇒ متاح = -3.
+        $stock = StockItem::where('code', 'RM-002')->firstOrFail();
+        $this->assertSame(-3, $stock->availableQty());
     }
 
     private function seedStockWithPriceBatch(): void

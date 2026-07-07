@@ -170,9 +170,9 @@ class PricingStatusTransitionTest extends TestCase
 
     // ── DB value written when BOM stock check fails → insufficient ────────────
 
-    public function test_bom_creation_with_insufficient_stock_sets_insufficient_in_db(): void
+    public function test_bom_creation_with_insufficient_stock_allows_backorder(): void
     {
-        // Stock with only 1 unit available, but BOM requests 5
+        // Stock with only 1 unit available, but BOM requests 5 — allowed as backorder.
         $supplier = $this->makeSupplier();
         $item = $this->stockItem('RM-001', qty: 1);
         app(StockPriceService::class)->addBatch($item, 1, 200.00, $supplier, 'INV-C', now());
@@ -185,7 +185,6 @@ class PricingStatusTransitionTest extends TestCase
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-INS-001']);
 
-        // Link a PricingRequest so BomService can mark it insufficient
         $request = PricingRequest::create([
             'request_no' => 'PR-TEST-INS',
             'case_id' => $case->id,
@@ -197,24 +196,17 @@ class PricingStatusTransitionTest extends TestCase
         ]);
         $case->update(['pricing_request_id' => $request->id]);
 
-        try {
-            app(BomService::class)->create($case, [
-                ['stock_item_code' => 'RM-001', 'qty' => 5],  // only 1 available
-            ]);
-            $this->fail('Expected HttpException for insufficient stock');
-        } catch (HttpException $e) {
-            // Expected — verify DB badge state is 'insufficient'
-            $this->assertDatabaseHas('pricing_requests', [
-                'id' => $request->id,
-                'status_key' => 'insufficient',
-            ]);
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 5],  // only 1 available → backorder
+        ]);
 
-            // Audit log must record the failure
-            $this->assertDatabaseHas('audit_logs', [
-                'action' => 'insufficient',
-                'tag' => 'pricing',
-            ]);
-        }
+        // الإنشاء ينجح ويُسجَّل رصيد سالب بدل وسم «نقص المخزون».
+        $this->assertSame(5, (int) $bom->items()->where('stock_item_code', 'RM-001')->value('qty'));
+        $this->assertSame(-4, $item->fresh()->availableQty());
+        $this->assertDatabaseHas('pricing_requests', [
+            'id' => $request->id,
+            'status_key' => PricingRequestStatus::SentToReception->value,
+        ]);
     }
 
     // ── isApprovable() guards ─────────────────────────────────────────────────

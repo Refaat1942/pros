@@ -328,12 +328,7 @@ class BomService
                     fn (BomItem $i) => $i->stock_item_code === $code && $i->source === BomItem::SOURCE_ADJUSTMENT
                 );
 
-                $available = $stockItem->availableQty();
-
-                if ($qty > $available) {
-                    abort(422, "الكمية المطلوبة ({$qty}) تتجاوز المتاح للصنف {$code} — الحد الأقصى: {$available}.");
-                }
-
+                // يُسمح بتجاوز الرصيد — يتحوّل الفائض إلى متاح سالب (backorder).
                 $stockItem->increment('reserved', $qty);
 
                 if ($existingAdj) {
@@ -408,12 +403,7 @@ class BomService
                     abort(422, "الصنف غير موجود: {$code}");
                 }
 
-                $available = $stockItem->availableQty();
-
-                if ($qty > $available) {
-                    abort(422, "الكمية المطلوبة ({$qty}) تتجاوز المتاح للصنف {$code} — الحد الأقصى: {$available}.");
-                }
-
+                // يُسمح بتجاوز الرصيد — متاح سالب (backorder).
                 $stockItem->increment('reserved', $qty);
 
                 BomItem::create([
@@ -516,11 +506,7 @@ class BomService
                 abort(422, "الصنف غير موجود: {$item->stock_item_code}");
             }
 
-            // عند الزيادة فقط نتحقق من المتاح؛ عند النقص نُحرّر الحجز.
-            if ($delta > 0 && $stockItem->availableQty() < $delta) {
-                abort(422, "الكمية المطلوبة ({$newQty}) تتجاوز المتاح للصنف {$item->stock_item_code} — الحد الأقصى للزيادة: {$stockItem->availableQty()}.");
-            }
-
+            // يُسمح بتجاوز الرصيد — الزيادة تحجز أكثر من المتاح (backorder).
             $before = $item->only(['id', 'stock_item_code', 'name', 'qty', 'source']);
 
             $stockItem->increment('reserved', $delta);
@@ -702,12 +688,7 @@ class BomService
             abort(422, "الصنف غير موجود: {$code}");
         }
 
-        $available = $stockItem->availableQty();
-
-        if ($qty > $available) {
-            throw new InsufficientStockException($code, $qty, $available, $case->pricing_request_id);
-        }
-
+        // يُسمح بتجاوز الرصيد — متاح سالب (backorder) بدل رفض الإنشاء.
         $unitCost = $this->stockPriceService->highestUnitPrice($code);
 
         BomItem::create([
@@ -781,9 +762,7 @@ class BomService
                     'reserved' => $stockItem->reserved,
                 ];
 
-                if ($stockItem->qty < $totalQty) {
-                    abort(422, "رصيد غير كافٍ للصنف {$stockItem->code}");
-                }
+                // يُسمح بالصرف حتى مع عجز الرصيد — يصبح الرصيد سالباً (backorder).
             }
 
             $performedById = Auth::id();

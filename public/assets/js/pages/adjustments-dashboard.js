@@ -84,8 +84,9 @@
 
   function catalogItemAvailable(item) {
     if (!item) return 0;
-    if (item.available != null) return Math.max(0, parseInt(item.available, 10) || 0);
-    return Math.max(0, (parseInt(item.qty, 10) || 0) - (parseInt(item.reserved, 10) || 0));
+    // يُسمح بالمتاح السالب (backorder) — لا نُقيّده بالصفر.
+    if (item.available != null) return parseInt(item.available, 10) || 0;
+    return (parseInt(item.qty, 10) || 0) - (parseInt(item.reserved, 10) || 0);
   }
 
   function qtyAlreadyInBom(code) {
@@ -683,23 +684,21 @@
     }
 
     var items = [];
+    var backorder = false;
     for (var i = 0; i < codes.length; i++) {
       var catalogItem = findCatalogItem(codes[i]);
       if (!catalogItem) continue;
-      var maxQty = maxAddableQty(catalogItem);
-      if (maxQty < 1) {
-        showError('الصنف «' + catalogItem.name + '» غير متاح');
-        return;
-      }
-      if (qty > maxQty) {
-        showError('الكمية تتجاوز المتاح للصنف «' + catalogItem.name + '» — الحد الأقصى: ' + maxQty);
-        return;
-      }
+      // يُسمح بتجاوز المتاح (backorder) — لا حظر، فقط تنبيه.
+      if (qty > maxAddableQty(catalogItem)) backorder = true;
       items.push({
         stock_item_code: catalogItem.code,
         name: catalogItem.name,
         qty: qty,
       });
+    }
+
+    if (backorder) {
+      toast('⚠️ الكمية تتجاوز المتاح — سيُسجَّل رصيد سالب (طلب توريد).');
     }
 
     var btn = $('btnAddAdjItem');
