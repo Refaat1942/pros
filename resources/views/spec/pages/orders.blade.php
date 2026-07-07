@@ -165,6 +165,14 @@
             </div>
 
             <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">📝 بنود مكتوبة (وصف حر — بند في كل سطر)</label>
+                <textarea id="writtenItems" rows="4" placeholder="اكتب البنود المطلوبة يدوياً، كل بند في سطر مستقل..."
+                          data-v-rules="max:5000" maxlength="5000"
+                          class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-spec/40"></textarea>
+                <p class="text-xs text-slate-400 mt-1">بنود وصفية فقط — لا تدخل التسعير ولا حجز المخزون.</p>
+            </div>
+
+            <div>
                 <label class="block text-sm font-bold text-slate-700 mb-2">ملاحظات فنية (اختياري)</label>
                 <textarea id="techNotes" rows="3" placeholder="ملاحظات التوصيف..."
                           data-v-rules="max:5000" maxlength="5000"

@@ -23,6 +23,9 @@ Route::get('/firebase-messaging-sw.js', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
+    Route::get('/notifications/feed', [NotificationController::class, 'feed'])
+        ->name('notifications.feed');
+
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])
         ->name('notifications.read-all');
 

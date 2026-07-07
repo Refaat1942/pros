@@ -73,6 +73,9 @@
             </div>
         @endif
     </div>
+    @if ($spec->written_items)
+        <p class="spec-preview-note is-muted" style="white-space: pre-line;"><strong>بنود مكتوبة:</strong> {{ $spec->written_items }}</p>
+    @endif
     @if ($spec->tech_notes)
         <p class="spec-preview-note is-muted"><strong>ملاحظات التوصيف:</strong> {{ $spec->tech_notes }}</p>
     @endif

@@ -21,6 +21,7 @@ class TechOrderSpec extends Model
         'company_name',
         'doctor_name',
         'tech_notes',
+        'written_items',
         'submitted_at',
         'locked',
     ];

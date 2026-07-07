@@ -51,6 +51,9 @@
         @yield('page-content')
     </main>
 
+    {{-- حاوية توست عامة للإشعارات المنبثقة — متاحة في كل الشاشات (بما فيها الخزنة) --}}
+    <div id="notifToast" class="toast hidden" role="alert" aria-live="assertive"></div>
+
     @include("{$dashboardKey}.partials.modals")
 @endsection
 
@@ -65,6 +68,8 @@
     @endif
     @include('partials.firebase-web')
     <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}"></script>
+    <script>window.__NOTIF_FEED_URL = "{{ route('notifications.feed') }}";</script>
+    <script src="{{ asset('assets/js/shared/dashboard-notifications-poll.js') }}?v={{ filemtime(public_path('assets/js/shared/dashboard-notifications-poll.js')) }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)
         @php
             $scriptSrc = str_starts_with($script, 'http')

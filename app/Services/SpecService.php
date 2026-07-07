@@ -76,6 +76,7 @@ class SpecService
                 'company_name' => $case->company_name,
                 'doctor_name' => $doctorName,
                 'tech_notes' => $data['tech_notes'] ?? null,
+                'written_items' => $data['written_items'] ?? null,
                 'locked' => false,
             ]);
 
@@ -102,10 +103,13 @@ class SpecService
         }
 
         return DB::transaction(function () use ($spec, $data) {
-            $before = $spec->only(['tech_notes']);
+            $before = $spec->only(['tech_notes', 'written_items']);
 
             $spec->update([
                 'tech_notes' => $data['tech_notes'] ?? $spec->tech_notes,
+                'written_items' => array_key_exists('written_items', $data)
+                    ? $data['written_items']
+                    : $spec->written_items,
             ]);
 
             if (array_key_exists('items', $data)) {
@@ -117,7 +121,7 @@ class SpecService
                 description: "تحديث مسودة توصيف فني #{$spec->id}",
                 tag: 'spec',
                 before: $before,
-                after: $spec->only(['tech_notes']),
+                after: $spec->only(['tech_notes', 'written_items']),
             );
 
             return $spec->fresh()->load('items');

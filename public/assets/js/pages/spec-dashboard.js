@@ -51,6 +51,11 @@
 
   function $(id) { return document.getElementById(id); }
 
+  function setWrittenItems(value) {
+    var el = $('writtenItems');
+    if (el) el.value = value || '';
+  }
+
   function showToast(msg, isError) {
     if (window.DashboardToast) {
       window.DashboardToast.show(msg, { id: 'toast', isError: !!isError });
@@ -481,6 +486,7 @@
         if (data.submitted_spec && c.stage_key !== 'technical') {
           state.specId = data.submitted_spec.id;
           $('techNotes').value = data.submitted_spec.tech_notes || '';
+          setWrittenItems(data.submitted_spec.written_items);
           state.items = mapSpecItems(data.submitted_spec.items);
           renderItemsTable();
           openWorkspace();
@@ -491,6 +497,7 @@
         if (data.submitted_spec && c.stage_key === 'technical') {
           state.specId = data.submitted_spec.id;
           $('techNotes').value = data.submitted_spec.tech_notes || '';
+          setWrittenItems(data.submitted_spec.written_items);
           state.items = mapSpecItems(data.submitted_spec.items);
           renderItemsTable();
           openWorkspace();
@@ -501,8 +508,10 @@
         if (data.draft) {
           state.specId = data.draft.id;
           $('techNotes').value = data.draft.tech_notes || '';
+          setWrittenItems(data.draft.written_items);
         } else {
           $('techNotes').value = '';
+          setWrittenItems('');
         }
 
         var draftItems = data.draft?.items?.length ? mapSpecItems(data.draft.items) : [];
@@ -534,9 +543,11 @@
   function saveDraft() {
     if (!state.caseId || state.locked) return Promise.reject();
     var items = payloadItems();
+    var writtenEl = $('writtenItems');
     var body = {
       case_id: state.caseId,
       tech_notes: $('techNotes').value.trim() || null,
+      written_items: writtenEl ? (writtenEl.value.trim() || null) : null,
       items: items,
     };
     if (state.specId) {

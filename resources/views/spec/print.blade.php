@@ -129,6 +129,13 @@
         </tbody>
     </table>
 
+    @if ($spec->written_items)
+        <div class="notes-box">
+            <div class="notes-title">بنود مكتوبة (وصف حر):</div>
+            <div style="white-space: pre-line;">{{ $spec->written_items }}</div>
+        </div>
+    @endif
+
     <div class="notes-box">
         <div class="notes-title">ملاحظات فنية:</div>
         <div>{{ $spec->tech_notes ?: '—' }}</div>

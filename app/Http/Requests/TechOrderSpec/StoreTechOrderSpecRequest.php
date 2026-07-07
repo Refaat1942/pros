@@ -12,6 +12,7 @@ class StoreTechOrderSpecRequest extends BaseRequest
         return [
             'case_id' => ['required', 'integer', 'exists:cases,id'],
             'tech_notes' => $this->notesRules(5000),
+            'written_items' => ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.stock_item_code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-_]+$/'],
             'items.*.name' => ['required', 'string', 'min:1', 'max:255'],
