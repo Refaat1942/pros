@@ -52,21 +52,22 @@ final class PatientEntityPresenter
             return self::military($case->sovereign_entity ?: Patient::MILITARY_SOVEREIGN_ENTITY);
         }
 
-        if (! $case->contract_company_id) {
+        $company = $case->relationLoaded('contractCompany')
+            ? $case->contractCompany
+            : ($case->contract_company_id ? ContractCompany::query()->find($case->contract_company_id) : null);
+
+        $name = $case->company_name ?: $company?->name;
+
+        // نقدي حقيقي: لا جهة تعاقد ولا اسم جهة على الحالة.
+        if (! $case->contract_company_id && ($name === null || $name === '')) {
             return self::cash();
         }
 
-        $company = $case->relationLoaded('contractCompany')
-            ? $case->contractCompany
-            : ContractCompany::query()->find($case->contract_company_id);
-
-        $name = $case->company_name ?? $company?->name ?? '—';
-
         if ($company && ! $company->is_contracted) {
-            return self::nonContracted($name);
+            return self::nonContracted($name ?? '—');
         }
 
-        return self::contracted($name);
+        return self::contracted($name ?? '—');
     }
 
     /** @return array{label: string, kind: string, badge: string, badge_class: string} */
