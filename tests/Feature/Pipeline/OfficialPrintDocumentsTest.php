@@ -36,12 +36,16 @@ class OfficialPrintDocumentsTest extends TestCase
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $ops = $this->userWithRole('operations');
 
+        $specItem = $quote->items->firstWhere('source', 'spec') ?? $quote->items->first();
+
         $this->actingAs($ops)
             ->get(route('operations.quote.print', $quote))
             ->assertOk()
             ->assertSee($quote->quote_no, false)
             ->assertSee('عرض سعر', false)
             ->assertSee(Quote::SERIAL_LABEL, false)
+            ->assertSee('الكمية', false)
+            ->assertSee($specItem->name, false)
             ->assertSee('<svg', false)
             ->assertSee('onload="window.print()"', false);
     }

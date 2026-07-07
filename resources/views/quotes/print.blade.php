@@ -326,12 +326,18 @@
         }
 
         .pricing-table .col-spec {
-            width: 46%;
+            width: 40%;
             text-align: right;
         }
 
+        .pricing-table .col-qty {
+            width: 8%;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
         .pricing-table .col-amount {
-            width: 14%;
+            width: 13%;
         }
 
         .pricing-table .col-remarks {
@@ -592,6 +598,7 @@
             <tr>
                 <th class="col-no" rowspan="2">م</th>
                 <th class="col-spec" rowspan="2">المواصفات</th>
+                <th class="col-qty" rowspan="2">الكمية</th>
                 <th class="col-amount" colspan="2">المبلغ</th>
                 <th class="col-remarks" rowspan="2">ملاحظات</th>
             </tr>
@@ -602,14 +609,10 @@
         </thead>
         <tbody>
             @foreach ($specItems as $index => $item)
-                @php
-                    $specLabel = $item->qty > 1
-                        ? $item->name . ' — عدد ' . $item->qty
-                        : $item->name;
-                @endphp
                 <tr>
                     <td class="col-no">{{ $index + 1 }}</td>
-                    <td class="col-spec">{{ $specLabel }}</td>
+                    <td class="col-spec">{{ $item->name }}</td>
+                    <td class="num">{{ $item->qty }}</td>
                     <td class="num">&nbsp;</td>
                     <td class="num">&nbsp;</td>
                     <td>&nbsp;</td>
@@ -621,25 +624,26 @@
                     <td class="col-spec">&nbsp;</td>
                     <td class="num">&nbsp;</td>
                     <td class="num">&nbsp;</td>
+                    <td class="num">&nbsp;</td>
                     <td>&nbsp;</td>
                 </tr>
             @endfor
             @if (! empty($totals['has_discount']))
                 <tr class="total-row">
-                    <td colspan="2" class="total-label">الإجمالي قبل الخصم</td>
+                    <td colspan="3" class="total-label">الإجمالي قبل الخصم</td>
                     <td class="num">{{ $grossFmt['piasters'] }}</td>
                     <td class="num">{{ $grossFmt['pounds'] }}</td>
                     <td>&nbsp;</td>
                 </tr>
                 <tr class="total-row discount-row">
-                    <td colspan="2" class="total-label">خصم جهة التعاقد ({{ rtrim(rtrim(number_format((float) $totals['discount_percent'], 2, '.', ''), '0'), '.') }}%)</td>
+                    <td colspan="3" class="total-label">خصم جهة التعاقد ({{ rtrim(rtrim(number_format((float) $totals['discount_percent'], 2, '.', ''), '0'), '.') }}%)</td>
                     <td class="num">− {{ $discountFmt['piasters'] }}</td>
                     <td class="num">− {{ $discountFmt['pounds'] }}</td>
                     <td>&nbsp;</td>
                 </tr>
             @endif
             <tr class="total-row">
-                <td colspan="2" class="total-label">الإجمالي</td>
+                <td colspan="3" class="total-label">الإجمالي</td>
                 <td class="num">{{ $totalFmt['piasters'] }}</td>
                 <td class="num">{{ $totalFmt['pounds'] }}</td>
                 <td>&nbsp;</td>
