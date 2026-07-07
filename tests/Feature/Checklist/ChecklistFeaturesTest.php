@@ -275,4 +275,24 @@ class ChecklistFeaturesTest extends TestCase
         $response->assertSee('BC-RM-LBL');
         $response->assertSee('<svg', false);
     }
+
+    public function test_bulk_barcode_labels_render_multiple_items_with_settings(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $a = StockItem::create(['code' => 'RM-A', 'name' => 'صنف أ', 'barcode' => 'BC-RM-A', 'qty' => 5, 'reserved' => 0, 'wac' => 10, 'status' => 'ok']);
+        $b = StockItem::create(['code' => 'RM-B', 'name' => 'صنف ب', 'barcode' => 'BC-RM-B', 'qty' => 5, 'reserved' => 0, 'wac' => 10, 'status' => 'ok']);
+
+        $response = $this->actingAs($admin)->get(
+            route('admin.catalog.labels.bulk').'?ids='.$a->id.','.$b->id.'&copies=2&offset_x=3&page_margin=6',
+        );
+
+        $response->assertOk();
+        $response->assertSee('BC-RM-A');
+        $response->assertSee('BC-RM-B');
+        // نسختان لكل صنف = 4 ملصقات.
+        $response->assertSee('4 ملصق');
+        $response->assertSee('--offset-x: 3mm', false);
+        $response->assertSee('--page-margin: 6mm', false);
+    }
 }

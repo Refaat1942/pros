@@ -64,24 +64,30 @@
                 <form id="catalogImportForm" method="POST" action="{{ route('admin.catalog.import') }}" enctype="multipart/form-data" style="display:inline-flex;">
                     @csrf
                     <input type="file" id="catalogImportFile" name="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" class="catalog-file-input" required>
-                    <label for="catalogImportFile" class="btn-action success catalog-file-label" id="catalogImportBtn" title="معرف المورد/القسم من تبويبات القالب — والخصائص: انسخ من «خيارات الحقول» مفصولة بـ |">📤 ارفع ملف Excel</label>
+                    <label for="catalogImportFile" class="btn-action success catalog-file-label" id="catalogImportBtn" title="القالب: كود الصنف | اسم الصنف | الوحدة | الكمية | الحد الأدنى للطلب">📤 ارفع ملف Excel</label>
                 </form>
+            @endcan
+
+            @can('print-barcode')
+                <button type="button" class="btn-action" id="catalogPrintBarcodesBtn" onclick="printSelectedBarcodes()" disabled>🏷️ طباعة باركود المحدد</button>
             @endcan
 
             <span class="toolbar-count" id="catalogSlimCount">{{ $items->count() }} صنف</span>
         </div>
 
         <p class="catalog-table-hint">
-            💡 لإضافة أكثر من سعر لنفس الصنف في ملف Excel/CSV، اكتب الأسعار في عمود «السعر» مفصولة بعلامة
-            <strong>;</strong>
-            — مثال: <code dir="ltr">1000;2000;2200</code>
-            (أول سعر أساسي والباقي أسعار إضافية). عمود «أعلى سعر» يعرض أعلى قيمة مسجّلة.
+            💡 قالب الأصناف مبسّط بخمسة أعمدة فقط:
+            <strong>كود الصنف | اسم الصنف | الوحدة | الكمية | الحد الأدنى للطلب</strong>.
+            الأسعار والموردون والأقسام تُدار من شاشة الكاتلوج. لطباعة الباركود، حدّد صنفاً أو أكثر ثم اضغط «طباعة باركود المحدد».
         </p>
 
         <div class="panel-body" style="overflow-x:auto;">
             <table class="catalog-slim-table" id="catalogItemsTable" data-paginate="10" style="width:100%;border-collapse:collapse;">
                 <thead>
                     <tr style="background:var(--surface-2,#f8fafc);">
+                        @can('print-barcode')
+                            <th style="padding:10px;text-align:center;width:34px;"><input type="checkbox" id="catalogSelectAll" onclick="toggleAllBarcodes(this)" title="تحديد الكل"></th>
+                        @endcan
                         <th style="padding:10px;text-align:right;">الكود</th>
                         <th style="padding:10px;text-align:right;">الصنف</th>
                         <th style="padding:10px;text-align:right;">القسم</th>
@@ -103,6 +109,9 @@
                             data-filter-hidden="0"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
                             style="border-top:1px solid var(--border);">
+                            @can('print-barcode')
+                                <td style="padding:8px;text-align:center;"><input type="checkbox" class="catalog-barcode-check" value="{{ $item['id'] ?? '' }}" onclick="syncBarcodeSelection()"></td>
+                            @endcan
                             <td style="padding:8px;direction:ltr;text-align:right;"><strong>{{ $item['code'] ?? '' }}</strong></td>
                             <td style="padding:8px;">{{ $item['name'] ?? '' }}</td>
                             <td style="padding:8px;color:var(--text-muted);">{{ $item['category'] ?? '—' }}</td>
@@ -134,7 +143,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
+                        <tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -877,6 +886,38 @@
         setForm(data);
         document.getElementById('slimCode').disabled = true;
         openCatalogFormModal('✏️ تعديل صنف');
+    };
+
+    window.selectedBarcodeIds = function () {
+        return Array.prototype.slice
+            .call(document.querySelectorAll('.catalog-barcode-check:checked'))
+            .map(function (c) { return c.value; })
+            .filter(Boolean);
+    };
+
+    window.syncBarcodeSelection = function () {
+        var ids = window.selectedBarcodeIds();
+        var btn = document.getElementById('catalogPrintBarcodesBtn');
+        if (btn) {
+            btn.disabled = ids.length === 0;
+            btn.textContent = ids.length > 0 ? '🏷️ طباعة باركود المحدد (' + ids.length + ')' : '🏷️ طباعة باركود المحدد';
+        }
+    };
+
+    window.toggleAllBarcodes = function (master) {
+        document.querySelectorAll('.catalog-barcode-check').forEach(function (c) {
+            var row = c.closest('tr');
+            if (row && row.getAttribute('data-filter-hidden') === '1') return;
+            c.checked = master.checked;
+        });
+        window.syncBarcodeSelection();
+    };
+
+    window.printSelectedBarcodes = function () {
+        var ids = window.selectedBarcodeIds();
+        if (!ids.length) return;
+        var url = @json(route('admin.catalog.labels.bulk')) + '?ids=' + encodeURIComponent(ids.join(','));
+        window.open(url, '_blank');
     };
 
     function itemHighestPrice(item) {

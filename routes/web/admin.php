@@ -104,6 +104,10 @@ Route::prefix('admin')
                 ->middleware('can:import-inventory')
                 ->name('catalog.import');
 
+            Route::get('catalog/labels', [StockCatalogController::class, 'labelsBulk'])
+                ->middleware('can:print-barcode')
+                ->name('catalog.labels.bulk');
+
             Route::get('catalog/{stockItem}/labels', [StockCatalogController::class, 'labels'])
                 ->middleware('can:print-barcode')
                 ->name('catalog.labels');

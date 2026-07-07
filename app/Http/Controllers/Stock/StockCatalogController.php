@@ -188,17 +188,83 @@ class StockCatalogController extends Controller
     }
 
     /**
-     * صفحة طباعة باركود حراري — ملصقان جنباً إلى جنب (38mm × 25mm).
+     * صفحة طباعة باركود حراري لصنف واحد — ملصقان جنباً إلى جنب (38mm × 25mm).
      */
     public function labels(StockItem $stockItem, Request $request): Response
     {
         $copies = max(1, min(200, (int) $request->integer('copies', 2)));
+        $settings = $this->labelSettings($request);
 
         return response()->view('admin.print.barcode-labels', [
-            'item' => $stockItem,
-            'copies' => $copies,
-            'barcodeSvg' => Code128::svg($stockItem->barcode, height: 44, moduleWidth: 1.1),
+            'labels' => $this->buildLabels([$stockItem], $copies, $settings['module_width'], $settings['barcode_height']),
+            'settings' => $settings,
+            'heading' => $stockItem->name,
         ]);
+    }
+
+    /**
+     * طباعة باركود لعدة أصناف دفعة واحدة — ids[] + عدد النسخ + إحداثيات قابلة للضبط.
+     */
+    public function labelsBulk(Request $request): Response
+    {
+        $ids = collect(explode(',', (string) $request->query('ids', '')))
+            ->merge((array) $request->query('id', []))
+            ->map(fn ($v) => (int) trim((string) $v))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $items = StockItem::query()->whereIn('id', $ids)->orderBy('name')->get();
+        $copies = max(1, min(200, (int) $request->integer('copies', 1)));
+        $settings = $this->labelSettings($request);
+
+        return response()->view('admin.print.barcode-labels', [
+            'labels' => $this->buildLabels($items->all(), $copies, $settings['module_width'], $settings['barcode_height']),
+            'settings' => $settings,
+            'heading' => $items->count().' صنف',
+        ]);
+    }
+
+    /**
+     * إعدادات الطباعة القابلة للضبط (بالمليمتر إلا حيث يُذكر).
+     *
+     * @return array{page_margin:float, gap:float, module_width:float, barcode_height:int, offset_x:float, offset_y:float, copies:int}
+     */
+    private function labelSettings(Request $request): array
+    {
+        return [
+            'page_margin' => round((float) $request->query('page_margin', '4'), 2),
+            'gap' => round((float) $request->query('gap', '2'), 2),
+            'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '1.1'), 2))),
+            'barcode_height' => max(20, min(80, (int) $request->integer('barcode_height', 44))),
+            'offset_x' => round((float) $request->query('offset_x', '0'), 2),
+            'offset_y' => round((float) $request->query('offset_y', '0'), 2),
+            'copies' => max(1, min(200, (int) $request->integer('copies', 2))),
+        ];
+    }
+
+    /**
+     * يبني قائمة الملصقات (اسم + باركود + SVG) مع تكرار النسخ.
+     *
+     * @param  list<StockItem>  $items
+     * @return list<array{name:string, barcode:string, svg:string}>
+     */
+    private function buildLabels(array $items, int $copies, float $moduleWidth, int $height): array
+    {
+        $labels = [];
+
+        foreach ($items as $item) {
+            $svg = Code128::svg((string) $item->barcode, height: $height, moduleWidth: $moduleWidth);
+            for ($i = 0; $i < $copies; $i++) {
+                $labels[] = [
+                    'name' => (string) $item->name,
+                    'barcode' => (string) $item->barcode,
+                    'svg' => $svg,
+                ];
+            }
+        }
+
+        return $labels;
     }
 
     /**
