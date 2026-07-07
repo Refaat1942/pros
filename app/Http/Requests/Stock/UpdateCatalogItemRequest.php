@@ -13,6 +13,7 @@ class UpdateCatalogItemRequest extends BaseRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'uom' => ['nullable', 'string', 'max:50'],
             'qty' => ['nullable', 'integer', 'min:0'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'min_qty' => ['nullable', 'integer', 'min:0'],

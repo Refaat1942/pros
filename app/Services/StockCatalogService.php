@@ -105,7 +105,7 @@ class StockCatalogService
                 'spec' => $data['spec'] ?? null,
                 'category_id' => $data['category_id'] ?? null,
                 'store_class' => $this->deriveStoreClass($category),
-                'uom' => StockUom::Piece->value,
+                'uom' => $this->normalizeUom($data['uom'] ?? null),
                 'barcode' => 'BC-'.$code,
                 'qty' => $qty,
                 'reserved' => 0,
@@ -153,6 +153,9 @@ class StockCatalogService
             $item->update([
                 'name' => $data['name'],
                 'spec' => $data['spec'] ?? $item->spec,
+                'uom' => array_key_exists('uom', $data) && trim((string) $data['uom']) !== ''
+                    ? $this->normalizeUom($data['uom'])
+                    : $item->uom,
                 'qty' => (int) ($data['qty'] ?? $item->qty),
                 'min_qty' => array_key_exists('min_qty', $data)
                     ? max(0, (int) $data['min_qty'])
@@ -243,6 +246,16 @@ class StockCatalogService
         $next = ((int) $lastNum) + 1;
 
         return 'ITM-'.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * وحدة القياس: نص حر مسموح، والافتراضي «قطعة» عند الفراغ.
+     */
+    private function normalizeUom(?string $uom): string
+    {
+        $uom = trim((string) $uom);
+
+        return $uom !== '' ? $uom : StockUom::Piece->value;
     }
 
     private function deriveStoreClass(?StockCategory $category): string

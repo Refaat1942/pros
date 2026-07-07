@@ -5,15 +5,10 @@ namespace Tests\Feature\Checklist;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Permission;
-use App\Models\StockCategory;
 use App\Models\StockItem;
-use App\Models\Supplier;
 use App\Services\AppointmentService;
 use App\Services\MedicalRecordService;
-use App\Services\StockCatalogService;
 use App\Services\StockImportService;
-use Database\Seeders\StockCategorySeeder;
-use Database\Seeders\SupplierSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
@@ -58,7 +53,7 @@ class ChecklistFeaturesTest extends TestCase
     {
         $csv = StockImportService::HEADERS;
         $contents = implode(',', $csv)."\r\n"
-            ."RM-900,خامة اختبار,15,100\r\n";
+            ."RM-900,خامة اختبار,متر,15,5\r\n";
 
         $file = UploadedFile::fake()->createWithContent('items.csv', $contents);
 
@@ -68,12 +63,13 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertDatabaseHas('stock_items', [
             'code' => 'RM-900',
             'name' => 'خامة اختبار',
+            'uom' => 'متر',
             'qty' => 15,
-            'price' => 100,
+            'min_qty' => 5,
         ]);
 
         // إعادة الرفع بنفس الكود → تحديث (upsert) لا إنشاء.
-        $update = implode(',', $csv)."\r\n"."RM-900,خامة محدثة,40,120\r\n";
+        $update = implode(',', $csv)."\r\n"."RM-900,خامة محدثة,قطعة,40,8\r\n";
         $summary2 = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('items2.csv', $update),
         );
@@ -82,30 +78,26 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertSame(0, $summary2['created']);
         $this->assertSame(1, StockItem::where('code', 'RM-900')->count());
         $this->assertSame(40, (int) StockItem::where('code', 'RM-900')->value('qty'));
+        $this->assertSame('قطعة', StockItem::where('code', 'RM-900')->value('uom'));
     }
 
-    public function test_csv_import_parses_multiple_prices_separated_by_semicolon(): void
+    public function test_csv_import_defaults_unit_when_blank(): void
     {
-        $csv = StockImportService::HEADERS;
-        $contents = implode(',', $csv)."\r\n"
-            ."RM-901,صنف متعدد الأسعار,5,1000;2000;2200\r\n";
+        $contents = implode(',', StockImportService::HEADERS)."\r\n"
+            ."RM-901,صنف بلا وحدة,,5,2\r\n";
 
         $summary = app(StockImportService::class)->import(
-            UploadedFile::fake()->createWithContent('multi.csv', $contents),
+            UploadedFile::fake()->createWithContent('nouom.csv', $contents),
         );
 
         $this->assertSame(1, $summary['created']);
-
-        $item = StockItem::where('code', 'RM-901')->with('prices')->firstOrFail();
-        $this->assertEquals(1000.0, (float) $item->price);
-        $this->assertCount(2, $item->prices);
-        $this->assertEquals(2200.0, app(StockCatalogService::class)->formatItem($item)['highest_price']);
+        $this->assertSame('قطعة', StockItem::where('code', 'RM-901')->value('uom'));
     }
 
     public function test_csv_import_handles_excel_semicolon_delimiter(): void
     {
-        $contents = "كود الصنف;اسم الصنف;الكمية;السعر\r\n"
-            ."RM-902;صنف اكسيل;3;500;1000\r\n";
+        $contents = "كود الصنف;اسم الصنف;الوحدة;الكمية;الحد الأدنى للطلب\r\n"
+            ."RM-902;صنف اكسيل;طقم;3;1\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('excel.csv', $contents),
@@ -113,10 +105,9 @@ class ChecklistFeaturesTest extends TestCase
 
         $this->assertSame(1, $summary['created']);
 
-        $item = StockItem::where('code', 'RM-902')->with('prices')->firstOrFail();
-        $this->assertEquals(500.0, (float) $item->price);
-        $this->assertCount(1, $item->prices);
-        $this->assertEquals(1000.0, (float) $item->prices->first()->amount);
+        $item = StockItem::where('code', 'RM-902')->firstOrFail();
+        $this->assertSame('طقم', $item->uom);
+        $this->assertSame(3, (int) $item->qty);
     }
 
     public function test_csv_import_converts_windows_1256_arabic_to_utf8(): void
@@ -124,7 +115,7 @@ class ChecklistFeaturesTest extends TestCase
         $arabicName = 'مفصل ركبة ميكانيكي';
         $encodedName = iconv('UTF-8', 'CP1256', $arabicName);
         $this->assertNotFalse($encodedName);
-        $contents = "RM-903,{$encodedName},5,1000;2000\r\n";
+        $contents = "RM-903,{$encodedName},قطعة,5,2\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('win1256.csv', $contents),
@@ -148,7 +139,7 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertNotFalse($header);
 
         $contents = $header."\r\n"
-            .'RM-560;'.$encodedName.';3;1000;2000'."\r\n";
+            .'RM-560;'.$encodedName.';قطعة;3;1'."\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('excel-ar.csv', $contents),
@@ -162,36 +153,8 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertStringNotContainsString('?', StockItem::where('code', 'RM-560')->value('name'));
     }
 
-    public function test_csv_import_supports_extended_template_columns(): void
+    public function test_xlsx_template_has_single_items_sheet_with_five_columns(): void
     {
-        $this->seed([StockCategorySeeder::class, SupplierSeeder::class]);
-
-        $supplierId = Supplier::query()->where('name', 'Blatchford Group')->value('id');
-        $categoryId = StockCategory::query()->where('name', 'أقمشة ومواد خام')->value('id');
-
-        $contents = implode(',', StockImportService::HEADERS)."\r\n"
-            ."RM-910,قماش اختبار,40,8,500,{$supplierId},{$categoryId},قماش Lamination|متر\r\n";
-
-        $summary = app(StockImportService::class)->import(
-            UploadedFile::fake()->createWithContent('extended.csv', $contents),
-        );
-
-        $this->assertSame(1, $summary['created']);
-        $this->assertSame([], $summary['errors']);
-
-        $item = StockItem::where('code', 'RM-910')->with(['suppliers', 'attributeValues.field'])->firstOrFail();
-        $this->assertSame(8, (int) $item->min_qty);
-        $this->assertSame('Blatchford Group', $item->suppliers->first()?->name);
-        $this->assertSame('أقمشة ومواد خام', StockCategory::find($item->category_id)?->name);
-        $this->assertTrue(
-            $item->attributeValues->contains(fn ($row) => $row->field?->field_key === 'uom' && $row->value === 'متر'),
-        );
-    }
-
-    public function test_xlsx_template_includes_reference_sheets_and_id_columns(): void
-    {
-        $this->seed([StockCategorySeeder::class, SupplierSeeder::class]);
-
         $bytes = app(StockImportService::class)->templateBinary();
 
         $this->assertStringStartsWith('PK', $bytes);
@@ -210,19 +173,11 @@ class ChecklistFeaturesTest extends TestCase
         $reader->close();
         @unlink($path);
 
+        $this->assertSame([StockImportService::SHEET_ITEMS], $sheetNames);
         $this->assertSame(
-            [
-                StockImportService::SHEET_ITEMS,
-                StockImportService::SHEET_SUPPLIERS,
-                StockImportService::SHEET_CATEGORIES,
-                StockImportService::SHEET_FIELDS,
-                StockImportService::SHEET_FIELD_OPTIONS,
-            ],
-            $sheetNames,
+            ['كود الصنف', 'اسم الصنف', 'الوحدة', 'الكمية', 'الحد الأدنى للطلب'],
+            StockImportService::HEADERS,
         );
-        $this->assertSame('معرف المورد', StockImportService::HEADERS[5]);
-        $this->assertSame('معرف القسم', StockImportService::HEADERS[6]);
-        $this->assertSame('قيم الخصائص', StockImportService::HEADERS[7]);
     }
 
     public function test_military_markup_engine_computes_selling_price_and_percentage(): void

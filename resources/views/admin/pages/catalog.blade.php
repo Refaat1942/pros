@@ -86,6 +86,7 @@
                         <th style="padding:10px;text-align:right;">الصنف</th>
                         <th style="padding:10px;text-align:right;">القسم</th>
                         <th style="padding:10px;text-align:right;">المورد</th>
+                        <th style="padding:10px;text-align:center;">الوحدة</th>
                         <th style="padding:10px;text-align:center;">الكمية</th>
                         <th style="padding:10px;text-align:center;">سعر التكلفة</th>
                         <th style="padding:10px;text-align:center;">أعلى سعر</th>
@@ -112,6 +113,7 @@
                                     —
                                 @endif
                             </td>
+                            <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $item['uom'] ?? 'قطعة' }}</td>
                             <td style="padding:8px;text-align:center;">{{ (int) ($item['qty'] ?? 0) }}</td>
                             <td style="padding:10px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['price'] ?? 0), 2) }}</td>
                             <td style="padding:10px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['highest_price'] ?? $item['price'] ?? 0), 2) }}</td>
@@ -132,7 +134,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
+                        <tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -164,11 +166,24 @@
                     <input type="text" id="slimName" placeholder="مثال: ركبة هيدروليكية" class="catalog-form-input">
                 </div>
                 <div>
+                    <label class="catalog-form-label">الوحدة</label>
+                    <input type="text" id="slimUom" list="slimUomOptions" value="قطعة" class="catalog-form-input" placeholder="قطعة / متر / طقم">
+                    <datalist id="slimUomOptions">
+                        <option value="قطعة"></option>
+                        <option value="متر"></option>
+                        <option value="طقم"></option>
+                        <option value="لفة"></option>
+                        <option value="كيلو"></option>
+                        <option value="جرام"></option>
+                        <option value="لتر"></option>
+                    </datalist>
+                </div>
+                <div>
                     <label class="catalog-form-label">الكمية</label>
                     <input type="number" id="slimQty" min="0" value="0" class="catalog-form-input">
                 </div>
                 <div>
-                    <label class="catalog-form-label">الحد الأدنى للصنف</label>
+                    <label class="catalog-form-label">الحد الأدنى للطلب</label>
                     <input type="number" id="slimMinQty" min="0" value="0" class="catalog-form-input" placeholder="مثال: 10">
                 </div>
                 <div>
@@ -789,6 +804,7 @@
     function setForm(v) {
         document.getElementById('slimCode').value = v.code || '';
         document.getElementById('slimName').value = v.name || '';
+        document.getElementById('slimUom').value = v.uom || 'قطعة';
         document.getElementById('slimQty').value = v.qty != null ? v.qty : 0;
         document.getElementById('slimMinQty').value = v.min_qty != null ? v.min_qty : 0;
         document.getElementById('slimPrice').value = v.price != null ? v.price : 0;
@@ -935,8 +951,9 @@
             '<div class="catalog-detail-grid">'
             + detailBox('كود الصنف', item.code || '—')
             + detailBox('الباركود', item.barcode || '—')
+            + detailBox('الوحدة', item.uom || 'قطعة')
             + detailBox('الكمية', String(parseInt(item.qty, 10) || 0))
-            + detailBox('الحد الأدنى', String(parseInt(item.min_qty, 10) || 0))
+            + detailBox('الحد الأدنى للطلب', String(parseInt(item.min_qty, 10) || 0))
             + detailBox('القسم', item.category || '—')
             + detailBox('المورد', supplierNamesLabel(item))
             + detailBox('خصائص القسم', window.CatalogSections ? window.CatalogSections.formatAttributesSummary(item) : '—')
@@ -1023,6 +1040,7 @@
 
         var payload = {
             name: name,
+            uom: (document.getElementById('slimUom').value || '').trim() || 'قطعة',
             qty: parseInt(document.getElementById('slimQty').value || '0', 10),
             min_qty: parseInt(document.getElementById('slimMinQty').value || '0', 10),
             price: parseFloat(document.getElementById('slimPrice').value || '0'),
