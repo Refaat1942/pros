@@ -1,7 +1,7 @@
 <aside class="sidebar">
     <div class="sidebar-brand">
       <div class="icon">📦</div>
-      <h2>لوحة المخزون</h2>
+      <h2>لوحة المخزن</h2>
       <span>إدارة الأصناف والكميات</span>
     </div>
     <!-- <div class="privacy-notice">
@@ -9,7 +9,7 @@
       هذه الشاشة تعرض مواصفات المخزون والكميات فقط — جميع البيانات المالية محجوبة.
     </div> -->
     <ul class="nav-menu">
-      <li><a href="#" class="active" data-section="inventory"><span class="nav-icon">📦</span> المخزون</a></li>
+      <li><a href="#" class="active" data-section="inventory"><span class="nav-icon">📦</span> المخزن</a></li>
       <li><a href="#" data-section="bom"><span class="nav-icon">📋</span> صرف المواد للورشة</a></li>
       <li><a href="#" data-section="returns"><span class="nav-icon">↩️</span> إذن ارتجاع</a></li>
     </ul>
@@ -19,7 +19,7 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <h1 id="pageTitle">المخزون — توفر الأصناف</h1>
+        <h1 id="pageTitle">المخزن — توفر الأصناف</h1>
         <p></p>
       </div>
       <div class="user-chip">

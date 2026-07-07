@@ -106,7 +106,7 @@ var bomFilter = 'all';
 var bomSearchTerm = '';
 
 var sectionTitles = {
-  inventory: 'المخزون — توفر الأصناف',
+  inventory: 'المخزن — توفر الأصناف',
   orders: 'طلبات التوصيف — إرسال للتسعير',
   spec: 'معاينة التوصيف (بدون صرف)',
   pricing: 'طلبات مرسلة للتسعير',

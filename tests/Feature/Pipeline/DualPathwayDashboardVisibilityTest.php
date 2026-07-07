@@ -198,6 +198,17 @@ class DualPathwayDashboardVisibilityTest extends TestCase
         $this->test_reception_quote_queue_surfaces_after_operations_release();
     }
 
+    public function test_reception_fast_delivery_page_is_reachable(): void
+    {
+        $reception = $this->userWithRole('reception');
+
+        // الصفحة لم تعد مخفية — شاشة تسليم سريعة بمسح QR.
+        $this->actingAs($reception)
+            ->get('/reception/delivery')
+            ->assertOk()
+            ->assertSee('deliveryQrInput', false);
+    }
+
     public function test_reception_delivery_page_has_no_approval_pending_section(): void
     {
         $company = $this->civilianCompany();

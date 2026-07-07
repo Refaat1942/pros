@@ -33,9 +33,8 @@ return [
             'appointments' => ['title' => 'جدولة المواعيد', 'icon' => '📅', 'label' => 'جدولة المواعيد'],
             'statistics' => ['title' => 'إحصائيات الاستقبال', 'icon' => '📊', 'label' => 'الإحصائيات'],
             'quote' => ['title' => 'عروض الأسعار', 'icon' => '💰', 'label' => 'عروض الأسعار'],
-            // تسليم الطرف عبر مسح QR — الصفحة مخفية من القائمة (نُقل العرض لمكتب التشغيل)
-            // لكن مسار المسح (DeliveryController::scan) لا يزال فعّالاً كصلاحية للاستقبال.
-            'delivery' => ['title' => 'تسليم الطرف للمريض', 'icon' => '✅', 'label' => 'تسليم للمريض', 'hidden' => true],
+            // تسليم الطرف عبر مسح QR — شاشة تسليم سريعة للاستقبال (إغلاق فوري بالمسح).
+            'delivery' => ['title' => 'تسليم الطرف للمريض', 'icon' => '✅', 'label' => 'تسليم للمريض'],
             // 'contracts' => ['title' => 'العقود والاتفاقيات', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
             'selfservice' => ['title' => 'متابعة حالة الطلب (خدمة ذاتية)', 'icon' => '📱', 'label' => 'متابعة حالة الطلب'],
             'patients' => ['title' => 'سجل المرضى المسجلين', 'icon' => '👤', 'label' => 'المرضى'],
@@ -51,7 +50,7 @@ return [
             'assets/js/shared/bom-inventory.js',
             'assets/js/pages/reception-dashboard.js',
             'assets/js/pages/reception-statistics.js',
-            // 'assets/js/pages/reception-delivery-dashboard.js', // التسليم من مكتب التشغيل
+            'assets/js/pages/reception-delivery-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => '',
@@ -208,14 +207,14 @@ return [
         'guard' => 'workshop',
     ],
     'technical' => [
-        'title' => 'لوحة المخزون — مركز الأطراف الصناعية',
+        'title' => 'لوحة المخزن — مركز الأطراف الصناعية',
         'layout' => 'layouts.technical',
         'default_page' => 'inventory',
-        'sidebar' => ['icon' => '📦', 'title' => 'لوحة المخزون', 'subtitle' => 'إدارة الأصناف والكميات'],
+        'sidebar' => ['icon' => '📦', 'title' => 'لوحة المخزن', 'subtitle' => 'إدارة الأصناف والكميات'],
         'pages' => [
-            'inventory' => ['title' => 'المخزون — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزون'],
+            'inventory' => ['title' => 'المخزن — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزن'],
             'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد للورشة'],
-            'delivery' => ['title' => 'المخزون — تسليم للمرضى', 'icon' => '✅', 'label' => 'تسليم للمرضى'],
+            'delivery' => ['title' => 'المخزن — تسليم للمرضى', 'icon' => '✅', 'label' => 'تسليم للمرضى'],
             'returns' => ['title' => 'استلام ارتجاع المواد — من الورشة', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],

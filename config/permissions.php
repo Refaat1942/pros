@@ -14,7 +14,7 @@ return [
         'operations' => ['label_ar' => 'مكتب التشغيل', 'icon' => '🎯'],
         'cashier' => ['label_ar' => 'الخزنة', 'icon' => '💵'],
         'workshop' => ['label_ar' => 'ورشة التصنيع', 'icon' => '🏭'],
-        'technical' => ['label_ar' => 'لوحة المخزون', 'icon' => '📦'],
+        'technical' => ['label_ar' => 'لوحة المخزن', 'icon' => '📦'],
         'admin' => ['label_ar' => 'لوحة الإدارة', 'icon' => '⚙️'],
     ],
 
@@ -52,7 +52,7 @@ return [
             'dashboard' => 'admin',
         ],
         'view-inventory-overview' => [
-            'label_ar' => 'لوحة المخزون التفصيلية',
+            'label_ar' => 'لوحة المخزن التفصيلية',
             'dashboard' => 'admin',
         ],
         'print-barcode' => [
