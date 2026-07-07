@@ -56,6 +56,9 @@ class StockPriceService
         Carbon    $receivedAt,
     ): StockItemPrice {
         return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $receivedAt) {
+            // قفل صف الصنف قبل إعادة حساب WAC لمنع فقدان التحديث عند استلام/تسعير متزامن.
+            $item = StockItem::whereKey($item->id)->lockForUpdate()->first() ?? $item;
+
             $batch = $this->createPriceBatch(
                 $item, $qty, $unitPrice, $supplier, $invoiceNo, $receivedAt
             );

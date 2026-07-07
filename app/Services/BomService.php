@@ -577,6 +577,10 @@ class BomService
     {
         $bom->load('items');
 
+        // BOM القادم من التوصيف يكون قد حجز المواد مسبقاً (reserveBackorderForBom)؛
+        // لا نُعيد الحجز حتى لا تُضاعَف الكمية المحجوزة.
+        $alreadyReserved = (bool) $bom->stock_reserved_at;
+
         foreach ($bom->items as $bomItem) {
             $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
 
@@ -588,10 +592,14 @@ class BomService
                 'unit_cost' => $this->stockPriceService->highestUnitPrice($bomItem->stock_item_code),
             ]);
 
-            $stockItem->increment('reserved', $bomItem->qty);
+            if (! $alreadyReserved) {
+                $stockItem->increment('reserved', $bomItem->qty);
+            }
         }
 
-        $bom->update(['stock_reserved_at' => now()]);
+        if (! $alreadyReserved) {
+            $bom->update(['stock_reserved_at' => now()]);
+        }
 
         AuditService::log(
             action:      'update',

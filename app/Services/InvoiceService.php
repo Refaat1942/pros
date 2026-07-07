@@ -58,12 +58,17 @@ class InvoiceService
         return ['invoice_no' => $invoiceNo, 'invoice_total' => $total];
     }
 
+    /**
+     * يُستدعى داخل معاملة DeliveryService::close — القفل يمنع ترقيم فاتورة مكرّر
+     * عند تسليم حالتين متزامنتين.
+     */
     private function nextInvoiceNo(): string
     {
         $year   = now()->year;
         $prefix = "INV-{$year}-";
 
         $last = CaseRecord::where('invoice_no', 'like', $prefix . '%')
+            ->lockForUpdate()
             ->orderByDesc('invoice_no')
             ->value('invoice_no');
 

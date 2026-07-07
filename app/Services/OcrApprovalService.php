@@ -7,6 +7,7 @@ use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
 use App\Models\Quote;
 use App\Support\QuotePrintPresenter;
+use Illuminate\Support\Facades\DB;
 
 /**
  * معالجة خطاب الموافقة — استخراج OCR ومطابقة عرض السعر المجمّد.
@@ -76,31 +77,34 @@ class OcrApprovalService
 
     private function archiveContract(CaseRecord $case, Quote $quote, array $extracted): void
     {
-        $year   = now()->year;
-        $prefix = "CNT-{$year}-";
+        // معاملة حتى يصبح قفل ترقيم العقد فعّالاً ويمنع تكرار contract_no.
+        DB::transaction(function () use ($case, $quote, $extracted) {
+            $year   = now()->year;
+            $prefix = "CNT-{$year}-";
 
-        $last = ApprovalContract::where('contract_no', 'like', $prefix . '%')
-            ->lockForUpdate()
-            ->orderByDesc('contract_no')
-            ->value('contract_no');
+            $last = ApprovalContract::where('contract_no', 'like', $prefix . '%')
+                ->lockForUpdate()
+                ->orderByDesc('contract_no')
+                ->value('contract_no');
 
-        $num = $last
-            ? ((int) substr($last, strlen($prefix)) + 1)
-            : 1;
+            $num = $last
+                ? ((int) substr($last, strlen($prefix)) + 1)
+                : 1;
 
-        ApprovalContract::create([
-            'contract_no'     => sprintf('%s%04d', $prefix, $num),
-            'case_id'         => $case->id,
-            'quote_id'        => $quote->id,
-            'patient_name'    => $extracted['patient_name'] ?? $quote->patient_name,
-            'company_name'    => $extracted['company_name'] ?? $quote->company_name,
-            'approved_amount' => $extracted['approved_amount'] ?? QuotePrintPresenter::approvedAmount($quote),
-            'approval_date'   => now()->toDateString(),
-            'work_order_no'   => $case->work_order_no,
-            'letter_path'     => $extracted['letter_path'] ?? null,
-            'letter_ref'      => $extracted['letter_ref'] ?? null,
-            'letter_date'     => $extracted['letter_date'] ?? null,
-        ]);
+            ApprovalContract::create([
+                'contract_no'     => sprintf('%s%04d', $prefix, $num),
+                'case_id'         => $case->id,
+                'quote_id'        => $quote->id,
+                'patient_name'    => $extracted['patient_name'] ?? $quote->patient_name,
+                'company_name'    => $extracted['company_name'] ?? $quote->company_name,
+                'approved_amount' => $extracted['approved_amount'] ?? QuotePrintPresenter::approvedAmount($quote),
+                'approval_date'   => now()->toDateString(),
+                'work_order_no'   => $case->work_order_no,
+                'letter_path'     => $extracted['letter_path'] ?? null,
+                'letter_ref'      => $extracted['letter_ref'] ?? null,
+                'letter_date'     => $extracted['letter_date'] ?? null,
+            ]);
+        });
     }
 
     /**

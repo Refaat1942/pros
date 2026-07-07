@@ -38,7 +38,8 @@ class CreditNoteService
 
         $case->load('patient:id,name');
 
-        $note = CreditNote::create([
+        // معاملة + قفل داخل nextCreditNoteNo يمنع ترقيماً مكرراً عند إنشاء إشعارين متزامنين.
+        $note = DB::transaction(fn () => CreditNote::create([
             'credit_note_no' => $this->nextCreditNoteNo(),
             'case_id'        => $case->id,
             'order_ref'      => $case->order_ref,
@@ -49,7 +50,7 @@ class CreditNoteService
             'original_total' => $originalTotal,
             'reason'         => $reason,
             'status'         => CreditNote::STATUS_PENDING,
-        ]);
+        ]));
 
         AuditService::log(
             action:      'create',

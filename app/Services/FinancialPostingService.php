@@ -56,9 +56,16 @@ class FinancialPostingService
             return;
         }
 
-        $this->postCivilianAmount($case, ContractBillingSplit::companyDue($case, $gross));
+        // مطالبة ذرية بخانة الترحيل: تمنع الترحيل المزدوج إذا تسابق مساران على نفس الحالة.
+        $claimed = CaseRecord::where('id', $case->id)
+            ->whereNull('ledger_posted_at')
+            ->update(['ledger_posted_at' => now()]);
 
-        CaseRecord::where('id', $case->id)->update(['ledger_posted_at' => now()]);
+        if ($claimed === 0) {
+            return;
+        }
+
+        $this->postCivilianAmount($case, ContractBillingSplit::companyDue($case, $gross));
     }
 
     private function resolveDispenseGross(CaseRecord $case, Bom $bom): float
