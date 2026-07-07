@@ -94,13 +94,12 @@ class AdminCaseDetailService
                 'approved_amount'=> (float) $contract->approved_amount,
                 'has_letter'     => (bool) $contract->letter_path,
                 'letter_url'     => $contract->letter_path
-                    ? asset('storage/' . $contract->letter_path)
+                    ? route('admin.contracts.letter', $contract)
                     : null,
                 'letter_ext'     => $contract->letter_path
                     ? strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION))
                     : null,
-                'download_url'   => $contract->letter_path
-                    && Storage::disk('public')->exists($contract->letter_path)
+                'download_url'   => $contract->letterDisk() !== null
                     ? route('admin.contracts.download', $contract)
                     : null,
             ] : null,

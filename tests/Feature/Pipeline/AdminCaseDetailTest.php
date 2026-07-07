@@ -101,7 +101,9 @@ class AdminCaseDetailTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('approval.has_letter', true);
         $response->assertJsonPath('approval.letter_ext', 'jfif');
-        $this->assertStringContainsString('approval_letters/sample.jfif', $response->json('approval.letter_url'));
+        // الوصول للخطاب عبر مسار مُصادَق عليه (وليس رابط /storage عام).
+        $this->assertStringContainsString('contracts/', $response->json('approval.letter_url'));
+        $this->assertStringEndsWith('/letter', $response->json('approval.letter_url'));
     }
 
     public function test_admin_case_detail_marks_quote_items_added_by_adjustments(): void

@@ -62,7 +62,7 @@
                         <td>
                             @if ($contract->letter_path)
                                 @php
-                                    $letterUrl = asset('storage/' . $contract->letter_path);
+                                    $letterUrl = route('admin.contracts.letter', $contract);
                                     $letterExt = strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION));
                                 @endphp
                                 <div class="contract-actions">

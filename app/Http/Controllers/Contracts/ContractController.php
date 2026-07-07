@@ -8,7 +8,7 @@ use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * أرشيف العقود والاتفاقيات المالية (مدني فقط).
@@ -61,16 +61,27 @@ class ContractController extends Controller
     }
 
     /**
+     * عرض ملف خطاب الموافقة داخل الصفحة (inline) — عبر مسار مُصادَق عليه.
+     */
+    public function letter(ApprovalContract $contract): StreamedResponse
+    {
+        $disk = $contract->letterDisk();
+        abort_unless($disk !== null, 404);
+
+        return Storage::disk($disk)->response($contract->letter_path);
+    }
+
+    /**
      * تحميل ملف خطاب الموافقة.
      */
-    public function download(ApprovalContract $contract): BinaryFileResponse
+    public function download(ApprovalContract $contract): StreamedResponse
     {
-        abort_unless($contract->letter_path && Storage::disk('public')->exists($contract->letter_path), 404);
+        $disk = $contract->letterDisk();
+        abort_unless($disk !== null, 404);
 
-        $storagePath = storage_path('app/public/' . $contract->letter_path);
         $downloadName = 'approval_letter_' . $contract->contract_no . '.' . pathinfo($contract->letter_path, PATHINFO_EXTENSION);
 
-        return response()->download($storagePath, $downloadName);
+        return Storage::disk($disk)->download($contract->letter_path, $downloadName);
     }
 
     /**
@@ -114,8 +125,8 @@ class ContractController extends Controller
             before:      $contract->only(['contract_no', 'patient_name', 'approved_amount']),
         );
 
-        if ($contract->letter_path && Storage::disk('public')->exists($contract->letter_path)) {
-            Storage::disk('public')->delete($contract->letter_path);
+        if ($disk = $contract->letterDisk()) {
+            Storage::disk($disk)->delete($contract->letter_path);
         }
 
         $contract->delete();

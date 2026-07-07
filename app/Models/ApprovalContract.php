@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * أرشيف عقود الاعتماد المالي — مدني فقط.
@@ -38,5 +39,25 @@ class ApprovalContract extends Model
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
+    }
+
+    /**
+     * القرص الذي يوجد عليه ملف الخطاب فعلياً.
+     * الخطابات الجديدة تُخزَّن على القرص الخاص (local)؛ نُبقي fallback على public
+     * لملفات قديمة رُفعت قبل التحويل. الوصول دائماً عبر مسار مُصادَق عليه.
+     */
+    public function letterDisk(): ?string
+    {
+        if (! $this->letter_path) {
+            return null;
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($this->letter_path)) {
+                return $disk;
+            }
+        }
+
+        return null;
     }
 }

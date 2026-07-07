@@ -19,6 +19,7 @@ Route::middleware('guest')->group(function () use ($dashboardPattern) {
         ->where('dashboard', $dashboardPattern);
 
     Route::post('/{dashboard}/login', [AuthController::class, 'login'])
+        ->middleware('throttle:login')
         ->name('dashboard.login.submit')
         ->where('dashboard', $dashboardPattern);
 });

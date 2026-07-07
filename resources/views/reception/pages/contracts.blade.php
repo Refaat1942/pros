@@ -37,7 +37,7 @@
                         <td>
                             @if ($contract->letter_path)
                                 @php
-                                    $letterUrl = asset('storage/' . $contract->letter_path);
+                                    $letterUrl = route('reception.contracts.letter', $contract);
                                     $letterExt = strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION));
                                 @endphp
                                 <div style="display:flex;gap:6px;flex-wrap:wrap;">

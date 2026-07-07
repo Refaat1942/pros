@@ -161,7 +161,8 @@ class AdminPatientTrackTest extends TestCase
 
         $this->assertNotNull($approvalEvent);
         $this->assertSame('approval_letter', $approvalEvent['preview']['type'] ?? null);
-        $this->assertStringContainsString('approval_letters/track-test.png', $approvalEvent['preview']['url'] ?? '');
+        // الوصول للخطاب عبر مسار مُصادَق عليه (وليس رابط /storage عام).
+        $this->assertStringEndsWith('/letter', $approvalEvent['preview']['url'] ?? '');
     }
 
     public function test_patient_tracks_api_returns_track_payload(): void

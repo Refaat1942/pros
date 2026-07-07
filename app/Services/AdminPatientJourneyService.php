@@ -511,14 +511,14 @@ class AdminPatientJourneyService
     /** @return array{type: string, label: string, url: string, title?: string, ext?: string, contract_no?: string}|null */
     private function approvalLetterPreviewForContract(ApprovalContract $contract): ?array
     {
-        if (! $contract->letter_path || ! Storage::disk('public')->exists($contract->letter_path)) {
+        if ($contract->letterDisk() === null) {
             return null;
         }
 
         return [
             'type'          => 'approval_letter',
             'label'         => 'موافقة الجهة',
-            'url'           => asset('storage/' . $contract->letter_path),
+            'url'           => route('admin.contracts.letter', $contract),
             'ext'           => strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION)),
             'title'         => 'خطاب الموافقة — ' . ($contract->contract_no ?? ''),
             'contract_no'   => $contract->contract_no,

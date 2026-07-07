@@ -13,7 +13,9 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 |--------------------------------------------------------------------------
 */
 Route::get('/selfservice/{qr}', [SelfServiceController::class, 'status'])
+    ->middleware('throttle:public')
     ->name('selfservice.status');
 
 Route::get('/track/{uid}', [PublicTrackingController::class, 'show'])
+    ->middleware('throttle:public')
     ->name('public.track.case');

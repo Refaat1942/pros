@@ -70,7 +70,8 @@ class OcrExtractController extends Controller
 
         $file     = $request->file('letter_file');
         $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-        $path     = $file->storeAs('approval_letters', $filename, 'public');
+        // قرص خاص (غير منشور على /storage) — الوصول عبر مسار مُصادَق عليه فقط.
+        $path     = $file->storeAs('approval_letters', $filename, 'local');
 
         $extracted = $this->extractionService->extractFromUpload($file, $quote);
         $printTotals = QuotePrintPresenter::fromQuote($quote);

@@ -112,6 +112,9 @@ Route::prefix('reception')
             Route::get('contracts/{contract}', [ContractController::class, 'show'])
                 ->name('contracts.show');
 
+            Route::get('contracts/{contract}/letter', [ContractController::class, 'letter'])
+                ->name('contracts.letter');
+
             Route::get('contracts/{contract}/download', [ContractController::class, 'download'])
                 ->name('contracts.download');
         });
