@@ -25,8 +25,9 @@ class AdminReturnsPageTest extends TestCase
         $case->update(['work_order_no' => 'WO-2026-0900']);
 
         $this->actingAs($ops);
+        // إصدار 3 وحدات حتى يُسمح بارتجاع وحدتين (تبقى وحدة في الورشة).
         $bom = app(BomService::class)->createSpecRaw($case, [
-            ['stock_item_code' => 'RM-001', 'qty' => 2],
+            ['stock_item_code' => 'RM-001', 'qty' => 3],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
         app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);

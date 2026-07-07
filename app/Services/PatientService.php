@@ -83,7 +83,9 @@ class PatientService
 
             $this->appointmentService->book([
                 'patient_id'       => $patient->id,
-                'appointment_date' => $clinicDay,
+                // تاريخ العرض بالتقويم الفعلي (توقيت المركز) ليظهر المريض في طابور اليوم؛
+                // بينما clinic_day يتبع يوم العمل (يبدأ 01:00) لترقيم الدور فقط.
+                'appointment_date' => ClinicTime::todayDateString(),
                 'visit_type_id'    => $data['visit_type_id'],
                 'clinic_day'       => $clinicDay,
                 'queue_number'     => $nextQueue + 1,

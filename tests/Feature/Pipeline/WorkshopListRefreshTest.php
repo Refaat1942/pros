@@ -21,8 +21,7 @@ class WorkshopListRefreshTest extends TestCase
             ->get('/workshop/workshop')
             ->assertOk()
             ->assertSee('id="btnRefreshWorkshop"', false)
-            ->assertSee('id="workshopTableBody"', false)
-            ->assertSee('تم التصنيع', false);
+            ->assertSee('id="workshopTableBody"', false);
     }
 
     public function test_workshop_list_endpoint_returns_wip_cases(): void

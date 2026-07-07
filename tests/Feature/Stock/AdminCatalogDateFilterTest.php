@@ -55,7 +55,7 @@ class AdminCatalogDateFilterTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/catalog/export?from=' . $from . '&to=' . $to)
             ->assertOk()
-            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
 
     public function test_parse_date_range_swaps_inverted_bounds(): void

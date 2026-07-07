@@ -94,7 +94,7 @@ class OperationsQuotesAwaitingTest extends TestCase
         $this->actingAs($ops)
             ->get('/operations/quotes-awaiting')
             ->assertOk()
-            ->assertSee('عروض الأسعار — بانتظار موافقة الجهة', false)
+            ->assertSee('عروض بانتظار الموافقة', false)
             ->assertSee('operations-quotes-awaiting-dashboard.js', false);
     }
 

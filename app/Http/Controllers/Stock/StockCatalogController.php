@@ -142,7 +142,7 @@ class StockCatalogController extends Controller
     }
 
     /**
-     * تصدير الأصناف الحالية إلى CSV (متوافق مع القالب والرفع الجماعي).
+     * تصدير الأصناف الحالية إلى ملف Excel (متوافق مع القالب والرفع الجماعي).
      */
     public function export(Request $request, StockImportService $importService): StreamedResponse
     {

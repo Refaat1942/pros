@@ -65,7 +65,7 @@ class CostingDashboardTest extends TestCase
             ->get('/costing/costing')
             ->assertOk()
             ->assertSee('id="costingTable"', false)
-            ->assertSee('تأكيد عرض سعر', false);
+            ->assertSee('id="btnRefreshCosting"', false);
     }
 
     public function test_operations_role_cannot_access_costing_dashboard(): void
