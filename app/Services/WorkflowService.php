@@ -63,13 +63,13 @@ class WorkflowService
             'to' => CaseRecord::STAGE_CASHIER,
             'mfg' => null,
         ],
-        // الخزنة: تأكيد استلام المبلغ → المخزن للصرف (حجز فوري في الخلفية).
+        // الخزنة: تأكيد استلام المبلغ → إعادة لمكتب التشغيل لاعتماد إصدار أمر الشغل.
         WorkflowEvent::CashierPaid->value => [
             'from' => [CaseRecord::STAGE_CASHIER],
-            'to' => CaseRecord::STAGE_MANUFACTURING,
-            'mfg' => CaseRecord::MFG_WAREHOUSE,
+            'to' => CaseRecord::STAGE_OPERATIONS,
+            'mfg' => null,
         ],
-        // مكتب التشغيل: اعتماد → المخزن للصرف (حجز فوري في الخلفية).
+        // مكتب التشغيل: اعتماد → المخزن للصرف + إصدار أمر الشغل (حجز فوري في الخلفية).
         WorkflowEvent::OperationsApproved->value => [
             'from' => [CaseRecord::STAGE_OPERATIONS],
             'to' => CaseRecord::STAGE_MANUFACTURING,

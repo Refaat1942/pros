@@ -83,7 +83,7 @@ class CashierPaymentFlowTest extends TestCase
             ->assertJsonPath('total', 1);
     }
 
-    public function test_cashier_confirm_payment_moves_case_to_warehouse_and_records_payment(): void
+    public function test_cashier_confirm_payment_returns_case_to_operations_without_work_order(): void
     {
         $this->stockItem('RM-001', qty: 10);
         $case = $this->cashierAwaitingCase();
@@ -91,25 +91,56 @@ class CashierPaymentFlowTest extends TestCase
 
         $this->actingAs($cashier)
             ->postJson('/cashier/payments/'.$case->id.'/confirm', [
-                'method' => 'instapay',
+                'method' => 'cash',
                 'amount' => 1500,
                 'reference' => 'IP-12345',
             ])
             ->assertOk()
-            ->assertJsonPath('payment.method', 'instapay');
+            ->assertJsonPath('payment.method', 'cash');
 
+        // الدفع لا يصرف مباشرة للمخزن — يرجع للتشغيل لاعتماد إصدار أمر الشغل.
         $fresh = $case->fresh();
-        $this->assertSame(CaseRecord::STAGE_MANUFACTURING, $fresh->stage_key);
-        $this->assertSame(CaseRecord::MFG_WAREHOUSE, $fresh->manufacturing_stage);
-        $this->assertNotNull($fresh->work_order_no);
+        $this->assertSame(CaseRecord::STAGE_OPERATIONS, $fresh->stage_key);
+        $this->assertNull($fresh->work_order_no);
 
         $payment = Payment::where('case_id', $case->id)->firstOrFail();
-        $this->assertSame('instapay', $payment->method);
+        $this->assertSame('cash', $payment->method);
         $this->assertGreaterThan(0, (float) $payment->amount);
 
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $this->assertSame(Quote::STATUS_APPROVED, $quote->status);
         $this->assertSame('تم الدفع في الخزنة', $quote->status_label);
+    }
+
+    public function test_paid_cash_case_shows_in_operations_and_approval_issues_work_order(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $case = $this->cashierAwaitingCase();
+
+        app(CashierPaymentService::class)->confirmPayment($case, [
+            'method' => 'cash',
+            'amount' => 1500,
+        ]);
+
+        $ops = $this->userWithRole('operations');
+
+        // يظهر في طابور التشغيل بعلامة «مدفوع».
+        $this->actingAs($ops)
+            ->getJson('/operations/pending/list')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $case->id)
+            ->assertJsonPath('data.0.is_paid', true);
+
+        // اعتماد التشغيل يُصدر أمر الشغل ويحوّل للمخزن.
+        $this->actingAs($ops)
+            ->postJson('/operations/pending/'.$case->id.'/approve')
+            ->assertOk()
+            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_MANUFACTURING);
+
+        $fresh = $case->fresh();
+        $this->assertSame(CaseRecord::STAGE_MANUFACTURING, $fresh->stage_key);
+        $this->assertSame(CaseRecord::MFG_WAREHOUSE, $fresh->manufacturing_stage);
+        $this->assertNotNull($fresh->work_order_no);
     }
 
     public function test_cashier_confirm_rejects_invalid_method(): void

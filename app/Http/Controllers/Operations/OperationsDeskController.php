@@ -229,6 +229,8 @@ class OperationsDeskController extends Controller
         ]) + [
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
             'is_cash' => $case->isCashCivilian(),
+            // كاش مدفوع بالخزنة ورجع للتشغيل — بانتظار اعتماد إصدار أمر الشغل.
+            'is_paid' => $quote !== null && $quote->status === Quote::STATUS_APPROVED,
             'display_entity' => $case->displayEntity(),
             'tech_notes' => $case->resolvedTechNotes(),
             'quote_total' => $displayTotal,

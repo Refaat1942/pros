@@ -49,14 +49,14 @@ class CashierDeskController extends Controller
     }
 
     /**
-     * تأكيد استلام المبلغ — حجز المواد وتحويل الحالة للمخزن للصرف.
+     * تأكيد استلام المبلغ — تسجيل الدفعة وإعادة الحالة لمكتب التشغيل لاعتماد أمر الشغل.
      */
     public function confirm(ConfirmPaymentRequest $request, CaseRecord $case): JsonResponse
     {
         $payment = $this->cashierPaymentService->confirmPayment($case, $request->validated());
 
         return response()->json([
-            'message' => 'تم تأكيد استلام المبلغ — حُوّلت الحالة للمخزن للصرف بالباركود.',
+            'message' => 'تم تأكيد استلام المبلغ — أُعيدت الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.',
             'payment' => [
                 'id' => $payment->id,
                 'payment_no' => $payment->payment_no,

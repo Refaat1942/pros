@@ -68,8 +68,10 @@
         ? '<span class="text-xs text-muted" style="margin-left:4px;">' + issuedLabel + '</span>'
         : '');
 
-    var approveBtn = isMil
-      ? '<button type="button" class="btn-action success btn-approve-pending" data-case-id="' + c.id + '" style="margin-left:4px;">✅ موافقة واعتماد الصرف</button>'
+    // اعتماد الصرف: للعسكري، أو لمريض كاش رجع من الخزنة مدفوعاً (بانتظار إصدار أمر الشغل).
+    var approveBtn = (isMil || c.is_paid)
+      ? '<button type="button" class="btn-action success btn-approve-pending" data-case-id="' + c.id + '" style="margin-left:4px;">'
+        + (c.is_paid ? '✅ اعتماد وإصدار أمر الشغل' : '✅ موافقة واعتماد الصرف') + '</button>'
       : '';
 
     var canRework = isMil || !quote || quote.status === 'pending';

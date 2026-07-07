@@ -66,39 +66,17 @@ class OperationsService
     }
 
     /**
-     * اعتماد الحالة من مكتب التشغيل — حجز فوري وتحويل للمخزن للصرف.
+     * اعتماد الحالة من مكتب التشغيل — حجز فوري + إصدار أمر الشغل + تحويل للمخزن للصرف.
+     *
+     * نقطة الاعتماد الوحيدة قبل المخزن — تخدم:
+     *   - مسار التعاقد بعد موافقة الجهة.
+     *   - مسار الكاش بعد رجوع الحالة من الخزنة مدفوعةً.
+     *   - المسار العسكري (اعتماد صامت تلقائي).
      */
     public function approve(CaseRecord $case, ?string $approvedBy = null): CaseRecord
     {
-        return $this->finalizeApproval(
-            $case,
-            $approvedBy,
-            WorkflowEvent::OperationsApproved->value,
-            CaseRecord::STAGE_OPERATIONS,
-        );
-    }
-
-    /**
-     * تأكيد الخزنة الدفع النقدي — حجز فوري للمواد + أمر شغل + تحويل للمخزن للصرف.
-     * يُستدعى من CashierPaymentService بعد إنشاء سجل الدفعة داخل نفس المعاملة.
-     */
-    public function finalizeFromCashier(CaseRecord $case, ?string $approvedBy = null): CaseRecord
-    {
-        return $this->finalizeApproval(
-            $case,
-            $approvedBy,
-            WorkflowEvent::CashierPaid->value,
-            CaseRecord::STAGE_CASHIER,
-        );
-    }
-
-    /**
-     * حجز المواد + أمر الشغل + التحويل للمخزن — مشترك بين اعتماد التشغيل وتأكيد الخزنة.
-     */
-    private function finalizeApproval(CaseRecord $case, ?string $approvedBy, string $event, string $expectedStage): CaseRecord
-    {
         try {
-            return $this->doApprove($case, $approvedBy, $event, $expectedStage);
+            return $this->doApprove($case, $approvedBy);
         } catch (InsufficientStockException $e) {
             // يعمل خارج الـ transaction المُلغاة — هذا الحفظ ينجح.
             if ($e->pricingRequestId) {
@@ -122,13 +100,13 @@ class OperationsService
         }
     }
 
-    private function doApprove(CaseRecord $case, ?string $approvedBy, string $event, string $expectedStage): CaseRecord
+    private function doApprove(CaseRecord $case, ?string $approvedBy): CaseRecord
     {
-        return DB::transaction(function () use ($case, $approvedBy, $event, $expectedStage) {
+        return DB::transaction(function () use ($case, $approvedBy) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
-            if ($case->stage_key !== $expectedStage) {
-                abort(422, 'الحالة ليست في المرحلة الصحيحة — لا يمكن الاعتماد.');
+            if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
+                abort(422, 'الحالة ليست في مكتب التشغيل — لا يمكن الاعتماد.');
             }
 
             $before = ['stage_key' => $case->stage_key];
@@ -159,16 +137,12 @@ class OperationsService
                 ]);
             }
 
-            $this->workflowService->advance($case->fresh(), $event);
-
-            $isCashier = $event === WorkflowEvent::CashierPaid->value;
+            $this->workflowService->advance($case->fresh(), WorkflowEvent::OperationsApproved->value);
 
             AuditService::log(
                 action: 'approve',
-                description: $isCashier
-                    ? "تأكيد الدفع النقدي بالخزنة — {$case->case_no} — تحويل للمخزن"
-                    : "اعتماد مكتب التشغيل — {$case->case_no} — تحويل للمخزن",
-                tag: $isCashier ? 'financial' : 'operations',
+                description: "اعتماد مكتب التشغيل — {$case->case_no} — إصدار أمر الشغل وتحويل للمخزن",
+                tag: 'operations',
                 before: $before,
                 after: [
                     'stage_key' => CaseRecord::STAGE_MANUFACTURING,

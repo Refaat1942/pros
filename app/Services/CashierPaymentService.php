@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\PaymentMethod;
+use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
 use App\Models\Payment;
 use App\Models\Quote;
@@ -13,15 +14,15 @@ use Illuminate\Support\Facades\DB;
  * الخزنة — تحصيل الدفع النقدي للمرضى على نفقتهم الشخصية (كاش).
  *
  * عند تأكيد استلام المبلغ:
- *   1) حجز فوري للمواد + توليد أمر شغل + تحويل الحالة للمخزن (عبر OperationsService).
- *   2) تسجيل سجل دفعة (Payment) بوسيلة الدفع.
- *   3) تحديث المبلغ المدفوع على الحالة.
- * كل ذلك داخل معاملة واحدة — يفشل بالكامل إن لم يكفِ المخزون.
+ *   1) تسجيل سجل دفعة (Payment) بوسيلة الدفع.
+ *   2) تحديث المبلغ المدفوع على الحالة ووسم عرض السعر «مدفوع».
+ *   3) إعادة الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل (لا حجز/صرف هنا).
+ * الحجز الفوري وأمر الشغل يصدران لاحقاً باعتماد مكتب التشغيل.
  */
 class CashierPaymentService
 {
     public function __construct(
-        private readonly OperationsService $operationsService,
+        private readonly WorkflowService $workflowService,
         private readonly QuoteService $quoteService,
     ) {}
 
@@ -55,10 +56,7 @@ class CashierPaymentService
         $receivedBy = Auth::user()?->name ?? 'الخزنة';
 
         return DB::transaction(function () use ($case, $quote, $amount, $method, $data, $receivedBy) {
-            // 1) حجز المواد + أمر الشغل + تحويل الحالة للمخزن (يفشل إن لم يكفِ المخزون).
-            $this->operationsService->finalizeFromCashier($case, "الخزنة — {$receivedBy}");
-
-            // 2) تسجيل الدفعة.
+            // 1) تسجيل الدفعة.
             $payment = Payment::create([
                 'payment_no' => $this->nextPaymentNo(),
                 'case_id' => $case->id,
@@ -73,12 +71,15 @@ class CashierPaymentService
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            // 3) تحديث المبلغ المدفوع على الحالة.
+            // 2) تحديث المبلغ المدفوع على الحالة ووسم العرض «مدفوع».
             CaseRecord::where('id', $case->id)->update(['paid' => $amount]);
 
             if ($quote) {
                 $this->quoteService->markPaidAtCashier($quote);
             }
+
+            // 3) إعادة الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.
+            $this->workflowService->advance($case, WorkflowEvent::CashierPaid->value);
 
             AuditService::log(
                 action: 'payment',
@@ -91,6 +92,7 @@ class CashierPaymentService
                     'amount' => $amount,
                     'method' => $method,
                     'received_by' => $receivedBy,
+                    'stage_key' => CaseRecord::STAGE_OPERATIONS,
                 ],
             );
 
