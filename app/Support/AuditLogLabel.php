@@ -76,6 +76,11 @@ final class AuditLogLabel
 
     public static function badge(?string $action, ?string $tag): string
     {
+        // إجراءات المصادقة (دخول/خروج) واضحة بذاتها — لا نُلحق وسم "مصادقة".
+        if ($tag === 'auth') {
+            return self::action($action);
+        }
+
         return self::action($action).' · '.self::tag($tag);
     }
 }
