@@ -1,4 +1,5 @@
 @php
+    use App\Models\BomItem;
     use App\Support\ArabicAmount;
 
     $case        = $quote->caseRecord;
@@ -14,8 +15,15 @@
         : null;
     $refNo       = $quote->quote_no;
     $letterRef   = $quote->order_ref ?: ($case?->order_ref ?? '—');
-    $minRows     = max($quote->items->count(), 4);
-    $emptyRows   = $minRows - $quote->items->count();
+
+    // العرض للجهة/المريض يعرض بنود التوصيف فقط دون تفصيل أسعار البنود؛
+    // القيمة تظهر مرة واحدة في سطر الإجمالي فقط.
+    $specItems   = $quote->items->where('source', BomItem::SOURCE_SPEC)->values();
+    if ($specItems->isEmpty()) {
+        $specItems = $quote->items->values();
+    }
+    $minRows     = max($specItems->count(), 4);
+    $emptyRows   = $minRows - $specItems->count();
     $dateDisplay = $quoteDate->format('d/m/Y');
 @endphp
 <!DOCTYPE html>
@@ -593,9 +601,8 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($quote->items as $index => $item)
+            @foreach ($specItems as $index => $item)
                 @php
-                    $lineSplit = ArabicAmount::split((float) $item->amount);
                     $specLabel = $item->qty > 1
                         ? $item->name . ' — عدد ' . $item->qty
                         : $item->name;
@@ -603,8 +610,8 @@
                 <tr>
                     <td class="col-no">{{ $index + 1 }}</td>
                     <td class="col-spec">{{ $specLabel }}</td>
-                    <td class="num">{{ str_pad((string) $lineSplit['piasters'], 2, '0', STR_PAD_LEFT) }}</td>
-                    <td class="num">{{ number_format($lineSplit['pounds']) }}</td>
+                    <td class="num">&nbsp;</td>
+                    <td class="num">&nbsp;</td>
                     <td>&nbsp;</td>
                 </tr>
             @endforeach
