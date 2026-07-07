@@ -28,6 +28,7 @@ class PatientService
         return DB::transaction(function () use ($data) {
             $type = $data['patient_type'];
             $patientCode = $this->nextPatientCode($type);
+            $patientSerial = $this->nextPatientSerial();
             $patientQr = $this->patientQrService->generate($patientCode);
 
             $companyName = null;
@@ -52,6 +53,7 @@ class PatientService
 
             $patient = Patient::create([
                 'patient_code' => $patientCode,
+                'patient_serial' => $patientSerial,
                 'patient_qr' => $patientQr,
                 'tracking_uid' => $this->trackingUidService->generate(),
                 'name' => $data['name'],
@@ -136,10 +138,36 @@ class PatientService
         return $code;
     }
 
+    /**
+     * سيريال تسلسلي سنوي للمريض بصيغة PT-YYYY-NNNN.
+     * قفل صفّي على آخر سيريال للسنة لمنع التكرار عند التسجيل المتزامن.
+     */
+    private function nextPatientSerial(): string
+    {
+        $year = now()->year;
+        $prefix = "PT-{$year}-";
+
+        $last = Patient::where('patient_serial', 'like', $prefix.'%')
+            ->lockForUpdate()
+            ->orderByDesc('patient_serial')
+            ->value('patient_serial');
+
+        $num = $last
+            ? ((int) substr($last, strlen($prefix)) + 1)
+            : 1;
+
+        do {
+            $serial = sprintf('%s%04d', $prefix, $num++);
+        } while (Patient::where('patient_serial', $serial)->exists());
+
+        return $serial;
+    }
+
     private function auditSnapshot(Patient $patient): array
     {
         return $patient->only([
             'patient_code',
+            'patient_serial',
             'patient_qr',
             'tracking_uid',
             'name',

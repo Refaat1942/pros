@@ -32,6 +32,7 @@ class Patient extends Model
 
     protected $fillable = [
         'patient_code',
+        'patient_serial',
         'patient_qr',
         'tracking_uid',
         'name',

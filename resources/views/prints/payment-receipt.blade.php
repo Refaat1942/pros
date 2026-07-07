@@ -89,6 +89,9 @@
 
     <section class="rec-grid">
         <div class="line">استلمنا من السيد/ة: <span class="fill fill-wide">{{ $receipt['patient_name'] }}</span></div>
+        @if(!empty($receipt['patient_serial']))
+            <div class="line">سيريال ملف المريض: <span class="fill" style="min-width:35mm;">{{ $receipt['patient_serial'] }}</span></div>
+        @endif
         <div class="line">الجهة: <span class="fill fill-wide">{{ $receipt['entity'] }}</span></div>
         <div class="line">
             رقم الحالة: <span class="fill" style="min-width:28mm;">{{ $receipt['case_no'] ?? '—' }}</span>

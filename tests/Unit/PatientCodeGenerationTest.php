@@ -34,4 +34,28 @@ class PatientCodeGenerationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('queue_number', 1);
     }
+
+    public function test_register_assigns_sequential_patient_serial(): void
+    {
+        $company = $this->civilianCompany();
+        $visitType = $this->defaultVisitType();
+        $year = now()->year;
+
+        $first = app(PatientService::class)->register([
+            'name' => 'مريض أول',
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'contract_company_id' => $company->id,
+            'visit_type_id' => $visitType->id,
+        ]);
+
+        $second = app(PatientService::class)->register([
+            'name' => 'مريض ثانٍ',
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'contract_company_id' => $company->id,
+            'visit_type_id' => $visitType->id,
+        ]);
+
+        $this->assertSame("PT-{$year}-0001", $first->patient_serial);
+        $this->assertSame("PT-{$year}-0002", $second->patient_serial);
+    }
 }
