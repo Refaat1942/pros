@@ -18,10 +18,10 @@ class WorkOrderService
             return $case->work_order_no;
         }
 
-        $year   = now()->year;
+        $year = now()->year;
         $prefix = "WO-{$year}-";
 
-        $last = CaseRecord::where('work_order_no', 'like', $prefix . '%')
+        $last = CaseRecord::where('work_order_no', 'like', $prefix.'%')
             ->lockForUpdate()
             ->orderByDesc('work_order_no')
             ->value('work_order_no');

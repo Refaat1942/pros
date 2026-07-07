@@ -13,9 +13,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
  */
 class PublicTrackingService
 {
-    public function __construct(private readonly TrackingUidService $trackingUidService)
-    {
-    }
+    public function __construct(private readonly TrackingUidService $trackingUidService) {}
 
     /**
      * @return array{
@@ -55,9 +53,9 @@ class PublicTrackingService
 
         $mappedSteps = array_map(function (array $step, int $index) use ($currentIndex) {
             $status = match (true) {
-                $index < $currentIndex  => 'done',
+                $index < $currentIndex => 'done',
                 $index === $currentIndex => 'current',
-                default                  => 'pending',
+                default => 'pending',
             };
 
             return $step + ['status' => $status];
@@ -69,13 +67,13 @@ class PublicTrackingService
             : 0;
 
         return [
-            'tracking_uid'      => $uid,
-            'pathway'           => $pathway,
-            'stage_label'       => $this->publicStageLabel($case, $case === null, $isMilitary),
-            'current_index'     => $currentIndex,
-            'progress_percent'  => $progressPercent,
-            'steps'             => $mappedSteps,
-            'tracking_url'      => $this->trackingUidService->trackingUrl($uid),
+            'tracking_uid' => $uid,
+            'pathway' => $pathway,
+            'stage_label' => $this->publicStageLabel($case, $case === null, $isMilitary),
+            'current_index' => $currentIndex,
+            'progress_percent' => $progressPercent,
+            'steps' => $mappedSteps,
+            'tracking_url' => $this->trackingUidService->trackingUrl($uid),
         ];
     }
 
@@ -132,32 +130,32 @@ class PublicTrackingService
 
         if ($isMilitary) {
             return match ($stageKey) {
-                CaseRecord::STAGE_RECEPTION       => 0,
-                CaseRecord::STAGE_EXAM            => 1,
+                CaseRecord::STAGE_RECEPTION => 0,
+                CaseRecord::STAGE_EXAM => 1,
                 CaseRecord::STAGE_TECHNICAL,
                 CaseRecord::STAGE_ADJUSTMENTS,
                 CaseRecord::STAGE_COST_CALC,
                 CaseRecord::STAGE_QUOTE,
-                CaseRecord::STAGE_OPERATIONS      => 2,
-                CaseRecord::STAGE_MANUFACTURING   => 3,
-                CaseRecord::STAGE_READY_DELIVERY  => 4,
-                CaseRecord::STAGE_DELIVERED       => 5,
-                default                           => 2,
+                CaseRecord::STAGE_OPERATIONS => 2,
+                CaseRecord::STAGE_MANUFACTURING => 3,
+                CaseRecord::STAGE_READY_DELIVERY => 4,
+                CaseRecord::STAGE_DELIVERED => 5,
+                default => 2,
             };
         }
 
         return match ($stageKey) {
-            CaseRecord::STAGE_RECEPTION       => 0,
-            CaseRecord::STAGE_EXAM            => 1,
+            CaseRecord::STAGE_RECEPTION => 0,
+            CaseRecord::STAGE_EXAM => 1,
             CaseRecord::STAGE_TECHNICAL,
             CaseRecord::STAGE_ADJUSTMENTS,
-            CaseRecord::STAGE_COST_CALC       => 2,
+            CaseRecord::STAGE_COST_CALC => 2,
             CaseRecord::STAGE_QUOTE,
-            CaseRecord::STAGE_OPERATIONS      => 3,
-            CaseRecord::STAGE_MANUFACTURING   => 4,
-            CaseRecord::STAGE_READY_DELIVERY  => 5,
-            CaseRecord::STAGE_DELIVERED       => 6,
-            default                           => 2,
+            CaseRecord::STAGE_OPERATIONS => 3,
+            CaseRecord::STAGE_MANUFACTURING => 4,
+            CaseRecord::STAGE_READY_DELIVERY => 5,
+            CaseRecord::STAGE_DELIVERED => 6,
+            default => 2,
         };
     }
 
@@ -175,32 +173,32 @@ class PublicTrackingService
 
         if (! $isMilitary) {
             return match ($stageKey) {
-                CaseRecord::STAGE_RECEPTION      => 'في الاستقبال',
-                CaseRecord::STAGE_EXAM           => 'في مرحلة الكشف الطبي',
-                CaseRecord::STAGE_TECHNICAL      => 'التوصيف الفني',
-                CaseRecord::STAGE_ADJUSTMENTS    => 'مراجعة المعدلات والتحضير',
-                CaseRecord::STAGE_COST_CALC      => 'جاري احتساب التكاليف',
-                CaseRecord::STAGE_QUOTE          => 'إعداد عرض السعر',
-                CaseRecord::STAGE_OPERATIONS     => 'بمكتب التشغيل — بانتظار الاعتماد',
-                CaseRecord::STAGE_MANUFACTURING  => 'جاري التصنيع بالورشة',
+                CaseRecord::STAGE_RECEPTION => 'في الاستقبال',
+                CaseRecord::STAGE_EXAM => 'في مرحلة الكشف الطبي',
+                CaseRecord::STAGE_TECHNICAL => 'التوصيف الفني',
+                CaseRecord::STAGE_ADJUSTMENTS => 'مراجعة المعدلات والتحضير',
+                CaseRecord::STAGE_COST_CALC => 'جاري احتساب التكاليف',
+                CaseRecord::STAGE_QUOTE => 'إعداد عرض السعر',
+                CaseRecord::STAGE_OPERATIONS => 'بمكتب التشغيل — بانتظار الاعتماد',
+                CaseRecord::STAGE_MANUFACTURING => 'جاري التصنيع بالورشة',
                 CaseRecord::STAGE_READY_DELIVERY => 'جاهز للتسليم',
-                CaseRecord::STAGE_DELIVERED      => 'تم التسليم',
-                default                          => CaseStage::labelFor($stageKey),
+                CaseRecord::STAGE_DELIVERED => 'تم التسليم',
+                default => CaseStage::labelFor($stageKey),
             };
         }
 
         return match ($stageKey) {
-            CaseRecord::STAGE_RECEPTION      => 'في الاستقبال',
-            CaseRecord::STAGE_EXAM           => 'في مرحلة الكشف الطبي',
+            CaseRecord::STAGE_RECEPTION => 'في الاستقبال',
+            CaseRecord::STAGE_EXAM => 'في مرحلة الكشف الطبي',
             CaseRecord::STAGE_TECHNICAL,
             CaseRecord::STAGE_ADJUSTMENTS,
             CaseRecord::STAGE_COST_CALC,
             CaseRecord::STAGE_QUOTE,
-            CaseRecord::STAGE_OPERATIONS     => 'جاري التحضير للتصنيع',
-            CaseRecord::STAGE_MANUFACTURING  => 'جاري التصنيع بالورشة',
+            CaseRecord::STAGE_OPERATIONS => 'جاري التحضير للتصنيع',
+            CaseRecord::STAGE_MANUFACTURING => 'جاري التصنيع بالورشة',
             CaseRecord::STAGE_READY_DELIVERY => 'جاهز للتسليم',
-            CaseRecord::STAGE_DELIVERED      => 'تم التسليم',
-            default                          => CaseStage::labelFor($stageKey),
+            CaseRecord::STAGE_DELIVERED => 'تم التسليم',
+            default => CaseStage::labelFor($stageKey),
         };
     }
 

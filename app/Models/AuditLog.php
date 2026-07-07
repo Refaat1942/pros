@@ -33,6 +33,7 @@ class AuditLog extends Model
     {
         throw new LogicException('AuditLog records cannot be deleted — the audit trail is permanent.');
     }
+
     protected $fillable = [
         'user_id',
         'user_name',

@@ -17,8 +17,8 @@ trait RendersAdminDashboard
 
         return view('dashboard.show', array_merge([
             'dashboardKey' => 'admin',
-            'activePage'   => $page,
-            'pageTitle'    => $pages[$page]['title'],
+            'activePage' => $page,
+            'pageTitle' => $pages[$page]['title'],
         ], $data));
     }
 }

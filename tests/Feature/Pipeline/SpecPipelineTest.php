@@ -2,12 +2,11 @@
 
 namespace Tests\Feature\Pipeline;
 
-use App\Enums\PricingRequestStatus;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
-use App\Models\PricingRequest;
 use App\Models\StockItem;
+use App\Services\MedicalRecordService;
 use App\Services\SpecService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -22,27 +21,27 @@ class SpecPipelineTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $doctor  = $this->userWithRole('doctor');
+        $doctor = $this->userWithRole('doctor');
         $specUser = $this->userWithRole('spec');
 
         $this->actingAs($doctor);
 
         $record = MedicalRecord::create([
-            'patient_id'     => $patient->id,
-            'patient_name'   => $patient->name,
-            'national_id'    => $patient->national_id,
-            'company_name'   => $patient->company_name,
-            'patient_type'   => $patient->patient_type,
-            'diagnosis'      => 'بتر فوق الركبة',
-            'prescription'   => 'ركبة ذكية',
-            'doctor_name'    => $doctor->name,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'national_id' => $patient->national_id,
+            'company_name' => $patient->company_name,
+            'patient_type' => $patient->patient_type,
+            'diagnosis' => 'بتر فوق الركبة',
+            'prescription' => 'ركبة ذكية',
+            'doctor_name' => $doctor->name,
             'doctor_user_id' => $doctor->id,
-            'record_date'    => now()->toDateString(),
-            'status'         => MedicalRecord::STATUS_DRAFT,
-            'locked'         => false,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
-        app(\App\Services\MedicalRecordService::class)->lock($record);
+        app(MedicalRecordService::class)->lock($record);
 
         $case = CaseRecord::where('patient_id', $patient->id)->first();
         $this->assertEquals(CaseRecord::STAGE_TECHNICAL, $case->stage_key);

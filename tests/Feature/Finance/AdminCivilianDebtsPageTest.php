@@ -42,13 +42,13 @@ class AdminCivilianDebtsPageTest extends TestCase
     {
         $a = ContractCompany::create([
             'company_code' => 'CIV-A',
-            'name'         => 'جهة أ',
-            'is_military'  => false,
+            'name' => 'جهة أ',
+            'is_military' => false,
         ]);
         $b = ContractCompany::create([
             'company_code' => 'CIV-B',
-            'name'         => 'جهة ب',
-            'is_military'  => false,
+            'name' => 'جهة ب',
+            'is_military' => false,
         ]);
 
         ContractCompanyDebt::create([
@@ -67,7 +67,7 @@ class AdminCivilianDebtsPageTest extends TestCase
             ->assertJsonPath('data.0.company.name', 'جهة أ');
 
         $this->actingAs($admin)
-            ->getJson('/admin/civilian-debts/list?status=' . DebtStatus::Paid->value)
+            ->getJson('/admin/civilian-debts/list?status='.DebtStatus::Paid->value)
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.company.name', 'جهة ب');
@@ -91,8 +91,8 @@ class AdminCivilianDebtsPageTest extends TestCase
 
         $this->assertDatabaseHas('contract_company_debts', [
             'contract_company_id' => $company->id,
-            'collected'           => 1000,
-            'status'              => DebtStatus::Paid->value,
+            'collected' => 1000,
+            'status' => DebtStatus::Paid->value,
         ]);
     }
 
@@ -109,7 +109,7 @@ class AdminCivilianDebtsPageTest extends TestCase
     public function test_legacy_civilian_collected_without_entries_shows_collection_summary(): void
     {
         $company = $this->civilianCompany('شركة ترحيل قديم');
-        \App\Models\ContractCompanyDebt::query()->updateOrCreate(
+        ContractCompanyDebt::query()->updateOrCreate(
             ['contract_company_id' => $company->id],
             ['due' => 1500, 'collected' => 1500, 'status' => DebtStatus::Paid->value],
         );

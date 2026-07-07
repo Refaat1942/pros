@@ -24,7 +24,7 @@ class AdminCatalogDateFilterTest extends TestCase
         $to = now()->toDateString();
 
         $this->actingAs($admin)
-            ->get('/admin/catalog?from=' . $from . '&to=' . $to)
+            ->get('/admin/catalog?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('reports-date-filter', false)
             ->assertSee('NEW-CAT', false)
@@ -45,7 +45,7 @@ class AdminCatalogDateFilterTest extends TestCase
         $to = now()->toDateString();
 
         $response = $this->actingAs($admin)
-            ->getJson('/admin/catalog/items?from=' . $from . '&to=' . $to);
+            ->getJson('/admin/catalog/items?from='.$from.'&to='.$to);
 
         $response->assertOk();
         $codes = collect($response->json('data'))->pluck('code')->all();
@@ -53,7 +53,7 @@ class AdminCatalogDateFilterTest extends TestCase
         $this->assertNotContains('API-OLD', $codes);
 
         $this->actingAs($admin)
-            ->get('/admin/catalog/export?from=' . $from . '&to=' . $to)
+            ->get('/admin/catalog/export?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }

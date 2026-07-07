@@ -190,10 +190,10 @@ class DashboardQueueService
             ->where('patient_type', Patient::TYPE_CIVILIAN)
             ->where(function ($q) {
                 $q->where('stage_key', CaseRecord::STAGE_OPERATIONS)
-                  ->orWhere(function ($q) {
-                      $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING)
-                        ->where('manufacturing_stage', CaseRecord::MFG_WAREHOUSE);
-                  });
+                    ->orWhere(function ($q) {
+                        $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+                            ->where('manufacturing_stage', CaseRecord::MFG_WAREHOUSE);
+                    });
             })
             ->whereHas('quotes', fn ($q) => $q->where('status', Quote::STATUS_ISSUED))
             ->pluck('id')

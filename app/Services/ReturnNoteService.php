@@ -17,9 +17,7 @@ use Illuminate\Support\Facades\DB;
  */
 class ReturnNoteService
 {
-    public function __construct(private readonly BarcodeValidationService $barcodeValidation)
-    {
-    }
+    public function __construct(private readonly BarcodeValidationService $barcodeValidation) {}
 
     /**
      * إنشاء إذن ارتجاع مع بنوده.
@@ -38,21 +36,21 @@ class ReturnNoteService
             $case = $bom->caseRecord;
 
             $note = ReturnNote::create([
-                'return_no'           => $this->nextReturnNo(),
-                'bom_id'              => $bom->id,
-                'case_id'             => $bom->case_id,
-                'order_ref'           => $bom->order_ref,
-                'work_order_no'       => $case?->work_order_no,
-                'patient_name'        => $bom->patient_name,
-                'status'              => ReturnNote::STATUS_AUTHORIZED,
-                'created_by'          => $createdBy->name,
-                'created_by_user_id'  => $createdBy->id,
-                'authorized_at'       => now(),
+                'return_no' => $this->nextReturnNo(),
+                'bom_id' => $bom->id,
+                'case_id' => $bom->case_id,
+                'order_ref' => $bom->order_ref,
+                'work_order_no' => $case?->work_order_no,
+                'patient_name' => $bom->patient_name,
+                'status' => ReturnNote::STATUS_AUTHORIZED,
+                'created_by' => $createdBy->name,
+                'created_by_user_id' => $createdBy->id,
+                'authorized_at' => now(),
             ]);
 
             foreach ($lines as $row) {
-                $code    = $row['stock_item_code'];
-                $qty     = (int) $row['qty'];
+                $code = $row['stock_item_code'];
+                $qty = (int) $row['qty'];
                 $bomItem = $bom->items->firstWhere('stock_item_code', $code);
 
                 if (! $bomItem) {
@@ -67,20 +65,20 @@ class ReturnNoteService
                 }
 
                 ReturnNoteLine::create([
-                    'return_note_id'  => $note->id,
+                    'return_note_id' => $note->id,
                     'stock_item_code' => $code,
-                    'name'            => $row['name'] ?? $bomItem->name,
-                    'qty_requested'   => $qty,
-                    'qty_returned'    => 0,
-                    'reason'          => $reason,
+                    'name' => $row['name'] ?? $bomItem->name,
+                    'qty_requested' => $qty,
+                    'qty_returned' => 0,
+                    'reason' => $reason,
                 ]);
             }
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "طلب ارتجاع مواد للمخزن {$note->return_no}",
-                tag:         'operations',
-                after:       $note->load('lines')->toArray(),
+                tag: 'operations',
+                after: $note->load('lines')->toArray(),
             );
 
             return $note;
@@ -118,7 +116,7 @@ class ReturnNoteService
                 }
 
                 $qtyReturned = (int) $scan['qty_returned'];
-                $remaining   = $line->qty_requested - $line->qty_returned;
+                $remaining = $line->qty_requested - $line->qty_returned;
 
                 if ($qtyReturned < 1 || $qtyReturned > $remaining) {
                     abort(422, "كمية غير صالحة للصنف {$line->stock_item_code}.");
@@ -139,15 +137,15 @@ class ReturnNoteService
                 $balanceAfter = $stockItem->qty + $qtyReturned;
 
                 StockMovement::create([
-                    'stock_item_id'        => $stockItem->id,
-                    'movement_type'        => StockMovement::TYPE_RETURN,
-                    'quantity'             => $qtyReturned,
-                    'unit_cost'            => $stockItem->wac,
-                    'balance_after'        => $balanceAfter,
-                    'reference_type'       => 'return_note',
-                    'reference_id'         => $note->id,
+                    'stock_item_id' => $stockItem->id,
+                    'movement_type' => StockMovement::TYPE_RETURN,
+                    'quantity' => $qtyReturned,
+                    'unit_cost' => $stockItem->wac,
+                    'balance_after' => $balanceAfter,
+                    'reference_type' => 'return_note',
+                    'reference_id' => $note->id,
                     'performed_by_user_id' => $performedById,
-                    'moved_at'             => now(),
+                    'moved_at' => now(),
                 ]);
 
                 $stockItem->increment('qty', $qtyReturned);
@@ -171,7 +169,7 @@ class ReturnNoteService
             );
 
             $note->update([
-                'status'       => $allComplete ? ReturnNote::STATUS_COMPLETED : ReturnNote::STATUS_PARTIAL,
+                'status' => $allComplete ? ReturnNote::STATUS_COMPLETED : ReturnNote::STATUS_PARTIAL,
                 'completed_at' => $allComplete ? now() : null,
             ]);
 
@@ -184,11 +182,11 @@ class ReturnNoteService
             }
 
             AuditService::log(
-                action:      'return',
+                action: 'return',
                 description: "ارتجاع مواد — {$note->return_no}",
-                tag:         'warehouse',
-                before:      $stockBefore,
-                after:       $stockAfter,
+                tag: 'warehouse',
+                before: $stockBefore,
+                after: $stockAfter,
             );
 
             return $note->fresh()->load('lines');

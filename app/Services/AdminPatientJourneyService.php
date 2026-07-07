@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Enums\CaseStage;
 use App\Enums\ManufacturingStage;
+use App\Enums\StockWarehouseType;
 use App\Models\Appointment;
 use App\Models\ApprovalContract;
 use App\Models\AuditLog;
-use App\Enums\StockWarehouseType;
 use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
@@ -19,7 +19,7 @@ use App\Support\CaseFinancialSummary;
 use App\Support\ClinicTime;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * سجل تفصيلي لمسار المريض — من الاستقبال حتى المرحلة الحالية.
@@ -28,17 +28,18 @@ class AdminPatientJourneyService
 {
     /** ترتيب مراحل الدورة — أولاً بالمسار المنطقي ثم بالوقت داخل المرحلة. */
     private const CATEGORY_ORDER = [
-        'reception'      => 1,
-        'exam'           => 2,
-        'technical'      => 3,
-        'adjustments'    => 4,
-        'cost_calc'      => 5,
-        'quote'          => 6,
-        'operations'     => 7,
-        'manufacturing'  => 8,
+        'reception' => 1,
+        'exam' => 2,
+        'technical' => 3,
+        'adjustments' => 4,
+        'cost_calc' => 5,
+        'quote' => 6,
+        'operations' => 7,
+        'manufacturing' => 8,
         'ready_delivery' => 9,
-        'delivered'      => 10,
+        'delivered' => 10,
     ];
+
     /** @return array<int, AuditLog|null> keyed by patient id */
     public function registrationAuditsForPatients(Collection $patients): array
     {
@@ -108,12 +109,12 @@ class AdminPatientJourneyService
     {
         $at = $registrationAudit?->logged_at ?? $patient->created_at ?? $patient->registered_at;
         $lines = [
-            'رقم المريض: ' . ($patient->patient_code ?? '—'),
-            'جهة التعاقد: ' . $patient->displayEntity(),
+            'رقم المريض: '.($patient->patient_code ?? '—'),
+            'جهة التعاقد: '.$patient->displayEntity(),
         ];
 
         if ($registrationAudit?->user_name) {
-            $lines[] = 'سجّله (الاستقبال): ' . $registrationAudit->user_name;
+            $lines[] = 'سجّله (الاستقبال): '.$registrationAudit->user_name;
         }
 
         $firstVisit = $patient->relationLoaded('appointments')
@@ -121,7 +122,7 @@ class AdminPatientJourneyService
             : null;
 
         if ($firstVisit instanceof Appointment) {
-            $lines[] = 'نوع الزيارة: ' . $firstVisit->displayVisitType();
+            $lines[] = 'نوع الزيارة: '.$firstVisit->displayVisitType();
         }
 
         $this->pushEvent($events, $at, 'reception', 'الاستقبال', 'تسجيل المريض في الاستقبال', $lines, null, 1);
@@ -145,10 +146,10 @@ class AdminPatientJourneyService
                 $transferredAt,
                 'reception',
                 'الاستقبال',
-                'تحويل للعيادة — ' . $appointment->displayVisitType(),
+                'تحويل للعيادة — '.$appointment->displayVisitType(),
                 [
-                    'الموعد: ' . ClinicTime::format($appointment->appointment_date, 'd/m/Y') . ' ' . ($appointment->appointment_time ?? ''),
-                    'الحالة: ' . $this->appointmentStatusLabel($appointment->status),
+                    'الموعد: '.ClinicTime::format($appointment->appointment_date, 'd/m/Y').' '.($appointment->appointment_time ?? ''),
+                    'الحالة: '.$this->appointmentStatusLabel($appointment->status),
                 ],
                 null,
                 2,
@@ -164,10 +165,10 @@ class AdminPatientJourneyService
             $case->created_at,
             'reception',
             'الاستقبال',
-            'فتح ملف حالة — ' . ($case->case_no ?? '—'),
+            'فتح ملف حالة — '.($case->case_no ?? '—'),
             array_filter([
-                'مرجع الطلب: ' . ($case->order_ref ?? '—'),
-                $case->work_order_no ? 'أمر التشغيل: ' . $case->work_order_no : null,
+                'مرجع الطلب: '.($case->order_ref ?? '—'),
+                $case->work_order_no ? 'أمر التشغيل: '.$case->work_order_no : null,
             ]),
             null,
             3,
@@ -189,9 +190,9 @@ class AdminPatientJourneyService
                 'الكشف الطبي',
                 'تشخيص طبي معتمد',
                 array_filter([
-                    'الطبيب: ' . ($record->doctor_name ?? '—'),
-                    $record->diagnosis ? 'التشخيص: ' . \Illuminate\Support\Str::limit($record->diagnosis, 120) : null,
-                    $record->prescription ? 'الروشتة: ' . \Illuminate\Support\Str::limit($record->prescription, 120) : null,
+                    'الطبيب: '.($record->doctor_name ?? '—'),
+                    $record->diagnosis ? 'التشخيص: '.Str::limit($record->diagnosis, 120) : null,
+                    $record->prescription ? 'الروشتة: '.Str::limit($record->prescription, 120) : null,
                 ])
             );
         }
@@ -206,9 +207,9 @@ class AdminPatientJourneyService
                 'التوصيف الفني',
                 'حفظ التوصيف الفني',
                 array_filter([
-                    $spec->doctor_name ? 'الطبيب: ' . $spec->doctor_name : null,
-                    'عدد الأصناف: ' . $itemCount,
-                    $spec->tech_notes ? 'ملاحظات: ' . \Illuminate\Support\Str::limit($spec->tech_notes, 100) : null,
+                    $spec->doctor_name ? 'الطبيب: '.$spec->doctor_name : null,
+                    'عدد الأصناف: '.$itemCount,
+                    $spec->tech_notes ? 'ملاحظات: '.Str::limit($spec->tech_notes, 100) : null,
                 ])
             );
         }
@@ -218,7 +219,7 @@ class AdminPatientJourneyService
             $adjustments = $bom->items->where('source', BomItem::SOURCE_ADJUSTMENT);
             if ($adjustments->isNotEmpty()) {
                 $lines = $adjustments->map(
-                    fn (BomItem $item) => ($item->name ?: $item->stock_item_code) . ' ×' . $item->qty
+                    fn (BomItem $item) => ($item->name ?: $item->stock_item_code).' ×'.$item->qty
                 )->values()->all();
 
                 $this->pushEvent(
@@ -226,7 +227,7 @@ class AdminPatientJourneyService
                     $adjustments->max('created_at') ?? $bom->created_at,
                     'adjustments',
                     'المعدلات',
-                    'بنود أضافتها المعدلات (' . $adjustments->count() . ')',
+                    'بنود أضافتها المعدلات ('.$adjustments->count().')',
                     $lines
                 );
             }
@@ -254,13 +255,13 @@ class AdminPatientJourneyService
         PricingRequest $pricing,
     ): void {
         $lines = [
-            'رقم طلب التسعير: ' . ($pricing->request_no ?? '—'),
-            'إجمالي عرض السعر (أعلى سعر شراء): ' . $this->money($pricing->computed_total),
-            'التكلفة الداخلية (متوسط التكلفة المرجح): ' . $this->money($pricing->internal_total),
+            'رقم طلب التسعير: '.($pricing->request_no ?? '—'),
+            'إجمالي عرض السعر (أعلى سعر شراء): '.$this->money($pricing->computed_total),
+            'التكلفة الداخلية (متوسط التكلفة المرجح): '.$this->money($pricing->internal_total),
         ];
 
         if ($pricing->doctor_name) {
-            $lines[] = 'الطبيب: ' . $pricing->doctor_name;
+            $lines[] = 'الطبيب: '.$pricing->doctor_name;
         }
 
         $this->pushEvent(
@@ -282,8 +283,8 @@ class AdminPatientJourneyService
                 'حساب التكاليف',
                 'اعتماد التسعير',
                 array_filter([
-                    $pricing->approved_by ? 'اعتمد بواسطة: ' . $pricing->approved_by : null,
-                    'الحالة: ' . ($pricing->status_label ?? '—'),
+                    $pricing->approved_by ? 'اعتمد بواسطة: '.$pricing->approved_by : null,
+                    'الحالة: '.($pricing->status_label ?? '—'),
                 ]),
                 null,
                 2,
@@ -300,17 +301,17 @@ class AdminPatientJourneyService
 
         foreach ($case->quotes->sortBy('quote_date') as $quote) {
             $lines = [
-                'رقم العرض: ' . ($quote->quote_no ?? '—'),
-                'الإجمالي: ' . $this->money($quote->total),
-                'الحالة: ' . $this->quoteStatusLabel($quote),
+                'رقم العرض: '.($quote->quote_no ?? '—'),
+                'الإجمالي: '.$this->money($quote->total),
+                'الحالة: '.$this->quoteStatusLabel($quote),
             ];
 
             if ($quote->relationLoaded('items') && $quote->items->isNotEmpty()) {
                 foreach ($quote->items->take(8) as $item) {
-                    $lines[] = ($item->name ?: $item->stock_item_code) . ' — ' . $this->money($item->amount);
+                    $lines[] = ($item->name ?: $item->stock_item_code).' — '.$this->money($item->amount);
                 }
                 if ($quote->items->count() > 8) {
-                    $lines[] = '… +' . ($quote->items->count() - 8) . ' بنود أخرى';
+                    $lines[] = '… +'.($quote->items->count() - 8).' بنود أخرى';
                 }
             }
 
@@ -344,9 +345,9 @@ class AdminPatientJourneyService
                 'مكتب التشغيل',
                 'اعتماد مكتب التشغيل',
                 array_filter([
-                    $case->work_order_no ? 'أمر التشغيل: ' . $case->work_order_no : null,
-                    $case->approval_date ? 'تاريخ الاعتماد: ' . ClinicTime::format($case->approval_date, 'd/m/Y') : null,
-                    $case->total_cost ? 'إجمالي الحالة: ' . $this->money($case->total_cost) : null,
+                    $case->work_order_no ? 'أمر التشغيل: '.$case->work_order_no : null,
+                    $case->approval_date ? 'تاريخ الاعتماد: '.ClinicTime::format($case->approval_date, 'd/m/Y') : null,
+                    $case->total_cost ? 'إجمالي الحالة: '.$this->money($case->total_cost) : null,
                 ]),
                 null,
                 1,
@@ -367,10 +368,10 @@ class AdminPatientJourneyService
                 'موافقة الجهة',
                 'موافقة جهة التعاقد / التأمين',
                 array_filter([
-                    'رقم العقد: ' . ($contract->contract_no ?? '—'),
-                    'المبلغ المعتمد: ' . $this->money($contract->approved_amount),
-                    $contract->letter_ref ? 'مرجع الخطاب: ' . $contract->letter_ref : null,
-                    $contract->approval_date ? 'تاريخ الموافقة: ' . ClinicTime::format($contract->approval_date, 'd/m/Y') : null,
+                    'رقم العقد: '.($contract->contract_no ?? '—'),
+                    'المبلغ المعتمد: '.$this->money($contract->approved_amount),
+                    $contract->letter_ref ? 'مرجع الخطاب: '.$contract->letter_ref : null,
+                    $contract->approval_date ? 'تاريخ الموافقة: '.ClinicTime::format($contract->approval_date, 'd/m/Y') : null,
                 ]),
                 null,
                 2,
@@ -402,10 +403,10 @@ class AdminPatientJourneyService
                     $bom->released_at,
                     'manufacturing',
                     'التصنيع',
-                    'صرف خامات من المخزن — BOM ' . ($bom->bom_no ?? '—'),
+                    'صرف خامات من المخزن — BOM '.($bom->bom_no ?? '—'),
                     [
-                        'مرحلة BOM: ' . $this->bomStageLabel($bom->stage),
-                        'مرحلة التصنيع: ' . ManufacturingStage::labelFor($case->manufacturing_stage),
+                        'مرحلة BOM: '.$this->bomStageLabel($bom->stage),
+                        'مرحلة التصنيع: '.ManufacturingStage::labelFor($case->manufacturing_stage),
                     ],
                     null,
                     1,
@@ -419,7 +420,7 @@ class AdminPatientJourneyService
                     'manufacturing',
                     'التصنيع',
                     'إتمام التصنيع في الورشة',
-                    ['BOM: ' . ($bom->bom_no ?? '—')],
+                    ['BOM: '.($bom->bom_no ?? '—')],
                     null,
                     3,
                 );
@@ -432,8 +433,8 @@ class AdminPatientJourneyService
                 $case->updated_at,
                 'manufacturing',
                 'التصنيع',
-                'المرحلة الفرعية الحالية: ' . ManufacturingStage::labelFor($case->manufacturing_stage),
-                ['حالة المسار: ' . CaseStage::labelFor($case->stage_key)],
+                'المرحلة الفرعية الحالية: '.ManufacturingStage::labelFor($case->manufacturing_stage),
+                ['حالة المسار: '.CaseStage::labelFor($case->stage_key)],
                 null,
                 2,
             );
@@ -451,8 +452,8 @@ class AdminPatientJourneyService
                 'التسليم',
                 'جاهز للتسليم',
                 array_filter([
-                    $bom?->bom_no ? 'BOM: ' . $bom->bom_no : null,
-                    $case->work_order_no ? 'أمر التشغيل: ' . $case->work_order_no : null,
+                    $bom?->bom_no ? 'BOM: '.$bom->bom_no : null,
+                    $case->work_order_no ? 'أمر التشغيل: '.$case->work_order_no : null,
                 ])
             );
         }
@@ -460,14 +461,14 @@ class AdminPatientJourneyService
         if ($case->delivered_at) {
             $total = CaseFinancialSummary::totalCost($case);
             $lines = [
-                'تاريخ التسليم: ' . ClinicTime::format($case->delivered_at, 'd/m/Y H:i'),
+                'تاريخ التسليم: '.ClinicTime::format($case->delivered_at, 'd/m/Y H:i'),
             ];
 
             if (! $patient->isMilitary()) {
-                $lines[] = 'إجمالي الحالة: ' . $this->money($total);
-                $lines[] = 'المحصّل: ' . $this->money(CaseFinancialSummary::paidAmount($case, $total));
+                $lines[] = 'إجمالي الحالة: '.$this->money($total);
+                $lines[] = 'المحصّل: '.$this->money(CaseFinancialSummary::paidAmount($case, $total));
             } else {
-                $lines[] = 'التكلفة الداخلية: ' . $this->money($case->internal_cost ?: $total);
+                $lines[] = 'التكلفة الداخلية: '.$this->money($case->internal_cost ?: $total);
             }
 
             $this->pushEvent(
@@ -498,10 +499,10 @@ class AdminPatientJourneyService
 
         try {
             return [
-                'type'  => 'quote',
+                'type' => 'quote',
                 'label' => 'عرض السعر',
-                'url'   => route('admin.cases.quote', ['case' => $case, 'embed' => 1]),
-                'title' => 'عرض السعر — ' . ($case->quote_no ?? $case->case_no ?? ''),
+                'url' => route('admin.cases.quote', ['case' => $case, 'embed' => 1]),
+                'title' => 'عرض السعر — '.($case->quote_no ?? $case->case_no ?? ''),
             ];
         } catch (\Throwable) {
             return null;
@@ -516,12 +517,12 @@ class AdminPatientJourneyService
         }
 
         return [
-            'type'          => 'approval_letter',
-            'label'         => 'موافقة الجهة',
-            'url'           => route('admin.contracts.letter', $contract),
-            'ext'           => strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION)),
-            'title'         => 'خطاب الموافقة — ' . ($contract->contract_no ?? ''),
-            'contract_no'   => $contract->contract_no,
+            'type' => 'approval_letter',
+            'label' => 'موافقة الجهة',
+            'url' => route('admin.contracts.letter', $contract),
+            'ext' => strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION)),
+            'title' => 'خطاب الموافقة — '.($contract->contract_no ?? ''),
+            'contract_no' => $contract->contract_no,
         ];
     }
 
@@ -550,13 +551,13 @@ class AdminPatientJourneyService
         $categoryRank = self::CATEGORY_ORDER[$category] ?? 99;
 
         $event = [
-            'sort_order'     => ($categoryRank * 1000) + $sequence,
-            'sort_at'        => $carbon->toIso8601String(),
-            'at_label'       => ClinicTime::format($carbon, 'd/m/Y H:i'),
-            'category'       => $category,
+            'sort_order' => ($categoryRank * 1000) + $sequence,
+            'sort_at' => $carbon->toIso8601String(),
+            'at_label' => ClinicTime::format($carbon, 'd/m/Y H:i'),
+            'category' => $category,
             'category_label' => $categoryLabel,
-            'title'          => $title,
-            'lines'          => array_values(array_filter($lines, fn ($line) => $line !== null && $line !== '')),
+            'title' => $title,
+            'lines' => array_values(array_filter($lines, fn ($line) => $line !== null && $line !== '')),
         ];
 
         if ($link) {
@@ -593,27 +594,27 @@ class AdminPatientJourneyService
 
     private function money(mixed $amount): string
     {
-        return number_format((float) $amount, 0) . ' ج.م';
+        return number_format((float) $amount, 0).' ج.م';
     }
 
     private function appointmentStatusLabel(?string $status): string
     {
         return match ($status) {
-            Appointment::STATUS_WAITING   => 'بانتظار التحويل',
+            Appointment::STATUS_WAITING => 'بانتظار التحويل',
             Appointment::STATUS_IN_CLINIC => 'في العيادة',
-            Appointment::STATUS_QUOTED  => 'تم التسعير',
-            Appointment::STATUS_DONE    => 'مكتمل',
-            default                     => $status ?? '—',
+            Appointment::STATUS_QUOTED => 'تم التسعير',
+            Appointment::STATUS_DONE => 'مكتمل',
+            default => $status ?? '—',
         };
     }
 
     private function quoteStatusLabel(Quote $quote): string
     {
         return match ($quote->status) {
-            Quote::STATUS_ISSUED   => 'صادر للعميل',
+            Quote::STATUS_ISSUED => 'صادر للعميل',
             Quote::STATUS_APPROVED => 'معتمد',
-            Quote::STATUS_PENDING  => 'معلق',
-            default                => $quote->status_label ?? $quote->status ?? '—',
+            Quote::STATUS_PENDING => 'معلق',
+            default => $quote->status_label ?? $quote->status ?? '—',
         };
     }
 

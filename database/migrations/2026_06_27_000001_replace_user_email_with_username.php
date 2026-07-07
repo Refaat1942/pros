@@ -19,7 +19,7 @@ return new class extends Migration
 
         foreach (DB::table('users')->orderBy('id')->get(['id', 'email']) as $row) {
             $base = strtolower((string) str($row->email)->before('@'));
-            $username = $base !== '' ? $base : 'user' . $row->id;
+            $username = $base !== '' ? $base : 'user'.$row->id;
 
             $candidate = $username;
             $suffix = 1;
@@ -29,7 +29,7 @@ return new class extends Migration
                     ->where('id', '!=', $row->id)
                     ->exists()
             ) {
-                $candidate = $username . $suffix;
+                $candidate = $username.$suffix;
                 $suffix++;
             }
 
@@ -60,7 +60,7 @@ return new class extends Migration
         foreach (DB::table('users')->orderBy('id')->get(['id', 'username']) as $row) {
             DB::table('users')
                 ->where('id', $row->id)
-                ->update(['email' => ($row->username ?: 'user' . $row->id) . '@clinic.com']);
+                ->update(['email' => ($row->username ?: 'user'.$row->id).'@clinic.com']);
         }
 
         Schema::table('users', function (Blueprint $table) {

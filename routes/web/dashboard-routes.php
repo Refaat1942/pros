@@ -20,7 +20,7 @@ if (! function_exists('registerDashboardPages')) {
         string $configKey,
         array $except = [],
     ): void {
-        $pages   = config("dashboards.{$configKey}.pages", []);
+        $pages = config("dashboards.{$configKey}.pages", []);
         $default = config("dashboards.{$configKey}.default_page");
 
         Route::prefix($uriPrefix)

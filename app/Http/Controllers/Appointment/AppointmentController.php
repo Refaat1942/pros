@@ -11,6 +11,7 @@ use App\Models\Appointment;
 use App\Models\Patient;
 use App\Services\AppointmentService;
 use App\Support\ClinicTime;
+use App\Support\PatientEntityPresenter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,9 +20,7 @@ class AppointmentController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly AppointmentService $appointmentService)
-    {
-    }
+    public function __construct(private readonly AppointmentService $appointmentService) {}
 
     /**
      * قائمة المواعيد — افتراضياً مواعيد اليوم.
@@ -48,8 +47,8 @@ class AppointmentController extends Controller
         $appointments = $this->fetchForDashboard($query);
 
         return response()->json([
-            'date'  => $date,
-            'data'  => collect($appointments)->map(fn (Appointment $a) => $this->formatForReceptionList($a))->values(),
+            'date' => $date,
+            'data' => collect($appointments)->map(fn (Appointment $a) => $this->formatForReceptionList($a))->values(),
             'total' => $appointments->count(),
         ]);
     }
@@ -109,26 +108,26 @@ class AppointmentController extends Controller
     {
         $entity = $appointment->patient
             ? $appointment->patient->entityPresentation()
-            : \App\Support\PatientEntityPresenter::fromParts(
+            : PatientEntityPresenter::fromParts(
                 $appointment->patient_type,
                 null,
                 $appointment->company_name,
             );
 
         return $appointment->toArray() + [
-            'queue_number'            => $appointment->queue_number,
-            'visit_type_id'           => $appointment->visit_type_id,
-            'visit_type_label'        => $appointment->displayVisitType(),
-            'patient_id'              => $appointment->patient_id,
-            'can_edit'                => $appointment->isReceptionEditable(),
-            'patient_type'            => $appointment->patient_type ?? $appointment->patient?->patient_type,
-            'patient_type_label'      => ($appointment->patient_type ?? $appointment->patient?->patient_type) === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
-            'entity'                  => $entity,
-            'company_name'            => $entity['label'],
+            'queue_number' => $appointment->queue_number,
+            'visit_type_id' => $appointment->visit_type_id,
+            'visit_type_label' => $appointment->displayVisitType(),
+            'patient_id' => $appointment->patient_id,
+            'can_edit' => $appointment->isReceptionEditable(),
+            'patient_type' => $appointment->patient_type ?? $appointment->patient?->patient_type,
+            'patient_type_label' => ($appointment->patient_type ?? $appointment->patient?->patient_type) === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
+            'entity' => $entity,
+            'company_name' => $entity['label'],
             'registered_at_formatted' => $appointment->registeredAtFormatted(),
-            'wait_label'              => $appointment->receptionDeskWaitLabel(),
-            'wait_started_at'         => $appointment->registrationMoment()?->toIso8601String(),
-            'wait_frozen_at'          => ($appointment->transferred_to_clinic && $appointment->transferredAt())
+            'wait_label' => $appointment->receptionDeskWaitLabel(),
+            'wait_started_at' => $appointment->registrationMoment()?->toIso8601String(),
+            'wait_frozen_at' => ($appointment->transferred_to_clinic && $appointment->transferredAt())
                 ? $appointment->transferredAt()->toIso8601String()
                 : null,
         ];

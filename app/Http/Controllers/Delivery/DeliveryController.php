@@ -6,6 +6,7 @@ use App\Exceptions\DeliveryNotReadyException;
 use App\Exceptions\InvalidPatientQrException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Delivery\ScanDeliveryRequest;
+use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Services\DeliveryService;
@@ -20,9 +21,7 @@ class DeliveryController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly DeliveryService $deliveryService)
-    {
-    }
+    public function __construct(private readonly DeliveryService $deliveryService) {}
 
     /**
      * الحالات الجاهزة للتسليم (ready_delivery + BOM finished).
@@ -35,18 +34,18 @@ class DeliveryController extends Controller
                 'bom:id,case_id,bom_no,stage,finished_at',
             ])
                 ->where('stage_key', CaseRecord::STAGE_READY_DELIVERY)
-                ->whereHas('bom', fn ($q) => $q->where('stage', \App\Models\Bom::STAGE_FINISHED))
+                ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_FINISHED))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhere('work_order_no', 'like', "%{$s}%")
-                      ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhere('work_order_no', 'like', "%{$s}%")
+                        ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
                 }))
                 ->orderByDesc('updated_at')
         );
 
         return response()->json([
-            'data'  => collect($cases)->map(fn ($c) => $this->formatSummary($c))->values(),
+            'data' => collect($cases)->map(fn ($c) => $this->formatSummary($c))->values(),
             'total' => $cases->count(),
         ]);
     }
@@ -60,8 +59,8 @@ class DeliveryController extends Controller
 
         if (! preg_match('/^QR-\d{6}$/', $scannedQr)) {
             return response()->json([
-                'message'  => 'رمز QR مُعدَّل أو غير صالح — تم رفض التسليم.',
-                'blocked'  => true,
+                'message' => 'رمز QR مُعدَّل أو غير صالح — تم رفض التسليم.',
+                'blocked' => true,
                 'security' => true,
             ], 422);
         }
@@ -87,17 +86,17 @@ class DeliveryController extends Controller
             return response()->json(['message' => $e->getMessage(), 'blocked' => true], 422);
         } catch (InvalidPatientQrException $e) {
             return response()->json([
-                'message'  => $e->getMessage(),
-                'blocked'  => true,
+                'message' => $e->getMessage(),
+                'blocked' => true,
                 'security' => true,
             ], 422);
         }
 
         return response()->json([
-            'message'    => 'تم تسليم الطرف وإغلاق الحالة بنجاح.',
-            'case'       => $this->formatSummary($case),
+            'message' => 'تم تسليم الطرف وإغلاق الحالة بنجاح.',
+            'case' => $this->formatSummary($case),
             'invoice_no' => $case->invoice_no,
-            'closed'     => true,
+            'closed' => true,
         ]);
     }
 

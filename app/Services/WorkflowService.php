@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\DB;
  */
 class WorkflowService
 {
-    public function __construct(private readonly NotificationService $notifications)
-    {
-    }
+    public function __construct(private readonly NotificationService $notifications) {}
 
     /**
      * خريطة الانتقالات: الحدث → [المراحل المسموحة, المرحلة الهدف, manufacturing_stage|null]
@@ -26,84 +24,84 @@ class WorkflowService
         // الكشف تم واعتُمد — قد تكون الحالة في الاستقبال (أُنشئت الآن) أو في الكشف.
         WorkflowEvent::ExamApproved->value => [
             'from' => [CaseRecord::STAGE_RECEPTION, CaseRecord::STAGE_EXAM],
-            'to'   => CaseRecord::STAGE_TECHNICAL,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_TECHNICAL,
+            'mfg' => null,
         ],
         // الكشف اختياري — يقفز من الاستقبال مباشرةً للتوصيف.
         WorkflowEvent::ExamSkipped->value => [
             'from' => [CaseRecord::STAGE_RECEPTION],
-            'to'   => CaseRecord::STAGE_TECHNICAL,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_TECHNICAL,
+            'mfg' => null,
         ],
         // التوصيف الفني → المعدلات (مراجعة وإضافة بنود قبل التسعير).
         WorkflowEvent::SpecSaved->value => [
             'from' => [CaseRecord::STAGE_TECHNICAL],
-            'to'   => CaseRecord::STAGE_ADJUSTMENTS,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_ADJUSTMENTS,
+            'mfg' => null,
         ],
         // المعدلات → التكاليف (تشغيل محرك الاحتساب).
         WorkflowEvent::AdjustmentsCompleted->value => [
             'from' => [CaseRecord::STAGE_ADJUSTMENTS],
-            'to'   => CaseRecord::STAGE_COST_CALC,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_COST_CALC,
+            'mfg' => null,
         ],
         // التكاليف → عرض السعر.
         WorkflowEvent::CostingCompleted->value => [
             'from' => [CaseRecord::STAGE_COST_CALC],
-            'to'   => CaseRecord::STAGE_QUOTE,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_QUOTE,
+            'mfg' => null,
         ],
         // عرض السعر → مكتب التشغيل (مركز القرار).
         WorkflowEvent::QuoteIssued->value => [
             'from' => [CaseRecord::STAGE_QUOTE],
-            'to'   => CaseRecord::STAGE_OPERATIONS,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_OPERATIONS,
+            'mfg' => null,
         ],
         // مكتب التشغيل (كاش): إصدار عرض السعر → بانتظار الدفع في الخزنة.
         WorkflowEvent::SentToCashier->value => [
             'from' => [CaseRecord::STAGE_OPERATIONS],
-            'to'   => CaseRecord::STAGE_CASHIER,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_CASHIER,
+            'mfg' => null,
         ],
         // الخزنة: تأكيد استلام المبلغ → المخزن للصرف (حجز فوري في الخلفية).
         WorkflowEvent::CashierPaid->value => [
             'from' => [CaseRecord::STAGE_CASHIER],
-            'to'   => CaseRecord::STAGE_MANUFACTURING,
-            'mfg'  => CaseRecord::MFG_WAREHOUSE,
+            'to' => CaseRecord::STAGE_MANUFACTURING,
+            'mfg' => CaseRecord::MFG_WAREHOUSE,
         ],
         // مكتب التشغيل: اعتماد → المخزن للصرف (حجز فوري في الخلفية).
         WorkflowEvent::OperationsApproved->value => [
             'from' => [CaseRecord::STAGE_OPERATIONS],
-            'to'   => CaseRecord::STAGE_MANUFACTURING,
-            'mfg'  => CaseRecord::MFG_WAREHOUSE,
+            'to' => CaseRecord::STAGE_MANUFACTURING,
+            'mfg' => CaseRecord::MFG_WAREHOUSE,
         ],
         // مكتب التشغيل: رفض/تعديل → إعادة للمعدلات.
         WorkflowEvent::ReturnedToAdjustments->value => [
             'from' => [CaseRecord::STAGE_OPERATIONS],
-            'to'   => CaseRecord::STAGE_ADJUSTMENTS,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_ADJUSTMENTS,
+            'mfg' => null,
         ],
         // مكتب التشغيل/المعدلات: رفض جذري → إعادة للتوصيف.
         WorkflowEvent::ReturnedToTechnical->value => [
             'from' => [CaseRecord::STAGE_OPERATIONS, CaseRecord::STAGE_ADJUSTMENTS],
-            'to'   => CaseRecord::STAGE_TECHNICAL,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_TECHNICAL,
+            'mfg' => null,
         ],
         // المخزن: صرف المواد بالباركود → دخول الورشة.
         WorkflowEvent::BomDispensed->value => [
             'from' => [CaseRecord::STAGE_MANUFACTURING],
-            'to'   => CaseRecord::STAGE_MANUFACTURING,
-            'mfg'  => CaseRecord::MFG_ISSUE,
+            'to' => CaseRecord::STAGE_MANUFACTURING,
+            'mfg' => CaseRecord::MFG_ISSUE,
         ],
         WorkflowEvent::BomFinished->value => [
             'from' => [CaseRecord::STAGE_MANUFACTURING],
-            'to'   => CaseRecord::STAGE_READY_DELIVERY,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_READY_DELIVERY,
+            'mfg' => null,
         ],
         WorkflowEvent::Delivered->value => [
             'from' => [CaseRecord::STAGE_READY_DELIVERY],
-            'to'   => CaseRecord::STAGE_DELIVERED,
-            'mfg'  => null,
+            'to' => CaseRecord::STAGE_DELIVERED,
+            'mfg' => null,
         ],
     ];
 
@@ -119,7 +117,7 @@ class WorkflowService
             }
 
             $before = [
-                'stage_key'           => $case->stage_key,
+                'stage_key' => $case->stage_key,
                 'manufacturing_stage' => $case->manufacturing_stage,
             ];
 
@@ -136,12 +134,12 @@ class WorkflowService
             $case->update($updates);
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "انتقال workflow: {$event} — {$before['stage_key']} → {$rule['to']}",
-                tag:         'medical',
-                before:      $before,
-                after:       [
-                    'stage_key'           => $case->stage_key,
+                tag: 'medical',
+                before: $before,
+                after: [
+                    'stage_key' => $case->stage_key,
                     'manufacturing_stage' => $case->manufacturing_stage,
                 ],
             );

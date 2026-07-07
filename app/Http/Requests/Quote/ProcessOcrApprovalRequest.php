@@ -9,13 +9,13 @@ class ProcessOcrApprovalRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'quote_no'        => ['required', 'string', 'max:50'],
-            'patient_name'    => ['required', 'string', 'max:255'],
+            'quote_no' => ['required', 'string', 'max:50'],
+            'patient_name' => ['required', 'string', 'max:255'],
             'approved_amount' => ['required', 'numeric', 'min:0'],
-            'company_name'    => ['required', 'string', 'max:255'],
-            'letter_ref'      => ['nullable', 'string', 'max:100'],
-            'letter_date'     => ['nullable', 'string', 'max:50'],
-            'letter_path'     => ['nullable', 'string', 'max:500'],
+            'company_name' => ['required', 'string', 'max:255'],
+            'letter_ref' => ['nullable', 'string', 'max:100'],
+            'letter_date' => ['nullable', 'string', 'max:50'],
+            'letter_path' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

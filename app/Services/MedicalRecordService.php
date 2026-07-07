@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Enums\WorkflowEvent;
 use App\Models\Appointment;
-use App\Models\CaseRecord;
 use App\Models\CaseRecommendation;
+use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\MedicalRecordItem;
 use App\Models\Patient;
@@ -23,8 +23,7 @@ class MedicalRecordService
         private readonly CaseService $caseService,
         private readonly DashboardQueueService $queueService,
         private readonly NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * حفظ مسودة تقرير طبي (إنشاء أو تحديث).
@@ -59,7 +58,7 @@ class MedicalRecordService
 
             if ($record->appointment_id) {
                 Appointment::where('id', $record->appointment_id)->update([
-                    'status'       => Appointment::STATUS_DONE,
+                    'status' => Appointment::STATUS_DONE,
                     'status_label' => 'منتهٍ',
                 ]);
             }
@@ -85,11 +84,11 @@ class MedicalRecordService
             }
 
             AuditService::log(
-                action:      'lock',
+                action: 'lock',
                 description: "اعتماد الكشف الطبي #{$record->id} — {$record->patient_name}",
-                tag:         'medical',
-                before:      $before,
-                after:       $record->fresh()->only(['locked', 'status', 'case_id']),
+                tag: 'medical',
+                before: $before,
+                after: $record->fresh()->only(['locked', 'status', 'case_id']),
             );
 
             $record = $record->fresh()->load(['items', 'patient', 'caseRecord']);
@@ -129,15 +128,15 @@ class MedicalRecordService
             $case = $this->caseService->initiateFromReception($patient);
 
             Appointment::where('id', $appointment->id)->update([
-                'status'       => Appointment::STATUS_DONE,
+                'status' => Appointment::STATUS_DONE,
                 'status_label' => 'منتهٍ',
             ]);
 
             AuditService::log(
-                action:      'skip',
+                action: 'skip',
                 description: "تخطّي الكشف الطبي — {$patient->name} (موعد #{$appointment->id})",
-                tag:         'medical',
-                after:       ['case_id' => $case->id, 'appointment_id' => $appointment->id],
+                tag: 'medical',
+                after: ['case_id' => $case->id, 'appointment_id' => $appointment->id],
             );
 
             $this->maybeNotifyReceptionIfClinicQueueEmpty($appointment->id);
@@ -148,7 +147,7 @@ class MedicalRecordService
 
     private function createDraft(array $data): MedicalRecord
     {
-        $patient     = Patient::findOrFail($data['patient_id']);
+        $patient = Patient::findOrFail($data['patient_id']);
         $appointment = ! empty($data['appointment_id'])
             ? Appointment::findOrFail($data['appointment_id'])
             : null;
@@ -172,28 +171,28 @@ class MedicalRecordService
         }
 
         $record = MedicalRecord::create([
-            'patient_id'     => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_id' => $appointment?->id,
-            'patient_name'   => $patient->name,
-            'national_id'    => $patient->national_id,
-            'company_name'   => $patient->company_name,
-            'patient_type'   => $patient->patient_type,
-            'diagnosis'      => $data['diagnosis'],
-            'prescription'   => $data['prescription'] ?? null,
-            'doctor_name'    => Auth::user()->name,
+            'patient_name' => $patient->name,
+            'national_id' => $patient->national_id,
+            'company_name' => $patient->company_name,
+            'patient_type' => $patient->patient_type,
+            'diagnosis' => $data['diagnosis'],
+            'prescription' => $data['prescription'] ?? null,
+            'doctor_name' => Auth::user()->name,
             'doctor_user_id' => Auth::id(),
-            'record_date'    => now()->toDateString(),
-            'status'         => MedicalRecord::STATUS_DRAFT,
-            'locked'         => false,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
         $this->syncItems($record, $data['items'] ?? []);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "مسودة تقرير طبي #{$record->id} — {$patient->name}",
-            tag:         'medical',
-            after:       ['id' => $record->id, 'patient_id' => $patient->id],
+            tag: 'medical',
+            after: ['id' => $record->id, 'patient_id' => $patient->id],
         );
 
         return $record->load('items');
@@ -210,18 +209,18 @@ class MedicalRecordService
         $before = $record->only(['diagnosis', 'prescription']);
 
         $record->update([
-            'diagnosis'    => $data['diagnosis'],
+            'diagnosis' => $data['diagnosis'],
             'prescription' => $data['prescription'] ?? null,
         ]);
 
         $this->syncItems($record, $data['items'] ?? []);
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تحديث مسودة تقرير طبي #{$record->id}",
-            tag:         'medical',
-            before:      $before,
-            after:       $record->only(['diagnosis', 'prescription']),
+            tag: 'medical',
+            before: $before,
+            after: $record->only(['diagnosis', 'prescription']),
         );
 
         return $record->fresh()->load('items');
@@ -237,9 +236,9 @@ class MedicalRecordService
         foreach ($items as $item) {
             MedicalRecordItem::create([
                 'medical_record_id' => $record->id,
-                'stock_item_code'   => $item['stock_item_code'],
-                'name'              => $item['name'],
-                'qty'               => $item['qty'],
+                'stock_item_code' => $item['stock_item_code'],
+                'name' => $item['name'],
+                'qty' => $item['qty'],
             ]);
         }
     }
@@ -254,10 +253,10 @@ class MedicalRecordService
 
         foreach ($record->items as $item) {
             CaseRecommendation::create([
-                'case_id'           => $case->id,
-                'stock_item_code'   => $item->stock_item_code,
-                'name'              => $item->name,
-                'qty'               => $item->qty,
+                'case_id' => $case->id,
+                'stock_item_code' => $item->stock_item_code,
+                'name' => $item->name,
+                'qty' => $item->qty,
             ]);
         }
     }

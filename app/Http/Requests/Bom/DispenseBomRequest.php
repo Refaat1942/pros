@@ -9,7 +9,7 @@ class DispenseBomRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'scanned_barcodes'   => ['required', 'array', 'min:1'],
+            'scanned_barcodes' => ['required', 'array', 'min:1'],
             'scanned_barcodes.*' => $this->barcodeRules(),
         ];
     }

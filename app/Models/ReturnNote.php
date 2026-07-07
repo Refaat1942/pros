@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class ReturnNote extends Model
 {
     public const STATUS_AUTHORIZED = 'authorized';
+
     public const STATUS_PARTIAL = 'partial';
+
     public const STATUS_COMPLETED = 'completed';
 
     protected $fillable = [

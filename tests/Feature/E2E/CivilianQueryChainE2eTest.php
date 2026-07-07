@@ -4,10 +4,8 @@ namespace Tests\Feature\E2E;
 
 use App\Models\Bom;
 use App\Models\CaseRecord;
-use App\Models\Patient;
 use App\Models\PricingRequest;
 use App\Models\Quote;
-use App\Models\TechOrderSpec;
 use App\Services\Dashboard\DashboardQueueService;
 use App\Services\StockPriceService;
 use Tests\Support\DashboardQueueAssertions;
@@ -19,13 +17,13 @@ use Tests\TestCase;
  */
 class CivilianQueryChainE2eTest extends TestCase
 {
-    use ProstheticTestHelper;
     use DashboardQueueAssertions;
+    use ProstheticTestHelper;
 
     private function seedStock(): void
     {
         $item = $this->stockItem('RM-001', qty: 30, wac: 80.00);
-        $sup  = $this->makeSupplier();
+        $sup = $this->makeSupplier();
         app(StockPriceService::class)->addBatch($item, 10, 150.00, $sup, 'INV-E2E-1', now());
         app(StockPriceService::class)->addBatch($item, 10, 200.00, $sup, 'INV-E2E-2', now());
     }
@@ -33,15 +31,15 @@ class CivilianQueryChainE2eTest extends TestCase
     public function test_civilian_full_pipeline_query_chain_and_blade_flow(): void
     {
         $this->seedStock();
-        $company  = $this->civilianCompany();
-        $recep    = $this->userWithRole('reception');
-        $doctor   = $this->userWithRole('doctor');
-        $spec     = $this->userWithRole('spec');
-        $adj      = $this->userWithRole('adjustments');
-        $admin    = $this->userWithRole('admin');
-        $tech     = $this->userWithRole('technical');
-        $ops      = $this->userWithRole('operations');
-        $queues   = app(DashboardQueueService::class);
+        $company = $this->civilianCompany();
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
+        $adj = $this->userWithRole('adjustments');
+        $admin = $this->userWithRole('admin');
+        $tech = $this->userWithRole('technical');
+        $ops = $this->userWithRole('operations');
+        $queues = app(DashboardQueueService::class);
 
         // ── Step 1: Reception — register + QR + doctor queue ─────────────────
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'خالد E2E مدني');
@@ -70,17 +68,17 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $appointmentId = collect($queue->json('data'))->firstWhere('patient_id', $patient->id)['id'];
 
-        $diagPage = $this->get('/doctor/queue?appointment=' . $appointmentId);
+        $diagPage = $this->get('/doctor/queue?appointment='.$appointmentId);
         $diagPage->assertOk();
         $this->assertStringNotContainsString('wac', strtolower($diagPage->getContent()));
         $this->assertStringNotContainsString('quote_total', strtolower($diagPage->getContent()));
 
         $lock = $this->postJson('/doctor/diagnosis', [
-            'patient_id'     => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_id' => $appointmentId,
-            'diagnosis'      => 'بتر طرف سفلي — E2E',
-            'items'          => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 2]],
-            'lock'           => true,
+            'diagnosis' => 'بتر طرف سفلي — E2E',
+            'items' => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 2]],
+            'lock' => true,
         ]);
         $lock->assertCreated();
 
@@ -101,7 +99,7 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $create = $this->postJson('/spec/spec', [
             'case_id' => $case->id,
-            'items'   => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 2]],
+            'items' => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 2]],
         ]);
         $create->assertCreated();
         $specId = $create->json('id');
@@ -170,19 +168,19 @@ class CivilianQueryChainE2eTest extends TestCase
         $print->assertSee($quote->quote_no, false);
 
         $ocrBad = $this->postJson('/reception/ocr/process', [
-            'quote_no'        => $quote->quote_no,
-            'patient_name'    => $patient->name,
+            'quote_no' => $quote->quote_no,
+            'patient_name' => $patient->name,
             'approved_amount' => 999.00,
-            'company_name'    => $company->name,
+            'company_name' => $company->name,
         ]);
         $ocrBad->assertStatus(422)->assertJsonPath('ocr', true);
 
         $ocrOk = $this->postJson('/reception/ocr/process', [
-            'quote_no'        => $quote->quote_no,
-            'patient_name'    => $patient->name,
+            'quote_no' => $quote->quote_no,
+            'patient_name' => $patient->name,
             'approved_amount' => 400.00,
-            'company_name'    => $company->name,
-            'letter_ref'      => 'LTR-E2E-001',
+            'company_name' => $company->name,
+            'letter_ref' => 'LTR-E2E-001',
         ]);
         $ocrOk->assertOk();
         $this->assertMatchesRegularExpression('/^WO-\d{4}-\d{4}$/', $ocrOk->json('work_order_no'));

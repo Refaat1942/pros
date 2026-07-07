@@ -15,7 +15,7 @@ return new class extends Migration
                 Schema::table('cases', function (Blueprint $table) {
                     $table->dropUnique(['tracking_uid']);
                 });
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // partial run may have already dropped the index
             }
         }
@@ -60,7 +60,7 @@ return new class extends Migration
     private function uniqueTrackingUid(): string
     {
         do {
-            $uid = 'case-' . Str::lower(Str::random(8));
+            $uid = 'case-'.Str::lower(Str::random(8));
         } while (
             DB::table('patients')->where('tracking_uid', $uid)->exists()
             || DB::table('cases')->where('tracking_uid', $uid)->exists()

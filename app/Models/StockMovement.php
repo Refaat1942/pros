@@ -12,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class StockMovement extends Model
 {
     public const TYPE_RECEIVE = 'receive';
+
     public const TYPE_ISSUE = 'issue';
+
     public const TYPE_RETURN = 'return';
 
     protected $fillable = [

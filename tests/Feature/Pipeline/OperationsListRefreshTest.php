@@ -32,8 +32,8 @@ class OperationsListRefreshTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0100']);
 
         $this->actingAs($user);
@@ -62,21 +62,21 @@ class OperationsListRefreshTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->militaryPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
         $case->update([
-            'path'          => CaseRecord::PATH_MILITARY,
+            'path' => CaseRecord::PATH_MILITARY,
             'work_order_no' => 'WO-2026-0002',
-            'company_name'  => null,
+            'company_name' => null,
         ]);
 
         Bom::create([
-            'bom_no'       => 'BOM-MIL-01',
-            'case_id'      => $case->id,
-            'order_ref'    => $case->order_ref,
+            'bom_no' => 'BOM-MIL-01',
+            'case_id' => $case->id,
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_FINISHED,
-            'finished_at'  => now(),
+            'stage' => Bom::STAGE_FINISHED,
+            'finished_at' => now(),
         ]);
 
         $this->actingAs($user)
@@ -97,17 +97,17 @@ class OperationsListRefreshTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
         $case->update(['work_order_no' => 'WO-2026-0101', 'quote_total' => 400.00]);
 
         Bom::create([
-            'bom_no'       => 'BOM-DEL-01',
-            'case_id'      => $case->id,
-            'order_ref'    => $case->order_ref,
+            'bom_no' => 'BOM-DEL-01',
+            'case_id' => $case->id,
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_FINISHED,
-            'finished_at'  => now(),
+            'stage' => Bom::STAGE_FINISHED,
+            'finished_at' => now(),
         ]);
 
         $this->actingAs($user)

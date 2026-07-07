@@ -23,11 +23,11 @@ class BomService
 {
     /** @var array<string, string> */
     private const MFG_SEQUENCE = [
-        CaseRecord::MFG_WAREHOUSE  => CaseRecord::MFG_ISSUE,
-        CaseRecord::MFG_ISSUE      => CaseRecord::MFG_GENERATION,
+        CaseRecord::MFG_WAREHOUSE => CaseRecord::MFG_ISSUE,
+        CaseRecord::MFG_ISSUE => CaseRecord::MFG_GENERATION,
         CaseRecord::MFG_GENERATION => CaseRecord::MFG_ASSEMBLY,
-        CaseRecord::MFG_ASSEMBLY   => CaseRecord::MFG_CASTING,
-        CaseRecord::MFG_CASTING    => CaseRecord::MFG_FINISHING,
+        CaseRecord::MFG_ASSEMBLY => CaseRecord::MFG_CASTING,
+        CaseRecord::MFG_CASTING => CaseRecord::MFG_FINISHING,
     ];
 
     public function __construct(
@@ -36,8 +36,7 @@ class BomService
         private readonly WorkflowService $workflowService,
         private readonly WorkOrderService $workOrderService,
         private readonly FinancialPostingService $financialPostingService,
-    ) {
-    }
+    ) {}
 
     /**
      * إنشاء BOM (raw) وحجز الكميات المطلوبة.
@@ -55,14 +54,14 @@ class BomService
                     ->update(['status_key' => PricingRequestStatus::Insufficient->value]);
 
                 AuditService::log(
-                    action:      'insufficient',
+                    action: 'insufficient',
                     description: "فشل فحص المخزون عند إنشاء BOM — الصنف: {$e->stockItemCode}",
-                    tag:         'pricing',
-                    after:       [
+                    tag: 'pricing',
+                    after: [
                         'pricing_request_id' => $e->pricingRequestId,
-                        'missing_code'       => $e->stockItemCode,
-                        'available'          => $e->available,
-                        'required'           => $e->required,
+                        'missing_code' => $e->stockItemCode,
+                        'available' => $e->available,
+                        'required' => $e->required,
                     ],
                 );
             }
@@ -99,18 +98,18 @@ class BomService
                 $case->load('patient:id,name');
 
                 $bom = Bom::create([
-                    'bom_no'       => $this->nextBomNo(),
-                    'case_id'      => $case->id,
-                    'order_ref'    => $case->order_ref,
-                    'quote_no'     => $case->quote_no,
+                    'bom_no' => $this->nextBomNo(),
+                    'case_id' => $case->id,
+                    'order_ref' => $case->order_ref,
+                    'quote_no' => $case->quote_no,
                     'patient_name' => $case->patient?->name ?? '—',
-                    'stage'        => Bom::STAGE_RAW,
+                    'stage' => Bom::STAGE_RAW,
                 ]);
             }
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty  = (int) $row['qty'];
+                $qty = (int) $row['qty'];
 
                 if ($qty < 1) {
                     abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
@@ -121,22 +120,22 @@ class BomService
                 }
 
                 BomItem::create([
-                    'bom_id'          => $bom->id,
+                    'bom_id' => $bom->id,
                     'stock_item_code' => $code,
-                    'name'            => $row['name'] ?? $code,
-                    'source'          => BomItem::SOURCE_SPEC,
-                    'qty'             => $qty,
-                    'unit_cost'       => 0,
-                    'issued_qty'      => 0,
-                    'returned_qty'    => 0,
+                    'name' => $row['name'] ?? $code,
+                    'source' => BomItem::SOURCE_SPEC,
+                    'qty' => $qty,
+                    'unit_cost' => 0,
+                    'issued_qty' => 0,
+                    'returned_qty' => 0,
                 ]);
             }
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "BOM خام من التوصيف — {$bom->bom_no}",
-                tag:         'spec',
-                after:       $bom->load('items')->only(['id', 'bom_no', 'case_id', 'stage']),
+                tag: 'spec',
+                after: $bom->load('items')->only(['id', 'bom_no', 'case_id', 'stage']),
             );
 
             $this->reserveBackorderForBom($bom);
@@ -165,14 +164,14 @@ class BomService
         $bom->update(['stock_reserved_at' => now()]);
 
         AuditService::log(
-            action:      'reserve',
+            action: 'reserve',
             description: "حجز/طلب توريد من التوصيف — {$bom->bom_no}",
-            tag:         'spec',
-            after:       [
+            tag: 'spec',
+            after: [
                 'bom_id' => $bom->id,
-                'items'  => $bom->items->map(fn (BomItem $i) => [
+                'items' => $bom->items->map(fn (BomItem $i) => [
                     'code' => $i->stock_item_code,
-                    'qty'  => $i->qty,
+                    'qty' => $i->qty,
                 ])->values()->all(),
             ],
         );
@@ -242,21 +241,21 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty  = (int) $row['qty'];
+                $qty = (int) $row['qty'];
 
                 if (! StockItem::where('code', $code)->exists()) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
 
                 BomItem::create([
-                    'bom_id'          => $bom->id,
+                    'bom_id' => $bom->id,
                     'stock_item_code' => $code,
-                    'name'            => $row['name'] ?? $code,
-                    'source'          => BomItem::SOURCE_SPEC,
-                    'qty'             => $qty,
-                    'unit_cost'       => 0,
-                    'issued_qty'      => 0,
-                    'returned_qty'    => 0,
+                    'name' => $row['name'] ?? $code,
+                    'source' => BomItem::SOURCE_SPEC,
+                    'qty' => $qty,
+                    'unit_cost' => 0,
+                    'issued_qty' => 0,
+                    'returned_qty' => 0,
                 ]);
             }
 
@@ -275,12 +274,12 @@ class BomService
             }
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "تحديث بنود التوصيف في BOM — {$bom->bom_no}",
-                tag:         'spec',
-                after:       [
+                tag: 'spec',
+                after: [
                     'bom_id' => $bom->id,
-                    'items'  => $items,
+                    'items' => $items,
                 ],
             );
 
@@ -313,7 +312,7 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty  = (int) $row['qty'];
+                $qty = (int) $row['qty'];
 
                 if ($qty < 1) {
                     abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
@@ -340,26 +339,27 @@ class BomService
                 if ($existingAdj) {
                     $existingAdj->update(['qty' => $existingAdj->qty + $qty]);
                     $bom->load('items');
+
                     continue;
                 }
 
                 BomItem::create([
-                    'bom_id'          => $bom->id,
+                    'bom_id' => $bom->id,
                     'stock_item_code' => $code,
-                    'name'            => $row['name'] ?? $stockItem->name,
-                    'source'          => BomItem::SOURCE_ADJUSTMENT,
-                    'qty'             => $qty,
-                    'unit_cost'       => 0,
-                    'issued_qty'      => 0,
-                    'returned_qty'    => 0,
+                    'name' => $row['name'] ?? $stockItem->name,
+                    'source' => BomItem::SOURCE_ADJUSTMENT,
+                    'qty' => $qty,
+                    'unit_cost' => 0,
+                    'issued_qty' => 0,
+                    'returned_qty' => 0,
                 ]);
             }
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "إضافة بنود مستشار المعدلات — {$bom->bom_no}",
-                tag:         'spec',
-                after:       ['bom_id' => $bom->id, 'added' => count($items)],
+                tag: 'spec',
+                after: ['bom_id' => $bom->id, 'added' => count($items)],
             );
 
             return $bom->fresh()->load('items');
@@ -396,7 +396,7 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty  = (int) $row['qty'];
+                $qty = (int) $row['qty'];
 
                 if ($qty < 1) {
                     abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
@@ -417,22 +417,22 @@ class BomService
                 $stockItem->increment('reserved', $qty);
 
                 BomItem::create([
-                    'bom_id'          => $bom->id,
+                    'bom_id' => $bom->id,
                     'stock_item_code' => $code,
-                    'name'            => $row['name'] ?? $code,
-                    'source'          => BomItem::SOURCE_ADJUSTMENT,
-                    'qty'             => $qty,
-                    'unit_cost'       => 0,
-                    'issued_qty'      => 0,
-                    'returned_qty'    => 0,
+                    'name' => $row['name'] ?? $code,
+                    'source' => BomItem::SOURCE_ADJUSTMENT,
+                    'qty' => $qty,
+                    'unit_cost' => 0,
+                    'issued_qty' => 0,
+                    'returned_qty' => 0,
                 ]);
             }
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "تحديث بنود المعدلات في BOM — {$bom->bom_no}",
-                tag:         'spec',
-                after:       ['bom_id' => $bom->id, 'items' => $items],
+                tag: 'spec',
+                after: ['bom_id' => $bom->id, 'items' => $items],
             );
 
             return $bom->fresh()->load('items');
@@ -468,11 +468,11 @@ class BomService
             $item->delete();
 
             AuditService::log(
-                action:      'delete',
+                action: 'delete',
                 description: "حذف بند مستشار المعدلات — {$bom->bom_no}",
-                tag:         'spec',
-                before:      $snapshot,
-                after:       ['bom_id' => $bom->id],
+                tag: 'spec',
+                before: $snapshot,
+                after: ['bom_id' => $bom->id],
             );
 
             return $bom->fresh()->load('items');
@@ -515,10 +515,10 @@ class BomService
         $bom->update(['stock_reserved_at' => now()]);
 
         AuditService::log(
-            action:      'reserve',
+            action: 'reserve',
             description: "حجز مواد فوري عند اعتماد التشغيل — {$bom->bom_no}",
-            tag:         'warehouse',
-            after:       ['bom_id' => $bom->id, 'case_id' => $case->id],
+            tag: 'warehouse',
+            after: ['bom_id' => $bom->id, 'case_id' => $case->id],
         );
     }
 
@@ -550,12 +550,12 @@ class BomService
             $case->load('patient:id,name');
 
             $bom = Bom::create([
-                'bom_no'       => $this->nextBomNo(),
-                'case_id'      => $case->id,
-                'order_ref'    => $case->order_ref,
-                'quote_no'     => $case->quote_no,
+                'bom_no' => $this->nextBomNo(),
+                'case_id' => $case->id,
+                'order_ref' => $case->order_ref,
+                'quote_no' => $case->quote_no,
                 'patient_name' => $case->patient?->name ?? '—',
-                'stage'        => Bom::STAGE_RAW,
+                'stage' => Bom::STAGE_RAW,
             ]);
 
             foreach ($items as $row) {
@@ -563,10 +563,10 @@ class BomService
             }
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "إنشاء BOM {$bom->bom_no}",
-                tag:         'warehouse',
-                after:       $bom->load('items')->toArray(),
+                tag: 'warehouse',
+                after: $bom->load('items')->toArray(),
             );
 
             return $bom;
@@ -602,10 +602,10 @@ class BomService
         }
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تفعيل BOM خام للصرف — {$bom->bom_no}",
-            tag:         'warehouse',
-            after:       ['bom_id' => $bom->id, 'stage' => $bom->stage],
+            tag: 'warehouse',
+            after: ['bom_id' => $bom->id, 'stage' => $bom->stage],
         );
 
         return $bom->fresh()->load('items');
@@ -635,7 +635,7 @@ class BomService
     private function appendBomItemWithReservation(Bom $bom, array $row, CaseRecord $case): void
     {
         $code = $row['stock_item_code'];
-        $qty  = (int) $row['qty'];
+        $qty = (int) $row['qty'];
 
         $stockItem = StockItem::where('code', $code)->lockForUpdate()->first();
 
@@ -652,13 +652,13 @@ class BomService
         $unitCost = $this->stockPriceService->highestUnitPrice($code);
 
         BomItem::create([
-            'bom_id'          => $bom->id,
+            'bom_id' => $bom->id,
             'stock_item_code' => $code,
-            'name'            => $row['name'] ?? $stockItem->name,
-            'qty'             => $qty,
-            'unit_cost'       => $unitCost,
-            'issued_qty'      => 0,
-            'returned_qty'    => 0,
+            'name' => $row['name'] ?? $stockItem->name,
+            'qty' => $qty,
+            'unit_cost' => $unitCost,
+            'issued_qty' => 0,
+            'returned_qty' => 0,
         ]);
 
         $stockItem->increment('reserved', $qty);
@@ -686,7 +686,7 @@ class BomService
                 $bom->refresh()->load('items');
             }
 
-            $items  = $bom->items;
+            $items = $bom->items;
             $groups = BomItemAggregator::groupModels($items);
 
             if (count($scannedBarcodes) !== $groups->count()) {
@@ -712,13 +712,13 @@ class BomService
                     throw BarcodeDispenseMismatchException::forItem($code);
                 }
 
-                $totalQty  = (int) $rows->sum('qty');
+                $totalQty = (int) $rows->sum('qty');
                 $stockItem = StockItem::where('code', $code)
                     ->lockForUpdate()
                     ->firstOrFail();
 
                 $stockBefore[$stockItem->code] = [
-                    'qty'      => $stockItem->qty,
+                    'qty' => $stockItem->qty,
                     'reserved' => $stockItem->reserved,
                 ];
 
@@ -735,19 +735,19 @@ class BomService
                         ->lockForUpdate()
                         ->firstOrFail();
 
-                    $qty          = $bomItem->qty;
+                    $qty = $bomItem->qty;
                     $balanceAfter = $stockItem->qty - $qty;
 
                     StockMovement::create([
-                        'stock_item_id'        => $stockItem->id,
-                        'movement_type'        => StockMovement::TYPE_ISSUE,
-                        'quantity'             => -$qty,
-                        'unit_cost'            => $bomItem->unit_cost,
-                        'balance_after'        => $balanceAfter,
-                        'reference_type'       => 'bom',
-                        'reference_id'         => $bom->id,
+                        'stock_item_id' => $stockItem->id,
+                        'movement_type' => StockMovement::TYPE_ISSUE,
+                        'quantity' => -$qty,
+                        'unit_cost' => $bomItem->unit_cost,
+                        'balance_after' => $balanceAfter,
+                        'reference_type' => 'bom',
+                        'reference_id' => $bom->id,
                         'performed_by_user_id' => $performedById,
-                        'moved_at'             => now(),
+                        'moved_at' => now(),
                     ]);
 
                     $stockItem->decrement('qty', $qty);
@@ -767,7 +767,7 @@ class BomService
             }
 
             $bom->update([
-                'stage'       => Bom::STAGE_WIP,
+                'stage' => Bom::STAGE_WIP,
                 'released_at' => now(),
             ]);
 
@@ -782,7 +782,7 @@ class BomService
                     $stockItem = StockItem::where('code', $bomItem->stock_item_code)->first();
                     if ($stockItem) {
                         $stockAfter[$stockItem->code] = [
-                            'qty'      => $stockItem->qty,
+                            'qty' => $stockItem->qty,
                             'reserved' => $stockItem->reserved,
                         ];
                     }
@@ -790,11 +790,11 @@ class BomService
             }
 
             AuditService::log(
-                action:      'dispense',
+                action: 'dispense',
                 description: "صرف BOM بالباركود — {$bom->bom_no}",
-                tag:         'warehouse',
-                before:      $stockBefore,
-                after:       $stockAfter,
+                tag: 'warehouse',
+                before: $stockBefore,
+                after: $stockAfter,
             );
 
             if ($case) {
@@ -891,11 +891,11 @@ class BomService
             $case->update(['manufacturing_stage' => $newStage]);
 
             AuditService::log(
-                action:      'stage',
+                action: 'stage',
                 description: 'تقدم مرحلة التصنيع',
-                tag:         'operations',
-                before:      $before,
-                after:       ['manufacturing_stage' => $newStage],
+                tag: 'operations',
+                before: $before,
+                after: ['manufacturing_stage' => $newStage],
             );
 
             return $case->fresh();
@@ -946,7 +946,7 @@ class BomService
             $before = ['stage' => $bom->stage, 'case_stage' => $bom->caseRecord?->stage_key];
 
             $bom->update([
-                'stage'       => Bom::STAGE_FINISHED,
+                'stage' => Bom::STAGE_FINISHED,
                 'finished_at' => now(),
             ]);
 
@@ -957,12 +957,12 @@ class BomService
             }
 
             AuditService::log(
-                action:      'finish',
+                action: 'finish',
                 description: "إغلاق BOM — تام — {$bom->bom_no}",
-                tag:         'warehouse',
-                before:      $before,
-                after:       [
-                    'stage'      => Bom::STAGE_FINISHED,
+                tag: 'warehouse',
+                before: $before,
+                after: [
+                    'stage' => Bom::STAGE_FINISHED,
                     'case_stage' => CaseRecord::STAGE_READY_DELIVERY,
                 ],
             );

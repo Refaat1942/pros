@@ -4,9 +4,10 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\Bom;
 use App\Models\CaseRecord;
-use App\Models\Patient;
+use App\Models\Quote;
 use App\Services\Dashboard\DashboardPageDataService;
 use App\Services\Dashboard\DashboardQueueService;
+use App\Services\QuoteService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -37,11 +38,11 @@ class DualPathwayDashboardVisibilityTest extends TestCase
         $case->loadMissing('patient');
 
         return Bom::create([
-            'case_id'      => $case->id,
-            'bom_no'       => $bomNo,
-            'order_ref'    => $case->order_ref,
+            'case_id' => $case->id,
+            'bom_no' => $bomNo,
+            'order_ref' => $case->order_ref,
             'patient_name' => $case->patient?->name ?? 'مريض',
-            'stage'        => Bom::STAGE_RAW,
+            'stage' => Bom::STAGE_RAW,
         ]);
     }
 
@@ -51,12 +52,12 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $this->makeBom($case, 'BOM-0001');
 
         $data = app(DashboardPageDataService::class)->resolve('technical', 'bom');
-        $ids  = collect($data['warehouse_boms'])->pluck('case_id');
+        $ids = collect($data['warehouse_boms'])->pluck('case_id');
 
         $this->assertFalse(
             $ids->contains($case->id),
@@ -68,13 +69,13 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0001']);
 
         $this->makeBom($case, 'BOM-0002');
 
         $data = app(DashboardPageDataService::class)->resolve('technical', 'bom');
-        $ids  = collect($data['warehouse_boms'])->pluck('case_id');
+        $ids = collect($data['warehouse_boms'])->pluck('case_id');
 
         $this->assertTrue(
             $ids->contains($case->id),
@@ -86,13 +87,13 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0002']);
 
         $this->makeBom($case, 'BOM-0003');
 
         $data = app(DashboardPageDataService::class)->resolve('technical', 'bom');
-        $ids  = collect($data['warehouse_boms'])->pluck('case_id');
+        $ids = collect($data['warehouse_boms'])->pluck('case_id');
 
         $this->assertTrue(
             $ids->contains($case->id),
@@ -106,7 +107,7 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $bom = $this->makeBom($case, 'BOM-0010');
 
@@ -119,7 +120,7 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
         $bom = $this->makeBom($case, 'BOM-0011');
 
@@ -137,7 +138,7 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->operationsReadyCase($patient);
+        $case = $this->operationsReadyCase($patient);
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 
@@ -152,10 +153,10 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->operationsReadyCase($patient);
+        $case = $this->operationsReadyCase($patient);
 
-        app(\App\Services\QuoteService::class)->releaseToReception(
-            \App\Models\Quote::where('case_id', $case->id)->firstOrFail()
+        app(QuoteService::class)->releaseToReception(
+            Quote::where('case_id', $case->id)->firstOrFail()
         );
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
@@ -171,16 +172,16 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->operationsReadyCase($patient);
-        $quote   = \App\Models\Quote::where('case_id', $case->id)->firstOrFail();
-        $recep   = $this->userWithRole('reception');
+        $case = $this->operationsReadyCase($patient);
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $recep = $this->userWithRole('reception');
 
         $this->actingAs($recep)
             ->getJson('/reception/quote/list')
             ->assertOk()
             ->assertJsonPath('total', 0);
 
-        app(\App\Services\QuoteService::class)->releaseToReception($quote);
+        app(QuoteService::class)->releaseToReception($quote);
 
         $this->actingAs($recep)
             ->getJson('/reception/quote/list')
@@ -234,10 +235,10 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->operationsReadyCase($patient);
+        $case = $this->operationsReadyCase($patient);
 
-        app(\App\Services\QuoteService::class)->releaseToReception(
-            \App\Models\Quote::where('case_id', $case->id)->firstOrFail()
+        app(QuoteService::class)->releaseToReception(
+            Quote::where('case_id', $case->id)->firstOrFail()
         );
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
@@ -249,7 +250,7 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
         $ids = app(DashboardQueueService::class)->receptionApprovalPendingCaseIds();
 

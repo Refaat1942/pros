@@ -7,7 +7,6 @@ use App\Http\Requests\Manufacturing\AdvanceManufacturingStageRequest;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
-use App\Services\DeliveryService;
 use App\Support\ManufacturingDeskCaseFormatter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -20,8 +19,7 @@ class WorkshopQueueController extends Controller
 
     public function __construct(
         private readonly BomService $bomService,
-    ) {
-    }
+    ) {}
 
     /**
      * طابور ورشة التصنيع — أوامر بعد صرف المخزن (BOM wip).
@@ -40,18 +38,18 @@ class WorkshopQueueController extends Controller
                 ->when($request->manufacturing_stage, fn ($q, $s) => $q->where('manufacturing_stage', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhere('work_order_no', 'like', "%{$s}%");
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhere('work_order_no', 'like', "%{$s}%");
                 }))
                 ->orderByDesc('updated_at')
         );
 
         $collection = collect($cases);
-        $summary    = ManufacturingDeskCaseFormatter::workshopSummary($collection);
+        $summary = ManufacturingDeskCaseFormatter::workshopSummary($collection);
 
         return response()->json([
-            'data'    => $collection->map(fn ($c) => ManufacturingDeskCaseFormatter::format($c, 'workshop.work-order.print'))->values(),
-            'total'   => $collection->count(),
+            'data' => $collection->map(fn ($c) => ManufacturingDeskCaseFormatter::format($c, 'workshop.work-order.print'))->values(),
+            'total' => $collection->count(),
             'summary' => $summary,
         ]);
     }
@@ -68,7 +66,7 @@ class WorkshopQueueController extends Controller
 
         return response()->json([
             'message' => 'تم تقدم مرحلة التصنيع.',
-            'case'    => ManufacturingDeskCaseFormatter::format(
+            'case' => ManufacturingDeskCaseFormatter::format(
                 $case->load(['patient:id,patient_code,name', 'bom.items:id,bom_id']),
                 'workshop.work-order.print',
             ),
@@ -92,8 +90,8 @@ class WorkshopQueueController extends Controller
 
         return response()->json([
             'message' => 'تم التصنيع — يُرجى توجيه العميل إلى المخزن للتسليم.',
-            'case'    => ManufacturingDeskCaseFormatter::format($case, 'workshop.work-order.print'),
-            'bom'     => $bom->only(['id', 'bom_no', 'stage', 'finished_at']),
+            'case' => ManufacturingDeskCaseFormatter::format($case, 'workshop.work-order.print'),
+            'bom' => $bom->only(['id', 'bom_no', 'stage', 'finished_at']),
         ]);
     }
 
@@ -109,7 +107,7 @@ class WorkshopQueueController extends Controller
         abort_unless($case->bom, 404, 'لا توجد BOM مرتبطة بهذه الحالة.');
 
         return view('prints.work-order', [
-            'case'      => $case,
+            'case' => $case,
             'autoPrint' => true,
         ]);
     }

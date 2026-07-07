@@ -28,29 +28,28 @@ class TechOrderSpecController extends Controller
     public function __construct(
         private readonly SpecService $specService,
         private readonly SpecOrdersService $ordersService,
-    ) {
-    }
+    ) {}
 
     /**
      * الحالات الواردة في مرحلة التوصيف الفني.
      */
     public function index(Request $request): JsonResponse
     {
-        $range  = $this->ordersService->parseDateRange($request->query('from'), $request->query('to'));
-        $from   = $range['from'] ?? null;
-        $to     = $range['to'] ?? null;
+        $range = $this->ordersService->parseDateRange($request->query('from'), $request->query('to'));
+        $from = $range['from'] ?? null;
+        $to = $range['to'] ?? null;
         $search = $request->query('search');
 
         $cases = $this->ordersService->list($from, $to, $search);
         $stats = $this->ordersService->stats($from, $to, $search);
 
         return response()->json([
-            'data'        => $cases->map(fn ($c) => $this->formatCase($c))->values(),
-            'stats'       => $stats,
-            'date_from'   => $from?->toDateString(),
-            'date_to'     => $to?->toDateString(),
+            'data' => $cases->map(fn ($c) => $this->formatCase($c))->values(),
+            'stats' => $stats,
+            'date_from' => $from?->toDateString(),
+            'date_to' => $to?->toDateString(),
             'export_rows' => $cases->map(fn ($c) => $this->ordersService->exportRow($c))->values(),
-            'total'       => $cases->count(),
+            'total' => $cases->count(),
         ]);
     }
 
@@ -59,21 +58,21 @@ class TechOrderSpecController extends Controller
      */
     public function exportOrders(Request $request): StreamedResponse
     {
-        $range  = $this->ordersService->parseDateRange($request->query('from'), $request->query('to'));
-        $from   = $range['from'] ?? null;
-        $to     = $range['to'] ?? null;
+        $range = $this->ordersService->parseDateRange($request->query('from'), $request->query('to'));
+        $from = $range['from'] ?? null;
+        $to = $range['to'] ?? null;
         $search = $request->query('search');
 
         $report = $this->ordersService->exportReport($from, $to, $search);
 
         $suffix = ($from && $to)
-            ? $from->format('Y-m-d') . '_' . $to->format('Y-m-d')
+            ? $from->format('Y-m-d').'_'.$to->format('Y-m-d')
             : 'all';
-        $filename = 'spec-orders-' . $suffix . '.csv';
+        $filename = 'spec-orders-'.$suffix.'.csv';
 
         $callback = function () use ($report) {
             $out = fopen('php://output', 'w');
-            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
             fputcsv($out, [$report['title']]);
             fputcsv($out, [$report['period_label']]);
             fputcsv($out, []);
@@ -85,8 +84,8 @@ class TechOrderSpecController extends Controller
         };
 
         return response()->stream($callback, 200, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -121,24 +120,24 @@ class TechOrderSpecController extends Controller
             ->orderBy('code')
             ->get(['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom'])
             ->map(fn ($item) => [
-                'code'          => $item->code,
-                'name'          => $item->name,
-                'spec'          => $item->spec,
-                'uom'           => $item->uom,
+                'code' => $item->code,
+                'name' => $item->name,
+                'spec' => $item->spec,
+                'uom' => $item->uom,
                 'available_max' => $item->availableQty(),
             ]);
 
         return response()->json([
-            'case'           => $this->formatCase($case),
+            'case' => $this->formatCase($case),
             'medical_record' => $medicalRecord ? [
-                'diagnosis'    => $medicalRecord->diagnosis,
+                'diagnosis' => $medicalRecord->diagnosis,
                 'prescription' => $medicalRecord->prescription,
-                'doctor_name'  => $medicalRecord->doctor_name,
-                'items'        => $medicalRecord->items->map->only(['stock_item_code', 'name', 'qty']),
+                'doctor_name' => $medicalRecord->doctor_name,
+                'items' => $medicalRecord->items->map->only(['stock_item_code', 'name', 'qty']),
             ] : null,
-            'draft'          => $draft ? $this->formatSpec($draft) : null,
+            'draft' => $draft ? $this->formatSpec($draft) : null,
             'submitted_spec' => $submittedSpec ? $this->formatSpec($submittedSpec) : null,
-            'stock_catalog'  => $stockCatalog,
+            'stock_catalog' => $stockCatalog,
         ]);
     }
 
@@ -162,15 +161,15 @@ class TechOrderSpecController extends Controller
             $case = $this->specService->submit($spec);
         } catch (InvalidSpecItemException $e) {
             return response()->json([
-                'message'          => $e->getMessage(),
-                'stock_item_code'  => $e->stockItemCode,
+                'message' => $e->getMessage(),
+                'stock_item_code' => $e->stockItemCode,
             ], 422);
         }
 
         return response()->json([
             'message' => 'تم إرسال التوصيف إلى مرحلة المعدلات.',
-            'case'    => $this->formatCase($case->load('patient')),
-            'spec'    => $this->formatSpec($spec->fresh()->load('items')),
+            'case' => $this->formatCase($case->load('patient')),
+            'spec' => $this->formatSpec($spec->fresh()->load('items')),
         ]);
     }
 
@@ -196,8 +195,8 @@ class TechOrderSpecController extends Controller
         $spec->load(['items', 'caseRecord.patient']);
 
         return response()->view('spec.print', [
-            'spec'      => $spec,
-            'case'      => $spec->caseRecord,
+            'spec' => $spec,
+            'case' => $spec->caseRecord,
             'autoPrint' => ! $request->boolean('embed'),
         ]);
     }
@@ -214,14 +213,14 @@ class TechOrderSpecController extends Controller
             ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('request_no', 'like', "%{$s}%")
-                      ->orWhere('patient_name', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%");
+                        ->orWhere('patient_name', 'like', "%{$s}%")
+                        ->orWhere('order_ref', 'like', "%{$s}%");
                 }))
                 ->orderByDesc('request_date')
         );
 
         return response()->json([
-            'data'  => collect($requests)->map(fn ($r) => $this->formatPricingRequest($r, forSpec: true))->values(),
+            'data' => collect($requests)->map(fn ($r) => $this->formatPricingRequest($r, forSpec: true))->values(),
             'total' => $requests->count(),
         ]);
     }
@@ -242,9 +241,9 @@ class TechOrderSpecController extends Controller
             'created_at',
         ]) + [
             'display_entity' => $case->displayEntity(),
-            'rework'         => $case->reworkNoticeFor(CaseRecord::STAGE_TECHNICAL),
+            'rework' => $case->reworkNoticeFor(CaseRecord::STAGE_TECHNICAL),
             'patient' => $case->relationLoaded('patient') ? $case->patient : null,
-            'spec'    => $case->relationLoaded('techOrderSpec') ? $case->techOrderSpec : null,
+            'spec' => $case->relationLoaded('techOrderSpec') ? $case->techOrderSpec : null,
         ];
     }
 

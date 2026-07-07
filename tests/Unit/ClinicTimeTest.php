@@ -14,11 +14,11 @@ class ClinicTimeTest extends TestCase
         config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
 
         // ٢٧ يونيو ٠٠:١١ بتوقيت القاهرة = ٢٦ يونيو ٢١:١١ UTC
-        \Carbon\Carbon::setTestNow('2026-06-26 21:11:00');
+        Carbon::setTestNow('2026-06-26 21:11:00');
 
         $this->assertSame('2026-06-27', ClinicTime::todayDateString());
 
-        \Carbon\Carbon::setTestNow();
+        Carbon::setTestNow();
     }
 
     public function test_formats_utc_timestamp_in_clinic_timezone(): void
@@ -53,7 +53,7 @@ class ClinicTimeTest extends TestCase
         $this->assertSame('2026-07-03', $range['to']->toDateString());
         $this->assertSame(
             '01/07/2026 — 03/07/2026',
-            ClinicTime::format($range['from'], 'd/m/Y') . ' — ' . ClinicTime::format($range['to'], 'd/m/Y'),
+            ClinicTime::format($range['from'], 'd/m/Y').' — '.ClinicTime::format($range['to'], 'd/m/Y'),
         );
     }
 
@@ -72,7 +72,7 @@ class ClinicTimeTest extends TestCase
         config(['app.timezone' => 'UTC', 'app.clinic_timezone' => 'Africa/Cairo']);
 
         $appointment = new Appointment([
-            'transferred_to_clinic'    => true,
+            'transferred_to_clinic' => true,
             'transferred_to_clinic_at' => '2026-06-26 09:23:00',
         ]);
 

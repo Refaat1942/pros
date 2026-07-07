@@ -12,11 +12,11 @@ class UpdateCompanyRequest extends BaseRequest
         $companyId = $this->route('company')?->id;
 
         return [
-            'name'        => [
+            'name' => [
                 'sometimes', 'required', 'string', 'max:255',
                 Rule::unique('contract_companies', 'name')->ignore($companyId),
             ],
-            'is_military'   => ['sometimes', 'boolean'],
+            'is_military' => ['sometimes', 'boolean'],
             'is_contracted' => ['sometimes', 'boolean'],
             'discount_percent' => ['sometimes', 'numeric', 'min:0', 'max:100'],
         ];

@@ -12,9 +12,9 @@ class HousekeepingCommandsTest extends TestCase
     {
         AppNotification::create([
             'role_slug' => 'admin',
-            'event'     => 'test',
-            'title'     => 'Test',
-            'body'      => 'Body',
+            'event' => 'test',
+            'title' => 'Test',
+            'body' => 'Body',
         ]);
 
         $this->artisan('prosthetics:purge-notifications')
@@ -40,9 +40,9 @@ class HousekeepingCommandsTest extends TestCase
     {
         AppNotification::create([
             'role_slug' => 'reception',
-            'event'     => 'test',
-            'title'     => 'Test',
-            'body'      => 'Body',
+            'event' => 'test',
+            'title' => 'Test',
+            'body' => 'Body',
         ]);
 
         $path = storage_path('logs/test-housekeeping-combined.log');

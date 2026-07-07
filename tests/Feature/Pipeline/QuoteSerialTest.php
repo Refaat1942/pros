@@ -4,6 +4,9 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\CaseRecord;
 use App\Models\Quote;
+use App\Services\BomService;
+use App\Services\StockPriceService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -26,7 +29,7 @@ class QuoteSerialTest extends TestCase
 
     public function test_quote_serial_accessor_matches_quote_no(): void
     {
-        $case  = $this->caseWaitingAtCosting();
+        $case = $this->caseWaitingAtCosting();
         $quote = $this->confirmCostingAndIssueQuote($case);
 
         $this->assertSame($quote->quote_no, $quote->quote_serial);
@@ -35,7 +38,7 @@ class QuoteSerialTest extends TestCase
 
     public function test_reception_quote_api_exposes_quote_serial(): void
     {
-        $case  = $this->caseWaitingAtCosting();
+        $case = $this->caseWaitingAtCosting();
         $quote = $this->confirmCostingAndIssueQuote($case);
 
         $this->actingAs($this->userWithRole('operations'))
@@ -51,35 +54,35 @@ class QuoteSerialTest extends TestCase
 
     public function test_duplicate_quote_no_is_rejected(): void
     {
-        $case  = $this->caseWaitingAtCosting();
+        $case = $this->caseWaitingAtCosting();
         $quote = $this->confirmCostingAndIssueQuote($case);
 
-        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        $this->expectException(UniqueConstraintViolationException::class);
 
         Quote::create([
-            'quote_no'           => $quote->quote_no,
-            'order_ref'          => $quote->order_ref,
-            'case_id'            => $case->id,
+            'quote_no' => $quote->quote_no,
+            'order_ref' => $quote->order_ref,
+            'case_id' => $case->id,
             'pricing_request_id' => null,
-            'patient_name'       => 'مريض',
-            'company_name'       => 'جهة',
-            'quote_date'         => now()->toDateString(),
-            'status'             => Quote::STATUS_PENDING,
-            'total'              => 1,
+            'patient_name' => 'مريض',
+            'company_name' => 'جهة',
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_PENDING,
+            'total' => 1,
         ]);
     }
 
     private function caseWaitingAtCosting(): CaseRecord
     {
         $item = $this->stockItem('RM-001', qty: 20);
-        app(\App\Services\StockPriceService::class)->addBatch(
+        app(StockPriceService::class)->addBatch(
             $item, 10, 200.00, $this->makeSupplier(), 'INV-QS', now()
         );
 
         $patient = $this->civilianPatient($this->civilianCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
-        app(\App\Services\BomService::class)->createSpecRaw($case, [
+        app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 

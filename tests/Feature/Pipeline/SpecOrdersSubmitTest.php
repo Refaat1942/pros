@@ -5,7 +5,10 @@ namespace Tests\Feature\Pipeline;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\MedicalRecordItem;
+use App\Models\StockItem;
 use App\Models\TechOrderSpec;
+use App\Services\Dashboard\DashboardQueueService;
+use App\Services\MedicalRecordService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -19,40 +22,40 @@ class SpecOrdersSubmitTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $doctor  = $this->userWithRole('doctor');
-        $spec    = $this->userWithRole('spec');
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
 
         $this->actingAs($doctor);
 
         $record = MedicalRecord::create([
-            'patient_id'     => $patient->id,
-            'patient_name'   => $patient->name,
-            'patient_type'   => $patient->patient_type,
-            'diagnosis'      => 'بتر فوق الركبة',
-            'doctor_name'    => $doctor->name,
-            'record_date'    => now()->toDateString(),
-            'status'         => MedicalRecord::STATUS_DRAFT,
-            'locked'         => false,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'patient_type' => $patient->patient_type,
+            'diagnosis' => 'بتر فوق الركبة',
+            'doctor_name' => $doctor->name,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
         MedicalRecordItem::create([
             'medical_record_id' => $record->id,
-            'stock_item_code'   => 'ITM-003',
-            'name'              => 'قدم Carbon Spring',
-            'qty'               => 1,
+            'stock_item_code' => 'ITM-003',
+            'name' => 'قدم Carbon Spring',
+            'qty' => 1,
         ]);
 
-        app(\App\Services\MedicalRecordService::class)->lock($record);
+        app(MedicalRecordService::class)->lock($record);
 
         $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
 
         TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => $doctor->name,
-            'locked'       => false,
+            'doctor_name' => $doctor->name,
+            'locked' => false,
         ]);
 
         $response = $this->actingAs($spec)
@@ -69,47 +72,47 @@ class SpecOrdersSubmitTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $doctor  = $this->userWithRole('doctor');
-        $spec    = $this->userWithRole('spec');
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
 
         $this->actingAs($doctor);
 
         $record = MedicalRecord::create([
-            'patient_id'     => $patient->id,
-            'patient_name'   => $patient->name,
-            'patient_type'   => $patient->patient_type,
-            'diagnosis'      => 'بتر فوق الركبة',
-            'doctor_name'    => $doctor->name,
-            'record_date'    => now()->toDateString(),
-            'status'         => MedicalRecord::STATUS_DRAFT,
-            'locked'         => false,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'patient_type' => $patient->patient_type,
+            'diagnosis' => 'بتر فوق الركبة',
+            'doctor_name' => $doctor->name,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
         MedicalRecordItem::create([
             'medical_record_id' => $record->id,
-            'stock_item_code'   => 'ITM-003',
-            'name'              => 'قدم Carbon Spring',
-            'qty'               => 1,
+            'stock_item_code' => 'ITM-003',
+            'name' => 'قدم Carbon Spring',
+            'qty' => 1,
         ]);
 
-        app(\App\Services\MedicalRecordService::class)->lock($record);
+        app(MedicalRecordService::class)->lock($record);
 
         $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
 
         $draft = TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => $doctor->name,
-            'locked'       => false,
+            'doctor_name' => $doctor->name,
+            'locked' => false,
         ]);
 
         $this->actingAs($spec);
 
         $this->putJson("/spec/spec/{$draft->id}", [
             'tech_notes' => 'توصيف من توصيات الطبيب',
-            'items'      => [
+            'items' => [
                 ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => 1],
             ],
         ])->assertOk();
@@ -119,7 +122,7 @@ class SpecOrdersSubmitTest extends TestCase
             ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS)
             ->assertJsonStructure(['case' => ['id', 'stage_key'], 'spec' => ['items']]);
 
-        $this->assertNotContains($case->id, app(\App\Services\Dashboard\DashboardQueueService::class)->specTechnicalCaseIds());
+        $this->assertNotContains($case->id, app(DashboardQueueService::class)->specTechnicalCaseIds());
     }
 
     public function test_military_spec_submit_stays_in_adjustments_queue(): void
@@ -128,47 +131,47 @@ class SpecOrdersSubmitTest extends TestCase
 
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $doctor  = $this->userWithRole('doctor');
-        $spec    = $this->userWithRole('spec');
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
 
         $this->actingAs($doctor);
 
         $record = MedicalRecord::create([
-            'patient_id'     => $patient->id,
-            'patient_name'   => $patient->name,
-            'patient_type'   => $patient->patient_type,
-            'diagnosis'      => 'بتر فوق الركبة',
-            'doctor_name'    => $doctor->name,
-            'record_date'    => now()->toDateString(),
-            'status'         => MedicalRecord::STATUS_DRAFT,
-            'locked'         => false,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'patient_type' => $patient->patient_type,
+            'diagnosis' => 'بتر فوق الركبة',
+            'doctor_name' => $doctor->name,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
         MedicalRecordItem::create([
             'medical_record_id' => $record->id,
-            'stock_item_code'   => 'ITM-003',
-            'name'              => 'قدم Carbon Spring',
-            'qty'               => 1,
+            'stock_item_code' => 'ITM-003',
+            'name' => 'قدم Carbon Spring',
+            'qty' => 1,
         ]);
 
-        app(\App\Services\MedicalRecordService::class)->lock($record);
+        app(MedicalRecordService::class)->lock($record);
 
         $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
 
         $draft = TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => $doctor->name,
-            'locked'       => false,
+            'doctor_name' => $doctor->name,
+            'locked' => false,
         ]);
 
         $this->actingAs($spec);
 
         $this->putJson("/spec/spec/{$draft->id}", [
             'tech_notes' => 'توصيف عسكري',
-            'items'      => [
+            'items' => [
                 ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => 1],
             ],
         ])->assertOk();
@@ -206,47 +209,47 @@ class SpecOrdersSubmitTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $doctor  = $this->userWithRole('doctor');
-        $spec    = $this->userWithRole('spec');
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
 
         $this->actingAs($doctor);
 
         $record = MedicalRecord::create([
-            'patient_id'     => $patient->id,
-            'patient_name'   => $patient->name,
-            'patient_type'   => $patient->patient_type,
-            'diagnosis'      => 'بتر فوق الركبة',
-            'doctor_name'    => $doctor->name,
-            'record_date'    => now()->toDateString(),
-            'status'         => MedicalRecord::STATUS_DRAFT,
-            'locked'         => false,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'patient_type' => $patient->patient_type,
+            'diagnosis' => 'بتر فوق الركبة',
+            'doctor_name' => $doctor->name,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
         MedicalRecordItem::create([
             'medical_record_id' => $record->id,
-            'stock_item_code'   => 'ITM-003',
-            'name'              => 'قدم Carbon Spring',
-            'qty'               => 1,
+            'stock_item_code' => 'ITM-003',
+            'name' => 'قدم Carbon Spring',
+            'qty' => 1,
         ]);
 
-        app(\App\Services\MedicalRecordService::class)->lock($record);
+        app(MedicalRecordService::class)->lock($record);
 
         $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
 
         $draft = TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => $doctor->name,
-            'locked'       => false,
+            'doctor_name' => $doctor->name,
+            'locked' => false,
         ]);
 
         $this->actingAs($spec);
 
         $this->putJson("/spec/spec/{$draft->id}", [
             'tech_notes' => 'توصيف بعجز مخزني',
-            'items'      => [
+            'items' => [
                 ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => 2],
             ],
         ])->assertOk();
@@ -255,7 +258,7 @@ class SpecOrdersSubmitTest extends TestCase
             ->assertOk()
             ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS);
 
-        $stock = \App\Models\StockItem::where('code', 'ITM-003')->first();
+        $stock = StockItem::where('code', 'ITM-003')->first();
         $this->assertSame(2, $stock->reserved);
         $this->assertSame(-2, $stock->availableQty());
         $this->assertSame(2, $stock->backorderQty());
@@ -267,47 +270,47 @@ class SpecOrdersSubmitTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $doctor  = $this->userWithRole('doctor');
-        $spec    = $this->userWithRole('spec');
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
 
         $this->actingAs($doctor);
 
         $record = MedicalRecord::create([
-            'patient_id'     => $patient->id,
-            'patient_name'   => $patient->name,
-            'patient_type'   => $patient->patient_type,
-            'diagnosis'      => 'بتر فوق الركبة',
-            'doctor_name'    => $doctor->name,
-            'record_date'    => now()->toDateString(),
-            'status'         => MedicalRecord::STATUS_DRAFT,
-            'locked'         => false,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'patient_type' => $patient->patient_type,
+            'diagnosis' => 'بتر فوق الركبة',
+            'doctor_name' => $doctor->name,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
         MedicalRecordItem::create([
             'medical_record_id' => $record->id,
-            'stock_item_code'   => 'ITM-003',
-            'name'              => 'قدم Carbon Spring',
-            'qty'               => 1,
+            'stock_item_code' => 'ITM-003',
+            'name' => 'قدم Carbon Spring',
+            'qty' => 1,
         ]);
 
-        app(\App\Services\MedicalRecordService::class)->lock($record);
+        app(MedicalRecordService::class)->lock($record);
 
         $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
 
         $draft = TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => $doctor->name,
-            'locked'       => false,
+            'doctor_name' => $doctor->name,
+            'locked' => false,
         ]);
 
         $this->actingAs($spec);
 
         $this->putJson("/spec/spec/{$draft->id}", [
             'tech_notes' => 'محاولة كمية سالبة',
-            'items'      => [
+            'items' => [
                 ['stock_item_code' => 'ITM-003', 'name' => 'قدم Carbon Spring', 'qty' => -1],
             ],
         ])->assertUnprocessable()

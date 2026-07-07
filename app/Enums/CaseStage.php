@@ -9,32 +9,32 @@ namespace App\Enums;
  */
 enum CaseStage: string
 {
-    case Reception     = 'reception';
-    case Exam          = 'exam';
-    case Technical     = 'technical';
-    case Adjustments   = 'adjustments';
-    case CostCalc      = 'cost_calc';
-    case Quote         = 'quote';
-    case Operations    = 'operations';
-    case Cashier       = 'cashier';
+    case Reception = 'reception';
+    case Exam = 'exam';
+    case Technical = 'technical';
+    case Adjustments = 'adjustments';
+    case CostCalc = 'cost_calc';
+    case Quote = 'quote';
+    case Operations = 'operations';
+    case Cashier = 'cashier';
     case Manufacturing = 'manufacturing';
     case ReadyDelivery = 'ready_delivery';
-    case Delivered     = 'delivered';
+    case Delivered = 'delivered';
 
     public function label(): string
     {
         return match ($this) {
-            self::Reception     => 'استقبال',
-            self::Exam          => 'كشف',
-            self::Technical     => 'توصيف فني',
-            self::Adjustments   => 'المعدلات',
-            self::CostCalc      => 'حساب التكاليف',
-            self::Quote         => 'عرض السعر',
-            self::Operations    => 'مكتب التشغيل',
-            self::Cashier       => 'بانتظار الدفع في الخزنة',
+            self::Reception => 'استقبال',
+            self::Exam => 'كشف',
+            self::Technical => 'توصيف فني',
+            self::Adjustments => 'المعدلات',
+            self::CostCalc => 'حساب التكاليف',
+            self::Quote => 'عرض السعر',
+            self::Operations => 'مكتب التشغيل',
+            self::Cashier => 'بانتظار الدفع في الخزنة',
             self::Manufacturing => 'جاري التصنيع',
             self::ReadyDelivery => 'جاهز للتسليم',
-            self::Delivered     => 'تم التسليم',
+            self::Delivered => 'تم التسليم',
         };
     }
 
@@ -55,7 +55,7 @@ enum CaseStage: string
         return match ($key) {
             'admin_approval' => 'انتظار موافقة الأدمن',
             'waiting_return' => 'بانتظار موافقة الجهة',
-            default          => null,
+            default => null,
         };
     }
 
@@ -68,19 +68,19 @@ enum CaseStage: string
     {
         return match ($key) {
             self::Reception->value,
-            self::Exam->value          => 'badge-info',
-            self::Technical->value     => 'badge-info',
-            self::Adjustments->value   => 'badge-warning',
+            self::Exam->value => 'badge-info',
+            self::Technical->value => 'badge-info',
+            self::Adjustments->value => 'badge-warning',
             self::CostCalc->value,
-            'admin_approval'           => 'badge-warning',
-            self::Quote->value         => 'badge-warning',
+            'admin_approval' => 'badge-warning',
+            self::Quote->value => 'badge-warning',
             self::Operations->value,
-            'waiting_return'             => 'badge-warning',
-            self::Cashier->value       => 'badge-warning',
+            'waiting_return' => 'badge-warning',
+            self::Cashier->value => 'badge-warning',
             self::Manufacturing->value => 'badge-info',
             self::ReadyDelivery->value => 'badge-success',
-            self::Delivered->value     => 'badge-success',
-            default                    => 'badge-secondary',
+            self::Delivered->value => 'badge-success',
+            default => 'badge-secondary',
         };
     }
 
@@ -94,24 +94,24 @@ enum CaseStage: string
             self::Cashier->value,
             self::Operations->value => [
                 'class' => 'bg-amber-100 text-amber-800',
-                'bg'    => 'bg-amber-100',
-                'text'  => 'text-amber-800',
+                'bg' => 'bg-amber-100',
+                'text' => 'text-amber-800',
             ],
             self::Manufacturing->value => [
                 'class' => 'bg-cyan-100 text-cyan-800',
-                'bg'    => 'bg-cyan-100',
-                'text'  => 'text-cyan-800',
+                'bg' => 'bg-cyan-100',
+                'text' => 'text-cyan-800',
             ],
             self::ReadyDelivery->value,
             self::Delivered->value => [
                 'class' => 'bg-emerald-100 text-emerald-800',
-                'bg'    => 'bg-emerald-100',
-                'text'  => 'text-emerald-800',
+                'bg' => 'bg-emerald-100',
+                'text' => 'text-emerald-800',
             ],
             default => [
                 'class' => 'bg-slate-100 text-slate-700',
-                'bg'    => 'bg-slate-100',
-                'text'  => 'text-slate-700',
+                'bg' => 'bg-slate-100',
+                'text' => 'text-slate-700',
             ],
         };
     }

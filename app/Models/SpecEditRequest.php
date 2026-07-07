@@ -29,11 +29,11 @@ class SpecEditRequest extends Model
     ];
 
     protected $casts = [
-        'source'          => SpecEditRequestSource::class,
-        'status'          => SpecEditRequestStatus::class,
-        'original_items'  => 'array',
-        'proposed_items'  => 'array',
-        'reviewed_at'     => 'datetime',
+        'source' => SpecEditRequestSource::class,
+        'status' => SpecEditRequestStatus::class,
+        'original_items' => 'array',
+        'proposed_items' => 'array',
+        'reviewed_at' => 'datetime',
     ];
 
     public function techOrderSpec(): BelongsTo
@@ -67,7 +67,7 @@ class SpecEditRequest extends Model
             return null;
         }
 
-        return config('spec_edit.rejection_reasons.' . $this->rejection_reason_key)
+        return config('spec_edit.rejection_reasons.'.$this->rejection_reason_key)
             ?? $this->rejection_reason_key;
     }
 }

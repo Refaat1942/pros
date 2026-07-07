@@ -21,13 +21,13 @@ final class BomItemAggregator
         foreach ($items as $item) {
             $row = $item instanceof BomItem
                 ? [
-                    'id'              => $item->id,
+                    'id' => $item->id,
                     'stock_item_code' => $item->stock_item_code,
-                    'name'            => $item->name,
-                    'qty'             => (int) $item->qty,
-                    'issued_qty'      => (int) $item->issued_qty,
-                    'returned_qty'    => (int) $item->returned_qty,
-                    'unit_cost'       => $item->unit_cost,
+                    'name' => $item->name,
+                    'qty' => (int) $item->qty,
+                    'issued_qty' => (int) $item->issued_qty,
+                    'returned_qty' => (int) $item->returned_qty,
+                    'unit_cost' => $item->unit_cost,
                 ]
                 : $item;
 
@@ -35,18 +35,18 @@ final class BomItemAggregator
 
             if (! isset($grouped[$code])) {
                 $grouped[$code] = [
-                    'id'              => $row['id'] ?? null,
+                    'id' => $row['id'] ?? null,
                     'stock_item_code' => $code,
-                    'name'            => $row['name'] ?? $code,
-                    'qty'             => 0,
-                    'issued_qty'      => 0,
-                    'returned_qty'    => 0,
-                    'unit_cost'       => $row['unit_cost'] ?? null,
+                    'name' => $row['name'] ?? $code,
+                    'qty' => 0,
+                    'issued_qty' => 0,
+                    'returned_qty' => 0,
+                    'unit_cost' => $row['unit_cost'] ?? null,
                 ];
             }
 
-            $grouped[$code]['qty']          += (int) ($row['qty'] ?? 0);
-            $grouped[$code]['issued_qty']   += (int) ($row['issued_qty'] ?? 0);
+            $grouped[$code]['qty'] += (int) ($row['qty'] ?? 0);
+            $grouped[$code]['issued_qty'] += (int) ($row['issued_qty'] ?? 0);
             $grouped[$code]['returned_qty'] += (int) ($row['returned_qty'] ?? 0);
         }
 

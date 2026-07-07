@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\CaseRecord;
 use App\Models\Patient;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;

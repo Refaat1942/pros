@@ -19,7 +19,7 @@ class StockItemSalesStatsService
     public function parseDateRange(?string $from, ?string $to): array
     {
         $fromDate = $from ? Carbon::parse($from)->startOfDay() : null;
-        $toDate   = $to ? Carbon::parse($to)->endOfDay() : null;
+        $toDate = $to ? Carbon::parse($to)->endOfDay() : null;
 
         if ($fromDate && $toDate && $fromDate->gt($toDate)) {
             [$fromDate, $toDate] = [$toDate->copy()->startOfDay(), $fromDate->copy()->endOfDay()];
@@ -44,17 +44,17 @@ class StockItemSalesStatsService
         $item->loadMissing('prices:id,stock_item_id,amount,label');
 
         $salesByPrice = $this->salesAggregates($from, $to, $item->code);
-        $registered   = $this->registeredPriceAmounts($item);
-        $rows         = $this->mergePriceRows($registered, $salesByPrice);
+        $registered = $this->registeredPriceAmounts($item);
+        $rows = $this->mergePriceRows($registered, $salesByPrice);
 
         return [
-            'item_code'          => $item->code,
-            'item_name'          => $item->name,
+            'item_code' => $item->code,
+            'item_name' => $item->name,
             'highest_registered' => $registered !== [] ? max($registered) : (float) $item->price,
-            'total_sold_qty'     => (int) $rows->sum('sold_qty'),
-            'total_sale_times'   => $this->distinctDeliveredCases($from, $to, $item->code),
-            'period_label'       => $this->periodLabel($from, $to),
-            'rows'               => $rows->values()->all(),
+            'total_sold_qty' => (int) $rows->sum('sold_qty'),
+            'total_sale_times' => $this->distinctDeliveredCases($from, $to, $item->code),
+            'period_label' => $this->periodLabel($from, $to),
+            'rows' => $rows->values()->all(),
         ];
     }
 
@@ -120,17 +120,17 @@ class StockItemSalesStatsService
      */
     private function mergePriceRows(array $registered, Collection $salesByPrice): Collection
     {
-        $rows   = collect();
-        $seen   = [];
+        $rows = collect();
+        $seen = [];
 
         foreach ($registered as $amount) {
             $key = $this->priceKey($amount);
             $sale = $salesByPrice->get($key);
             $rows->push([
-                'unit_price'  => $amount,
-                'registered'  => true,
-                'sale_times'  => (int) ($sale->sale_times ?? 0),
-                'sold_qty'    => (int) ($sale->sold_qty ?? 0),
+                'unit_price' => $amount,
+                'registered' => true,
+                'sale_times' => (int) ($sale->sale_times ?? 0),
+                'sold_qty' => (int) ($sale->sold_qty ?? 0),
             ]);
             $seen[$key] = true;
         }
@@ -141,10 +141,10 @@ class StockItemSalesStatsService
             }
 
             $rows->push([
-                'unit_price'  => (float) $sale->unit_price,
-                'registered'  => false,
-                'sale_times'  => (int) $sale->sale_times,
-                'sold_qty'    => (int) $sale->sold_qty,
+                'unit_price' => (float) $sale->unit_price,
+                'registered' => false,
+                'sale_times' => (int) $sale->sale_times,
+                'sold_qty' => (int) $sale->sold_qty,
             ]);
         }
 
@@ -163,7 +163,7 @@ class StockItemSalesStatsService
         }
 
         $fromLabel = $from ? ClinicTime::format($from, 'd/m/Y') : '—';
-        $toLabel   = $to ? ClinicTime::format($to, 'd/m/Y') : '—';
+        $toLabel = $to ? ClinicTime::format($to, 'd/m/Y') : '—';
 
         return "الفترة: {$fromLabel} — {$toLabel} (حالات مُسلَّمة)";
     }

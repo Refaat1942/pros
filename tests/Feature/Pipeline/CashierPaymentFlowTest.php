@@ -5,6 +5,9 @@ namespace Tests\Feature\Pipeline;
 use App\Models\CaseRecord;
 use App\Models\Payment;
 use App\Models\Quote;
+use App\Services\AdminReportsHubService;
+use App\Services\CashierPaymentService;
+use App\Services\OperationsService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -22,7 +25,7 @@ class CashierPaymentFlowTest extends TestCase
         $ops = $this->userWithRole('operations');
 
         $this->actingAs($ops)
-            ->postJson('/operations/pending/' . $case->id . '/release-quote')
+            ->postJson('/operations/pending/'.$case->id.'/release-quote')
             ->assertOk()
             ->assertJsonPath('case.stage_key', CaseRecord::STAGE_CASHIER);
 
@@ -33,10 +36,10 @@ class CashierPaymentFlowTest extends TestCase
     {
         $this->stockItem('RM-001', qty: 10);
         $case = $this->operationsReadyCase($this->civilianPatient($this->civilianCompany()));
-        $ops  = $this->userWithRole('operations');
+        $ops = $this->userWithRole('operations');
 
         $this->actingAs($ops)
-            ->postJson('/operations/pending/' . $case->id . '/release-quote')
+            ->postJson('/operations/pending/'.$case->id.'/release-quote')
             ->assertOk()
             ->assertJsonPath('case.stage_key', CaseRecord::STAGE_OPERATIONS);
 
@@ -87,7 +90,7 @@ class CashierPaymentFlowTest extends TestCase
         $cashier = $this->userWithRole('cashier');
 
         $this->actingAs($cashier)
-            ->postJson('/cashier/payments/' . $case->id . '/confirm', [
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', [
                 'method' => 'instapay',
                 'amount' => 1500,
                 'reference' => 'IP-12345',
@@ -116,7 +119,7 @@ class CashierPaymentFlowTest extends TestCase
         $cashier = $this->userWithRole('cashier');
 
         $this->actingAs($cashier)
-            ->postJson('/cashier/payments/' . $case->id . '/confirm', [
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', [
                 'method' => 'bitcoin',
             ])
             ->assertStatus(422);
@@ -128,12 +131,12 @@ class CashierPaymentFlowTest extends TestCase
     {
         $this->stockItem('RM-001', qty: 10);
         $case = $this->cashierAwaitingCase();
-        app(\App\Services\CashierPaymentService::class)->confirmPayment($case, [
+        app(CashierPaymentService::class)->confirmPayment($case, [
             'method' => 'cash',
             'amount' => 800,
         ]);
 
-        $report = app(\App\Services\AdminReportsHubService::class)->build(
+        $report = app(AdminReportsHubService::class)->build(
             'cash-income',
             now()->startOfMonth(),
             now()->endOfMonth(),
@@ -150,7 +153,7 @@ class CashierPaymentFlowTest extends TestCase
         $case = $this->operationsReadyCase($this->cashPatient());
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
 
-        app(\App\Services\OperationsService::class)->sendToCashier($case->fresh(), $quote);
+        app(OperationsService::class)->sendToCashier($case->fresh(), $quote);
 
         return $case->fresh();
     }

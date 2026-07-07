@@ -27,9 +27,9 @@ class CostingSettingsTest extends TestCase
 
         $this->actingAs($admin)
             ->putJson(route('admin.costing-settings.update'), [
-                SettingService::KEY_TECHNICAL_CHECK         => 30,
-                SettingService::KEY_COMPONENTS_INTEGRATION  => 25,
-                SettingService::KEY_MACHINERY_DEPRECIATION  => 23,
+                SettingService::KEY_TECHNICAL_CHECK => 30,
+                SettingService::KEY_COMPONENTS_INTEGRATION => 25,
+                SettingService::KEY_MACHINERY_DEPRECIATION => 23,
                 SettingService::KEY_REHABILITATION_ASSESSMENT => 22,
             ])
             ->assertOk()
@@ -44,9 +44,9 @@ class CostingSettingsTest extends TestCase
 
         $this->actingAs($admin)
             ->putJson(route('admin.costing-settings.update'), [
-                SettingService::KEY_TECHNICAL_CHECK         => 30,
-                SettingService::KEY_COMPONENTS_INTEGRATION  => 25,
-                SettingService::KEY_MACHINERY_DEPRECIATION  => 23,
+                SettingService::KEY_TECHNICAL_CHECK => 30,
+                SettingService::KEY_COMPONENTS_INTEGRATION => 25,
+                SettingService::KEY_MACHINERY_DEPRECIATION => 23,
                 SettingService::KEY_REHABILITATION_ASSESSMENT => 20,
             ])
             ->assertStatus(422)

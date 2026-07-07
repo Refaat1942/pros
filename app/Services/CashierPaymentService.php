@@ -23,11 +23,10 @@ class CashierPaymentService
     public function __construct(
         private readonly OperationsService $operationsService,
         private readonly QuoteService $quoteService,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array{method: string, amount?: float|int|string|null, reference?: ?string, notes?: ?string} $data
+     * @param  array{method: string, amount?: float|int|string|null, reference?: ?string, notes?: ?string}  $data
      */
     public function confirmPayment(CaseRecord $case, array $data): Payment
     {
@@ -61,17 +60,17 @@ class CashierPaymentService
 
             // 2) تسجيل الدفعة.
             $payment = Payment::create([
-                'payment_no'   => $this->nextPaymentNo(),
-                'case_id'      => $case->id,
-                'quote_id'     => $quote?->id,
-                'patient_id'   => $case->patient_id,
+                'payment_no' => $this->nextPaymentNo(),
+                'case_id' => $case->id,
+                'quote_id' => $quote?->id,
+                'patient_id' => $case->patient_id,
                 'patient_name' => $case->patient?->name ?? $quote?->patient_name,
-                'amount'       => $amount,
-                'method'       => $method,
-                'reference'    => $data['reference'] ?? null,
-                'received_by'  => $receivedBy,
-                'received_at'  => now(),
-                'notes'        => $data['notes'] ?? null,
+                'amount' => $amount,
+                'method' => $method,
+                'reference' => $data['reference'] ?? null,
+                'received_by' => $receivedBy,
+                'received_at' => now(),
+                'notes' => $data['notes'] ?? null,
             ]);
 
             // 3) تحديث المبلغ المدفوع على الحالة.
@@ -82,16 +81,16 @@ class CashierPaymentService
             }
 
             AuditService::log(
-                action:      'payment',
-                description: "تحصيل دفعة نقدية بالخزنة — {$payment->payment_no} — " . PaymentMethod::labelFor($method),
-                tag:         'financial',
-                after:       [
+                action: 'payment',
+                description: "تحصيل دفعة نقدية بالخزنة — {$payment->payment_no} — ".PaymentMethod::labelFor($method),
+                tag: 'financial',
+                after: [
                     'payment_no' => $payment->payment_no,
-                    'case_id'    => $case->id,
-                    'case_no'    => $case->case_no,
-                    'amount'     => $amount,
-                    'method'     => $method,
-                    'received_by'=> $receivedBy,
+                    'case_id' => $case->id,
+                    'case_no' => $case->case_no,
+                    'amount' => $amount,
+                    'method' => $method,
+                    'received_by' => $receivedBy,
                 ],
             );
 
@@ -101,10 +100,10 @@ class CashierPaymentService
 
     private function nextPaymentNo(): string
     {
-        $year   = now()->year;
+        $year = now()->year;
         $prefix = "PAY-{$year}-";
 
-        $last = Payment::where('payment_no', 'like', $prefix . '%')
+        $last = Payment::where('payment_no', 'like', $prefix.'%')
             ->lockForUpdate()
             ->orderByDesc('payment_no')
             ->value('payment_no');

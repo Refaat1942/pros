@@ -19,8 +19,8 @@ class ClinicDayQueueNumberTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-06-30 09:00:00', ClinicTime::zone()));
 
         $patient = app(PatientService::class)->register([
-            'name'          => 'مريض أول',
-            'patient_type'  => Patient::TYPE_CIVILIAN,
+            'name' => 'مريض أول',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'visit_type_id' => $this->defaultVisitType()->id,
         ]);
 
@@ -40,14 +40,14 @@ class ClinicDayQueueNumberTest extends TestCase
         $visitTypeId = $this->defaultVisitType()->id;
 
         $service->register([
-            'name'          => 'مريض 1',
-            'patient_type'  => Patient::TYPE_CIVILIAN,
+            'name' => 'مريض 1',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'visit_type_id' => $visitTypeId,
         ]);
 
         $second = $service->register([
-            'name'          => 'مريض 2',
-            'patient_type'  => Patient::TYPE_CIVILIAN,
+            'name' => 'مريض 2',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'visit_type_id' => $visitTypeId,
         ]);
 
@@ -64,16 +64,16 @@ class ClinicDayQueueNumberTest extends TestCase
         $visitTypeId = $this->defaultVisitType()->id;
 
         $service->register([
-            'name'          => 'مريض مساء',
-            'patient_type'  => Patient::TYPE_CIVILIAN,
+            'name' => 'مريض مساء',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'visit_type_id' => $visitTypeId,
         ]);
 
         Carbon::setTestNow(Carbon::parse('2026-07-01 00:30:00', ClinicTime::zone()));
 
         $lateNight = $service->register([
-            'name'          => 'مريض قبل الفجر',
-            'patient_type'  => Patient::TYPE_CIVILIAN,
+            'name' => 'مريض قبل الفجر',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'visit_type_id' => $visitTypeId,
         ]);
 
@@ -84,8 +84,8 @@ class ClinicDayQueueNumberTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-07-01 01:05:00', ClinicTime::zone()));
 
         $newDay = $service->register([
-            'name'          => 'مريض يوم جديد',
-            'patient_type'  => Patient::TYPE_CIVILIAN,
+            'name' => 'مريض يوم جديد',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'visit_type_id' => $visitTypeId,
         ]);
 

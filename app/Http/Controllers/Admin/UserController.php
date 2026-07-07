@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
@@ -13,9 +14,7 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
-    public function __construct(private readonly UserService $userService)
-    {
-    }
+    public function __construct(private readonly UserService $userService) {}
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
@@ -39,7 +38,7 @@ class UserController extends Controller
     {
         $user->loadMissing('role:id,slug');
 
-        if ($user->role?->slug === \App\Models\Role::SLUG_ADMIN) {
+        if ($user->role?->slug === Role::SLUG_ADMIN) {
             return redirect()
                 ->route('admin.employees')
                 ->with('error', 'لا يمكن تعطيل حساب مسؤول النظام.');
@@ -62,7 +61,7 @@ class UserController extends Controller
 
         $user->loadMissing('role:id,slug');
 
-        if ($user->role?->slug === \App\Models\Role::SLUG_ADMIN) {
+        if ($user->role?->slug === Role::SLUG_ADMIN) {
             return response()->json(['message' => 'لا يمكن حذف حساب مسؤول النظام.'], 422);
         }
 

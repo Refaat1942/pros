@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Pipeline;
 
-use App\Models\CaseRecord;
 use App\Models\Quote;
+use App\Services\Dashboard\DashboardQueueService;
 use App\Services\OperationsService;
 use App\Services\QuoteService;
 use Tests\Support\ProstheticTestHelper;
@@ -107,7 +107,7 @@ class OperationsQuotesAwaitingTest extends TestCase
 
         app(QuoteService::class)->releaseToReception($quote);
 
-        $service = app(\App\Services\Dashboard\DashboardQueueService::class);
+        $service = app(DashboardQueueService::class);
 
         $this->assertSame(1, $service->operationsIssuedQuotesCount());
         $this->assertContains($quote->id, $service->operationsIssuedQuoteIds());

@@ -10,9 +10,7 @@ use Illuminate\Http\JsonResponse;
 
 class CostingSettingsController extends Controller
 {
-    public function __construct(private readonly SettingService $settings)
-    {
-    }
+    public function __construct(private readonly SettingService $settings) {}
 
     public function update(UpdateCostingSettingsRequest $request): JsonResponse
     {
@@ -23,16 +21,16 @@ class CostingSettingsController extends Controller
         $after = $this->settings->overheadRates();
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: 'تحديث نسب المصاريف الإضافية للتكاليف',
-            tag:         'admin',
-            before:      $before,
-            after:       $after,
+            tag: 'admin',
+            before: $before,
+            after: $after,
         );
 
         return response()->json([
-            'message'   => 'تم حفظ الإعدادات.',
-            'rates'     => $this->settings->overheadRateDefinitions(),
+            'message' => 'تم حفظ الإعدادات.',
+            'rates' => $this->settings->overheadRateDefinitions(),
             'rates_sum' => $this->settings->overheadRatesSum(),
         ]);
     }

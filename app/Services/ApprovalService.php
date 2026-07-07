@@ -17,8 +17,7 @@ class ApprovalService
 {
     public function __construct(
         private readonly OperationsService $operationsService,
-    ) {
-    }
+    ) {}
 
     /**
      * معالجة مسح QR من خطاب الموافقة — يعتمد الحالة في مكتب التشغيل ويفتح الصرف.
@@ -46,7 +45,7 @@ class ApprovalService
         }
 
         $before = [
-            'stage_key'    => $case->stage_key,
+            'stage_key' => $case->stage_key,
             'quote_status' => $quote->status,
         ];
 
@@ -57,20 +56,20 @@ class ApprovalService
 
         DB::transaction(function () use ($quote) {
             $quote->update([
-                'status'       => Quote::STATUS_APPROVED,
+                'status' => Quote::STATUS_APPROVED,
                 'status_label' => 'معتمد من الجهة',
             ]);
         });
 
         AuditService::log(
-            action:      'scan',
+            action: 'scan',
             description: "مسح موافقة الجهة — {$quote->quote_no} — {$case->work_order_no}",
-            tag:         'quotes',
-            before:      $before,
-            after:       [
-                'stage_key'     => $case->stage_key,
+            tag: 'quotes',
+            before: $before,
+            after: [
+                'stage_key' => $case->stage_key,
                 'work_order_no' => $case->work_order_no,
-                'quote_status'  => Quote::STATUS_APPROVED,
+                'quote_status' => Quote::STATUS_APPROVED,
             ],
         );
 

@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Exceptions\InvalidPatientQrException;
+use App\Models\Bom;
+use App\Models\CaseRecord;
 use App\Models\Patient;
 
 /**
@@ -15,7 +18,7 @@ class PatientQrService
      */
     public function generate(string $patientCode): string
     {
-        return 'QR-' . $patientCode;
+        return 'QR-'.$patientCode;
     }
 
     /**
@@ -29,28 +32,28 @@ class PatientQrService
     /**
      * تحقق صارم لمسح التسليم — QR صالح + حالة ready_delivery + BOM تام.
      */
-    public function assertValidForDelivery(string $qrString, \App\Models\CaseRecord $case, Patient $patient): void
+    public function assertValidForDelivery(string $qrString, CaseRecord $case, Patient $patient): void
     {
         if (! preg_match('/^QR-\d{6}$/', $qrString)) {
-            throw \App\Exceptions\InvalidPatientQrException::tampered();
+            throw InvalidPatientQrException::tampered();
         }
 
         if ($patient->archived_at !== null) {
-            throw \App\Exceptions\InvalidPatientQrException::archived();
+            throw InvalidPatientQrException::archived();
         }
 
-        if ($case->stage_key !== \App\Models\CaseRecord::STAGE_READY_DELIVERY) {
-            throw \App\Exceptions\InvalidPatientQrException::notReady();
+        if ($case->stage_key !== CaseRecord::STAGE_READY_DELIVERY) {
+            throw InvalidPatientQrException::notReady();
         }
 
         $case->loadMissing('bom');
 
-        if (! $case->bom || $case->bom->stage !== \App\Models\Bom::STAGE_FINISHED) {
-            throw \App\Exceptions\InvalidPatientQrException::notReady();
+        if (! $case->bom || $case->bom->stage !== Bom::STAGE_FINISHED) {
+            throw InvalidPatientQrException::notReady();
         }
 
         if (! $this->validate($qrString, $patient)) {
-            throw \App\Exceptions\InvalidPatientQrException::mismatch();
+            throw InvalidPatientQrException::mismatch();
         }
     }
 }

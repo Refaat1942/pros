@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
-use App\Support\PatientEntityPresenter;
 use App\Support\ClinicTime;
+use App\Support\PatientEntityPresenter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+
 // MilitaryRank is resolved at runtime — imported for IDE hints
 
 /**
@@ -15,14 +16,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Patient extends Model
 {
     public const TYPE_CIVILIAN = 'civilian';
+
     public const TYPE_MILITARY = 'military';
 
     /** الجهة السيادية الافتراضية لكل مريض عسكري — لا يُدخلها الاستقبال. */
     public const MILITARY_SOVEREIGN_ENTITY = 'القوات المسلحة';
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_INACTIVE = 'inactive';
+
     public const STATUS_QUOTED = 'quoted';
+
     public const STATUS_DONE = 'done';
 
     protected $fillable = [

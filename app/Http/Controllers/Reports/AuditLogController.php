@@ -14,8 +14,8 @@ use Illuminate\View\View;
  */
 class AuditLogController extends Controller
 {
-    use RendersAdminDashboard;
     use PaginationTrait;
+    use RendersAdminDashboard;
 
     /**
      * سجل الرقابة — مُرقَّم مع فلاتر.
@@ -29,7 +29,7 @@ class AuditLogController extends Controller
             ->when($request->date_to, fn ($q, $d) => $q->whereDate('logged_at', '<=', $d))
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('user_name', 'like', "%{$s}%")
-                  ->orWhere('description', 'like', "%{$s}%");
+                    ->orWhere('description', 'like', "%{$s}%");
             }))
             ->latest('logged_at')
             ->paginate($this->perPage())
@@ -41,38 +41,38 @@ class AuditLogController extends Controller
             ->pluck('total', 'action');
 
         return $this->adminPage('audit', [
-            'auditLogs'    => $logs,
-            'audit_stats'  => [
+            'auditLogs' => $logs,
+            'audit_stats' => [
                 [
-                    'icon'  => '📝',
+                    'icon' => '📝',
                     'label' => 'إجمالي العمليات',
                     'value' => (string) AuditLog::count(),
-                    'bg'    => 'rgba(124,58,237,0.1)',
+                    'bg' => 'rgba(124,58,237,0.1)',
                 ],
                 [
-                    'icon'  => '➕',
+                    'icon' => '➕',
                     'label' => 'إنشاء',
                     'value' => (string) ($actionCounts['create'] ?? 0),
                     'color' => '#059669',
-                    'bg'    => 'rgba(5,150,105,0.1)',
+                    'bg' => 'rgba(5,150,105,0.1)',
                 ],
                 [
-                    'icon'  => '✏️',
+                    'icon' => '✏️',
                     'label' => 'تحديث',
                     'value' => (string) (($actionCounts['update'] ?? 0) + ($actionCounts['deliver'] ?? 0)),
                     'color' => '#d97706',
-                    'bg'    => 'rgba(217,119,6,0.1)',
+                    'bg' => 'rgba(217,119,6,0.1)',
                 ],
                 [
-                    'icon'  => '🚫',
+                    'icon' => '🚫',
                     'label' => 'محظور',
                     'value' => (string) ($actionCounts['blocked'] ?? 0),
                     'color' => '#dc2626',
-                    'bg'    => 'rgba(220,38,38,0.1)',
+                    'bg' => 'rgba(220,38,38,0.1)',
                 ],
             ],
-            'filterTags'    => AuditLog::query()->distinct()->orderBy('tag')->pluck('tag')->filter(),
-            'filters'       => $request->only(['tag', 'user_id', 'date_from', 'date_to', 'search']),
+            'filterTags' => AuditLog::query()->distinct()->orderBy('tag')->pluck('tag')->filter(),
+            'filters' => $request->only(['tag', 'user_id', 'date_from', 'date_to', 'search']),
         ]);
     }
 }

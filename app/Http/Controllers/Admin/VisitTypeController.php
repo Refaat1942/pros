@@ -40,7 +40,7 @@ class VisitTypeController extends Controller
         );
 
         return response()->json([
-            'data'  => $types,
+            'data' => $types,
             'total' => $types->count(),
         ]);
     }
@@ -50,15 +50,15 @@ class VisitTypeController extends Controller
         $data = $request->validated();
 
         $type = VisitType::create([
-            'name'       => $data['name'],
+            'name' => $data['name'],
             'sort_order' => (int) (VisitType::max('sort_order') ?? 0) + 10,
         ]);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إضافة نوع زيارة: {$type->name}",
-            tag:         'admin',
-            after:       $type->toArray(),
+            tag: 'admin',
+            after: $type->toArray(),
         );
 
         if ($request->expectsJson()) {
@@ -78,15 +78,15 @@ class VisitTypeController extends Controller
         $visitType->update($data);
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تعديل نوع زيارة: {$visitType->name}",
-            tag:         'admin',
-            before:      $before,
-            after:       $visitType->fresh()->only(['name']),
+            tag: 'admin',
+            before: $before,
+            after: $visitType->fresh()->only(['name']),
         );
 
         return response()->json([
-            'message'    => 'تم تحديث نوع الزيارة بنجاح.',
+            'message' => 'تم تحديث نوع الزيارة بنجاح.',
             'visit_type' => $visitType->fresh(),
         ]);
     }
@@ -103,10 +103,10 @@ class VisitTypeController extends Controller
         $visitType->delete();
 
         AuditService::log(
-            action:      'delete',
+            action: 'delete',
             description: "حذف نوع زيارة: {$before['name']}",
-            tag:         'admin',
-            before:      $before,
+            tag: 'admin',
+            before: $before,
         );
 
         return response()->json(['message' => 'تم حذف نوع الزيارة بنجاح.']);
@@ -126,10 +126,10 @@ class VisitTypeController extends Controller
         });
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: 'إعادة ترتيب أنواع الزيارات',
-            tag:         'admin',
-            after:       ['order' => $ids],
+            tag: 'admin',
+            after: ['order' => $ids],
         );
 
         return response()->json(['message' => 'تم حفظ الترتيب بنجاح.']);

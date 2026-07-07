@@ -6,6 +6,7 @@ use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
 use App\Services\StockPriceService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -20,14 +21,14 @@ class OperationsQualityFinishTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('workshop');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-QC-01']);
         $this->actingAs($user);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         app(BomService::class)->finish($bom->fresh());
     }
 
@@ -38,8 +39,8 @@ class OperationsQualityFinishTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('workshop');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-QC-02']);
         $this->actingAs($user);
 

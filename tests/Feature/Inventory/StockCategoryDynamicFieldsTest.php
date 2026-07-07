@@ -17,14 +17,14 @@ class StockCategoryDynamicFieldsTest extends TestCase
         $admin = $this->userWithRole('admin');
 
         $response = $this->actingAs($admin)->postJson('/admin/stock-categories', [
-            'name'   => 'أقمشة',
+            'name' => 'أقمشة',
             'fields' => [
                 [
-                    'label'    => 'وحدة القياس',
-                    'type'     => 'list',
-                    'field_key'=> 'uom',
+                    'label' => 'وحدة القياس',
+                    'type' => 'list',
+                    'field_key' => 'uom',
                     'required' => true,
-                    'options'  => [
+                    'options' => [
                         ['value' => 'كيلو', 'label' => 'كيلو'],
                         ['value' => 'قطعة', 'label' => 'قطعة'],
                     ],
@@ -44,21 +44,21 @@ class StockCategoryDynamicFieldsTest extends TestCase
         $category = StockCategory::create(['name' => 'مسامير']);
         $schema->syncFields($category, [
             [
-                'label'    => 'وحدة القياس',
-                'type'     => 'list',
-                'field_key'=> 'uom',
+                'label' => 'وحدة القياس',
+                'type' => 'list',
+                'field_key' => 'uom',
                 'required' => true,
-                'options'  => [['value' => 'قطعة', 'label' => 'قطعة']],
+                'options' => [['value' => 'قطعة', 'label' => 'قطعة']],
             ],
         ]);
 
         $item = app(StockCatalogService::class)->create([
-            'name'        => 'مسامير M6',
-            'code'        => 'ITM-BOLT1',
-            'qty'         => 100,
-            'price'       => 5,
+            'name' => 'مسامير M6',
+            'code' => 'ITM-BOLT1',
+            'qty' => 100,
+            'price' => 5,
             'category_id' => $category->id,
-            'attributes'  => ['uom' => 'قطعة'],
+            'attributes' => ['uom' => 'قطعة'],
         ]);
 
         $formatted = app(StockCatalogService::class)->formatItem($item);

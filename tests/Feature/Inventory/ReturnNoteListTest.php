@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
-use App\Models\Bom;
+use App\Models\CaseRecord;
 use App\Models\ReturnNote;
 use App\Services\BomService;
 use App\Services\ReturnNoteService;
@@ -20,8 +20,8 @@ class ReturnNoteListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('workshop');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0501']);
 
         $this->actingAs($user);
@@ -43,8 +43,8 @@ class ReturnNoteListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('workshop');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0500']);
 
         $this->actingAs($user);
@@ -67,8 +67,8 @@ class ReturnNoteListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('workshop');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
         $this->actingAs($user);
         $bom = app(BomService::class)->createSpecRaw($case, [
@@ -95,9 +95,9 @@ class ReturnNoteListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $ops     = $this->userWithRole('workshop');
-        $tech    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
+        $ops = $this->userWithRole('workshop');
+        $tech = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
         $this->actingAs($ops);
         $bom = app(BomService::class)->createSpecRaw($case, [
@@ -115,8 +115,8 @@ class ReturnNoteListTest extends TestCase
 
         $completedCase = $this->caseAtStage(
             $this->cashPatient(),
-            \App\Models\CaseRecord::STAGE_MANUFACTURING,
-            \App\Models\CaseRecord::MFG_WAREHOUSE,
+            CaseRecord::STAGE_MANUFACTURING,
+            CaseRecord::MFG_WAREHOUSE,
         );
         $completedBom = app(BomService::class)->createSpecRaw($completedCase, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],

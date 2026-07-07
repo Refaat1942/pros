@@ -18,16 +18,16 @@ class PatientCodeGenerationTest extends TestCase
         $reception = $this->userWithRole('reception');
 
         $patient = app(PatientService::class)->register([
-            'name'                => 'مريض اختبار',
-            'phone'               => '01012345678',
-            'national_id'         => '29901010100001',
-            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'name' => 'مريض اختبار',
+            'phone' => '01012345678',
+            'national_id' => '29901010100001',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'contract_company_id' => $company->id,
-            'visit_type_id'       => $visitType->id,
+            'visit_type_id' => $visitType->id,
         ]);
 
         $this->assertMatchesRegularExpression('/^\d{6}$/', $patient->patient_code);
-        $this->assertSame('QR-' . $patient->patient_code, $patient->patient_qr);
+        $this->assertSame('QR-'.$patient->patient_code, $patient->patient_qr);
 
         $this->actingAs($reception)
             ->getJson("/reception/patients/{$patient->id}")

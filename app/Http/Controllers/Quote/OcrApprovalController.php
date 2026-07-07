@@ -10,9 +10,7 @@ use Illuminate\Http\JsonResponse;
 
 class OcrApprovalController extends Controller
 {
-    public function __construct(private readonly OcrApprovalService $ocrApprovalService)
-    {
-    }
+    public function __construct(private readonly OcrApprovalService $ocrApprovalService) {}
 
     /**
      * معالجة خطاب الموافقة — OCR + مطابقة + فك التجميد + WO-*.
@@ -25,18 +23,18 @@ class OcrApprovalController extends Controller
             return response()->json([
                 'message' => $e->getMessage(),
                 'blocked' => true,
-                'ocr'     => true,
+                'ocr' => true,
             ], 422);
         }
 
         return response()->json([
-            'message'       => 'تمت مطابقة OCR — تم فك التجميد وتوليد أمر التشغيل.',
-            'case'          => $case->only([
+            'message' => 'تمت مطابقة OCR — تم فك التجميد وتوليد أمر التشغيل.',
+            'case' => $case->only([
                 'id', 'case_no', 'stage_key', 'manufacturing_stage',
                 'work_order_no', 'approval_date', 'approval_confirmed_at',
             ]),
             'work_order_no' => $case->work_order_no,
-            'unfrozen'      => true,
+            'unfrozen' => true,
         ]);
     }
 }

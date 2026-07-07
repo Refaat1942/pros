@@ -5,6 +5,7 @@ namespace Tests\Feature\Pipeline;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Quote;
+use App\Services\OperationsService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -40,7 +41,7 @@ class OfficialPrintDocumentsTest extends TestCase
             ->assertOk()
             ->assertSee($quote->quote_no, false)
             ->assertSee('عرض سعر', false)
-            ->assertSee(\App\Models\Quote::SERIAL_LABEL, false)
+            ->assertSee(Quote::SERIAL_LABEL, false)
             ->assertSee('<svg', false)
             ->assertSee('onload="window.print()"', false);
     }
@@ -50,7 +51,7 @@ class OfficialPrintDocumentsTest extends TestCase
         $this->stockItem('RM-001', qty: 10);
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
-        app(\App\Services\OperationsService::class)->approve($case->fresh(), 'اختبار');
+        app(OperationsService::class)->approve($case->fresh(), 'اختبار');
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $technical = $this->userWithRole('technical');
 
@@ -69,7 +70,7 @@ class OfficialPrintDocumentsTest extends TestCase
         $this->stockItem('RM-001', qty: 10);
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
-        app(\App\Services\OperationsService::class)->approve($case->fresh(), 'اختبار');
+        app(OperationsService::class)->approve($case->fresh(), 'اختبار');
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $technical = $this->userWithRole('technical');
 
@@ -84,15 +85,15 @@ class OfficialPrintDocumentsTest extends TestCase
     {
         $this->stockItem('RM-001', qty: 10);
         $patient = $this->militaryPatient($this->militaryCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0099']);
 
         $bom = Bom::create([
-            'case_id'      => $case->id,
-            'bom_no'       => 'BOM-MIL-001',
-            'order_ref'    => $case->order_ref,
+            'case_id' => $case->id,
+            'bom_no' => 'BOM-MIL-001',
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_RAW,
+            'stage' => Bom::STAGE_RAW,
         ]);
 
         $technical = $this->userWithRole('technical');
@@ -112,15 +113,15 @@ class OfficialPrintDocumentsTest extends TestCase
     public function test_technical_bom_list_exposes_issue_voucher_for_military_without_quote(): void
     {
         $patient = $this->militaryPatient($this->militaryCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0100']);
 
         $bom = Bom::create([
-            'case_id'      => $case->id,
-            'bom_no'       => 'BOM-MIL-002',
-            'order_ref'    => $case->order_ref,
+            'case_id' => $case->id,
+            'bom_no' => 'BOM-MIL-002',
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_RAW,
+            'stage' => Bom::STAGE_RAW,
         ]);
 
         $technical = $this->userWithRole('technical');

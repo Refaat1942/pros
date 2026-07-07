@@ -3,7 +3,6 @@
 namespace Tests\Feature\Reports;
 
 use App\Models\Appointment;
-use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\AdminCycleDashboardService;
 use App\Services\BomService;
@@ -23,24 +22,24 @@ class AdminCycleDashboardTest extends TestCase
         $patient = $this->civilianPatient($company);
 
         Appointment::create([
-            'patient_id'       => $patient->id,
-            'patient_name'     => $patient->name,
-            'phone'            => $patient->phone,
-            'patient_type'     => $patient->patient_type,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'phone' => $patient->phone,
+            'patient_type' => $patient->patient_type,
             'appointment_date' => now()->toDateString(),
             'appointment_time' => '09:00',
-            'status'           => Appointment::STATUS_WAITING,
+            'status' => Appointment::STATUS_WAITING,
             'transferred_to_clinic' => false,
         ]);
 
         Appointment::create([
-            'patient_id'       => $patient->id,
-            'patient_name'     => $patient->name,
-            'phone'            => $patient->phone,
-            'patient_type'     => $patient->patient_type,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'phone' => $patient->phone,
+            'patient_type' => $patient->patient_type,
             'appointment_date' => now()->toDateString(),
             'appointment_time' => '10:00',
-            'status'           => Appointment::STATUS_IN_CLINIC,
+            'status' => Appointment::STATUS_IN_CLINIC,
             'transferred_to_clinic' => true,
         ]);
 
@@ -49,7 +48,7 @@ class AdminCycleDashboardTest extends TestCase
         $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $from = now()->subDays(30)->startOfDay();
-        $to   = now()->addDay()->endOfDay();
+        $to = now()->addDay()->endOfDay();
         $cards = collect(app(AdminCycleDashboardService::class)->build($from, $to))->keyBy('key');
 
         $this->assertSame(1, $cards['reception']['count']);
@@ -65,7 +64,7 @@ class AdminCycleDashboardTest extends TestCase
         $case->touch();
 
         $from = now()->subDays(30)->startOfDay();
-        $to   = now()->addDay()->endOfDay();
+        $to = now()->addDay()->endOfDay();
         $cards = collect(app(AdminCycleDashboardService::class)->build($from, $to))->keyBy('key');
 
         $this->assertSame(1, $cards['cashier']['count']);
@@ -88,10 +87,10 @@ class AdminCycleDashboardTest extends TestCase
         ]);
 
         $this->stubBiReportServiceForOverview([
-            'item_count'     => 1,
-            'low_stock'      => 0,
+            'item_count' => 1,
+            'low_stock' => 0,
             'stagnant_items' => [],
-            'total_value'    => 0,
+            'total_value' => 0,
         ], [
             'open_work_orders' => 0, 'awaiting_dispense' => 1, 'in_workshop' => 0, 'ready_for_delivery' => 0,
         ]);
@@ -126,12 +125,12 @@ class AdminCycleDashboardTest extends TestCase
         $this->stubBiReportServiceForOverview();
 
         $from = now()->startOfMonth()->toDateString();
-        $to   = now()->toDateString();
+        $to = now()->toDateString();
 
         $this->actingAs($admin)
-            ->get('/admin/overview/export?from=' . $from . '&to=' . $to)
+            ->get('/admin/overview/export?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8')
-            ->assertDownload('نظرة_عامة_' . $from . '_' . $to . '.csv');
+            ->assertDownload('نظرة_عامة_'.$from.'_'.$to.'.csv');
     }
 }

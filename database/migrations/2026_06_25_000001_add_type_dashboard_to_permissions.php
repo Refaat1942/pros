@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PermissionCatalogService;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,8 +21,8 @@ return new class extends Migration
             }
         });
 
-        if (class_exists(\App\Services\PermissionCatalogService::class)) {
-            app(\App\Services\PermissionCatalogService::class)->seedRoleDefaults();
+        if (class_exists(PermissionCatalogService::class)) {
+            app(PermissionCatalogService::class)->seedRoleDefaults();
         }
     }
 

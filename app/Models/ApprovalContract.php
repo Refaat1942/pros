@@ -27,7 +27,7 @@ class ApprovalContract extends Model
     ];
 
     protected $casts = [
-        'approval_date'   => 'date',
+        'approval_date' => 'date',
         'approved_amount' => 'decimal:2',
     ];
 

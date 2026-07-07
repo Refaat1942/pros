@@ -33,24 +33,24 @@ class BarcodeValidationTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
         $bom = Bom::create([
-            'bom_no'       => 'BOM-0001',
-            'case_id'      => $case->id,
-            'order_ref'    => 'ORD-001',
+            'bom_no' => 'BOM-0001',
+            'case_id' => $case->id,
+            'order_ref' => 'ORD-001',
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_RAW,
+            'stage' => Bom::STAGE_RAW,
         ]);
 
         return BomItem::create([
-            'bom_id'          => $bom->id,
+            'bom_id' => $bom->id,
             'stock_item_code' => $code,
-            'name'            => "Bom Item {$code}",
-            'qty'             => 2,
-            'unit_cost'       => 100.00,
-            'issued_qty'      => 0,
-            'returned_qty'    => 0,
+            'name' => "Bom Item {$code}",
+            'qty' => 2,
+            'unit_cost' => 100.00,
+            'issued_qty' => 0,
+            'returned_qty' => 0,
         ]);
     }
 
@@ -86,7 +86,7 @@ class BarcodeValidationTest extends TestCase
 
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'blocked',
-            'tag'    => 'warehouse',
+            'tag' => 'warehouse',
         ]);
     }
 
@@ -101,7 +101,7 @@ class BarcodeValidationTest extends TestCase
 
     public function test_stock_qty_unchanged_after_wrong_scan(): void
     {
-        $item    = $this->stockItem('RM-004', qty: 10);
+        $item = $this->stockItem('RM-004', qty: 10);
         $this->stockItem('RM-005');
         $bomItem = $this->bomItemForCode('RM-004');
 

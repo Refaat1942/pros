@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\CaseRecord;
+use App\Models\MedicalRecord;
 use App\Models\Patient;
 use Tests\TestCase;
 
@@ -40,7 +41,7 @@ class MilitaryDisplayEntityTest extends TestCase
 
     public function test_military_medical_record_display_entity_defaults_to_armed_forces(): void
     {
-        $record = new \App\Models\MedicalRecord([
+        $record = new MedicalRecord([
             'patient_type' => Patient::TYPE_MILITARY,
             'company_name' => null,
         ]);

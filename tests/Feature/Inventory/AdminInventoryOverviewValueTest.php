@@ -19,10 +19,10 @@ class AdminInventoryOverviewValueTest extends TestCase
         $supplier = $this->makeSupplier();
         StockItemPrice::create([
             'stock_item_id' => $item->id,
-            'price_ref'     => 'PR-RM-099-1',
-            'supplier_id'   => $supplier->id,
-            'amount'        => 250.00,
-            'qty'           => 10,
+            'price_ref' => 'PR-RM-099-1',
+            'supplier_id' => $supplier->id,
+            'amount' => 250.00,
+            'qty' => 10,
         ]);
 
         $data = app(DashboardPageDataService::class)->resolve('admin', 'inventory-overview');

@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\Auth;
 
 class SpecEditRequestController extends Controller
 {
-    public function __construct(private readonly SpecEditRequestService $editService)
-    {
-    }
+    public function __construct(private readonly SpecEditRequestService $editService) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -25,8 +23,8 @@ class SpecEditRequestController extends Controller
         );
 
         return response()->json([
-            'data'    => $rows,
-            'total'   => count($rows),
+            'data' => $rows,
+            'total' => count($rows),
             'pending' => $this->editService->pendingCount(),
             'rejection_reasons' => config('spec_edit.rejection_reasons', []),
         ]);

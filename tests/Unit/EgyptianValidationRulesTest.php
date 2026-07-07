@@ -55,7 +55,7 @@ class EgyptianValidationRulesTest extends TestCase
     {
         return ! Validator::make(
             ['phone' => $value],
-            ['phone' => ['nullable', new EgyptianMobile()]]
+            ['phone' => ['nullable', new EgyptianMobile]]
         )->fails();
     }
 
@@ -63,7 +63,7 @@ class EgyptianValidationRulesTest extends TestCase
     {
         return ! Validator::make(
             ['national_id' => $value],
-            ['national_id' => ['nullable', new EgyptianNationalId()]]
+            ['national_id' => ['nullable', new EgyptianNationalId]]
         )->fails();
     }
 }

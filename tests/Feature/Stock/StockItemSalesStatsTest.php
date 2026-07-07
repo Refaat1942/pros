@@ -3,10 +3,8 @@
 namespace Tests\Feature\Stock;
 
 use App\Models\CaseRecord;
-use App\Models\Patient;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
-use App\Models\StockItem;
 use App\Models\StockItemPrice;
 use App\Services\StockItemSalesStatsService;
 use Tests\Support\ProstheticTestHelper;
@@ -22,15 +20,15 @@ class StockItemSalesStatsTest extends TestCase
         $item->update(['price' => 10]);
         StockItemPrice::create([
             'stock_item_id' => $item->id,
-            'price_ref'     => 'PR-RM-SALES-1',
-            'amount'        => 20,
-            'qty'           => 1,
+            'price_ref' => 'PR-RM-SALES-1',
+            'amount' => 20,
+            'qty' => 1,
         ]);
         StockItemPrice::create([
             'stock_item_id' => $item->id,
-            'price_ref'     => 'PR-RM-SALES-2',
-            'amount'        => 30,
-            'qty'           => 1,
+            'price_ref' => 'PR-RM-SALES-2',
+            'amount' => 30,
+            'qty' => 1,
         ]);
 
         $patient = $this->civilianPatient($this->civilianCompany());
@@ -46,7 +44,7 @@ class StockItemSalesStatsTest extends TestCase
         $pending = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
         $this->attachPricingLine($pending, 'RM-SALES', 30, 5);
 
-        $service  = app(StockItemSalesStatsService::class);
+        $service = app(StockItemSalesStatsService::class);
         $breakdown = $service->breakdownForItem($item->fresh('prices'));
 
         $this->assertSame(2, $breakdown['total_sale_times']);
@@ -68,11 +66,11 @@ class StockItemSalesStatsTest extends TestCase
     public function test_admin_can_fetch_sales_stats_api(): void
     {
         $admin = $this->userWithRole('admin');
-        $item  = $this->stockItem('RM-API', qty: 10, wac: 15);
+        $item = $this->stockItem('RM-API', qty: 10, wac: 15);
         $item->update(['price' => 15]);
 
         $patient = $this->civilianPatient($this->civilianCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update(['delivered_at' => now()]);
         $this->attachPricingLine($case, 'RM-API', 15, 3);
 
@@ -92,22 +90,22 @@ class StockItemSalesStatsTest extends TestCase
         $seq++;
 
         $req = PricingRequest::create([
-            'request_no'   => "PR-STATS-{$seq}",
-            'case_id'      => $case->id,
+            'request_no' => "PR-STATS-{$seq}",
+            'case_id' => $case->id,
             'patient_type' => $case->patient_type ?? 'civilian',
-            'order_ref'    => $case->order_ref,
+            'order_ref' => $case->order_ref,
             'patient_name' => 'مريض',
             'request_date' => now()->toDateString(),
-            'status_key'   => 'awaiting_admin_approval',
+            'status_key' => 'awaiting_admin_approval',
         ]);
 
         PricingRequestItem::create([
             'pricing_request_id' => $req->id,
-            'stock_item_code'    => $code,
-            'name'               => "صنف {$code}",
-            'qty'                => $qty,
-            'unit_price'         => $unitPrice,
-            'line_total'         => $unitPrice * $qty,
+            'stock_item_code' => $code,
+            'name' => "صنف {$code}",
+            'qty' => $qty,
+            'unit_price' => $unitPrice,
+            'line_total' => $unitPrice * $qty,
         ]);
 
         $case->update(['pricing_request_id' => $req->id]);

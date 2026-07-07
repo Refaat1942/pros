@@ -10,10 +10,10 @@ class UpdateTechOrderSpecRequest extends BaseRequest
     {
         return [
             'tech_notes' => $this->notesRules(5000),
-            'items'      => ['sometimes', 'array', 'min:1'],
+            'items' => ['sometimes', 'array', 'min:1'],
             'items.*.stock_item_code' => ['required_with:items', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-_]+$/'],
-            'items.*.name'            => ['required_with:items', 'string', 'min:1', 'max:255'],
-            'items.*.qty'             => ['required_with:items', ...$this->positiveQtyRules()],
+            'items.*.name' => ['required_with:items', 'string', 'min:1', 'max:255'],
+            'items.*.qty' => ['required_with:items', ...$this->positiveQtyRules()],
         ];
     }
 

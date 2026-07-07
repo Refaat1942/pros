@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Reports;
 
-use App\Models\ReturnNote;
+use App\Models\CaseRecord;
 use App\Services\BomService;
 use App\Services\ReturnNoteService;
 use App\Services\StockPriceService;
@@ -19,9 +19,9 @@ class AdminReturnsPageTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $ops     = $this->userWithRole('operations');
-        $admin   = $this->userWithRole('admin');
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING, \App\Models\CaseRecord::MFG_WAREHOUSE);
+        $ops = $this->userWithRole('operations');
+        $admin = $this->userWithRole('admin');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0900']);
 
         $this->actingAs($ops);

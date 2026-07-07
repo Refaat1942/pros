@@ -13,7 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class Permission extends Model
 {
-    public const TYPE_VIEW   = 'view';
+    public const TYPE_VIEW = 'view';
+
     public const TYPE_ACTION = 'action';
 
     protected $fillable = [
@@ -54,19 +55,19 @@ class Permission extends Model
             foreach ($dash['pages'] as $pageKey => $page) {
                 $slug = self::viewSlug($dashKey, $pageKey);
                 $entries[$slug] = [
-                    'label_ar'  => $page['label'] ?? $page['title'] ?? $pageKey,
+                    'label_ar' => $page['label'] ?? $page['title'] ?? $pageKey,
                     'dashboard' => $dashKey,
-                    'type'      => self::TYPE_VIEW,
-                    'page'      => $pageKey,
+                    'type' => self::TYPE_VIEW,
+                    'page' => $pageKey,
                 ];
             }
         }
 
         foreach (config('permissions.actions', []) as $slug => $meta) {
             $entries[$slug] = [
-                'label_ar'  => $meta['label_ar'],
+                'label_ar' => $meta['label_ar'],
                 'dashboard' => $meta['dashboard'],
-                'type'      => self::TYPE_ACTION,
+                'type' => self::TYPE_ACTION,
             ];
         }
 

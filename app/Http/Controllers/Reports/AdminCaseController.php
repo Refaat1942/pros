@@ -17,8 +17,7 @@ class AdminCaseController extends Controller
     public function __construct(
         private readonly AdminCaseDetailService $detailService,
         private readonly QuoteQrService $quoteQrService,
-    ) {
-    }
+    ) {}
 
     /**
      * تفاصيل الحالة — JSON لنافذة العرض في متابعة الحالات.
@@ -45,10 +44,10 @@ class AdminCaseController extends Controller
         $embed = $request->boolean('embed');
 
         return view('quotes.print', [
-            'quote'      => $quote,
+            'quote' => $quote,
             'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
-            'embed'      => $embed,
-            'autoPrint'  => ! $embed,
+            'embed' => $embed,
+            'autoPrint' => ! $embed,
         ]);
     }
 }

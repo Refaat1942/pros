@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Finance;
 
-use App\Enums\DebtStatus;
 use App\Models\DebtCollectionEntry;
 use App\Models\MilitaryDebt;
 use App\Services\ContractDebtService;
@@ -83,18 +82,18 @@ class DebtCollectionHistoryTest extends TestCase
     {
         $company = $this->militaryCompany('جهة عسكرية');
         $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, 'delivered');
+        $case = $this->caseAtStage($patient, 'delivered');
 
         return MilitaryDebt::create([
-            'case_id'             => $case->id,
-            'work_order_no'       => 'WO-HIST-' . $case->id,
-            'patient_name'        => $patient->name,
+            'case_id' => $case->id,
+            'work_order_no' => 'WO-HIST-'.$case->id,
+            'patient_name' => $patient->name,
             'patient_national_id' => $patient->national_id,
-            'sovereign_entity'    => 'القوات المسلحة',
-            'total_cost'          => $due,
-            'collected'           => $collected,
-            'delivered_at'        => now()->toDateString(),
-            'status'              => MilitaryDebt::STATUS_PENDING,
+            'sovereign_entity' => 'القوات المسلحة',
+            'total_cost' => $due,
+            'collected' => $collected,
+            'delivered_at' => now()->toDateString(),
+            'status' => MilitaryDebt::STATUS_PENDING,
         ]);
     }
 }

@@ -13,7 +13,7 @@ class UpdateAppointmentRequest extends BaseRequest
         return [
             'appointment_date' => ['sometimes', 'required', 'date'],
             'appointment_time' => ['nullable', 'string', 'max:10'],
-            'visit_type'       => ['sometimes', 'required', 'string', Rule::in([
+            'visit_type' => ['sometimes', 'required', 'string', Rule::in([
                 Appointment::VISIT_EXAM,
                 Appointment::VISIT_FOLLOWUP,
                 Appointment::VISIT_FITTING,

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Inventory;
 
-use App\Models\StockItem;
 use App\Services\Dashboard\DashboardPageDataService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -57,11 +56,11 @@ class SpecBackorderInventoryTest extends TestCase
         $this->actingAs($user)
             ->postJson('/technical/inventory/receive', [
                 'stock_item_id' => $item->id,
-                'supplier_id'   => $supplier->id,
-                'qty'           => 10,
-                'unit_price'    => 100,
-                'invoice_no'    => 'INV-BO-03',
-                'moved_at'      => now()->toDateString(),
+                'supplier_id' => $supplier->id,
+                'qty' => 10,
+                'unit_price' => 100,
+                'invoice_no' => 'INV-BO-03',
+                'moved_at' => now()->toDateString(),
             ])
             ->assertCreated();
 

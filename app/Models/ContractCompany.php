@@ -21,9 +21,9 @@ class ContractCompany extends Model
     ];
 
     protected $casts = [
-        'is_military'       => 'boolean',
-        'is_contracted'     => 'boolean',
-        'discount_percent'  => 'decimal:2',
+        'is_military' => 'boolean',
+        'is_contracted' => 'boolean',
+        'discount_percent' => 'decimal:2',
     ];
 
     /** @return array{gross_total: float, patient_share: float, company_share: float, company_share_percent: float, patient_share_percent: float} */

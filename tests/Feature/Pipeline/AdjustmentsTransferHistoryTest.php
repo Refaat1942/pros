@@ -58,7 +58,7 @@ class AdjustmentsTransferHistoryTest extends TestCase
         $user = $this->userWithRole('adjustments');
 
         $this->actingAs($user)
-            ->getJson('/adjustments/history/list?search=' . urlencode($case->patient->name))
+            ->getJson('/adjustments/history/list?search='.urlencode($case->patient->name))
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.case_no', $case->case_no);
@@ -75,7 +75,7 @@ class AdjustmentsTransferHistoryTest extends TestCase
         $user = $this->userWithRole('adjustments');
 
         $response = $this->actingAs($user)
-            ->get('/adjustments/history/export?from=' . now()->startOfMonth()->toDateString() . '&to=' . now()->toDateString());
+            ->get('/adjustments/history/export?from='.now()->startOfMonth()->toDateString().'&to='.now()->toDateString());
 
         $response->assertOk();
         $response->assertHeader('content-type', 'text/csv; charset=UTF-8');

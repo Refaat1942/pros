@@ -4,6 +4,7 @@ use App\Http\Controllers\Bom\ReturnNoteController;
 use App\Http\Controllers\Dashboard\OperationsDashboardController;
 use App\Http\Controllers\Manufacturing\ManufacturingStageController;
 use App\Http\Controllers\Operations\OperationsDeskController;
+use App\Http\Controllers\Quote\QuoteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,7 +41,7 @@ Route::prefix('operations')
                 ->middleware('can:approve-pricing')
                 ->name('pending.return');
 
-            Route::get('quote/{quote}/print', [\App\Http\Controllers\Quote\QuoteController::class, 'print'])
+            Route::get('quote/{quote}/print', [QuoteController::class, 'print'])
                 ->name('quote.print');
 
             Route::get('case/{case}/print-work-order', [ManufacturingStageController::class, 'printWorkOrder'])

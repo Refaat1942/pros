@@ -11,8 +11,7 @@ class AdminOverviewExportService
 {
     public function __construct(
         private readonly AdminOverviewService $overview,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{
@@ -23,7 +22,7 @@ class AdminOverviewExportService
      */
     public function build(Carbon $from, Carbon $to): array
     {
-        $data    = $this->overview->pageData($from, $to);
+        $data = $this->overview->pageData($from, $to);
         $reports = $data['admin_reports'] ?? [];
         $financial = $reports['financial'] ?? [];
         $inventory = $reports['inventory'] ?? [];
@@ -44,11 +43,11 @@ class AdminOverviewExportService
         ];
 
         $kpiRows = [
-            ['الإيرادات', number_format((float) ($financial['monthly_revenue'] ?? 0), 2) . ' ج.م'],
+            ['الإيرادات', number_format((float) ($financial['monthly_revenue'] ?? 0), 2).' ج.م'],
             ['حالات مدنية مُسلّمة', (string) ($financial['delivered_count'] ?? 0)],
             ['أوامر التشغيل', (string) ($financial['work_orders_count'] ?? 0)],
-            ['صحة المخزون', (string) ($inventory['health_pct'] ?? 0) . '%'],
-            ['صرف المخزن', (string) ($inventory['issues_this_month'] ?? 0) . ' وحدة'],
+            ['صحة المخزون', (string) ($inventory['health_pct'] ?? 0).'%'],
+            ['صرف المخزن', (string) ($inventory['issues_this_month'] ?? 0).' وحدة'],
             ['حالات مفتوحة (إجمالي)', (string) ($data['cycle_total_active'] ?? 0)],
         ];
 
@@ -82,38 +81,38 @@ class AdminOverviewExportService
         }
 
         return [
-            'title'        => 'نظرة عامة — الإدارة العليا',
+            'title' => 'نظرة عامة — الإدارة العليا',
             'period_label' => $data['period_label'] ?? $this->overview->periodLabel($from, $to),
-            'sections'     => [
+            'sections' => [
                 [
-                    'title'   => 'دورة العمل — الطوابير',
+                    'title' => 'دورة العمل — الطوابير',
                     'headers' => ['القسم', 'العدد', 'الوصف'],
-                    'rows'    => $summaryRows,
+                    'rows' => $summaryRows,
                 ],
                 [
-                    'title'   => 'متابعة الحالات',
+                    'title' => 'متابعة الحالات',
                     'headers' => ['الحالة', 'العدد'],
-                    'rows'    => $caseRows,
+                    'rows' => $caseRows,
                 ],
                 [
-                    'title'   => 'مؤشرات المالية والمخزون',
+                    'title' => 'مؤشرات المالية والمخزون',
                     'headers' => ['المؤشر', 'القيمة'],
-                    'rows'    => $kpiRows,
+                    'rows' => $kpiRows,
                 ],
                 [
-                    'title'   => 'الأصناف الأكثر طلباً (BOM)',
+                    'title' => 'الأصناف الأكثر طلباً (BOM)',
                     'headers' => ['الكود', 'الاسم', 'الكمية'],
-                    'rows'    => $topItemRows ?: [['—', 'لا توجد بيانات', '0']],
+                    'rows' => $topItemRows ?: [['—', 'لا توجد بيانات', '0']],
                 ],
                 [
-                    'title'   => 'أوامر التشغيل',
+                    'title' => 'أوامر التشغيل',
                     'headers' => ['أمر التشغيل', 'المريض', 'رقم الحالة'],
-                    'rows'    => $workOrderRows ?: [['—', 'لا توجد أوامر', '—']],
+                    'rows' => $workOrderRows ?: [['—', 'لا توجد أوامر', '—']],
                 ],
                 [
-                    'title'   => 'قوائم BOM',
+                    'title' => 'قوائم BOM',
                     'headers' => ['المريض', 'أمر التشغيل', 'المرحلة', 'البنود', 'قيمة الاصناف (ج.م)'],
-                    'rows'    => $bomRows ?: [['—', '—', '—', '0', '0.00']],
+                    'rows' => $bomRows ?: [['—', '—', '—', '0', '0.00']],
                 ],
             ],
         ];

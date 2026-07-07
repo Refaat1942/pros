@@ -9,8 +9,8 @@ class StoreMilitaryRankRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'name'       => $this->personNameRules(),
-            'rank_code'  => ['nullable', 'string', 'min:2', 'max:30', 'regex:/^[A-Za-z0-9_\-]+$/', 'unique:military_ranks,rank_code'],
+            'name' => $this->personNameRules(),
+            'rank_code' => ['nullable', 'string', 'min:2', 'max:30', 'regex:/^[A-Za-z0-9_\-]+$/', 'unique:military_ranks,rank_code'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
         ];
     }
@@ -18,7 +18,7 @@ class StoreMilitaryRankRequest extends BaseRequest
     public function messages(): array
     {
         return [
-            'rank_code.regex'  => 'كود الرتبة يجب أن يحتوي على حروف إنجليزية وأرقام فقط.',
+            'rank_code.regex' => 'كود الرتبة يجب أن يحتوي على حروف إنجليزية وأرقام فقط.',
             'rank_code.unique' => 'كود الرتبة مستخدم مسبقاً.',
         ];
     }

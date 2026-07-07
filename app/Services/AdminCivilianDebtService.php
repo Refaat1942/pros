@@ -15,8 +15,7 @@ class AdminCivilianDebtService
 {
     public function __construct(
         private readonly DebtCollectionEntryService $collectionEntryService,
-    ) {
-    }
+    ) {}
 
     public function query(?Request $request = null): Builder
     {
@@ -43,10 +42,10 @@ class AdminCivilianDebtService
      */
     public function stats(Collection $debts): array
     {
-        $totalDue       = $debts->sum(fn (ContractCompanyDebt $d) => (float) $d->due);
+        $totalDue = $debts->sum(fn (ContractCompanyDebt $d) => (float) $d->due);
         $totalCollected = $debts->sum(fn (ContractCompanyDebt $d) => (float) $d->collected);
         $totalRemaining = $debts->sum(fn ($d) => $this->remaining($d));
-        $outstanding    = $debts->filter(fn ($d) => $this->remaining($d) > 0)->count();
+        $outstanding = $debts->filter(fn ($d) => $this->remaining($d) > 0)->count();
 
         return [
             ['icon' => '🏢', 'label' => 'جهات مدنية', 'value' => (string) $debts->count(), 'bg' => 'rgba(14,116,144,0.1)', 'color' => '#0e7490', 'key' => 'entities'],
@@ -59,19 +58,19 @@ class AdminCivilianDebtService
 
     public function formatDebt(ContractCompanyDebt $debt): array
     {
-        $due       = (float) $debt->due;
+        $due = (float) $debt->due;
         $collected = (float) $debt->collected;
         $remaining = $this->remaining($debt);
         $collectionPkg = $this->collectionEntryService->packageForPayable($debt, $due, $collected);
         $lastCollectedAt = $collectionPkg['collection_summary']['last_collected_at'] ?? null;
 
         return $debt->only(['id', 'contract_company_id', 'due', 'collected', 'status']) + [
-            'remaining'         => $remaining,
-            'status_label'      => $this->statusLabel((string) $debt->status, $due, $collected),
+            'remaining' => $remaining,
+            'status_label' => $this->statusLabel((string) $debt->status, $due, $collected),
             'last_collected_at' => $lastCollectedAt,
-            'is_frozen'         => $due > 0 && $collected >= $due,
-            'balance'           => $remaining > 0 ? 'outstanding' : 'settled',
-            'company'           => $debt->relationLoaded('contractCompany') && $debt->contractCompany
+            'is_frozen' => $due > 0 && $collected >= $due,
+            'balance' => $remaining > 0 ? 'outstanding' : 'settled',
+            'company' => $debt->relationLoaded('contractCompany') && $debt->contractCompany
                 ? $debt->contractCompany->only(['id', 'company_code', 'name', 'is_military'])
                 : null,
         ] + $collectionPkg;

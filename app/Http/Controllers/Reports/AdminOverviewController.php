@@ -22,8 +22,7 @@ class AdminOverviewController extends Controller
         private readonly AdminPatientTrackService $patientTrackService,
         private readonly AdminOverviewService $overview,
         private readonly AdminOverviewExportService $exporter,
-    ) {
-    }
+    ) {}
 
     /**
      * نظرة عامة — دورة العمل + مؤشرات مالية ومخزون.
@@ -45,17 +44,17 @@ class AdminOverviewController extends Controller
             $request->query('to'),
         );
 
-        $report   = $this->exporter->build($dates['from'], $dates['to']);
+        $report = $this->exporter->build($dates['from'], $dates['to']);
         $filename = $this->exportFilename($dates['from'], $dates['to']);
 
         $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         $callback = function () use ($report) {
             $out = fopen('php://output', 'w');
-            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
             fputcsv($out, [$report['title']]);
             fputcsv($out, [$report['period_label']]);
             fputcsv($out, []);
@@ -90,6 +89,6 @@ class AdminOverviewController extends Controller
 
     private function exportFilename(Carbon $from, Carbon $to): string
     {
-        return 'نظرة_عامة_' . $from->format('Y-m-d') . '_' . $to->format('Y-m-d') . '.csv';
+        return 'نظرة_عامة_'.$from->format('Y-m-d').'_'.$to->format('Y-m-d').'.csv';
     }
 }

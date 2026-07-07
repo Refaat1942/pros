@@ -24,22 +24,22 @@ class ContractCompanyDiscountTest extends TestCase
 
         $this->actingAs($admin)
             ->postJson(route('admin.companies.store'), [
-                'name'             => 'جهة خصم اختبار',
-                'is_military'      => false,
-                'is_contracted'    => true,
+                'name' => 'جهة خصم اختبار',
+                'is_military' => false,
+                'is_contracted' => true,
                 'discount_percent' => 15,
             ])
             ->assertCreated();
 
         $this->assertDatabaseHas('contract_companies', [
-            'name'             => 'جهة خصم اختبار',
+            'name' => 'جهة خصم اختبار',
             'discount_percent' => 15,
         ]);
     }
 
     public function test_admin_can_update_company_discount_percent(): void
     {
-        $admin   = $this->userWithRole('admin');
+        $admin = $this->userWithRole('admin');
         $company = $this->civilianCompany('شركة تحديث خصم');
         $company->update(['discount_percent' => 5]);
 
@@ -55,10 +55,10 @@ class ContractCompanyDiscountTest extends TestCase
     public function test_billing_split_applies_discount_to_patient_share(): void
     {
         $company = ContractCompany::create([
-            'company_code'     => 'CO-SPLIT',
-            'name'             => 'تأمين صحي',
-            'is_military'      => false,
-            'is_contracted'    => true,
+            'company_code' => 'CO-SPLIT',
+            'name' => 'تأمين صحي',
+            'is_military' => false,
+            'is_contracted' => true,
             'discount_percent' => 20,
         ]);
 
@@ -82,18 +82,18 @@ class ContractCompanyDiscountTest extends TestCase
         $company->update(['discount_percent' => 20]);
 
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_COST_CALC);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
         $case->update(['contract_company_id' => $company->id]);
 
         $pricing = PricingRequest::create([
-            'request_no'     => 'PR-SPLIT-001',
-            'case_id'        => $case->id,
-            'patient_type'   => 'civilian',
-            'order_ref'      => $case->order_ref,
-            'patient_name'   => $patient->name,
-            'company_name'   => $company->name,
-            'request_date'   => now()->toDateString(),
-            'status_key'     => 'awaiting_admin_approval',
+            'request_no' => 'PR-SPLIT-001',
+            'case_id' => $case->id,
+            'patient_type' => 'civilian',
+            'order_ref' => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
+            'request_date' => now()->toDateString(),
+            'status_key' => 'awaiting_admin_approval',
             'computed_total' => 1000,
         ]);
 
@@ -109,18 +109,18 @@ class ContractCompanyDiscountTest extends TestCase
         $company->update(['discount_percent' => 10]);
 
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_COST_CALC);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
         $case->update(['contract_company_id' => $company->id]);
 
         $pricing = PricingRequest::create([
-            'request_no'     => 'PR-PRINT-001',
-            'case_id'        => $case->id,
-            'patient_type'   => 'civilian',
-            'order_ref'      => $case->order_ref,
-            'patient_name'   => $patient->name,
-            'company_name'   => $company->name,
-            'request_date'   => now()->toDateString(),
-            'status_key'     => 'awaiting_admin_approval',
+            'request_no' => 'PR-PRINT-001',
+            'case_id' => $case->id,
+            'patient_type' => 'civilian',
+            'order_ref' => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
+            'request_date' => now()->toDateString(),
+            'status_key' => 'awaiting_admin_approval',
             'computed_total' => 4000,
         ]);
 
@@ -144,10 +144,10 @@ class ContractCompanyDiscountTest extends TestCase
         $company->update(['discount_percent' => 20]);
 
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
         $case->update([
             'contract_company_id' => $company->id,
-            'quote_total'         => 1000,
+            'quote_total' => 1000,
         ]);
 
         app(FinancialPostingService::class)->post($case->fresh(['contractCompany']));
@@ -167,10 +167,10 @@ class ContractCompanyDiscountTest extends TestCase
     {
         $company = $this->civilianCompany('تأمين بدون خصم');
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
         $case->update([
             'contract_company_id' => $company->id,
-            'quote_total'         => 2000,
+            'quote_total' => 2000,
         ]);
 
         $this->assertSame(2000.0, ContractBillingSplit::companyDue($case->fresh(['contractCompany']), 2000));
@@ -182,10 +182,10 @@ class ContractCompanyDiscountTest extends TestCase
         $company->update(['discount_percent' => 10]);
 
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, \App\Models\CaseRecord::STAGE_MANUFACTURING);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
         $case->update([
             'contract_company_id' => $company->id,
-            'quote_total'         => 4000,
+            'quote_total' => 4000,
         ]);
 
         $this->assertSame(3600.0, ContractBillingSplit::companyDue($case->fresh(['contractCompany']), 4000));
@@ -197,20 +197,20 @@ class ContractCompanyDiscountTest extends TestCase
         $company->update(['discount_percent' => 10]);
 
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update([
             'contract_company_id' => $company->id,
-            'work_order_no'       => 'WO-2026-0001',
-            'quote_total'         => 4000,
-            'quote_no'            => 'QT-2026-0001',
+            'work_order_no' => 'WO-2026-0001',
+            'quote_total' => 4000,
+            'quote_no' => 'QT-2026-0001',
         ]);
 
         Bom::create([
-            'case_id'      => $case->id,
-            'bom_no'       => 'BOM-WO-001',
-            'order_ref'    => $case->order_ref,
+            'case_id' => $case->id,
+            'bom_no' => 'BOM-WO-001',
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_WIP,
+            'stage' => Bom::STAGE_WIP,
         ]);
 
         $ops = $this->userWithRole('operations');

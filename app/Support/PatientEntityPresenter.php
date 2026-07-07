@@ -114,9 +114,9 @@ final class PatientEntityPresenter
     {
         if (($entity['kind'] ?? '') === self::KIND_CASH) {
             return [
-                'label'       => '—',
-                'kind'        => self::KIND_CASH,
-                'badge'       => '',
+                'label' => '—',
+                'kind' => self::KIND_CASH,
+                'badge' => '',
                 'badge_class' => '',
             ];
         }
@@ -128,9 +128,9 @@ final class PatientEntityPresenter
     private static function cash(): array
     {
         return [
-            'label'       => self::CASH_LABEL,
-            'kind'        => self::KIND_CASH,
-            'badge'       => '💵 نقدي',
+            'label' => self::CASH_LABEL,
+            'kind' => self::KIND_CASH,
+            'badge' => '💵 نقدي',
             'badge_class' => 'entity-badge entity-badge--cash',
         ];
     }
@@ -139,9 +139,9 @@ final class PatientEntityPresenter
     private static function contracted(string $name): array
     {
         return [
-            'label'       => $name,
-            'kind'        => self::KIND_CONTRACTED,
-            'badge'       => '📑 متعاقد',
+            'label' => $name,
+            'kind' => self::KIND_CONTRACTED,
+            'badge' => '📑 متعاقد',
             'badge_class' => 'entity-badge entity-badge--contracted',
         ];
     }
@@ -150,9 +150,9 @@ final class PatientEntityPresenter
     private static function nonContracted(string $name): array
     {
         return [
-            'label'       => $name,
-            'kind'        => self::KIND_NON_CONTRACTED,
-            'badge'       => '🏷️ غير متعاقد',
+            'label' => $name,
+            'kind' => self::KIND_NON_CONTRACTED,
+            'badge' => '🏷️ غير متعاقد',
             'badge_class' => 'entity-badge entity-badge--non-contracted',
         ];
     }
@@ -161,9 +161,9 @@ final class PatientEntityPresenter
     private static function military(string $entity): array
     {
         return [
-            'label'       => $entity,
-            'kind'        => self::KIND_MILITARY,
-            'badge'       => '🪖 عسكري',
+            'label' => $entity,
+            'kind' => self::KIND_MILITARY,
+            'badge' => '🪖 عسكري',
             'badge_class' => 'entity-badge entity-badge--military',
         ];
     }

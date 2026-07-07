@@ -20,8 +20,7 @@ class SpecService
     public function __construct(
         private readonly WorkflowService $workflowService,
         private readonly BomService $bomService,
-    ) {
-    }
+    ) {}
 
     /**
      * إعادة فتح التوصيف للتعديل بعد إرجاع الحالة من مكتب التشغيل (أو المعدلات).
@@ -42,16 +41,16 @@ class SpecService
             $before = $spec->only(['locked', 'submitted_at']);
 
             $spec->update([
-                'locked'       => false,
+                'locked' => false,
                 'submitted_at' => null,
             ]);
 
             AuditService::log(
-                action:      'reopen',
+                action: 'reopen',
                 description: "إعادة فتح التوصيف الفني للتعديل — {$case->case_no}",
-                tag:         'spec',
-                before:      $before,
-                after:       $spec->only(['locked', 'submitted_at']),
+                tag: 'spec',
+                before: $before,
+                after: $spec->only(['locked', 'submitted_at']),
             );
         });
     }
@@ -71,22 +70,22 @@ class SpecService
             $doctorName = $this->resolveDoctorName($case);
 
             $spec = TechOrderSpec::create([
-                'order_ref'    => $case->order_ref,
-                'case_id'      => $case->id,
+                'order_ref' => $case->order_ref,
+                'case_id' => $case->id,
                 'patient_name' => $case->patient->name,
                 'company_name' => $case->company_name,
-                'doctor_name'  => $doctorName,
-                'tech_notes'   => $data['tech_notes'] ?? null,
-                'locked'       => false,
+                'doctor_name' => $doctorName,
+                'tech_notes' => $data['tech_notes'] ?? null,
+                'locked' => false,
             ]);
 
             $this->syncItems($spec, $data['items'] ?? []);
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "مسودة توصيف فني #{$spec->id} — {$case->case_no}",
-                tag:         'spec',
-                after:       ['id' => $spec->id, 'case_id' => $case->id],
+                tag: 'spec',
+                after: ['id' => $spec->id, 'case_id' => $case->id],
             );
 
             return $spec->load('items');
@@ -114,11 +113,11 @@ class SpecService
             }
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "تحديث مسودة توصيف فني #{$spec->id}",
-                tag:         'spec',
-                before:      $before,
-                after:       $spec->only(['tech_notes']),
+                tag: 'spec',
+                before: $before,
+                after: $spec->only(['tech_notes']),
             );
 
             return $spec->fresh()->load('items');
@@ -153,12 +152,12 @@ class SpecService
 
             $this->bomService->createSpecRaw($case, $spec->items->map(fn ($i) => [
                 'stock_item_code' => $i->stock_item_code,
-                'name'            => $i->name,
-                'qty'             => $i->qty,
+                'name' => $i->name,
+                'qty' => $i->qty,
             ])->all());
 
             $spec->update([
-                'locked'       => true,
+                'locked' => true,
                 'submitted_at' => now(),
             ]);
 
@@ -168,10 +167,10 @@ class SpecService
             $case->clearReworkNotice();
 
             AuditService::log(
-                action:      'submit',
+                action: 'submit',
                 description: "إرسال التوصيف للمعدلات — {$case->case_no}",
-                tag:         'spec',
-                after:       ['case_id' => $case->id, 'items_count' => $spec->items->count()],
+                tag: 'spec',
+                after: ['case_id' => $case->id, 'items_count' => $spec->items->count()],
             );
 
             return $case->fresh();
@@ -192,9 +191,9 @@ class SpecService
         foreach ($items as $item) {
             TechOrderSpecItem::create([
                 'tech_order_spec_id' => $spec->id,
-                'stock_item_code'    => $item['stock_item_code'],
-                'name'               => $item['name'],
-                'qty'                => $item['qty'],
+                'stock_item_code' => $item['stock_item_code'],
+                'name' => $item['name'],
+                'qty' => $item['qty'],
             ]);
         }
     }
@@ -203,7 +202,7 @@ class SpecService
     {
         $this->validateItemStockCodes($spec->items->map(fn ($i) => [
             'stock_item_code' => $i->stock_item_code,
-            'qty'             => $i->qty,
+            'qty' => $i->qty,
         ])->all());
     }
 
@@ -214,7 +213,7 @@ class SpecService
     {
         foreach ($items as $item) {
             $code = $item['stock_item_code'] ?? '';
-            $qty  = (int) ($item['qty'] ?? 0);
+            $qty = (int) ($item['qty'] ?? 0);
 
             if ($qty < 1) {
                 abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');

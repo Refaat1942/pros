@@ -13,17 +13,17 @@ class BomItemAggregatorTest extends TestCase
         $items = [
             new BomItem([
                 'stock_item_code' => 'ITM-010',
-                'name'            => 'مفصل كوع',
-                'qty'             => 1,
-                'issued_qty'      => 0,
-                'returned_qty'    => 0,
+                'name' => 'مفصل كوع',
+                'qty' => 1,
+                'issued_qty' => 0,
+                'returned_qty' => 0,
             ]),
             new BomItem([
                 'stock_item_code' => 'ITM-010',
-                'name'            => 'مفصل كوع',
-                'qty'             => 1,
-                'issued_qty'      => 0,
-                'returned_qty'    => 0,
+                'name' => 'مفصل كوع',
+                'qty' => 1,
+                'issued_qty' => 0,
+                'returned_qty' => 0,
             ]),
         ];
 

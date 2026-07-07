@@ -8,6 +8,7 @@ use App\Models\Permission;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\Supplier;
+use App\Services\AppointmentService;
 use App\Services\MedicalRecordService;
 use App\Services\StockCatalogService;
 use App\Services\StockImportService;
@@ -16,6 +17,7 @@ use Database\Seeders\SupplierSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
+use OpenSpout\Reader\XLSX\Reader;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -25,22 +27,22 @@ use Tests\TestCase;
  */
 class ChecklistFeaturesTest extends TestCase
 {
-    use RefreshDatabase;
     use ProstheticTestHelper;
+    use RefreshDatabase;
 
     public function test_skip_exam_advances_case_to_technical_without_medical_record(): void
     {
-        $company   = $this->civilianCompany();
-        $patient   = $this->civilianPatient($company);
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
         $visitType = $this->defaultVisitType();
 
-        $appointment = app(\App\Services\AppointmentService::class)->book([
-            'patient_id'       => $patient->id,
+        $appointment = app(AppointmentService::class)->book([
+            'patient_id' => $patient->id,
             'appointment_date' => now()->toDateString(),
-            'visit_type_id'    => $visitType->id,
+            'visit_type_id' => $visitType->id,
         ]);
 
-        app(\App\Services\AppointmentService::class)->advanceStatus(
+        app(AppointmentService::class)->advanceStatus(
             $appointment,
             Appointment::STATUS_IN_CLINIC,
         );
@@ -55,8 +57,8 @@ class ChecklistFeaturesTest extends TestCase
     public function test_csv_bulk_import_creates_then_updates_items(): void
     {
         $csv = StockImportService::HEADERS;
-        $contents = implode(',', $csv) . "\r\n"
-            . "RM-900,خامة اختبار,15,100\r\n";
+        $contents = implode(',', $csv)."\r\n"
+            ."RM-900,خامة اختبار,15,100\r\n";
 
         $file = UploadedFile::fake()->createWithContent('items.csv', $contents);
 
@@ -64,14 +66,14 @@ class ChecklistFeaturesTest extends TestCase
 
         $this->assertSame(1, $summary['created']);
         $this->assertDatabaseHas('stock_items', [
-            'code'  => 'RM-900',
-            'name'  => 'خامة اختبار',
-            'qty'   => 15,
+            'code' => 'RM-900',
+            'name' => 'خامة اختبار',
+            'qty' => 15,
             'price' => 100,
         ]);
 
         // إعادة الرفع بنفس الكود → تحديث (upsert) لا إنشاء.
-        $update = implode(',', $csv) . "\r\n" . "RM-900,خامة محدثة,40,120\r\n";
+        $update = implode(',', $csv)."\r\n"."RM-900,خامة محدثة,40,120\r\n";
         $summary2 = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('items2.csv', $update),
         );
@@ -85,8 +87,8 @@ class ChecklistFeaturesTest extends TestCase
     public function test_csv_import_parses_multiple_prices_separated_by_semicolon(): void
     {
         $csv = StockImportService::HEADERS;
-        $contents = implode(',', $csv) . "\r\n"
-            . "RM-901,صنف متعدد الأسعار,5,1000;2000;2200\r\n";
+        $contents = implode(',', $csv)."\r\n"
+            ."RM-901,صنف متعدد الأسعار,5,1000;2000;2200\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('multi.csv', $contents),
@@ -103,7 +105,7 @@ class ChecklistFeaturesTest extends TestCase
     public function test_csv_import_handles_excel_semicolon_delimiter(): void
     {
         $contents = "كود الصنف;اسم الصنف;الكمية;السعر\r\n"
-            . "RM-902;صنف اكسيل;3;500;1000\r\n";
+            ."RM-902;صنف اكسيل;3;500;1000\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('excel.csv', $contents),
@@ -132,7 +134,7 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertDatabaseHas('stock_items', [
             'code' => 'RM-903',
             'name' => $arabicName,
-            'qty'  => 5,
+            'qty' => 5,
         ]);
     }
 
@@ -145,8 +147,8 @@ class ChecklistFeaturesTest extends TestCase
         $header = iconv('UTF-8', 'CP1256', implode(';', StockImportService::HEADERS));
         $this->assertNotFalse($header);
 
-        $contents = $header . "\r\n"
-            . 'RM-560;' . $encodedName . ';3;1000;2000' . "\r\n";
+        $contents = $header."\r\n"
+            .'RM-560;'.$encodedName.';3;1000;2000'."\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('excel-ar.csv', $contents),
@@ -167,8 +169,8 @@ class ChecklistFeaturesTest extends TestCase
         $supplierId = Supplier::query()->where('name', 'Blatchford Group')->value('id');
         $categoryId = StockCategory::query()->where('name', 'أقمشة ومواد خام')->value('id');
 
-        $contents = implode(',', StockImportService::HEADERS) . "\r\n"
-            . "RM-910,قماش اختبار,40,8,500,{$supplierId},{$categoryId},قماش Lamination|متر\r\n";
+        $contents = implode(',', StockImportService::HEADERS)."\r\n"
+            ."RM-910,قماش اختبار,40,8,500,{$supplierId},{$categoryId},قماش Lamination|متر\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('extended.csv', $contents),
@@ -194,10 +196,10 @@ class ChecklistFeaturesTest extends TestCase
 
         $this->assertStringStartsWith('PK', $bytes);
 
-        $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'stock_tpl_test_' . uniqid('', true) . '.xlsx';
+        $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'stock_tpl_test_'.uniqid('', true).'.xlsx';
         file_put_contents($path, $bytes);
 
-        $reader = new \OpenSpout\Reader\XLSX\Reader();
+        $reader = new Reader;
         $reader->open($path);
 
         $sheetNames = [];
@@ -230,14 +232,14 @@ class ChecklistFeaturesTest extends TestCase
 
         // سعر الصنف 300 مقابل تكلفة WAC = 100 → هامش 200%.
         StockItem::create([
-            'code'     => 'RM-MIL',
-            'name'     => 'صنف عسكري',
-            'barcode'  => 'BC-RM-MIL',
-            'qty'      => 20,
+            'code' => 'RM-MIL',
+            'name' => 'صنف عسكري',
+            'barcode' => 'BC-RM-MIL',
+            'qty' => 20,
             'reserved' => 0,
-            'price'    => 300,
-            'wac'      => 100,
-            'status'   => 'ok',
+            'price' => 300,
+            'wac' => 100,
+            'status' => 'ok',
         ]);
 
         $case = $this->operationsReadyCase($patient, ['RM-MIL']);
@@ -277,19 +279,19 @@ class ChecklistFeaturesTest extends TestCase
         $supplier = $this->makeSupplier();
 
         $response = $this->actingAs($admin)->postJson(route('admin.catalog.store'), [
-            'name'         => 'صنف مبسّط',
-            'qty'          => 12,
-            'price'        => 150,
+            'name' => 'صنف مبسّط',
+            'qty' => 12,
+            'price' => 150,
             'supplier_ids' => [$supplier->id],
-            'prices'       => [
+            'prices' => [
                 ['label' => 'سعر مورد آخر', 'amount' => 175],
             ],
         ]);
 
         $response->assertCreated();
         $this->assertDatabaseHas('stock_items', [
-            'name'  => 'صنف مبسّط',
-            'qty'   => 12,
+            'name' => 'صنف مبسّط',
+            'qty' => 12,
             'price' => 150,
         ]);
         // السعر الإضافي يُحفظ كصف سعر مستقل (صنف بأكثر من سعر).
@@ -303,16 +305,16 @@ class ChecklistFeaturesTest extends TestCase
         $admin = $this->userWithRole('admin');
 
         $item = StockItem::create([
-            'code'     => 'RM-LBL',
-            'name'     => 'صنف ملصق',
-            'barcode'  => 'BC-RM-LBL',
-            'qty'      => 5,
+            'code' => 'RM-LBL',
+            'name' => 'صنف ملصق',
+            'barcode' => 'BC-RM-LBL',
+            'qty' => 5,
             'reserved' => 0,
-            'wac'      => 50,
-            'status'   => 'ok',
+            'wac' => 50,
+            'status' => 'ok',
         ]);
 
-        $response = $this->actingAs($admin)->get(route('admin.catalog.labels', $item) . '?copies=4');
+        $response = $this->actingAs($admin)->get(route('admin.catalog.labels', $item).'?copies=4');
 
         $response->assertOk();
         $response->assertSee('BC-RM-LBL');

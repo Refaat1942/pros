@@ -11,9 +11,7 @@ use Illuminate\View\View;
  */
 class PublicTrackingController extends Controller
 {
-    public function __construct(private readonly PublicTrackingService $publicTrackingService)
-    {
-    }
+    public function __construct(private readonly PublicTrackingService $publicTrackingService) {}
 
     public function show(string $uid): View
     {

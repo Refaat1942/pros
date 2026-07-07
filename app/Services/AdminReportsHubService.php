@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\CaseStage;
+use App\Enums\PaymentMethod;
 use App\Models\Appointment;
 use App\Models\ApprovalContract;
 use App\Models\AuditLog;
@@ -12,19 +13,19 @@ use App\Models\ContractCompanyDebt;
 use App\Models\DebtCollectionEntry;
 use App\Models\Patient;
 use App\Models\Payment;
-use App\Enums\PaymentMethod;
 use App\Models\ReturnNote;
 use App\Models\SpecEditRequest;
-use App\Models\Supplier;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
 use App\Models\StockMovement;
-use App\Models\VisitType;
+use App\Models\Supplier;
 use App\Support\CaseFinancialSummary;
 use App\Support\ClinicTime;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -36,8 +37,7 @@ class AdminReportsHubService
         private readonly AdminReportsService $snapshotReports,
         private readonly SupplierService $supplierService,
         private readonly AdminPatientTrackService $patientTracks,
-    ) {
-    }
+    ) {}
 
     /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
     public function sections(): array
@@ -47,23 +47,23 @@ class AdminReportsHubService
 
         $cards = [];
         $groups = [
-            'patient-tracks'     => 'مسار المرضى والحالات',
-            'cases'              => 'مسار المرضى والحالات',
+            'patient-tracks' => 'مسار المرضى والحالات',
+            'cases' => 'مسار المرضى والحالات',
             'spec-edit-requests' => 'مسار المرضى والحالات',
-            'visit-types'        => 'مسار المرضى والحالات',
-            'catalog'            => 'المخزون والتوريد',
-            'stock-categories'   => 'المخزون والتوريد',
+            'visit-types' => 'مسار المرضى والحالات',
+            'catalog' => 'المخزون والتوريد',
+            'stock-categories' => 'المخزون والتوريد',
             'inventory-overview' => 'المخزون والتوريد',
-            'suppliers'          => 'المخزون والتوريد',
-            'returns'            => 'المخزون والتوريد',
-            'companies'        => 'التعاقد والمالية',
-            'contracts'        => 'التعاقد والمالية',
-            'civilian-debts'   => 'التعاقد والمالية',
-            'audit'            => 'الرقابة',
-            'financial'        => 'رؤية عامة',
-            'inventory'        => 'رؤية عامة',
-            'operations'       => 'رؤية عامة',
-            'bom'              => 'رؤية عامة',
+            'suppliers' => 'المخزون والتوريد',
+            'returns' => 'المخزون والتوريد',
+            'companies' => 'التعاقد والمالية',
+            'contracts' => 'التعاقد والمالية',
+            'civilian-debts' => 'التعاقد والمالية',
+            'audit' => 'الرقابة',
+            'financial' => 'رؤية عامة',
+            'inventory' => 'رؤية عامة',
+            'operations' => 'رؤية عامة',
+            'bom' => 'رؤية عامة',
         ];
 
         $reportLabels = [
@@ -76,10 +76,10 @@ class AdminReportsHubService
             }
 
             $cards[] = [
-                'id'          => $slug,
-                'label'       => $reportLabels[$slug] ?? ($meta['label'] ?? $slug),
-                'icon'        => $meta['icon'] ?? '📄',
-                'group'       => $groups[$slug] ?? 'أخرى',
+                'id' => $slug,
+                'label' => $reportLabels[$slug] ?? ($meta['label'] ?? $slug),
+                'icon' => $meta['icon'] ?? '📄',
+                'group' => $groups[$slug] ?? 'أخرى',
                 'description' => $meta['title'] ?? '',
             ];
         }
@@ -110,28 +110,28 @@ class AdminReportsHubService
         }
 
         $from = $from?->copy()->startOfDay();
-        $to   = $to?->copy()->endOfDay();
+        $to = $to?->copy()->endOfDay();
 
         return match ($section) {
-            'cash-income'        => $this->buildCashIncome($from, $to),
-            'financial'          => $this->buildFinancial($from, $to),
-            'inventory'          => $this->buildInventoryAnalytics($from, $to),
-            'operations'         => $this->buildOperations($from, $to),
-            'bom'                => $this->buildBom($from, $to),
-            'patient-tracks'     => $this->buildPatientTracks($from, $to),
-            'cases'              => $this->buildCases($from, $to),
+            'cash-income' => $this->buildCashIncome($from, $to),
+            'financial' => $this->buildFinancial($from, $to),
+            'inventory' => $this->buildInventoryAnalytics($from, $to),
+            'operations' => $this->buildOperations($from, $to),
+            'bom' => $this->buildBom($from, $to),
+            'patient-tracks' => $this->buildPatientTracks($from, $to),
+            'cases' => $this->buildCases($from, $to),
             'spec-edit-requests' => $this->buildSpecEditRequests($from, $to),
-            'visit-types'        => $this->buildVisitTypes($from, $to),
-            'stock-categories'   => $this->buildStockCategories($from, $to),
-            'catalog'            => $this->buildCatalog($from, $to),
+            'visit-types' => $this->buildVisitTypes($from, $to),
+            'stock-categories' => $this->buildStockCategories($from, $to),
+            'catalog' => $this->buildCatalog($from, $to),
             'inventory-overview' => $this->buildInventoryMovements($from, $to),
-            'suppliers'          => $this->buildSuppliers($from, $to),
-            'returns'            => $this->buildReturns($from, $to),
-            'companies'          => $this->buildCompanies($from, $to),
-            'contracts'          => $this->buildContracts($from, $to),
-            'civilian-debts'     => $this->buildCivilianDebts($from, $to),
-            'audit'              => $this->buildAudit($from, $to),
-            default              => throw new InvalidArgumentException("تقرير غير معروف: {$section}"),
+            'suppliers' => $this->buildSuppliers($from, $to),
+            'returns' => $this->buildReturns($from, $to),
+            'companies' => $this->buildCompanies($from, $to),
+            'contracts' => $this->buildContracts($from, $to),
+            'civilian-debts' => $this->buildCivilianDebts($from, $to),
+            'audit' => $this->buildAudit($from, $to),
+            default => throw new InvalidArgumentException("تقرير غير معروف: {$section}"),
         };
     }
 
@@ -162,15 +162,15 @@ class AdminReportsHubService
             PaymentMethod::labelFor($p->method),
             $p->reference ?? '—',
             $p->received_by ?? '—',
-            number_format((float) $p->amount, 2) . ' ج.م',
+            number_format((float) $p->amount, 2).' ج.م',
         ])->values()->all();
 
         return [
-            'title'        => 'التحصيل النقدي — الخزنة',
+            'title' => 'التحصيل النقدي — الخزنة',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['التاريخ', 'رقم الدفعة', 'المريض', 'رقم الحالة', 'الوسيلة', 'رقم العملية', 'المُحصِّل', 'المبلغ'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['التاريخ', 'رقم الدفعة', 'المريض', 'رقم الحالة', 'الوسيلة', 'رقم العملية', 'المُحصِّل', 'المبلغ'],
+            'rows' => $rows,
         ];
     }
 
@@ -194,15 +194,15 @@ class AdminReportsHubService
             $c->patient?->name ?? '—',
             $c->work_order_no ?? '—',
             $c->invoice_no ?? '—',
-            number_format(CaseFinancialSummary::totalCost($c), 2) . ' ج.م',
+            number_format(CaseFinancialSummary::totalCost($c), 2).' ج.م',
         ])->values()->all();
 
         return [
-            'title'         => 'الإيرادات والمالية',
-            'period_label'  => $this->periodLabel($from, $to),
-            'summary'       => [],
-            'headers'       => ['رقم الحالة', 'المريض', 'أمر التشغيل', 'الفاتورة', 'الإجمالي'],
-            'rows'          => $rows,
+            'title' => 'الإيرادات والمالية',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [],
+            'headers' => ['رقم الحالة', 'المريض', 'أمر التشغيل', 'الفاتورة', 'الإجمالي'],
+            'rows' => $rows,
         ];
     }
 
@@ -229,11 +229,11 @@ class AdminReportsHubService
         })->values()->all();
 
         return [
-            'title'        => 'تحليلات المخزون',
+            'title' => 'تحليلات المخزون',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['الكود', 'اسم الصنف', 'الكمية', 'آخر حركة', 'الحالة'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['الكود', 'اسم الصنف', 'الكمية', 'آخر حركة', 'الحالة'],
+            'rows' => $rows,
         ];
     }
 
@@ -260,11 +260,11 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'التشغيل والأوامر',
+            'title' => 'التشغيل والأوامر',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['أمر التشغيل', 'المريض', 'المرحلة', 'آخر تحديث'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['أمر التشغيل', 'المريض', 'المرحلة', 'آخر تحديث'],
+            'rows' => $rows,
         ];
     }
 
@@ -272,22 +272,22 @@ class AdminReportsHubService
     private function buildBom(?Carbon $from, ?Carbon $to): array
     {
         $snapshot = $this->snapshotReports->build($from, $to);
-        $bomRows  = $snapshot['bom']['rows'] ?? [];
+        $bomRows = $snapshot['bom']['rows'] ?? [];
 
         $rows = collect($bomRows)->map(fn (array $row) => [
             $row['patient'] ?? '—',
             $row['work_order_no'] ?? '—',
             $row['stage_label'] ?? '—',
             (string) ($row['line_count'] ?? 0),
-            number_format((float) ($row['value'] ?? 0), 2) . ' ج.م',
+            number_format((float) ($row['value'] ?? 0), 2).' ج.م',
         ])->values()->all();
 
         return [
-            'title'        => 'قوائم المواد',
+            'title' => 'قوائم المواد',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['المريض', 'أمر التشغيل', 'المرحلة', 'البنود', 'قيمة قائمة المواد'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['المريض', 'أمر التشغيل', 'المرحلة', 'البنود', 'قيمة قائمة المواد'],
+            'rows' => $rows,
         ];
     }
 
@@ -308,11 +308,11 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'مسار المرضى',
+            'title' => 'مسار المرضى',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['المريض', 'رقم الحالة', 'الجهة', 'المرحلة'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['المريض', 'رقم الحالة', 'الجهة', 'المرحلة'],
+            'rows' => $rows,
         ];
     }
 
@@ -390,11 +390,11 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'متابعة الحالات',
+            'title' => 'متابعة الحالات',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['رقم الحالة', 'المريض', 'المرحلة', 'أمر التشغيل', 'التاريخ'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['رقم الحالة', 'المريض', 'المرحلة', 'أمر التشغيل', 'التاريخ'],
+            'rows' => $rows,
         ];
     }
 
@@ -422,11 +422,11 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'أنواع الزيارات',
+            'title' => 'أنواع الزيارات',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['نوع الزيارة', 'العدد'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['نوع الزيارة', 'العدد'],
+            'rows' => $rows,
         ];
     }
 
@@ -447,11 +447,11 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'أقسام الأصناف',
+            'title' => 'أقسام الأصناف',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['القسم', 'عدد الأصناف', 'حقول مخصصة', 'تاريخ الإضافة'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['القسم', 'عدد الأصناف', 'حقول مخصصة', 'تاريخ الإضافة'],
+            'rows' => $rows,
         ];
     }
 
@@ -479,32 +479,32 @@ class AdminReportsHubService
             return [
                 $p->stockItem?->code ?? '—',
                 $p->stockItem?->name ?? '—',
-                number_format((float) $p->amount, 2) . ' ج.م',
+                number_format((float) $p->amount, 2).' ج.م',
                 (string) $p->qty,
                 ClinicTime::format($receivedAt, 'd/m/Y'),
-                $multiPrice ? ('نعم (' . $priceCount . ' أسعار)') : 'لا',
+                $multiPrice ? ('نعم ('.$priceCount.' أسعار)') : 'لا',
             ];
         })->values()->all();
 
         return [
-            'title'        => 'الأصناف والأسعار',
+            'title' => 'الأصناف والأسعار',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['الكود', 'الصنف', 'السعر', 'الكمية', 'تاريخ الاستلام', 'أسعار متعددة'],
-            'rows'         => $rows,
-            'row_actions'  => $rowActions,
+            'summary' => [],
+            'headers' => ['الكود', 'الصنف', 'السعر', 'الكمية', 'تاريخ الاستلام', 'أسعار متعددة'],
+            'rows' => $rows,
+            'row_actions' => $rowActions,
         ];
     }
 
-    /** @param \Illuminate\Database\Eloquent\Builder<StockItemPrice> $query */
-    private function priceBatchesInDateRange(?Carbon $from, ?Carbon $to): \Illuminate\Database\Eloquent\Builder
+    /** @param Builder<StockItemPrice> $query */
+    private function priceBatchesInDateRange(?Carbon $from, ?Carbon $to): Builder
     {
         if (! $from && ! $to) {
             return StockItemPrice::query();
         }
 
         $fromDate = $from ? ClinicTime::format($from, 'Y-m-d') : null;
-        $toDate   = $to ? ClinicTime::format($to, 'Y-m-d') : null;
+        $toDate = $to ? ClinicTime::format($to, 'Y-m-d') : null;
 
         return StockItemPrice::query()->where(function ($q) use ($from, $to, $fromDate, $toDate) {
             $q->where(function ($inner) use ($fromDate, $toDate) {
@@ -549,21 +549,21 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'متابعة حركة الأصناف',
+            'title' => 'متابعة حركة الأصناف',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['التاريخ', 'النوع', 'الكود', 'اسم الصنف', 'الكمية'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['التاريخ', 'النوع', 'الكود', 'اسم الصنف', 'الكمية'],
+            'rows' => $rows,
         ];
     }
 
     private function movementTypeLabel(StockMovement $movement): string
     {
         return match ($movement->movement_type) {
-            StockMovement::TYPE_ISSUE   => 'صرف / بيع',
-            StockMovement::TYPE_RETURN  => 'ارتجاع من الورشة',
+            StockMovement::TYPE_ISSUE => 'صرف / بيع',
+            StockMovement::TYPE_RETURN => 'ارتجاع من الورشة',
             StockMovement::TYPE_RECEIVE => 'توريد',
-            default                     => $movement->movement_type ?? '—',
+            default => $movement->movement_type ?? '—',
         };
     }
 
@@ -573,10 +573,10 @@ class AdminReportsHubService
         $qty = (int) $movement->quantity;
 
         return match ($movement->movement_type) {
-            StockMovement::TYPE_ISSUE   => abs($qty),
-            StockMovement::TYPE_RETURN  => -abs($qty),
+            StockMovement::TYPE_ISSUE => abs($qty),
+            StockMovement::TYPE_RETURN => -abs($qty),
             StockMovement::TYPE_RECEIVE => abs($qty),
-            default                     => $qty,
+            default => $qty,
         };
     }
 
@@ -598,16 +598,16 @@ class AdminReportsHubService
                 ->values();
 
             return [
-                'return_no'      => $n->return_no ?? '—',
-                'patient_name'   => $n->patient_name ?? '—',
-                'work_order_no'  => $n->work_order_no ?? '—',
+                'return_no' => $n->return_no ?? '—',
+                'patient_name' => $n->patient_name ?? '—',
+                'work_order_no' => $n->work_order_no ?? '—',
                 'warehouse_received_at' => ClinicTime::format($n->completed_at ?? $n->updated_at, 'd/m/Y H:i'),
                 'can_view_items' => $receivedLines->isNotEmpty(),
-                'lines'          => $receivedLines->map(fn ($line) => [
-                    'code'         => $line->stock_item_code,
-                    'name'         => $line->name ?: $line->stock_item_code,
+                'lines' => $receivedLines->map(fn ($line) => [
+                    'code' => $line->stock_item_code,
+                    'name' => $line->name ?: $line->stock_item_code,
                     'qty_returned' => (int) $line->qty_returned,
-                    'reason'       => $line->reason ?? '—',
+                    'reason' => $line->reason ?? '—',
                 ])->values()->all(),
             ];
         })->values()->all();
@@ -625,12 +625,12 @@ class AdminReportsHubService
         })->values()->all();
 
         return [
-            'title'        => 'طلبات الارتجاع',
+            'title' => 'طلبات الارتجاع',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['رقم الطلب', 'المريض', 'أمر التشغيل', 'البنود', 'تاريخ الاستلام'],
-            'rows'         => $rows,
-            'row_actions'  => $rowActions,
+            'summary' => [],
+            'headers' => ['رقم الطلب', 'المريض', 'أمر التشغيل', 'البنود', 'تاريخ الاستلام'],
+            'rows' => $rows,
+            'row_actions' => $rowActions,
         ];
     }
 
@@ -662,11 +662,11 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'طلبات تعديل التوصيف',
+            'title' => 'طلبات تعديل التوصيف',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['رقم الحالة', 'المريض', 'مرجع الطلب', 'الحالة', 'طلب بواسطة', 'البنود', 'التاريخ'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['رقم الحالة', 'المريض', 'مرجع الطلب', 'الحالة', 'طلب بواسطة', 'البنود', 'التاريخ'],
+            'rows' => $rows,
         ];
     }
 
@@ -684,16 +684,16 @@ class AdminReportsHubService
             $s->phone ?? '—',
             $s->email ?? '—',
             (string) ($s->linked_items_count ?? 0),
-            number_format((float) ($s->debt_total ?? 0), 2) . ' ج.م',
+            number_format((float) ($s->debt_total ?? 0), 2).' ج.م',
             ClinicTime::format($s->created_at, 'd/m/Y'),
         ])->values()->all();
 
         return [
-            'title'        => 'الموردون',
+            'title' => 'الموردون',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['المورد', 'الهاتف', 'البريد', 'أصناف مرتبطة', 'المديونية', 'تاريخ الإضافة'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['المورد', 'الهاتف', 'البريد', 'أصناف مرتبطة', 'المديونية', 'تاريخ الإضافة'],
+            'rows' => $rows,
         ];
     }
 
@@ -719,11 +719,11 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title'        => 'جهات التعاقد',
+            'title' => 'جهات التعاقد',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['الكود', 'الاسم', 'النوع', 'الجهة', 'التصنيف'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['الكود', 'الاسم', 'النوع', 'الجهة', 'التصنيف'],
+            'rows' => $rows,
         ];
     }
 
@@ -754,16 +754,16 @@ class AdminReportsHubService
             $c->contract_no ?? '—',
             $c->patient_name ?? '—',
             $c->company_name ?? '—',
-            number_format((float) $c->approved_amount, 2) . ' ج.م',
+            number_format((float) $c->approved_amount, 2).' ج.م',
             ClinicTime::format($c->approval_date ?? $c->created_at, 'd/m/Y'),
         ])->values()->all();
 
         return [
-            'title'        => 'موافقات جهات التعاقد',
+            'title' => 'موافقات جهات التعاقد',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['رقم العقد', 'المريض', 'الجهة', 'المبلغ', 'التاريخ'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['رقم العقد', 'المريض', 'الجهة', 'المبلغ', 'التاريخ'],
+            'rows' => $rows,
         ];
     }
 
@@ -789,16 +789,16 @@ class AdminReportsHubService
             return [
                 ClinicTime::format($e->collected_at, 'd/m/Y'),
                 $company?->name ?? '—',
-                number_format((float) $e->amount, 2) . ' ج.م',
+                number_format((float) $e->amount, 2).' ج.م',
             ];
         })->values()->all();
 
         return [
-            'title'        => 'المديونات',
+            'title' => 'المديونات',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['التاريخ', 'الجهة', 'المبلغ'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['التاريخ', 'الجهة', 'المبلغ'],
+            'rows' => $rows,
         ];
     }
 
@@ -820,15 +820,15 @@ class AdminReportsHubService
             $log->user_name ?? '—',
             $log->action ?? '—',
             $log->tag ?? '—',
-            \Illuminate\Support\Str::limit($log->description ?? '—', 80),
+            Str::limit($log->description ?? '—', 80),
         ])->values()->all();
 
         return [
-            'title'        => 'سجل الرقابة',
+            'title' => 'سجل الرقابة',
             'period_label' => $this->periodLabel($from, $to),
-            'summary'      => [],
-            'headers'      => ['التاريخ', 'المستخدم', 'الإجراء', 'الوسم', 'الوصف'],
-            'rows'         => $rows,
+            'summary' => [],
+            'headers' => ['التاريخ', 'المستخدم', 'الإجراء', 'الوسم', 'الوصف'],
+            'rows' => $rows,
         ];
     }
 
@@ -839,14 +839,14 @@ class AdminReportsHubService
         }
 
         if ($from && $to) {
-            return ClinicTime::format($from, 'd/m/Y') . ' — ' . ClinicTime::format($to, 'd/m/Y');
+            return ClinicTime::format($from, 'd/m/Y').' — '.ClinicTime::format($to, 'd/m/Y');
         }
 
         if ($from) {
-            return 'من ' . ClinicTime::format($from, 'd/m/Y');
+            return 'من '.ClinicTime::format($from, 'd/m/Y');
         }
 
-        return 'حتى ' . ClinicTime::format($to, 'd/m/Y');
+        return 'حتى '.ClinicTime::format($to, 'd/m/Y');
     }
 
     /**

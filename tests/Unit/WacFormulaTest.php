@@ -51,7 +51,7 @@ class WacFormulaTest extends TestCase
     public function test_highest_unit_price_is_max_batch_price(): void
     {
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('RM-003', qty: 15, wac: 80.00);
+        $item = $this->stockItem('RM-003', qty: 15, wac: 80.00);
 
         $this->service->addBatch($item, 5, 100.00, $supplier, 'INV-001', now());
         $this->service->addBatch($item, 5, 250.00, $supplier, 'INV-002', now());
@@ -66,12 +66,12 @@ class WacFormulaTest extends TestCase
     public function test_wac_and_highest_price_are_distinct(): void
     {
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('RM-004', qty: 10, wac: 50.00);
+        $item = $this->stockItem('RM-004', qty: 10, wac: 50.00);
 
         $this->service->addBatch($item, 10, 90.00, $supplier, 'INV-004', now());
 
         $item->refresh();
-        $wac     = (float) $item->wac;
+        $wac = (float) $item->wac;
         $highest = $this->service->highestUnitPrice('RM-004');
 
         $this->assertNotEquals($wac, $highest, 'WAC and highest price must be independent values');

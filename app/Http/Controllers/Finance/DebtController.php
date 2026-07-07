@@ -15,9 +15,7 @@ class DebtController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly ContractDebtService $contractDebtService)
-    {
-    }
+    public function __construct(private readonly ContractDebtService $contractDebtService) {}
 
     /**
      * جميع مديونيات الجهات — مستحق / محصَّل / متبقٍ.
@@ -36,7 +34,7 @@ class DebtController extends Controller
         );
 
         return response()->json([
-            'data'  => collect($debts)->map(fn ($d) => $this->formatDebt($d))->values(),
+            'data' => collect($debts)->map(fn ($d) => $this->formatDebt($d))->values(),
             'total' => $debts->count(),
         ]);
     }
@@ -55,18 +53,18 @@ class DebtController extends Controller
 
         return response()->json([
             'message' => 'تم تسجيل الدفعة بنجاح.',
-            'debt'    => $this->formatDebt($company->debt),
+            'debt' => $this->formatDebt($company->debt),
         ]);
     }
 
     private function formatDebt(ContractCompanyDebt $debt): array
     {
-        $due       = (float) $debt->due;
+        $due = (float) $debt->due;
         $collected = (float) $debt->collected;
 
         return $debt->only(['id', 'contract_company_id', 'due', 'collected', 'status']) + [
             'remaining' => max(0, $due - $collected),
-            'company'   => $debt->relationLoaded('contractCompany') && $debt->contractCompany
+            'company' => $debt->relationLoaded('contractCompany') && $debt->contractCompany
                 ? $debt->contractCompany->only(['id', 'company_code', 'name', 'is_military'])
                 : null,
         ];

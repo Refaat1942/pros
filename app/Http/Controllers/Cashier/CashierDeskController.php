@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Cashier;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cashier\ConfirmPaymentRequest;
 use App\Models\CaseRecord;
-use App\Models\Quote;
 use App\Services\CashierPaymentService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -20,8 +19,7 @@ class CashierDeskController extends Controller
 
     public function __construct(
         private readonly CashierPaymentService $cashierPaymentService,
-    ) {
-    }
+    ) {}
 
     /**
      * طابور الحالات بانتظار تحصيل الدفع في الخزنة.
@@ -37,15 +35,15 @@ class CashierDeskController extends Controller
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhere('quote_no', 'like', "%{$s}%")
-                      ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhere('quote_no', 'like', "%{$s}%")
+                        ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
                 }))
                 ->orderByDesc('updated_at')
         );
 
         return response()->json([
-            'data'  => collect($cases)->map(fn (CaseRecord $c) => $this->formatCase($c))->values(),
+            'data' => collect($cases)->map(fn (CaseRecord $c) => $this->formatCase($c))->values(),
             'total' => $cases->count(),
         ]);
     }
@@ -60,10 +58,10 @@ class CashierDeskController extends Controller
         return response()->json([
             'message' => 'تم تأكيد استلام المبلغ — حُوّلت الحالة للمخزن للصرف بالباركود.',
             'payment' => [
-                'id'         => $payment->id,
+                'id' => $payment->id,
                 'payment_no' => $payment->payment_no,
-                'amount'     => (float) $payment->amount,
-                'method'     => $payment->method,
+                'amount' => (float) $payment->amount,
+                'method' => $payment->method,
             ],
         ]);
     }
@@ -75,14 +73,14 @@ class CashierDeskController extends Controller
         return $case->only([
             'id', 'case_no', 'order_ref', 'quote_no',
         ]) + [
-            'amount'  => (float) ($quote?->total ?? $case->quote_total ?? 0),
+            'amount' => (float) ($quote?->total ?? $case->quote_total ?? 0),
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name', 'phone'])
                 : null,
-            'quote'   => $quote ? [
-                'id'        => $quote->id,
-                'quote_no'  => $quote->quote_no,
-                'total'     => (float) $quote->total,
+            'quote' => $quote ? [
+                'id' => $quote->id,
+                'quote_no' => $quote->quote_no,
+                'total' => (float) $quote->total,
                 'print_url' => route('cashier.quote.print', $quote),
             ] : null,
         ];

@@ -14,8 +14,10 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 class ContractCompanyDebt extends Model
 {
-    public const STATUS_PAID    = DebtStatus::Paid->value;
+    public const STATUS_PAID = DebtStatus::Paid->value;
+
     public const STATUS_PARTIAL = DebtStatus::Partial->value;
+
     public const STATUS_PENDING = DebtStatus::Pending->value;
 
     protected $fillable = [

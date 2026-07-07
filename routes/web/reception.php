@@ -3,13 +3,14 @@
 use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Appointment\AppointmentController;
+use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Dashboard\ReceptionDashboardController;
 use App\Http\Controllers\Delivery\DeliveryController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Patient\PatientController;
 use App\Http\Controllers\Patient\ReceptionSelfServiceController;
-use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Quote\ApprovalScanController;
+use App\Http\Controllers\Quote\OcrApprovalController;
 use App\Http\Controllers\Quote\OcrExtractController;
 use App\Http\Controllers\Quote\QuoteController;
 use Illuminate\Support\Facades\Route;
@@ -97,7 +98,7 @@ Route::prefix('reception')
             Route::post('ocr/extract', [OcrExtractController::class, 'extract'])
                 ->name('ocr.extract');
 
-            Route::post('ocr/process', [\App\Http\Controllers\Quote\OcrApprovalController::class, 'process'])
+            Route::post('ocr/process', [OcrApprovalController::class, 'process'])
                 ->name('ocr.process');
 
             Route::post('ocr/scan', [ApprovalScanController::class, 'scan'])

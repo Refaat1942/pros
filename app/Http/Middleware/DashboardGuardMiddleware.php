@@ -38,7 +38,7 @@ class DashboardGuardMiddleware
         }
 
         $requiredPrefix = $request->segment(1);
-        $userSlug       = $user->role?->slug;
+        $userSlug = $user->role?->slug;
 
         if ($requiredPrefix !== $userSlug && ! $user->canAccessDashboard($requiredPrefix)) {
             abort(403, 'ليس لديك صلاحية الوصول إلى هذه اللوحة.');

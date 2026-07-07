@@ -4,6 +4,7 @@ use App\Http\Controllers\Bom\BomController;
 use App\Http\Controllers\Bom\ReturnNoteController;
 use App\Http\Controllers\Dashboard\TechnicalDashboardController;
 use App\Http\Controllers\Manufacturing\ManufacturingStageController;
+use App\Http\Controllers\Quote\QuoteController;
 use App\Http\Controllers\Stock\StockReceiveController;
 use Illuminate\Support\Facades\Route;
 
@@ -60,7 +61,7 @@ Route::prefix('technical')
             Route::get('bom/{bom}/print-issue-voucher', [BomController::class, 'printIssueVoucher'])
                 ->name('bom.print-issue-voucher');
 
-            Route::get('quote/{quote}/print-issue-voucher', [\App\Http\Controllers\Quote\QuoteController::class, 'printIssueVoucher'])
+            Route::get('quote/{quote}/print-issue-voucher', [QuoteController::class, 'printIssueVoucher'])
                 ->name('quote.print-issue-voucher');
         });
 

@@ -29,15 +29,15 @@ class AdminOverviewOperationsTest extends TestCase
 
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
         Quote::create([
-            'case_id'      => $case->id,
-            'quote_no'     => 'QT-OPS-OVERVIEW',
-            'order_ref'    => $case->order_ref,
+            'case_id' => $case->id,
+            'quote_no' => 'QT-OPS-OVERVIEW',
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'quote_date'   => now()->toDateString(),
-            'status'       => Quote::STATUS_ISSUED,
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_ISSUED,
             'status_label' => 'صادر للجهة — بانتظار خطاب الموافقة',
-            'total'        => 1000,
+            'total' => 1000,
         ]);
 
         $this->get('/admin/overview')

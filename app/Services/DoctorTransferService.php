@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Support\CaseDisplayStatus;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\TechOrderSpec;
+use App\Support\CaseDisplayStatus;
 use Illuminate\Support\Collection;
 
 /**
@@ -44,27 +44,27 @@ class DoctorTransferService
     public function formatRow(CaseRecord $case): array
     {
         $patient = $case->patient;
-        $record  = $case->medicalRecords->first();
+        $record = $case->medicalRecords->first();
 
         $display = CaseDisplayStatus::forCase($case);
 
         return [
-            'id'                  => $case->id,
-            'case_no'             => $case->case_no,
-            'name'                => $patient?->name ?? $record?->patient_name ?? '—',
-            'company'             => $case->displayEntity(),
-            'display_entity'      => $case->displayEntity(),
-            'patient_type'        => $case->patient_type,
-            'stage_key'           => $case->stage_key,
+            'id' => $case->id,
+            'case_no' => $case->case_no,
+            'name' => $patient?->name ?? $record?->patient_name ?? '—',
+            'company' => $case->displayEntity(),
+            'display_entity' => $case->displayEntity(),
+            'patient_type' => $case->patient_type,
+            'stage_key' => $case->stage_key,
             'manufacturing_stage' => $case->manufacturing_stage,
-            'date'                => $case->created_at?->format('d/m/Y') ?? '—',
-            'transferred_at'      => $case->created_at?->toIso8601String(),
-            'status'              => $display->label,
-            'status_group'        => $this->statusGroup($case),
-            'status_badge_class'  => $display->badgeClass,
-            'diagnosis'           => $record?->diagnosis,
-            'prescription'        => $record?->prescription,
-            'recommendations'     => $this->resolveRecommendations($case, $record),
+            'date' => $case->created_at?->format('d/m/Y') ?? '—',
+            'transferred_at' => $case->created_at?->toIso8601String(),
+            'status' => $display->label,
+            'status_group' => $this->statusGroup($case),
+            'status_badge_class' => $display->badgeClass,
+            'diagnosis' => $record?->diagnosis,
+            'prescription' => $record?->prescription,
+            'recommendations' => $this->resolveRecommendations($case, $record),
         ];
     }
 
@@ -100,13 +100,13 @@ class DoctorTransferService
         return [];
     }
 
-    /** @param  \Illuminate\Support\Collection<int, object>  $items */
+    /** @param  Collection<int, object>  $items */
     private function mapRecommendationRows(Collection $items): array
     {
         return $items->map(fn ($item) => [
             'name' => $item->name,
             'code' => $item->stock_item_code,
-            'qty'  => (int) ($item->qty ?? 1),
+            'qty' => (int) ($item->qty ?? 1),
         ])->values()->all();
     }
 
@@ -133,10 +133,10 @@ class DoctorTransferService
     public function stats(Collection $rows): array
     {
         return [
-            'total'    => $rows->count(),
-            'spec'     => $rows->where('status_group', 'قيد التوصيف')->count(),
+            'total' => $rows->count(),
+            'spec' => $rows->where('status_group', 'قيد التوصيف')->count(),
             'workshop' => $rows->where('status_group', 'في الورشة')->count(),
-            'done'     => $rows->where('status_group', 'مكتمل')->count(),
+            'done' => $rows->where('status_group', 'مكتمل')->count(),
         ];
     }
 }

@@ -15,16 +15,16 @@ class IssueVoucherPresenter
     {
         $bom->loadMissing(['items', 'caseRecord.patient']);
 
-        $case  = $bom->caseRecord;
+        $case = $bom->caseRecord;
         $quote = $case
             ? Quote::where('case_id', $case->id)->orderByDesc('id')->first()
             : null;
 
         return [
-            'voucher_no'    => $quote?->order_ref ?: ($bom->order_ref ?: ($case?->order_ref ?? '—')),
-            'patient_name'  => $quote?->patient_name ?: ($bom->patient_name ?: ($case?->patient?->name ?? '—')),
-            'company_name'  => $quote?->company_name ?: ($case?->displayEntity() ?? '—'),
-            'items'         => $bom->items,
+            'voucher_no' => $quote?->order_ref ?: ($bom->order_ref ?: ($case?->order_ref ?? '—')),
+            'patient_name' => $quote?->patient_name ?: ($bom->patient_name ?: ($case?->patient?->name ?? '—')),
+            'company_name' => $quote?->company_name ?: ($case?->displayEntity() ?? '—'),
+            'items' => $bom->items,
         ];
     }
 

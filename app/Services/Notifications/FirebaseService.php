@@ -15,9 +15,11 @@ use Illuminate\Support\Facades\Log;
  */
 class FirebaseService
 {
-    private const TOKEN_URI   = 'https://oauth2.googleapis.com/token';
-    private const SCOPE       = 'https://www.googleapis.com/auth/firebase.messaging';
-    private const CACHE_KEY   = 'firebase.access_token';
+    private const TOKEN_URI = 'https://oauth2.googleapis.com/token';
+
+    private const SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
+
+    private const CACHE_KEY = 'firebase.access_token';
 
     public function enabled(): bool
     {
@@ -29,7 +31,7 @@ class FirebaseService
      *
      * @param  list<string>  $tokens
      * @param  array<string, string>  $data
-     * @return int  عدد الرسائل المُرسلة بنجاح
+     * @return int عدد الرسائل المُرسلة بنجاح
      */
     public function sendToTokens(array $tokens, string $title, string $body, array $data = []): int
     {
@@ -41,29 +43,29 @@ class FirebaseService
 
         try {
             $accessToken = $this->accessToken();
-            $projectId   = (string) config('firebase.project_id');
+            $projectId = (string) config('firebase.project_id');
 
             if ($accessToken === null || $projectId === '') {
                 return 0;
             }
 
             $client = $this->httpClient();
-            $url    = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
-            $sent   = 0;
+            $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+            $sent = 0;
 
             foreach ($tokens as $token) {
                 try {
                     $client->post($url, [
                         'headers' => [
                             'Authorization' => "Bearer {$accessToken}",
-                            'Content-Type'  => 'application/json',
+                            'Content-Type' => 'application/json',
                         ],
                         'json' => [
                             'message' => [
-                                'token'        => $token,
+                                'token' => $token,
                                 'notification' => ['title' => $title, 'body' => $body],
-                                'data'         => array_map('strval', $data),
-                                'webpush'      => [
+                                'data' => array_map('strval', $data),
+                                'webpush' => [
                                     'notification' => ['icon' => '/favicon.ico'],
                                 ],
                             ],
@@ -104,7 +106,7 @@ class FirebaseService
             $response = $this->httpClient()->post(self::TOKEN_URI, [
                 'form_params' => [
                     'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                    'assertion'  => $jwt,
+                    'assertion' => $jwt,
                 ],
             ]);
 
@@ -121,14 +123,14 @@ class FirebaseService
      */
     private function signJwt(array $sa): ?string
     {
-        $now    = time();
+        $now = time();
         $header = ['alg' => 'RS256', 'typ' => 'JWT'];
         $claims = [
-            'iss'   => $sa['client_email'],
+            'iss' => $sa['client_email'],
             'scope' => self::SCOPE,
-            'aud'   => self::TOKEN_URI,
-            'iat'   => $now,
-            'exp'   => $now + 3600,
+            'aud' => self::TOKEN_URI,
+            'iat' => $now,
+            'exp' => $now + 3600,
         ];
 
         $segments = [
@@ -137,7 +139,7 @@ class FirebaseService
         ];
 
         $signingInput = implode('.', $segments);
-        $signature    = '';
+        $signature = '';
 
         if (! openssl_sign($signingInput, $signature, $sa['private_key'], OPENSSL_ALGO_SHA256)) {
             Log::error('Firebase JWT signing failed');

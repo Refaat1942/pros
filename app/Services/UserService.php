@@ -4,25 +4,24 @@ namespace App\Services;
 
 use App\Models\Role;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 class UserService
 {
     public function create(array $data): User
     {
         $user = User::create([
-            'name'     => $data['name'],
+            'name' => $data['name'],
             'username' => $data['username'],
             'password' => $data['password'],
-            'role_id'  => $data['role_id'],
-            'status'   => $data['status'] ?? User::STATUS_ACTIVE,
+            'role_id' => $data['role_id'],
+            'status' => $data['status'] ?? User::STATUS_ACTIVE,
         ]);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إضافة موظف: {$user->name} ({$user->username})",
-            tag:         'admin',
-            after:       $user->only(['id', 'name', 'username', 'role_id', 'status']),
+            tag: 'admin',
+            after: $user->only(['id', 'name', 'username', 'role_id', 'status']),
         );
 
         return $user->load('role:id,slug,label_ar');
@@ -34,9 +33,9 @@ class UserService
         $before = $user->only(['name', 'username', 'role_id', 'status']);
 
         $payload = [
-            'name'     => $data['name'],
+            'name' => $data['name'],
             'username' => $data['username'],
-            'status'   => $data['status'],
+            'status' => $data['status'],
         ];
 
         if ($user->role?->slug === Role::SLUG_ADMIN) {
@@ -52,11 +51,11 @@ class UserService
         $user->update($payload);
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تعديل موظف: {$user->name}",
-            tag:         'admin',
-            before:      $before,
-            after:       $user->fresh()->only(['name', 'username', 'role_id', 'status']),
+            tag: 'admin',
+            before: $before,
+            after: $user->fresh()->only(['name', 'username', 'role_id', 'status']),
         );
 
         return $user->fresh()->load('role:id,slug,label_ar');
@@ -79,11 +78,11 @@ class UserService
         ]);
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تبديل حالة موظف: {$user->name} → {$user->status}",
-            tag:         'admin',
-            before:      $before,
-            after:       $user->only(['status']),
+            tag: 'admin',
+            before: $before,
+            after: $user->only(['status']),
         );
 
         return $user;
@@ -96,10 +95,10 @@ class UserService
         $user->delete();
 
         AuditService::log(
-            action:      'delete',
+            action: 'delete',
             description: "حذف موظف: {$before['name']}",
-            tag:         'admin',
-            before:      $before,
+            tag: 'admin',
+            before: $before,
         );
     }
 }

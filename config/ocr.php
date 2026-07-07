@@ -1,18 +1,18 @@
 <?php
 
 return [
-  /*
+    /*
   |--------------------------------------------------------------------------
   | Tesseract OCR (اختياري — للصور والـ PDF الممسوح ضوئياً)
   |--------------------------------------------------------------------------
   */
-  'tesseract_path' => env('TESSERACT_PATH', 'tesseract'),
-  'tesseract_lang' => env('TESSERACT_LANG', 'ara+eng'),
+    'tesseract_path' => env('TESSERACT_PATH', 'tesseract'),
+    'tesseract_lang' => env('TESSERACT_LANG', 'ara+eng'),
 
-  /*
+    /*
   |--------------------------------------------------------------------------
   | pdftotext (اختياري — poppler-utils)
   |--------------------------------------------------------------------------
   */
-  'pdftotext_path' => env('PDFTOTEXT_PATH', 'pdftotext'),
+    'pdftotext_path' => env('PDFTOTEXT_PATH', 'pdftotext'),
 ];

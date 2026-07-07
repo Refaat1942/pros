@@ -7,6 +7,7 @@ use App\Http\Requests\MedicalRecord\StoreMedicalRecordRequest;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
+use App\Services\Dashboard\DashboardQueueService;
 use App\Services\DoctorTransferService;
 use App\Services\MedicalRecordService;
 use App\Support\ClinicTime;
@@ -23,8 +24,7 @@ class MedicalRecordController extends Controller
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
         private readonly DoctorTransferService $doctorTransferService,
-    ) {
-    }
+    ) {}
 
     /**
      * قائمة انتظار العيادة — مواعيد اليوم.
@@ -49,17 +49,17 @@ class MedicalRecordController extends Controller
             ->where('status', Appointment::STATUS_DONE)
             ->count();
 
-        $receptionPendingCount = app(\App\Services\Dashboard\DashboardQueueService::class)
+        $receptionPendingCount = app(DashboardQueueService::class)
             ->doctorReceptionPendingCount($date);
 
         return response()->json([
-            'date'                      => $date,
-            'data'                      => collect($appointments)->map(fn (Appointment $a) => $this->formatQueueAppointment($a))->values(),
-            'total'                     => $appointments->count(),
-            'waiting_count'             => $appointments->count(),
-            'examined_count'            => $examinedCount,
-            'reception_pending_count'   => $receptionPendingCount,
-            'today_total'               => $appointments->count() + $examinedCount,
+            'date' => $date,
+            'data' => collect($appointments)->map(fn (Appointment $a) => $this->formatQueueAppointment($a))->values(),
+            'total' => $appointments->count(),
+            'waiting_count' => $appointments->count(),
+            'examined_count' => $examinedCount,
+            'reception_pending_count' => $receptionPendingCount,
+            'today_total' => $appointments->count() + $examinedCount,
         ]);
     }
 
@@ -83,7 +83,7 @@ class MedicalRecordController extends Controller
 
         return response()->json([
             'appointment' => $appointment,
-            'draft'       => $draft,
+            'draft' => $draft,
         ]);
     }
 
@@ -118,7 +118,7 @@ class MedicalRecordController extends Controller
 
         return response()->json([
             'message' => 'تم تخطّي الكشف وتحويل الحالة للتوصيف.',
-            'case'    => $this->formatCaseForDoctor($case),
+            'case' => $this->formatCaseForDoctor($case),
         ]);
     }
 
@@ -131,7 +131,7 @@ class MedicalRecordController extends Controller
 
         return response()->json([
             'record' => $this->formatRecord($record),
-            'case'   => $this->formatCaseForDoctor($record->caseRecord),
+            'case' => $this->formatCaseForDoctor($record->caseRecord),
         ]);
     }
 
@@ -145,14 +145,14 @@ class MedicalRecordController extends Controller
                 ->where('locked', true)
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('patient_name', 'like', "%{$s}%")
-                      ->orWhere('national_id', 'like', "%{$s}%")
-                      ->orWhereHas('patient', fn ($q) => $q->where('phone', 'like', "%{$s}%"));
+                        ->orWhere('national_id', 'like', "%{$s}%")
+                        ->orWhereHas('patient', fn ($q) => $q->where('phone', 'like', "%{$s}%"));
                 }))
                 ->orderByDesc('record_date')
         );
 
         return response()->json([
-            'data'  => collect($records)->map(fn ($r) => $this->formatRecord($r))->values(),
+            'data' => collect($records)->map(fn ($r) => $this->formatRecord($r))->values(),
             'total' => $records->count(),
         ]);
     }
@@ -165,7 +165,7 @@ class MedicalRecordController extends Controller
         $rows = $this->doctorTransferService->list($request->search);
 
         return response()->json([
-            'data'  => $rows->values(),
+            'data' => $rows->values(),
             'total' => $rows->count(),
         ]);
     }
@@ -188,9 +188,9 @@ class MedicalRecordController extends Controller
             'status',
             'locked',
         ]) + [
-            'phone'          => $record->relationLoaded('patient') ? $record->patient?->phone : null,
+            'phone' => $record->relationLoaded('patient') ? $record->patient?->phone : null,
             'display_entity' => $record->displayEntity(),
-            'items'          => $record->relationLoaded('items')
+            'items' => $record->relationLoaded('items')
                 ? $record->items->map->only(['stock_item_code', 'name', 'qty'])
                 : [],
         ];
@@ -238,8 +238,8 @@ class MedicalRecordController extends Controller
                 ? $appointment->transferredAt()->copy()->timezone(ClinicTime::zone())->toIso8601String()
                 : null,
             'transferred_at_formatted' => $appointment->transferredAtFormatted(),
-            'wait_label'     => $appointment->clinicWaitLabel(),
-            'patient'        => $appointment->relationLoaded('patient') && $appointment->patient
+            'wait_label' => $appointment->clinicWaitLabel(),
+            'patient' => $appointment->relationLoaded('patient') && $appointment->patient
                 ? $appointment->patient->only(['id', 'patient_code', 'name', 'national_id', 'patient_type', 'company_name', 'sovereign_entity', 'contract_company_id'])
                     + ['display_entity' => $appointment->patient->displayEntity()]
                 : null,

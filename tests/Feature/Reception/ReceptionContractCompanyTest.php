@@ -25,9 +25,9 @@ class ReceptionContractCompanyTest extends TestCase
             ->assertJsonPath('data.is_military', false);
 
         $this->assertDatabaseHas('contract_companies', [
-            'name'          => 'جهة مرجعية جديدة',
+            'name' => 'جهة مرجعية جديدة',
             'is_contracted' => false,
-            'is_military'   => false,
+            'is_military' => false,
         ]);
     }
 
@@ -36,9 +36,9 @@ class ReceptionContractCompanyTest extends TestCase
         $recep = $this->userWithRole('reception');
 
         $existing = ContractCompany::create([
-            'company_code'  => 'CO-NC-01',
-            'name'          => 'جهة قائمة مسبقاً',
-            'is_military'   => false,
+            'company_code' => 'CO-NC-01',
+            'name' => 'جهة قائمة مسبقاً',
+            'is_military' => false,
             'is_contracted' => false,
         ]);
 

@@ -2,13 +2,16 @@
 
 namespace Tests\Feature\Pipeline;
 
-use App\Models\Bom;
 use App\Models\CaseRecord;
+use App\Models\Permission;
 use App\Models\PricingRequest;
+use App\Models\PricingRequestItem;
 use App\Models\Quote;
 use App\Models\StockCategory;
+use App\Models\Supplier;
 use App\Models\TechOrderSpec;
 use App\Services\BomService;
+use App\Services\OperationsService;
 use App\Services\StockCatalogService;
 use App\Services\StockCategorySchemaService;
 use App\Services\StockPriceService;
@@ -73,7 +76,7 @@ class CostingDashboardTest extends TestCase
         $ops = $this->userWithRole('operations');
         // Simulate admin revoking costing-dashboard access
         $ops->role->permissions()->detach(
-            \App\Models\Permission::where('dashboard', 'costing')->pluck('id')
+            Permission::where('dashboard', 'costing')->pluck('id')
         );
 
         $this->actingAs($ops->fresh())
@@ -102,13 +105,13 @@ class CostingDashboardTest extends TestCase
         $case = $this->caseInAdjustments();
 
         TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $case->patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => 'د. اختبار',
-            'tech_notes'   => 'ملاحظة للتكاليف',
-            'locked'       => true,
+            'doctor_name' => 'د. اختبار',
+            'tech_notes' => 'ملاحظة للتكاليف',
+            'locked' => true,
             'submitted_at' => now()->toDateString(),
         ]);
 
@@ -155,12 +158,12 @@ class CostingDashboardTest extends TestCase
         ]);
 
         $stock = app(StockCatalogService::class)->create([
-            'name'        => 'مفصل Carbon',
-            'code'        => 'RM-JOINT',
-            'qty'         => 10,
-            'price'       => 500,
+            'name' => 'مفصل Carbon',
+            'code' => 'RM-JOINT',
+            'qty' => 10,
+            'price' => 500,
             'category_id' => $category->id,
-            'attributes'  => ['pieces' => 3, 'joint_type' => 'Spring'],
+            'attributes' => ['pieces' => 3, 'joint_type' => 'Spring'],
         ]);
 
         $supplier = $this->makeSupplier();
@@ -237,7 +240,7 @@ class CostingDashboardTest extends TestCase
             $item2,
             10,
             1000.00,
-            \App\Models\Supplier::query()->firstOrFail(),
+            Supplier::query()->firstOrFail(),
             'INV-002',
             now(),
         );
@@ -254,24 +257,24 @@ class CostingDashboardTest extends TestCase
 
         // طلب تسعير قديم ببنود التوصيف فقط — كان سبب ظهور إجمالي ناقص
         $stalePricing = PricingRequest::create([
-            'request_no'   => '111111',
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'request_no' => '111111',
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $case->patient->name,
             'company_name' => $case->company_name,
             'request_date' => now()->toDateString(),
-            'items_count'  => 1,
+            'items_count' => 1,
             'patient_type' => $case->patient_type,
-            'status_key'   => 'processing',
-            'step'         => PricingRequest::STEP_ADMIN,
+            'status_key' => 'processing',
+            'step' => PricingRequest::STEP_ADMIN,
         ]);
-        \App\Models\PricingRequestItem::create([
+        PricingRequestItem::create([
             'pricing_request_id' => $stalePricing->id,
-            'stock_item_code'    => 'RM-001',
-            'name'               => 'RM-001',
-            'qty'                => 2,
-            'unit_price'         => 200,
-            'line_total'         => 400,
+            'stock_item_code' => 'RM-001',
+            'name' => 'RM-001',
+            'qty' => 2,
+            'unit_price' => 200,
+            'line_total' => 400,
         ]);
         $stalePricing->update(['computed_total' => 400, 'internal_total' => 400]);
         $case->update(['pricing_request_id' => $stalePricing->id]);
@@ -322,7 +325,7 @@ class CostingDashboardTest extends TestCase
         $firstQuote = Quote::where('case_id', $case->id)->firstOrFail();
         $firstQuoteNo = $firstQuote->quote_no;
 
-        app(\App\Services\OperationsService::class)->returnForRework(
+        app(OperationsService::class)->returnForRework(
             $case->fresh(),
             CaseRecord::STAGE_ADJUSTMENTS,
             'تعديل بنود',

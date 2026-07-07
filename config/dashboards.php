@@ -110,7 +110,7 @@ return [
         'sidebar' => ['icon' => '📏', 'title' => 'لوحة المعدلات', 'subtitle' => 'تجارب التركيب والمقاسات'],
         'pages' => [
             'adjustments' => ['title' => 'المعدلات', 'icon' => '📏', 'label' => 'المعدلات'],
-            'history'     => ['title' => 'المحوّلون للتكاليف', 'icon' => '📤', 'label' => 'سجل المحوّلين', 'hidden' => true],
+            'history' => ['title' => 'المحوّلون للتكاليف', 'icon' => '📤', 'label' => 'سجل المحوّلين', 'hidden' => true],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
@@ -247,27 +247,27 @@ return [
         'nav_groups' => [
             [
                 'label' => 'التقارير والمؤشرات',
-                'icon'  => '📊',
+                'icon' => '📊',
                 'pages' => ['overview', 'reports'],
             ],
             [
                 'label' => 'المرضى والحالات',
-                'icon'  => '🧭',
+                'icon' => '🧭',
                 'pages' => ['patient-tracks', 'cases', 'spec-edit-requests', 'visit-types'],
             ],
             [
                 'label' => 'المخزون والتوريد',
-                'icon'  => '📦',
+                'icon' => '📦',
                 'pages' => ['stock-categories', 'catalog', 'inventory-overview', 'suppliers', 'returns'],
             ],
             [
                 'label' => 'التعاقد والمالية',
-                'icon'  => '💼',
+                'icon' => '💼',
                 'pages' => ['companies', 'contracts', 'civilian-debts'],
             ],
             [
                 'label' => 'الرقابة والنظام',
-                'icon'  => '⚙️',
+                'icon' => '⚙️',
                 'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'costing-settings'],
             ],
         ],

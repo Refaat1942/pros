@@ -19,6 +19,7 @@ class RedirectIfAuthenticated
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
                 $slug = Auth::user()->role?->slug;
+
                 return redirect($slug ? "/{$slug}" : '/');
             }
         }

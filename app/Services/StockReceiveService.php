@@ -17,20 +17,19 @@ class StockReceiveService
     public function __construct(
         private readonly StockPriceService $stockPriceService,
         private readonly SupplierDebtService $supplierDebtService,
-    ) {
-    }
+    ) {}
 
     /**
      * استلام بضاعة من مورد — يُحدِّث الرصيد وWAC ويُنشئ سجل حركة غير قابل للتعديل.
      */
     public function receive(
         StockItem $item,
-        int       $qty,
-        float     $unitPrice,
-        Supplier  $supplier,
-        string    $invoiceNo,
-        Carbon    $movedAt,
-        User      $performedBy,
+        int $qty,
+        float $unitPrice,
+        Supplier $supplier,
+        string $invoiceNo,
+        Carbon $movedAt,
+        User $performedBy,
     ): StockMovement {
         return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $performedBy) {
             $item = StockItem::lockForUpdate()->findOrFail($item->id);
@@ -43,17 +42,17 @@ class StockReceiveService
             $balanceAfter = $item->qty + $qty;
 
             $movement = StockMovement::create([
-                'stock_item_id'         => $item->id,
-                'movement_type'         => StockMovement::TYPE_RECEIVE,
-                'quantity'              => $qty,
-                'unit_cost'             => $unitPrice,
-                'balance_after'         => $balanceAfter,
-                'invoice_no'            => $invoiceNo,
-                'supplier_id'           => $supplier->id,
-                'reference_type'        => null,
-                'reference_id'          => null,
-                'performed_by_user_id'  => $performedBy->id,
-                'moved_at'              => $movedAt,
+                'stock_item_id' => $item->id,
+                'movement_type' => StockMovement::TYPE_RECEIVE,
+                'quantity' => $qty,
+                'unit_cost' => $unitPrice,
+                'balance_after' => $balanceAfter,
+                'invoice_no' => $invoiceNo,
+                'supplier_id' => $supplier->id,
+                'reference_type' => null,
+                'reference_id' => null,
+                'performed_by_user_id' => $performedBy->id,
+                'moved_at' => $movedAt,
             ]);
 
             $this->stockPriceService->createPriceBatch(
@@ -66,7 +65,7 @@ class StockReceiveService
             $this->stockPriceService->recalcWac($item, $qty, $unitPrice);
 
             $item->update([
-                'qty'           => $balanceAfter,
+                'qty' => $balanceAfter,
                 'last_moved_at' => $movedAt->toDateString(),
             ]);
 
@@ -74,11 +73,11 @@ class StockReceiveService
             $item->recalculateAndSaveStatus();
 
             AuditService::log(
-                action:      'receive',
-                description: 'استلام بضاعة: ' . $item->code,
-                tag:         'warehouse',
-                before:      $before,
-                after:       [
+                action: 'receive',
+                description: 'استلام بضاعة: '.$item->code,
+                tag: 'warehouse',
+                before: $before,
+                after: [
                     'qty' => $item->qty,
                     'wac' => (float) $item->wac,
                 ],

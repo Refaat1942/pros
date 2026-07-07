@@ -20,13 +20,13 @@ class BarcodeValidationService
         }
 
         AuditService::log(
-            action:      'blocked',
+            action: 'blocked',
             description: 'مسح باركود خاطئ',
-            tag:         'warehouse',
-            before:      [
-                'barcode'       => $barcode,
+            tag: 'warehouse',
+            before: [
+                'barcode' => $barcode,
                 'expected_code' => $bomItem->stock_item_code,
-                'bom_item_id'   => $bomItem->id,
+                'bom_item_id' => $bomItem->id,
             ],
         );
 
@@ -43,11 +43,11 @@ class BarcodeValidationService
         }
 
         AuditService::log(
-            action:      'blocked',
+            action: 'blocked',
             description: 'مسح باركود خاطئ — ارتجاع',
-            tag:         'warehouse',
-            before:      [
-                'barcode'       => $barcode,
+            tag: 'warehouse',
+            before: [
+                'barcode' => $barcode,
                 'expected_code' => $stockItemCode,
             ],
         );

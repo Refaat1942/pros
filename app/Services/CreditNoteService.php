@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Models\CaseRecord;
 use App\Models\ContractCompany;
-use App\Support\PatientEntityPresenter;
 use App\Models\CreditNote;
 use App\Models\Patient;
 use App\Models\User;
+use App\Support\PatientEntityPresenter;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -15,9 +15,7 @@ use Illuminate\Support\Facades\DB;
  */
 class CreditNoteService
 {
-    public function __construct(private readonly ContractDebtService $contractDebtService)
-    {
-    }
+    public function __construct(private readonly ContractDebtService $contractDebtService) {}
 
     /**
      * إنشاء إشعار دائن معلّق.
@@ -41,22 +39,22 @@ class CreditNoteService
         // معاملة + قفل داخل nextCreditNoteNo يمنع ترقيماً مكرراً عند إنشاء إشعارين متزامنين.
         $note = DB::transaction(fn () => CreditNote::create([
             'credit_note_no' => $this->nextCreditNoteNo(),
-            'case_id'        => $case->id,
-            'order_ref'      => $case->order_ref,
-            'patient_name'   => $case->patient?->name ?? '—',
-            'company_name'   => $case->company_name,
-            'type'           => $type,
-            'amount'         => $amount,
+            'case_id' => $case->id,
+            'order_ref' => $case->order_ref,
+            'patient_name' => $case->patient?->name ?? '—',
+            'company_name' => $case->company_name,
+            'type' => $type,
+            'amount' => $amount,
             'original_total' => $originalTotal,
-            'reason'         => $reason,
-            'status'         => CreditNote::STATUS_PENDING,
+            'reason' => $reason,
+            'status' => CreditNote::STATUS_PENDING,
         ]));
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إنشاء إشعار دائن {$note->credit_note_no}",
-            tag:         'financial',
-            after:       $note->toArray(),
+            tag: 'financial',
+            after: $note->toArray(),
         );
 
         return $note;
@@ -82,28 +80,28 @@ class CreditNoteService
             }
 
             $company = ContractCompany::findOrFail($case->contract_company_id);
-            $before  = $note->only(['status', 'amount']);
+            $before = $note->only(['status', 'amount']);
 
             $this->contractDebtService->decreaseDue($company, (float) $note->amount);
 
             $case->update([
-                'credit_note_no'     => $note->credit_note_no,
+                'credit_note_no' => $note->credit_note_no,
                 'credit_note_amount' => $note->amount,
             ]);
 
             $note->update([
-                'status'               => CreditNote::STATUS_APPROVED,
-                'approved_at'          => now(),
-                'approved_by'          => $approver->name,
-                'approved_by_user_id'  => $approver->id,
+                'status' => CreditNote::STATUS_APPROVED,
+                'approved_at' => now(),
+                'approved_by' => $approver->name,
+                'approved_by_user_id' => $approver->id,
             ]);
 
             AuditService::log(
-                action:      'credit_note',
+                action: 'credit_note',
                 description: "تطبيق إشعار دائن {$note->credit_note_no}",
-                tag:         'financial',
-                before:      $before,
-                after:       $note->fresh()->only(['status', 'amount', 'approved_at']),
+                tag: 'financial',
+                before: $before,
+                after: $note->fresh()->only(['status', 'amount', 'approved_at']),
             );
 
             return $note->fresh();
@@ -131,19 +129,19 @@ class CreditNoteService
             $before = $note->only(['status']);
 
             $note->update([
-                'status'              => CreditNote::STATUS_REJECTED,
-                'approved_at'         => now(),
-                'approved_by'         => $approver->name,
+                'status' => CreditNote::STATUS_REJECTED,
+                'approved_at' => now(),
+                'approved_by' => $approver->name,
                 'approved_by_user_id' => $approver->id,
-                'reason'              => $reason ?? $note->reason,
+                'reason' => $reason ?? $note->reason,
             ]);
 
             AuditService::log(
-                action:      'reject',
+                action: 'reject',
                 description: "رفض إشعار دائن {$note->credit_note_no}",
-                tag:         'financial',
-                before:      $before,
-                after:       $note->fresh()->only(['status']),
+                tag: 'financial',
+                before: $before,
+                after: $note->fresh()->only(['status']),
             );
 
             return $note->fresh();

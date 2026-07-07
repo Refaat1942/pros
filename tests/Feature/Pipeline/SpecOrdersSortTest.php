@@ -13,61 +13,61 @@ class SpecOrdersSortTest extends TestCase
 
     public function test_spec_orders_lists_newest_first(): void
     {
-        $company  = $this->civilianCompany();
+        $company = $this->civilianCompany();
         $specUser = $this->userWithRole('spec');
 
         $olderPatient = Patient::create([
-            'patient_code'        => '910001',
-            'patient_qr'          => 'QR-910001',
-            'tracking_uid'        => 'spec-orders-old',
-            'name'                => 'مريض قديم',
-            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'patient_code' => '910001',
+            'patient_qr' => 'QR-910001',
+            'tracking_uid' => 'spec-orders-old',
+            'name' => 'مريض قديم',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'registered_at'       => now()->toDateString(),
-            'status'              => Patient::STATUS_ACTIVE,
+            'company_name' => $company->name,
+            'registered_at' => now()->toDateString(),
+            'status' => Patient::STATUS_ACTIVE,
         ]);
 
         $newerPatient = Patient::create([
-            'patient_code'        => '910002',
-            'patient_qr'          => 'QR-910002',
-            'tracking_uid'        => 'spec-orders-new',
-            'name'                => 'مريض حديث',
-            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'patient_code' => '910002',
+            'patient_qr' => 'QR-910002',
+            'tracking_uid' => 'spec-orders-new',
+            'name' => 'مريض حديث',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'registered_at'       => now()->toDateString(),
-            'status'              => Patient::STATUS_ACTIVE,
+            'company_name' => $company->name,
+            'registered_at' => now()->toDateString(),
+            'status' => Patient::STATUS_ACTIVE,
         ]);
 
         $olderCase = CaseRecord::create([
-            'case_no'             => 'CASE-2026-9101',
-            'order_ref'           => 'ORD-2026-9101',
-            'patient_id'          => $olderPatient->id,
+            'case_no' => 'CASE-2026-9101',
+            'order_ref' => 'ORD-2026-9101',
+            'patient_id' => $olderPatient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_TECHNICAL,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_TECHNICAL,
         ]);
         $olderCase->forceFill(['updated_at' => now()->subHours(3)])->save();
 
         $newerCase = CaseRecord::create([
-            'case_no'             => 'CASE-2026-9102',
-            'order_ref'           => 'ORD-2026-9102',
-            'patient_id'          => $newerPatient->id,
+            'case_no' => 'CASE-2026-9102',
+            'order_ref' => 'ORD-2026-9102',
+            'patient_id' => $newerPatient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_TECHNICAL,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_TECHNICAL,
         ]);
         $newerCase->forceFill(['updated_at' => now()->subMinutes(5)])->save();
 
         $pageResponse = $this->actingAs($specUser)->get('/spec/orders');
         $pageResponse->assertOk();
 
-        $content  = $pageResponse->getContent();
+        $content = $pageResponse->getContent();
         $newerPos = strpos($content, 'ORD-2026-9102');
         $olderPos = strpos($content, 'ORD-2026-9101');
 

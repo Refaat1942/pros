@@ -8,6 +8,8 @@ use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Role;
 use App\Models\UserDevice;
+use App\Services\BomService;
+use App\Services\StockPriceService;
 use App\Services\WorkflowService;
 use Tests\Support\DashboardQueueAssertions;
 use Tests\Support\ProstheticTestHelper;
@@ -27,7 +29,7 @@ class NotificationsFeatureTest extends TestCase
     public function test_reception_transfer_to_clinic_notifies_doctor(): void
     {
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
+        $recep = $this->userWithRole('reception');
 
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض إشعار الطبيب');
 
@@ -48,7 +50,7 @@ class NotificationsFeatureTest extends TestCase
     public function test_spec_submit_notifies_adjustments_dashboard(): void
     {
         $patient = $this->civilianPatient($this->civilianCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
         app(WorkflowService::class)->advance($case, WorkflowEvent::SpecSaved->value);
 
@@ -64,7 +66,7 @@ class NotificationsFeatureTest extends TestCase
     public function test_operations_approval_notifies_warehouse(): void
     {
         $patient = $this->civilianPatient($this->civilianCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         app(WorkflowService::class)->advance($case, WorkflowEvent::OperationsApproved->value);
 
@@ -79,7 +81,7 @@ class NotificationsFeatureTest extends TestCase
     public function test_workshop_finish_notifies_warehouse(): void
     {
         $item = $this->stockItem('RM-001', qty: 10);
-        app(\App\Services\StockPriceService::class)->addBatch(
+        app(StockPriceService::class)->addBatch(
             $item,
             10,
             200.0,
@@ -90,15 +92,15 @@ class NotificationsFeatureTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('workshop');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-NOTIF-01']);
         $this->actingAs($user);
 
-        $bom = app(\App\Services\BomService::class)->create($case, [
+        $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
-        app(\App\Services\BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
 
         $this->assertSame(
             0,
@@ -130,14 +132,14 @@ class NotificationsFeatureTest extends TestCase
         $this->userWithRole('reception');
 
         $this->post('/reception/login', [
-            'username'    => 'reception',
-            'password'    => 'password',
-            'device_id'   => 'fcm-token-abc-123',
+            'username' => 'reception',
+            'password' => 'password',
+            'device_id' => 'fcm-token-abc-123',
             'device_type' => 'web',
         ])->assertRedirect();
 
         $this->assertDatabaseHas('user_devices', [
-            'device_id'   => 'fcm-token-abc-123',
+            'device_id' => 'fcm-token-abc-123',
             'device_type' => 'web',
         ]);
     }
@@ -178,8 +180,8 @@ class NotificationsFeatureTest extends TestCase
         for ($i = 1; $i <= 12; $i++) {
             AppNotification::create([
                 'role_slug' => Role::SLUG_ADJUSTMENTS,
-                'title'     => "إشعار {$i}",
-                'body'      => "نص الإشعار رقم {$i}",
+                'title' => "إشعار {$i}",
+                'body' => "نص الإشعار رقم {$i}",
             ]);
         }
 
@@ -199,14 +201,14 @@ class NotificationsFeatureTest extends TestCase
 
         AppNotification::create([
             'role_slug' => Role::SLUG_SPEC,
-            'title'     => 'مقروء',
-            'body'      => 'قديم',
-            'read_at'   => now(),
+            'title' => 'مقروء',
+            'body' => 'قديم',
+            'read_at' => now(),
         ]);
         AppNotification::create([
             'role_slug' => Role::SLUG_SPEC,
-            'title'     => 'جديد',
-            'body'      => 'غير مقروء',
+            'title' => 'جديد',
+            'body' => 'غير مقروء',
         ]);
 
         $this->actingAs($user)
@@ -252,8 +254,8 @@ class NotificationsFeatureTest extends TestCase
     public function test_reception_notified_when_last_patient_exam_is_locked(): void
     {
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
-        $doctor  = $this->userWithRole('doctor');
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
 
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض آخر كشف');
         $this->transferPatientToClinicHttp($recep, $patient);
@@ -261,10 +263,10 @@ class NotificationsFeatureTest extends TestCase
         $appointmentId = Appointment::where('patient_id', $patient->id)->value('id');
 
         $this->actingAs($doctor)->postJson('/doctor/diagnosis', [
-            'patient_id'     => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_id' => $appointmentId,
-            'diagnosis'      => 'تشخيص اختبار الإشعار',
-            'lock'           => true,
+            'diagnosis' => 'تشخيص اختبار الإشعار',
+            'lock' => true,
         ])->assertCreated();
 
         $notification = AppNotification::forRole(Role::SLUG_RECEPTION)
@@ -279,10 +281,10 @@ class NotificationsFeatureTest extends TestCase
     public function test_reception_not_notified_when_other_patients_still_waiting(): void
     {
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
-        $doctor  = $this->userWithRole('doctor');
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
 
-        $first  = $this->registerCivilianPatientHttp($recep, $company, 'مريض أول');
+        $first = $this->registerCivilianPatientHttp($recep, $company, 'مريض أول');
         $second = $this->registerCivilianPatientHttp($recep, $company, 'مريض ثاني');
         $this->transferPatientToClinicHttp($recep, $first);
         $this->transferPatientToClinicHttp($recep, $second);
@@ -290,10 +292,10 @@ class NotificationsFeatureTest extends TestCase
         $firstAppointmentId = Appointment::where('patient_id', $first->id)->value('id');
 
         $this->actingAs($doctor)->postJson('/doctor/diagnosis', [
-            'patient_id'     => $first->id,
+            'patient_id' => $first->id,
             'appointment_id' => $firstAppointmentId,
-            'diagnosis'      => 'تشخيص المريض الأول',
-            'lock'           => true,
+            'diagnosis' => 'تشخيص المريض الأول',
+            'lock' => true,
         ])->assertCreated();
 
         $this->assertSame(
@@ -308,8 +310,8 @@ class NotificationsFeatureTest extends TestCase
     public function test_reception_notified_when_last_patient_skips_exam(): void
     {
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
-        $doctor  = $this->userWithRole('doctor');
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
 
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض تخطي');
         $appointment = $this->transferPatientToClinicHttp($recep, $patient);

@@ -2,9 +2,10 @@
 
 namespace App\Traits;
 
+use Illuminate\Database\Eloquent\Builder;
+
 trait PaginationTrait
 {
-
     protected function perPage(): int
     {
         return (int) config('dashboards.table_per_page', 10);
@@ -18,7 +19,7 @@ trait PaginationTrait
     /**
      * جلب صفوف الجدول للوحات — التصفح يتم في المتصفح (table-pagination.js).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     * @param  Builder|\Illuminate\Database\Query\Builder  $query
      */
     protected function fetchForDashboard($query)
     {
@@ -28,11 +29,11 @@ trait PaginationTrait
     public function paginationModel($col)
     {
         return [
-            'total_items'   => $col->total(),
-            'count_items'   => (int) $col->count(),
-            'per_page'      => $col->perPage(),
-            'total_pages'   => $col->lastPage(),
-            'current_page'  => $col->currentPage(),
+            'total_items' => $col->total(),
+            'count_items' => (int) $col->count(),
+            'per_page' => $col->perPage(),
+            'total_pages' => $col->lastPage(),
+            'current_page' => $col->currentPage(),
             'next_page_url' => (string) $col->nextPageUrl(),
             'perv_page_url' => (string) $col->previousPageUrl(),
         ];

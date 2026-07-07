@@ -3,7 +3,6 @@
 namespace Tests\Feature\Reports;
 
 use App\Models\AuditLog;
-use App\Services\AuditService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -16,19 +15,19 @@ class AdminAuditFilterTest extends TestCase
         $admin = $this->userWithRole('admin');
 
         AuditLog::create([
-            'user_name'   => 'أحمد محمود',
-            'action'      => 'login',
+            'user_name' => 'أحمد محمود',
+            'action' => 'login',
             'description' => 'تسجيل دخول ناجح',
-            'tag'         => 'auth',
-            'logged_at'   => '2024-05-27 10:00:00',
+            'tag' => 'auth',
+            'logged_at' => '2024-05-27 10:00:00',
         ]);
 
         AuditLog::create([
-            'user_name'   => 'سارة فني',
-            'action'      => 'update',
+            'user_name' => 'سارة فني',
+            'action' => 'update',
             'description' => 'تحديث سجل طبي',
-            'tag'         => 'medical',
-            'logged_at'   => '2024-06-01 12:00:00',
+            'tag' => 'medical',
+            'logged_at' => '2024-06-01 12:00:00',
         ]);
 
         $this->actingAs($admin);

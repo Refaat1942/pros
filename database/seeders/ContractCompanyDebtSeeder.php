@@ -20,9 +20,9 @@ class ContractCompanyDebtSeeder extends Seeder
             ContractCompanyDebt::query()->updateOrCreate(
                 ['contract_company_id' => $companyId],
                 [
-                    'due'       => $row['due'],
+                    'due' => $row['due'],
                     'collected' => $row['collected'],
-                    'status'    => $row['status'],
+                    'status' => $row['status'],
                 ]
             );
         }

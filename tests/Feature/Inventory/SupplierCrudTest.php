@@ -19,16 +19,16 @@ class SupplierCrudTest extends TestCase
 
         $this->actingAs($admin)
             ->postJson(route('admin.suppliers.store'), [
-                'name'                => 'مورد اختبار',
-                'phone'               => '01012345678',
-                'fax'                 => '0227654321',
-                'address'             => 'القاهرة — مدينة نصر',
-                'tax_number'          => '123-456-789',
+                'name' => 'مورد اختبار',
+                'phone' => '01012345678',
+                'fax' => '0227654321',
+                'address' => 'القاهرة — مدينة نصر',
+                'tax_number' => '123-456-789',
                 'commercial_registry' => 'CR-9988',
-                'bank_name'           => 'البنك الأهلي',
-                'bank_branch'         => 'فرع مدينة نصر',
-                'bank_account'        => '1234567890',
-                'iban'                => 'EG123456789012345678901234',
+                'bank_name' => 'البنك الأهلي',
+                'bank_branch' => 'فرع مدينة نصر',
+                'bank_account' => '1234567890',
+                'iban' => 'EG123456789012345678901234',
             ])
             ->assertCreated();
 
@@ -39,15 +39,15 @@ class SupplierCrudTest extends TestCase
 
     public function test_catalog_item_links_supplier_on_create(): void
     {
-        $admin    = $this->userWithRole('admin');
+        $admin = $this->userWithRole('admin');
         $supplier = Supplier::create(['name' => 'مورد للصنف']);
 
         $this->actingAs($admin)
             ->postJson(route('admin.catalog.store'), [
-                'name'         => 'صنف مرتبط بمورد',
-                'code'         => 'ITM-SUP-LINK',
-                'qty'          => 0,
-                'price'        => 100,
+                'name' => 'صنف مرتبط بمورد',
+                'code' => 'ITM-SUP-LINK',
+                'qty' => 0,
+                'price' => 100,
                 'supplier_ids' => [$supplier->id],
             ])
             ->assertCreated()
@@ -60,16 +60,16 @@ class SupplierCrudTest extends TestCase
 
     public function test_catalog_item_rejects_multiple_suppliers(): void
     {
-        $admin     = $this->userWithRole('admin');
+        $admin = $this->userWithRole('admin');
         $supplier1 = Supplier::create(['name' => 'مورد 1']);
         $supplier2 = Supplier::create(['name' => 'مورد 2']);
 
         $this->actingAs($admin)
             ->postJson(route('admin.catalog.store'), [
-                'name'         => 'صنف بموردين',
-                'code'         => 'ITM-MULTI-SUP',
-                'qty'          => 0,
-                'price'        => 100,
+                'name' => 'صنف بموردين',
+                'code' => 'ITM-MULTI-SUP',
+                'qty' => 0,
+                'price' => 100,
                 'supplier_ids' => [$supplier1->id, $supplier2->id],
             ])
             ->assertStatus(422)
@@ -78,9 +78,9 @@ class SupplierCrudTest extends TestCase
 
     public function test_receive_increases_supplier_debt_and_links_item(): void
     {
-        $user     = $this->userWithRole('technical');
+        $user = $this->userWithRole('technical');
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('ITM-SUP-002');
+        $item = $this->stockItem('ITM-SUP-002');
 
         app(StockReceiveService::class)->receive(
             $item, 4, 250.00, $supplier, 'INV-SUP-1', now(), $user
@@ -94,10 +94,10 @@ class SupplierCrudTest extends TestCase
 
     public function test_cannot_delete_supplier_with_movements(): void
     {
-        $admin    = $this->userWithRole('admin');
-        $user     = $this->userWithRole('technical');
+        $admin = $this->userWithRole('admin');
+        $user = $this->userWithRole('technical');
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('ITM-SUP-003');
+        $item = $this->stockItem('ITM-SUP-003');
 
         app(StockReceiveService::class)->receive(
             $item, 1, 100.00, $supplier, 'INV-SUP-2', now(), $user
@@ -112,7 +112,7 @@ class SupplierCrudTest extends TestCase
 
     public function test_can_soft_delete_supplier_without_financial_activity(): void
     {
-        $admin    = $this->userWithRole('admin');
+        $admin = $this->userWithRole('admin');
         $supplier = Supplier::create(['name' => 'مورد للحذف']);
 
         $this->actingAs($admin)

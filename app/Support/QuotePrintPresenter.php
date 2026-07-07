@@ -24,7 +24,7 @@ final class QuotePrintPresenter
         $quote->loadMissing(['caseRecord.contractCompany', 'items']);
 
         $gross = round((float) $quote->total, 2);
-        $case  = $quote->caseRecord;
+        $case = $quote->caseRecord;
 
         if (! $case) {
             return self::withoutDiscount($gross);
@@ -38,12 +38,12 @@ final class QuotePrintPresenter
         }
 
         return [
-            'gross_total'      => $gross,
+            'gross_total' => $gross,
             'discount_percent' => (float) $split['company_share_percent'],
-            'discount_amount'  => $discountAmount,
-            'net_total'        => (float) $split['patient_share'],
-            'display_total'    => (float) $split['patient_share'],
-            'has_discount'     => true,
+            'discount_amount' => $discountAmount,
+            'net_total' => (float) $split['patient_share'],
+            'display_total' => (float) $split['patient_share'],
+            'has_discount' => true,
         ];
     }
 
@@ -57,12 +57,12 @@ final class QuotePrintPresenter
     private static function withoutDiscount(float $gross): array
     {
         return [
-            'gross_total'      => $gross,
+            'gross_total' => $gross,
             'discount_percent' => 0.0,
-            'discount_amount'  => 0.0,
-            'net_total'        => $gross,
-            'display_total'    => $gross,
-            'has_discount'     => false,
+            'discount_amount' => 0.0,
+            'net_total' => $gross,
+            'display_total' => $gross,
+            'has_discount' => false,
         ];
     }
 }

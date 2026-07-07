@@ -3,11 +3,12 @@
 namespace App\Services;
 
 use App\Enums\CaseStage;
-use App\Support\PatientEntityPresenter;
 use App\Models\Appointment;
+use App\Models\AuditLog;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\VisitType;
+use App\Support\PatientEntityPresenter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -19,8 +20,7 @@ class AdminPatientTrackService
     public function __construct(
         private readonly PublicTrackingService $publicTracking,
         private readonly AdminPatientJourneyService $journey,
-    ) {
-    }
+    ) {}
 
     /** @return list<array{value: string, label: string}> */
     public static function stageFilterOptions(): array
@@ -117,7 +117,7 @@ class AdminPatientTrackService
     }
 
     /** @return array<string, mixed> */
-    private function formatTrack(Patient $patient, ?\App\Models\AuditLog $registrationAudit = null): array
+    private function formatTrack(Patient $patient, ?AuditLog $registrationAudit = null): array
     {
         $activeCase = $patient->cases->first(
             fn (CaseRecord $case) => $case->stage_key !== CaseRecord::STAGE_DELIVERED
@@ -133,9 +133,9 @@ class AdminPatientTrackService
 
         if (! $activeCase && $appointment) {
             $tracking['stage_label'] = match ($appointment->status) {
-                Appointment::STATUS_WAITING   => 'في الاستقبال — بانتظار التحويل للعيادة',
+                Appointment::STATUS_WAITING => 'في الاستقبال — بانتظار التحويل للعيادة',
                 Appointment::STATUS_IN_CLINIC => 'في العيادة',
-                default                       => $tracking['stage_label'],
+                default => $tracking['stage_label'],
             };
 
             if ($appointment->status === Appointment::STATUS_IN_CLINIC && ($tracking['current_index'] ?? 0) < 1) {
@@ -154,28 +154,28 @@ class AdminPatientTrackService
         $entity = PatientEntityPresenter::forPatient($patient);
 
         return [
-            'id'               => $patient->id,
-            'name'             => $patient->name,
-            'phone'            => $patient->phone,
-            'national_id'      => $patient->national_id,
-            'patient_type'     => $patient->patient_type,
-            'company_name'     => $entity['label'],
-            'entity'           => $entity,
-            'case_no'          => $activeCase?->case_no,
-            'stage_key'        => $this->resolveStageKey($activeCase, $appointment),
-            'pathway'          => $tracking['pathway'],
-            'pathway_label'    => $tracking['pathway'] === 'military' ? 'عسكري' : 'مدني',
-            'stage_label'      => $tracking['stage_label'],
+            'id' => $patient->id,
+            'name' => $patient->name,
+            'phone' => $patient->phone,
+            'national_id' => $patient->national_id,
+            'patient_type' => $patient->patient_type,
+            'company_name' => $entity['label'],
+            'entity' => $entity,
+            'case_no' => $activeCase?->case_no,
+            'stage_key' => $this->resolveStageKey($activeCase, $appointment),
+            'pathway' => $tracking['pathway'],
+            'pathway_label' => $tracking['pathway'] === 'military' ? 'عسكري' : 'مدني',
+            'stage_label' => $tracking['stage_label'],
             'progress_percent' => $progressPercent,
-            'steps'            => $steps,
-            'current_index'    => $currentIndex,
-            'search_hay'       => mb_strtolower(trim(
-                ($patient->name ?? '') . ' ' . ($patient->phone ?? '') . ' ' . ($patient->national_id ?? '')
+            'steps' => $steps,
+            'current_index' => $currentIndex,
+            'search_hay' => mb_strtolower(trim(
+                ($patient->name ?? '').' '.($patient->phone ?? '').' '.($patient->national_id ?? '')
             )),
-            'visit_type_id'    => $visitTypeId,
+            'visit_type_id' => $visitTypeId,
             'visit_type_label' => $visitAppointment?->displayVisitType(),
-            'journey'          => $this->journey->build($patient, $activeCase, $registrationAudit),
-            'patient_details'  => $this->formatPatientDetails($patient, $activeCase, $tracking),
+            'journey' => $this->journey->build($patient, $activeCase, $registrationAudit),
+            'patient_details' => $this->formatPatientDetails($patient, $activeCase, $tracking),
         ];
     }
 
@@ -183,51 +183,51 @@ class AdminPatientTrackService
     private function formatPatientDetails(Patient $patient, ?CaseRecord $activeCase, array $tracking): array
     {
         $statusLabels = [
-            Patient::STATUS_ACTIVE   => 'نشط',
+            Patient::STATUS_ACTIVE => 'نشط',
             Patient::STATUS_INACTIVE => 'غير نشط',
-            Patient::STATUS_QUOTED   => 'تم التسعير',
-            Patient::STATUS_DONE     => 'مكتمل',
+            Patient::STATUS_QUOTED => 'تم التسعير',
+            Patient::STATUS_DONE => 'مكتمل',
         ];
 
         $cases = $patient->cases->map(fn (CaseRecord $case) => [
-            'case_no'      => $case->case_no,
-            'order_ref'    => $case->order_ref,
-            'stage_key'    => $case->stage_key,
-            'stage_label'  => CaseStage::labelFor($case->stage_key),
+            'case_no' => $case->case_no,
+            'order_ref' => $case->order_ref,
+            'stage_key' => $case->stage_key,
+            'stage_label' => CaseStage::labelFor($case->stage_key),
             'patient_type' => $case->patient_type,
             'delivered_at' => $case->delivered_at?->toDateString(),
-            'created_at'   => $case->created_at?->toDateString(),
+            'created_at' => $case->created_at?->toDateString(),
         ])->values()->all();
 
         return [
-            'id'                  => $patient->id,
-            'patient_code'        => $patient->patient_code,
-            'patient_qr'          => $patient->patient_qr,
-            'tracking_uid'        => $patient->tracking_uid,
-            'name'                => $patient->name,
-            'phone'               => $patient->phone,
-            'national_id'         => $patient->national_id,
-            'patient_type'        => $patient->patient_type,
-            'patient_type_label'  => $patient->isMilitary() ? 'عسكري' : 'مدني',
-            'rank'                => $patient->rank,
-            'sovereign_entity'    => $patient->sovereign_entity,
-            'display_entity'      => $patient->displayEntity(),
-            'company_name'        => $patient->company_name,
-            'company_code'        => $patient->contractCompany?->company_code,
-            'registered_at'       => $patient->registered_at?->toDateString(),
-            'last_visit_at'       => $patient->last_visit_at?->toDateString(),
-            'status'              => $patient->status,
-            'status_label'        => $statusLabels[$patient->status] ?? $patient->status,
+            'id' => $patient->id,
+            'patient_code' => $patient->patient_code,
+            'patient_qr' => $patient->patient_qr,
+            'tracking_uid' => $patient->tracking_uid,
+            'name' => $patient->name,
+            'phone' => $patient->phone,
+            'national_id' => $patient->national_id,
+            'patient_type' => $patient->patient_type,
+            'patient_type_label' => $patient->isMilitary() ? 'عسكري' : 'مدني',
+            'rank' => $patient->rank,
+            'sovereign_entity' => $patient->sovereign_entity,
+            'display_entity' => $patient->displayEntity(),
+            'company_name' => $patient->company_name,
+            'company_code' => $patient->contractCompany?->company_code,
+            'registered_at' => $patient->registered_at?->toDateString(),
+            'last_visit_at' => $patient->last_visit_at?->toDateString(),
+            'status' => $patient->status,
+            'status_label' => $statusLabels[$patient->status] ?? $patient->status,
             'current_stage_label' => $tracking['stage_label'] ?? null,
-            'active_case'         => $activeCase ? [
-                'case_no'      => $activeCase->case_no,
-                'order_ref'    => $activeCase->order_ref,
-                'stage_key'    => $activeCase->stage_key,
-                'stage_label'  => CaseStage::labelFor($activeCase->stage_key),
+            'active_case' => $activeCase ? [
+                'case_no' => $activeCase->case_no,
+                'order_ref' => $activeCase->order_ref,
+                'stage_key' => $activeCase->stage_key,
+                'stage_label' => CaseStage::labelFor($activeCase->stage_key),
                 'delivered_at' => $activeCase->delivered_at?->toDateString(),
             ] : null,
-            'cases'               => $cases,
-            'cases_count'         => count($cases),
+            'cases' => $cases,
+            'cases_count' => count($cases),
         ];
     }
 
@@ -236,9 +236,9 @@ class AdminPatientTrackService
     {
         return array_map(function (array $step, int $index) use ($currentIndex) {
             $step['status'] = match (true) {
-                $index < $currentIndex  => 'done',
+                $index < $currentIndex => 'done',
                 $index === $currentIndex => 'current',
-                default                  => 'pending',
+                default => 'pending',
             };
 
             return $step;
@@ -277,21 +277,21 @@ class AdminPatientTrackService
         $steps = $this->stepsForPath($isMilitary);
 
         $stageLabel = match ($appointment?->status) {
-            Appointment::STATUS_WAITING   => 'في الاستقبال — بانتظار التحويل للعيادة',
+            Appointment::STATUS_WAITING => 'في الاستقبال — بانتظار التحويل للعيادة',
             Appointment::STATUS_IN_CLINIC => 'في العيادة — بانتظار الطبيب',
-            default                       => 'تم التسجيل — في انتظار الكشف الطبي',
+            default => 'تم التسجيل — في انتظار الكشف الطبي',
         };
 
         $currentIndex = $appointment?->status === Appointment::STATUS_IN_CLINIC ? 1 : 0;
 
         return [
-            'tracking_uid'  => null,
-            'pathway'       => $isMilitary ? 'military' : 'civilian',
-            'stage_label'   => $case
-                ? \App\Enums\CaseStage::labelFor($case->stage_key)
+            'tracking_uid' => null,
+            'pathway' => $isMilitary ? 'military' : 'civilian',
+            'stage_label' => $case
+                ? CaseStage::labelFor($case->stage_key)
                 : $stageLabel,
             'current_index' => $currentIndex,
-            'steps'         => $this->remapStepStatuses($steps, $currentIndex),
+            'steps' => $this->remapStepStatuses($steps, $currentIndex),
         ];
     }
 

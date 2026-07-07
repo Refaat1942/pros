@@ -19,9 +19,7 @@ class ContractCompanyController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly ContractDebtService $contractDebtService)
-    {
-    }
+    public function __construct(private readonly ContractDebtService $contractDebtService) {}
 
     /**
      * قائمة جهات التعاقد مع ملخص المديونية.
@@ -31,9 +29,9 @@ class ContractCompanyController extends Controller
         // ?all=1 — used by patient registration select dropdown
         if ($request->boolean('all')) {
             $companies = ContractCompany::when(
-                    $request->has('is_military'),
-                    fn ($q) => $q->where('is_military', $request->boolean('is_military'))
-                )
+                $request->has('is_military'),
+                fn ($q) => $q->where('is_military', $request->boolean('is_military'))
+            )
                 ->orderBy('name')
                 ->get(['id', 'name', 'company_code', 'is_military', 'is_contracted', 'discount_percent']);
 
@@ -49,13 +47,13 @@ class ContractCompanyController extends Controller
                 ->when(
                     $request->search,
                     fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
-                                      ->orWhere('company_code', 'like', "%{$s}%")
+                        ->orWhere('company_code', 'like', "%{$s}%")
                 )
                 ->orderByDesc('id')
         );
 
         return response()->json([
-            'data'  => $companies,
+            'data' => $companies,
             'total' => $companies->count(),
         ]);
     }
@@ -81,28 +79,28 @@ class ContractCompanyController extends Controller
 
             return response()->json([
                 'message' => 'الجهة موجودة مسبقاً — تم اختيارها.',
-                'data'    => $this->companyLookupPayload($existing),
+                'data' => $this->companyLookupPayload($existing),
             ]);
         }
 
         $company = ContractCompany::create([
-            'company_code'     => $this->generateCompanyCode(),
-            'name'             => $name,
-            'is_military'      => false,
-            'is_contracted'    => false,
+            'company_code' => $this->generateCompanyCode(),
+            'name' => $name,
+            'is_military' => false,
+            'is_contracted' => false,
             'discount_percent' => 0,
         ]);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إضافة جهة غير متعاقدة من الاستقبال — {$company->company_code} — {$company->name}",
-            tag:         'reception',
-            after:       $company->toArray(),
+            tag: 'reception',
+            after: $company->toArray(),
         );
 
         return response()->json([
             'message' => 'تمت إضافة الجهة — يمكنك الآن حفظ المريض.',
-            'data'    => $this->companyLookupPayload($company),
+            'data' => $this->companyLookupPayload($company),
         ], 201);
     }
 
@@ -113,10 +111,10 @@ class ContractCompanyController extends Controller
     {
         $company = DB::transaction(function () use ($request) {
             $company = ContractCompany::create([
-                'company_code'     => $this->generateCompanyCode(),
-                'name'             => $request->name,
-                'is_military'      => $request->boolean('is_military'),
-                'is_contracted'    => $request->boolean('is_contracted', true),
+                'company_code' => $this->generateCompanyCode(),
+                'name' => $request->name,
+                'is_military' => $request->boolean('is_military'),
+                'is_contracted' => $request->boolean('is_contracted', true),
                 'discount_percent' => $request->input('discount_percent', 0),
             ]);
 
@@ -125,10 +123,10 @@ class ContractCompanyController extends Controller
             }
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "إضافة جهة تعاقد {$company->company_code} — {$company->name}",
-                tag:         'financial',
-                after:       $company->toArray(),
+                tag: 'financial',
+                after: $company->toArray(),
             );
 
             return $company;
@@ -166,11 +164,11 @@ class ContractCompanyController extends Controller
         }
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تعديل جهة تعاقد {$company->company_code}",
-            tag:         'financial',
-            before:      $before,
-            after:       $company->only(['name', 'is_military', 'is_contracted', 'discount_percent']),
+            tag: 'financial',
+            before: $before,
+            after: $company->only(['name', 'is_military', 'is_contracted', 'discount_percent']),
         );
 
         return response()->json([
@@ -196,10 +194,10 @@ class ContractCompanyController extends Controller
             $company->delete();
 
             AuditService::log(
-                action:      'delete',
+                action: 'delete',
                 description: "حذف جهة تعاقد {$before['name']}",
-                tag:         'financial',
-                before:      $before,
+                tag: 'financial',
+                before: $before,
             );
         });
 
@@ -211,7 +209,7 @@ class ContractCompanyController extends Controller
     private function generateCompanyCode(): string
     {
         $last = ContractCompany::orderByDesc('id')->value('company_code');
-        $num  = $last ? ((int) ltrim(substr($last, 3), '0') ?: 0) + 1 : 1;
+        $num = $last ? ((int) ltrim(substr($last, 3), '0') ?: 0) + 1 : 1;
 
         return sprintf('CO-%03d', $num);
     }
@@ -220,11 +218,11 @@ class ContractCompanyController extends Controller
     private function companyLookupPayload(ContractCompany $company): array
     {
         return [
-            'id'               => $company->id,
-            'name'             => $company->name,
-            'company_code'     => $company->company_code,
-            'is_military'      => (bool) $company->is_military,
-            'is_contracted'    => (bool) $company->is_contracted,
+            'id' => $company->id,
+            'name' => $company->name,
+            'company_code' => $company->company_code,
+            'is_military' => (bool) $company->is_military,
+            'is_contracted' => (bool) $company->is_contracted,
             'discount_percent' => $company->discount_percent,
         ];
     }

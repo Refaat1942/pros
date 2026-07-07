@@ -27,8 +27,7 @@ class CostingController extends Controller
         private readonly PricingService $pricingService,
         private readonly OverheadCostingEngine $overheadCostingEngine,
         private readonly StockCategorySchemaService $categorySchema,
-    ) {
-    }
+    ) {}
 
     /**
      * طابور الحالات بانتظار تأكيد التكاليف.
@@ -44,14 +43,14 @@ class CostingController extends Controller
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
                 }))
                 ->orderByDesc('updated_at')
         );
 
         return response()->json([
-            'data'  => collect($cases)->map(fn (CaseRecord $c) => $this->formatSummary($c))->values(),
+            'data' => collect($cases)->map(fn (CaseRecord $c) => $this->formatSummary($c))->values(),
             'total' => $cases->count(),
         ]);
     }
@@ -84,12 +83,12 @@ class CostingController extends Controller
         }
 
         return response()->json([
-            'case'    => $this->formatSummary($case),
+            'case' => $this->formatSummary($case),
             'pricing' => $pricing ? $this->formatPricingDetail($pricing, $case) : null,
-            'bom'     => $case->bom ? [
-                'id'     => $case->bom->id,
+            'bom' => $case->bom ? [
+                'id' => $case->bom->id,
                 'bom_no' => $case->bom->bom_no,
-                'items'  => $case->bom->items->map(fn ($i) => $i->only([
+                'items' => $case->bom->items->map(fn ($i) => $i->only([
                     'stock_item_code', 'name', 'qty', 'source',
                 ]))->values(),
             ] : null,
@@ -108,7 +107,7 @@ class CostingController extends Controller
             'message' => $case->isMilitary()
                 ? 'تم تأكيد التكاليف — اعتماد عسكري تلقائي وتحويل للمخزن.'
                 : 'تم تأكيد التكاليف  — الحالة في مكتب التشغيل.',
-            'case'    => $this->formatSummary($case->load(['patient', 'pricingRequest', 'quotes'])),
+            'case' => $this->formatSummary($case->load(['patient', 'pricingRequest', 'quotes'])),
         ]);
     }
 
@@ -119,9 +118,9 @@ class CostingController extends Controller
         return $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'path',
         ]) + [
-            'pathway_label'  => $case->isMilitary() ? 'عسكري' : 'مدني',
+            'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
             'display_entity' => $case->displayEntity(),
-            'tech_notes'     => $case->resolvedTechNotes(),
+            'tech_notes' => $case->resolvedTechNotes(),
             'computed_total' => $pricing ? (float) $pricing->computed_total : null,
             'internal_total' => CaseFinancialSummary::canSeeInternalCost() && $pricing
                 ? (float) $pricing->internal_total
@@ -148,9 +147,9 @@ class CostingController extends Controller
             'materials_highest_total' => $materialsTotal,
             'overhead_breakdown' => $canSeeInternal ? $breakdown : [
                 'gross_before_discount' => $breakdown['gross_before_discount'],
-                'discount_percent'      => $breakdown['discount_percent'],
-                'discount_amount'       => $breakdown['discount_amount'],
-                'net_offer_total'       => $breakdown['net_offer_total'],
+                'discount_percent' => $breakdown['discount_percent'],
+                'discount_amount' => $breakdown['discount_amount'],
+                'net_offer_total' => $breakdown['net_offer_total'],
             ],
             'items' => $pricing->relationLoaded('items')
                 ? $pricing->items->map(function ($item) {
@@ -161,10 +160,10 @@ class CostingController extends Controller
 
                     return [
                         'stock_item_code' => $item->stock_item_code,
-                        'name'            => $item->name,
-                        'qty'             => $item->qty,
-                        'criteria'        => $criteria,
-                        'line_total'      => (float) $item->line_total,
+                        'name' => $item->name,
+                        'qty' => $item->qty,
+                        'criteria' => $criteria,
+                        'line_total' => (float) $item->line_total,
                     ];
                 })->values()
                 : [],

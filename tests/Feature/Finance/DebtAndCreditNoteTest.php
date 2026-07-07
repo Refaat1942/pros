@@ -6,6 +6,7 @@ use App\Models\CaseRecord;
 use App\Models\CreditNote;
 use App\Services\ContractDebtService;
 use App\Services\CreditNoteService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -24,7 +25,7 @@ class DebtAndCreditNoteTest extends TestCase
     public function test_increase_due_adds_to_company_debt(): void
     {
         $company = $this->civilianCompany('شركة أ');
-        $debt    = $company->debt()->first();
+        $debt = $company->debt()->first();
 
         app(ContractDebtService::class)->increaseDue($company, 1500.00);
 
@@ -35,7 +36,7 @@ class DebtAndCreditNoteTest extends TestCase
     public function test_record_payment_increases_collected_but_not_due(): void
     {
         $company = $this->civilianCompany('شركة ب');
-        $debt    = $company->debt()->first();
+        $debt = $company->debt()->first();
         $debt->update(['due' => 2000.00]);
 
         app(ContractDebtService::class)->recordPayment($company, 500.00);
@@ -55,7 +56,7 @@ class DebtAndCreditNoteTest extends TestCase
 
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'payment',
-            'tag'    => 'financial',
+            'tag' => 'financial',
         ]);
     }
 
@@ -65,7 +66,7 @@ class DebtAndCreditNoteTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update(['quote_total' => 800.00]);
         $company->debt()->first()->update(['due' => 800.00]);
 
@@ -79,7 +80,7 @@ class DebtAndCreditNoteTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update(['quote_total' => 800.00]);
         $company->debt()->first()->update(['due' => 800.00]);
 
@@ -97,11 +98,11 @@ class DebtAndCreditNoteTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update(['quote_total' => 300.00]);
         $company->debt()->first()->update(['due' => 300.00]);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
 
         app(CreditNoteService::class)->create($case, 'discount', 999.00, 'خصم زائد');
     }
@@ -110,7 +111,7 @@ class DebtAndCreditNoteTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update(['quote_total' => 500.00]);
         $company->debt()->first()->update(['due' => 500.00]);
 
@@ -126,7 +127,7 @@ class DebtAndCreditNoteTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update(['quote_total' => 500.00]);
         $company->debt()->first()->update(['due' => 500.00]);
 
@@ -144,10 +145,10 @@ class DebtAndCreditNoteTest extends TestCase
     {
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update(['total_cost' => 500.00]);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
 
         app(CreditNoteService::class)->create($case, 'discount', 100.00, 'محاولة مرفوضة للعسكري');
     }

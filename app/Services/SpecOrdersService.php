@@ -22,7 +22,7 @@ class SpecOrdersService
         }
 
         $fromDate = $from ? Carbon::parse($from) : now()->startOfMonth();
-        $toDate   = $to ? Carbon::parse($to) : now();
+        $toDate = $to ? Carbon::parse($to) : now();
 
         if ($fromDate->gt($toDate)) {
             [$fromDate, $toDate] = [$toDate->copy()->startOfDay(), $fromDate->copy()->endOfDay()];
@@ -30,7 +30,7 @@ class SpecOrdersService
 
         return [
             'from' => $fromDate->copy()->startOfDay(),
-            'to'   => $toDate->copy()->endOfDay(),
+            'to' => $toDate->copy()->endOfDay(),
         ];
     }
 
@@ -77,7 +77,7 @@ class SpecOrdersService
 
         return [
             'today_from_doctor' => $todayQuery->count(),
-            'pending_spec'      => $cases->count(),
+            'pending_spec' => $cases->count(),
         ];
     }
 
@@ -89,18 +89,18 @@ class SpecOrdersService
         $rows = $this->list($from, $to, $search)->map(fn (CaseRecord $case) => $this->exportRow($case));
 
         $period = ($from && $to)
-            ? 'الفترة: ' . $from->format('d/m/Y') . ' — ' . $to->format('d/m/Y')
+            ? 'الفترة: '.$from->format('d/m/Y').' — '.$to->format('d/m/Y')
             : 'كل الفترات';
 
         if ($search) {
-            $period .= ' | بحث: ' . $search;
+            $period .= ' | بحث: '.$search;
         }
 
         return [
-            'title'         => 'طلبات التوصيف الفني',
-            'period_label'  => $period,
-            'headers'       => ['المريض', 'رقم الحالة', 'رقم الطلب', 'الجهة', 'النوع', 'تاريخ التحويل'],
-            'rows'          => $rows->values()->all(),
+            'title' => 'طلبات التوصيف الفني',
+            'period_label' => $period,
+            'headers' => ['المريض', 'رقم الحالة', 'رقم الطلب', 'الجهة', 'النوع', 'تاريخ التحويل'],
+            'rows' => $rows->values()->all(),
         ];
     }
 

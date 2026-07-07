@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class MedicalRecord extends Model
 {
-    public const STATUS_DRAFT    = 'مسودة';
+    public const STATUS_DRAFT = 'مسودة';
+
     public const STATUS_APPROVED = 'معتمد';
 
     protected $fillable = [

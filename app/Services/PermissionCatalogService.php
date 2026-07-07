@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Permission;
 use App\Models\Role;
+use Illuminate\Support\Collection;
 
 /**
  * مزامنة كتالوج الصلاحيات مع قاعدة البيانات وإسناد الافتراضي للأدوار.
@@ -22,11 +23,11 @@ class PermissionCatalogService
             Permission::updateOrCreate(
                 ['slug' => $slug],
                 [
-                    'label_ar'  => $meta['label_ar'],
-                    'group'     => $meta['dashboard'],
-                    'type'      => $meta['type'],
+                    'label_ar' => $meta['label_ar'],
+                    'group' => $meta['dashboard'],
+                    'type' => $meta['type'],
                     'dashboard' => $meta['dashboard'],
-                    'page'      => $meta['page'] ?? null,
+                    'page' => $meta['page'] ?? null,
                 ],
             );
         }
@@ -41,7 +42,7 @@ class PermissionCatalogService
      * النتيجة: كل التوجلز خضراء بعد migrate:fresh --seed؛
      * يستطيع الأدمن تضييق الصلاحيات لاحقاً من صفحة المصفوفة.
      *
-     * @param bool $fullSync  true = استبدال كامل، false = إضافة بدون حذف الموجود
+     * @param  bool  $fullSync  true = استبدال كامل، false = إضافة بدون حذف الموجود
      */
     public function seedRoleDefaults(bool $fullSync = false): void
     {
@@ -87,7 +88,7 @@ class PermissionCatalogService
     /**
      * بيانات العرض لصفحة مصفوفة الصلاحيات — بطاقة لكل لوحة.
      *
-     * @return array{roles: \Illuminate\Support\Collection, dashboards: array, matrix: \Illuminate\Support\Collection}
+     * @return array{roles: Collection, dashboards: array, matrix: Collection}
      */
     public function matrixPageData(): array
     {
@@ -112,18 +113,18 @@ class PermissionCatalogService
 
             $dashPerms = $permissions->where('dashboard', $key);
             $dashboards[$key] = [
-                'key'     => $key,
-                'label'   => $meta['label_ar'] ?? $key,
-                'icon'    => $meta['icon'] ?? '📊',
-                'views'   => $dashPerms->where('type', Permission::TYPE_VIEW)->values(),
+                'key' => $key,
+                'label' => $meta['label_ar'] ?? $key,
+                'icon' => $meta['icon'] ?? '📊',
+                'views' => $dashPerms->where('type', Permission::TYPE_VIEW)->values(),
                 'actions' => $dashPerms->where('type', Permission::TYPE_ACTION)->values(),
             ];
         }
 
         return [
-            'roles'        => $roles,
-            'dashboards'   => $dashboards,
-            'matrix'         => $roles->mapWithKeys(fn (Role $r) => [
+            'roles' => $roles,
+            'dashboards' => $dashboards,
+            'matrix' => $roles->mapWithKeys(fn (Role $r) => [
                 $r->id => $r->permissions->pluck('slug')->all(),
             ]),
             'permission_ids' => $permissions->pluck('id', 'slug'),

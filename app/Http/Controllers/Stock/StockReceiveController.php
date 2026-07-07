@@ -7,6 +7,7 @@ use App\Http\Requests\Stock\ReceiveStockRequest;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\Supplier;
+use App\Models\User;
 use App\Services\StockReceiveService;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
@@ -21,9 +22,7 @@ class StockReceiveController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly StockReceiveService $stockReceiveService)
-    {
-    }
+    public function __construct(private readonly StockReceiveService $stockReceiveService) {}
 
     /**
      * كتالوج المخزون — الكميات والتوفر فقط (بدون WAC أو أسعار).
@@ -39,14 +38,14 @@ class StockReceiveController extends Controller
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('code', 'like', "%{$search}%")
-                      ->orWhere('barcode', 'like', "%{$search}%");
+                        ->orWhere('code', 'like', "%{$search}%")
+                        ->orWhere('barcode', 'like', "%{$search}%");
                 }))
                 ->orderBy('code')
         );
 
         return response()->json([
-            'data'  => collect($items)->map(fn ($item) => $this->formatItem($item))->values(),
+            'data' => collect($items)->map(fn ($item) => $this->formatItem($item))->values(),
             'total' => $items->count(),
         ]);
     }
@@ -56,26 +55,26 @@ class StockReceiveController extends Controller
      */
     public function receive(ReceiveStockRequest $request): JsonResponse
     {
-        $item     = StockItem::findOrFail($request->validated('stock_item_id'));
+        $item = StockItem::findOrFail($request->validated('stock_item_id'));
         $supplier = Supplier::findOrFail($request->validated('supplier_id'));
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $movement = $this->stockReceiveService->receive(
-            item:        $item,
-            qty:         (int) $request->validated('qty'),
-            unitPrice:   (float) $request->validated('unit_price'),
-            supplier:    $supplier,
-            invoiceNo:   $request->validated('invoice_no'),
-            movedAt:     Carbon::parse($request->validated('moved_at')),
+            item: $item,
+            qty: (int) $request->validated('qty'),
+            unitPrice: (float) $request->validated('unit_price'),
+            supplier: $supplier,
+            invoiceNo: $request->validated('invoice_no'),
+            movedAt: Carbon::parse($request->validated('moved_at')),
             performedBy: $user,
         );
 
         return response()->json([
-            'message'  => 'تم استلام البضاعة بنجاح.',
+            'message' => 'تم استلام البضاعة بنجاح.',
             'movement' => $this->formatMovement($movement),
-            'item'     => $this->formatItem($movement->stockItem),
+            'item' => $this->formatItem($movement->stockItem),
         ], 201);
     }
 
@@ -93,8 +92,8 @@ class StockReceiveController extends Controller
         );
 
         return response()->json([
-            'item'  => $this->formatItem($stockItem),
-            'data'  => collect($movements)->map(fn ($m) => $this->formatMovement($m))->values(),
+            'item' => $this->formatItem($stockItem),
+            'data' => collect($movements)->map(fn ($m) => $this->formatMovement($m))->values(),
             'total' => $movements->count(),
         ]);
     }
@@ -115,10 +114,10 @@ class StockReceiveController extends Controller
             'min_qty',
             'last_moved_at',
         ]) + [
-            'category'  => $item->category?->name,
+            'category' => $item->category?->name,
             'available' => $item->availableQty(),
             'backorder' => $item->backorderQty(),
-            'status'    => $item->isBackorder() ? 'backorder' : $item->status,
+            'status' => $item->isBackorder() ? 'backorder' : $item->status,
         ];
     }
 
@@ -133,7 +132,7 @@ class StockReceiveController extends Controller
             'invoice_no',
             'moved_at',
         ]) + [
-            'supplier'     => $movement->supplier?->only(['id', 'name']),
+            'supplier' => $movement->supplier?->only(['id', 'name']),
             'performed_by' => $movement->performedBy?->only(['id', 'name']),
         ];
     }

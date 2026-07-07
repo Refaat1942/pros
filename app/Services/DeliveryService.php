@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\WorkflowEvent;
 use App\Exceptions\DeliveryNotReadyException;
+use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Support\CaseFinancialSummary;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +21,7 @@ class DeliveryService
         private readonly FinancialPostingService $financialPostingService,
         private readonly InvoiceService $invoiceService,
         private readonly PatientArchiveService $patientArchiveService,
-    ) {
-    }
+    ) {}
 
     public function canDeliver(CaseRecord $case): bool
     {
@@ -45,7 +45,7 @@ class DeliveryService
             $this->patientQrService->assertValidForDelivery($scannedQr, $case, $case->patient);
 
             $before = [
-                'stage_key'    => $case->stage_key,
+                'stage_key' => $case->stage_key,
                 'delivered_at' => $case->delivered_at?->toDateString(),
             ];
 
@@ -64,14 +64,14 @@ class DeliveryService
             $case->refresh();
 
             AuditService::log(
-                action:      'deliver',
+                action: 'deliver',
                 description: 'تسليم الطرف للمريض — إغلاق الحالة',
-                tag:         'delivery',
-                before:      $before,
-                after:       [
-                    'stage_key'     => $case->stage_key,
-                    'delivered_at'  => $case->delivered_at?->toDateString(),
-                    'invoice_no'    => $invoice['invoice_no'],
+                tag: 'delivery',
+                before: $before,
+                after: [
+                    'stage_key' => $case->stage_key,
+                    'delivered_at' => $case->delivered_at?->toDateString(),
+                    'invoice_no' => $invoice['invoice_no'],
                     'invoice_total' => $invoice['invoice_total'],
                 ],
             );
@@ -95,7 +95,7 @@ class DeliveryService
             return 'لا توجد قائمة مواد تشغيل مرتبطة بالحالة.';
         }
 
-        if ($case->bom->stage !== \App\Models\Bom::STAGE_FINISHED) {
+        if ($case->bom->stage !== Bom::STAGE_FINISHED) {
             return 'BOM لم تُغلَق بعد — التصنيع غير مكتمل.';
         }
 

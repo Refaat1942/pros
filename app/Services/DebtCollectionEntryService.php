@@ -13,18 +13,18 @@ class DebtCollectionEntryService
     public function record(Model $payable, float $amount, float $dueTotal): DebtCollectionEntry
     {
         $running = $this->runningCollected($payable);
-        $nextNo  = $this->nextInstallmentNo($payable);
+        $nextNo = $this->nextInstallmentNo($payable);
 
         return DebtCollectionEntry::create([
-            'payable_type'      => $payable->getMorphClass(),
-            'payable_id'        => $payable->id,
-            'installment_no'    => $nextNo,
-            'amount'            => round($amount, 2),
+            'payable_type' => $payable->getMorphClass(),
+            'payable_id' => $payable->id,
+            'installment_no' => $nextNo,
+            'amount' => round($amount, 2),
             'running_collected' => $running,
-            'remaining_after'   => max(0, round($dueTotal - $running, 2)),
-            'recorded_by'       => auth()->id(),
-            'recorded_by_name'  => auth()->user()?->name,
-            'collected_at'      => now(),
+            'remaining_after' => max(0, round($dueTotal - $running, 2)),
+            'recorded_by' => auth()->id(),
+            'recorded_by_name' => auth()->user()?->name,
+            'collected_at' => now(),
         ]);
     }
 
@@ -37,39 +37,39 @@ class DebtCollectionEntryService
 
         if ($count === 0 || $collected <= 0) {
             return [
-                'payment_count'       => 0,
-                'mode'                => 'none',
-                'mode_label'          => 'لم يُحصَّل بعد',
-                'first_collected_at'  => null,
-                'last_collected_at'   => null,
+                'payment_count' => 0,
+                'mode' => 'none',
+                'mode_label' => 'لم يُحصَّل بعد',
+                'first_collected_at' => null,
+                'last_collected_at' => null,
             ];
         }
 
         $sorted = $entries->sortBy('installment_no')->values();
-        $first  = $sorted->first();
-        $last   = $sorted->last();
+        $first = $sorted->first();
+        $last = $sorted->last();
         $isFull = $due > 0 && $collected >= $due;
 
         if ($count === 1 && $isFull) {
-            $mode      = 'full_once';
+            $mode = 'full_once';
             $modeLabel = 'تحصيل كامل — دفعة واحدة';
         } elseif ($count === 1) {
-            $mode      = 'partial_once';
+            $mode = 'partial_once';
             $modeLabel = 'تحصيل جزئي — دفعة واحدة';
         } elseif ($isFull) {
-            $mode      = 'full_multi';
-            $modeLabel = 'تحصيل كامل — ' . $count . ' دفعات';
+            $mode = 'full_multi';
+            $modeLabel = 'تحصيل كامل — '.$count.' دفعات';
         } else {
-            $mode      = 'partial_multi';
-            $modeLabel = 'تحصيل جزئي — ' . $count . ' دفعات';
+            $mode = 'partial_multi';
+            $modeLabel = 'تحصيل جزئي — '.$count.' دفعات';
         }
 
         return [
-            'payment_count'      => $count,
-            'mode'               => $mode,
-            'mode_label'         => $modeLabel,
+            'payment_count' => $count,
+            'mode' => $mode,
+            'mode_label' => $modeLabel,
             'first_collected_at' => $first?->collected_at?->format('d/m/Y H:i'),
-            'last_collected_at'  => $last?->collected_at?->format('d/m/Y H:i'),
+            'last_collected_at' => $last?->collected_at?->format('d/m/Y H:i'),
         ];
     }
 
@@ -79,12 +79,12 @@ class DebtCollectionEntryService
     public function formatEntries(Collection $entries): array
     {
         return $entries->sortBy('installment_no')->values()->map(fn (DebtCollectionEntry $e) => [
-            'installment_no'    => $e->installment_no,
-            'amount'            => (float) $e->amount,
+            'installment_no' => $e->installment_no,
+            'amount' => (float) $e->amount,
             'running_collected' => (float) $e->running_collected,
-            'remaining_after'   => (float) $e->remaining_after,
-            'recorded_by_name'  => $e->recorded_by_name ?? '—',
-            'collected_at'      => $e->collected_at?->format('d/m/Y H:i'),
+            'remaining_after' => (float) $e->remaining_after,
+            'recorded_by_name' => $e->recorded_by_name ?? '—',
+            'collected_at' => $e->collected_at?->format('d/m/Y H:i'),
         ])->all();
     }
 
@@ -136,11 +136,11 @@ class DebtCollectionEntryService
         $isFull = $due > 0 && $collected >= $due;
 
         return [
-            'payment_count'      => 1,
-            'mode'               => $isFull ? 'full_once' : 'partial_once',
-            'mode_label'         => $isFull ? 'تحصيل كامل — دفعة واحدة' : 'تحصيل جزئي — دفعة واحدة',
+            'payment_count' => 1,
+            'mode' => $isFull ? 'full_once' : 'partial_once',
+            'mode_label' => $isFull ? 'تحصيل كامل — دفعة واحدة' : 'تحصيل جزئي — دفعة واحدة',
             'first_collected_at' => null,
-            'last_collected_at'  => null,
+            'last_collected_at' => null,
         ];
     }
 
@@ -150,12 +150,12 @@ class DebtCollectionEntryService
     private function legacyFormattedEntries(float $due, float $collected): array
     {
         return [[
-            'installment_no'    => 1,
-            'amount'            => round($collected, 2),
+            'installment_no' => 1,
+            'amount' => round($collected, 2),
             'running_collected' => round($collected, 2),
-            'remaining_after'   => max(0, round($due - $collected, 2)),
-            'recorded_by_name'  => 'ترحيل سابق',
-            'collected_at'      => null,
+            'remaining_after' => max(0, round($due - $collected, 2)),
+            'recorded_by_name' => 'ترحيل سابق',
+            'collected_at' => null,
         ]];
     }
 }

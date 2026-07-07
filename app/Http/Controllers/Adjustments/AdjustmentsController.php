@@ -19,9 +19,7 @@ class AdjustmentsController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly AdjustmentsService $adjustmentsService)
-    {
-    }
+    public function __construct(private readonly AdjustmentsService $adjustmentsService) {}
 
     /**
      * الحالات في المعدلات أو بانتظار تأكيد التكاليف.
@@ -39,14 +37,14 @@ class AdjustmentsController extends Controller
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
                 }))
                 ->orderByDesc('updated_at')
         );
 
         return response()->json([
-            'data'  => collect($cases)->map(fn (CaseRecord $c) => $this->formatCase($c))->values(),
+            'data' => collect($cases)->map(fn (CaseRecord $c) => $this->formatCase($c))->values(),
             'total' => $cases->count(),
         ]);
     }
@@ -69,15 +67,15 @@ class AdjustmentsController extends Controller
             ->orderBy('name')
             ->get(['id', 'code', 'name', 'qty', 'reserved'])
             ->map(fn (StockItem $item) => [
-                'code'      => $item->code,
-                'name'      => $item->name,
-                'qty'       => (int) $item->qty,
-                'reserved'  => (int) $item->reserved,
+                'code' => $item->code,
+                'name' => $item->name,
+                'qty' => (int) $item->qty,
+                'reserved' => (int) $item->reserved,
                 'available' => $item->availableQty(),
             ]);
 
         return response()->json([
-            'case'          => $this->formatCase($case),
+            'case' => $this->formatCase($case),
             'stock_catalog' => $stockCatalog,
         ]);
     }
@@ -88,8 +86,8 @@ class AdjustmentsController extends Controller
 
         return response()->json([
             'message' => 'تمت إضافة البنود إلى قائمة المواد.',
-            'bom'     => [
-                'id'    => $bom->id,
+            'bom' => [
+                'id' => $bom->id,
                 'items' => $bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values(),
             ],
         ], 201);
@@ -101,8 +99,8 @@ class AdjustmentsController extends Controller
 
         return response()->json([
             'message' => 'تم حذف البند من قائمة المعدلات.',
-            'bom'     => [
-                'id'    => $bom->id,
+            'bom' => [
+                'id' => $bom->id,
                 'items' => $bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values(),
             ],
         ]);
@@ -114,7 +112,7 @@ class AdjustmentsController extends Controller
 
         return response()->json([
             'message' => 'تم إغلاق المعدلات — الحالة في طابور التكاليف بانتظار التأكيد.',
-            'case'    => $this->formatCase($case->load(['patient:id,patient_code,name', 'bom.items'])),
+            'case' => $this->formatCase($case->load(['patient:id,patient_code,name', 'bom.items'])),
         ]);
     }
 
@@ -126,23 +124,23 @@ class AdjustmentsController extends Controller
             'id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'path',
             'company_name', 'rank', 'sovereign_entity', 'created_at',
         ]) + [
-            'pathway_label'              => $case->isMilitary() ? 'عسكري' : 'مدني',
-            'display_entity'             => $case->displayEntity(),
-            'tech_notes'                 => $case->resolvedTechNotes(),
-            'rework'                     => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
-            'stage_label'                => $isCostCalc ? 'بانتظار التكاليف' : 'المعدلات',
-            'can_modify_directly'        => $case->isInAdjustments(),
-            'can_request_adjustment_edit'=> $isCostCalc && ! $case->pendingAdjustmentEditRequest,
-            'has_pending_edit_request'   => (bool) $case->pendingAdjustmentEditRequest,
+            'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
+            'display_entity' => $case->displayEntity(),
+            'tech_notes' => $case->resolvedTechNotes(),
+            'rework' => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
+            'stage_label' => $isCostCalc ? 'بانتظار التكاليف' : 'المعدلات',
+            'can_modify_directly' => $case->isInAdjustments(),
+            'can_request_adjustment_edit' => $isCostCalc && ! $case->pendingAdjustmentEditRequest,
+            'has_pending_edit_request' => (bool) $case->pendingAdjustmentEditRequest,
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name'])
                 : null,
             'bom' => $case->relationLoaded('bom') && $case->bom
                 ? [
-                    'id'      => $case->bom->id,
-                    'bom_no'  => $case->bom->bom_no,
-                    'stage'   => $case->bom->stage,
-                    'items'   => $case->bom->relationLoaded('items')
+                    'id' => $case->bom->id,
+                    'bom_no' => $case->bom->bom_no,
+                    'stage' => $case->bom->stage,
+                    'items' => $case->bom->relationLoaded('items')
                         ? $case->bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values()
                         : [],
                 ]
@@ -153,12 +151,12 @@ class AdjustmentsController extends Controller
     private function formatBomItem(BomItem $item): array
     {
         return [
-            'id'              => $item->id,
+            'id' => $item->id,
             'stock_item_code' => $item->stock_item_code,
-            'name'            => $item->name,
-            'qty'             => $item->qty,
-            'source'          => $item->source,
-            'read_only'       => $item->source === BomItem::SOURCE_SPEC,
+            'name' => $item->name,
+            'qty' => $item->qty,
+            'source' => $item->source,
+            'read_only' => $item->source === BomItem::SOURCE_SPEC,
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\PricingRequestStatus;
 use App\Models\Bom;
+use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\PricingRequest;
@@ -25,8 +26,7 @@ class PricingService
 {
     public function __construct(
         private readonly StockPriceService $stockPriceService,
-    ) {
-    }
+    ) {}
 
     /**
      * بناء طلب تسعير من BOM النهائي للحالة ثم احتساب التكلفة فوراً.
@@ -59,27 +59,27 @@ class PricingService
                 ->first();
 
             $pricingRequest = PricingRequest::create([
-                'request_no'     => $this->nextRequestNo(),
-                'order_ref'      => $case->order_ref,
-                'case_id'        => $case->id,
-                'patient_name'   => $case->patient?->name ?? '—',
-                'company_name'   => $case->company_name,
-                'request_date'   => now()->toDateString(),
-                'items_count'    => $bom->items->count(),
-                'doctor_name'    => $doctor?->doctor_name,
+                'request_no' => $this->nextRequestNo(),
+                'order_ref' => $case->order_ref,
+                'case_id' => $case->id,
+                'patient_name' => $case->patient?->name ?? '—',
+                'company_name' => $case->company_name,
+                'request_date' => now()->toDateString(),
+                'items_count' => $bom->items->count(),
+                'doctor_name' => $doctor?->doctor_name,
                 'doctor_user_id' => $doctor?->doctor_user_id,
-                'patient_type'   => $case->patient_type,
-                'status_key'     => PricingRequestStatus::Processing->value,
-                'step'           => PricingRequest::STEP_ADMIN,
+                'patient_type' => $case->patient_type,
+                'status_key' => PricingRequestStatus::Processing->value,
+                'step' => PricingRequest::STEP_ADMIN,
             ]);
 
             foreach ($bom->items as $item) {
                 PricingRequestItem::create([
                     'pricing_request_id' => $pricingRequest->id,
-                    'stock_item_code'    => $item->stock_item_code,
-                    'name'               => $item->name,
-                    'source'             => $item->source ?? \App\Models\BomItem::SOURCE_SPEC,
-                    'qty'                => $item->qty,
+                    'stock_item_code' => $item->stock_item_code,
+                    'name' => $item->name,
+                    'source' => $item->source ?? BomItem::SOURCE_SPEC,
+                    'qty' => $item->qty,
                 ]);
             }
 
@@ -108,10 +108,10 @@ class PricingService
         foreach ($bom->items as $item) {
             PricingRequestItem::create([
                 'pricing_request_id' => $request->id,
-                'stock_item_code'    => $item->stock_item_code,
-                'name'               => $item->name,
-                'source'             => $item->source ?? \App\Models\BomItem::SOURCE_SPEC,
-                'qty'                => $item->qty,
+                'stock_item_code' => $item->stock_item_code,
+                'name' => $item->name,
+                'source' => $item->source ?? BomItem::SOURCE_SPEC,
+                'qty' => $item->qty,
             ]);
         }
 
@@ -135,14 +135,14 @@ class PricingService
             $lines = [];
 
             foreach ($request->items as $item) {
-                $code      = $item->stock_item_code ?? '';
+                $code = $item->stock_item_code ?? '';
                 $unitPrice = $this->stockPriceService->highestUnitPrice($code);
-                $wacUnit   = $this->stockPriceService->wacUnitPrice($code);
+                $wacUnit = $this->stockPriceService->wacUnitPrice($code);
 
                 if ($unitPrice <= 0) {
                     Log::warning('Pricing: no valid price batch for item', [
                         'pricing_request_id' => $request->id,
-                        'stock_item_code'    => $code,
+                        'stock_item_code' => $code,
                     ]);
                 }
 
@@ -155,17 +155,17 @@ class PricingService
 
                 $lines[] = [
                     'stock_item_code' => $code,
-                    'qty'             => $item->qty,
-                    'unit_price'      => $unitPrice,
-                    'line_total'      => $lineTotal,
-                    'wac_unit'        => $wacUnit,
+                    'qty' => $item->qty,
+                    'unit_price' => $unitPrice,
+                    'line_total' => $lineTotal,
+                    'wac_unit' => $wacUnit,
                 ];
 
-                $total    += $lineTotal;
+                $total += $lineTotal;
                 $internal += round($item->qty * $wacUnit, 2);
             }
 
-            $total    = round($total, 2);
+            $total = round($total, 2);
             $internal = round($internal, 2);
 
             $before = $request->only(['status_key', 'computed_total', 'internal_total']);
@@ -173,20 +173,20 @@ class PricingService
             $request->update([
                 'computed_total' => $total,
                 'internal_total' => $internal,
-                'status_key'     => PricingRequestStatus::AwaitingAdminApproval->value,
+                'status_key' => PricingRequestStatus::AwaitingAdminApproval->value,
             ]);
 
             AuditService::log(
-                action:      'calculate',
+                action: 'calculate',
                 description: "احتساب تكلفة الحالة — {$request->request_no}",
-                tag:         'pricing',
-                before:      $before,
-                after:       [
-                    'request_no'     => $request->request_no,
-                    'status_key'     => PricingRequestStatus::AwaitingAdminApproval->value,
+                tag: 'pricing',
+                before: $before,
+                after: [
+                    'request_no' => $request->request_no,
+                    'status_key' => PricingRequestStatus::AwaitingAdminApproval->value,
                     'computed_total' => $total,
                     'internal_total' => $internal,
-                    'lines'          => $lines,
+                    'lines' => $lines,
                 ],
             );
 
@@ -207,14 +207,14 @@ class PricingService
             $internal = 0.0;
 
             foreach ($request->items as $item) {
-                $code      = $item->stock_item_code ?? '';
+                $code = $item->stock_item_code ?? '';
                 $unitPrice = $this->stockPriceService->highestUnitPrice($code);
-                $wacUnit   = $this->stockPriceService->wacUnitPrice($code);
+                $wacUnit = $this->stockPriceService->wacUnitPrice($code);
 
                 if ($unitPrice <= 0) {
                     Log::warning('Pricing refresh: no valid price batch for item', [
                         'pricing_request_id' => $request->id,
-                        'stock_item_code'    => $code,
+                        'stock_item_code' => $code,
                     ]);
                 }
 
@@ -225,11 +225,11 @@ class PricingService
                     'line_total' => $lineTotal,
                 ]);
 
-                $total    += $lineTotal;
+                $total += $lineTotal;
                 $internal += round($item->qty * $wacUnit, 2);
             }
 
-            $total    = round($total, 2);
+            $total = round($total, 2);
             $internal = round($internal, 2);
 
             $request->update([

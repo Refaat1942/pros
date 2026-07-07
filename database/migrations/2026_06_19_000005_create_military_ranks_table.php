@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('rank_code', 30)->nullable()->unique();       // CAPT / MAJ / COL ...
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
-           
+
             $table->timestamps();
         });
     }

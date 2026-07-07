@@ -18,7 +18,7 @@ class AdjustmentsTransferHistoryService
     public function parseDateRange(?string $from, ?string $to): array
     {
         $fromDate = $from ? Carbon::parse($from) : now()->startOfMonth();
-        $toDate   = $to ? Carbon::parse($to) : now();
+        $toDate = $to ? Carbon::parse($to) : now();
 
         if ($fromDate->gt($toDate)) {
             [$fromDate, $toDate] = [$toDate->copy()->startOfDay(), $fromDate->copy()->endOfDay()];
@@ -26,7 +26,7 @@ class AdjustmentsTransferHistoryService
 
         return [
             'from' => $fromDate->copy()->startOfDay(),
-            'to'   => $toDate->copy()->endOfDay(),
+            'to' => $toDate->copy()->endOfDay(),
         ];
     }
 
@@ -44,7 +44,7 @@ class AdjustmentsTransferHistoryService
         $rows = $this->query($from, $to, $search);
 
         return [
-            'total'    => $rows->count(),
+            'total' => $rows->count(),
             'military' => $rows->where('patient_type', 'military')->count(),
             'civilian' => $rows->where('patient_type', 'civilian')->count(),
         ];
@@ -58,9 +58,9 @@ class AdjustmentsTransferHistoryService
         $rows = $this->list($from, $to, $search);
 
         return [
-            'title'         => 'سجل المحوّلين من المعدلات للتكاليف',
-            'period_label'  => 'الفترة: ' . ClinicTime::format($from, 'd/m/Y') . ' — ' . ClinicTime::format($to, 'd/m/Y'),
-            'headers'       => [
+            'title' => 'سجل المحوّلين من المعدلات للتكاليف',
+            'period_label' => 'الفترة: '.ClinicTime::format($from, 'd/m/Y').' — '.ClinicTime::format($to, 'd/m/Y'),
+            'headers' => [
                 'تاريخ التحويل',
                 'رقم الحالة',
                 'الطلب',
@@ -121,7 +121,7 @@ class AdjustmentsTransferHistoryService
 
         return $logs->map(function (AuditLog $log) use ($cases, $term) {
             $caseId = $log->payload_after['case_id'] ?? null;
-            $case   = $caseId ? $cases->get($caseId) : null;
+            $case = $caseId ? $cases->get($caseId) : null;
 
             if (! $case) {
                 return null;
@@ -153,21 +153,21 @@ class AdjustmentsTransferHistoryService
         $stage = CaseStage::tryFrom($case->stage_key);
 
         return [
-            'id'                    => $log->id,
-            'case_id'               => $case->id,
-            'case_no'               => $case->case_no,
-            'order_ref'             => $case->order_ref,
-            'patient_name'          => $case->patient?->name ?? '—',
-            'patient_type'          => $case->patient_type,
-            'pathway_label'         => $case->isMilitary() ? 'عسكري' : 'مدني',
-            'display_entity'        => $case->displayEntity(),
-            'items_count'           => $case->bom?->items?->count() ?? 0,
-            'pricing_request_no'    => (string) ($log->payload_after['pricing_request'] ?? '—'),
-            'transferred_by'        => $log->user_name ?? '—',
-            'transferred_at'        => $log->logged_at?->toIso8601String(),
-            'transferred_at_label'  => ClinicTime::format($log->logged_at),
-            'current_stage_label'   => $stage?->label() ?? $case->stage_key,
-            'search_blob'           => implode(' ', [
+            'id' => $log->id,
+            'case_id' => $case->id,
+            'case_no' => $case->case_no,
+            'order_ref' => $case->order_ref,
+            'patient_name' => $case->patient?->name ?? '—',
+            'patient_type' => $case->patient_type,
+            'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
+            'display_entity' => $case->displayEntity(),
+            'items_count' => $case->bom?->items?->count() ?? 0,
+            'pricing_request_no' => (string) ($log->payload_after['pricing_request'] ?? '—'),
+            'transferred_by' => $log->user_name ?? '—',
+            'transferred_at' => $log->logged_at?->toIso8601String(),
+            'transferred_at_label' => ClinicTime::format($log->logged_at),
+            'current_stage_label' => $stage?->label() ?? $case->stage_key,
+            'search_blob' => implode(' ', [
                 $case->patient?->name,
                 $case->case_no,
                 $case->order_ref,

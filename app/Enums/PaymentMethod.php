@@ -7,15 +7,15 @@ namespace App\Enums;
  */
 enum PaymentMethod: string
 {
-    case Cash         = 'cash';
-    case Instapay     = 'instapay';
+    case Cash = 'cash';
+    case Instapay = 'instapay';
     case VodafoneCash = 'vodafone_cash';
 
     public function label(): string
     {
         return match ($this) {
-            self::Cash         => 'نقدي',
-            self::Instapay     => 'إنستا باي',
+            self::Cash => 'نقدي',
+            self::Instapay => 'إنستا باي',
             self::VodafoneCash => 'فودافون كاش',
         };
     }

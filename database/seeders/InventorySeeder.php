@@ -16,8 +16,7 @@ class InventorySeeder extends Seeder
     public function __construct(
         private readonly StockCategorySchemaService $categorySchema,
         private readonly StockCatalogService $catalog,
-    ) {
-    }
+    ) {}
 
     public function run(): void
     {
@@ -32,16 +31,16 @@ class InventorySeeder extends Seeder
                 : 'قطعة';
 
             $item = StockItem::query()->create([
-                'code'          => $row['code'],
-                'name'          => $row['name'],
-                'spec'          => $row['spec'],
-                'category_id'   => $categoryId,
-                'store_class'   => PrototypeSeedData::deriveStoreClass($row['category']),
-                'uom'           => $uom,
-                'barcode'       => PrototypeSeedData::deriveBarcode($row['code']),
-                'qty'           => $row['qty'],
-                'reserved'      => $row['reserved'],
-                'status'        => $row['status'],
+                'code' => $row['code'],
+                'name' => $row['name'],
+                'spec' => $row['spec'],
+                'category_id' => $categoryId,
+                'store_class' => PrototypeSeedData::deriveStoreClass($row['category']),
+                'uom' => $uom,
+                'barcode' => PrototypeSeedData::deriveBarcode($row['code']),
+                'qty' => $row['qty'],
+                'reserved' => $row['reserved'],
+                'status' => $row['status'],
                 'last_moved_at' => PrototypeSeedData::parseDate($row['lastMoved'] ?? '01/06/2026'),
             ]);
 
@@ -63,15 +62,15 @@ class InventorySeeder extends Seeder
                 $supplierIds[] = $supplierId;
 
                 StockItemPrice::query()->create([
-                    'stock_item_id'      => $item->id,
-                    'price_ref'          => $price['id'],
-                    'label'              => $price['label'],
-                    'supplier_id'        => $supplierId,
-                    'supplier_type'      => $price['supplierType'],
+                    'stock_item_id' => $item->id,
+                    'price_ref' => $price['id'],
+                    'label' => $price['label'],
+                    'supplier_id' => $supplierId,
+                    'supplier_type' => $price['supplierType'],
                     'supplier_item_code' => $price['itemCode'],
-                    'amount'             => $price['amount'],
-                    'qty'                => max(1, (int) ($price['qty'] ?? 1)),
-                    'received_at'        => PrototypeSeedData::parseDate($row['lastMoved'] ?? '01/06/2026')?->toDateString(),
+                    'amount' => $price['amount'],
+                    'qty' => max(1, (int) ($price['qty'] ?? 1)),
+                    'received_at' => PrototypeSeedData::parseDate($row['lastMoved'] ?? '01/06/2026')?->toDateString(),
                 ]);
             }
 
@@ -83,7 +82,7 @@ class InventorySeeder extends Seeder
             if ($highest > 0 && (int) $row['qty'] > 0) {
                 $item->update([
                     'price' => (float) $highest,
-                    'wac'   => (float) $highest,
+                    'wac' => (float) $highest,
                 ]);
             }
         }

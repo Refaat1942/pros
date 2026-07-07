@@ -14,8 +14,8 @@ class UpdateMilitaryRankRequest extends BaseRequest
         $rank = $this->route('militaryRank');
 
         return [
-            'name'       => ['sometimes', 'string', 'min:2', 'max:100'],
-            'rank_code'  => [
+            'name' => ['sometimes', 'string', 'min:2', 'max:100'],
+            'rank_code' => [
                 'nullable',
                 'string',
                 'min:2',

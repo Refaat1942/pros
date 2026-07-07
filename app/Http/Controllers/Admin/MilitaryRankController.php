@@ -37,15 +37,15 @@ class MilitaryRankController extends Controller
 
         $ranks = $this->fetchForDashboard(
             MilitaryRank::when(
-                    $request->search,
-                    fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
-                )
+                $request->search,
+                fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
+            )
                 ->orderBy('sort_order')
                 ->orderBy('name')
         );
 
         return response()->json([
-            'data'  => $ranks,
+            'data' => $ranks,
             'total' => $ranks->count(),
         ]);
     }
@@ -58,16 +58,16 @@ class MilitaryRankController extends Controller
         $data = $request->validated();
 
         $rank = MilitaryRank::create([
-            'name'       => $data['name'],
-            'rank_code'  => null,
+            'name' => $data['name'],
+            'rank_code' => null,
             'sort_order' => (int) (MilitaryRank::max('sort_order') ?? 0) + 10,
         ]);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إضافة رتبة عسكرية: {$rank->name}",
-            tag:         'admin',
-            after:       $rank->toArray(),
+            tag: 'admin',
+            after: $rank->toArray(),
         );
 
         if ($request->expectsJson()) {
@@ -90,16 +90,16 @@ class MilitaryRankController extends Controller
         $militaryRank->update($data);
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تعديل رتبة عسكرية: {$militaryRank->name}",
-            tag:         'admin',
-            before:      $before,
-            after:       $militaryRank->fresh()->only(['name', 'sort_order']),
+            tag: 'admin',
+            before: $before,
+            after: $militaryRank->fresh()->only(['name', 'sort_order']),
         );
 
         return response()->json([
             'message' => 'تم تحديث الرتبة بنجاح.',
-            'rank'    => $militaryRank->fresh(),
+            'rank' => $militaryRank->fresh(),
         ]);
     }
 
@@ -115,10 +115,10 @@ class MilitaryRankController extends Controller
         $militaryRank->delete();
 
         AuditService::log(
-            action:      'delete',
+            action: 'delete',
             description: "حذف رتبة عسكرية: {$before['name']}",
-            tag:         'admin',
-            before:      $before,
+            tag: 'admin',
+            before: $before,
         );
 
         return response()->json(['message' => 'تم حذف الرتبة بنجاح.']);
@@ -138,10 +138,10 @@ class MilitaryRankController extends Controller
         });
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: 'إعادة ترتيب الرتب العسكرية',
-            tag:         'admin',
-            after:       ['order' => $ids],
+            tag: 'admin',
+            after: ['order' => $ids],
         );
 
         return response()->json(['message' => 'تم حفظ الترتيب بنجاح.']);

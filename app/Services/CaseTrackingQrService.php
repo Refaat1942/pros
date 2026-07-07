@@ -10,9 +10,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
  */
 class CaseTrackingQrService
 {
-    public function __construct(private readonly TrackingUidService $trackingUidService)
-    {
-    }
+    public function __construct(private readonly TrackingUidService $trackingUidService) {}
 
     public function url(Patient $patient): string
     {

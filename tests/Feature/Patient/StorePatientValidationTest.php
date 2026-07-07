@@ -20,11 +20,11 @@ class StorePatientValidationTest extends TestCase
         $visitType = VisitType::create(['name' => 'كشف أولي']);
 
         $response = $this->actingAs($user)->post(route('reception.patients.store'), [
-            'form'                => 'patient',
-            'name'                => 'مريض بدون هاتف',
-            'patient_type'        => 'civilian',
+            'form' => 'patient',
+            'name' => 'مريض بدون هاتف',
+            'patient_type' => 'civilian',
             'contract_company_id' => $company->id,
-            'visit_type_id'       => $visitType->id,
+            'visit_type_id' => $visitType->id,
         ]);
 
         $response->assertSessionHasNoErrors();
@@ -42,13 +42,13 @@ class StorePatientValidationTest extends TestCase
         $visitType = VisitType::create(['name' => 'كشف أولي']);
 
         $response = $this->actingAs($user)->post(route('reception.patients.store'), [
-            'form'                => 'patient',
-            'name'                => 'مريض تجريبي',
-            'phone'               => 'بشيسيسش',
-            'national_id'         => 'بشيسيسش',
-            'patient_type'        => 'civilian',
+            'form' => 'patient',
+            'name' => 'مريض تجريبي',
+            'phone' => 'بشيسيسش',
+            'national_id' => 'بشيسيسش',
+            'patient_type' => 'civilian',
             'contract_company_id' => $company->id,
-            'visit_type_id'       => $visitType->id,
+            'visit_type_id' => $visitType->id,
         ]);
 
         $response->assertSessionHasErrors(['phone', 'national_id']);
@@ -60,9 +60,9 @@ class StorePatientValidationTest extends TestCase
         $visitType = VisitType::create(['name' => 'كشف نقدي']);
 
         $response = $this->actingAs($user)->post(route('reception.patients.store'), [
-            'form'          => 'patient',
-            'name'          => 'مريض نقدي',
-            'patient_type'  => 'civilian',
+            'form' => 'patient',
+            'name' => 'مريض نقدي',
+            'patient_type' => 'civilian',
             'visit_type_id' => $visitType->id,
         ]);
 
@@ -82,13 +82,13 @@ class StorePatientValidationTest extends TestCase
         $visitType = VisitType::create(['name' => 'كشف أولي']);
 
         $response = $this->actingAs($user)->post(route('reception.patients.store'), [
-            'form'             => 'patient',
-            'name'             => 'النقيب أحمد عسكري',
-            'phone'            => '01012345678',
-            'national_id'      => '29901010100002',
-            'patient_type'     => Patient::TYPE_MILITARY,
+            'form' => 'patient',
+            'name' => 'النقيب أحمد عسكري',
+            'phone' => '01012345678',
+            'national_id' => '29901010100002',
+            'patient_type' => Patient::TYPE_MILITARY,
             'military_rank_id' => $rank->id,
-            'visit_type_id'    => $visitType->id,
+            'visit_type_id' => $visitType->id,
         ]);
 
         $response->assertSessionHasNoErrors();

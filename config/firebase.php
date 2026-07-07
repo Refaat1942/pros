@@ -30,11 +30,11 @@ return [
     | إن تُركت فارغة، يعمل النظام بآلية Polling + صوت داخلي كبديل.
     */
     'web' => [
-        'apiKey'            => env('FIREBASE_WEB_API_KEY', 'AIzaSyBJ52S6mZGRAt_AM3GhF0EJBBEIUlvoedM'),
-        'authDomain'        => env('FIREBASE_WEB_AUTH_DOMAIN', 'prosthetics-4857b.firebaseapp.com'),
-        'projectId'         => env('FIREBASE_PROJECT_ID', 'prosthetics-4857b'),
+        'apiKey' => env('FIREBASE_WEB_API_KEY', 'AIzaSyBJ52S6mZGRAt_AM3GhF0EJBBEIUlvoedM'),
+        'authDomain' => env('FIREBASE_WEB_AUTH_DOMAIN', 'prosthetics-4857b.firebaseapp.com'),
+        'projectId' => env('FIREBASE_PROJECT_ID', 'prosthetics-4857b'),
         'messagingSenderId' => env('FIREBASE_WEB_SENDER_ID', '600182139349'),
-        'appId'             => env('FIREBASE_WEB_APP_ID', '1:600182139349:web:743111e5ef170b70d7355c'),
-        'vapidKey'          => env('FIREBASE_WEB_VAPID_KEY', 'BLOJqy1yBbLUbVQCvbdAi-uwBd6CNogE_hOPPWXy__Dnj8yfF8U4Ujujl8tPrCFNoFHeFag9Yfqc9_JBebI46V8'),
+        'appId' => env('FIREBASE_WEB_APP_ID', '1:600182139349:web:743111e5ef170b70d7355c'),
+        'vapidKey' => env('FIREBASE_WEB_VAPID_KEY', 'BLOJqy1yBbLUbVQCvbdAi-uwBd6CNogE_hOPPWXy__Dnj8yfF8U4Ujujl8tPrCFNoFHeFag9Yfqc9_JBebI46V8'),
     ],
 ];

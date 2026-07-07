@@ -16,7 +16,7 @@ final class SpecEditRequestItemDiff
     {
         $origByCode = collect($original)->keyBy('stock_item_code');
         $propByCode = collect($proposed)->keyBy('stock_item_code');
-        $changes    = [];
+        $changes = [];
 
         foreach ($original as $item) {
             $code = (string) ($item['stock_item_code'] ?? '');
@@ -31,9 +31,9 @@ final class SpecEditRequestItemDiff
             if ($next === null) {
                 $changes[] = [
                     'stock_item_code' => $code,
-                    'name'            => $name,
-                    'qty'             => $prev,
-                    'change'          => 'removed',
+                    'name' => $name,
+                    'qty' => $prev,
+                    'change' => 'removed',
                 ];
 
                 continue;
@@ -43,10 +43,10 @@ final class SpecEditRequestItemDiff
             if ($newQty !== $prev) {
                 $changes[] = [
                     'stock_item_code' => $code,
-                    'name'            => (string) ($next['name'] ?? $name),
-                    'qty'             => $newQty,
-                    'previous_qty'    => $prev,
-                    'change'          => 'updated',
+                    'name' => (string) ($next['name'] ?? $name),
+                    'qty' => $newQty,
+                    'previous_qty' => $prev,
+                    'change' => 'updated',
                 ];
             }
         }
@@ -59,9 +59,9 @@ final class SpecEditRequestItemDiff
 
             $changes[] = [
                 'stock_item_code' => $code,
-                'name'            => (string) ($item['name'] ?? $code),
-                'qty'             => (int) ($item['qty'] ?? 0),
-                'change'          => 'added',
+                'name' => (string) ($item['name'] ?? $code),
+                'qty' => (int) ($item['qty'] ?? 0),
+                'change' => 'added',
             ];
         }
 
@@ -74,10 +74,10 @@ final class SpecEditRequestItemDiff
         $name = $item['name'] ?? $item['stock_item_code'] ?? '—';
 
         return match ($item['change'] ?? '') {
-            'removed' => 'حذف: ' . $name . ' (×' . (int) ($item['qty'] ?? 0) . ')',
-            'updated' => $name . ' × ' . (int) ($item['qty'] ?? 0)
-                . ' (كان ×' . (int) ($item['previous_qty'] ?? 0) . ')',
-            default   => $name . ' × ' . (int) ($item['qty'] ?? 0),
+            'removed' => 'حذف: '.$name.' (×'.(int) ($item['qty'] ?? 0).')',
+            'updated' => $name.' × '.(int) ($item['qty'] ?? 0)
+                .' (كان ×'.(int) ($item['previous_qty'] ?? 0).')',
+            default => $name.' × '.(int) ($item['qty'] ?? 0),
         };
     }
 

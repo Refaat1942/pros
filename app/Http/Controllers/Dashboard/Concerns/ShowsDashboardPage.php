@@ -23,8 +23,8 @@ trait ShowsDashboardPage
 
         return view('dashboard.show', array_merge([
             'dashboardKey' => $key,
-            'activePage'   => $page,
-            'pageTitle'    => $pages[$page]['title'],
+            'activePage' => $page,
+            'pageTitle' => $pages[$page]['title'],
         ], $pageData));
     }
 }

@@ -28,11 +28,11 @@ class AdjustmentEditRequestTest extends TestCase
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'locked'       => true,
+            'locked' => true,
         ]);
 
         app(BomService::class)->createSpecRaw($case, [
@@ -63,8 +63,8 @@ class AdjustmentEditRequestTest extends TestCase
 
         $this->assertDatabaseHas('spec_edit_requests', [
             'case_id' => $case->id,
-            'source'  => SpecEditRequestSource::Adjustments->value,
-            'status'  => SpecEditRequestStatus::Pending->value,
+            'source' => SpecEditRequestSource::Adjustments->value,
+            'status' => SpecEditRequestStatus::Pending->value,
         ]);
 
         $this->assertSame(
@@ -159,10 +159,10 @@ class AdjustmentEditRequestTest extends TestCase
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
-            'locked'       => true,
+            'locked' => true,
         ]);
 
         app(BomService::class)->createSpecRaw($case, [
@@ -170,13 +170,13 @@ class AdjustmentEditRequestTest extends TestCase
         ]);
 
         SpecEditRequest::create([
-            'source'               => SpecEditRequestSource::Adjustments,
-            'tech_order_spec_id'   => $case->techOrderSpec()->firstOrFail()->id,
-            'case_id'              => $case->id,
+            'source' => SpecEditRequestSource::Adjustments,
+            'tech_order_spec_id' => $case->techOrderSpec()->firstOrFail()->id,
+            'case_id' => $case->id,
             'requested_by_user_id' => $this->userWithRole('adjustments')->id,
-            'status'               => SpecEditRequestStatus::Pending,
-            'original_items'       => [],
-            'proposed_items'       => [],
+            'status' => SpecEditRequestStatus::Pending,
+            'original_items' => [],
+            'proposed_items' => [],
         ]);
 
         $user = $this->userWithRole('adjustments');

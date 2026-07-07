@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\TelegramLogChannel;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -137,7 +138,7 @@ return [
 
         'telegram_bot' => [
             'driver' => 'custom',
-            'via' => \App\Logging\TelegramLogChannel::class,
+            'via' => TelegramLogChannel::class,
             'level' => env('TELEGRAM_LOG_LEVEL', 'error'),
         ],
 

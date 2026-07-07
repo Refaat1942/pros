@@ -7,6 +7,7 @@ use App\Http\Requests\Finance\RejectCreditNoteRequest;
 use App\Http\Requests\Finance\StoreCreditNoteRequest;
 use App\Models\CaseRecord;
 use App\Models\CreditNote;
+use App\Models\User;
 use App\Services\CreditNoteService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -17,9 +18,7 @@ class CreditNoteController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly CreditNoteService $creditNoteService)
-    {
-    }
+    public function __construct(private readonly CreditNoteService $creditNoteService) {}
 
     /**
      * قائمة إشعارات الدائن — مرشَّحة بالحالة.
@@ -31,15 +30,15 @@ class CreditNoteController extends Controller
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('credit_note_no', 'like', "%{$s}%")
-                      ->orWhere('patient_name', 'like', "%{$s}%")
-                      ->orWhere('company_name', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%");
+                        ->orWhere('patient_name', 'like', "%{$s}%")
+                        ->orWhere('company_name', 'like', "%{$s}%")
+                        ->orWhere('order_ref', 'like', "%{$s}%");
                 }))
                 ->orderByDesc('created_at')
         );
 
         return response()->json([
-            'data'  => collect($notes)->map(fn ($n) => $this->formatNote($n))->values(),
+            'data' => collect($notes)->map(fn ($n) => $this->formatNote($n))->values(),
             'total' => $notes->count(),
         ]);
     }
@@ -59,7 +58,7 @@ class CreditNoteController extends Controller
         );
 
         return response()->json([
-            'message'     => 'تم إنشاء إشعار الدائن.',
+            'message' => 'تم إنشاء إشعار الدائن.',
             'credit_note' => $this->formatNote($note),
         ], 201);
     }
@@ -69,13 +68,13 @@ class CreditNoteController extends Controller
      */
     public function approve(CreditNote $creditNote): JsonResponse
     {
-        /** @var \App\Models\User $approver */
+        /** @var User $approver */
         $approver = Auth::user();
 
         $note = $this->creditNoteService->apply($creditNote, $approver);
 
         return response()->json([
-            'message'     => 'تم اعتماد إشعار الدائن.',
+            'message' => 'تم اعتماد إشعار الدائن.',
             'credit_note' => $this->formatNote($note),
         ]);
     }
@@ -85,7 +84,7 @@ class CreditNoteController extends Controller
      */
     public function reject(RejectCreditNoteRequest $request, CreditNote $creditNote): JsonResponse
     {
-        /** @var \App\Models\User $approver */
+        /** @var User $approver */
         $approver = Auth::user();
 
         $note = $this->creditNoteService->reject(
@@ -95,7 +94,7 @@ class CreditNoteController extends Controller
         );
 
         return response()->json([
-            'message'     => 'تم رفض إشعار الدائن.',
+            'message' => 'تم رفض إشعار الدائن.',
             'credit_note' => $this->formatNote($note),
         ]);
     }

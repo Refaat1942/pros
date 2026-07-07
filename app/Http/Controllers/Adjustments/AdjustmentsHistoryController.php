@@ -13,8 +13,7 @@ class AdjustmentsHistoryController extends Controller
 {
     public function __construct(
         private readonly AdjustmentsTransferHistoryService $historyService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -24,14 +23,14 @@ class AdjustmentsHistoryController extends Controller
         );
 
         $search = $request->query('search');
-        $rows   = $this->historyService->list($dates['from'], $dates['to'], $search);
+        $rows = $this->historyService->list($dates['from'], $dates['to'], $search);
 
         return response()->json([
-            'data'       => $rows,
-            'stats'      => $this->historyService->stats($dates['from'], $dates['to'], $search),
-            'date_from'  => $dates['from']->toDateString(),
-            'date_to'    => $dates['to']->toDateString(),
-            'total'      => count($rows),
+            'data' => $rows,
+            'stats' => $this->historyService->stats($dates['from'], $dates['to'], $search),
+            'date_from' => $dates['from']->toDateString(),
+            'date_to' => $dates['to']->toDateString(),
+            'total' => count($rows),
         ]);
     }
 
@@ -48,16 +47,16 @@ class AdjustmentsHistoryController extends Controller
             $request->query('search'),
         );
 
-        $filename = 'adjustments-to-costing-' . $dates['from']->format('Y-m-d') . '_' . $dates['to']->format('Y-m-d') . '.csv';
+        $filename = 'adjustments-to-costing-'.$dates['from']->format('Y-m-d').'_'.$dates['to']->format('Y-m-d').'.csv';
 
         $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         $callback = function () use ($report) {
             $out = fopen('php://output', 'w');
-            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
             fputcsv($out, [$report['title']]);
             fputcsv($out, [$report['period_label']]);
             fputcsv($out, []);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Bom;
 
 use App\Exceptions\BarcodeDispenseMismatchException;
+use App\Exceptions\InvalidWorkflowTransitionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Bom\DispenseBomRequest;
 use App\Http\Requests\Bom\StoreBomRequest;
@@ -25,9 +26,7 @@ class BomController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly BomService $bomService)
-    {
-    }
+    public function __construct(private readonly BomService $bomService) {}
 
     /**
      * قائمة BOM — مرشَّحة حسب المرحلة (raw / wip / finished).
@@ -42,14 +41,14 @@ class BomController extends Controller
                 ->when($request->stage, fn ($q, $s) => $q->where('stage', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('bom_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhere('patient_name', 'like', "%{$s}%");
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhere('patient_name', 'like', "%{$s}%");
                 }))
                 ->orderByDesc('created_at')
         );
 
         return response()->json([
-            'data'  => collect($boms)->map(fn ($b) => $this->formatSummary($b))->values(),
+            'data' => collect($boms)->map(fn ($b) => $this->formatSummary($b))->values(),
             'total' => $boms->count(),
         ]);
     }
@@ -74,7 +73,7 @@ class BomController extends Controller
         $prefill = $this->prefillItems($case);
 
         return response()->json([
-            'case'         => $this->formatCase($case),
+            'case' => $this->formatCase($case),
             'prefill_items' => $prefill,
         ]);
     }
@@ -90,7 +89,7 @@ class BomController extends Controller
 
         return response()->json([
             'message' => 'تم إنشاء BOM بنجاح.',
-            'bom'     => $this->formatDetail($bom),
+            'bom' => $this->formatDetail($bom),
         ], 201);
     }
 
@@ -115,13 +114,13 @@ class BomController extends Controller
             return response()->json([
                 'message' => $e->getMessage(),
                 'blocked' => true,
-                'alarm'   => true,
+                'alarm' => true,
             ], 422);
         }
 
         return response()->json([
             'message' => 'تم صرف الأصناف بنجاح — وهي في مرحلة التصنيع حالياً.',
-            'bom'     => $this->formatDetail($bom),
+            'bom' => $this->formatDetail($bom),
         ]);
     }
 
@@ -133,7 +132,7 @@ class BomController extends Controller
         abort_unless($bom->case_id, 404, 'لا توجد حالة مرتبطة بهذه القائمة.');
 
         return view('prints.issue-voucher', [
-            'voucher'   => IssueVoucherPresenter::fromBom($bom),
+            'voucher' => IssueVoucherPresenter::fromBom($bom),
             'autoPrint' => true,
         ]);
     }
@@ -145,13 +144,13 @@ class BomController extends Controller
     {
         try {
             $bom = $this->bomService->finish($bom);
-        } catch (\App\Exceptions\InvalidWorkflowTransitionException $e) {
+        } catch (InvalidWorkflowTransitionException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
         return response()->json([
             'message' => 'تم إغلاق BOM — الحالة جاهزة للتسليم.',
-            'bom'     => $this->formatDetail($bom),
+            'bom' => $this->formatDetail($bom),
             'can_deliver' => $this->bomService->canDeliver($bom->caseRecord),
         ]);
     }
@@ -161,16 +160,16 @@ class BomController extends Controller
         if ($case->pricingRequest?->items->isNotEmpty()) {
             return $case->pricingRequest->items->map(fn (PricingRequestItem $i) => [
                 'stock_item_code' => $i->stock_item_code,
-                'name'            => $i->name,
-                'qty'             => $i->qty,
+                'name' => $i->name,
+                'qty' => $i->qty,
             ])->values()->all();
         }
 
         if ($case->techOrderSpec?->items->isNotEmpty()) {
             return $case->techOrderSpec->items->map(fn (TechOrderSpecItem $i) => [
                 'stock_item_code' => $i->stock_item_code,
-                'name'            => $i->name,
-                'qty'             => $i->qty,
+                'name' => $i->name,
+                'qty' => $i->qty,
             ])->values()->all();
         }
 
@@ -187,9 +186,9 @@ class BomController extends Controller
 
     private function formatSummary(Bom $bom): array
     {
-        $quote       = Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
+        $quote = Quote::where('case_id', $bom->case_id)->orderByDesc('id')->first();
         $patientType = $bom->caseRecord?->patient_type;
-        $isMilitary  = $patientType === Patient::TYPE_MILITARY;
+        $isMilitary = $patientType === Patient::TYPE_MILITARY;
 
         return $bom->only([
             'id', 'bom_no', 'case_id', 'order_ref', 'quote_no',
@@ -197,13 +196,13 @@ class BomController extends Controller
         ]) + [
             'quote_id' => $quote?->id,
             'patient_type' => $patientType,
-            'path'         => $isMilitary ? 'military' : 'civilian',
-            'path_label'   => $isMilitary ? '🪖 عسكري' : '🌐 مدني',
+            'path' => $isMilitary ? 'military' : 'civilian',
+            'path_label' => $isMilitary ? '🪖 عسكري' : '🌐 مدني',
             'issue_voucher_print_url' => IssueVoucherPresenter::printUrl($bom),
             'items_count' => $bom->relationLoaded('items')
                 ? BomItemAggregator::uniqueCodeCount($bom->items)
                 : 0,
-            'case'        => $bom->relationLoaded('caseRecord') && $bom->caseRecord
+            'case' => $bom->relationLoaded('caseRecord') && $bom->caseRecord
                 ? $this->formatCase($bom->caseRecord)
                 : null,
         ];

@@ -13,9 +13,7 @@ use App\Services\SettingService;
  */
 final class OverheadCostingEngine
 {
-    public function __construct(private readonly SettingService $settings)
-    {
-    }
+    public function __construct(private readonly SettingService $settings) {}
 
     /**
      * @return array{
@@ -43,9 +41,9 @@ final class OverheadCostingEngine
             $overheadTotal += $amount;
 
             $overheads[] = [
-                'key'    => $definition['key'],
-                'label'  => $definition['label'],
-                'rate'   => $definition['rate'],
+                'key' => $definition['key'],
+                'label' => $definition['label'],
+                'rate' => $definition['rate'],
                 'amount' => $amount,
             ];
         }
@@ -65,15 +63,15 @@ final class OverheadCostingEngine
         $netOffer = round($grossBeforeDiscount - $discountAmount, 2);
 
         return [
-            'materials_total'       => $materials,
-            'wac_total'             => $materials,
-            'overheads'             => $overheads,
-            'overhead_total'        => $overheadTotal,
+            'materials_total' => $materials,
+            'wac_total' => $materials,
+            'overheads' => $overheads,
+            'overhead_total' => $overheadTotal,
             'gross_before_discount' => $grossBeforeDiscount,
-            'discount_percent'      => $discountPct,
-            'discount_amount'       => $discountAmount,
-            'net_offer_total'       => $netOffer,
-            'rates_sum'             => $this->settings->overheadRatesSum(),
+            'discount_percent' => $discountPct,
+            'discount_amount' => $discountAmount,
+            'net_offer_total' => $netOffer,
+            'rates_sum' => $this->settings->overheadRatesSum(),
         ];
     }
 

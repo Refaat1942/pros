@@ -7,8 +7,10 @@ use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
 use App\Services\BomService;
+use App\Services\OperationsService;
 use App\Services\PricingService;
 use App\Services\StockPriceService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -55,20 +57,20 @@ class PricingStatusTransitionTest extends TestCase
 
     public function test_badge_classes_match_prototype_design(): void
     {
-        $this->assertEquals('badge-info',    PricingRequestStatus::Processing->badgeClass());
+        $this->assertEquals('badge-info', PricingRequestStatus::Processing->badgeClass());
         $this->assertEquals('badge-warning', PricingRequestStatus::AwaitingAdminApproval->badgeClass());
         $this->assertEquals('badge-success', PricingRequestStatus::SentToReception->badgeClass());
-        $this->assertEquals('badge-danger',  PricingRequestStatus::Insufficient->badgeClass());
+        $this->assertEquals('badge-danger', PricingRequestStatus::Insufficient->badgeClass());
     }
 
     // ── Arabic labels match prototype text ───────────────────────────────────
 
     public function test_arabic_labels_match_prototype_ui_text(): void
     {
-        $this->assertEquals('جاري الاحتساب',          PricingRequestStatus::Processing->label());
-        $this->assertEquals('بانتظار الاعتماد',        PricingRequestStatus::AwaitingAdminApproval->label());
-        $this->assertEquals('تم الإرسال للاستقبال',    PricingRequestStatus::SentToReception->label());
-        $this->assertEquals('غير كافٍ',                PricingRequestStatus::Insufficient->label());
+        $this->assertEquals('جاري الاحتساب', PricingRequestStatus::Processing->label());
+        $this->assertEquals('بانتظار الاعتماد', PricingRequestStatus::AwaitingAdminApproval->label());
+        $this->assertEquals('تم الإرسال للاستقبال', PricingRequestStatus::SentToReception->label());
+        $this->assertEquals('غير كافٍ', PricingRequestStatus::Insufficient->label());
     }
 
     // ── DB value written on calculate() → processing → awaiting_admin_approval
@@ -76,34 +78,34 @@ class PricingStatusTransitionTest extends TestCase
     public function test_calculate_writes_processing_then_awaiting_approval_in_db(): void
     {
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('RM-001', qty: 10);
+        $item = $this->stockItem('RM-001', qty: 10);
         app(StockPriceService::class)->addBatch($item, 10, 200.00, $supplier, 'INV-A', now());
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
 
         // Start with processing (as SpecService does before calling calculate)
         $request = PricingRequest::create([
-            'request_no'   => 'PR-TEST-001',
-            'case_id'      => $case->id,
+            'request_no' => 'PR-TEST-001',
+            'case_id' => $case->id,
             'patient_type' => 'civilian',
-            'order_ref'    => $case->order_ref,
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
             'request_date' => now()->toDateString(),
-            'status_key'   => PricingRequestStatus::Processing->value,
+            'status_key' => PricingRequestStatus::Processing->value,
         ]);
 
         PricingRequestItem::create([
             'pricing_request_id' => $request->id,
-            'stock_item_code'    => 'RM-001',
-            'name'               => 'صنف RM-001',
-            'qty'                => 1,
+            'stock_item_code' => 'RM-001',
+            'name' => 'صنف RM-001',
+            'qty' => 1,
         ]);
 
         // Verify DB shows 'processing' before calculate()
         $this->assertDatabaseHas('pricing_requests', [
-            'id'         => $request->id,
+            'id' => $request->id,
             'status_key' => 'processing',
         ]);
 
@@ -111,12 +113,12 @@ class PricingStatusTransitionTest extends TestCase
 
         // After calculate() → DB must show 'awaiting_admin_approval'
         $this->assertDatabaseHas('pricing_requests', [
-            'id'         => $request->id,
+            'id' => $request->id,
             'status_key' => 'awaiting_admin_approval',
         ]);
 
         $this->assertDatabaseMissing('pricing_requests', [
-            'id'         => $request->id,
+            'id' => $request->id,
             'status_key' => 'processing',
         ]);
     }
@@ -126,18 +128,18 @@ class PricingStatusTransitionTest extends TestCase
     public function test_operations_approval_writes_sent_to_reception_in_db(): void
     {
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('RM-001', qty: 10);
+        $item = $this->stockItem('RM-001', qty: 10);
         app(StockPriceService::class)->addBatch($item, 10, 200.00, $supplier, 'INV-B', now());
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->operationsReadyCase($patient);
+        $case = $this->operationsReadyCase($patient);
 
-        app(\App\Services\OperationsService::class)->approve($case, 'مكتب التشغيل');
+        app(OperationsService::class)->approve($case, 'مكتب التشغيل');
 
         // DB must show 'sent_to_reception'
         $this->assertDatabaseHas('pricing_requests', [
-            'case_id'    => $case->id,
+            'case_id' => $case->id,
             'status_key' => 'sent_to_reception',
         ]);
     }
@@ -148,22 +150,22 @@ class PricingStatusTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
 
-        app(\App\Services\OperationsService::class)->approve($case, 'مكتب التشغيل');
+        app(OperationsService::class)->approve($case, 'مكتب التشغيل');
     }
 
     public function test_operations_approval_rejects_case_at_technical(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
 
-        app(\App\Services\OperationsService::class)->approve($case, 'مكتب التشغيل');
+        app(OperationsService::class)->approve($case, 'مكتب التشغيل');
     }
 
     // ── DB value written when BOM stock check fails → insufficient ────────────
@@ -172,12 +174,12 @@ class PricingStatusTransitionTest extends TestCase
     {
         // Stock with only 1 unit available, but BOM requests 5
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('RM-001', qty: 1);
+        $item = $this->stockItem('RM-001', qty: 1);
         app(StockPriceService::class)->addBatch($item, 1, 200.00, $supplier, 'INV-C', now());
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
+        $user = $this->userWithRole('technical');
         $this->actingAs($user);
 
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
@@ -185,13 +187,13 @@ class PricingStatusTransitionTest extends TestCase
 
         // Link a PricingRequest so BomService can mark it insufficient
         $request = PricingRequest::create([
-            'request_no'   => 'PR-TEST-INS',
-            'case_id'      => $case->id,
+            'request_no' => 'PR-TEST-INS',
+            'case_id' => $case->id,
             'patient_type' => 'civilian',
-            'order_ref'    => $case->order_ref,
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
             'request_date' => now()->toDateString(),
-            'status_key'   => PricingRequestStatus::SentToReception->value,
+            'status_key' => PricingRequestStatus::SentToReception->value,
         ]);
         $case->update(['pricing_request_id' => $request->id]);
 
@@ -200,17 +202,17 @@ class PricingStatusTransitionTest extends TestCase
                 ['stock_item_code' => 'RM-001', 'qty' => 5],  // only 1 available
             ]);
             $this->fail('Expected HttpException for insufficient stock');
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             // Expected — verify DB badge state is 'insufficient'
             $this->assertDatabaseHas('pricing_requests', [
-                'id'         => $request->id,
+                'id' => $request->id,
                 'status_key' => 'insufficient',
             ]);
 
             // Audit log must record the failure
             $this->assertDatabaseHas('audit_logs', [
                 'action' => 'insufficient',
-                'tag'    => 'pricing',
+                'tag' => 'pricing',
             ]);
         }
     }
@@ -230,7 +232,7 @@ class PricingStatusTransitionTest extends TestCase
     public function test_full_status_lifecycle_processing_to_sent_to_reception(): void
     {
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('RM-001', qty: 10);
+        $item = $this->stockItem('RM-001', qty: 10);
         app(StockPriceService::class)->addBatch($item, 10, 200.00, $supplier, 'INV-D', now());
 
         $company = $this->civilianCompany();
@@ -240,14 +242,14 @@ class PricingStatusTransitionTest extends TestCase
         $case = $this->operationsReadyCase($patient);
         $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
         $this->assertDatabaseHas('pricing_requests', [
-            'case_id'    => $case->id,
+            'case_id' => $case->id,
             'status_key' => 'awaiting_admin_approval',
         ]);
 
         // اعتماد مكتب التشغيل → sent_to_reception
-        app(\App\Services\OperationsService::class)->approve($case, 'مكتب التشغيل');
+        app(OperationsService::class)->approve($case, 'مكتب التشغيل');
         $this->assertDatabaseHas('pricing_requests', [
-            'case_id'    => $case->id,
+            'case_id' => $case->id,
             'status_key' => 'sent_to_reception',
         ]);
     }

@@ -40,12 +40,12 @@ trait DashboardQueueAssertions
         $visitType = $this->defaultVisitType();
 
         $response = $this->postJson('/reception/patients', [
-            'name'                => $name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'name' => $name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'contract_company_id' => $company->id,
-            'visit_type_id'       => $visitType->id,
-            'phone'               => '01011112222',
-            'national_id'         => '29901010100999',
+            'visit_type_id' => $visitType->id,
+            'phone' => '01011112222',
+            'national_id' => '29901010100999',
         ]);
 
         $response->assertCreated();
@@ -59,10 +59,10 @@ trait DashboardQueueAssertions
         $visitType = $this->defaultVisitType();
 
         $response = $this->postJson('/reception/patients', [
-            'name'          => $name,
-            'patient_type'  => Patient::TYPE_CIVILIAN,
+            'name' => $name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'visit_type_id' => $visitType->id,
-            'phone'         => '01099998888',
+            'phone' => '01099998888',
         ]);
 
         $response->assertCreated();
@@ -80,13 +80,13 @@ trait DashboardQueueAssertions
         $visitType = $this->defaultVisitType();
 
         $response = $this->postJson('/reception/patients', [
-            'name'             => $name,
-            'patient_type'     => Patient::TYPE_MILITARY,
+            'name' => $name,
+            'patient_type' => Patient::TYPE_MILITARY,
             'contract_company_id' => $company->id,
             'military_rank_id' => $rank->id,
-            'visit_type_id'    => $visitType->id,
+            'visit_type_id' => $visitType->id,
             'sovereign_entity' => 'القوات المسلحة',
-            'phone'            => '01122223333',
+            'phone' => '01122223333',
         ]);
 
         $response->assertCreated();

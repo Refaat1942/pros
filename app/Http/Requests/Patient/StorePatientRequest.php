@@ -10,7 +10,9 @@ use Illuminate\Validation\Rule;
 class StorePatientRequest extends BaseRequest
 {
     public const CLASS_CASH = 'cash';
+
     public const CLASS_ENTITY = 'entity';
+
     public const CLASS_MILITARY = 'military';
 
     protected function prepareForValidation(): void
@@ -32,7 +34,7 @@ class StorePatientRequest extends BaseRequest
             $this->merge(['patient_type' => Patient::TYPE_CIVILIAN]);
         } elseif ($class === self::CLASS_MILITARY) {
             $this->merge([
-                'patient_type'        => Patient::TYPE_MILITARY,
+                'patient_type' => Patient::TYPE_MILITARY,
                 'contract_company_id' => null,
                 'entity_billing_type' => null,
             ]);
@@ -61,16 +63,16 @@ class StorePatientRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'name'                   => $this->personNameRules(),
-            'phone'                  => $this->egyptianMobileRules(required: false),
-            'national_id'            => $this->egyptianNationalIdRules(),
+            'name' => $this->personNameRules(),
+            'phone' => $this->egyptianMobileRules(required: false),
+            'national_id' => $this->egyptianNationalIdRules(),
             'patient_classification' => ['required', 'string', Rule::in([self::CLASS_CASH, self::CLASS_ENTITY, self::CLASS_MILITARY])],
-            'patient_type'           => ['required', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
-            'entity_billing_type'    => ['nullable', 'string', Rule::in(['contracted', 'non_contracted'])],
-            'military_rank_id'       => ['nullable', 'integer', 'exists:military_ranks,id'],
-            'sovereign_entity'       => ['nullable', 'string', 'min:2', 'max:255'],
-            'contract_company_id'    => ['nullable', 'integer', 'exists:contract_companies,id'],
-            'visit_type_id'          => ['required', 'integer', Rule::exists('visit_types', 'id')],
+            'patient_type' => ['required', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
+            'entity_billing_type' => ['nullable', 'string', Rule::in(['contracted', 'non_contracted'])],
+            'military_rank_id' => ['nullable', 'integer', 'exists:military_ranks,id'],
+            'sovereign_entity' => ['nullable', 'string', 'min:2', 'max:255'],
+            'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
+            'visit_type_id' => ['required', 'integer', Rule::exists('visit_types', 'id')],
         ];
     }
 
@@ -121,8 +123,8 @@ class StorePatientRequest extends BaseRequest
     {
         return [
             'patient_classification.in' => 'تصنيف المريض يجب أن يكون مدني أو جهات أو عسكري.',
-            'visit_type_id.required'      => 'نوع الزيارة مطلوب.',
-            'visit_type_id.exists'        => 'نوع الزيارة غير صالح.',
+            'visit_type_id.required' => 'نوع الزيارة مطلوب.',
+            'visit_type_id.exists' => 'نوع الزيارة غير صالح.',
         ];
     }
 }

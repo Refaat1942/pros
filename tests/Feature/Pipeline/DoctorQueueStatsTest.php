@@ -3,7 +3,6 @@
 namespace Tests\Feature\Pipeline;
 
 use App\Models\Appointment;
-use App\Models\Patient;
 use Tests\Support\DashboardQueueAssertions;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -15,9 +14,9 @@ class DoctorQueueStatsTest extends TestCase
 
     public function test_examined_count_increments_after_report_approval(): void
     {
-        $company  = $this->civilianCompany();
-        $recep    = $this->userWithRole('reception');
-        $doctor   = $this->userWithRole('doctor');
+        $company = $this->civilianCompany();
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
 
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض عداد الفحص');
         $this->transferPatientToClinicHttp($recep, $patient);
@@ -30,10 +29,10 @@ class DoctorQueueStatsTest extends TestCase
         $appointmentId = Appointment::where('patient_id', $patient->id)->value('id');
 
         $this->actingAs($doctor)->postJson('/doctor/diagnosis', [
-            'patient_id'     => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_id' => $appointmentId,
-            'diagnosis'      => 'تشخيص اختبار العداد',
-            'lock'           => true,
+            'diagnosis' => 'تشخيص اختبار العداد',
+            'lock' => true,
         ])->assertCreated();
 
         $afterQueue = $this->actingAs($doctor)->get('/doctor/queue');
@@ -46,8 +45,8 @@ class DoctorQueueStatsTest extends TestCase
     public function test_reception_pending_count_shows_untransferred_patients(): void
     {
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
-        $doctor  = $this->userWithRole('doctor');
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
 
         $waiting = $this->registerCivilianPatientHttp($recep, $company, 'مريض بالاستقبال');
         $transferred = $this->registerCivilianPatientHttp($recep, $company, 'مريض محوّل');
@@ -73,8 +72,8 @@ class DoctorQueueStatsTest extends TestCase
     public function test_sidebar_shows_waiting_count_beside_queue_link(): void
     {
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
-        $doctor  = $this->userWithRole('doctor');
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
 
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض شارة القائمة');
         $this->transferPatientToClinicHttp($recep, $patient);
@@ -88,10 +87,10 @@ class DoctorQueueStatsTest extends TestCase
         $appointmentId = Appointment::where('patient_id', $patient->id)->value('id');
 
         $this->actingAs($doctor)->postJson('/doctor/diagnosis', [
-            'patient_id'     => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_id' => $appointmentId,
-            'diagnosis'      => 'تشخيص',
-            'lock'           => true,
+            'diagnosis' => 'تشخيص',
+            'lock' => true,
         ])->assertCreated();
 
         $this->actingAs($doctor)
@@ -104,7 +103,7 @@ class DoctorQueueStatsTest extends TestCase
     public function test_transfer_sets_transferred_to_clinic_at_for_wait_time(): void
     {
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
+        $recep = $this->userWithRole('reception');
 
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض وقت الانتظار');
 
@@ -117,8 +116,8 @@ class DoctorQueueStatsTest extends TestCase
     public function test_doctor_queue_shows_contract_entity_for_civilian_patient(): void
     {
         $company = $this->civilianCompany('التأمين الصحي');
-        $recep   = $this->userWithRole('reception');
-        $doctor  = $this->userWithRole('doctor');
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
 
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'احمد عرفه');
         $this->transferPatientToClinicHttp($recep, $patient);
@@ -132,7 +131,7 @@ class DoctorQueueStatsTest extends TestCase
 
     public function test_doctor_queue_shows_dash_for_cash_civilian_without_contract_entity(): void
     {
-        $recep  = $this->userWithRole('reception');
+        $recep = $this->userWithRole('reception');
         $doctor = $this->userWithRole('doctor');
 
         $patient = $this->registerCashPatientHttp($recep, 'مريض نقدي الطبيب');

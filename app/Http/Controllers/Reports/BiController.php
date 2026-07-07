@@ -11,9 +11,7 @@ class BiController extends Controller
 {
     use RendersAdminDashboard;
 
-    public function __construct(private readonly BiReportService $biReportService)
-    {
-    }
+    public function __construct(private readonly BiReportService $biReportService) {}
 
     /**
      * لوحات القيادة الخمس — بيانات حقيقية من الخدمة.

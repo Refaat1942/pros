@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Cashier\CashierDeskController;
 use App\Http\Controllers\Dashboard\CashierDashboardController;
+use App\Http\Controllers\Quote\QuoteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -29,7 +30,7 @@ Route::prefix('cashier')
                 ->middleware('can:confirm-cash-payment')
                 ->name('payments.confirm');
 
-            Route::get('quote/{quote}/print', [\App\Http\Controllers\Quote\QuoteController::class, 'print'])
+            Route::get('quote/{quote}/print', [QuoteController::class, 'print'])
                 ->name('quote.print');
         });
     });

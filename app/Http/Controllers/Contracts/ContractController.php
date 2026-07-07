@@ -32,20 +32,20 @@ class ContractController extends Controller
             $s = $request->input('search');
             $query->where(function ($q) use ($s) {
                 $q->where('patient_name', 'like', "%{$s}%")
-                  ->orWhere('company_name', 'like', "%{$s}%")
-                  ->orWhere('contract_no', 'like', "%{$s}%")
-                  ->orWhere('work_order_no', 'like', "%{$s}%");
+                    ->orWhere('company_name', 'like', "%{$s}%")
+                    ->orWhere('contract_no', 'like', "%{$s}%")
+                    ->orWhere('work_order_no', 'like', "%{$s}%");
             });
         }
 
         if ($request->filled('company')) {
-            $query->where('company_name', 'like', '%' . $request->input('company') . '%');
+            $query->where('company_name', 'like', '%'.$request->input('company').'%');
         }
 
         $contracts = $query->limit(500)->get();
 
         return response()->json([
-            'data'  => $contracts->map(fn ($c) => $this->formatContract($c))->values(),
+            'data' => $contracts->map(fn ($c) => $this->formatContract($c))->values(),
             'total' => $contracts->count(),
         ]);
     }
@@ -79,7 +79,7 @@ class ContractController extends Controller
         $disk = $contract->letterDisk();
         abort_unless($disk !== null, 404);
 
-        $downloadName = 'approval_letter_' . $contract->contract_no . '.' . pathinfo($contract->letter_path, PATHINFO_EXTENSION);
+        $downloadName = 'approval_letter_'.$contract->contract_no.'.'.pathinfo($contract->letter_path, PATHINFO_EXTENSION);
 
         return Storage::disk($disk)->download($contract->letter_path, $downloadName);
     }
@@ -91,24 +91,24 @@ class ContractController extends Controller
     {
         $data = $request->validate([
             'approved_amount' => ['sometimes', 'numeric', 'min:0'],
-            'letter_ref'      => ['sometimes', 'nullable', 'string', 'max:100'],
-            'letter_date'     => ['sometimes', 'nullable', 'string', 'max:50'],
-            'company_name'    => ['sometimes', 'string', 'max:255'],
+            'letter_ref' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'letter_date' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'company_name' => ['sometimes', 'string', 'max:255'],
         ]);
 
         $before = $contract->only(['approved_amount', 'letter_ref', 'company_name']);
         $contract->update($data);
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تعديل عقد {$contract->contract_no}",
-            tag:         'contracts',
-            before:      $before,
-            after:       $contract->fresh()->only(['approved_amount', 'letter_ref', 'company_name']),
+            tag: 'contracts',
+            before: $before,
+            after: $contract->fresh()->only(['approved_amount', 'letter_ref', 'company_name']),
         );
 
         return response()->json([
-            'message'  => 'تم تحديث العقد بنجاح.',
+            'message' => 'تم تحديث العقد بنجاح.',
             'contract' => $this->formatContract($contract->fresh()),
         ]);
     }
@@ -119,10 +119,10 @@ class ContractController extends Controller
     public function destroy(ApprovalContract $contract): JsonResponse
     {
         AuditService::log(
-            action:      'delete',
+            action: 'delete',
             description: "حذف عقد {$contract->contract_no}",
-            tag:         'contracts',
-            before:      $contract->only(['contract_no', 'patient_name', 'approved_amount']),
+            tag: 'contracts',
+            before: $contract->only(['contract_no', 'patient_name', 'approved_amount']),
         );
 
         if ($disk = $contract->letterDisk()) {
@@ -137,20 +137,20 @@ class ContractController extends Controller
     private function formatContract(ApprovalContract $c): array
     {
         return [
-            'id'              => $c->id,
-            'contract_no'     => $c->contract_no,
-            'case_id'         => $c->case_id,
-            'case_no'         => $c->caseRecord?->case_no,
-            'patient_name'    => $c->patient_name,
-            'company_name'    => $c->company_name,
+            'id' => $c->id,
+            'contract_no' => $c->contract_no,
+            'case_id' => $c->case_id,
+            'case_no' => $c->caseRecord?->case_no,
+            'patient_name' => $c->patient_name,
+            'company_name' => $c->company_name,
             'approved_amount' => (float) $c->approved_amount,
-            'approval_date'   => $c->approval_date ? (string) $c->approval_date : null,
-            'work_order_no'   => $c->work_order_no,
-            'letter_ref'      => $c->letter_ref,
-            'letter_date'     => $c->letter_date,
-            'has_letter'      => (bool) $c->letter_path,
-            'download_url'    => $c->letter_path ? route('contracts.download', $c) : null,
-            'created_at'      => $c->created_at?->toDateString(),
+            'approval_date' => $c->approval_date ? (string) $c->approval_date : null,
+            'work_order_no' => $c->work_order_no,
+            'letter_ref' => $c->letter_ref,
+            'letter_date' => $c->letter_date,
+            'has_letter' => (bool) $c->letter_path,
+            'download_url' => $c->letter_path ? route('contracts.download', $c) : null,
+            'created_at' => $c->created_at?->toDateString(),
         ];
     }
 }

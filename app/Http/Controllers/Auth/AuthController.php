@@ -14,9 +14,7 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly DeviceService $deviceService)
-    {
-    }
+    public function __construct(private readonly DeviceService $deviceService) {}
 
     /**
      * عرض صفحة تسجيل الدخول الخاصة بالداشبورد المطلوب.
@@ -26,7 +24,7 @@ class AuthController extends Controller
         $dashboardConfig = config("dashboards.{$dashboard}");
 
         return view('auth.login', [
-            'dashboard'       => $dashboard,
+            'dashboard' => $dashboard,
             'dashboardConfig' => $dashboardConfig,
         ]);
     }
@@ -44,7 +42,7 @@ class AuthController extends Controller
                 ->withErrors(['username' => 'اسم المستخدم أو كلمة المرور غير صحيحة.']);
         }
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if (! $user->isActive()) {
@@ -69,7 +67,7 @@ class AuthController extends Controller
 
         User::where('id', Auth::id())->update(['last_login_at' => now()]);
 
-        /** @var \App\Models\User $authUser */
+        /** @var User $authUser */
         $authUser = Auth::user();
 
         // استلام بيانات الجهاز (device_id, device_type) وتسجيلها لإشعارات FCM.
@@ -80,10 +78,10 @@ class AuthController extends Controller
         );
 
         AuditService::log(
-            action:      'login',
+            action: 'login',
             description: "تسجيل دخول ناجح — لوحة {$dashboard}",
-            tag:         'auth',
-            after:       ['username' => $authUser->username, 'role' => $authUser->role?->slug],
+            tag: 'auth',
+            after: ['username' => $authUser->username, 'role' => $authUser->role?->slug],
         );
 
         return redirect()->route("{$dashboard}.dashboard");
@@ -94,14 +92,14 @@ class AuthController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         if ($user) {
             AuditService::log(
-                action:      'logout',
+                action: 'logout',
                 description: 'تسجيل خروج',
-                tag:         'auth',
+                tag: 'auth',
             );
         }
 

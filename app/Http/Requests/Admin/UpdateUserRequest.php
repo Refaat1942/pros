@@ -18,7 +18,7 @@ class UpdateUserRequest extends BaseRequest
         if ($user?->role?->slug === Role::SLUG_ADMIN) {
             $this->merge([
                 'role_id' => $user->role_id,
-                'status'  => User::STATUS_ACTIVE,
+                'status' => User::STATUS_ACTIVE,
             ]);
         }
 
@@ -46,7 +46,7 @@ class UpdateUserRequest extends BaseRequest
             ];
 
         return [
-            'name'     => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'username' => [
                 'required',
                 'string',
@@ -56,16 +56,16 @@ class UpdateUserRequest extends BaseRequest
                 Rule::unique('users', 'username')->ignore($userId),
             ],
             'password' => ['nullable', 'string', 'min:6', 'confirmed'],
-            'role_id'  => $roleRules,
-            'status'   => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
+            'role_id' => $roleRules,
+            'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'username.unique'    => 'اسم المستخدم مستخدم مسبقاً.',
-            'username.alpha_dash'=> 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
+            'username.unique' => 'اسم المستخدم مستخدم مسبقاً.',
+            'username.alpha_dash' => 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
         ];
     }

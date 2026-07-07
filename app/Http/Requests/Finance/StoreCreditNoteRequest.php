@@ -12,12 +12,12 @@ class StoreCreditNoteRequest extends BaseRequest
     {
         return [
             'case_id' => ['required', 'integer', 'exists:cases,id'],
-            'type'    => ['required', 'string', Rule::in([
+            'type' => ['required', 'string', Rule::in([
                 CreditNote::TYPE_PARTIAL,
                 CreditNote::TYPE_FULL,
             ])],
-            'amount'  => $this->moneyRules(),
-            'reason'  => ['required', 'string', 'min:3', 'max:1000'],
+            'amount' => $this->moneyRules(),
+            'reason' => ['required', 'string', 'min:3', 'max:1000'],
         ];
     }
 

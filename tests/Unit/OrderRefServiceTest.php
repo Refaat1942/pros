@@ -22,14 +22,14 @@ class OrderRefServiceTest extends TestCase
         $this->assertMatchesRegularExpression('/^\d{6}$/', $first);
 
         CaseRecord::create([
-            'case_no'             => 'CASE-TEST-0001',
-            'order_ref'           => $first,
-            'patient_id'          => $patient->id,
+            'case_no' => 'CASE-TEST-0001',
+            'order_ref' => $first,
+            'patient_id' => $patient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_RECEPTION,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_RECEPTION,
         ]);
 
         $second = $service->generate();

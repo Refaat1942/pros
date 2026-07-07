@@ -22,23 +22,23 @@ class StockPriceService
      */
     public function createPriceBatch(
         StockItem $item,
-        int       $qty,
-        float     $unitPrice,
-        Supplier  $supplier,
-        string    $invoiceNo,
-        Carbon    $receivedAt,
+        int $qty,
+        float $unitPrice,
+        Supplier $supplier,
+        string $invoiceNo,
+        Carbon $receivedAt,
     ): StockItemPrice {
-        $seq      = $item->prices()->count() + 1;
+        $seq = $item->prices()->count() + 1;
         $priceRef = sprintf('PR-%s-%d', $item->code, $seq);
 
         return StockItemPrice::create([
             'stock_item_id' => $item->id,
-            'price_ref'     => $priceRef,
-            'supplier_id'   => $supplier->id,
-            'amount'        => $unitPrice,
-            'qty'           => $qty,
-            'invoice_no'    => $invoiceNo,
-            'received_at'   => $receivedAt->toDateString(),
+            'price_ref' => $priceRef,
+            'supplier_id' => $supplier->id,
+            'amount' => $unitPrice,
+            'qty' => $qty,
+            'invoice_no' => $invoiceNo,
+            'received_at' => $receivedAt->toDateString(),
         ]);
     }
 
@@ -49,11 +49,11 @@ class StockPriceService
      */
     public function addBatch(
         StockItem $item,
-        int       $qty,
-        float     $unitPrice,
-        Supplier  $supplier,
-        string    $invoiceNo,
-        Carbon    $receivedAt,
+        int $qty,
+        float $unitPrice,
+        Supplier $supplier,
+        string $invoiceNo,
+        Carbon $receivedAt,
     ): StockItemPrice {
         return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $receivedAt) {
             // قفل صف الصنف قبل إعادة حساب WAC لمنع فقدان التحديث عند استلام/تسعير متزامن.
@@ -66,10 +66,10 @@ class StockPriceService
             $this->recalcWac($item, $qty, $unitPrice);
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "إضافة دفعة سعر {$batch->price_ref} للصنف {$item->code} — سعر {$unitPrice} × {$qty}",
-                tag:         'warehouse',
-                after:       ['price_ref' => $batch->price_ref, 'amount' => $unitPrice, 'qty' => $qty],
+                tag: 'warehouse',
+                after: ['price_ref' => $batch->price_ref, 'amount' => $unitPrice, 'qty' => $qty],
             );
 
             return $batch;

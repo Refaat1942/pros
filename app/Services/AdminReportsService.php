@@ -12,6 +12,7 @@ use App\Models\StockItemPrice;
 use App\Models\StockMovement;
 use App\Support\BomItemAggregator;
 use App\Support\CaseFinancialSummary;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,28 +23,27 @@ class AdminReportsService
     public function __construct(
         private readonly BiReportService $biReportService,
         private readonly StockPriceService $stockPriceService,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
-    public function build(?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
+    public function build(?Carbon $from = null, ?Carbon $to = null): array
     {
         $inventoryBoard = $this->biReportService->boardInventory();
         $operationsBoard = $this->biReportService->boardOperations();
 
         return [
-            'financial'   => $this->financial($from, $to),
-            'inventory'   => array_merge($inventoryBoard, $this->inventoryExtras($inventoryBoard, $from, $to)),
-            'operations'  => $operationsBoard,
-            'bom'         => $this->bomReport($from, $to),
+            'financial' => $this->financial($from, $to),
+            'inventory' => array_merge($inventoryBoard, $this->inventoryExtras($inventoryBoard, $from, $to)),
+            'operations' => $operationsBoard,
+            'bom' => $this->bomReport($from, $to),
         ];
     }
 
     /** @return array<string, mixed> */
-    private function financial(?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
+    private function financial(?Carbon $from = null, ?Carbon $to = null): array
     {
         $monthStart = ($from ?? now()->startOfMonth())->copy()->startOfDay();
-        $monthEnd   = ($to ?? now()->endOfMonth())->copy()->endOfDay();
+        $monthEnd = ($to ?? now()->endOfMonth())->copy()->endOfDay();
 
         $deliveredThisMonth = CaseRecord::query()
             ->where('patient_type', Patient::TYPE_CIVILIAN)
@@ -64,7 +64,7 @@ class AdminReportsService
             ->map(fn ($row) => [
                 'code' => $row->stock_item_code,
                 'name' => $row->name,
-                'qty'  => (int) $row->total_qty,
+                'qty' => (int) $row->total_qty,
             ])
             ->all();
 
@@ -80,17 +80,17 @@ class AdminReportsService
             ->get(['id', 'case_no', 'work_order_no', 'patient_id', 'stage_key', 'updated_at']);
 
         return [
-            'monthly_revenue'      => round((float) $monthlyRevenue, 2),
-            'delivered_count'      => $deliveredThisMonth->count(),
-            'month_label'          => $monthStart->translatedFormat('F Y')
-                . ($from || $to ? '' : ''),
-            'top_items'            => $topItems,
-            'work_orders_count'    => $workOrders->count(),
-            'work_orders'          => $workOrders->map(fn (CaseRecord $c) => [
+            'monthly_revenue' => round((float) $monthlyRevenue, 2),
+            'delivered_count' => $deliveredThisMonth->count(),
+            'month_label' => $monthStart->translatedFormat('F Y')
+                .($from || $to ? '' : ''),
+            'top_items' => $topItems,
+            'work_orders_count' => $workOrders->count(),
+            'work_orders' => $workOrders->map(fn (CaseRecord $c) => [
                 'work_order_no' => $c->work_order_no,
-                'patient'       => $c->patient?->name ?? '—',
-                'case_no'       => $c->case_no,
-                'stage_key'     => $c->stage_key,
+                'patient' => $c->patient?->name ?? '—',
+                'case_no' => $c->case_no,
+                'stage_key' => $c->stage_key,
             ])->all(),
         ];
     }
@@ -99,13 +99,13 @@ class AdminReportsService
      * @param  array<string, mixed>  $inventoryBoard
      * @return array<string, mixed>
      */
-    private function inventoryExtras(array $inventoryBoard, ?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
+    private function inventoryExtras(array $inventoryBoard, ?Carbon $from = null, ?Carbon $to = null): array
     {
         $monthStart = ($from ?? now()->startOfMonth())->copy()->startOfDay();
-        $monthEnd   = ($to ?? now()->endOfMonth())->copy()->endOfDay();
+        $monthEnd = ($to ?? now()->endOfMonth())->copy()->endOfDay();
 
         $itemCount = (int) ($inventoryBoard['item_count'] ?? 0);
-        $lowStock  = (int) ($inventoryBoard['low_stock'] ?? 0);
+        $lowStock = (int) ($inventoryBoard['low_stock'] ?? 0);
 
         $lowStockItems = StockItem::query()
             ->where('status', StockItem::STATUS_LOW)
@@ -115,28 +115,28 @@ class AdminReportsService
             ->map(fn (StockItem $i) => [
                 'code' => $i->code,
                 'name' => $i->name,
-                'qty'  => (int) $i->qty,
+                'qty' => (int) $i->qty,
             ])
             ->all();
 
         return [
-            'health_pct'       => $itemCount > 0
+            'health_pct' => $itemCount > 0
                 ? (int) round((($itemCount - $lowStock) / $itemCount) * 100)
                 : 0,
-            'low_stock_items'  => $lowStockItems,
+            'low_stock_items' => $lowStockItems,
             'issues_this_month' => $this->warehouseIssuesInPeriod($monthStart, $monthEnd),
-            'active_batches'   => StockItemPrice::query()->where('qty', '>', 0)->count(),
-            'batch_samples'      => StockItemPrice::query()
+            'active_batches' => StockItemPrice::query()->where('qty', '>', 0)->count(),
+            'batch_samples' => StockItemPrice::query()
                 ->with('stockItem:id,code,name')
                 ->where('qty', '>', 0)
                 ->orderByDesc('received_at')
                 ->limit(8)
                 ->get()
                 ->map(fn (StockItemPrice $p) => [
-                    'code'   => $p->stockItem?->code ?? '—',
-                    'name'   => $p->stockItem?->name ?? '—',
+                    'code' => $p->stockItem?->code ?? '—',
+                    'name' => $p->stockItem?->name ?? '—',
                     'amount' => (float) $p->amount,
-                    'qty'    => (int) $p->qty,
+                    'qty' => (int) $p->qty,
                 ])
                 ->all(),
         ];
@@ -145,7 +145,7 @@ class AdminReportsService
     /**
      * وحدات صرف المخزن خلال الفترة — من حركات الصرف (كمية موجبة) أو بنود BOM المُصرفة.
      */
-    private function warehouseIssuesInPeriod(\Carbon\Carbon $start, \Carbon\Carbon $end): int
+    private function warehouseIssuesInPeriod(Carbon $start, Carbon $end): int
     {
         $fromMovements = (int) StockMovement::query()
             ->where('movement_type', StockMovement::TYPE_ISSUE)
@@ -161,7 +161,7 @@ class AdminReportsService
     }
 
     /** @return array<string, mixed> */
-    private function bomReport(?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
+    private function bomReport(?Carbon $from = null, ?Carbon $to = null): array
     {
         $boms = Bom::query()
             ->with([
@@ -175,24 +175,24 @@ class AdminReportsService
             ->get();
 
         $stageLabels = [
-            Bom::STAGE_RAW      => StockWarehouseType::Raw->label(),
-            Bom::STAGE_WIP      => StockWarehouseType::Production->label(),
+            Bom::STAGE_RAW => StockWarehouseType::Raw->label(),
+            Bom::STAGE_WIP => StockWarehouseType::Production->label(),
             Bom::STAGE_FINISHED => StockWarehouseType::Delivery->label(),
         ];
 
         $summary = [
-            Bom::STAGE_RAW      => ['count' => 0, 'value' => 0.0, 'lines' => 0],
-            Bom::STAGE_WIP      => ['count' => 0, 'value' => 0.0, 'lines' => 0],
+            Bom::STAGE_RAW => ['count' => 0, 'value' => 0.0, 'lines' => 0],
+            Bom::STAGE_WIP => ['count' => 0, 'value' => 0.0, 'lines' => 0],
             Bom::STAGE_FINISHED => ['count' => 0, 'value' => 0.0, 'lines' => 0],
         ];
 
         $rows = [];
 
         foreach ($boms as $bom) {
-            $merged  = BomItemAggregator::byStockCode($bom->items);
-            $value   = $this->bomHighestBatchValue($merged);
+            $merged = BomItemAggregator::byStockCode($bom->items);
+            $value = $this->bomHighestBatchValue($merged);
             $lineCnt = count($merged);
-            $stage   = $bom->stage ?? Bom::STAGE_RAW;
+            $stage = $bom->stage ?? Bom::STAGE_RAW;
 
             if (isset($summary[$stage])) {
                 $summary[$stage]['count']++;
@@ -201,12 +201,12 @@ class AdminReportsService
             }
 
             $rows[] = [
-                'patient'       => $bom->patient_name ?: ($bom->caseRecord?->patient?->name ?? '—'),
-                'work_order_no'   => $bom->caseRecord?->work_order_no ?? '—',
-                'stage'         => $stage,
-                'stage_label'   => $stageLabels[$stage] ?? $stage,
-                'line_count'    => $lineCnt,
-                'value'         => round($value, 2),
+                'patient' => $bom->patient_name ?: ($bom->caseRecord?->patient?->name ?? '—'),
+                'work_order_no' => $bom->caseRecord?->work_order_no ?? '—',
+                'stage' => $stage,
+                'stage_label' => $stageLabels[$stage] ?? $stage,
+                'line_count' => $lineCnt,
+                'value' => round($value, 2),
             ];
         }
 
@@ -216,7 +216,7 @@ class AdminReportsService
 
         return [
             'summary' => $summary,
-            'rows'    => $rows,
+            'rows' => $rows,
         ];
     }
 

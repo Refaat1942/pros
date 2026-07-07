@@ -4,6 +4,8 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\CaseRecord;
 use App\Models\Quote;
+use App\Services\BomService;
+use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -18,7 +20,7 @@ class QuoteVisibilityPipelineTest extends TestCase
     private function seedStock(): void
     {
         $item = $this->stockItem('RM-001', qty: 20, wac: 100.00);
-        app(\App\Services\StockPriceService::class)->addBatch(
+        app(StockPriceService::class)->addBatch(
             $item, 10, 200.00, $this->makeSupplier(), 'INV-001', now()
         );
     }
@@ -27,9 +29,9 @@ class QuoteVisibilityPipelineTest extends TestCase
     {
         $this->seedStock();
         $patient = $this->civilianPatient($this->civilianCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
-        app(\App\Services\BomService::class)->createSpecRaw($case, [
+        app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
 
@@ -46,10 +48,10 @@ class QuoteVisibilityPipelineTest extends TestCase
 
     public function test_full_quote_visibility_chain_costing_to_operations_to_reception(): void
     {
-        $case    = $this->caseWaitingAtCosting();
+        $case = $this->caseWaitingAtCosting();
         $costing = $this->userWithRole('costing');
-        $ops     = $this->userWithRole('operations');
-        $recep   = $this->userWithRole('reception');
+        $ops = $this->userWithRole('operations');
+        $recep = $this->userWithRole('reception');
 
         // ── قبل تأكيد التكاليف: لا عرض، لا استقبال، لا تشغيل ───────────────
         $this->assertDatabaseMissing('quotes', ['case_id' => $case->id]);
@@ -104,7 +106,7 @@ class QuoteVisibilityPipelineTest extends TestCase
             ->assertJsonStructure(['data' => [['print_url']]]);
 
         $preview = $this->actingAs($recep)
-            ->get('/reception/quote/' . $quote->id . '/print?embed=1');
+            ->get('/reception/quote/'.$quote->id.'/print?embed=1');
         $preview->assertOk()
             ->assertSee('عرض سعر', false)
             ->assertSee('وزارة الدفاع', false)

@@ -73,10 +73,10 @@ final class CaseDisplayStatus
     public function toArray(): array
     {
         return [
-            'label'       => $this->label,
+            'label' => $this->label,
             'badge_class' => $this->badgeClass,
-            'filter_key'  => $this->filterKey,
-            'source'      => $this->source,
+            'filter_key' => $this->filterKey,
+            'source' => $this->source,
         ];
     }
 }

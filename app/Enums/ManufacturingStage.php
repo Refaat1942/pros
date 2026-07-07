@@ -7,30 +7,30 @@ namespace App\Enums;
  */
 enum ManufacturingStage: string
 {
-    case Warehouse  = 'warehouse';
-    case Issue      = 'issue';
+    case Warehouse = 'warehouse';
+    case Issue = 'issue';
     case Generation = 'generation';
-    case Assembly   = 'assembly';
-    case Casting    = 'casting';
-    case Finishing  = 'finishing';
-    case Workshop   = 'workshop';
-    case Fitting    = 'fitting';
-    case Quality    = 'quality';
-    case Closed     = 'closed';
+    case Assembly = 'assembly';
+    case Casting = 'casting';
+    case Finishing = 'finishing';
+    case Workshop = 'workshop';
+    case Fitting = 'fitting';
+    case Quality = 'quality';
+    case Closed = 'closed';
 
     public function label(): string
     {
         return match ($this) {
-            self::Warehouse  => 'المخزن',
-            self::Issue      => 'صرف خامات',
+            self::Warehouse => 'المخزن',
+            self::Issue => 'صرف خامات',
             self::Generation => 'توليد',
-            self::Assembly   => 'تجميع',
-            self::Casting    => 'صب',
-            self::Finishing  => 'تشطيب',
-            self::Workshop   => 'الورشة',
-            self::Fitting    => 'قياس',
-            self::Quality    => 'جودة',
-            self::Closed     => 'مغلق',
+            self::Assembly => 'تجميع',
+            self::Casting => 'صب',
+            self::Finishing => 'تشطيب',
+            self::Workshop => 'الورشة',
+            self::Fitting => 'قياس',
+            self::Quality => 'جودة',
+            self::Closed => 'مغلق',
         };
     }
 
@@ -47,9 +47,9 @@ enum ManufacturingStage: string
     public static function workshopDeskLabelFor(?string $key): string
     {
         return match ($key) {
-            self::Issue->value    => 'قيد التصنيع',
+            self::Issue->value => 'قيد التصنيع',
             self::Assembly->value => 'تم التصنيع',
-            default               => self::labelFor($key),
+            default => self::labelFor($key),
         };
     }
 }

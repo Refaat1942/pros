@@ -18,9 +18,7 @@ use App\Models\CaseRecord;
  */
 class MilitaryMarkupService
 {
-    public function __construct(private readonly StockPriceService $stockPriceService)
-    {
-    }
+    public function __construct(private readonly StockPriceService $stockPriceService) {}
 
     /**
      * يحسب ويُخزّن ربحية الحالة العسكرية. لا أثر على المدني.
@@ -45,12 +43,12 @@ class MilitaryMarkupService
         }
 
         $sellingPrice = round($sellingPrice, 2);
-        $cost         = (float) $case->internal_cost;
-        $markupPct    = $cost > 0 ? round((($sellingPrice - $cost) / $cost) * 100, 2) : 0.0;
+        $cost = (float) $case->internal_cost;
+        $markupPct = $cost > 0 ? round((($sellingPrice - $cost) / $cost) * 100, 2) : 0.0;
 
         CaseRecord::where('id', $case->id)->update([
             'military_selling_price' => $sellingPrice,
-            'military_markup_pct'    => $markupPct,
+            'military_markup_pct' => $markupPct,
         ]);
     }
 }

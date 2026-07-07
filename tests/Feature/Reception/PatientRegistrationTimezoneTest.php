@@ -3,7 +3,6 @@
 namespace Tests\Feature\Reception;
 
 use App\Models\Appointment;
-use App\Models\Patient;
 use App\Support\ClinicTime;
 use Carbon\Carbon;
 use Tests\Support\DashboardQueueAssertions;
@@ -29,7 +28,7 @@ class PatientRegistrationTimezoneTest extends TestCase
         Carbon::setTestNow('2026-06-26 21:11:00');
 
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
+        $recep = $this->userWithRole('reception');
 
         $patient = $this->registerCivilianPatientHttp($recep, $company, 'مريض بعد منتصف الليل');
 
@@ -43,7 +42,7 @@ class PatientRegistrationTimezoneTest extends TestCase
         $this->assertStringContainsString('00:11', $appointment->registeredAtFormatted());
 
         $this->actingAs($recep)
-            ->getJson('/reception/appointments/list?date=' . ClinicTime::todayDateString())
+            ->getJson('/reception/appointments/list?date='.ClinicTime::todayDateString())
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.patient_name', 'مريض بعد منتصف الليل');

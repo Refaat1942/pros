@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class PricingRequest extends Model
 {
     public const STEP_ADMIN = 1;
+
     public const STEP_QUOTE_READY = 2;
 
     protected $fillable = [

@@ -68,7 +68,7 @@ class OcrLetterParser
         // أرقام عربية-هندية → لاتينية
         $eastern = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
         $western = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-        $text    = str_replace($eastern, $western, $text);
+        $text = str_replace($eastern, $western, $text);
 
         return trim($text);
     }

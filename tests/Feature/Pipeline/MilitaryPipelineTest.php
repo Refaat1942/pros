@@ -6,9 +6,9 @@ use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
 use App\Models\Quote;
+use App\Models\StockItem;
 use App\Services\BomService;
 use App\Services\DeliveryService;
-use App\Services\PricingService;
 use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -34,22 +34,22 @@ class MilitaryPipelineTest extends TestCase
         $seq++;
 
         $req = PricingRequest::create([
-            'request_no'   => "PR-2026-MIL-{$seq}",
-            'case_id'      => $case->id,
+            'request_no' => "PR-2026-MIL-{$seq}",
+            'case_id' => $case->id,
             'patient_type' => 'military',
-            'order_ref'    => $case->order_ref,
+            'order_ref' => $case->order_ref,
             'patient_name' => 'العقيد محمود خالد',
             'request_date' => now()->toDateString(),
-            'status_key'   => 'awaiting_admin_approval',
+            'status_key' => 'awaiting_admin_approval',
         ]);
 
         PricingRequestItem::create([
             'pricing_request_id' => $req->id,
-            'stock_item_code'    => 'RM-001',
-            'name'               => 'صنف RM-001',
-            'qty'                => 1,
-            'unit_price'         => 150.00,
-            'line_total'         => 150.00,
+            'stock_item_code' => 'RM-001',
+            'name' => 'صنف RM-001',
+            'qty' => 1,
+            'unit_price' => 150.00,
+            'line_total' => 150.00,
         ]);
 
         $case->update(['pricing_request_id' => $req->id]);
@@ -65,7 +65,7 @@ class MilitaryPipelineTest extends TestCase
         $patient = $this->militaryPatient($company);
 
         $this->assertDatabaseHas('patients', [
-            'id'           => $patient->id,
+            'id' => $patient->id,
             'patient_type' => 'military',
         ]);
     }
@@ -76,7 +76,7 @@ class MilitaryPipelineTest extends TestCase
     {
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $user    = $this->userWithRole('spec');
+        $user = $this->userWithRole('spec');
         $this->actingAs($user);
 
         $this->stockItem('RM-001', qty: 10, wac: 200.00);
@@ -102,7 +102,7 @@ class MilitaryPipelineTest extends TestCase
     {
         $this->stockItem('RM-001', qty: 10, wac: 150.00);
         app(StockPriceService::class)->addBatch(
-            \App\Models\StockItem::first(), 5, 150.00, $this->makeSupplier(), 'INV-001', now()
+            StockItem::first(), 5, 150.00, $this->makeSupplier(), 'INV-001', now()
         );
 
         $company = $this->militaryCompany();
@@ -141,7 +141,7 @@ class MilitaryPipelineTest extends TestCase
 
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $user    = $this->userWithRole('technical');
+        $user = $this->userWithRole('technical');
         $this->actingAs($user);
 
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
@@ -165,15 +165,15 @@ class MilitaryPipelineTest extends TestCase
         $item = $this->stockItem('RM-001', qty: 10);
         app(StockPriceService::class)->addBatch($item, 10, 150.0, $this->makeSupplier(), 'INV-A', now());
 
-        $company  = $this->militaryCompany();
-        $patient  = $this->militaryPatient($company);
+        $company = $this->militaryCompany();
+        $patient = $this->militaryPatient($company);
         $techUser = $this->userWithRole('technical');
         $this->actingAs($techUser);
 
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update([
             'work_order_no' => 'WO-2026-MIL-0001',
-            'total_cost'    => 450.00,
+            'total_cost' => 450.00,
         ]);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
@@ -196,7 +196,7 @@ class MilitaryPipelineTest extends TestCase
 
         // Military posting writes to audit log with action='post', tag='financial'
         $this->assertDatabaseHas('audit_logs', [
-            'tag'    => 'financial',
+            'tag' => 'financial',
             'action' => 'post',
         ]);
     }
@@ -221,7 +221,7 @@ class MilitaryPipelineTest extends TestCase
     {
         $civCompany = $this->civilianCompany();
         $civPatient = $this->civilianPatient($civCompany);
-        $case       = $this->caseAtStage($civPatient, CaseRecord::STAGE_RECEPTION);
+        $case = $this->caseAtStage($civPatient, CaseRecord::STAGE_RECEPTION);
 
         $this->assertEquals(CaseRecord::PATH_STANDARD, $case->path);
         $this->assertNotEquals(CaseRecord::PATH_MILITARY, $case->path);

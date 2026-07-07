@@ -58,9 +58,7 @@ class StockImportService
         'خصائص القسم',
     ];
 
-    public function __construct(private readonly StockCatalogService $catalogService)
-    {
-    }
+    public function __construct(private readonly StockCatalogService $catalogService) {}
 
     /**
      * يبني ملف Excel (.xlsx) جاهز للتنزيل — مع تبويبات المراجع.
@@ -104,7 +102,7 @@ class StockImportService
         $created = 0;
         $updated = 0;
         $skipped = 0;
-        $errors  = [];
+        $errors = [];
 
         $rows = $this->readRows($file);
 
@@ -122,17 +120,17 @@ class StockImportService
                     continue;
                 }
 
-                $priceParts  = $this->parsePriceList($parsed['price_raw']);
-                $mainPrice   = $priceParts[0] ?? 0.0;
+                $priceParts = $this->parsePriceList($parsed['price_raw']);
+                $mainPrice = $priceParts[0] ?? 0.0;
                 $extraPrices = array_slice($priceParts, 1);
 
                 $payload = [
-                    'code'    => $parsed['code'] !== '' ? $parsed['code'] : null,
-                    'name'    => $parsed['name'],
-                    'qty'     => (int) $this->num($parsed['qty_raw']),
+                    'code' => $parsed['code'] !== '' ? $parsed['code'] : null,
+                    'name' => $parsed['name'],
+                    'qty' => (int) $this->num($parsed['qty_raw']),
                     'min_qty' => (int) $this->num($parsed['min_qty_raw']),
-                    'price'   => $mainPrice,
-                    'prices'  => array_map(
+                    'price' => $mainPrice,
+                    'prices' => array_map(
                         fn (float $amount) => ['amount' => $amount],
                         $extraPrices,
                     ),
@@ -181,16 +179,16 @@ class StockImportService
                     }
                 } catch (ValidationException $e) {
                     $skipped++;
-                    $errors[] = "السطر {$lineNo}: " . implode(' ', $e->validator->errors()->all());
+                    $errors[] = "السطر {$lineNo}: ".implode(' ', $e->validator->errors()->all());
                 }
             }
         });
 
         AuditService::log(
-            action:      'import',
+            action: 'import',
             description: "رفع جماعي للأصناف — {$created} جديد، {$updated} محدَّث، {$skipped} متخطّى",
-            tag:         'admin',
-            after:       ['created' => $created, 'updated' => $updated, 'skipped' => $skipped],
+            tag: 'admin',
+            after: ['created' => $created, 'updated' => $updated, 'skipped' => $skipped],
         );
 
         return compact('created', 'updated', 'skipped', 'errors');
@@ -206,10 +204,10 @@ class StockImportService
             throw new \RuntimeException('تعذّر إنشاء ملف مؤقت للقالب.');
         }
 
-        $xlsxPath = $path . '.xlsx';
+        $xlsxPath = $path.'.xlsx';
         @unlink($path);
 
-        $writer = new XlsxWriter();
+        $writer = new XlsxWriter;
         $writer->openToFile($xlsxPath);
 
         $itemsSheet = $writer->getCurrentSheet();
@@ -281,11 +279,11 @@ class StockImportService
     private function buildExampleRows(): array
     {
         $blatchford = Supplier::query()->where('name', 'Blatchford Group')->first();
-        $fillauer   = Supplier::query()->where('name', 'Fillauer LLC')->first();
-        $ottobock   = Supplier::query()->where('name', 'Ottobock Egypt')->first();
+        $fillauer = Supplier::query()->where('name', 'Fillauer LLC')->first();
+        $ottobock = Supplier::query()->where('name', 'Ottobock Egypt')->first();
 
-        $joints    = StockCategory::query()->where('name', 'مفاصل')->first();
-        $fabrics   = StockCategory::query()->where('name', 'أقمشة ومواد خام')->first();
+        $joints = StockCategory::query()->where('name', 'مفاصل')->first();
+        $fabrics = StockCategory::query()->where('name', 'أقمشة ومواد خام')->first();
         $fasteners = StockCategory::query()->where('name', 'مسامير وربط')->first();
 
         return [
@@ -410,13 +408,13 @@ class StockImportService
     private function fieldTypeLabel(string $type): string
     {
         return match ($type) {
-            'list'     => 'قائمة',
-            'radio'    => 'اختيار واحد',
+            'list' => 'قائمة',
+            'radio' => 'اختيار واحد',
             'checkbox' => 'اختيارات متعددة',
-            'color'    => 'لون',
-            'number'   => 'رقم',
-            'range'    => 'نطاق',
-            default    => 'نص',
+            'color' => 'لون',
+            'number' => 'رقم',
+            'range' => 'نطاق',
+            default => 'نص',
         };
     }
 
@@ -451,6 +449,7 @@ class StockImportService
         foreach ($attributes as $key => $value) {
             if (! is_string($value)) {
                 $out[$key] = $value;
+
                 continue;
             }
 
@@ -536,7 +535,7 @@ class StockImportService
      */
     private function readXlsxRows(UploadedFile $file): array
     {
-        $reader = new XlsxReader();
+        $reader = new XlsxReader;
         $reader->open($file->getRealPath());
 
         $sheetIterator = $reader->getSheetIterator();
@@ -577,7 +576,7 @@ class StockImportService
         $content = $this->normalizeToUtf8((string) file_get_contents($file->getRealPath()));
 
         $lines = preg_split('/\r\n|\r|\n/', $content) ?: [];
-        $rows  = [];
+        $rows = [];
 
         foreach ($lines as $i => $line) {
             if (trim($line) === '') {
@@ -613,32 +612,32 @@ class StockImportService
     {
         if (count($cols) >= 7) {
             return [
-                'code'            => trim((string) ($cols[0] ?? '')),
-                'name'            => trim((string) ($cols[1] ?? '')),
-                'qty_raw'         => trim((string) ($cols[2] ?? '')),
-                'min_qty_raw'     => trim((string) ($cols[3] ?? '')),
-                'price_raw'       => trim((string) ($cols[4] ?? '')),
-                'supplier_ref'    => trim((string) ($cols[5] ?? '')),
-                'category_ref'    => trim((string) ($cols[6] ?? '')),
-                'attributes_raw'  => trim((string) ($cols[7] ?? '')),
+                'code' => trim((string) ($cols[0] ?? '')),
+                'name' => trim((string) ($cols[1] ?? '')),
+                'qty_raw' => trim((string) ($cols[2] ?? '')),
+                'min_qty_raw' => trim((string) ($cols[3] ?? '')),
+                'price_raw' => trim((string) ($cols[4] ?? '')),
+                'supplier_ref' => trim((string) ($cols[5] ?? '')),
+                'category_ref' => trim((string) ($cols[6] ?? '')),
+                'attributes_raw' => trim((string) ($cols[7] ?? '')),
             ];
         }
 
         $priceParts = array_slice($cols, 3);
-        $priceRaw   = implode(';', array_map(
+        $priceRaw = implode(';', array_map(
             fn ($part) => trim((string) $part),
             $priceParts,
         ));
 
         return [
-            'code'            => trim((string) ($cols[0] ?? '')),
-            'name'            => trim((string) ($cols[1] ?? '')),
-            'qty_raw'         => trim((string) ($cols[2] ?? '')),
-            'min_qty_raw'     => '0',
-            'price_raw'       => $priceRaw,
-            'supplier_ref'    => '',
-            'category_ref'    => '',
-            'attributes_raw'  => '',
+            'code' => trim((string) ($cols[0] ?? '')),
+            'name' => trim((string) ($cols[1] ?? '')),
+            'qty_raw' => trim((string) ($cols[2] ?? '')),
+            'min_qty_raw' => '0',
+            'price_raw' => $priceRaw,
+            'supplier_ref' => '',
+            'category_ref' => '',
+            'attributes_raw' => '',
         ];
     }
 
@@ -736,7 +735,7 @@ class StockImportService
 
         $fields = $category->fields->sortBy('sort_order')->values();
         $values = array_map('trim', explode('|', $raw));
-        $out    = [];
+        $out = [];
 
         foreach ($fields as $index => $field) {
             $value = trim((string) ($values[$index] ?? ''));
@@ -948,20 +947,20 @@ class StockImportService
     {
         $escaped = array_map(function (string $cell) {
             if (preg_match('/[",;\n]/', $cell)) {
-                return '"' . str_replace('"', '""', $cell) . '"';
+                return '"'.str_replace('"', '""', $cell).'"';
             }
 
             return $cell;
         }, $row);
 
-        return implode(',', $escaped) . "\r\n";
+        return implode(',', $escaped)."\r\n";
     }
 
     /** @param  array<string, mixed>  $item */
     private function formatPriceColumn(array $item): string
     {
         $parts = [];
-        $main  = (float) ($item['price'] ?? 0);
+        $main = (float) ($item['price'] ?? 0);
 
         if ($main > 0) {
             $parts[] = $this->formatAmount($main);
@@ -1010,7 +1009,7 @@ class StockImportService
             if ($value === null || $value === '') {
                 continue;
             }
-            $legacy[] = $key . '=' . $value;
+            $legacy[] = $key.'='.$value;
         }
 
         return implode(';', $legacy);

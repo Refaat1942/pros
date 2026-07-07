@@ -4,6 +4,7 @@ namespace Tests\Feature\Patient;
 
 use App\Models\CaseRecord;
 use App\Models\Patient;
+use App\Models\Quote;
 use App\Services\PublicTrackingService;
 use Illuminate\Support\Str;
 use Tests\Support\ProstheticTestHelper;
@@ -20,17 +21,17 @@ class PublicTrackingTest extends TestCase
         $patient->update(['tracking_uid' => 'case-test1234']);
 
         CaseRecord::create([
-            'case_no'             => 'C-2026-0001',
-            'order_ref'           => 'ORD-0001',
-            'tracking_uid'        => $patient->tracking_uid,
-            'patient_id'          => $patient->id,
+            'case_no' => 'C-2026-0001',
+            'order_ref' => 'ORD-0001',
+            'tracking_uid' => $patient->tracking_uid,
+            'patient_id' => $patient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_MANUFACTURING,
-            'quote_total'         => 50000,
-            'total_cost'          => 40000,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_MANUFACTURING,
+            'quote_total' => 50000,
+            'total_cost' => 40000,
         ]);
 
         $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
@@ -40,7 +41,7 @@ class PublicTrackingTest extends TestCase
         $response->assertOk();
         $response->assertSee('متابعة حالة الطلب');
         $response->assertSee('حالة الطلب');
-        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertSee($tracking['progress_percent'].'%', false);
         $response->assertSee('role="progressbar"', false);
         $response->assertSee('case-test1234');
         $response->assertDontSee('جاري التصنيع بالورشة');
@@ -75,15 +76,15 @@ class PublicTrackingTest extends TestCase
         $patient->update(['tracking_uid' => 'case-civwait1']);
 
         CaseRecord::create([
-            'case_no'             => 'C-2026-0099',
-            'order_ref'           => 'ORD-0099',
-            'tracking_uid'        => $patient->tracking_uid,
-            'patient_id'          => $patient->id,
+            'case_no' => 'C-2026-0099',
+            'order_ref' => 'ORD-0099',
+            'tracking_uid' => $patient->tracking_uid,
+            'patient_id' => $patient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_OPERATIONS,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_OPERATIONS,
         ]);
 
         $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
@@ -92,7 +93,7 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('حالة الطلب');
-        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertSee($tracking['progress_percent'].'%', false);
         $response->assertDontSee('بمكتب التشغيل — بانتظار الاعتماد');
         $response->assertDontSee('التسعير واعتماد التشغيل');
     }
@@ -104,15 +105,15 @@ class PublicTrackingTest extends TestCase
         $patient->update(['tracking_uid' => 'case-civcost01']);
 
         CaseRecord::create([
-            'case_no'             => 'C-2026-0100',
-            'order_ref'           => 'ORD-0100',
-            'tracking_uid'        => $patient->tracking_uid,
-            'patient_id'          => $patient->id,
+            'case_no' => 'C-2026-0100',
+            'order_ref' => 'ORD-0100',
+            'tracking_uid' => $patient->tracking_uid,
+            'patient_id' => $patient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_COST_CALC,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_COST_CALC,
         ]);
 
         $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
@@ -121,7 +122,7 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('حالة الطلب');
-        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertSee($tracking['progress_percent'].'%', false);
         $response->assertDontSee('جاري احتساب التكاليف');
         $response->assertDontSee('التوصيف الفني والتحضير');
     }
@@ -148,15 +149,15 @@ class PublicTrackingTest extends TestCase
         $patient->update(['tracking_uid' => 'case-milprep01']);
 
         CaseRecord::create([
-            'case_no'             => 'M-2026-0101',
-            'order_ref'           => 'ORD-0101',
-            'tracking_uid'        => $patient->tracking_uid,
-            'patient_id'          => $patient->id,
+            'case_no' => 'M-2026-0101',
+            'order_ref' => 'ORD-0101',
+            'tracking_uid' => $patient->tracking_uid,
+            'patient_id' => $patient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_MILITARY,
-            'path'                => CaseRecord::PATH_MILITARY,
-            'stage_key'           => CaseRecord::STAGE_COST_CALC,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_MILITARY,
+            'path' => CaseRecord::PATH_MILITARY,
+            'stage_key' => CaseRecord::STAGE_COST_CALC,
         ]);
 
         $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
@@ -165,7 +166,7 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('حالة الطلب');
-        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertSee($tracking['progress_percent'].'%', false);
         $response->assertDontSee('جاري التحضير للتصنيع');
         $response->assertDontSee('التوصيف الفني والتحضير');
         $response->assertDontSee('التسعير واعتماد التشغيل');
@@ -178,28 +179,28 @@ class PublicTrackingTest extends TestCase
         $patient->update(['tracking_uid' => 'case-civissued1']);
 
         $case = CaseRecord::create([
-            'case_no'              => 'C-2026-0102',
-            'order_ref'            => '793536',
-            'tracking_uid'         => $patient->tracking_uid,
-            'patient_id'           => $patient->id,
-            'contract_company_id'  => $company->id,
-            'company_name'         => $company->name,
-            'patient_type'         => Patient::TYPE_CIVILIAN,
-            'path'                 => CaseRecord::PATH_STANDARD,
-            'stage_key'            => CaseRecord::STAGE_MANUFACTURING,
-            'manufacturing_stage'  => CaseRecord::MFG_WAREHOUSE,
+            'case_no' => 'C-2026-0102',
+            'order_ref' => '793536',
+            'tracking_uid' => $patient->tracking_uid,
+            'patient_id' => $patient->id,
+            'contract_company_id' => $company->id,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_MANUFACTURING,
+            'manufacturing_stage' => CaseRecord::MFG_WAREHOUSE,
         ]);
 
-        \App\Models\Quote::create([
-            'quote_no'     => 'QT-2026-0862',
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+        Quote::create([
+            'quote_no' => 'QT-2026-0862',
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $company->name,
-            'quote_date'   => now()->toDateString(),
-            'status'       => \App\Models\Quote::STATUS_ISSUED,
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_ISSUED,
             'status_label' => 'صادر للاستقبال',
-            'total'        => 95000,
+            'total' => 95000,
         ]);
 
         $tracking = app(PublicTrackingService::class)->resolve($patient->tracking_uid);
@@ -208,14 +209,14 @@ class PublicTrackingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('حالة الطلب');
-        $response->assertSee($tracking['progress_percent'] . '%', false);
+        $response->assertSee($tracking['progress_percent'].'%', false);
         $response->assertDontSee('بانتظار موافقة الجهة');
         $response->assertDontSee('التسعير واعتماد التشغيل');
     }
 
     public function test_invalid_tracking_uid_returns_404(): void
     {
-        $this->get(route('public.track.case', ['uid' => 'case-' . Str::random(12)]))
+        $this->get(route('public.track.case', ['uid' => 'case-'.Str::random(12)]))
             ->assertNotFound();
     }
 
@@ -226,11 +227,11 @@ class PublicTrackingTest extends TestCase
         $reception = $this->userWithRole('reception');
 
         $response = $this->actingAs($reception)->postJson('/reception/patients', [
-            'name'                 => 'سارة محمد',
-            'phone'                => '01012345678',
-            'patient_type'         => 'civilian',
-            'contract_company_id'  => $company->id,
-            'visit_type_id'        => $visitType->id,
+            'name' => 'سارة محمد',
+            'phone' => '01012345678',
+            'patient_type' => 'civilian',
+            'contract_company_id' => $company->id,
+            'visit_type_id' => $visitType->id,
         ]);
 
         $response->assertCreated();

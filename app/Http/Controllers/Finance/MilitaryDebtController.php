@@ -18,8 +18,7 @@ class MilitaryDebtController extends Controller
 {
     public function __construct(
         private readonly MilitaryDebtService $militaryDebtService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -29,8 +28,8 @@ class MilitaryDebtController extends Controller
             $s = $request->input('search');
             $query->where(function ($q) use ($s) {
                 $q->where('patient_name', 'like', "%{$s}%")
-                  ->orWhere('sovereign_entity', 'like', "%{$s}%")
-                  ->orWhere('work_order_no', 'like', "%{$s}%");
+                    ->orWhere('sovereign_entity', 'like', "%{$s}%")
+                    ->orWhere('work_order_no', 'like', "%{$s}%");
             });
         }
 
@@ -47,13 +46,13 @@ class MilitaryDebtController extends Controller
         }
 
         if ($request->filled('entity')) {
-            $query->where('sovereign_entity', 'like', '%' . $request->input('entity') . '%');
+            $query->where('sovereign_entity', 'like', '%'.$request->input('entity').'%');
         }
 
         $debts = $query->limit(1000)->get();
 
         return response()->json([
-            'data'  => $debts->map(fn ($d) => $this->militaryDebtService->formatDebt($d))->values(),
+            'data' => $debts->map(fn ($d) => $this->militaryDebtService->formatDebt($d))->values(),
             'stats' => $this->militaryDebtService->stats($debts),
             'total' => $debts->count(),
         ]);
@@ -64,12 +63,12 @@ class MilitaryDebtController extends Controller
         if ($militaryDebt->isCollected()) {
             return response()->json([
                 'message' => 'السجل مجمَّد — تم اعتماد التحصيل مسبقاً ولا يمكن التعديل.',
-                'frozen'  => true,
+                'frozen' => true,
             ], 422);
         }
 
         $remaining = $this->militaryDebtService->remaining($militaryDebt);
-        $amount    = round((float) $request->validated('amount'), 2);
+        $amount = round((float) $request->validated('amount'), 2);
 
         if ($remaining <= 0) {
             return response()->json(['message' => 'لا يوجد متبقٍ للتحصيل على هذا السجل.'], 422);
@@ -77,7 +76,7 @@ class MilitaryDebtController extends Controller
 
         if ($amount > $remaining) {
             return response()->json([
-                'message' => 'المبلغ المُدخل أكبر من المتبقي للتحصيل (' . number_format($remaining, 2) . ' ج.م).',
+                'message' => 'المبلغ المُدخل أكبر من المتبقي للتحصيل ('.number_format($remaining, 2).' ج.م).',
             ], 422);
         }
 
@@ -93,7 +92,7 @@ class MilitaryDebtController extends Controller
             'message' => $debt->isCollected()
                 ? 'تم التحصيل بالكامل — السجل مجمَّد.'
                 : 'تم تسجيل جزء من التحصيل — يمكنك إكمال الباقي لاحقاً.',
-            'debt'    => $formatted,
+            'debt' => $formatted,
         ]);
     }
 
@@ -103,13 +102,13 @@ class MilitaryDebtController extends Controller
     public function updateStatus(Request $request, MilitaryDebt $militaryDebt): JsonResponse
     {
         $request->validate([
-            'status' => ['required', 'in:' . MilitaryDebt::STATUS_PENDING . ',' . MilitaryDebt::STATUS_COLLECTED],
+            'status' => ['required', 'in:'.MilitaryDebt::STATUS_PENDING.','.MilitaryDebt::STATUS_COLLECTED],
         ]);
 
         if ($militaryDebt->isCollected()) {
             return response()->json([
                 'message' => 'السجل مجمَّد — تم اعتماد التحصيل مسبقاً ولا يمكن التعديل.',
-                'frozen'  => true,
+                'frozen' => true,
             ], 422);
         }
 
@@ -125,28 +124,28 @@ class MilitaryDebtController extends Controller
 
                 return response()->json([
                     'message' => 'تم اعتماد التحصيل وإيداع المبلغ — السجل مجمَّد.',
-                    'debt'    => $this->militaryDebtService->formatDebt($militaryDebt),
+                    'debt' => $this->militaryDebtService->formatDebt($militaryDebt),
                 ]);
             }
         }
 
         $before = $militaryDebt->only(['status', 'collected_at']);
         $militaryDebt->update([
-            'status'       => $newStatus,
+            'status' => $newStatus,
             'collected_at' => null,
         ]);
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تحديث حالة مديونية عسكرية — WO: {$militaryDebt->work_order_no}",
-            tag:         'financial',
-            before:      $before,
-            after:       $militaryDebt->fresh()->only(['status', 'collected_at']),
+            tag: 'financial',
+            before: $before,
+            after: $militaryDebt->fresh()->only(['status', 'collected_at']),
         );
 
         return response()->json([
             'message' => 'تم تغيير حالة المديونية.',
-            'debt'    => $this->militaryDebtService->formatDebt($militaryDebt->fresh()),
+            'debt' => $this->militaryDebtService->formatDebt($militaryDebt->fresh()),
         ]);
     }
 
@@ -162,10 +161,10 @@ class MilitaryDebtController extends Controller
         $militaryDebt->delete();
 
         AuditService::log(
-            action:      'delete',
+            action: 'delete',
             description: "حذف مديونية عسكرية — WO: {$before['work_order_no']}",
-            tag:         'financial',
-            before:      $before,
+            tag: 'financial',
+            before: $before,
         );
 
         return response()->json(['message' => 'تم حذف السجل بنجاح.']);

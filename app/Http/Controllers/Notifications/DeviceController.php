@@ -14,14 +14,12 @@ use Illuminate\Support\Facades\Auth;
  */
 class DeviceController extends Controller
 {
-    public function __construct(private readonly DeviceService $deviceService)
-    {
-    }
+    public function __construct(private readonly DeviceService $deviceService) {}
 
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'device_id'   => ['required', 'string', 'max:512'],
+            'device_id' => ['required', 'string', 'max:512'],
             'device_type' => ['nullable', 'string', 'in:web,android,ios'],
         ]);
 

@@ -11,7 +11,6 @@ use App\Models\Quote;
 use App\Support\CaseDisplayStatus;
 use App\Support\CaseFinancialSummary;
 use App\Support\ClinicTime;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * تفاصيل الحالة لعرض الأدمن — مريض، عرض سعر، خطاب موافقة.
@@ -29,77 +28,77 @@ class AdminCaseDetailService
             'bom.items:id,bom_id,stock_item_code,name,source,qty',
         ]);
 
-        $quote    = $this->resolveQuote($case);
-        $payment  = $this->resolvePayment($case);
+        $quote = $this->resolveQuote($case);
+        $payment = $this->resolvePayment($case);
         $contract = ApprovalContract::query()
             ->where('case_id', $case->id)
             ->orderByDesc('id')
             ->first();
 
-        $display   = CaseDisplayStatus::forCase($case);
+        $display = CaseDisplayStatus::forCase($case);
         $totalCost = CaseFinancialSummary::totalCost($case);
-        $patient   = $case->patient;
-        $isMil     = $case->isMilitary();
+        $patient = $case->patient;
+        $isMil = $case->isMilitary();
         $sovereign = $isMil
             ? ($patient?->displayEntity() ?? Patient::MILITARY_SOVEREIGN_ENTITY)
             : ($patient?->sovereign_entity ?? $case->sovereign_entity);
 
         return [
             'case' => [
-                'id'                  => $case->id,
-                'case_no'             => $case->case_no,
-                'order_ref'           => $case->order_ref,
-                'work_order_no'       => $case->work_order_no,
-                'stage_key'           => $case->stage_key,
-                'stage_label'         => $display->label,
+                'id' => $case->id,
+                'case_no' => $case->case_no,
+                'order_ref' => $case->order_ref,
+                'work_order_no' => $case->work_order_no,
+                'stage_key' => $case->stage_key,
+                'stage_label' => $display->label,
                 'manufacturing_stage' => $case->manufacturing_stage,
-                'quote_date'          => $case->quote_date?->format('d/m/Y'),
-                'approval_date'       => $case->approval_date?->format('d/m/Y')
+                'quote_date' => $case->quote_date?->format('d/m/Y'),
+                'approval_date' => $case->approval_date?->format('d/m/Y')
                     ?? $case->approval_confirmed_at?->format('d/m/Y'),
-                'delivered_at'        => $case->delivered_at
+                'delivered_at' => $case->delivered_at
                     ? ClinicTime::format($case->delivered_at, 'd/m/Y H:i')
                     : null,
-                'total_cost'          => $totalCost,
-                'paid'                => CaseFinancialSummary::paidAmount($case, $totalCost),
-                'pricing_ref'         => $case->pricingRequest?->request_no,
-                'bom'                 => $case->bom?->only(['bom_no', 'stage']),
+                'total_cost' => $totalCost,
+                'paid' => CaseFinancialSummary::paidAmount($case, $totalCost),
+                'pricing_ref' => $case->pricingRequest?->request_no,
+                'bom' => $case->bom?->only(['bom_no', 'stage']),
             ],
             'patient' => $patient ? [
-                'name'         => $patient->name,
+                'name' => $patient->name,
                 'patient_code' => $patient->patient_code,
-                'phone'        => $patient->phone,
-                'national_id'  => $patient->national_id,
-                'type'         => $patient->patient_type,
-                'type_label'   => $isMil ? 'عسكري' : 'مدني',
-                'company'      => $isMil ? null : ($case->company_name ?? $patient->company_name),
-                'rank'         => $patient->militaryRank?->name ?? $patient->rank,
-                'sovereign'    => $sovereign,
+                'phone' => $patient->phone,
+                'national_id' => $patient->national_id,
+                'type' => $patient->patient_type,
+                'type_label' => $isMil ? 'عسكري' : 'مدني',
+                'company' => $isMil ? null : ($case->company_name ?? $patient->company_name),
+                'rank' => $patient->militaryRank?->name ?? $patient->rank,
+                'sovereign' => $sovereign,
             ] : null,
             'quote' => $quote ? [
-                'id'           => $quote->id,
-                'quote_no'     => $quote->quote_no,
-                'status'       => $quote->status,
+                'id' => $quote->id,
+                'quote_no' => $quote->quote_no,
+                'status' => $quote->status,
                 'status_label' => $quote->resolvedStatusLabel($case),
-                'quote_date'   => $quote->quote_date?->format('d/m/Y'),
-                'total'        => (float) $quote->total,
+                'quote_date' => $quote->quote_date?->format('d/m/Y'),
+                'total' => (float) $quote->total,
                 'company_name' => $quote->company_name,
-                'items'          => $this->mapQuoteItems($case, $quote),
-                'print_url'    => route('admin.cases.quote', $case),
+                'items' => $this->mapQuoteItems($case, $quote),
+                'print_url' => route('admin.cases.quote', $case),
             ] : null,
             'payment' => $payment,
             'approval' => $contract ? [
-                'contract_no'    => $contract->contract_no,
-                'letter_ref'     => $contract->letter_ref,
-                'approval_date'  => $contract->approval_date?->format('d/m/Y'),
-                'approved_amount'=> (float) $contract->approved_amount,
-                'has_letter'     => (bool) $contract->letter_path,
-                'letter_url'     => $contract->letter_path
+                'contract_no' => $contract->contract_no,
+                'letter_ref' => $contract->letter_ref,
+                'approval_date' => $contract->approval_date?->format('d/m/Y'),
+                'approved_amount' => (float) $contract->approved_amount,
+                'has_letter' => (bool) $contract->letter_path,
+                'letter_url' => $contract->letter_path
                     ? route('admin.contracts.letter', $contract)
                     : null,
-                'letter_ext'     => $contract->letter_path
+                'letter_ext' => $contract->letter_path
                     ? strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION))
                     : null,
-                'download_url'   => $contract->letterDisk() !== null
+                'download_url' => $contract->letterDisk() !== null
                     ? route('admin.contracts.download', $contract)
                     : null,
             ] : null,
@@ -132,13 +131,13 @@ class AdminCaseDetailService
         }
 
         return [
-            'payment_no'    => $payment->payment_no,
-            'method'        => $payment->method,
-            'method_label'  => $payment->methodLabel(),
-            'amount'        => (float) $payment->amount,
-            'reference'     => $payment->reference,
-            'received_by'   => $payment->received_by,
-            'received_at'   => ClinicTime::format($payment->received_at),
+            'payment_no' => $payment->payment_no,
+            'method' => $payment->method,
+            'method_label' => $payment->methodLabel(),
+            'amount' => (float) $payment->amount,
+            'reference' => $payment->reference,
+            'received_by' => $payment->received_by,
+            'received_at' => ClinicTime::format($payment->received_at),
         ];
     }
 
@@ -159,13 +158,13 @@ class AdminCaseDetailService
             $fromAdjustments = $source === BomItem::SOURCE_ADJUSTMENT;
 
             return [
-                'name'              => $item->name,
-                'stock_item_code'   => $item->stock_item_code,
-                'qty'               => $item->qty,
-                'amount'            => (float) $item->amount,
-                'source'            => $source,
-                'from_adjustments'  => $fromAdjustments,
-                'source_label'      => $fromAdjustments ? 'المعدلات' : null,
+                'name' => $item->name,
+                'stock_item_code' => $item->stock_item_code,
+                'qty' => $item->qty,
+                'amount' => (float) $item->amount,
+                'source' => $source,
+                'from_adjustments' => $fromAdjustments,
+                'source_label' => $fromAdjustments ? 'المعدلات' : null,
             ];
         })->all();
     }

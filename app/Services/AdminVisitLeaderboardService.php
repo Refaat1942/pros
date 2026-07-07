@@ -18,7 +18,7 @@ class AdminVisitLeaderboardService
     public function topPatientsByVisitType(): array
     {
         $visitTypes = VisitType::query()->ordered()->get(['id', 'name']);
-        $boards     = [];
+        $boards = [];
 
         foreach ($visitTypes as $visitType) {
             $counts = Appointment::query()
@@ -41,17 +41,17 @@ class AdminVisitLeaderboardService
 
             $boards[] = [
                 'visit_type_id' => $visitType->id,
-                'visit_type'    => $visitType->name,
-                'total_visits'  => (int) Appointment::query()
+                'visit_type' => $visitType->name,
+                'total_visits' => (int) Appointment::query()
                     ->where('visit_type_id', $visitType->id)
                     ->count(),
-                'patients'      => $counts->map(function ($row) use ($patients) {
+                'patients' => $counts->map(function ($row) use ($patients) {
                     $patient = $patients->get($row->patient_id);
 
                     return [
-                        'name'         => $patient?->name ?? '—',
+                        'name' => $patient?->name ?? '—',
                         'patient_type' => $patient?->patient_type ?? Patient::TYPE_CIVILIAN,
-                        'visit_count'  => (int) $row->visit_count,
+                        'visit_count' => (int) $row->visit_count,
                     ];
                 })->values()->all(),
             ];

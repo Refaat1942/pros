@@ -12,12 +12,12 @@ class CorrectAppointmentRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'name'                => $this->personNameRules(),
-            'phone'               => $this->egyptianMobileRules(required: false),
-            'national_id'         => $this->egyptianNationalIdRules(),
-            'visit_type_id'       => ['required', 'integer', Rule::exists('visit_types', 'id')],
+            'name' => $this->personNameRules(),
+            'phone' => $this->egyptianMobileRules(required: false),
+            'national_id' => $this->egyptianNationalIdRules(),
+            'visit_type_id' => ['required', 'integer', Rule::exists('visit_types', 'id')],
             'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
-            'military_rank_id'    => ['nullable', 'integer', 'exists:military_ranks,id'],
+            'military_rank_id' => ['nullable', 'integer', 'exists:military_ranks,id'],
         ];
     }
 

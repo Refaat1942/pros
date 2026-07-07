@@ -45,11 +45,11 @@ class AuditLogImmutabilityTest extends TestCase
     public function test_audit_log_captures_before_and_after_payload(): void
     {
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: 'تعديل حالة',
-            tag:         'medical',
-            before:      ['stage_key' => 'reception'],
-            after:       ['stage_key' => 'technical'],
+            tag: 'medical',
+            before: ['stage_key' => 'reception'],
+            after: ['stage_key' => 'technical'],
         );
 
         $log = AuditLog::latest('logged_at')->first();

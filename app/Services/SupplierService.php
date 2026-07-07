@@ -120,10 +120,10 @@ class SupplierService
 
         $periodParts = [];
         if ($from) {
-            $periodParts[] = 'من ' . Carbon::parse($from)->format('Y-m-d');
+            $periodParts[] = 'من '.Carbon::parse($from)->format('Y-m-d');
         }
         if ($to) {
-            $periodParts[] = 'إلى ' . Carbon::parse($to)->format('Y-m-d');
+            $periodParts[] = 'إلى '.Carbon::parse($to)->format('Y-m-d');
         }
 
         $rows = $suppliers->map(function (Supplier $s) {
@@ -145,9 +145,9 @@ class SupplierService
         })->all();
 
         return [
-            'title'        => 'تقرير الموردين',
+            'title' => 'تقرير الموردين',
             'period_label' => $periodParts !== [] ? implode(' ', $periodParts) : 'كل الفترات',
-            'headers'      => [
+            'headers' => [
                 'اسم المورد / الشركة',
                 'الهاتف',
                 'الفاكس',

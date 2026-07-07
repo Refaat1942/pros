@@ -13,8 +13,7 @@ class MilitaryDebtService
 {
     public function __construct(
         private readonly DebtCollectionEntryService $collectionEntryService,
-    ) {
-    }
+    ) {}
 
     public function recordPayment(MilitaryDebt $debt, float $amount): MilitaryDebt
     {
@@ -33,12 +32,12 @@ class MilitaryDebtService
 
             if ($amount > $remaining) {
                 throw new \InvalidArgumentException(
-                    'المبلغ المُدخل أكبر من المتبقي للتحصيل (' . number_format($remaining, 2) . ' ج.م).'
+                    'المبلغ المُدخل أكبر من المتبقي للتحصيل ('.number_format($remaining, 2).' ج.م).'
                 );
             }
 
             $locked->collected = round((float) $locked->collected + $amount, 2);
-            $locked->status    = $this->computeStatus($locked);
+            $locked->status = $this->computeStatus($locked);
             if ($locked->status === MilitaryDebt::STATUS_COLLECTED) {
                 $locked->collected_at = now();
             }
@@ -47,11 +46,11 @@ class MilitaryDebtService
             $this->collectionEntryService->record($locked, $amount, (float) $locked->total_cost);
 
             AuditService::log(
-                action:      'payment',
+                action: 'payment',
                 description: "تسجيل تحصيل مديونية عسكرية — WO: {$locked->work_order_no} بمقدار {$amount}",
-                tag:         'financial',
-                before:      $before,
-                after:       $this->snapshot($locked->fresh()),
+                tag: 'financial',
+                before: $before,
+                after: $this->snapshot($locked->fresh()),
             );
 
             return $locked->fresh()->load('collectionEntries');
@@ -63,10 +62,10 @@ class MilitaryDebtService
      */
     public function stats(Collection $debts): array
     {
-        $totalDue       = $debts->sum(fn (MilitaryDebt $d) => (float) $d->total_cost);
+        $totalDue = $debts->sum(fn (MilitaryDebt $d) => (float) $d->total_cost);
         $totalCollected = $debts->sum(fn (MilitaryDebt $d) => (float) $d->collected);
         $totalRemaining = $debts->sum(fn ($d) => $this->remaining($d));
-        $outstanding    = $debts->filter(fn ($d) => $this->remaining($d) > 0)->count();
+        $outstanding = $debts->filter(fn ($d) => $this->remaining($d) > 0)->count();
         $fullyCollected = $debts->filter(fn ($d) => $d->isCollected())->count();
 
         return [
@@ -81,7 +80,7 @@ class MilitaryDebtService
 
     public function formatDebt(MilitaryDebt $debt): array
     {
-        $due       = (float) $debt->total_cost;
+        $due = (float) $debt->total_cost;
         $collected = (float) $debt->collected;
         $remaining = $this->remaining($debt);
         $collectionPkg = $this->collectionEntryService->packageForPayable($debt, $due, $collected);
@@ -89,23 +88,23 @@ class MilitaryDebtService
             ?? $debt->collected_at?->format('d/m/Y H:i');
 
         return [
-            'id'                  => $debt->id,
-            'case_id'             => $debt->case_id,
-            'work_order_no'       => $debt->work_order_no,
-            'patient_name'        => $debt->patient_name,
+            'id' => $debt->id,
+            'case_id' => $debt->case_id,
+            'work_order_no' => $debt->work_order_no,
+            'patient_name' => $debt->patient_name,
             'patient_national_id' => $debt->patient_national_id,
-            'sovereign_entity'    => $debt->sovereign_entity,
-            'due'                 => $due,
-            'collected'           => $collected,
-            'remaining'           => $remaining,
-            'total_cost'          => $due,
-            'delivered_at'        => $debt->delivered_at ? (string) $debt->delivered_at : null,
-            'status'              => $debt->status,
-            'status_label'        => $this->statusLabel($debt),
-            'collected_at'        => $debt->collected_at?->format('d/m/Y H:i'),
-            'last_collected_at'   => $lastCollectedAt,
-            'is_frozen'           => $debt->isCollected(),
-            'balance'             => $remaining > 0 ? 'outstanding' : 'settled',
+            'sovereign_entity' => $debt->sovereign_entity,
+            'due' => $due,
+            'collected' => $collected,
+            'remaining' => $remaining,
+            'total_cost' => $due,
+            'delivered_at' => $debt->delivered_at ? (string) $debt->delivered_at : null,
+            'status' => $debt->status,
+            'status_label' => $this->statusLabel($debt),
+            'collected_at' => $debt->collected_at?->format('d/m/Y H:i'),
+            'last_collected_at' => $lastCollectedAt,
+            'is_frozen' => $debt->isCollected(),
+            'balance' => $remaining > 0 ? 'outstanding' : 'settled',
         ] + $collectionPkg;
     }
 
@@ -116,7 +115,7 @@ class MilitaryDebtService
 
     private function computeStatus(MilitaryDebt $debt): string
     {
-        $due       = (float) $debt->total_cost;
+        $due = (float) $debt->total_cost;
         $collected = (float) $debt->collected;
 
         if ($due <= 0) {
@@ -142,7 +141,7 @@ class MilitaryDebtService
 
         return match ($debt->status) {
             MilitaryDebt::STATUS_PARTIAL => 'مسدَّد جزئياً',
-            default                      => 'بانتظار التحصيل',
+            default => 'بانتظار التحصيل',
         };
     }
 
@@ -150,8 +149,8 @@ class MilitaryDebtService
     {
         return [
             'total_cost' => (float) $debt->total_cost,
-            'collected'  => (float) $debt->collected,
-            'status'     => $debt->status,
+            'collected' => (float) $debt->collected,
+            'status' => $debt->status,
         ];
     }
 }

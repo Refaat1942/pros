@@ -3,7 +3,6 @@
 namespace Tests\Feature\Patient;
 
 use App\Models\CaseRecord;
-use App\Models\Patient;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -16,8 +15,8 @@ class ReceptionSelfServiceLookupTest extends TestCase
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
         $patient->update([
-            'phone'         => '01066666666',
-            'tracking_uid'  => 'case-phone6666',
+            'phone' => '01066666666',
+            'tracking_uid' => 'case-phone6666',
         ]);
 
         $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);

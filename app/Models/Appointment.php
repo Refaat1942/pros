@@ -3,8 +3,11 @@
 namespace App\Models;
 
 use App\Support\ClinicTime;
+use App\Support\PatientEntityPresenter;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * موعد المريض — reception-dashboard appointments[]
@@ -12,14 +15,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Appointment extends Model
 {
     public const VISIT_EXAM = 'exam';
+
     public const VISIT_FOLLOWUP = 'followup';
+
     public const VISIT_FITTING = 'fitting';
+
     public const VISIT_DELIVERY = 'delivery';
+
     public const VISIT_REVIEW = 'review';
 
     public const STATUS_WAITING = 'waiting';
+
     public const STATUS_IN_CLINIC = 'in_clinic';
+
     public const STATUS_QUOTED = 'quoted';
+
     public const STATUS_DONE = 'done';
 
     protected $fillable = [
@@ -41,16 +51,16 @@ class Appointment extends Model
     ];
 
     protected $casts = [
-        'appointment_date'          => 'date',
-        'clinic_day'                => 'date',
-        'transferred_to_clinic'     => 'boolean',
-        'transferred_to_clinic_at'  => 'datetime',
+        'appointment_date' => 'date',
+        'clinic_day' => 'date',
+        'transferred_to_clinic' => 'boolean',
+        'transferred_to_clinic_at' => 'datetime',
     ];
 
     /**
      * وقت تحويل المريض من الاستقبال — مع fallback للسجلات القديمة.
      */
-    public function transferredAt(): ?\Illuminate\Support\Carbon
+    public function transferredAt(): ?Carbon
     {
         if ($this->transferred_to_clinic_at) {
             return $this->transferred_to_clinic_at;
@@ -71,7 +81,7 @@ class Appointment extends Model
     public function receptionWaitLabel(): string
     {
         $patient = $this->relationLoaded('patient') ? $this->patient : null;
-        $end     = $this->transferredAt();
+        $end = $this->transferredAt();
 
         if (! $patient?->created_at || ! $end) {
             return '—';
@@ -83,7 +93,7 @@ class Appointment extends Model
     /**
      * مدة الانتظار في العيادة — من التحويل حتى الآن (قائمة الطبيب).
      */
-    public function clinicWaitLabel(?\Carbon\CarbonInterface $until = null): string
+    public function clinicWaitLabel(?CarbonInterface $until = null): string
     {
         $start = $this->transferredAt();
 
@@ -95,7 +105,7 @@ class Appointment extends Model
     }
 
     /** لحظة تسجيل الموعد في الاستقبال — وقت إنشاء الموعد وليس ملف المريض الأول. */
-    public function registrationMoment(): ?\Carbon\CarbonInterface
+    public function registrationMoment(): ?CarbonInterface
     {
         if ($this->created_at) {
             return $this->created_at;
@@ -115,7 +125,7 @@ class Appointment extends Model
     /**
      * مدة انتظار المريض في الاستقبال — من التسجيل حتى التحويل أو الآن.
      */
-    public function receptionDeskWaitLabel(?\Carbon\CarbonInterface $until = null): string
+    public function receptionDeskWaitLabel(?CarbonInterface $until = null): string
     {
         $start = $this->registrationMoment();
 
@@ -130,7 +140,7 @@ class Appointment extends Model
         return self::formatWaitDuration($start, $end);
     }
 
-    public static function formatWaitDuration(\Carbon\CarbonInterface $from, \Carbon\CarbonInterface $to): string
+    public static function formatWaitDuration(CarbonInterface $from, CarbonInterface $to): string
     {
         if ($to->lessThan($from)) {
             return '—';
@@ -143,10 +153,10 @@ class Appointment extends Model
         }
 
         $totalMinutes = intdiv($totalSeconds, 60);
-        $days         = intdiv($totalMinutes, 60 * 24);
-        $remMinutes   = $totalMinutes % (60 * 24);
-        $hours        = intdiv($remMinutes, 60);
-        $minutes      = $remMinutes % 60;
+        $days = intdiv($totalMinutes, 60 * 24);
+        $remMinutes = $totalMinutes % (60 * 24);
+        $hours = intdiv($remMinutes, 60);
+        $minutes = $remMinutes % 60;
 
         $parts = [];
 
@@ -216,12 +226,12 @@ class Appointment extends Model
         }
 
         return match ($this->visit_type) {
-            self::VISIT_EXAM      => 'كشف',
-            self::VISIT_FOLLOWUP  => 'متابعة',
-            self::VISIT_FITTING   => 'تجربة',
-            self::VISIT_DELIVERY  => 'تسليم',
-            self::VISIT_REVIEW    => 'مراجعة',
-            default               => $this->visit_type ?: '—',
+            self::VISIT_EXAM => 'كشف',
+            self::VISIT_FOLLOWUP => 'متابعة',
+            self::VISIT_FITTING => 'تجربة',
+            self::VISIT_DELIVERY => 'تسليم',
+            self::VISIT_REVIEW => 'مراجعة',
+            default => $this->visit_type ?: '—',
         };
     }
 
@@ -238,7 +248,7 @@ class Appointment extends Model
             return $this->patient->entityPresentation();
         }
 
-        return \App\Support\PatientEntityPresenter::fromParts(
+        return PatientEntityPresenter::fromParts(
             $this->patient_type,
             null,
             $this->company_name,

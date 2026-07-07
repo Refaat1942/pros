@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\CaseStage;
 use App\Enums\StockWarehouseType;
-use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 
@@ -13,9 +12,7 @@ use App\Models\Patient;
  */
 class ReceptionSelfServiceService
 {
-    public function __construct(private readonly PublicTrackingService $publicTrackingService)
-    {
-    }
+    public function __construct(private readonly PublicTrackingService $publicTrackingService) {}
 
     public function lookup(string $query): ?array
     {
@@ -47,27 +44,27 @@ class ReceptionSelfServiceService
 
         return [
             'patient' => [
-                'id'               => $patient->id,
-                'name'             => $patient->name,
-                'phone'            => $patient->phone,
-                'national_id'      => $patient->national_id,
-                'patient_code'     => $patient->patient_code,
-                'patient_qr'       => $patient->patient_qr,
-                'tracking_uid'     => $patient->tracking_uid,
-                'patient_type'     => $patient->patient_type,
+                'id' => $patient->id,
+                'name' => $patient->name,
+                'phone' => $patient->phone,
+                'national_id' => $patient->national_id,
+                'patient_code' => $patient->patient_code,
+                'patient_qr' => $patient->patient_qr,
+                'tracking_uid' => $patient->tracking_uid,
+                'patient_type' => $patient->patient_type,
                 'patient_type_label' => $patient->isMilitary() ? 'عسكري' : 'مدني',
-                'rank'             => $patient->rank ?: $patient->militaryRank?->name,
+                'rank' => $patient->rank ?: $patient->militaryRank?->name,
                 'sovereign_entity' => $patient->sovereign_entity,
-                'company_name'     => $patient->company_name ?: $patient->contractCompany?->name,
-                'registered_at'    => $patient->registered_at?->format('Y-m-d'),
-                'last_visit_at'    => $patient->last_visit_at?->format('Y-m-d'),
-                'status'           => $patient->status,
+                'company_name' => $patient->company_name ?: $patient->contractCompany?->name,
+                'registered_at' => $patient->registered_at?->format('Y-m-d'),
+                'last_visit_at' => $patient->last_visit_at?->format('Y-m-d'),
+                'status' => $patient->status,
             ],
             'active_case' => $activeCase ? $this->formatCase($activeCase) : null,
             'cases' => $cases->map(fn (CaseRecord $c) => $this->formatCase($c))->values()->all(),
             'tracking' => $tracking,
             'progress_percent' => $progressPercent,
-            'queue_position'   => $this->queuePosition($activeCase),
+            'queue_position' => $this->queuePosition($activeCase),
             'expected_delivery' => $this->expectedDelivery($activeCase),
         ];
     }
@@ -104,19 +101,19 @@ class ReceptionSelfServiceService
     private function formatCase(CaseRecord $case): array
     {
         return [
-            'id'                  => $case->id,
-            'case_no'             => $case->case_no,
-            'order_ref'           => $case->order_ref,
-            'work_order_no'       => $case->work_order_no,
-            'quote_no'            => $case->quote_no,
-            'stage_key'           => $case->stage_key,
-            'stage_label'         => CaseStage::labelFor($case->stage_key),
+            'id' => $case->id,
+            'case_no' => $case->case_no,
+            'order_ref' => $case->order_ref,
+            'work_order_no' => $case->work_order_no,
+            'quote_no' => $case->quote_no,
+            'stage_key' => $case->stage_key,
+            'stage_label' => CaseStage::labelFor($case->stage_key),
             'manufacturing_stage' => $case->manufacturing_stage,
-            'bom_stage'           => $case->bom?->stage,
-            'bom_stage_label'     => $this->bomStageLabel($case->bom?->stage),
-            'path'                => $case->path,
-            'delivered_at'        => $case->delivered_at?->format('Y-m-d'),
-            'created_at'          => $case->created_at?->format('Y-m-d H:i'),
+            'bom_stage' => $case->bom?->stage,
+            'bom_stage_label' => $this->bomStageLabel($case->bom?->stage),
+            'path' => $case->path,
+            'delivered_at' => $case->delivered_at?->format('Y-m-d'),
+            'created_at' => $case->created_at?->format('Y-m-d H:i'),
         ];
     }
 
@@ -195,20 +192,20 @@ class ReceptionSelfServiceService
 
         if (! $case) {
             return [
-                'tracking_uid'  => null,
-                'pathway'       => $isMilitary ? 'military' : 'civilian',
-                'stage_label'   => 'تم التسجيل — في انتظار الكشف الطبي',
+                'tracking_uid' => null,
+                'pathway' => $isMilitary ? 'military' : 'civilian',
+                'stage_label' => 'تم التسجيل — في انتظار الكشف الطبي',
                 'current_index' => 0,
-                'steps'         => $steps,
+                'steps' => $steps,
             ];
         }
 
         return [
-            'tracking_uid'    => null,
-            'pathway'         => $isMilitary ? 'military' : 'civilian',
-            'stage_label'     => CaseStage::labelFor($case->stage_key),
-            'current_index'   => 0,
-            'steps'           => $steps,
+            'tracking_uid' => null,
+            'pathway' => $isMilitary ? 'military' : 'civilian',
+            'stage_label' => CaseStage::labelFor($case->stage_key),
+            'current_index' => 0,
+            'steps' => $steps,
         ];
     }
 }

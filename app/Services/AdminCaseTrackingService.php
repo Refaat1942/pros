@@ -11,8 +11,8 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Support\CaseDisplayStatus;
 use App\Support\CaseFinancialSummary;
-use App\Support\PatientEntityPresenter;
 use App\Support\ClinicTime;
+use App\Support\PatientEntityPresenter;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -21,15 +21,13 @@ use Illuminate\Support\Collection;
  */
 class AdminCaseTrackingService
 {
-    public function __construct(private readonly BomService $bomService)
-    {
-    }
+    public function __construct(private readonly BomService $bomService) {}
 
     /** @return array{waiting_return: Collection<int, array>, awaiting_cashier: Collection<int, array>, in_progress: Collection<int, array>, delivered: Collection<int, array>, counts: array{waiting_return: int, awaiting_cashier: int, in_progress: int, delivered: int}} */
     public function buckets(?Carbon $from = null, ?Carbon $to = null): array
     {
         $from = $from?->copy()->startOfDay();
-        $to   = $to?->copy()->endOfDay();
+        $to = $to?->copy()->endOfDay();
 
         $waiting = $this->waitingReturnCases($from, $to);
         $waitingIds = $waiting->pluck('id')->all();
@@ -66,15 +64,15 @@ class AdminCaseTrackingService
             ->get();
 
         return [
-            'waiting_return'   => $waiting->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
+            'waiting_return' => $waiting->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
             'awaiting_cashier' => $awaitingCashier->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
-            'in_progress'      => $progress->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
-            'delivered'        => $delivered->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
-            'counts'           => [
-                'waiting_return'   => $waiting->count(),
+            'in_progress' => $progress->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
+            'delivered' => $delivered->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
+            'counts' => [
+                'waiting_return' => $waiting->count(),
                 'awaiting_cashier' => $awaitingCashier->count(),
-                'in_progress'      => $progress->count(),
-                'delivered'        => $delivered->count(),
+                'in_progress' => $progress->count(),
+                'delivered' => $delivered->count(),
             ],
         ];
     }
@@ -115,41 +113,41 @@ class AdminCaseTrackingService
     public function formatRow(CaseRecord $case): array
     {
         $display = CaseDisplayStatus::forCase($case);
-        $bom     = $case->bom;
-        $canDel  = $this->bomService->canDeliver($case);
+        $bom = $case->bom;
+        $canDel = $this->bomService->canDeliver($case);
         $totalCost = CaseFinancialSummary::totalCost($case);
 
         return [
-            'id'                  => (string) $case->id,
-            'caseNo'              => $case->case_no,
-            'patient'             => $case->patient?->name ?? '—',
-            'patientPhone'        => $case->patient?->phone,
-            'company'             => $this->contractCompanyColumn($case),
-            'patientType'         => $case->patient_type,
-            'orderRef'            => $case->order_ref,
-            'quoteId'             => $case->quote_no,
-            'quoteDate'           => $this->formatDate($case->quote_date),
-            'quoteDaysWaiting'    => $case->quote_date ? (int) $case->quote_date->diffInDays(now()) : 0,
-            'pricingRef'          => $case->pricingRequest?->request_no,
-            'manufacturingStage'  => $case->manufacturing_stage,
-            'manufacturingLabel'  => ManufacturingStage::labelFor($case->manufacturing_stage),
-            'approvalDate'        => $this->formatApprovalDate($case),
-            'stageKey'            => $case->stage_key,
-            'stageLabel'          => $display->label,
-            'totalCost'           => $totalCost,
-            'paid'                => CaseFinancialSummary::paidAmount($case, $totalCost),
-            'deliveredAt'         => $this->formatDateTime($case->delivered_at),
-            'pipelineHtml'        => $this->pipelineHtml($case, $display->label),
-            'quoteRefHtml'        => $case->quote_no
-                ? '<strong>' . e($case->quote_no) . '</strong>'
+            'id' => (string) $case->id,
+            'caseNo' => $case->case_no,
+            'patient' => $case->patient?->name ?? '—',
+            'patientPhone' => $case->patient?->phone,
+            'company' => $this->contractCompanyColumn($case),
+            'patientType' => $case->patient_type,
+            'orderRef' => $case->order_ref,
+            'quoteId' => $case->quote_no,
+            'quoteDate' => $this->formatDate($case->quote_date),
+            'quoteDaysWaiting' => $case->quote_date ? (int) $case->quote_date->diffInDays(now()) : 0,
+            'pricingRef' => $case->pricingRequest?->request_no,
+            'manufacturingStage' => $case->manufacturing_stage,
+            'manufacturingLabel' => ManufacturingStage::labelFor($case->manufacturing_stage),
+            'approvalDate' => $this->formatApprovalDate($case),
+            'stageKey' => $case->stage_key,
+            'stageLabel' => $display->label,
+            'totalCost' => $totalCost,
+            'paid' => CaseFinancialSummary::paidAmount($case, $totalCost),
+            'deliveredAt' => $this->formatDateTime($case->delivered_at),
+            'pipelineHtml' => $this->pipelineHtml($case, $display->label),
+            'quoteRefHtml' => $case->quote_no
+                ? '<strong>'.e($case->quote_no).'</strong>'
                 : '—',
-            'bom'                 => $bom ? [
-                'stage'       => $bom->stage,
-                'stageLabel'  => $this->bomStageLabel($bom->stage),
-                'badgeClass'  => $this->bomBadgeClass($bom->stage),
+            'bom' => $bom ? [
+                'stage' => $bom->stage,
+                'stageLabel' => $this->bomStageLabel($bom->stage),
+                'badgeClass' => $this->bomBadgeClass($bom->stage),
             ] : null,
-            'canDeliver'          => $canDel,
-            'deliverBlockReason'  => $canDel ? null : $this->deliverBlockReason($case, $bom),
+            'canDeliver' => $canDel,
+            'deliverBlockReason' => $canDel ? null : $this->deliverBlockReason($case, $bom),
         ];
     }
 
@@ -168,7 +166,7 @@ class AdminCaseTrackingService
     {
         $badge = CaseStage::badgeClassFor($case->stage_key);
 
-        return '<span class="badge ' . e($badge) . '">' . e($label) . '</span>';
+        return '<span class="badge '.e($badge).'">'.e($label).'</span>';
     }
 
     private function bomStageLabel(?string $stage): string
@@ -179,10 +177,10 @@ class AdminCaseTrackingService
     private function bomBadgeClass(?string $stage): string
     {
         return match ($stage) {
-            Bom::STAGE_RAW      => 'badge-raw',
-            Bom::STAGE_WIP      => 'badge-wip',
+            Bom::STAGE_RAW => 'badge-raw',
+            Bom::STAGE_WIP => 'badge-wip',
             Bom::STAGE_FINISHED => 'badge-finished',
-            default             => 'default',
+            default => 'default',
         };
     }
 

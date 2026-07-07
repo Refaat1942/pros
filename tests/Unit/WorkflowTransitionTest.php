@@ -33,7 +33,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_RECEPTION);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_RECEPTION);
 
         $this->workflow->advance($case, WorkflowEvent::ExamApproved->value);
 
@@ -44,7 +44,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
         $this->workflow->advance($case, WorkflowEvent::SpecSaved->value);
 
@@ -55,7 +55,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         $this->workflow->advance($case, WorkflowEvent::AdjustmentsCompleted->value);
 
@@ -66,7 +66,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
 
         $this->workflow->advance($case, WorkflowEvent::CostingCompleted->value);
 
@@ -77,7 +77,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_QUOTE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_QUOTE);
 
         $this->workflow->advance($case, WorkflowEvent::QuoteIssued->value);
 
@@ -88,7 +88,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $this->workflow->advance($case, WorkflowEvent::OperationsApproved->value);
 
@@ -101,7 +101,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $this->workflow->advance($case, WorkflowEvent::ReturnedToAdjustments->value);
 
@@ -112,7 +112,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $this->workflow->advance($case, WorkflowEvent::ReturnedToTechnical->value);
 
@@ -123,7 +123,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
         $this->workflow->advance($case, WorkflowEvent::BomDispensed->value);
 
@@ -136,7 +136,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
         $this->workflow->advance($case, WorkflowEvent::BomFinished->value);
 
@@ -148,7 +148,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
 
         $this->workflow->advance($case, WorkflowEvent::Delivered->value);
 
@@ -163,7 +163,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_RECEPTION);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_RECEPTION);
 
         $this->expectException(InvalidWorkflowTransitionException::class);
 
@@ -175,7 +175,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $this->expectException(InvalidWorkflowTransitionException::class);
 
@@ -187,7 +187,7 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
         $this->expectException(InvalidWorkflowTransitionException::class);
 
@@ -198,13 +198,13 @@ class WorkflowTransitionTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
         $this->workflow->advance($case, WorkflowEvent::SpecSaved->value);
 
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'update',
-            'tag'    => 'medical',
+            'tag' => 'medical',
         ]);
     }
 }

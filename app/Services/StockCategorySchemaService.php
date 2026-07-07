@@ -8,6 +8,7 @@ use App\Models\StockCategory;
 use App\Models\StockCategoryField;
 use App\Models\StockItem;
 use App\Models\StockItemAttributeValue;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -19,8 +20,8 @@ class StockCategorySchemaService
         $category->loadMissing('fields');
 
         return [
-            'id'     => $category->id,
-            'name'   => $category->name,
+            'id' => $category->id,
+            'name' => $category->name,
             'fields' => $category->fields->map(fn (StockCategoryField $f) => $this->formatField($f))->values()->all(),
         ];
     }
@@ -29,13 +30,13 @@ class StockCategorySchemaService
     public function formatField(StockCategoryField $field): array
     {
         return [
-            'id'         => $field->id,
-            'field_key'  => $field->field_key,
-            'label'      => $field->label,
-            'type'       => $field->type,
-            'options'    => $field->options ?? [],
-            'config'     => $field->config ?? [],
-            'required'   => (bool) $field->required,
+            'id' => $field->id,
+            'field_key' => $field->field_key,
+            'label' => $field->label,
+            'type' => $field->type,
+            'options' => $field->options ?? [],
+            'config' => $field->config ?? [],
+            'required' => (bool) $field->required,
             'sort_order' => (int) $field->sort_order,
         ];
     }
@@ -50,7 +51,7 @@ class StockCategorySchemaService
 
         foreach (array_values($fields) as $index => $row) {
             $label = trim((string) ($row['label'] ?? ''));
-            $type  = (string) ($row['type'] ?? StockCategoryFieldType::Text->value);
+            $type = (string) ($row['type'] ?? StockCategoryFieldType::Text->value);
 
             if ($label === '') {
                 continue;
@@ -69,19 +70,19 @@ class StockCategorySchemaService
             $suffix = 1;
             $baseKey = $fieldKey;
             while (in_array($fieldKey, $usedKeys, true)) {
-                $fieldKey = Str::limit($baseKey . '_' . $suffix, 64, '');
+                $fieldKey = Str::limit($baseKey.'_'.$suffix, 64, '');
                 $suffix++;
             }
             $usedKeys[] = $fieldKey;
 
             $payload = [
-                'field_key'  => $fieldKey,
-                'label'      => $label,
-                'type'       => $type,
-                'options'    => $this->normalizeOptions($row['options'] ?? []),
-                'config'     => $this->normalizeConfig($type, $row['config'] ?? []),
+                'field_key' => $fieldKey,
+                'label' => $label,
+                'type' => $type,
+                'options' => $this->normalizeOptions($row['options'] ?? []),
+                'config' => $this->normalizeConfig($type, $row['config'] ?? []),
                 'sort_order' => isset($row['sort_order']) ? (int) $row['sort_order'] : (($index + 1) * 10),
-                'required'   => (bool) ($row['required'] ?? false),
+                'required' => (bool) ($row['required'] ?? false),
             ];
 
             $fieldId = isset($row['id']) && is_numeric($row['id']) ? (int) $row['id'] : null;
@@ -92,6 +93,7 @@ class StockCategorySchemaService
             if ($existing) {
                 $existing->update($payload);
                 $keepIds[] = $existing->id;
+
                 continue;
             }
 
@@ -134,7 +136,7 @@ class StockCategorySchemaService
             $stored = $this->encodeValue($field, $validated[$fieldKey]);
             $record = StockItemAttributeValue::query()->updateOrCreate(
                 [
-                    'stock_item_id'     => $item->id,
+                    'stock_item_id' => $item->id,
                     'category_field_id' => $field->id,
                 ],
                 ['value' => $stored],
@@ -152,7 +154,7 @@ class StockCategorySchemaService
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, StockCategoryField>  $fields
+     * @param  Collection<string, StockCategoryField>  $fields
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
      */
@@ -169,6 +171,7 @@ class StockCategorySchemaService
                 if ($field->required) {
                     $errors[$fieldKey] = "«{$field->label}» مطلوب.";
                 }
+
                 continue;
             }
 
@@ -200,6 +203,7 @@ class StockCategorySchemaService
                 if ($option !== '') {
                     $out[] = ['value' => $option, 'label' => $option];
                 }
+
                 continue;
             }
             if (! is_array($option)) {
@@ -251,8 +255,8 @@ class StockCategorySchemaService
     {
         return match ($type) {
             StockCategoryFieldType::Number => $this->castNumber($field, $raw),
-            StockCategoryFieldType::Range  => $this->castNumber($field, $raw),
-            StockCategoryFieldType::Color  => $this->castColor($raw),
+            StockCategoryFieldType::Range => $this->castNumber($field, $raw),
+            StockCategoryFieldType::Color => $this->castColor($raw),
             StockCategoryFieldType::Checkbox => $this->castCheckbox($field, $raw),
             StockCategoryFieldType::List, StockCategoryFieldType::Radio => $this->castChoice($field, $raw),
             default => trim((string) $raw),
@@ -369,11 +373,11 @@ class StockCategorySchemaService
                 $decoded = $this->decodeStoredValue($field, $value->value);
 
                 return [
-                    'field_key'      => $field->field_key,
-                    'label'          => $field->label,
-                    'type'           => $field->type,
-                    'value'          => $decoded,
-                    'display_value'  => $this->displayValue($field, $decoded),
+                    'field_key' => $field->field_key,
+                    'label' => $field->label,
+                    'type' => $field->type,
+                    'value' => $decoded,
+                    'display_value' => $this->displayValue($field, $decoded),
                 ];
             })
             ->filter()
@@ -385,7 +389,7 @@ class StockCategorySchemaService
     public function formatCriteriaSummary(StockItem $item): string
     {
         $parts = collect($this->formatItemAttributes($item))
-            ->map(fn (array $row) => trim($row['label'] . ': ' . ($row['display_value'] ?? '—')))
+            ->map(fn (array $row) => trim($row['label'].': '.($row['display_value'] ?? '—')))
             ->filter(fn (string $line) => ! str_ends_with($line, ': —'))
             ->values();
 
@@ -439,18 +443,18 @@ class StockCategorySchemaService
     private function mapUom(string $value): string
     {
         $map = [
-            'piece'  => StockUom::Piece->value,
-            'قطعة'   => StockUom::Piece->value,
-            'meter'  => StockUom::Meter->value,
-            'متر'    => StockUom::Meter->value,
-            'kg'     => StockUom::Kilo->value,
-            'kilo'   => StockUom::Kilo->value,
-            'كilo'   => StockUom::Kilo->value,
-            'كيلو'   => StockUom::Kilo->value,
-            'gram'   => StockUom::Gram->value,
-            'جرام'   => StockUom::Gram->value,
-            'liter'  => StockUom::Liter->value,
-            'لتر'    => StockUom::Liter->value,
+            'piece' => StockUom::Piece->value,
+            'قطعة' => StockUom::Piece->value,
+            'meter' => StockUom::Meter->value,
+            'متر' => StockUom::Meter->value,
+            'kg' => StockUom::Kilo->value,
+            'kilo' => StockUom::Kilo->value,
+            'كilo' => StockUom::Kilo->value,
+            'كيلو' => StockUom::Kilo->value,
+            'gram' => StockUom::Gram->value,
+            'جرام' => StockUom::Gram->value,
+            'liter' => StockUom::Liter->value,
+            'لتر' => StockUom::Liter->value,
         ];
 
         return $map[$value] ?? $value;

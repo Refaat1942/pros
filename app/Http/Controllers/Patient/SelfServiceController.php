@@ -30,8 +30,8 @@ class SelfServiceController extends Controller
 
         if (! $case) {
             return response()->json([
-                'stage_label'       => 'لم يُسجَّل طلب بعد',
-                'queue_position'    => null,
+                'stage_label' => 'لم يُسجَّل طلب بعد',
+                'queue_position' => null,
                 'expected_delivery' => null,
             ]);
         }
@@ -45,8 +45,8 @@ class SelfServiceController extends Controller
         }
 
         return response()->json([
-            'stage_label'       => CaseStage::labelFor($case->stage_key),
-            'queue_position'    => $queuePosition,
+            'stage_label' => CaseStage::labelFor($case->stage_key),
+            'queue_position' => $queuePosition,
             'expected_delivery' => null,
         ]);
     }

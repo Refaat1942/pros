@@ -10,7 +10,7 @@ class ReorderMilitaryRanksRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'ids'   => ['required', 'array', 'min:1'],
+            'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'distinct', 'exists:military_ranks,id'],
         ];
     }

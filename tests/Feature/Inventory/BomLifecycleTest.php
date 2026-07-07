@@ -24,14 +24,14 @@ class BomLifecycleTest extends TestCase
 
     private function prepareCase(): array
     {
-        $item     = $this->stockItem('RM-001', qty: 20);
+        $item = $this->stockItem('RM-001', qty: 20);
         $supplier = $this->makeSupplier();
         app(StockPriceService::class)->addBatch($item, 20, 200.00, $supplier, 'INV-001', now());
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0001']);
 
         return compact('item', 'case', 'user');
@@ -50,9 +50,9 @@ class BomLifecycleTest extends TestCase
 
         $this->assertEquals(Bom::STAGE_RAW, $bom->stage);
         $this->assertDatabaseHas('bom_items', [
-            'bom_id'          => $bom->id,
+            'bom_id' => $bom->id,
             'stock_item_code' => 'RM-001',
-            'qty'             => 3,
+            'qty' => 3,
         ]);
     }
 
@@ -96,7 +96,7 @@ class BomLifecycleTest extends TestCase
         ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
 
-        $bom       = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
+        $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
         $qtyBefore = $item->fresh()->qty;
 
         $this->expectException(BarcodeDispenseMismatchException::class);

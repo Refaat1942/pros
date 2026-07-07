@@ -8,8 +8,8 @@ trait UploadTrait
 {
     public function uploadAllTyps($file, $directory, $width = null, $height = null)
     {
-        if (!File::isDirectory('storage/images/' . $directory)) {
-            File::makeDirectory('storage/images/' . $directory, 0777, true, true);
+        if (! File::isDirectory('storage/images/'.$directory)) {
+            File::makeDirectory('storage/images/'.$directory, 0777, true, true);
         }
 
         $fileMimeType = $file->getClientMimeType();
@@ -17,8 +17,9 @@ trait UploadTrait
 
         if ($imageCheck[0] == 'image') {
             $allowedImagesMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-            if (!in_array($fileMimeType, $allowedImagesMimeTypes))
+            if (! in_array($fileMimeType, $allowedImagesMimeTypes)) {
                 return 'default.png';
+            }
 
             return $this->uploadeImage($file, $directory, $width, $height);
         }
@@ -33,31 +34,33 @@ trait UploadTrait
             'application/octet-stream',
         ];
 
-        if (!in_array($fileMimeType, $allowedMimeTypes))
+        if (! in_array($fileMimeType, $allowedMimeTypes)) {
             return 'default.png';
+        }
 
         return $this->uploadFile($file, $directory);
     }
 
     public function uploadFile($file, $directory)
     {
-        $filename = time() . rand(1000000, 9999999) . '.' . $file->getClientOriginalExtension();
-        $path = 'images/' . $directory;
+        $filename = time().rand(1000000, 9999999).'.'.$file->getClientOriginalExtension();
+        $path = 'images/'.$directory;
         $file->storeAs($path, $filename);
+
         return $filename;
     }
 
     public function uploadeImage($file, $directory, $width = null, $height = null)
     {
-        $thumbsPath = 'storage/images/' . $directory;
-        $name       = time() . '_' . rand(1111, 9999) . '.' . $file->getClientOriginalExtension();
+        $thumbsPath = 'storage/images/'.$directory;
+        $name = time().'_'.rand(1111, 9999).'.'.$file->getClientOriginalExtension();
 
         // Move the file first
         $file->move(public_path($thumbsPath), $name);
 
         // Resize if needed using GD
         if ($width !== null && $height !== null) {
-            $fullPath = public_path($thumbsPath . '/' . $name);
+            $fullPath = public_path($thumbsPath.'/'.$name);
             $this->resizeImageGD($fullPath, $width, $height, $file->getClientOriginalExtension());
         }
 
@@ -70,17 +73,19 @@ trait UploadTrait
 
         $src = match ($ext) {
             'jpg', 'jpeg' => imagecreatefromjpeg($path),
-            'png'         => imagecreatefrompng($path),
-            default       => null,
+            'png' => imagecreatefrompng($path),
+            default => null,
         };
 
-        if (!$src) return;
+        if (! $src) {
+            return;
+        }
 
         [$origWidth, $origHeight] = getimagesize($path);
 
         // Aspect ratio
         $ratio = min($maxWidth / $origWidth, $maxHeight / $origHeight);
-        $newWidth  = (int) ($origWidth  * $ratio);
+        $newWidth = (int) ($origWidth * $ratio);
         $newHeight = (int) ($origHeight * $ratio);
 
         $dst = imagecreatetruecolor($newWidth, $newHeight);
@@ -95,7 +100,7 @@ trait UploadTrait
 
         match ($ext) {
             'jpg', 'jpeg' => imagejpeg($dst, $path, 90),
-            'png'         => imagepng($dst, $path),
+            'png' => imagepng($dst, $path),
         };
 
         imagedestroy($src);
@@ -116,6 +121,6 @@ trait UploadTrait
 
     public static function getImage($name, $directory)
     {
-        return asset("storage/images/$directory/" . $name);
+        return asset("storage/images/$directory/".$name);
     }
 }

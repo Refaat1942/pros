@@ -20,11 +20,11 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name'           => fake()->name(),
-            'username'       => fake()->unique()->userName(),
-            'password'       => static::$password ??= self::TEST_PASSWORD,
-            'status'         => User::STATUS_ACTIVE,
-            'role_id'        => null,
+            'name' => fake()->name(),
+            'username' => fake()->unique()->userName(),
+            'password' => static::$password ??= self::TEST_PASSWORD,
+            'status' => User::STATUS_ACTIVE,
+            'role_id' => null,
             'remember_token' => Str::random(10),
         ];
     }
@@ -36,15 +36,15 @@ class UserFactory extends Factory
     {
         return $this->state(function () use ($slug) {
             $labels = [
-                Role::SLUG_ADMIN       => 'مسؤول النظام',
-                Role::SLUG_RECEPTION   => 'موظف استقبال',
-                Role::SLUG_DOCTOR      => 'طبيب',
-                Role::SLUG_SPEC        => 'فني مواصفات',
+                Role::SLUG_ADMIN => 'مسؤول النظام',
+                Role::SLUG_RECEPTION => 'موظف استقبال',
+                Role::SLUG_DOCTOR => 'طبيب',
+                Role::SLUG_SPEC => 'فني مواصفات',
                 Role::SLUG_ADJUSTMENTS => 'فني تعديلات',
-                Role::SLUG_COSTING     => 'فني تكاليف',
-                Role::SLUG_OPERATIONS  => 'مكتب عمليات',
-                Role::SLUG_WORKSHOP    => 'ورشة التصنيع',
-                Role::SLUG_TECHNICAL   => 'مسؤول مخزن',
+                Role::SLUG_COSTING => 'فني تكاليف',
+                Role::SLUG_OPERATIONS => 'مكتب عمليات',
+                Role::SLUG_WORKSHOP => 'ورشة التصنيع',
+                Role::SLUG_TECHNICAL => 'مسؤول مخزن',
             ];
 
             $role = Role::firstOrCreate(
@@ -53,9 +53,9 @@ class UserFactory extends Factory
             );
 
             return [
-                'role_id'  => $role->id,
+                'role_id' => $role->id,
                 'username' => $slug,
-                'name'     => $role->label_ar,
+                'name' => $role->label_ar,
             ];
         });
     }

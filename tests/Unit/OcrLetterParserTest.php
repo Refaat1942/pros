@@ -20,7 +20,7 @@ class OcrLetterParserTest extends TestCase
 
         $parsed = OcrLetterParser::parse($text, [
             'patient_hint' => 'عرفه بنتيست الفاتورة',
-            'amount_hint'  => 72000.0,
+            'amount_hint' => 72000.0,
             'company_hint' => 'التأمين الصحي',
         ]);
 

@@ -17,9 +17,7 @@ class StockCategoryController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly StockCategorySchemaService $schema)
-    {
-    }
+    public function __construct(private readonly StockCategorySchemaService $schema) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -41,7 +39,7 @@ class StockCategoryController extends Controller
         )->map(fn (StockCategory $c) => $this->schema->formatCategory($c));
 
         return response()->json([
-            'data'  => $categories,
+            'data' => $categories,
             'total' => $categories->count(),
         ]);
     }
@@ -54,15 +52,15 @@ class StockCategoryController extends Controller
         $this->schema->syncFields($category, $data['fields'] ?? []);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إضافة قسم صنف: {$category->name}",
-            tag:         'admin',
-            after:       $this->schema->formatCategory($category->fresh('fields')),
+            tag: 'admin',
+            after: $this->schema->formatCategory($category->fresh('fields')),
         );
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message'        => "تم إضافة القسم «{$category->name}» بنجاح.",
+                'message' => "تم إضافة القسم «{$category->name}» بنجاح.",
                 'stock_category' => $this->schema->formatCategory($category->fresh('fields')),
             ], 201);
         }
@@ -88,16 +86,16 @@ class StockCategoryController extends Controller
         $fresh = $this->schema->formatCategory($stockCategory->fresh('fields'));
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تعديل قسم صنف: {$stockCategory->name}",
-            tag:         'admin',
-            before:      $before,
-            after:       $fresh,
+            tag: 'admin',
+            before: $before,
+            after: $fresh,
         );
 
         return response()->json([
-            'message'         => 'تم تحديث القسم بنجاح.',
-            'stock_category'  => $fresh,
+            'message' => 'تم تحديث القسم بنجاح.',
+            'stock_category' => $fresh,
         ]);
     }
 
@@ -113,10 +111,10 @@ class StockCategoryController extends Controller
         $stockCategory->delete();
 
         AuditService::log(
-            action:      'delete',
+            action: 'delete',
             description: "حذف قسم صنف: {$before['name']}",
-            tag:         'admin',
-            before:      $before,
+            tag: 'admin',
+            before: $before,
         );
 
         return response()->json(['message' => 'تم حذف القسم بنجاح.']);

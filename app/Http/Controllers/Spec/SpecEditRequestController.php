@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\Auth;
 
 class SpecEditRequestController extends Controller
 {
-    public function __construct(private readonly SpecEditRequestService $editService)
-    {
-    }
+    public function __construct(private readonly SpecEditRequestService $editService) {}
 
     /**
      * سياق التعديل — البنود الحالية + الكatalog + حالة الطلب.
@@ -30,25 +28,25 @@ class SpecEditRequestController extends Controller
             ->orderBy('code')
             ->get(['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom'])
             ->map(fn ($item) => [
-                'code'          => $item->code,
-                'name'          => $item->name,
-                'spec'          => $item->spec,
-                'uom'           => $item->uom,
+                'code' => $item->code,
+                'name' => $item->name,
+                'spec' => $item->spec,
+                'uom' => $item->uom,
                 'available_max' => $item->availableQty(),
             ]);
 
         return response()->json([
-            'spec'              => $spec->only(['id', 'order_ref', 'case_id', 'patient_name', 'tech_notes', 'locked']),
-            'items'             => $spec->items->map->only(['stock_item_code', 'name', 'qty']),
-            'can_request_edit'  => $this->editService->canRequestEdit($spec),
-            'pending_request'   => $spec->pendingEditRequest
+            'spec' => $spec->only(['id', 'order_ref', 'case_id', 'patient_name', 'tech_notes', 'locked']),
+            'items' => $spec->items->map->only(['stock_item_code', 'name', 'qty']),
+            'can_request_edit' => $this->editService->canRequestEdit($spec),
+            'pending_request' => $spec->pendingEditRequest
                 ? $this->editService->format($spec->pendingEditRequest)
                 : null,
-            'rejected_request'  => $spec->rejectedSpecEditRequest
+            'rejected_request' => $spec->rejectedSpecEditRequest
                 ? $this->editService->format($spec->rejectedSpecEditRequest)
                 : null,
-            'case_stage'        => $spec->caseRecord?->stage_key,
-            'stock_catalog'     => $stockCatalog,
+            'case_stage' => $spec->caseRecord?->stage_key,
+            'stock_catalog' => $stockCatalog,
             'rejection_reasons' => config('spec_edit.rejection_reasons', []),
         ]);
     }
@@ -64,7 +62,7 @@ class SpecEditRequestController extends Controller
             );
         } catch (InvalidSpecItemException $e) {
             return response()->json([
-                'message'         => $e->getMessage(),
+                'message' => $e->getMessage(),
                 'stock_item_code' => $e->stockItemCode,
             ], 422);
         }

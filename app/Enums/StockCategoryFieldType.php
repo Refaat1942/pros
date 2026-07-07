@@ -4,13 +4,13 @@ namespace App\Enums;
 
 enum StockCategoryFieldType: string
 {
-    case Text     = 'text';
-    case Number   = 'number';
-    case List     = 'list';
-    case Radio    = 'radio';
+    case Text = 'text';
+    case Number = 'number';
+    case List = 'list';
+    case Radio = 'radio';
     case Checkbox = 'checkbox';
-    case Color    = 'color';
-    case Range    = 'range';
+    case Color = 'color';
+    case Range = 'range';
 
     /** @return list<string> */
     public static function values(): array
@@ -21,13 +21,13 @@ enum StockCategoryFieldType: string
     public function label(): string
     {
         return match ($this) {
-            self::Text     => 'نص',
-            self::Number   => 'رقم',
-            self::List     => 'قائمة',
-            self::Radio    => 'اختيار واحد',
+            self::Text => 'نص',
+            self::Number => 'رقم',
+            self::List => 'قائمة',
+            self::Radio => 'اختيار واحد',
             self::Checkbox => 'خانات اختيار',
-            self::Color    => 'لون',
-            self::Range    => 'شريط',
+            self::Color => 'لون',
+            self::Range => 'شريط',
         };
     }
 }

@@ -6,8 +6,10 @@ use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\Patient;
+use App\Services\AppointmentService;
 use App\Services\CaseService;
 use App\Services\MedicalRecordService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -22,36 +24,36 @@ class DoctorCaseInitiationTest extends TestCase
         $patient = $this->civilianPatient($company);
 
         CaseRecord::create([
-            'case_no'             => "CASE-{$year}-011",
-            'order_ref'           => "ORD-{$year}-011",
-            'patient_id'          => $patient->id,
+            'case_no' => "CASE-{$year}-011",
+            'order_ref' => "ORD-{$year}-011",
+            'patient_id' => $patient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_RECEPTION,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_RECEPTION,
         ]);
 
         CaseRecord::create([
-            'case_no'             => "CASE-{$year}-0012",
-            'order_ref'           => "ORD-{$year}-0012",
-            'patient_id'          => $patient->id,
+            'case_no' => "CASE-{$year}-0012",
+            'order_ref' => "ORD-{$year}-0012",
+            'patient_id' => $patient->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_RECEPTION,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_RECEPTION,
         ]);
 
         $record = MedicalRecord::create([
-            'patient_id'   => $patient->id,
+            'patient_id' => $patient->id,
             'patient_name' => $patient->name,
             'patient_type' => $patient->patient_type,
-            'diagnosis'    => 'تشخيص تجريبي',
-            'doctor_name'  => 'د. اختبار',
-            'record_date'  => now()->toDateString(),
-            'status'       => MedicalRecord::STATUS_DRAFT,
-            'locked'       => false,
+            'diagnosis' => 'تشخيص تجريبي',
+            'doctor_name' => 'د. اختبار',
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
         $case = app(CaseService::class)->initiate($patient, $record);
@@ -70,35 +72,35 @@ class DoctorCaseInitiationTest extends TestCase
         $this->actingAs($doctor);
 
         CaseRecord::create([
-            'case_no'             => "CASE-{$year}-011",
-            'order_ref'           => "ORD-{$year}-011",
-            'patient_id'          => $this->civilianPatient($company)->id,
+            'case_no' => "CASE-{$year}-011",
+            'order_ref' => "ORD-{$year}-011",
+            'patient_id' => $this->civilianPatient($company)->id,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'patient_type'        => Patient::TYPE_CIVILIAN,
-            'path'                => CaseRecord::PATH_STANDARD,
-            'stage_key'           => CaseRecord::STAGE_RECEPTION,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_RECEPTION,
         ]);
 
         $patient = Patient::create([
-            'patient_code'        => '100099',
-            'patient_qr'          => 'QR-100099',
-            'tracking_uid'        => 'case-doctest1',
-            'name'                => 'مريض اختبار',
-            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'patient_code' => '100099',
+            'patient_qr' => 'QR-100099',
+            'tracking_uid' => 'case-doctest1',
+            'name' => 'مريض اختبار',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'registered_at'       => now()->toDateString(),
-            'status'              => Patient::STATUS_ACTIVE,
+            'company_name' => $company->name,
+            'registered_at' => now()->toDateString(),
+            'status' => Patient::STATUS_ACTIVE,
         ]);
 
-        $appointment = app(\App\Services\AppointmentService::class)->book([
-            'patient_id'       => $patient->id,
+        $appointment = app(AppointmentService::class)->book([
+            'patient_id' => $patient->id,
             'appointment_date' => now()->toDateString(),
-            'visit_type_id'    => $visitType->id,
+            'visit_type_id' => $visitType->id,
         ]);
 
-        app(\App\Services\AppointmentService::class)->advanceStatus(
+        app(AppointmentService::class)->advanceStatus(
             $appointment,
             Appointment::STATUS_IN_CLINIC
         );
@@ -106,17 +108,17 @@ class DoctorCaseInitiationTest extends TestCase
         $service = app(MedicalRecordService::class);
 
         $first = $service->saveDraft([
-            'patient_id'     => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_id' => $appointment->id,
-            'diagnosis'      => 'تشخيص أول',
+            'diagnosis' => 'تشخيص أول',
         ]);
         $locked = $service->lock($first);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $service->saveDraft([
-            'patient_id'     => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_id' => $appointment->id,
-            'diagnosis'      => 'تشخيص محاولة ثانية',
+            'diagnosis' => 'تشخيص محاولة ثانية',
         ]);
 
         $this->assertTrue($locked->fresh()->locked);

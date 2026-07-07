@@ -15,10 +15,10 @@ class StoreAdjustmentEditRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'items'                   => ['present', 'array'],
+            'items' => ['present', 'array'],
             'items.*.stock_item_code' => ['required', 'string', 'max:64'],
-            'items.*.name'            => ['required', 'string', 'max:255'],
-            'items.*.qty'             => ['required', 'integer', 'min:1'],
+            'items.*.name' => ['required', 'string', 'max:255'],
+            'items.*.qty' => ['required', 'integer', 'min:1'],
         ];
     }
 }

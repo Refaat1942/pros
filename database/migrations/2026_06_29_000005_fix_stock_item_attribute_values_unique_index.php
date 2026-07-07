@@ -16,7 +16,7 @@ return new class extends Migration
             Schema::table('stock_item_attribute_values', function (Blueprint $table) {
                 $table->unique(['stock_item_id', 'category_field_id'], 'stock_item_attr_unique');
             });
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // الفهرس موجود مسبقاً أو الجدول أُنشئ بالفعل.
         }
     }
@@ -31,7 +31,7 @@ return new class extends Migration
             Schema::table('stock_item_attribute_values', function (Blueprint $table) {
                 $table->dropUnique('stock_item_attr_unique');
             });
-        } catch (\Throwable) {
+        } catch (Throwable) {
         }
     }
 };

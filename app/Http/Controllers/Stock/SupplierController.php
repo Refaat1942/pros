@@ -19,9 +19,7 @@ class SupplierController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly SupplierService $supplierService)
-    {
-    }
+    public function __construct(private readonly SupplierService $supplierService) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -41,7 +39,7 @@ class SupplierController extends Controller
         );
 
         return response()->json([
-            'data'  => $suppliers,
+            'data' => $suppliers,
             'total' => $suppliers->count(),
         ]);
     }
@@ -58,8 +56,8 @@ class SupplierController extends Controller
 
     public function store(StoreSupplierRequest $request): RedirectResponse|JsonResponse
     {
-        $data     = $request->validated();
-        $itemIds  = $data['stock_item_ids'] ?? [];
+        $data = $request->validated();
+        $itemIds = $data['stock_item_ids'] ?? [];
         unset($data['stock_item_ids']);
 
         $supplier = Supplier::create($data);
@@ -69,10 +67,10 @@ class SupplierController extends Controller
         }
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إضافة مورد {$supplier->name}",
-            tag:         'admin',
-            after:       $supplier->fresh(['debt'])?->toArray(),
+            tag: 'admin',
+            after: $supplier->fresh(['debt'])?->toArray(),
         );
 
         if ($request->expectsJson()) {
@@ -92,7 +90,7 @@ class SupplierController extends Controller
             'bank_name', 'bank_branch', 'bank_account', 'iban', 'notes',
         ]);
 
-        $data    = $request->validated();
+        $data = $request->validated();
         $itemIds = array_key_exists('stock_item_ids', $data) ? ($data['stock_item_ids'] ?? []) : null;
         unset($data['stock_item_ids']);
 
@@ -103,17 +101,17 @@ class SupplierController extends Controller
         }
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: "تعديل مورد {$supplier->name}",
-            tag:         'admin',
-            before:      $before,
-            after:       $supplier->fresh()->only(array_keys($before)),
+            tag: 'admin',
+            before: $before,
+            after: $supplier->fresh()->only(array_keys($before)),
         );
 
         $supplier = $this->supplierService->hydrateStats($supplier->fresh(['debt', 'stockItems']));
 
         return response()->json([
-            'message'  => 'تم تحديث المورد بنجاح.',
+            'message' => 'تم تحديث المورد بنجاح.',
             'supplier' => $supplier,
         ]);
     }
@@ -130,10 +128,10 @@ class SupplierController extends Controller
         $supplier->delete();
 
         AuditService::log(
-            action:      'delete',
+            action: 'delete',
             description: "حذف مورد (soft): {$before['name']}",
-            tag:         'admin',
-            before:      $before,
+            tag: 'admin',
+            before: $before,
         );
 
         return response()->json(['message' => 'تم حذف المورد بنجاح.']);
@@ -148,11 +146,11 @@ class SupplierController extends Controller
             debtFilter: $request->string('debt')->toString() ?: null,
         );
 
-        $filename = 'الموردون_' . now()->format('Y-m-d') . '.csv';
+        $filename = 'الموردون_'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($report) {
             $out = fopen('php://output', 'w');
-            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
             fputcsv($out, [$report['title']]);
             fputcsv($out, [$report['period_label']]);
             fputcsv($out, []);

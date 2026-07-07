@@ -13,24 +13,24 @@ class StoreCatalogItemRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'code'           => ['nullable', 'string', 'max:100', 'unique:stock_items,code'],
-            'name'           => ['required', 'string', 'max:255'],
-            'qty'            => ['nullable', 'integer', 'min:0'],
-            'price'          => ['nullable', 'numeric', 'min:0'],
-            'min_qty'         => ['nullable', 'integer', 'min:0'],
-            'expiry_date'    => ['nullable', 'date'],
+            'code' => ['nullable', 'string', 'max:100', 'unique:stock_items,code'],
+            'name' => ['required', 'string', 'max:255'],
+            'qty' => ['nullable', 'integer', 'min:0'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'min_qty' => ['nullable', 'integer', 'min:0'],
+            'expiry_date' => ['nullable', 'date'],
 
             // أسعار إضافية (صنف بأكثر من سعر) — اختيارية.
-            'prices'         => ['nullable', 'array'],
-            'prices.*.id'    => ['nullable'],
+            'prices' => ['nullable', 'array'],
+            'prices.*.id' => ['nullable'],
             'prices.*.label' => ['nullable', 'string', 'max:255'],
-            'prices.*.amount'=> ['required_with:prices', 'numeric', 'min:0'],
+            'prices.*.amount' => ['required_with:prices', 'numeric', 'min:0'],
 
             // سمات قديمة اختيارية (توافق خلفي — غير مطلوبة في النموذج المبسّط).
-            'spec'           => ['nullable', 'string', 'max:500'],
-            'category_id'    => ['nullable', 'integer', 'exists:stock_categories,id'],
-            'attributes'     => ['nullable', 'array'],
-            'supplier_ids'   => ['required', 'array', 'size:1'],
+            'spec' => ['nullable', 'string', 'max:500'],
+            'category_id' => ['nullable', 'integer', 'exists:stock_categories,id'],
+            'attributes' => ['nullable', 'array'],
+            'supplier_ids' => ['required', 'array', 'size:1'],
             'supplier_ids.*' => ['integer', 'exists:suppliers,id'],
         ];
     }
@@ -39,9 +39,9 @@ class StoreCatalogItemRequest extends BaseRequest
     {
         return [
             'name.required' => 'يرجى إدخال اسم الصنف.',
-            'code.unique'   => 'كود الصنف مستخدم مسبقاً.',
+            'code.unique' => 'كود الصنف مستخدم مسبقاً.',
             'supplier_ids.required' => 'يرجى اختيار مورد واحد لهذا الصنف.',
-            'supplier_ids.size'     => 'يُسمح بمورد واحد فقط لكل صنف.',
+            'supplier_ids.size' => 'يُسمح بمورد واحد فقط لكل صنف.',
         ];
     }
 }

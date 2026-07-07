@@ -10,9 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserDevice extends Model
 {
-    public const TYPE_WEB     = 'web';
+    public const TYPE_WEB = 'web';
+
     public const TYPE_ANDROID = 'android';
-    public const TYPE_IOS     = 'ios';
+
+    public const TYPE_IOS = 'ios';
 
     protected $fillable = [
         'user_id',

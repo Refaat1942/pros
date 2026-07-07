@@ -14,7 +14,7 @@ class TrackingUidService
     public function generate(): string
     {
         do {
-            $uid = 'case-' . Str::lower(Str::random(8));
+            $uid = 'case-'.Str::lower(Str::random(8));
         } while (
             Patient::where('tracking_uid', $uid)->exists()
             || CaseRecord::where('tracking_uid', $uid)->exists()

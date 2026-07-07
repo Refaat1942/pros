@@ -16,8 +16,7 @@ class CaseService
     public function __construct(
         private readonly WorkflowService $workflowService,
         private readonly OrderRefService $orderRefService,
-    ) {
-    }
+    ) {}
 
     /**
      * إنشاء حالة من الاستقبال مع تخطّي الكشف (اختياري) — تقفز مباشرةً للتوصيف.
@@ -29,10 +28,10 @@ class CaseService
         $this->workflowService->advance($case, WorkflowEvent::ExamSkipped->value);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إنشاء حالة بتخطّي الكشف {$case->case_no} — {$patient->patient_code}",
-            tag:         'medical',
-            after:       $this->caseAuditSnapshot($case->fresh()),
+            tag: 'medical',
+            after: $this->caseAuditSnapshot($case->fresh()),
         );
 
         return $case->fresh();
@@ -47,10 +46,10 @@ class CaseService
         $case = $this->createCase($patient, $record);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إنشاء حالة جديدة {$case->case_no} للمريض {$patient->patient_code}",
-            tag:         'medical',
-            after:       $this->caseAuditSnapshot($case),
+            tag: 'medical',
+            after: $this->caseAuditSnapshot($case),
         );
 
         return $case->fresh();
@@ -69,17 +68,17 @@ class CaseService
                 : CaseRecord::PATH_STANDARD;
 
             $case = CaseRecord::create([
-                'case_no'              => $caseNo,
-                'order_ref'            => $orderRef,
-                'tracking_uid'         => $patient->tracking_uid,
-                'patient_id'           => $patient->id,
-                'contract_company_id'  => $patient->isMilitary() ? null : $patient->contract_company_id,
-                'company_name'         => $patient->isMilitary() ? null : $patient->company_name,
-                'patient_type'         => $patient->patient_type,
-                'path'                 => $path,
-                'stage_key'            => CaseRecord::STAGE_RECEPTION,
-                'rank'                 => $patient->rank,
-                'sovereign_entity'     => $patient->isMilitary()
+                'case_no' => $caseNo,
+                'order_ref' => $orderRef,
+                'tracking_uid' => $patient->tracking_uid,
+                'patient_id' => $patient->id,
+                'contract_company_id' => $patient->isMilitary() ? null : $patient->contract_company_id,
+                'company_name' => $patient->isMilitary() ? null : $patient->company_name,
+                'patient_type' => $patient->patient_type,
+                'path' => $path,
+                'stage_key' => CaseRecord::STAGE_RECEPTION,
+                'rank' => $patient->rank,
+                'sovereign_entity' => $patient->isMilitary()
                     ? ($patient->sovereign_entity ?? Patient::MILITARY_SOVEREIGN_ENTITY)
                     : null,
             ]);
@@ -103,10 +102,10 @@ class CaseService
      */
     private function nextCaseNumbers(): array
     {
-        $year   = now()->year;
+        $year = now()->year;
         $prefix = "CASE-{$year}-";
 
-        $lastNum = CaseRecord::where('case_no', 'like', $prefix . '%')
+        $lastNum = CaseRecord::where('case_no', 'like', $prefix.'%')
             ->lockForUpdate()
             ->pluck('case_no')
             ->map(fn (string $code) => (int) substr($code, strlen($prefix)))

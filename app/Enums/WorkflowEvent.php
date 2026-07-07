@@ -11,18 +11,18 @@ namespace App\Enums;
  */
 enum WorkflowEvent: string
 {
-    case ExamApproved          = 'exam_approved';          // exam → technical
-    case ExamSkipped           = 'exam_skipped';           // reception → technical (الكشف اختياري)
-    case SpecSaved             = 'spec_saved';             // technical → adjustments
-    case AdjustmentsCompleted  = 'adjustments_completed';  // adjustments → cost_calc
-    case CostingCompleted      = 'costing_completed';      // cost_calc → quote
-    case QuoteIssued           = 'quote_issued';           // quote → operations
-    case SentToCashier         = 'sent_to_cashier';        // operations → cashier (كاش: بانتظار الدفع)
-    case CashierPaid           = 'cashier_paid';           // cashier → manufacturing (warehouse)
-    case OperationsApproved    = 'operations_approved';    // operations → manufacturing (warehouse)
-    case ReturnedToAdjustments = 'returned_to_adjustments';// operations → adjustments
-    case ReturnedToTechnical   = 'returned_to_technical';  // operations/adjustments → technical
-    case BomDispensed          = 'bom_dispensed';          // manufacturing (warehouse → issue)
-    case BomFinished           = 'bom_finished';           // manufacturing → ready_delivery
-    case Delivered             = 'delivered';              // ready_delivery → delivered
+    case ExamApproved = 'exam_approved';          // exam → technical
+    case ExamSkipped = 'exam_skipped';           // reception → technical (الكشف اختياري)
+    case SpecSaved = 'spec_saved';             // technical → adjustments
+    case AdjustmentsCompleted = 'adjustments_completed';  // adjustments → cost_calc
+    case CostingCompleted = 'costing_completed';      // cost_calc → quote
+    case QuoteIssued = 'quote_issued';           // quote → operations
+    case SentToCashier = 'sent_to_cashier';        // operations → cashier (كاش: بانتظار الدفع)
+    case CashierPaid = 'cashier_paid';           // cashier → manufacturing (warehouse)
+    case OperationsApproved = 'operations_approved';    // operations → manufacturing (warehouse)
+    case ReturnedToAdjustments = 'returned_to_adjustments'; // operations → adjustments
+    case ReturnedToTechnical = 'returned_to_technical';  // operations/adjustments → technical
+    case BomDispensed = 'bom_dispensed';          // manufacturing (warehouse → issue)
+    case BomFinished = 'bom_finished';           // manufacturing → ready_delivery
+    case Delivered = 'delivered';              // ready_delivery → delivered
 }

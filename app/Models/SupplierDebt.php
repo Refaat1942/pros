@@ -19,7 +19,7 @@ class SupplierDebt extends Model
     ];
 
     protected $casts = [
-        'due'       => 'decimal:2',
+        'due' => 'decimal:2',
         'collected' => 'decimal:2',
     ];
 
@@ -36,12 +36,12 @@ class SupplierDebt extends Model
     public function refreshStatus(): void
     {
         $remaining = $this->remaining();
-        $due       = (float) $this->due;
+        $due = (float) $this->due;
 
         $status = match (true) {
             $due <= 0 || $remaining <= 0 => DebtStatus::Paid->value,
             (float) $this->collected > 0 => DebtStatus::Partial->value,
-            default                      => DebtStatus::Pending->value,
+            default => DebtStatus::Pending->value,
         };
 
         if ($this->status !== $status) {

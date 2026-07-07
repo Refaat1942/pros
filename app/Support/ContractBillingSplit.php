@@ -63,9 +63,9 @@ final class ContractBillingSplit
 
         if ($discountPct >= 100) {
             return [
-                'gross_total'           => $gross,
-                'patient_share'         => 0.0,
-                'company_share'         => $gross,
+                'gross_total' => $gross,
+                'patient_share' => 0.0,
+                'company_share' => $gross,
                 'company_share_percent' => 100.0,
                 'patient_share_percent' => 0.0,
             ];
@@ -74,9 +74,9 @@ final class ContractBillingSplit
         $patientShare = round($gross * (1 - $discountPct / 100), 2);
 
         return [
-            'gross_total'           => $gross,
-            'patient_share'         => $patientShare,
-            'company_share'         => $patientShare,
+            'gross_total' => $gross,
+            'patient_share' => $patientShare,
+            'company_share' => $patientShare,
             'company_share_percent' => round($discountPct, 2),
             'patient_share_percent' => round(100 - $discountPct, 2),
         ];
@@ -128,9 +128,9 @@ final class ContractBillingSplit
     private static function patientPaysAll(float $gross): array
     {
         return [
-            'gross_total'           => $gross,
-            'patient_share'         => $gross,
-            'company_share'         => 0.0,
+            'gross_total' => $gross,
+            'patient_share' => $gross,
+            'company_share' => 0.0,
             'company_share_percent' => 0.0,
             'patient_share_percent' => $gross > 0 ? 100.0 : 0.0,
         ];

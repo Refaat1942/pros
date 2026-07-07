@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\CaseRecord;
+use App\Models\Permission;
 use App\Models\User;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -135,7 +135,7 @@ class DashboardGuardTest extends TestCase
         $user = $this->userWithRole('doctor');
         // Simulate admin revoking technical-dashboard access
         $user->role->permissions()->detach(
-            \App\Models\Permission::where('dashboard', 'technical')->pluck('id')
+            Permission::where('dashboard', 'technical')->pluck('id')
         );
         $this->actingAs($user->fresh());
 
@@ -159,7 +159,7 @@ class DashboardGuardTest extends TestCase
     public function test_admin_without_quote_permission_blocked_from_quote_page(): void
     {
         $admin = $this->userWithRole('admin');
-        $appointmentsId = \App\Models\Permission::where('slug', 'reception.appointments.view')->value('id');
+        $appointmentsId = Permission::where('slug', 'reception.appointments.view')->value('id');
         $admin->role->permissions()->sync([$appointmentsId]);
         $this->actingAs($admin->fresh());
 

@@ -28,7 +28,7 @@ return new class extends Migration
 
             if (! $id) {
                 $id = DB::table('stock_categories')->insertGetId([
-                    'name'       => $name,
+                    'name' => $name,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

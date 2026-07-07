@@ -20,7 +20,7 @@ class StoreReceptionCompanyRequest extends BaseRequest
     {
         return [
             'name.required' => 'اسم الجهة مطلوب.',
-            'name.min'      => 'اسم الجهة يجب أن يكون حرفين على الأقل.',
+            'name.min' => 'اسم الجهة يجب أن يكون حرفين على الأقل.',
         ];
     }
 }

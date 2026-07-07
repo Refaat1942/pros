@@ -23,10 +23,10 @@ class DebtCollectionEntry extends Model
     ];
 
     protected $casts = [
-        'amount'            => 'decimal:2',
+        'amount' => 'decimal:2',
         'running_collected' => 'decimal:2',
-        'remaining_after'   => 'decimal:2',
-        'collected_at'      => 'datetime',
+        'remaining_after' => 'decimal:2',
+        'collected_at' => 'datetime',
     ];
 
     public function payable(): MorphTo

@@ -12,21 +12,21 @@ class StoreAppointmentRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'patient_id'       => ['nullable', 'integer', 'exists:patients,id'],
+            'patient_id' => ['nullable', 'integer', 'exists:patients,id'],
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['nullable', 'string', 'max:10'],
-            'visit_type_id'    => ['required', 'integer', Rule::exists('visit_types', 'id')],
-            'visit_type'       => ['nullable', 'string', Rule::in([
+            'visit_type_id' => ['required', 'integer', Rule::exists('visit_types', 'id')],
+            'visit_type' => ['nullable', 'string', Rule::in([
                 Appointment::VISIT_EXAM,
                 Appointment::VISIT_FOLLOWUP,
                 Appointment::VISIT_FITTING,
                 Appointment::VISIT_DELIVERY,
                 Appointment::VISIT_REVIEW,
             ])],
-            'patient_name'     => ['required_without:patient_id', 'nullable', ...$this->personNameRules(false)],
-            'phone'            => $this->egyptianMobileRules(),
-            'company_name'     => ['nullable', 'string', 'max:255'],
-            'patient_type'     => ['nullable', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
+            'patient_name' => ['required_without:patient_id', 'nullable', ...$this->personNameRules(false)],
+            'phone' => $this->egyptianMobileRules(),
+            'company_name' => ['nullable', 'string', 'max:255'],
+            'patient_type' => ['nullable', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
         ];
     }
 

@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\Auth;
 
 class AdjustmentEditRequestController extends Controller
 {
-    public function __construct(private readonly SpecEditRequestService $editService)
-    {
-    }
+    public function __construct(private readonly SpecEditRequestService $editService) {}
 
     public function show(CaseRecord $case): JsonResponse
     {
@@ -33,21 +31,21 @@ class AdjustmentEditRequestController extends Controller
             ->orderBy('name')
             ->get(['id', 'code', 'name', 'qty', 'reserved'])
             ->map(fn (StockItem $item) => [
-                'code'      => $item->code,
-                'name'      => $item->name,
-                'qty'       => (int) $item->qty,
-                'reserved'  => (int) $item->reserved,
+                'code' => $item->code,
+                'name' => $item->name,
+                'qty' => (int) $item->qty,
+                'reserved' => (int) $item->reserved,
                 'available' => $item->availableQty(),
             ]);
 
         return response()->json([
-            'case_id'            => $case->id,
-            'items'              => $adjustmentItems,
-            'can_request_edit'   => $this->editService->canRequestAdjustmentEdit($case),
-            'pending_request'    => $case->pendingAdjustmentEditRequest
+            'case_id' => $case->id,
+            'items' => $adjustmentItems,
+            'can_request_edit' => $this->editService->canRequestAdjustmentEdit($case),
+            'pending_request' => $case->pendingAdjustmentEditRequest
                 ? $this->editService->format($case->pendingAdjustmentEditRequest)
                 : null,
-            'stock_catalog'      => $stockCatalog,
+            'stock_catalog' => $stockCatalog,
         ]);
     }
 
@@ -61,7 +59,7 @@ class AdjustmentEditRequestController extends Controller
             );
         } catch (InvalidSpecItemException $e) {
             return response()->json([
-                'message'         => $e->getMessage(),
+                'message' => $e->getMessage(),
                 'stock_item_code' => $e->stockItemCode,
             ], 422);
         }

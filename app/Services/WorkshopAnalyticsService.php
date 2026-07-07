@@ -19,11 +19,11 @@ class WorkshopAnalyticsService
 {
     public function build(): array
     {
-        $now        = ClinicTime::now();
-        $today      = ClinicTime::todayDateString();
+        $now = ClinicTime::now();
+        $today = ClinicTime::todayDateString();
         $monthStart = $now->copy()->startOfMonth();
         $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
-        $lastMonthEnd   = $now->copy()->subMonth()->endOfMonth();
+        $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
 
         $finishedToday = $this->countFinishedBetween($today, $today);
         $finishedMonth = $this->countFinishedBetween($monthStart->toDateString(), $now->toDateString());
@@ -49,8 +49,8 @@ class WorkshopAnalyticsService
         return [
             'meta' => [
                 'generated_at' => ClinicTime::format($now),
-                'today'        => ClinicTime::format($now, 'd/m/Y'),
-                'month_label'  => $now->translatedFormat('F Y'),
+                'today' => ClinicTime::format($now, 'd/m/Y'),
+                'month_label' => $now->translatedFormat('F Y'),
             ],
             'stats' => [
                 ['icon' => '✅', 'label' => 'تم تصنيعها — اليوم', 'value' => (string) $finishedToday, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
@@ -64,14 +64,14 @@ class WorkshopAnalyticsService
             ],
             'charts' => [
                 [
-                    'type'  => 'column',
+                    'type' => 'column',
                     'title' => '📈 قطع مُنجزة — آخر 7 أيام',
-                    'wide'  => true,
-                    'unit'  => 'count',
+                    'wide' => true,
+                    'unit' => 'count',
                     'items' => $this->lastSevenDaysFinished(),
                 ],
                 [
-                    'type'  => 'donut',
+                    'type' => 'donut',
                     'title' => '⚙️ مراحل التصنيع — تحت التشغيل',
                     'large' => true,
                     'items' => $wipStages['items'],
@@ -82,7 +82,7 @@ class WorkshopAnalyticsService
                     ],
                 ],
                 [
-                    'type'  => 'donut',
+                    'type' => 'donut',
                     'title' => '🪖 المسار — مُنجَز الشهر',
                     'large' => true,
                     'items' => [
@@ -92,13 +92,13 @@ class WorkshopAnalyticsService
                     'summary' => [
                         ['label' => 'إجمالي الشهر', 'value' => (string) $finishedMonth],
                         ['label' => 'الشهر السابق', 'value' => (string) $finishedLastMonth],
-                        ['label' => 'التغيّر', 'value' => ($monthDelta >= 0 ? '+' : '') . $monthDelta . '%', 'color' => $monthDelta >= 0 ? '#059669' : '#dc2626'],
+                        ['label' => 'التغيّر', 'value' => ($monthDelta >= 0 ? '+' : '').$monthDelta.'%', 'color' => $monthDelta >= 0 ? '#059669' : '#dc2626'],
                     ],
                 ],
                 [
-                    'type'  => 'bar',
+                    'type' => 'bar',
                     'title' => '📦 قوائم المواد — خام / تحت التشغيل / تام',
-                    'wide'  => true,
+                    'wide' => true,
                     'items' => [
                         ['label' => 'خام — بانتظار الصرف', 'value' => $bomStages[Bom::STAGE_RAW] ?? 0, 'color' => '#d97706'],
                         ['label' => 'تحت التشغيل', 'value' => $bomStages[Bom::STAGE_WIP] ?? 0, 'color' => '#7c3aed'],
@@ -106,20 +106,20 @@ class WorkshopAnalyticsService
                     ],
                 ],
                 [
-                    'type'  => 'bar',
+                    'type' => 'bar',
                     'title' => '📊 أسابيع الشهر — مُنجَز',
-                    'wide'  => true,
+                    'wide' => true,
                     'items' => $this->weeklyFinishedThisMonth($monthStart, $now),
                 ],
                 [
-                    'type'  => 'column',
+                    'type' => 'column',
                     'title' => '📆 إنتاج شهري — آخر 6 أشهر',
-                    'wide'  => true,
-                    'unit'  => 'count',
+                    'wide' => true,
+                    'unit' => 'count',
                     'items' => $this->lastSixMonthsFinished($now),
                 ],
                 [
-                    'type'  => 'bar',
+                    'type' => 'bar',
                     'title' => '🔥 أكثر مواد — تحت التشغيل',
                     'items' => $this->topWipBomItems(),
                 ],
@@ -138,12 +138,12 @@ class WorkshopAnalyticsService
         $finishedMonth = $this->countFinishedBetween($monthStart->toDateString(), $now->toDateString());
 
         return [
-            'returns_this_month'   => $returnsMonth,
-            'finished_this_month'    => $finishedMonth,
-            'month_label'            => $now->translatedFormat('F Y'),
-            'top_wip_items'          => array_slice($this->topWipBomItems(), 0, 5),
-            'longest_wip'            => $this->longestWipCases(),
-            'completed_rows'         => $this->completedReportRows(),
+            'returns_this_month' => $returnsMonth,
+            'finished_this_month' => $finishedMonth,
+            'month_label' => $now->translatedFormat('F Y'),
+            'top_wip_items' => array_slice($this->topWipBomItems(), 0, 5),
+            'longest_wip' => $this->longestWipCases(),
+            'completed_rows' => $this->completedReportRows(),
         ];
     }
 
@@ -209,7 +209,7 @@ class WorkshopAnalyticsService
             return '< 1 ي';
         }
 
-        return rtrim(rtrim(number_format($days, 1), '0'), '.') . ' ي';
+        return rtrim(rtrim(number_format($days, 1), '0'), '.').' ي';
     }
 
     /** @return array{total: int, top_label: string, items: list<array{label: string, value: int, color?: string}>} */
@@ -223,9 +223,9 @@ class WorkshopAnalyticsService
 
         if ($counts === []) {
             return [
-                'total'     => 0,
+                'total' => 0,
                 'top_label' => '—',
-                'items'     => [['label' => 'لا أوامر تحت التشغيل', 'value' => 0, 'color' => '#94a3b8']],
+                'items' => [['label' => 'لا أوامر تحت التشغيل', 'value' => 0, 'color' => '#94a3b8']],
             ];
         }
 
@@ -246,9 +246,9 @@ class WorkshopAnalyticsService
         $topKey = array_key_first($counts);
 
         return [
-            'total'     => array_sum($counts),
+            'total' => array_sum($counts),
             'top_label' => ManufacturingStage::labelFor($topKey),
-            'items'     => $items,
+            'items' => $items,
         ];
     }
 
@@ -274,15 +274,15 @@ class WorkshopAnalyticsService
         $items = [];
 
         for ($i = 6; $i >= 0; $i--) {
-            $day   = ClinicTime::now()->subDays($i);
-            $date  = $day->toDateString();
+            $day = ClinicTime::now()->subDays($i);
+            $date = $day->toDateString();
             $count = $this->countFinishedBetween($date, $date);
             $isToday = $i === 0;
 
             $items[] = [
                 'label' => $day->format('d/m'),
                 'value' => $count,
-                'sub'   => $isToday ? 'اليوم' : $day->translatedFormat('D'),
+                'sub' => $isToday ? 'اليوم' : $day->translatedFormat('D'),
                 'color' => $isToday ? '#059669' : '#7c3aed',
             ];
         }
@@ -302,7 +302,7 @@ class WorkshopAnalyticsService
             $count = $this->countFinishedBetween($cursor->toDateString(), $weekEnd->toDateString());
 
             $items[] = [
-                'label' => 'أسبوع ' . $week,
+                'label' => 'أسبوع '.$week,
                 'value' => $count,
                 'color' => $week === (int) ceil($now->day / 7) ? '#059669' : '#7c3aed',
             ];
@@ -327,13 +327,13 @@ class WorkshopAnalyticsService
         for ($i = 5; $i >= 0; $i--) {
             $month = $now->copy()->subMonths($i);
             $start = $month->copy()->startOfMonth();
-            $end   = $month->copy()->endOfMonth();
+            $end = $month->copy()->endOfMonth();
             $isCurrent = $i === 0;
 
             $items[] = [
                 'label' => $month->translatedFormat('M Y'),
                 'value' => $this->countFinishedBetween($start->toDateString(), $end->toDateString()),
-                'sub'   => $isCurrent ? 'الشهر الحالي' : null,
+                'sub' => $isCurrent ? 'الشهر الحالي' : null,
                 'color' => $isCurrent ? '#059669' : $palette[$i % count($palette)],
             ];
         }
@@ -359,7 +359,7 @@ class WorkshopAnalyticsService
         $palette = ['#7c3aed', '#0e7490', '#059669', '#d97706', '#4f46e5', '#dc2626'];
 
         return $rows->values()->map(function ($row, int $i) use ($palette) {
-            $label = $row->stock_item_code . ' — ' . ($row->name ?: '—');
+            $label = $row->stock_item_code.' — '.($row->name ?: '—');
 
             return [
                 'label' => $label,
@@ -384,9 +384,9 @@ class WorkshopAnalyticsService
 
                 return [
                     'work_order_no' => $case->work_order_no ?? '—',
-                    'patient'       => $case->patient?->name ?? '—',
-                    'stage'         => ManufacturingStage::labelFor($case->manufacturing_stage),
-                    'days'          => $days,
+                    'patient' => $case->patient?->name ?? '—',
+                    'stage' => ManufacturingStage::labelFor($case->manufacturing_stage),
+                    'days' => $days,
                 ];
             })
             ->sortByDesc('days')
@@ -416,13 +416,13 @@ class WorkshopAnalyticsService
                     : null;
 
                 return [
-                    'work_order_no'  => $case?->work_order_no ?? '—',
-                    'patient'          => $case?->patient?->name ?? $bom->patient_name ?? '—',
-                    'case_no'          => $case?->case_no ?? '—',
-                    'path'             => $case?->patient_type === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
-                    'finished_at'      => ClinicTime::format($bom->finished_at, 'd/m/Y H:i'),
-                    'duration_days'    => $days !== null ? $days . ' ي' : '—',
-                    'bom_no'           => $bom->bom_no ?? '—',
+                    'work_order_no' => $case?->work_order_no ?? '—',
+                    'patient' => $case?->patient?->name ?? $bom->patient_name ?? '—',
+                    'case_no' => $case?->case_no ?? '—',
+                    'path' => $case?->patient_type === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
+                    'finished_at' => ClinicTime::format($bom->finished_at, 'd/m/Y H:i'),
+                    'duration_days' => $days !== null ? $days.' ي' : '—',
+                    'bom_no' => $bom->bom_no ?? '—',
                 ];
             })
             ->all();

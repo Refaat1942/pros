@@ -20,10 +20,10 @@ class StockCategoryField extends Model
     ];
 
     protected $casts = [
-        'options'    => 'array',
-        'config'     => 'array',
+        'options' => 'array',
+        'config' => 'array',
         'sort_order' => 'integer',
-        'required'   => 'boolean',
+        'required' => 'boolean',
     ];
 
     public function category(): BelongsTo

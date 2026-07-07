@@ -26,8 +26,7 @@ class OperationsDeskController extends Controller
     public function __construct(
         private readonly OperationsService $operationsService,
         private readonly QuoteService $quoteService,
-    ) {
-    }
+    ) {}
 
     /**
      * عروض الأسعار المُصدَرة للاستقبال/العميل — بانتظار موافقة الجهة (OCR).
@@ -44,17 +43,17 @@ class OperationsDeskController extends Controller
                 ->whereHas('caseRecord', fn ($q) => $q->where('patient_type', Patient::TYPE_CIVILIAN))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('quote_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhere('patient_name', 'like', "%{$s}%")
-                      ->orWhere('company_name', 'like', "%{$s}%")
-                      ->orWhereHas('caseRecord', fn ($q) => $q->where('case_no', 'like', "%{$s}%"));
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhere('patient_name', 'like', "%{$s}%")
+                        ->orWhere('company_name', 'like', "%{$s}%")
+                        ->orWhereHas('caseRecord', fn ($q) => $q->where('case_no', 'like', "%{$s}%"));
                 }))
                 ->orderByDesc('quote_date')
                 ->orderByDesc('id')
         );
 
         return response()->json([
-            'data'  => collect($quotes)->map(fn (Quote $q) => $this->formatIssuedQuote($q))->values(),
+            'data' => collect($quotes)->map(fn (Quote $q) => $this->formatIssuedQuote($q))->values(),
             'total' => $quotes->count(),
         ]);
     }
@@ -77,14 +76,14 @@ class OperationsDeskController extends Controller
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhereHas('patient', fn ($q) => $q->where('name', 'like', "%{$s}%"));
                 }))
                 ->orderByDesc('updated_at')
         );
 
         return response()->json([
-            'data'  => collect($cases)->map(fn (CaseRecord $c) => $this->formatPending($c))->values(),
+            'data' => collect($cases)->map(fn (CaseRecord $c) => $this->formatPending($c))->values(),
             'total' => $cases->count(),
         ]);
     }
@@ -111,10 +110,10 @@ class OperationsDeskController extends Controller
 
             return response()->json([
                 'message' => 'تم إصدار عرض السعر — حُوّلت الحالة للخزنة لتحصيل الدفع النقدي.',
-                'quote'   => [
-                    'id'           => $quote->id,
-                    'quote_no'     => $quote->quote_no,
-                    'status'       => $quote->status,
+                'quote' => [
+                    'id' => $quote->id,
+                    'quote_no' => $quote->quote_no,
+                    'status' => $quote->status,
                     'status_label' => $quote->status_label,
                 ],
                 'case' => $case->only(['id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no']),
@@ -122,14 +121,14 @@ class OperationsDeskController extends Controller
         }
 
         $quote = $this->quoteService->releaseToReception($quote);
-        $case  = $case->fresh();
+        $case = $case->fresh();
 
         return response()->json([
             'message' => 'تم إصدار عرض السعر للاستقبال — بانتظار رجوع العميل بخطاب الموافقة.',
-            'quote'   => [
-                'id'           => $quote->id,
-                'quote_no'     => $quote->quote_no,
-                'status'       => $quote->status,
+            'quote' => [
+                'id' => $quote->id,
+                'quote_no' => $quote->quote_no,
+                'status' => $quote->status,
                 'status_label' => $quote->status_label,
             ],
             'case' => $case->only(['id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no']),
@@ -145,7 +144,7 @@ class OperationsDeskController extends Controller
 
         return response()->json([
             'message' => 'تم الاعتماد — حُجزت المواد وحُوّلت الحالة للمخزن.',
-            'case'    => $case->only(['id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no']),
+            'case' => $case->only(['id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no']),
         ]);
     }
 
@@ -170,7 +169,7 @@ class OperationsDeskController extends Controller
 
         return response()->json([
             'message' => 'تمت إعادة الحالة للتعديل.',
-            'case'    => $case->only(['id', 'case_no', 'stage_key']),
+            'case' => $case->only(['id', 'case_no', 'stage_key']),
         ]);
     }
 
@@ -183,19 +182,19 @@ class OperationsDeskController extends Controller
             'id', 'quote_no', 'order_ref', 'case_id', 'patient_name', 'company_name',
             'quote_date', 'status', 'status_label', 'total',
         ]) + [
-            'gross_total'        => $printTotals['gross_total'],
-            'display_total'      => $printTotals['display_total'],
-            'discount_percent'   => $printTotals['discount_percent'],
-            'has_discount'       => $printTotals['has_discount'],
-            'quote_serial'       => $quote->quote_no,
+            'gross_total' => $printTotals['gross_total'],
+            'display_total' => $printTotals['display_total'],
+            'discount_percent' => $printTotals['discount_percent'],
+            'has_discount' => $printTotals['has_discount'],
+            'quote_serial' => $quote->quote_no,
             'quote_serial_label' => Quote::SERIAL_LABEL,
-            'issued_at'      => $quote->updated_at?->toIso8601String(),
-            'print_url'      => route('operations.quote.print', $quote),
-            'stage_label'    => $this->issuedQuoteStageLabel($case),
-            'case'           => $case ? $case->only([
+            'issued_at' => $quote->updated_at?->toIso8601String(),
+            'print_url' => route('operations.quote.print', $quote),
+            'stage_label' => $this->issuedQuoteStageLabel($case),
+            'case' => $case ? $case->only([
                 'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage', 'work_order_no',
             ]) : null,
-            'patient'        => $case && $case->relationLoaded('patient') && $case->patient
+            'patient' => $case && $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name'])
                 : null,
         ];
@@ -227,26 +226,26 @@ class OperationsDeskController extends Controller
 
         return $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'path', 'quote_no',
-        ]        ) + [
-            'pathway_label'  => $case->isMilitary() ? 'عسكري' : 'مدني',
-            'is_cash'        => $case->isCashCivilian(),
+        ]) + [
+            'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
+            'is_cash' => $case->isCashCivilian(),
             'display_entity' => $case->displayEntity(),
-            'tech_notes'     => $case->resolvedTechNotes(),
-            'quote_total'    => $displayTotal,
+            'tech_notes' => $case->resolvedTechNotes(),
+            'quote_total' => $displayTotal,
             'display_quote_total' => $displayTotal,
-            'quote'          => $quote ? [
-                'id'               => $quote->id,
-                'quote_no'         => $quote->quote_no,
-                'total'            => (float) $quote->total,
-                'display_total'    => $printTotals['display_total'],
-                'gross_total'      => $printTotals['gross_total'],
+            'quote' => $quote ? [
+                'id' => $quote->id,
+                'quote_no' => $quote->quote_no,
+                'total' => (float) $quote->total,
+                'display_total' => $printTotals['display_total'],
+                'gross_total' => $printTotals['gross_total'],
                 'discount_percent' => $printTotals['discount_percent'],
-                'has_discount'     => $printTotals['has_discount'],
-                'status'           => $quote->status,
-                'print_url'        => route('operations.quote.print', $quote),
+                'has_discount' => $printTotals['has_discount'],
+                'status' => $quote->status,
+                'print_url' => route('operations.quote.print', $quote),
             ] : null,
             // التكلفة الداخلية (WAC) للأدمن فقط — لقياس الربح.
-            'internal_cost'  => CaseFinancialSummary::canSeeInternalCost()
+            'internal_cost' => CaseFinancialSummary::canSeeInternalCost()
                 ? (float) $case->internal_cost
                 : null,
             // الربحية العسكرية — للسوبر أدمن فقط (مجرّدة من واجهة بقية الموظفين).
@@ -261,8 +260,8 @@ class OperationsDeskController extends Controller
                 : null,
             'bom' => $case->relationLoaded('bom') && $case->bom
                 ? [
-                    'id'          => $case->bom->id,
-                    'bom_no'      => $case->bom->bom_no,
+                    'id' => $case->bom->id,
+                    'bom_no' => $case->bom->bom_no,
                     'items_count' => $case->bom->relationLoaded('items') ? $case->bom->items->count() : 0,
                 ]
                 : null,

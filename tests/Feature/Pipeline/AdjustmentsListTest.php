@@ -35,7 +35,7 @@ class AdjustmentsListTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
+        $user = $this->userWithRole('adjustments');
 
         $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
@@ -51,8 +51,8 @@ class AdjustmentsListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
@@ -71,21 +71,21 @@ class AdjustmentsListTest extends TestCase
         $this->seedStockWithPriceBatch();
 
         $patient = $this->civilianPatient($this->civilianCompany());
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
         TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => 'د. اختبار',
-            'tech_notes'   => 'ملاحظة فنية من التوصيف',
-            'locked'       => true,
+            'doctor_name' => 'د. اختبار',
+            'tech_notes' => 'ملاحظة فنية من التوصيف',
+            'locked' => true,
             'submitted_at' => now()->toDateString(),
         ]);
 
@@ -100,21 +100,21 @@ class AdjustmentsListTest extends TestCase
         $this->seedStockWithPriceBatch();
 
         $patient = $this->civilianPatient($this->civilianCompany());
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
         TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => 'د. اختبار',
-            'tech_notes'   => '   ',
-            'locked'       => true,
+            'doctor_name' => 'د. اختبار',
+            'tech_notes' => '   ',
+            'locked' => true,
             'submitted_at' => now()->toDateString(),
         ]);
 
@@ -130,8 +130,8 @@ class AdjustmentsListTest extends TestCase
 
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
@@ -148,7 +148,7 @@ class AdjustmentsListTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
+        $user = $this->userWithRole('adjustments');
 
         $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
 
@@ -165,8 +165,8 @@ class AdjustmentsListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
@@ -181,14 +181,14 @@ class AdjustmentsListTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseHas('bom_items', [
-            'bom_id'          => $bom->id,
+            'bom_id' => $bom->id,
             'stock_item_code' => 'RM-001',
-            'source'          => BomItem::SOURCE_SPEC,
+            'source' => BomItem::SOURCE_SPEC,
         ]);
         $this->assertDatabaseHas('bom_items', [
-            'bom_id'          => $bom->id,
+            'bom_id' => $bom->id,
             'stock_item_code' => 'RM-002',
-            'source'          => BomItem::SOURCE_ADJUSTMENT,
+            'source' => BomItem::SOURCE_ADJUSTMENT,
         ]);
     }
 
@@ -199,8 +199,8 @@ class AdjustmentsListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
@@ -232,9 +232,9 @@ class AdjustmentsListTest extends TestCase
             ->assertJsonPath('message', 'تم حذف البند من قائمة المعدلات.');
 
         $this->assertDatabaseHas('bom_items', [
-            'id'              => $specItem->id,
+            'id' => $specItem->id,
             'stock_item_code' => 'RM-001',
-            'source'          => BomItem::SOURCE_SPEC,
+            'source' => BomItem::SOURCE_SPEC,
         ]);
         $this->assertDatabaseMissing('bom_items', ['id' => $adjItem->id]);
     }
@@ -246,8 +246,8 @@ class AdjustmentsListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
@@ -279,8 +279,8 @@ class AdjustmentsListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
@@ -325,8 +325,8 @@ class AdjustmentsListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
@@ -349,8 +349,8 @@ class AdjustmentsListTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('adjustments');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
 
         app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],

@@ -2,20 +2,23 @@
 
 namespace Tests\Feature\Pipeline;
 
+use App\Exceptions\DeliveryNotReadyException;
 use App\Models\Bom;
 use App\Models\CaseRecord;
+use App\Models\ContractCompany;
 use App\Models\MedicalRecord;
 use App\Models\Patient;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
 use App\Models\Quote;
+use App\Models\StockItem;
 use App\Services\ApprovalService;
 use App\Services\BomService;
 use App\Services\DeliveryService;
-use App\Services\PricingService;
+use App\Services\MedicalRecordService;
 use App\Services\QuoteService;
-use App\Models\ContractCompany;
 use App\Services\StockPriceService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -36,7 +39,7 @@ class CivilianPipelineTest extends TestCase
     private function seedStockWithPriceBatch(): void
     {
         $supplier = $this->makeSupplier();
-        $item     = $this->stockItem('RM-001', qty: 20, wac: 80.00);
+        $item = $this->stockItem('RM-001', qty: 20, wac: 80.00);
 
         app(StockPriceService::class)->addBatch($item, 5, 150.00, $supplier, 'INV-001', now());
         app(StockPriceService::class)->addBatch($item, 5, 200.00, $supplier, 'INV-002', now());
@@ -48,22 +51,22 @@ class CivilianPipelineTest extends TestCase
         $seq++;
 
         $req = PricingRequest::create([
-            'request_no'   => "PR-2026-{$type}-{$seq}",
-            'case_id'      => $case->id,
+            'request_no' => "PR-2026-{$type}-{$seq}",
+            'case_id' => $case->id,
             'patient_type' => $type,
-            'order_ref'    => $case->order_ref,
+            'order_ref' => $case->order_ref,
             'patient_name' => 'مريض اختبار',
             'request_date' => now()->toDateString(),
-            'status_key'   => 'awaiting_admin_approval',
+            'status_key' => 'awaiting_admin_approval',
         ]);
 
         PricingRequestItem::create([
             'pricing_request_id' => $req->id,
-            'stock_item_code'    => 'RM-001',
-            'name'               => 'صنف RM-001',
-            'qty'                => 2,
-            'unit_price'         => 200.00,
-            'line_total'         => 400.00,
+            'stock_item_code' => 'RM-001',
+            'name' => 'صنف RM-001',
+            'qty' => 2,
+            'unit_price' => 200.00,
+            'line_total' => 400.00,
         ]);
 
         $case->update(['pricing_request_id' => $req->id]);
@@ -77,14 +80,14 @@ class CivilianPipelineTest extends TestCase
         $qSeq++;
 
         return Quote::create([
-            'quote_no'     => "QT-2026-{$qSeq}",
-            'case_id'      => $case->id,
-            'order_ref'    => $case->order_ref,
+            'quote_no' => "QT-2026-{$qSeq}",
+            'case_id' => $case->id,
+            'order_ref' => $case->order_ref,
             'patient_name' => 'مريض اختبار',
             'company_name' => $company?->name ?? 'الجهة',
-            'quote_date'   => now()->toDateString(),
-            'status'       => Quote::STATUS_ISSUED,
-            'total'        => 400.00,
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_ISSUED,
+            'total' => 400.00,
         ]);
     }
 
@@ -96,7 +99,7 @@ class CivilianPipelineTest extends TestCase
         $patient = $this->civilianPatient($company);
 
         $this->assertDatabaseHas('patients', [
-            'id'           => $patient->id,
+            'id' => $patient->id,
             'patient_type' => 'civilian',
         ]);
         $this->assertStringStartsWith('QR-', $patient->patient_qr);
@@ -108,27 +111,27 @@ class CivilianPipelineTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $doctor  = $this->userWithRole('doctor');
+        $doctor = $this->userWithRole('doctor');
 
         // Create a MedicalRecord draft, then lock it
         $this->actingAs($doctor);
 
         $record = MedicalRecord::create([
-            'patient_id'   => $patient->id,
+            'patient_id' => $patient->id,
             'patient_name' => $patient->name,
-            'national_id'  => $patient->national_id,
+            'national_id' => $patient->national_id,
             'company_name' => $patient->company_name,
             'patient_type' => $patient->patient_type,
-            'diagnosis'    => 'بتر فوق الركبة',
+            'diagnosis' => 'بتر فوق الركبة',
             'prescription' => 'ركبة ذكية + أنبوب كربون',
-            'doctor_name'  => $doctor->name,
+            'doctor_name' => $doctor->name,
             'doctor_user_id' => $doctor->id,
-            'record_date'  => now()->toDateString(),
-            'status'       => MedicalRecord::STATUS_DRAFT,
-            'locked'       => false,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
-        app(\App\Services\MedicalRecordService::class)->lock($record);
+        app(MedicalRecordService::class)->lock($record);
 
         $case = CaseRecord::where('patient_id', $patient->id)->first();
         $this->assertNotNull($case);
@@ -143,8 +146,8 @@ class CivilianPipelineTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
-        $req     = $this->makePricingRequest($case);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+        $req = $this->makePricingRequest($case);
 
         // Highest price for RM-001 is 200.00 (from INV-002), not WAC (80)
         $item = $req->items()->first();
@@ -158,8 +161,8 @@ class CivilianPipelineTest extends TestCase
     {
         $this->seedStockWithPriceBatch();
 
-        $company  = $this->civilianCompany();
-        $patient  = $this->civilianPatient($company);
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
 
         // التوصيف → معدلات → تكاليف → عرض السعر → مكتب التشغيل (للقرار).
         $case = $this->operationsReadyCase($patient);
@@ -178,17 +181,17 @@ class CivilianPipelineTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
 
         $quote = Quote::create([
-            'quote_no'    => 'QT-2026-0001',
-            'case_id'     => $case->id,
-            'order_ref'   => $case->order_ref,
-            'patient_name'=> $patient->name,
-            'company_name'=> $company->name,
-            'quote_date'  => now()->toDateString(),
-            'status'      => Quote::STATUS_PENDING,
-            'total'       => 400.00,
+            'quote_no' => 'QT-2026-0001',
+            'case_id' => $case->id,
+            'order_ref' => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_PENDING,
+            'total' => 400.00,
         ]);
 
         app(QuoteService::class)->markIssued($quote);
@@ -205,9 +208,9 @@ class CivilianPipelineTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->operationsReadyCase($patient);
-        $quote   = Quote::where('case_id', $case->id)->firstOrFail();
-        $ops     = $this->userWithRole('operations');
+        $case = $this->operationsReadyCase($patient);
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $ops = $this->userWithRole('operations');
 
         $this->actingAs($ops)
             ->postJson("/operations/pending/{$case->id}/release-quote")
@@ -231,9 +234,9 @@ class CivilianPipelineTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->operationsReadyCase($patient);
+        $case = $this->operationsReadyCase($patient);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
 
         app(ApprovalService::class)->confirm($case, 'WRONG-QR-CODE');
     }
@@ -245,8 +248,8 @@ class CivilianPipelineTest extends TestCase
         $this->seedStockWithPriceBatch();
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0001']);
 
         $this->actingAs($user);
@@ -257,7 +260,7 @@ class CivilianPipelineTest extends TestCase
 
         $this->assertEquals(Bom::STAGE_RAW, $bom->stage);
 
-        $item = \App\Models\StockItem::where('code', 'RM-001')->first();
+        $item = StockItem::where('code', 'RM-001')->first();
         $this->assertEquals(2, $item->reserved, 'Creating a BOM must reserve the items');
     }
 
@@ -266,8 +269,8 @@ class CivilianPipelineTest extends TestCase
         $this->seedStockWithPriceBatch();
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0001', 'quote_total' => 400.00]);
 
         $this->actingAs($user);
@@ -282,7 +285,7 @@ class CivilianPipelineTest extends TestCase
         $bom->refresh();
         $this->assertEquals(Bom::STAGE_WIP, $bom->stage);
 
-        $stock = \App\Models\StockItem::where('code', 'RM-001')->first();
+        $stock = StockItem::where('code', 'RM-001')->first();
         $this->assertEquals(18, $stock->qty, 'Stock must be reduced by dispensed qty=2');
         $this->assertEquals(0, $stock->reserved, 'Reserved must be cleared after dispense');
 
@@ -299,8 +302,8 @@ class CivilianPipelineTest extends TestCase
         $this->seedStockWithPriceBatch();
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0001', 'quote_total' => 400.00]);
 
         $this->actingAs($user);
@@ -326,8 +329,8 @@ class CivilianPipelineTest extends TestCase
         $this->seedStockWithPriceBatch();
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0001']);
         $this->actingAs($user);
 
@@ -344,8 +347,8 @@ class CivilianPipelineTest extends TestCase
     public function test_delivery_qr_scan_closes_case_and_posts_debt(): void
     {
         $this->seedStockWithPriceBatch();
-        $company  = $this->civilianCompany();
-        $patient  = $this->civilianPatient($company);
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
         $techUser = $this->userWithRole('technical');
         $this->actingAs($techUser);
 
@@ -388,20 +391,20 @@ class CivilianPipelineTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
 
         Bom::create([
-            'bom_no'       => 'BOM-0001',
-            'case_id'      => $case->id,
-            'order_ref'    => $case->order_ref,
+            'bom_no' => 'BOM-0001',
+            'case_id' => $case->id,
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_WIP,
+            'stage' => Bom::STAGE_WIP,
         ]);
 
         $user = $this->userWithRole('reception');
         $this->actingAs($user);
 
-        $this->expectException(\App\Exceptions\DeliveryNotReadyException::class);
+        $this->expectException(DeliveryNotReadyException::class);
 
         app(DeliveryService::class)->close($case, $patient->patient_qr);
     }

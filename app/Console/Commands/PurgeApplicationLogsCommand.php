@@ -26,14 +26,14 @@ class PurgeApplicationLogsCommand extends Command
 
         $cleared = 0;
 
-        foreach (File::glob($logsDir . DIRECTORY_SEPARATOR . '*.log') ?: [] as $path) {
+        foreach (File::glob($logsDir.DIRECTORY_SEPARATOR.'*.log') ?: [] as $path) {
             if (! is_file($path)) {
                 continue;
             }
 
             if (@file_put_contents($path, '') !== false) {
                 $cleared++;
-                $this->line('Cleared: ' . basename($path));
+                $this->line('Cleared: '.basename($path));
             }
         }
 

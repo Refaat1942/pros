@@ -37,10 +37,10 @@ class PermissionMatrixController extends Controller
             });
 
         AuditService::log(
-            action:      'update',
+            action: 'update',
             description: 'تحديث مصفوفة الصلاحيات التفصيلية',
-            tag:         'admin',
-            after:       ['roles' => array_keys($matrix)],
+            tag: 'admin',
+            after: ['roles' => array_keys($matrix)],
         );
 
         return back()->with('status', 'تم حفظ مصفوفة الصلاحيات بنجاح.');

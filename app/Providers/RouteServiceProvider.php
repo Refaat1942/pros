@@ -48,7 +48,7 @@ class RouteServiceProvider extends ServiceProvider
 
         // تسجيل الدخول: يحدّ من محاولات تخمين كلمة المرور (لكل اسم مستخدم + IP).
         RateLimiter::for('login', function (Request $request) {
-            $key = mb_strtolower((string) $request->input('username')) . '|' . $request->ip();
+            $key = mb_strtolower((string) $request->input('username')).'|'.$request->ip();
 
             return Limit::perMinute(5)->by($key);
         });

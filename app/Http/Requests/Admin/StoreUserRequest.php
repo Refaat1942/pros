@@ -21,7 +21,7 @@ class StoreUserRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'name'     => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'username' => [
                 'required',
                 'string',
@@ -31,20 +31,20 @@ class StoreUserRequest extends BaseRequest
                 'unique:users,username',
             ],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
-            'role_id'  => [
+            'role_id' => [
                 'required',
                 'integer',
                 Rule::exists('roles', 'id')->where(fn ($q) => $q->where('slug', '!=', Role::SLUG_ADMIN)),
             ],
-            'status'   => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
+            'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'username.unique'    => 'اسم المستخدم مستخدم مسبقاً.',
-            'username.alpha_dash'=> 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
+            'username.unique' => 'اسم المستخدم مستخدم مسبقاً.',
+            'username.alpha_dash' => 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
         ];
     }

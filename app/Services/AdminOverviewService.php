@@ -6,7 +6,6 @@ use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
 use App\Support\ClinicTime;
-use App\Services\Dashboard\DashboardQueueService;
 use Carbon\Carbon;
 
 /**
@@ -19,8 +18,7 @@ class AdminOverviewService
         private readonly AdminReportsService $reports,
         private readonly AdminCycleDashboardService $cycle,
         private readonly BiReportService $biReports,
-    ) {
-    }
+    ) {}
 
     /** @return array{from: Carbon, to: Carbon} */
     public function parseDateRange(?string $from, ?string $to): array
@@ -29,7 +27,7 @@ class AdminOverviewService
 
         return [
             'from' => $range['from'] ?? ClinicTime::now()->copy()->startOfMonth()->startOfDay(),
-            'to'   => $range['to'] ?? ClinicTime::now()->copy()->endOfDay(),
+            'to' => $range['to'] ?? ClinicTime::now()->copy()->endOfDay(),
         ];
     }
 
@@ -39,18 +37,18 @@ class AdminOverviewService
         $adminReports = $this->reports->build($from, $to);
 
         return [
-            'date_from'          => $from->toDateString(),
-            'date_to'            => $to->toDateString(),
-            'period_label'       => $this->periodLabel($from, $to),
-            'admin_reports'      => $adminReports,
-            'cycle_cards'        => $this->cycle->build($from, $to),
+            'date_from' => $from->toDateString(),
+            'date_to' => $to->toDateString(),
+            'period_label' => $this->periodLabel($from, $to),
+            'admin_reports' => $adminReports,
+            'cycle_cards' => $this->cycle->build($from, $to),
             'cycle_total_active' => $this->cycle->totalActive($from, $to),
-            'case_strip'         => $this->caseStripCounts($from, $to),
-            'board1'             => $this->biReports->boardPatients(),
-            'board2'             => $this->biReports->boardInventory(),
-            'board3'             => $this->biReports->boardOperations(),
-            'board4'             => $this->biReports->boardEntitiesAndCosts(),
-            'board5'             => $this->biReports->boardPurchasing(),
+            'case_strip' => $this->caseStripCounts($from, $to),
+            'board1' => $this->biReports->boardPatients(),
+            'board2' => $this->biReports->boardInventory(),
+            'board3' => $this->biReports->boardOperations(),
+            'board4' => $this->biReports->boardEntitiesAndCosts(),
+            'board5' => $this->biReports->boardPurchasing(),
         ];
     }
 
@@ -84,15 +82,15 @@ class AdminOverviewService
             ->count();
 
         return [
-            'waiting_return'   => $waiting,
+            'waiting_return' => $waiting,
             'awaiting_cashier' => $awaitingCashier,
-            'in_progress'      => $inProgress,
-            'delivered'        => $delivered,
+            'in_progress' => $inProgress,
+            'delivered' => $delivered,
         ];
     }
 
     public function periodLabel(Carbon $from, Carbon $to): string
     {
-        return 'من ' . $from->format('Y-m-d') . ' إلى ' . $to->format('Y-m-d');
+        return 'من '.$from->format('Y-m-d').' إلى '.$to->format('Y-m-d');
     }
 }

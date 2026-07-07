@@ -18,8 +18,7 @@ class PatientService
         private readonly PatientQrService $patientQrService,
         private readonly AppointmentService $appointmentService,
         private readonly TrackingUidService $trackingUidService,
-    ) {
-    }
+    ) {}
 
     /**
      * تسجيل مريض جديد — يُولِّد patient_code و patient_qr تلقائياً.
@@ -27,9 +26,9 @@ class PatientService
     public function register(array $data): Patient
     {
         return DB::transaction(function () use ($data) {
-            $type       = $data['patient_type'];
+            $type = $data['patient_type'];
             $patientCode = $this->nextPatientCode($type);
-            $patientQr   = $this->patientQrService->generate($patientCode);
+            $patientQr = $this->patientQrService->generate($patientCode);
 
             $companyName = null;
             $contractCompanyId = null;
@@ -52,27 +51,27 @@ class PatientService
             }
 
             $patient = Patient::create([
-                'patient_code'        => $patientCode,
-                'patient_qr'          => $patientQr,
-                'tracking_uid'        => $this->trackingUidService->generate(),
-                'name'                => $data['name'],
-                'phone'               => $data['phone'] ?? null,
-                'national_id'         => $data['national_id'] ?? null,
-                'patient_type'        => $type,
-                'military_rank_id'    => $data['military_rank_id'] ?? null,
-                'rank'                => $rankName,
-                'sovereign_entity'    => $sovereignEntity,
+                'patient_code' => $patientCode,
+                'patient_qr' => $patientQr,
+                'tracking_uid' => $this->trackingUidService->generate(),
+                'name' => $data['name'],
+                'phone' => $data['phone'] ?? null,
+                'national_id' => $data['national_id'] ?? null,
+                'patient_type' => $type,
+                'military_rank_id' => $data['military_rank_id'] ?? null,
+                'rank' => $rankName,
+                'sovereign_entity' => $sovereignEntity,
                 'contract_company_id' => $contractCompanyId,
-                'company_name'        => $companyName,
-                'registered_at'       => ClinicTime::todayDateString(),
-                'status'              => Patient::STATUS_ACTIVE,
+                'company_name' => $companyName,
+                'registered_at' => ClinicTime::todayDateString(),
+                'status' => Patient::STATUS_ACTIVE,
             ]);
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "تسجيل مريض جديد {$patient->patient_code} — {$patient->name}",
-                tag:         'patients',
-                after:       $this->auditSnapshot($patient),
+                tag: 'patients',
+                after: $this->auditSnapshot($patient),
             );
 
             $clinicDay = ClinicTime::clinicDayDateString();
@@ -82,13 +81,13 @@ class PatientService
                 ->max('queue_number');
 
             $this->appointmentService->book([
-                'patient_id'       => $patient->id,
+                'patient_id' => $patient->id,
                 // تاريخ العرض بالتقويم الفعلي (توقيت المركز) ليظهر المريض في طابور اليوم؛
                 // بينما clinic_day يتبع يوم العمل (يبدأ 01:00) لترقيم الدور فقط.
                 'appointment_date' => ClinicTime::todayDateString(),
-                'visit_type_id'    => $data['visit_type_id'],
-                'clinic_day'       => $clinicDay,
-                'queue_number'     => $nextQueue + 1,
+                'visit_type_id' => $data['visit_type_id'],
+                'clinic_day' => $clinicDay,
+                'queue_number' => $nextQueue + 1,
             ]);
 
             return $patient->load('contractCompany');
@@ -115,11 +114,11 @@ class PatientService
             $patient->update($updates);
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "تعديل ملف مريض {$patient->patient_code}",
-                tag:         'patients',
-                before:      $before,
-                after:       $this->auditSnapshot($patient->fresh()),
+                tag: 'patients',
+                before: $before,
+                after: $this->auditSnapshot($patient->fresh()),
             );
 
             return $patient->fresh()->load('contractCompany');

@@ -2,8 +2,8 @@
 
 namespace App\Services\Notifications;
 
-use App\Enums\WorkflowEvent;
 use App\Enums\SpecEditRequestSource;
+use App\Enums\WorkflowEvent;
 use App\Models\AppNotification;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
@@ -19,9 +19,7 @@ use App\Models\UserDevice;
  */
 class NotificationService
 {
-    public function __construct(private readonly FirebaseService $firebase)
-    {
-    }
+    public function __construct(private readonly FirebaseService $firebase) {}
 
     /**
      * خريطة الحدث → [الدور المستهدف, العنوان, قالب الرسالة].
@@ -31,94 +29,94 @@ class NotificationService
      */
     private const MAP = [
         WorkflowEvent::ExamApproved->value => [
-            'role'  => Role::SLUG_SPEC,
+            'role' => Role::SLUG_SPEC,
             'title' => '🔧 حالة جديدة للتوصيف الفني',
-            'body'  => 'المريض {patient} (حالة {case}) جاهز للتوصيف الفني بعد اعتماد الكشف.',
+            'body' => 'المريض {patient} (حالة {case}) جاهز للتوصيف الفني بعد اعتماد الكشف.',
         ],
         WorkflowEvent::ExamSkipped->value => [
-            'role'  => Role::SLUG_SPEC,
+            'role' => Role::SLUG_SPEC,
             'title' => '🔧 حالة جديدة للتوصيف الفني',
-            'body'  => 'المريض {patient} (حالة {case}) محوّل مباشرةً للتوصيف (تم تخطّي الكشف).',
+            'body' => 'المريض {patient} (حالة {case}) محوّل مباشرةً للتوصيف (تم تخطّي الكشف).',
         ],
         WorkflowEvent::SpecSaved->value => [
-            'role'  => Role::SLUG_ADJUSTMENTS,
+            'role' => Role::SLUG_ADJUSTMENTS,
             'title' => '📏 حالة بانتظار المعدلات',
-            'body'  => 'المريض {patient} (حالة {case}) وصل لمكتب المعدلات لمراجعة وإضافة البنود.',
+            'body' => 'المريض {patient} (حالة {case}) وصل لمكتب المعدلات لمراجعة وإضافة البنود.',
         ],
         WorkflowEvent::AdjustmentsCompleted->value => [
-            'role'  => Role::SLUG_COSTING,
+            'role' => Role::SLUG_COSTING,
             'title' => '🧮 حالة بانتظار التكاليف',
-            'body'  => 'المريض {patient} (حالة {case}) جاهز لمراجعة التكلفة وتأكيد عرض السعر.',
+            'body' => 'المريض {patient} (حالة {case}) جاهز لمراجعة التكلفة وتأكيد عرض السعر.',
         ],
         WorkflowEvent::QuoteIssued->value => [
-            'role'  => Role::SLUG_OPERATIONS,
+            'role' => Role::SLUG_OPERATIONS,
             'title' => '🎯 حالة بانتظار مكتب التشغيل',
-            'body'  => 'المريض {patient} (حالة {case}) بانتظار اعتماد مكتب التشغيل وإصدار أمر الصرف.',
+            'body' => 'المريض {patient} (حالة {case}) بانتظار اعتماد مكتب التشغيل وإصدار أمر الصرف.',
         ],
         WorkflowEvent::SentToCashier->value => [
-            'role'  => Role::SLUG_CASHIER,
+            'role' => Role::SLUG_CASHIER,
             'title' => '💵 مريض بانتظار الدفع في الخزنة',
-            'body'  => 'المريض {patient} (حالة {case}) صدر له عرض سعر نقدي — بانتظار تحصيل المبلغ في الخزنة.',
+            'body' => 'المريض {patient} (حالة {case}) صدر له عرض سعر نقدي — بانتظار تحصيل المبلغ في الخزنة.',
         ],
         WorkflowEvent::CashierPaid->value => [
-            'role'  => Role::SLUG_TECHNICAL,
+            'role' => Role::SLUG_TECHNICAL,
             'title' => '📦 أمر صرف جديد للمخزن (دفع نقدي)',
-            'body'  => 'المريض {patient} (حالة {case}) سدد المبلغ في الخزنة — جاهز للصرف بالباركود من المخزن.',
+            'body' => 'المريض {patient} (حالة {case}) سدد المبلغ في الخزنة — جاهز للصرف بالباركود من المخزن.',
         ],
         WorkflowEvent::OperationsApproved->value => [
-            'role'  => Role::SLUG_TECHNICAL,
+            'role' => Role::SLUG_TECHNICAL,
             'title' => '📦 أمر صرف جديد للمخزن',
-            'body'  => 'المريض {patient} (حالة {case}) معتمد — جاهز للصرف بالباركود من المخزن.',
+            'body' => 'المريض {patient} (حالة {case}) معتمد — جاهز للصرف بالباركود من المخزن.',
         ],
         WorkflowEvent::ReturnedToAdjustments->value => [
-            'role'  => Role::SLUG_ADJUSTMENTS,
+            'role' => Role::SLUG_ADJUSTMENTS,
             'title' => '↩️ حالة أُعيدت للمعدلات',
-            'body'  => 'المريض {patient} (حالة {case}) أُعيد من مكتب التشغيل لمراجعة المعدلات.',
+            'body' => 'المريض {patient} (حالة {case}) أُعيد من مكتب التشغيل لمراجعة المعدلات.',
         ],
         WorkflowEvent::ReturnedToTechnical->value => [
-            'role'  => Role::SLUG_SPEC,
+            'role' => Role::SLUG_SPEC,
             'title' => '↩️ حالة أُعيدت للتوصيف',
-            'body'  => 'المريض {patient} (حالة {case}) أُعيد لإعادة التوصيف الفني.',
+            'body' => 'المريض {patient} (حالة {case}) أُعيد لإعادة التوصيف الفني.',
         ],
         WorkflowEvent::BomDispensed->value => [
-            'role'  => Role::SLUG_WORKSHOP,
+            'role' => Role::SLUG_WORKSHOP,
             'title' => '🏭 أمر جديد في ورشة التصنيع',
-            'body'  => 'تم صرف مواد المريض {patient} (حالة {case}) — الطلب جاهز للتصنيع في الورشة.',
+            'body' => 'تم صرف مواد المريض {patient} (حالة {case}) — الطلب جاهز للتصنيع في الورشة.',
         ],
         WorkflowEvent::BomFinished->value => [
-            'role'  => Role::SLUG_TECHNICAL,
+            'role' => Role::SLUG_TECHNICAL,
             'title' => '✅ طرف جاهز للتسليم — المخزن',
-            'body'  => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه في الورشة — جاهز للتسليم وإغلاق الطلب من المخزن.',
+            'body' => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه في الورشة — جاهز للتسليم وإغلاق الطلب من المخزن.',
         ],
         WorkflowEvent::Delivered->value => [
-            'role'  => Role::SLUG_ADMIN,
+            'role' => Role::SLUG_ADMIN,
             'title' => '📁 تم تسليم وإغلاق حالة',
-            'body'  => 'تم تسليم الطرف للمريض {patient} (حالة {case}) وإغلاق الحالة.',
+            'body' => 'تم تسليم الطرف للمريض {patient} (حالة {case}) وإغلاق الحالة.',
         ],
     ];
 
     public function notifyEditRequestSubmitted(SpecEditRequest $request): AppNotification
     {
         $request->loadMissing('caseRecord.patient:id,name', 'requestedBy:id,name');
-        $case    = $request->caseRecord;
+        $case = $request->caseRecord;
         $patient = $case?->patient?->name ?? 'غير معروف';
-        $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
-        $by      = $request->requestedBy?->name ?? '—';
+        $caseNo = $case?->case_no ?? ('#'.$request->case_id);
+        $by = $request->requestedBy?->name ?? '—';
 
         $isAdjustments = $request->source === SpecEditRequestSource::Adjustments;
 
         return $this->push(
             roleSlug: Role::SLUG_ADMIN,
-            title:    $isAdjustments ? '✏️ طلب تعديل بنود المعدلات' : '✏️ طلب تعديل التوصيف',
-            body:     $isAdjustments
+            title: $isAdjustments ? '✏️ طلب تعديل بنود المعدلات' : '✏️ طلب تعديل التوصيف',
+            body: $isAdjustments
                 ? "طلب {$by} تعديل بنود المعدلات للمريض {$patient} (حالة {$caseNo}) — بانتظار موافقة الإدارة."
                 : "طلب {$by} تعديل توصيف المريض {$patient} (حالة {$caseNo}) — بانتظار موافقة الإدارة.",
-            case:     $case,
-            event:    'spec_edit_requested',
-            data:     [
+            case: $case,
+            event: 'spec_edit_requested',
+            data: [
                 'spec_edit_request_id' => (string) $request->id,
-                'source'               => $request->source->value,
-                'url'                  => '/admin/spec-edit-requests',
+                'source' => $request->source->value,
+                'url' => '/admin/spec-edit-requests',
             ],
         );
     }
@@ -126,25 +124,25 @@ class NotificationService
     public function notifyEditRequestApproved(SpecEditRequest $request): AppNotification
     {
         $request->loadMissing('caseRecord.patient:id,name', 'requestedBy.role:id,slug');
-        $case    = $request->caseRecord;
+        $case = $request->caseRecord;
         $patient = $case?->patient?->name ?? 'غير معروف';
-        $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
+        $caseNo = $case?->case_no ?? ('#'.$request->case_id);
 
         $isAdjustments = $request->source === SpecEditRequestSource::Adjustments;
         $departmentRole = $isAdjustments ? Role::SLUG_ADJUSTMENTS : Role::SLUG_SPEC;
 
         return $this->pushEditRequestOutcome(
-            request:        $request,
+            request: $request,
             departmentRole: $departmentRole,
-            title:          $isAdjustments ? '✅ تم اعتماد تعديل بنود المعدلات' : '✅ تم اعتماد تعديل التوصيف',
-            body:           $isAdjustments
+            title: $isAdjustments ? '✅ تم اعتماد تعديل بنود المعدلات' : '✅ تم اعتماد تعديل التوصيف',
+            body: $isAdjustments
                 ? "وافقت الإدارة على تعديل بنود المعدلات للمريض {$patient} (حالة {$caseNo}) — التعديل مُطبَّق."
                 : "وافقت الإدارة على تعديل توصيف المريض {$patient} (حالة {$caseNo}) — التعديل مُطبَّق.",
-            event:          'spec_edit_approved',
-            data:           [
+            event: 'spec_edit_approved',
+            data: [
                 'spec_edit_request_id' => (string) $request->id,
-                'source'               => $request->source->value,
-                'url'                  => $isAdjustments ? '/adjustments/adjustments' : '/spec/spec',
+                'source' => $request->source->value,
+                'url' => $isAdjustments ? '/adjustments/adjustments' : '/spec/spec',
             ],
         );
     }
@@ -152,31 +150,31 @@ class NotificationService
     public function notifyEditRequestRejected(SpecEditRequest $request): AppNotification
     {
         $request->loadMissing('caseRecord.patient:id,name', 'requestedBy.role:id,slug');
-        $case    = $request->caseRecord;
+        $case = $request->caseRecord;
         $patient = $case?->patient?->name ?? 'غير معروف';
-        $caseNo  = $case?->case_no ?? ('#' . $request->case_id);
-        $reason  = $request->rejectionReasonLabel();
-        $notes   = trim((string) $request->rejection_notes);
+        $caseNo = $case?->case_no ?? ('#'.$request->case_id);
+        $reason = $request->rejectionReasonLabel();
+        $notes = trim((string) $request->rejection_notes);
         $reasonPart = '';
 
         if ($reason || $notes !== '') {
-            $reasonPart = ' السبب: ' . ($notes !== '' ? $notes : $reason);
+            $reasonPart = ' السبب: '.($notes !== '' ? $notes : $reason);
         }
 
         $isAdjustments = $request->source === SpecEditRequestSource::Adjustments;
         $departmentRole = $isAdjustments ? Role::SLUG_ADJUSTMENTS : Role::SLUG_SPEC;
 
         return $this->pushEditRequestOutcome(
-            request:        $request,
+            request: $request,
             departmentRole: $departmentRole,
-            title:          $isAdjustments ? '❌ رُفض طلب تعديل المعدلات' : '❌ رُفض طلب تعديل التوصيف',
-            body:           "رفضت الإدارة طلب تعديل {$patient} (حالة {$caseNo}).{$reasonPart}",
-            event:          'spec_edit_rejected',
-            data:           [
+            title: $isAdjustments ? '❌ رُفض طلب تعديل المعدلات' : '❌ رُفض طلب تعديل التوصيف',
+            body: "رفضت الإدارة طلب تعديل {$patient} (حالة {$caseNo}).{$reasonPart}",
+            event: 'spec_edit_rejected',
+            data: [
                 'spec_edit_request_id' => (string) $request->id,
-                'source'               => $request->source->value,
-                'rejection_reason'     => $reason,
-                'url'                  => $isAdjustments ? '/adjustments/adjustments' : '/spec/spec',
+                'source' => $request->source->value,
+                'rejection_reason' => $reason,
+                'url' => $isAdjustments ? '/adjustments/adjustments' : '/spec/spec',
             ],
         );
     }
@@ -209,16 +207,16 @@ class NotificationService
 
         $case->loadMissing('patient:id,name,patient_code');
         $patient = $case->patient?->name ?? 'غير معروف';
-        $caseNo  = $case->case_no ?? ('#' . $case->id);
+        $caseNo = $case->case_no ?? ('#'.$case->id);
 
         $body = strtr($rule['body'], ['{patient}' => $patient, '{case}' => $caseNo]);
 
         return $this->push(
             roleSlug: $rule['role'],
-            title:    $rule['title'],
-            body:     $body,
-            case:     $case,
-            event:    $event,
+            title: $rule['title'],
+            body: $body,
+            case: $case,
+            event: $event,
         );
     }
 
@@ -229,11 +227,11 @@ class NotificationService
     {
         $notification = AppNotification::create([
             'role_slug' => $roleSlug,
-            'case_id'   => $case?->id,
-            'event'     => $event,
-            'title'     => $title,
-            'body'      => $body,
-            'data'      => $data ?: null,
+            'case_id' => $case?->id,
+            'event' => $event,
+            'title' => $title,
+            'body' => $body,
+            'data' => $data ?: null,
         ]);
 
         $tokens = $this->tokensForRole($roleSlug);
@@ -241,9 +239,9 @@ class NotificationService
         if ($tokens !== []) {
             $this->firebase->sendToTokens($tokens, $title, $body, array_merge([
                 'notification_id' => (string) $notification->id,
-                'role'            => $roleSlug,
-                'case_id'         => (string) ($case?->id ?? ''),
-                'case_no'         => (string) ($case?->case_no ?? ''),
+                'role' => $roleSlug,
+                'case_id' => (string) ($case?->id ?? ''),
+                'case_no' => (string) ($case?->case_no ?? ''),
             ], array_map('strval', $data)));
         }
 
@@ -265,22 +263,22 @@ class NotificationService
 
         $notification = $this->push(
             roleSlug: $departmentRole,
-            title:    $title,
-            body:     $body,
-            case:     $case,
-            event:    $event,
-            data:     $data,
+            title: $title,
+            body: $body,
+            case: $case,
+            event: $event,
+            data: $data,
         );
 
         $requesterRole = $request->requestedBy?->role?->slug;
         if ($requesterRole && $requesterRole !== $departmentRole) {
             $this->push(
                 roleSlug: $requesterRole,
-                title:    $title,
-                body:     $body,
-                case:     $case,
-                event:    $event,
-                data:     $data,
+                title: $title,
+                body: $body,
+                case: $case,
+                event: $event,
+                data: $data,
             );
         }
 
@@ -294,13 +292,13 @@ class NotificationService
     {
         return $this->push(
             roleSlug: Role::SLUG_RECEPTION,
-            title:    '🟢 العيادة متاحة لاستقبال مرضى جدد',
-            body:     'انتهت قائمة انتظار الطبيب — يمكن تحويل مرضى جدد للعيادة.',
-            case:     null,
-            event:    'doctor_clinic_queue_empty',
-            data:     [
+            title: '🟢 العيادة متاحة لاستقبال مرضى جدد',
+            body: 'انتهت قائمة انتظار الطبيب — يمكن تحويل مرضى جدد للعيادة.',
+            case: null,
+            event: 'doctor_clinic_queue_empty',
+            data: [
                 'queue_date' => $queueDate,
-                'url'        => '/reception/appointments',
+                'url' => '/reception/appointments',
             ],
         );
     }
@@ -320,15 +318,15 @@ class NotificationService
 
         return $this->push(
             roleSlug: Role::SLUG_DOCTOR,
-            title:    '🩺 مريض جديد في قائمة الانتظار',
-            body:     "تم تحويل المريض {$patientName} ({$entity} — {$pathway}) من الاستقبال — جاهز للكشف.",
-            case:     null,
-            event:    'patient_transferred_to_clinic',
-            data:     [
+            title: '🩺 مريض جديد في قائمة الانتظار',
+            body: "تم تحويل المريض {$patientName} ({$entity} — {$pathway}) من الاستقبال — جاهز للكشف.",
+            case: null,
+            event: 'patient_transferred_to_clinic',
+            data: [
                 'appointment_id' => (string) $appointment->id,
-                'patient_id'     => (string) ($appointment->patient_id ?? ''),
-                'patient_name'   => $patientName,
-                'url'            => '/doctor/queue',
+                'patient_id' => (string) ($appointment->patient_id ?? ''),
+                'patient_name' => $patientName,
+                'url' => '/doctor/queue',
             ],
         );
     }

@@ -17,7 +17,9 @@ class Quote extends Model
     public const SERIAL_LABEL = 'سريال عرض السعر';
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_ISSUED = 'issued';
 
     protected $fillable = [

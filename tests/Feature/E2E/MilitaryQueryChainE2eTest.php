@@ -5,9 +5,7 @@ namespace Tests\Feature\E2E;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\MilitaryRank;
-use App\Models\Patient;
 use App\Models\PricingRequest;
-use App\Models\Quote;
 use App\Services\Dashboard\DashboardQueueService;
 use App\Services\StockPriceService;
 use Tests\Support\DashboardQueueAssertions;
@@ -19,13 +17,13 @@ use Tests\TestCase;
  */
 class MilitaryQueryChainE2eTest extends TestCase
 {
-    use ProstheticTestHelper;
     use DashboardQueueAssertions;
+    use ProstheticTestHelper;
 
     private function seedStock(): void
     {
         $item = $this->stockItem('RM-001', qty: 30, wac: 80.00);
-        $sup  = $this->makeSupplier();
+        $sup = $this->makeSupplier();
         app(StockPriceService::class)->addBatch($item, 10, 150.00, $sup, 'INV-MIL-1', now());
     }
 
@@ -33,14 +31,14 @@ class MilitaryQueryChainE2eTest extends TestCase
     {
         $this->seedStock();
         $company = $this->militaryCompany();
-        $rank    = MilitaryRank::create(['name' => 'عقيد', 'rank_code' => 'COL', 'sort_order' => 1]);
-        $recep   = $this->userWithRole('reception');
-        $doctor  = $this->userWithRole('doctor');
-        $spec    = $this->userWithRole('spec');
-        $admin   = $this->userWithRole('admin');
-        $tech    = $this->userWithRole('technical');
-        $ops     = $this->userWithRole('operations');
-        $queues  = app(DashboardQueueService::class);
+        $rank = MilitaryRank::create(['name' => 'عقيد', 'rank_code' => 'COL', 'sort_order' => 1]);
+        $recep = $this->userWithRole('reception');
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
+        $admin = $this->userWithRole('admin');
+        $tech = $this->userWithRole('technical');
+        $ops = $this->userWithRole('operations');
+        $queues = app(DashboardQueueService::class);
 
         $patient = $this->registerMilitaryPatientHttp($recep, $company, $rank, 'محمود E2E عسكري');
         $this->assertNotContains($patient->id, $queues->doctorWaitingPatientIds());
@@ -53,11 +51,11 @@ class MilitaryQueryChainE2eTest extends TestCase
             ->firstWhere('patient_id', $patient->id)['id'];
 
         $this->postJson('/doctor/diagnosis', [
-            'patient_id'     => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_id' => $appointmentId,
-            'diagnosis'      => 'بتر — عسكري E2E',
-            'items'          => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1]],
-            'lock'           => true,
+            'diagnosis' => 'بتر — عسكري E2E',
+            'items' => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1]],
+            'lock' => true,
         ])->assertCreated();
 
         $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
@@ -70,11 +68,11 @@ class MilitaryQueryChainE2eTest extends TestCase
 
         $specRes = $this->postJson('/spec/spec', [
             'case_id' => $case->id,
-            'items'   => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1]],
+            'items' => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1]],
         ])->assertCreated();
 
         // المسار العسكري: الإرسال → المعدلات → التكاليف → تأكيد → اعتماد تلقائي → مخزن.
-        $this->postJson('/spec/spec/' . $specRes->json('id') . '/submit')->assertOk();
+        $this->postJson('/spec/spec/'.$specRes->json('id').'/submit')->assertOk();
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_ADJUSTMENTS, $case->stage_key);
@@ -105,10 +103,10 @@ class MilitaryQueryChainE2eTest extends TestCase
 
         $this->actingAs($recep);
         $this->postJson('/reception/ocr/process', [
-            'quote_no'        => 'QT-FAKE',
-            'patient_name'    => $patient->name,
+            'quote_no' => 'QT-FAKE',
+            'patient_name' => $patient->name,
             'approved_amount' => 100,
-            'company_name'    => $company->name,
+            'company_name' => $company->name,
         ])->assertStatus(422);
 
         $this->actingAs($tech);

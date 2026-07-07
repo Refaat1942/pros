@@ -26,8 +26,7 @@ class SpecEditRequestService
         private readonly BomService $bomService,
         private readonly PricingService $pricingService,
         private readonly NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     public function canRequestSpecEdit(TechOrderSpec $spec): bool
     {
@@ -91,18 +90,18 @@ class SpecEditRequestService
         return DB::transaction(function () use ($spec, $requester, $items, $techNotes) {
             $originalItems = $spec->items->map(fn (TechOrderSpecItem $i) => [
                 'stock_item_code' => $i->stock_item_code,
-                'name'            => $i->name,
-                'qty'             => $i->qty,
+                'name' => $i->name,
+                'qty' => $i->qty,
             ])->values()->all();
 
             $request = SpecEditRequest::create([
-                'source'              => SpecEditRequestSource::Spec,
-                'tech_order_spec_id'  => $spec->id,
-                'case_id'             => $spec->case_id,
-                'requested_by_user_id'=> $requester->id,
-                'status'              => SpecEditRequestStatus::Pending,
-                'original_items'      => $originalItems,
-                'proposed_items'      => $items,
+                'source' => SpecEditRequestSource::Spec,
+                'tech_order_spec_id' => $spec->id,
+                'case_id' => $spec->case_id,
+                'requested_by_user_id' => $requester->id,
+                'status' => SpecEditRequestStatus::Pending,
+                'original_items' => $originalItems,
+                'proposed_items' => $items,
                 'original_tech_notes' => $spec->tech_notes,
                 'proposed_tech_notes' => $techNotes,
             ]);
@@ -110,12 +109,12 @@ class SpecEditRequestService
             $case = $spec->caseRecord;
 
             AuditService::log(
-                action:      'request',
+                action: 'request',
                 description: "طلب تعديل توصيف — {$case?->case_no}",
-                tag:         'spec',
-                after:       [
+                tag: 'spec',
+                after: [
                     'spec_edit_request_id' => $request->id,
-                    'source'               => SpecEditRequestSource::Spec->value,
+                    'source' => SpecEditRequestSource::Spec->value,
                 ],
             );
 
@@ -153,24 +152,24 @@ class SpecEditRequestService
             $originalItems = $this->adjustmentItemsSnapshot($case);
 
             $request = SpecEditRequest::create([
-                'source'              => SpecEditRequestSource::Adjustments,
-                'tech_order_spec_id'  => $spec->id,
-                'case_id'             => $case->id,
-                'requested_by_user_id'=> $requester->id,
-                'status'              => SpecEditRequestStatus::Pending,
-                'original_items'      => $originalItems,
-                'proposed_items'      => $this->normalizeItems($items),
+                'source' => SpecEditRequestSource::Adjustments,
+                'tech_order_spec_id' => $spec->id,
+                'case_id' => $case->id,
+                'requested_by_user_id' => $requester->id,
+                'status' => SpecEditRequestStatus::Pending,
+                'original_items' => $originalItems,
+                'proposed_items' => $this->normalizeItems($items),
                 'original_tech_notes' => null,
                 'proposed_tech_notes' => null,
             ]);
 
             AuditService::log(
-                action:      'request',
+                action: 'request',
                 description: "طلب تعديل بنود المعدلات — {$case->case_no}",
-                tag:         'spec',
-                after:       [
+                tag: 'spec',
+                after: [
                     'spec_edit_request_id' => $request->id,
-                    'source'               => SpecEditRequestSource::Adjustments->value,
+                    'source' => SpecEditRequestSource::Adjustments->value,
                 ],
             );
 
@@ -190,7 +189,7 @@ class SpecEditRequestService
 
         return match ($request->source) {
             SpecEditRequestSource::Adjustments => $this->approveAdjustmentEdit($request, $reviewer),
-            default                            => $this->approveSpecEdit($request, $reviewer),
+            default => $this->approveSpecEdit($request, $reviewer),
         };
     }
 
@@ -212,23 +211,23 @@ class SpecEditRequestService
 
         return DB::transaction(function () use ($request, $reviewer, $reasonKey, $notes) {
             $request->update([
-                'status'               => SpecEditRequestStatus::Rejected,
+                'status' => SpecEditRequestStatus::Rejected,
                 'rejection_reason_key' => $reasonKey ?: null,
-                'rejection_notes'      => $notes,
-                'reviewed_by_user_id'  => $reviewer->id,
-                'reviewed_at'          => now(),
+                'rejection_notes' => $notes,
+                'reviewed_by_user_id' => $reviewer->id,
+                'reviewed_at' => now(),
             ]);
 
             $case = $request->caseRecord;
 
             AuditService::log(
-                action:      'reject',
+                action: 'reject',
                 description: "رفض طلب تعديل — {$case?->case_no}",
-                tag:         'spec',
-                after:       [
+                tag: 'spec',
+                after: [
                     'spec_edit_request_id' => $request->id,
-                    'source'               => $request->source->value,
-                    'reason_key'           => $reasonKey,
+                    'source' => $request->source->value,
+                    'reason_key' => $reasonKey,
                 ],
             );
 
@@ -282,32 +281,32 @@ class SpecEditRequestService
         $modifiedItems = SpecEditRequestItemDiff::modifiedItems($originalItems, $proposedItems);
 
         return [
-            'id'                    => $request->id,
-            'source'                => $request->source->value,
-            'source_label'          => $request->source->label(),
-            'status'                => $request->status->value,
-            'status_label'          => $request->status->label(),
-            'status_badge_class'    => $request->status->badgeClass(),
-            'case_id'               => $request->case_id,
-            'case_no'               => $request->caseRecord?->case_no,
-            'order_ref'             => $request->techOrderSpec?->order_ref ?? $request->caseRecord?->order_ref,
-            'patient_name'          => $request->techOrderSpec?->patient_name,
-            'stage_key'             => $request->caseRecord?->stage_key,
-            'requested_by'          => $request->requestedBy?->name,
-            'requested_at'          => $request->created_at?->toIso8601String(),
-            'requested_at_label'    => ClinicTime::format($request->created_at),
-            'reviewed_by'           => $request->reviewedBy?->name,
-            'reviewed_at_label'     => ClinicTime::format($request->reviewed_at),
-            'rejection_reason_key'  => $request->rejection_reason_key,
-            'rejection_reason_label'=> $request->rejectionReasonLabel(),
-            'rejection_notes'       => $request->rejection_notes,
-            'original_items'        => $originalItems,
-            'proposed_items'        => $proposedItems,
-            'modified_items'        => $modifiedItems,
-            'modified_summary'      => SpecEditRequestItemDiff::summaryText($modifiedItems),
-            'original_tech_notes'   => $request->original_tech_notes,
-            'proposed_tech_notes'   => $request->proposed_tech_notes,
-            'tech_order_spec_id'    => $request->tech_order_spec_id,
+            'id' => $request->id,
+            'source' => $request->source->value,
+            'source_label' => $request->source->label(),
+            'status' => $request->status->value,
+            'status_label' => $request->status->label(),
+            'status_badge_class' => $request->status->badgeClass(),
+            'case_id' => $request->case_id,
+            'case_no' => $request->caseRecord?->case_no,
+            'order_ref' => $request->techOrderSpec?->order_ref ?? $request->caseRecord?->order_ref,
+            'patient_name' => $request->techOrderSpec?->patient_name,
+            'stage_key' => $request->caseRecord?->stage_key,
+            'requested_by' => $request->requestedBy?->name,
+            'requested_at' => $request->created_at?->toIso8601String(),
+            'requested_at_label' => ClinicTime::format($request->created_at),
+            'reviewed_by' => $request->reviewedBy?->name,
+            'reviewed_at_label' => ClinicTime::format($request->reviewed_at),
+            'rejection_reason_key' => $request->rejection_reason_key,
+            'rejection_reason_label' => $request->rejectionReasonLabel(),
+            'rejection_notes' => $request->rejection_notes,
+            'original_items' => $originalItems,
+            'proposed_items' => $proposedItems,
+            'modified_items' => $modifiedItems,
+            'modified_summary' => SpecEditRequestItemDiff::summaryText($modifiedItems),
+            'original_tech_notes' => $request->original_tech_notes,
+            'proposed_tech_notes' => $request->proposed_tech_notes,
+            'tech_order_spec_id' => $request->tech_order_spec_id,
         ];
     }
 
@@ -329,25 +328,25 @@ class SpecEditRequestService
             foreach ($items as $row) {
                 TechOrderSpecItem::create([
                     'tech_order_spec_id' => $spec->id,
-                    'stock_item_code'    => $row['stock_item_code'],
-                    'name'               => $row['name'],
-                    'qty'                => (int) $row['qty'],
+                    'stock_item_code' => $row['stock_item_code'],
+                    'name' => $row['name'],
+                    'qty' => (int) $row['qty'],
                 ]);
             }
 
             $this->bomService->replaceSpecSourceItems($case, $items);
 
             $request->update([
-                'status'              => SpecEditRequestStatus::Approved,
+                'status' => SpecEditRequestStatus::Approved,
                 'reviewed_by_user_id' => $reviewer->id,
-                'reviewed_at'         => now(),
+                'reviewed_at' => now(),
             ]);
 
             AuditService::log(
-                action:      'approve',
+                action: 'approve',
                 description: "اعتماد تعديل توصيف — {$case->case_no}",
-                tag:         'spec',
-                after:       ['spec_edit_request_id' => $request->id],
+                tag: 'spec',
+                after: ['spec_edit_request_id' => $request->id],
             );
 
             $this->notifications->notifyEditRequestApproved($request->fresh()->load('caseRecord.patient', 'requestedBy.role'));
@@ -378,16 +377,16 @@ class SpecEditRequestService
             }
 
             $request->update([
-                'status'              => SpecEditRequestStatus::Approved,
+                'status' => SpecEditRequestStatus::Approved,
                 'reviewed_by_user_id' => $reviewer->id,
-                'reviewed_at'         => now(),
+                'reviewed_at' => now(),
             ]);
 
             AuditService::log(
-                action:      'approve',
+                action: 'approve',
                 description: "اعتماد تعديل بنود المعدلات — {$case->case_no}",
-                tag:         'spec',
-                after:       ['spec_edit_request_id' => $request->id],
+                tag: 'spec',
+                after: ['spec_edit_request_id' => $request->id],
             );
 
             $this->notifications->notifyEditRequestApproved($request->fresh()->load('caseRecord.patient', 'requestedBy.role'));
@@ -407,8 +406,8 @@ class SpecEditRequestService
             ->where('source', BomItem::SOURCE_ADJUSTMENT)
             ->map(fn (BomItem $i) => [
                 'stock_item_code' => $i->stock_item_code,
-                'name'            => $i->name,
-                'qty'             => $i->qty,
+                'name' => $i->name,
+                'qty' => $i->qty,
             ])
             ->values()
             ->all();
@@ -426,8 +425,8 @@ class SpecEditRequestService
 
             return [
                 'stock_item_code' => $code,
-                'name'            => $item['name'] ?? $stock?->name ?? $code,
-                'qty'             => (int) ($item['qty'] ?? 0),
+                'name' => $item['name'] ?? $stock?->name ?? $code,
+                'qty' => (int) ($item['qty'] ?? 0),
             ];
         })->values()->all();
     }
@@ -443,7 +442,7 @@ class SpecEditRequestService
 
         foreach ($items as $item) {
             $code = $item['stock_item_code'] ?? '';
-            $qty  = (int) ($item['qty'] ?? 0);
+            $qty = (int) ($item['qty'] ?? 0);
 
             if (! StockItem::where('code', $code)->exists()) {
                 throw new InvalidSpecItemException($code);

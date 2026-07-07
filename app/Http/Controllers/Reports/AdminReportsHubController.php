@@ -16,9 +16,7 @@ class AdminReportsHubController extends Controller
 {
     use RendersAdminDashboard;
 
-    public function __construct(private readonly AdminReportsHubService $hub)
-    {
-    }
+    public function __construct(private readonly AdminReportsHubService $hub) {}
 
     public function index(): View
     {
@@ -37,11 +35,11 @@ class AdminReportsHubController extends Controller
         );
 
         return $this->adminPage('reports-section', [
-            'report_section'  => $section,
-            'section_meta'    => $this->hub->sectionMeta($section),
-            'report_data'     => $this->hub->build($section, $dates['from'], $dates['to']),
-            'date_from'       => $dates['from']?->toDateString() ?? '',
-            'date_to'         => $dates['to']?->toDateString() ?? '',
+            'report_section' => $section,
+            'section_meta' => $this->hub->sectionMeta($section),
+            'report_data' => $this->hub->build($section, $dates['from'], $dates['to']),
+            'date_from' => $dates['from']?->toDateString() ?? '',
+            'date_to' => $dates['to']?->toDateString() ?? '',
         ]);
     }
 
@@ -67,13 +65,13 @@ class AdminReportsHubController extends Controller
         );
 
         $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         $callback = function () use ($report) {
             $out = fopen('php://output', 'w');
-            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
             fputcsv($out, [$report['title'] ?? 'تقرير']);
             fputcsv($out, [$report['period_label'] ?? '']);
             fputcsv($out, []);
@@ -93,9 +91,9 @@ class AdminReportsHubController extends Controller
         $base = preg_replace('/[^\p{L}\p{N}_-]+/u', '', $base) ?: 'تقرير';
 
         $suffix = ($from && $to)
-            ? $from->format('Y-m-d') . '_' . $to->format('Y-m-d')
+            ? $from->format('Y-m-d').'_'.$to->format('Y-m-d')
             : 'all';
 
-        return $base . '_' . $suffix . '.csv';
+        return $base.'_'.$suffix.'.csv';
     }
 }

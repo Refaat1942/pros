@@ -9,14 +9,14 @@ enum DebtStatus: string
 {
     case Pending = 'pending';
     case Partial = 'partial';
-    case Paid    = 'paid';
+    case Paid = 'paid';
 
     public function label(): string
     {
         return match ($this) {
             self::Pending => 'لم يُسدَّد',
             self::Partial => 'مسدَّد جزئياً',
-            self::Paid    => 'مسدَّد',
+            self::Paid => 'مسدَّد',
         };
     }
 }

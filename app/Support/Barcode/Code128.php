@@ -29,7 +29,8 @@ final class Code128
     ];
 
     private const START_B = 104;
-    private const STOP    = 106;
+
+    private const STOP = 106;
 
     /**
      * يبني SVG للباركود.
@@ -44,23 +45,23 @@ final class Code128
         }
 
         $totalUnits = $unitCount + ($quietZone * 2);
-        $svgWidth   = round($totalUnits * $moduleWidth, 2);
+        $svgWidth = round($totalUnits * $moduleWidth, 2);
 
-        $x    = $quietZone * $moduleWidth;
+        $x = $quietZone * $moduleWidth;
         $rects = '';
 
         foreach ($modules as [$width, $isBar]) {
             $w = $width * $moduleWidth;
             if ($isBar) {
-                $rects .= '<rect x="' . round($x, 2) . '" y="0" width="' . round($w, 2)
-                    . '" height="' . $height . '" fill="#000"/>';
+                $rects .= '<rect x="'.round($x, 2).'" y="0" width="'.round($w, 2)
+                    .'" height="'.$height.'" fill="#000"/>';
             }
             $x += $w;
         }
 
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="' . $svgWidth . '" height="' . $height
-            . '" viewBox="0 0 ' . $svgWidth . ' ' . $height . '" preserveAspectRatio="none">'
-            . '<rect width="100%" height="100%" fill="#fff"/>' . $rects . '</svg>';
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="'.$svgWidth.'" height="'.$height
+            .'" viewBox="0 0 '.$svgWidth.' '.$height.'" preserveAspectRatio="none">'
+            .'<rect width="100%" height="100%" fill="#fff"/>'.$rects.'</svg>';
     }
 
     /**
@@ -70,8 +71,8 @@ final class Code128
      */
     private static function modules(string $data): array
     {
-        $codes  = [self::START_B];
-        $sum    = self::START_B;
+        $codes = [self::START_B];
+        $sum = self::START_B;
         $length = strlen($data);
 
         for ($i = 0; $i < $length; $i++) {
@@ -80,7 +81,7 @@ final class Code128
                 $value = 0; // أي حرف غير مدعوم → مسافة
             }
             $codes[] = $value;
-            $sum    += $value * ($i + 1);
+            $sum += $value * ($i + 1);
         }
 
         $codes[] = $sum % 103;   // checksum
@@ -90,7 +91,7 @@ final class Code128
 
         foreach ($codes as $code) {
             $pattern = self::PATTERNS[$code];
-            $isBar   = true; // كل نمط يبدأ بشريط أسود
+            $isBar = true; // كل نمط يبدأ بشريط أسود
 
             for ($j = 0, $plen = strlen($pattern); $j < $plen; $j++) {
                 $modules[] = [(int) $pattern[$j], $isBar];

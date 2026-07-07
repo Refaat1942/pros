@@ -9,9 +9,7 @@ use Illuminate\Http\Request;
 
 class ReceptionSelfServiceController extends Controller
 {
-    public function __construct(private readonly ReceptionSelfServiceService $selfService)
-    {
-    }
+    public function __construct(private readonly ReceptionSelfServiceService $selfService) {}
 
     /**
      * استعلام بالهاتف / QR / كود المريض / الاسم — للوحة الاستقبال.

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\OcrMismatchException;
 use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
+use App\Models\Patient;
 use App\Models\Quote;
 use App\Support\QuotePrintPresenter;
 use Illuminate\Support\Facades\DB;
@@ -14,9 +15,7 @@ use Illuminate\Support\Facades\DB;
  */
 class OcrApprovalService
 {
-    public function __construct(private readonly ApprovalService $approvalService)
-    {
-    }
+    public function __construct(private readonly ApprovalService $approvalService) {}
 
     /**
      * @param  array{
@@ -41,7 +40,7 @@ class OcrApprovalService
 
         $case = $quote->caseRecord;
 
-        if ($case->patient_type === \App\Models\Patient::TYPE_MILITARY) {
+        if ($case->patient_type === Patient::TYPE_MILITARY) {
             abort(422, 'المسار العسكري لا يتطلب خطاب موافقة OCR.');
         }
 
@@ -56,15 +55,15 @@ class OcrApprovalService
         $this->assertOcrMatchesQuote($quote, $extracted);
 
         AuditService::log(
-            action:      'ocr',
+            action: 'ocr',
             description: "OCR مطابق — {$quote->quote_no}",
-            tag:         'quotes',
-            after:       [
-                'quote_no'        => $quote->quote_no,
-                'patient_name'    => $extracted['patient_name'] ?? null,
+            tag: 'quotes',
+            after: [
+                'quote_no' => $quote->quote_no,
+                'patient_name' => $extracted['patient_name'] ?? null,
                 'approved_amount' => $extracted['approved_amount'] ?? null,
-                'company_name'    => $extracted['company_name'] ?? null,
-                'letter_path'     => $extracted['letter_path'] ?? null,
+                'company_name' => $extracted['company_name'] ?? null,
+                'letter_path' => $extracted['letter_path'] ?? null,
             ],
         );
 
@@ -79,10 +78,10 @@ class OcrApprovalService
     {
         // معاملة حتى يصبح قفل ترقيم العقد فعّالاً ويمنع تكرار contract_no.
         DB::transaction(function () use ($case, $quote, $extracted) {
-            $year   = now()->year;
+            $year = now()->year;
             $prefix = "CNT-{$year}-";
 
-            $last = ApprovalContract::where('contract_no', 'like', $prefix . '%')
+            $last = ApprovalContract::where('contract_no', 'like', $prefix.'%')
                 ->lockForUpdate()
                 ->orderByDesc('contract_no')
                 ->value('contract_no');
@@ -92,17 +91,17 @@ class OcrApprovalService
                 : 1;
 
             ApprovalContract::create([
-                'contract_no'     => sprintf('%s%04d', $prefix, $num),
-                'case_id'         => $case->id,
-                'quote_id'        => $quote->id,
-                'patient_name'    => $extracted['patient_name'] ?? $quote->patient_name,
-                'company_name'    => $extracted['company_name'] ?? $quote->company_name,
+                'contract_no' => sprintf('%s%04d', $prefix, $num),
+                'case_id' => $case->id,
+                'quote_id' => $quote->id,
+                'patient_name' => $extracted['patient_name'] ?? $quote->patient_name,
+                'company_name' => $extracted['company_name'] ?? $quote->company_name,
                 'approved_amount' => $extracted['approved_amount'] ?? QuotePrintPresenter::approvedAmount($quote),
-                'approval_date'   => now()->toDateString(),
-                'work_order_no'   => $case->work_order_no,
-                'letter_path'     => $extracted['letter_path'] ?? null,
-                'letter_ref'      => $extracted['letter_ref'] ?? null,
-                'letter_date'     => $extracted['letter_date'] ?? null,
+                'approval_date' => now()->toDateString(),
+                'work_order_no' => $case->work_order_no,
+                'letter_path' => $extracted['letter_path'] ?? null,
+                'letter_ref' => $extracted['letter_ref'] ?? null,
+                'letter_date' => $extracted['letter_date'] ?? null,
             ]);
         });
     }
@@ -112,7 +111,7 @@ class OcrApprovalService
      */
     private function assertOcrMatchesQuote(Quote $quote, array $extracted): void
     {
-        $case    = $quote->caseRecord;
+        $case = $quote->caseRecord;
         $patient = $case->patient;
 
         if ($patient && ! empty($extracted['patient_name'])) {
@@ -122,7 +121,7 @@ class OcrApprovalService
         }
 
         if (isset($extracted['approved_amount'])) {
-            $ocrAmount      = round((float) $extracted['approved_amount'], 2);
+            $ocrAmount = round((float) $extracted['approved_amount'], 2);
             $expectedAmount = round(QuotePrintPresenter::approvedAmount($quote), 2);
 
             if (abs($ocrAmount - $expectedAmount) >= 0.01) {

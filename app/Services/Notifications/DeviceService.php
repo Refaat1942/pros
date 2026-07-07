@@ -25,8 +25,8 @@ class DeviceService
         return UserDevice::updateOrCreate(
             ['device_id' => $deviceId],
             [
-                'user_id'      => $user->id,
-                'device_type'  => $this->normalizeType($deviceType),
+                'user_id' => $user->id,
+                'device_type' => $this->normalizeType($deviceType),
                 'last_used_at' => now(),
             ],
         );

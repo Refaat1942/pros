@@ -10,8 +10,8 @@ use App\Models\ReturnNote;
 use App\Services\Dashboard\DashboardQueueService;
 use App\Services\SpecEditRequestService;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -38,7 +38,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer(['partials.dashboard-sidebar', 'partials.dashboard-header-actions'], function ($view) {
             $dashboardKey = $view->getData()['dashboardKey'] ?? '';
-            $roleSlug     = Auth::user()?->role?->slug;
+            $roleSlug = Auth::user()?->role?->slug;
 
             $badges = $view->getData()['sidebarBadges'] ?? $view->getData()['headerBadges'] ?? [];
 

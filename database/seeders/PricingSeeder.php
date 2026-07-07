@@ -12,9 +12,7 @@ use Illuminate\Database\Seeder;
 
 class PricingSeeder extends Seeder
 {
-    public function __construct(private readonly PricingService $pricingService)
-    {
-    }
+    public function __construct(private readonly PricingService $pricingService) {}
 
     public function run(): void
     {

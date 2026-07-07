@@ -14,10 +14,10 @@ class OverheadCostingEngineTest extends TestCase
     public function test_calculates_overheads_and_net_offer_with_company_discount(): void
     {
         $company = ContractCompany::create([
-            'company_code'     => 'CO-OH',
-            'name'             => 'جهة خصم',
-            'is_military'      => false,
-            'is_contracted'    => true,
+            'company_code' => 'CO-OH',
+            'name' => 'جهة خصم',
+            'is_military' => false,
+            'is_contracted' => true,
             'discount_percent' => 20,
         ]);
 

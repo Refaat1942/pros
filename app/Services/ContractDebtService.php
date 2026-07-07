@@ -24,9 +24,9 @@ class ContractDebtService
     {
         return ContractCompanyDebt::create([
             'contract_company_id' => $company->id,
-            'due'                 => 0,
-            'collected'           => 0,
-            'status'              => DebtStatus::Pending->value,
+            'due' => 0,
+            'collected' => 0,
+            'status' => DebtStatus::Pending->value,
         ]);
     }
 
@@ -65,16 +65,16 @@ class ContractDebtService
 
             $before = $this->snapshot($debt);
 
-            $debt->due    = (float) $debt->due + $amount;
+            $debt->due = (float) $debt->due + $amount;
             $debt->status = $this->computeStatus($debt)->value;
             $debt->save();
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "زيادة مستحق جهة {$company->name} بمقدار {$amount}",
-                tag:         'financial',
-                before:      $before,
-                after:       $this->snapshot($debt),
+                tag: 'financial',
+                before: $before,
+                after: $this->snapshot($debt),
             );
         });
     }
@@ -90,17 +90,17 @@ class ContractDebtService
             $before = $this->snapshot($debt);
 
             $debt->collected = (float) $debt->collected + $amount;
-            $debt->status    = $this->computeStatus($debt)->value;
+            $debt->status = $this->computeStatus($debt)->value;
             $debt->save();
 
             app(DebtCollectionEntryService::class)->record($debt, $amount, (float) $debt->due);
 
             AuditService::log(
-                action:      'payment',
+                action: 'payment',
                 description: "تسجيل تحصيل من جهة {$company->name} بمقدار {$amount}",
-                tag:         'financial',
-                before:      $before,
-                after:       $this->snapshot($debt),
+                tag: 'financial',
+                before: $before,
+                after: $this->snapshot($debt),
             );
         });
     }
@@ -115,16 +115,16 @@ class ContractDebtService
 
             $before = $this->snapshot($debt);
 
-            $debt->due    = max(0, (float) $debt->due - $amount);
+            $debt->due = max(0, (float) $debt->due - $amount);
             $debt->status = $this->computeStatus($debt)->value;
             $debt->save();
 
             AuditService::log(
-                action:      'debt',
+                action: 'debt',
                 description: "تخفيض مستحق جهة {$company->name} بمقدار {$amount}",
-                tag:         'financial',
-                before:      $before,
-                after:       $this->snapshot($debt),
+                tag: 'financial',
+                before: $before,
+                after: $this->snapshot($debt),
             );
         });
     }
@@ -133,7 +133,7 @@ class ContractDebtService
 
     private function computeStatus(ContractCompanyDebt $debt): DebtStatus
     {
-        $due       = (float) $debt->due;
+        $due = (float) $debt->due;
         $collected = (float) $debt->collected;
 
         if ($due <= 0) {
@@ -154,9 +154,9 @@ class ContractDebtService
     private function snapshot(ContractCompanyDebt $debt): array
     {
         return [
-            'due'       => (float) $debt->due,
+            'due' => (float) $debt->due,
             'collected' => (float) $debt->collected,
-            'status'    => $debt->status,
+            'status' => $debt->status,
         ];
     }
 }

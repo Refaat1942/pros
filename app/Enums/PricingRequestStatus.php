@@ -19,38 +19,38 @@ namespace App\Enums;
  */
 enum PricingRequestStatus: string
 {
-    case Processing             = 'processing';
-    case AwaitingAdminApproval  = 'awaiting_admin_approval';
-    case SentToReception        = 'sent_to_reception';
-    case Insufficient           = 'insufficient';
+    case Processing = 'processing';
+    case AwaitingAdminApproval = 'awaiting_admin_approval';
+    case SentToReception = 'sent_to_reception';
+    case Insufficient = 'insufficient';
 
     public function label(): string
     {
         return match ($this) {
-            self::Processing            => 'جاري الاحتساب',
+            self::Processing => 'جاري الاحتساب',
             self::AwaitingAdminApproval => 'بانتظار الاعتماد',
-            self::SentToReception       => 'تم الإرسال للاستقبال',
-            self::Insufficient          => 'غير كافٍ',
+            self::SentToReception => 'تم الإرسال للاستقبال',
+            self::Insufficient => 'غير كافٍ',
         };
     }
 
     public function badgeClass(): string
     {
         return match ($this) {
-            self::Processing            => 'badge-info',
+            self::Processing => 'badge-info',
             self::AwaitingAdminApproval => 'badge-warning',
-            self::SentToReception       => 'badge-success',
-            self::Insufficient          => 'badge-danger',
+            self::SentToReception => 'badge-success',
+            self::Insufficient => 'badge-danger',
         };
     }
 
     public function step(): int
     {
         return match ($this) {
-            self::Processing            => 1,
+            self::Processing => 1,
             self::AwaitingAdminApproval => 2,
-            self::SentToReception       => 3,
-            self::Insufficient          => 0,
+            self::SentToReception => 3,
+            self::Insufficient => 0,
         };
     }
 

@@ -13,9 +13,11 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 class MilitaryDebt extends Model
 {
-    public const STATUS_PENDING    = 'pending_collection';
-    public const STATUS_PARTIAL    = 'partial_collection';
-    public const STATUS_COLLECTED  = 'collected';
+    public const STATUS_PENDING = 'pending_collection';
+
+    public const STATUS_PARTIAL = 'partial_collection';
+
+    public const STATUS_COLLECTED = 'collected';
 
     protected $fillable = [
         'case_id',
@@ -31,10 +33,10 @@ class MilitaryDebt extends Model
     ];
 
     protected $casts = [
-        'total_cost'    => 'decimal:2',
-        'collected'     => 'decimal:2',
-        'delivered_at'  => 'date',
-        'collected_at'  => 'datetime',
+        'total_cost' => 'decimal:2',
+        'collected' => 'decimal:2',
+        'delivered_at' => 'date',
+        'collected_at' => 'datetime',
     ];
 
     public function caseRecord(): BelongsTo

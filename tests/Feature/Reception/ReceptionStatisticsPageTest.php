@@ -36,7 +36,7 @@ class ReceptionStatisticsPageTest extends TestCase
     public function test_analytics_service_returns_real_counts(): void
     {
         $company = $this->civilianCompany();
-        $recep   = $this->userWithRole('reception');
+        $recep = $this->userWithRole('reception');
 
         $this->registerCivilianPatientHttp($recep, $company, 'مريض إحصائيات');
 

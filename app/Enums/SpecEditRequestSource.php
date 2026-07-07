@@ -10,8 +10,8 @@ enum SpecEditRequestSource: string
     public function label(): string
     {
         return match ($this) {
-            self::Spec         => 'توصيف فني',
-            self::Adjustments  => 'معدلات',
+            self::Spec => 'توصيف فني',
+            self::Adjustments => 'معدلات',
         };
     }
 }

@@ -14,7 +14,6 @@ use App\Models\StockItemPrice;
 use App\Models\StockMovement;
 use App\Services\AdminReportsHubService;
 use App\Services\AdminReportsService;
-use App\Services\BiReportService;
 use App\Services\BomService;
 use App\Services\Dashboard\DashboardPageDataService;
 use App\Services\ReturnNoteService;
@@ -34,28 +33,28 @@ class AdminReportsPageTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update([
             'work_order_no' => 'WO-RPT-001',
-            'quote_total'   => 5000,
-            'delivered_at'  => now(),
-            'paid'          => 5000,
+            'quote_total' => 5000,
+            'delivered_at' => now(),
+            'paid' => 5000,
         ]);
 
         $bom = Bom::create([
-            'case_id'      => $case->id,
-            'bom_no'       => 'BOM-RPT-01',
-            'order_ref'    => $case->order_ref,
+            'case_id' => $case->id,
+            'bom_no' => 'BOM-RPT-01',
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_FINISHED,
+            'stage' => Bom::STAGE_FINISHED,
         ]);
 
         BomItem::create([
-            'bom_id'          => $bom->id,
+            'bom_id' => $bom->id,
             'stock_item_code' => 'RM-001',
-            'name'            => 'صنف RM-001',
-            'qty'             => 2,
-            'unit_cost'       => 100.00,
+            'name' => 'صنف RM-001',
+            'qty' => 2,
+            'unit_cost' => 100.00,
         ]);
 
         $reports = app(AdminReportsService::class)->build();
@@ -79,17 +78,17 @@ class AdminReportsPageTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update([
-            'quote_total'  => 12000,
+            'quote_total' => 12000,
             'delivered_at' => now(),
         ]);
 
         $this->stubBiReportServiceForOverview([
-            'item_count'     => 1,
-            'low_stock'      => 0,
+            'item_count' => 1,
+            'low_stock' => 0,
             'stagnant_items' => [],
-            'total_value'    => 0,
+            'total_value' => 0,
         ]);
 
         $this->actingAs($admin)
@@ -131,9 +130,9 @@ class AdminReportsPageTest extends TestCase
         $contracted->update(['is_contracted' => true]);
 
         $cash = ContractCompany::create([
-            'company_code'  => 'CO-CASH-RPT',
-            'name'          => 'جهة مرجعية نقدية',
-            'is_military'   => false,
+            'company_code' => 'CO-CASH-RPT',
+            'name' => 'جهة مرجعية نقدية',
+            'is_military' => false,
             'is_contracted' => false,
         ]);
 
@@ -170,7 +169,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame('عسكري', $militaryRow[4]);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/companies?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/companies?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('الجهة', false)
             ->assertSee('التصنيف', false)
@@ -193,13 +192,13 @@ class AdminReportsPageTest extends TestCase
         $this->assertNull($hub->sectionMeta('military-debts'));
 
         $this->actingAs($admin)
-            ->get('/admin/reports/civilian-debts?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/civilian-debts?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('المديونات', false)
             ->assertDontSee('>سجّله<', false);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/military-debts?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/military-debts?from='.$from.'&to='.$to)
             ->assertNotFound();
     }
 
@@ -210,13 +209,13 @@ class AdminReportsPageTest extends TestCase
         $to = now()->toDateString();
 
         $this->actingAs($admin)
-            ->get('/admin/reports/audit?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/audit?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('reports-date-filter', false)
             ->assertSee('تصدير Excel', false);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/audit/export?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/audit/export?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
@@ -225,14 +224,14 @@ class AdminReportsPageTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
         $case->update([
-            'work_order_no'  => 'WO-FIN-RPT',
-            'invoice_no'     => 'INV-2026-0100',
-            'quote_total'    => 8000,
-            'invoice_total'  => 8000,
-            'internal_cost'  => 3200,
-            'delivered_at'   => now(),
+            'work_order_no' => 'WO-FIN-RPT',
+            'invoice_no' => 'INV-2026-0100',
+            'quote_total' => 8000,
+            'invoice_total' => 8000,
+            'internal_cost' => 3200,
+            'delivered_at' => now(),
         ]);
 
         $hub = app(AdminReportsHubService::class);
@@ -255,7 +254,7 @@ class AdminReportsPageTest extends TestCase
         $to = now()->toDateString();
 
         $this->actingAs($admin)
-            ->get('/admin/reports/financial?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/financial?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('الفاتورة', false)
             ->assertSee('INV-2026-0100', false)
@@ -276,9 +275,9 @@ class AdminReportsPageTest extends TestCase
 
         StockItemPrice::query()->create([
             'stock_item_id' => $item->id,
-            'price_ref'     => 'PR-NULL-RCV-1',
-            'amount'        => 100.00,
-            'qty'           => 5,
+            'price_ref' => 'PR-NULL-RCV-1',
+            'amount' => 100.00,
+            'qty' => 5,
         ]);
 
         $from = '2026-07-03';
@@ -292,7 +291,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame('NULL-RCV-CAT', $report['rows'][0][0] ?? null);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/catalog?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/catalog?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('NULL-RCV-CAT', false);
 
@@ -304,29 +303,29 @@ class AdminReportsPageTest extends TestCase
         $admin = $this->userWithRole('admin');
         $visit = $this->defaultVisitType();
         $patient = Patient::create([
-            'patient_code'        => '100901',
-            'patient_qr'          => 'QR-100901',
-            'tracking_uid'        => 'case-test0901',
-            'name'                => 'مريض الاستقبال',
-            'phone'               => '01000000901',
-            'national_id'         => '29901010100901',
-            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'patient_code' => '100901',
+            'patient_qr' => 'QR-100901',
+            'tracking_uid' => 'case-test0901',
+            'name' => 'مريض الاستقبال',
+            'phone' => '01000000901',
+            'national_id' => '29901010100901',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'contract_company_id' => null,
-            'company_name'        => null,
-            'registered_at'       => now()->toDateString(),
-            'status'              => Patient::STATUS_ACTIVE,
+            'company_name' => null,
+            'registered_at' => now()->toDateString(),
+            'status' => Patient::STATUS_ACTIVE,
         ]);
 
         Appointment::create([
-            'patient_id'       => $patient->id,
+            'patient_id' => $patient->id,
             'appointment_date' => now()->toDateString(),
             'appointment_time' => '09:00',
-            'visit_type_id'    => $visit->id,
-            'visit_type'       => $visit->name,
-            'patient_name'     => $patient->name,
-            'phone'            => $patient->phone,
-            'patient_type'     => $patient->patient_type,
-            'status'           => Appointment::STATUS_WAITING,
+            'visit_type_id' => $visit->id,
+            'visit_type' => $visit->name,
+            'patient_name' => $patient->name,
+            'phone' => $patient->phone,
+            'patient_type' => $patient->patient_type,
+            'status' => Appointment::STATUS_WAITING,
         ]);
 
         $this->actingAs($admin)
@@ -383,11 +382,11 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame('01/07/2026 — 03/07/2026', $report['period_label']);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/catalog?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/catalog?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertDontSee('reports-section-period', false)
-            ->assertSee('value="' . $from . '"', false)
-            ->assertSee('value="' . $to . '"', false);
+            ->assertSee('value="'.$from.'"', false)
+            ->assertSee('value="'.$to.'"', false);
     }
 
     public function test_catalog_report_shows_multi_price_flag_and_view_action(): void
@@ -396,8 +395,8 @@ class AdminReportsPageTest extends TestCase
         $item = $this->stockItem('RM-RPT-CAT', qty: 10, wac: 50.00);
         $supplier = $this->makeSupplier();
 
-        app(\App\Services\StockPriceService::class)->addBatch($item, 5, 100.00, $supplier, 'INV-A', now());
-        app(\App\Services\StockPriceService::class)->addBatch($item->fresh(), 5, 150.00, $supplier, 'INV-B', now());
+        app(StockPriceService::class)->addBatch($item, 5, 100.00, $supplier, 'INV-A', now());
+        app(StockPriceService::class)->addBatch($item->fresh(), 5, 150.00, $supplier, 'INV-B', now());
 
         $from = now()->startOfMonth()->toDateString();
         $to = now()->toDateString();
@@ -412,7 +411,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame($item->id, $report['row_actions'][0]['stock_item_id'] ?? null);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/catalog?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/catalog?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('أسعار متعددة', false)
             ->assertSee('نعم (2 أسعار)', false)
@@ -429,21 +428,21 @@ class AdminReportsPageTest extends TestCase
         StockMovement::create([
             'stock_item_id' => $item->id,
             'movement_type' => StockMovement::TYPE_ISSUE,
-            'quantity'      => -3,
-            'unit_cost'     => 40.00,
+            'quantity' => -3,
+            'unit_cost' => 40.00,
             'balance_after' => 17,
-            'moved_at'      => now(),
+            'moved_at' => now(),
         ]);
 
         StockMovement::create([
-            'stock_item_id'  => $item->id,
-            'movement_type'  => StockMovement::TYPE_RETURN,
-            'quantity'       => 2,
-            'unit_cost'      => 40.00,
-            'balance_after'  => 19,
+            'stock_item_id' => $item->id,
+            'movement_type' => StockMovement::TYPE_RETURN,
+            'quantity' => 2,
+            'unit_cost' => 40.00,
+            'balance_after' => 19,
             'reference_type' => 'return_note',
-            'reference_id'   => 1,
-            'moved_at'       => now(),
+            'reference_id' => 1,
+            'moved_at' => now(),
         ]);
 
         $from = now()->startOfMonth()->toDateString();
@@ -466,7 +465,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame('-2', $returnRow[4]);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/inventory-overview?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/inventory-overview?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('متابعة حركة الأصناف', false)
             ->assertSee('اسم الصنف', false)
@@ -480,23 +479,23 @@ class AdminReportsPageTest extends TestCase
 
         $stagnant = $this->stockItem('RM-STAG-RPT', qty: 12, wac: 40.00);
         $stagnant->update([
-            'name'          => 'ركبة راكدة',
+            'name' => 'ركبة راكدة',
             'last_moved_at' => now()->subDays(200)->toDateString(),
-            'status'        => StockItem::STATUS_OK,
+            'status' => StockItem::STATUS_OK,
         ]);
 
         $active = $this->stockItem('RM-ACT-RPT', qty: 8, wac: 55.00);
         $active->update([
-            'name'          => 'قدم شغالة',
+            'name' => 'قدم شغالة',
             'last_moved_at' => now()->subDays(10)->toDateString(),
-            'status'        => StockItem::STATUS_OK,
+            'status' => StockItem::STATUS_OK,
         ]);
 
         $low = $this->stockItem('RM-LOW-RPT', qty: 2, wac: 30.00);
         $low->update([
-            'name'          => 'بطانة منخفضة',
+            'name' => 'بطانة منخفضة',
             'last_moved_at' => now()->subDays(5)->toDateString(),
-            'status'        => StockItem::STATUS_LOW,
+            'status' => StockItem::STATUS_LOW,
         ]);
 
         $from = now()->startOfMonth()->toDateString();
@@ -522,7 +521,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame('منخفضة', $lowRow[4] ?? null);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/inventory?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/inventory?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertDontSee('reports-summary-grid', false)
             ->assertSee('ركبة راكدة', false)
@@ -537,9 +536,9 @@ class AdminReportsPageTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $ops     = $this->userWithRole('operations');
-        $admin   = $this->userWithRole('admin');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $ops = $this->userWithRole('operations');
+        $admin = $this->userWithRole('admin');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-RPT-RET']);
 
         $this->actingAs($ops);
@@ -576,7 +575,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame(2, $report['row_actions'][0]['lines'][0]['qty_returned'] ?? null);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/returns?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/returns?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('عرض الأصناف', false)
             ->assertSee('openReportsReturnItems', false)
@@ -593,9 +592,9 @@ class AdminReportsPageTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $ops     = $this->userWithRole('operations');
-        $admin   = $this->userWithRole('admin');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $ops = $this->userWithRole('operations');
+        $admin = $this->userWithRole('admin');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
 
         $this->actingAs($ops);
         $bom = app(BomService::class)->createSpecRaw($case, [
@@ -621,7 +620,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame([], $report['rows']);
 
         $this->actingAs($admin)
-            ->get('/admin/reports/returns?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/returns?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertDontSee($note->return_no, false);
     }
@@ -643,7 +642,7 @@ class AdminReportsPageTest extends TestCase
         );
 
         $this->actingAs($admin)
-            ->get('/admin/reports/spec-edit-requests?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/spec-edit-requests?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('طلبات تعديل التوصيف', false)
             ->assertSee('reports-date-filter', false);
@@ -665,7 +664,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertContains($supplier->name, array_column($report['rows'], 0));
 
         $this->actingAs($admin)
-            ->get('/admin/reports/suppliers?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/suppliers?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('الموردون', false)
             ->assertSee($supplier->name, false)
@@ -689,7 +688,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertContains($category->name, array_column($report['rows'], 0));
 
         $this->actingAs($admin)
-            ->get('/admin/reports/stock-categories?from=' . $from . '&to=' . $to)
+            ->get('/admin/reports/stock-categories?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('أقسام الأصناف', false)
             ->assertSee($category->name, false)
@@ -734,14 +733,14 @@ class AdminReportsPageTest extends TestCase
         StockMovement::create([
             'stock_item_id' => $item->id,
             'movement_type' => StockMovement::TYPE_ISSUE,
-            'quantity'      => -3,
-            'unit_cost'     => 40.00,
+            'quantity' => -3,
+            'unit_cost' => 40.00,
             'balance_after' => 17,
-            'moved_at'      => now(),
+            'moved_at' => now(),
         ]);
 
         $from = now()->startOfDay();
-        $to   = now()->endOfDay();
+        $to = now()->endOfDay();
         $reports = app(AdminReportsService::class)->build($from, $to);
 
         $this->assertSame(3, $reports['inventory']['issues_this_month']);
@@ -751,28 +750,28 @@ class AdminReportsPageTest extends TestCase
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
 
         $bom = Bom::create([
-            'case_id'      => $case->id,
-            'bom_no'       => 'BOM-ISSUE-RPT',
-            'order_ref'    => $case->order_ref,
+            'case_id' => $case->id,
+            'bom_no' => 'BOM-ISSUE-RPT',
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
-            'stage'        => Bom::STAGE_WIP,
-            'released_at'  => now(),
+            'stage' => Bom::STAGE_WIP,
+            'released_at' => now(),
         ]);
 
         BomItem::create([
-            'bom_id'          => $bom->id,
+            'bom_id' => $bom->id,
             'stock_item_code' => 'RM-001',
-            'name'            => 'صنف RM-001',
-            'qty'             => 2,
-            'unit_cost'       => 100.00,
-            'issued_qty'      => 2,
+            'name' => 'صنف RM-001',
+            'qty' => 2,
+            'unit_cost' => 100.00,
+            'issued_qty' => 2,
         ]);
 
         $from = now()->startOfDay();
-        $to   = now()->endOfDay();
+        $to = now()->endOfDay();
         $reports = app(AdminReportsService::class)->build($from, $to);
 
         $this->assertSame(2, $reports['inventory']['issues_this_month']);
@@ -785,7 +784,7 @@ class AdminReportsPageTest extends TestCase
         $this->dispensedManufacturingCase($patient, ['RM-001']);
 
         $from = now()->startOfDay();
-        $to   = now()->endOfDay();
+        $to = now()->endOfDay();
         $reports = app(AdminReportsService::class)->build($from, $to);
 
         $this->assertGreaterThanOrEqual(1, $reports['inventory']['issues_this_month']);

@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\PermissionCatalogService;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Seeder;
 
@@ -38,10 +38,10 @@ class RolesAndAdminSeeder extends Seeder
             User::updateOrCreate(
                 ['username' => $slug],
                 [
-                    'name'     => Role::where('slug', $slug)->value('label_ar'),
+                    'name' => Role::where('slug', $slug)->value('label_ar'),
                     'password' => UserFactory::TEST_PASSWORD,
-                    'role_id'  => Role::where('slug', $slug)->value('id'),
-                    'status'   => User::STATUS_ACTIVE,
+                    'role_id' => Role::where('slug', $slug)->value('id'),
+                    'status' => User::STATUS_ACTIVE,
                 ]
             );
         }
@@ -53,6 +53,6 @@ class RolesAndAdminSeeder extends Seeder
      */
     private function seedPermissions(): void
     {
-        app(\App\Services\PermissionCatalogService::class)->seedRoleDefaults(fullSync: true);
+        app(PermissionCatalogService::class)->seedRoleDefaults(fullSync: true);
     }
 }

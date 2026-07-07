@@ -19,12 +19,12 @@ Route::prefix('adjustments')
     ->group(function () {
         Route::get('history', function () {
             $params = array_filter([
-                'from'   => request()->query('from'),
-                'to'     => request()->query('to'),
+                'from' => request()->query('from'),
+                'to' => request()->query('to'),
                 'search' => request()->query('search'),
             ], fn ($v) => $v !== null && $v !== '');
 
-            return redirect()->to(route('adjustments.adjustments', $params) . '#adj-history-section');
+            return redirect()->to(route('adjustments.adjustments', $params).'#adj-history-section');
         })->name('history');
     });
 

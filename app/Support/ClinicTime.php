@@ -44,7 +44,7 @@ final class ClinicTime
 
     public static function clinicDayStart(?CarbonInterface $at = null): Carbon
     {
-        return Carbon::parse(self::clinicDayDateString($at) . ' 01:00:00', self::zone());
+        return Carbon::parse(self::clinicDayDateString($at).' 01:00:00', self::zone());
     }
 
     public static function clinicDayEnd(?CarbonInterface $at = null): Carbon

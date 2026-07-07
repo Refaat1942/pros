@@ -20,31 +20,52 @@ class CaseRecord extends Model
 {
     // مراحل المسار الرئيسية — التسلسل الصارم الجديد
     public const STAGE_RECEPTION = 'reception';
+
     public const STAGE_EXAM = 'exam';
+
     public const STAGE_TECHNICAL = 'technical';
+
     public const STAGE_ADJUSTMENTS = 'adjustments';
+
     public const STAGE_COST_CALC = 'cost_calc';
+
     public const STAGE_QUOTE = 'quote';
+
     public const STAGE_OPERATIONS = 'operations';
+
     public const STAGE_CASHIER = 'cashier';
+
     public const STAGE_MANUFACTURING = 'manufacturing';
+
     public const STAGE_READY_DELIVERY = 'ready_delivery';
+
     public const STAGE_DELIVERED = 'delivered';
 
     // مراحل التصنيع الفرعية — MANUFACTURING_STAGES
     public const MFG_WAREHOUSE = 'warehouse';
+
     public const MFG_WORKSHOP = 'workshop';
+
     public const MFG_FITTING = 'fitting';
+
     public const MFG_QUALITY = 'quality';
+
     public const MFG_ISSUE = 'issue';
+
     public const MFG_GENERATION = 'generation';
+
     public const MFG_ASSEMBLY = 'assembly';
+
     public const MFG_CASTING = 'casting';
+
     public const MFG_FINISHING = 'finishing';
+
     public const MFG_CLOSED = 'closed';
 
     public const PATH_STANDARD = 'standard';
+
     public const PATH_MILITARY = 'military';
+
     public const PATH_OCR_BYPASS = 'ocr_bypass';
 
     protected $table = 'cases';
@@ -97,7 +118,7 @@ class CaseRecord extends Model
         'paid' => 'decimal:2',
         'approval_date' => 'date',
         'approval_confirmed_at' => 'datetime',
-        'ledger_posted_at'      => 'datetime',
+        'ledger_posted_at' => 'datetime',
         'delivered_at' => 'datetime',
         'credit_note_amount' => 'decimal:2',
         'rework_returned_at' => 'datetime',
@@ -324,10 +345,10 @@ class CaseRecord extends Model
     public function clearReworkNotice(): void
     {
         $this->forceFill([
-            'rework_reason'       => null,
-            'rework_target'       => null,
-            'rework_returned_at'  => null,
-            'rework_returned_by'  => null,
+            'rework_reason' => null,
+            'rework_target' => null,
+            'rework_returned_at' => null,
+            'rework_returned_by' => null,
         ])->save();
     }
 
@@ -343,17 +364,17 @@ class CaseRecord extends Model
         }
 
         return [
-            'reason'        => filled($this->rework_reason)
+            'reason' => filled($this->rework_reason)
                 ? $this->rework_reason
                 : 'لم تُذكر ملاحظات من مكتب التشغيل.',
-            'target'        => $this->rework_target,
-            'target_label'  => match ($this->rework_target) {
+            'target' => $this->rework_target,
+            'target_label' => match ($this->rework_target) {
                 self::STAGE_ADJUSTMENTS => 'إرجاع من مكتب التشغيل — المعدلات الفنية',
-                self::STAGE_TECHNICAL   => 'إرجاع من مكتب التشغيل — التوصيف الفني',
-                default                 => 'إرجاع من مكتب التشغيل',
+                self::STAGE_TECHNICAL => 'إرجاع من مكتب التشغيل — التوصيف الفني',
+                default => 'إرجاع من مكتب التشغيل',
             },
-            'returned_at'   => $this->rework_returned_at?->toIso8601String(),
-            'returned_by'   => $this->rework_returned_by,
+            'returned_at' => $this->rework_returned_at?->toIso8601String(),
+            'returned_by' => $this->rework_returned_by,
         ];
     }
 }

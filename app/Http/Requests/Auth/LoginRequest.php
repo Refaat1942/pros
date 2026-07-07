@@ -18,9 +18,9 @@ class LoginRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'username'    => ['required', 'string', 'max:50'],
-            'password'    => ['required', 'string', 'min:6'],
-            'device_id'   => ['nullable', 'string', 'max:512'],
+            'username' => ['required', 'string', 'max:50'],
+            'password' => ['required', 'string', 'min:6'],
+            'device_id' => ['nullable', 'string', 'max:512'],
             'device_type' => ['nullable', 'string', 'in:web,android,ios'],
         ];
     }
@@ -30,7 +30,7 @@ class LoginRequest extends BaseRequest
         return [
             'username.required' => 'اسم المستخدم مطلوب.',
             'password.required' => 'كلمة المرور مطلوبة.',
-            'password.min'      => 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.',
+            'password.min' => 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.',
         ];
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Pipeline;
 
-use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
 use App\Services\StockPriceService;
@@ -30,8 +29,8 @@ class WorkshopListRefreshTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('workshop');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0100']);
 
         $this->actingAs($user);
@@ -67,8 +66,8 @@ class WorkshopListRefreshTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('workshop');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0100']);
 
         $this->actingAs($user);

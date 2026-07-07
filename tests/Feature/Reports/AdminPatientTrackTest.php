@@ -9,6 +9,7 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\AdminPatientTrackService;
 use App\Services\BiReportService;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -20,13 +21,13 @@ class AdminPatientTrackTest extends TestCase
     {
         $mock = $this->mock(BiReportService::class);
         $mock->shouldReceive('boardPatients')->andReturn([
-            'open_count'         => 0,
-            'sla_breached'       => 0,
+            'open_count' => 0,
+            'sla_breached' => 0,
             'sla_breached_cases' => [],
         ]);
         $mock->shouldReceive('boardInventory')->andReturn([
             'item_count' => 0,
-            'low_stock'  => 0,
+            'low_stock' => 0,
         ]);
     }
 
@@ -111,36 +112,36 @@ class AdminPatientTrackTest extends TestCase
         $patient = $this->civilianPatient($company);
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
         $case->update([
-            'quote_no'               => 'QT-2026-0400',
-            'approval_date'          => now()->toDateString(),
-            'approval_confirmed_at'  => now(),
-            'work_order_no'          => 'WO-2026-0400',
-            'total_cost'             => 1000.00,
+            'quote_no' => 'QT-2026-0400',
+            'approval_date' => now()->toDateString(),
+            'approval_confirmed_at' => now(),
+            'work_order_no' => 'WO-2026-0400',
+            'total_cost' => 1000.00,
         ]);
 
         $quote = Quote::create([
-            'quote_no'     => 'QT-2026-0400',
-            'case_id'      => $case->id,
-            'order_ref'    => $case->order_ref,
+            'quote_no' => 'QT-2026-0400',
+            'case_id' => $case->id,
+            'order_ref' => $case->order_ref,
             'patient_name' => $patient->name,
             'company_name' => $company->name,
-            'quote_date'   => now()->toDateString(),
-            'status'       => Quote::STATUS_APPROVED,
-            'total'        => 1000.00,
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_APPROVED,
+            'total' => 1000.00,
         ]);
 
-        \Illuminate\Support\Facades\Storage::disk('public')->put('approval_letters/track-test.png', 'fake-image');
+        Storage::disk('public')->put('approval_letters/track-test.png', 'fake-image');
 
         ApprovalContract::create([
-            'contract_no'     => 'CNT-2026-0400',
-            'case_id'         => $case->id,
-            'quote_id'        => $quote->id,
-            'patient_name'    => $patient->name,
-            'company_name'    => $company->name,
+            'contract_no' => 'CNT-2026-0400',
+            'case_id' => $case->id,
+            'quote_id' => $quote->id,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
             'approved_amount' => 1000.00,
-            'approval_date'   => now()->toDateString(),
-            'work_order_no'   => 'WO-2026-0400',
-            'letter_path'     => 'approval_letters/track-test.png',
+            'approval_date' => now()->toDateString(),
+            'work_order_no' => 'WO-2026-0400',
+            'letter_path' => 'approval_letters/track-test.png',
         ]);
 
         $tracks = app(AdminPatientTrackService::class)->list();
@@ -242,57 +243,57 @@ class AdminPatientTrackTest extends TestCase
         $company = $this->civilianCompany();
 
         $patientWithExam = Patient::create([
-            'patient_code'        => '100101',
-            'patient_qr'          => 'QR-100101',
-            'tracking_uid'        => 'case-test0101',
-            'name'                => 'أحمد حسن',
-            'phone'               => '01000000001',
-            'national_id'         => '29901010100101',
-            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'patient_code' => '100101',
+            'patient_qr' => 'QR-100101',
+            'tracking_uid' => 'case-test0101',
+            'name' => 'أحمد حسن',
+            'phone' => '01000000001',
+            'national_id' => '29901010100101',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'registered_at'       => now()->toDateString(),
-            'status'              => Patient::STATUS_ACTIVE,
+            'company_name' => $company->name,
+            'registered_at' => now()->toDateString(),
+            'status' => Patient::STATUS_ACTIVE,
         ]);
 
         $patientWithFollowup = Patient::create([
-            'patient_code'        => '100102',
-            'patient_qr'          => 'QR-100102',
-            'tracking_uid'        => 'case-test0102',
-            'name'                => 'سارة علي',
-            'phone'               => '01000000002',
-            'national_id'         => '29901010100102',
-            'patient_type'        => Patient::TYPE_CIVILIAN,
+            'patient_code' => '100102',
+            'patient_qr' => 'QR-100102',
+            'tracking_uid' => 'case-test0102',
+            'name' => 'سارة علي',
+            'phone' => '01000000002',
+            'national_id' => '29901010100102',
+            'patient_type' => Patient::TYPE_CIVILIAN,
             'contract_company_id' => $company->id,
-            'company_name'        => $company->name,
-            'registered_at'       => now()->toDateString(),
-            'status'              => Patient::STATUS_ACTIVE,
+            'company_name' => $company->name,
+            'registered_at' => now()->toDateString(),
+            'status' => Patient::STATUS_ACTIVE,
         ]);
 
         Appointment::create([
-            'patient_id'        => $patientWithExam->id,
-            'appointment_date'  => now()->toDateString(),
-            'appointment_time'  => '09:00',
-            'visit_type_id'     => $examVisit->id,
-            'visit_type'        => $examVisit->name,
-            'patient_name'      => $patientWithExam->name,
-            'phone'             => $patientWithExam->phone,
-            'company_name'      => $patientWithExam->company_name,
-            'patient_type'      => $patientWithExam->patient_type,
-            'status'            => Appointment::STATUS_WAITING,
+            'patient_id' => $patientWithExam->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => '09:00',
+            'visit_type_id' => $examVisit->id,
+            'visit_type' => $examVisit->name,
+            'patient_name' => $patientWithExam->name,
+            'phone' => $patientWithExam->phone,
+            'company_name' => $patientWithExam->company_name,
+            'patient_type' => $patientWithExam->patient_type,
+            'status' => Appointment::STATUS_WAITING,
         ]);
 
         Appointment::create([
-            'patient_id'        => $patientWithFollowup->id,
-            'appointment_date'  => now()->toDateString(),
-            'appointment_time'  => '10:00',
-            'visit_type_id'     => $followupVisit->id,
-            'visit_type'        => $followupVisit->name,
-            'patient_name'      => $patientWithFollowup->name,
-            'phone'             => $patientWithFollowup->phone,
-            'company_name'      => $patientWithFollowup->company_name,
-            'patient_type'      => $patientWithFollowup->patient_type,
-            'status'            => Appointment::STATUS_IN_CLINIC,
+            'patient_id' => $patientWithFollowup->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => '10:00',
+            'visit_type_id' => $followupVisit->id,
+            'visit_type' => $followupVisit->name,
+            'patient_name' => $patientWithFollowup->name,
+            'phone' => $patientWithFollowup->phone,
+            'company_name' => $patientWithFollowup->company_name,
+            'patient_type' => $patientWithFollowup->patient_type,
+            'status' => Appointment::STATUS_IN_CLINIC,
         ]);
 
         $service = app(AdminPatientTrackService::class);
@@ -311,7 +312,7 @@ class AdminPatientTrackTest extends TestCase
         $admin = $this->userWithRole('admin');
 
         $this->actingAs($admin)
-            ->get('/admin/patient-tracks?visit_type=' . $examVisit->id)
+            ->get('/admin/patient-tracks?visit_type='.$examVisit->id)
             ->assertOk()
             ->assertSee('id="patientTrackVisitFilter"', false)
             ->assertSee($patientWithExam->name, false)
@@ -325,16 +326,16 @@ class AdminPatientTrackTest extends TestCase
         $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
 
         Appointment::create([
-            'patient_id'        => $patient->id,
-            'appointment_date'  => now()->subDays(3)->toDateString(),
-            'appointment_time'  => '09:00',
-            'visit_type_id'     => $examVisit->id,
-            'visit_type'        => $examVisit->name,
-            'patient_name'      => $patient->name,
-            'phone'             => $patient->phone,
-            'company_name'      => $patient->company_name,
-            'patient_type'      => $patient->patient_type,
-            'status'            => Appointment::STATUS_DONE,
+            'patient_id' => $patient->id,
+            'appointment_date' => now()->subDays(3)->toDateString(),
+            'appointment_time' => '09:00',
+            'visit_type_id' => $examVisit->id,
+            'visit_type' => $examVisit->name,
+            'patient_name' => $patient->name,
+            'phone' => $patient->phone,
+            'company_name' => $patient->company_name,
+            'patient_type' => $patient->patient_type,
+            'status' => Appointment::STATUS_DONE,
         ]);
 
         $service = app(AdminPatientTrackService::class);

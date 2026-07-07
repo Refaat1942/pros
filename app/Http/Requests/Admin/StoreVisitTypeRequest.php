@@ -17,7 +17,7 @@ class StoreVisitTypeRequest extends BaseRequest
     {
         return [
             'name.required' => 'اسم نوع الزيارة مطلوب.',
-            'name.unique'   => 'نوع الزيارة موجود مسبقاً.',
+            'name.unique' => 'نوع الزيارة موجود مسبقاً.',
         ];
     }
 }

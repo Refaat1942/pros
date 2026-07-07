@@ -17,19 +17,19 @@ class CaseDisplayStatusTest extends TestCase
     public function test_pricing_request_shows_case_stage_when_case_is_in_manufacturing(): void
     {
         $patient = $this->civilianPatient($this->civilianCompany());
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_CASTING);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_CASTING);
 
         $request = PricingRequest::create([
-            'request_no'    => '974673',
-            'order_ref'     => $case->order_ref,
-            'case_id'       => $case->id,
-            'patient_name'  => $patient->name,
-            'company_name'  => $patient->company_name,
-            'request_date'  => now()->toDateString(),
-            'items_count'   => 2,
-            'patient_type'  => $patient->patient_type,
-            'status_key'    => PricingRequestStatus::SentToReception->value,
-            'step'          => PricingRequest::STEP_QUOTE_READY,
+            'request_no' => '974673',
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
+            'patient_name' => $patient->name,
+            'company_name' => $patient->company_name,
+            'request_date' => now()->toDateString(),
+            'items_count' => 2,
+            'patient_type' => $patient->patient_type,
+            'status_key' => PricingRequestStatus::SentToReception->value,
+            'step' => PricingRequest::STEP_QUOTE_READY,
         ]);
 
         $request->load('caseRecord');
@@ -44,14 +44,14 @@ class CaseDisplayStatusTest extends TestCase
     public function test_pricing_request_falls_back_to_pricing_status_without_case(): void
     {
         $request = PricingRequest::create([
-            'request_no'    => 'QT-PENDING-001',
-            'order_ref'     => 'ORD-9999',
-            'case_id'       => null,
-            'patient_name'  => 'مريض تجريبي',
-            'request_date'  => now()->toDateString(),
-            'items_count'   => 1,
-            'patient_type'  => 'civilian',
-            'status_key'    => PricingRequestStatus::AwaitingAdminApproval->value,
+            'request_no' => 'QT-PENDING-001',
+            'order_ref' => 'ORD-9999',
+            'case_id' => null,
+            'patient_name' => 'مريض تجريبي',
+            'request_date' => now()->toDateString(),
+            'items_count' => 1,
+            'patient_type' => 'civilian',
+            'status_key' => PricingRequestStatus::AwaitingAdminApproval->value,
         ]);
 
         $display = CaseDisplayStatus::forPricingRequest($request);

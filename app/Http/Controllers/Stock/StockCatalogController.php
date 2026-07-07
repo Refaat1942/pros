@@ -29,8 +29,7 @@ class StockCatalogController extends Controller
         private readonly StockPriceService $stockPriceService,
         private readonly StockCatalogService $catalogService,
         private readonly StockItemSalesStatsService $salesStatsService,
-    ) {
-    }
+    ) {}
 
     /**
      * قائمة الأصناف — مرشَّحة ومُنسَّقة للوحة الإدارة.
@@ -49,15 +48,15 @@ class StockCatalogController extends Controller
             ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
             ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%");
             }))
             ->orderByDesc('id');
 
         $items = $this->fetchForDashboard($query);
 
         return response()->json([
-            'data'  => $items->map(fn (StockItem $item) => $this->catalogService->formatItem($item))->values(),
+            'data' => $items->map(fn (StockItem $item) => $this->catalogService->formatItem($item))->values(),
             'total' => $items->count(),
         ]);
     }
@@ -71,7 +70,7 @@ class StockCatalogController extends Controller
 
         return response()->json([
             'message' => 'تم حفظ الصنف — يظهر في لوحة الإدارة والمخزون وتوصيات الطبيب',
-            'item'    => $this->catalogService->formatItem($item),
+            'item' => $this->catalogService->formatItem($item),
         ], 201);
     }
 
@@ -84,7 +83,7 @@ class StockCatalogController extends Controller
 
         return response()->json([
             'message' => 'تم تحديث الصنف بنجاح',
-            'item'    => $this->catalogService->formatItem($item),
+            'item' => $this->catalogService->formatItem($item),
         ]);
     }
 
@@ -110,18 +109,18 @@ class StockCatalogController extends Controller
         $supplier = Supplier::findOrFail($request->supplier_id);
 
         $batch = $this->stockPriceService->addBatch(
-            item:       $stockItem,
-            qty:        $request->qty,
-            unitPrice:  (float) $request->unit_price,
-            supplier:   $supplier,
-            invoiceNo:  $request->invoice_no,
+            item: $stockItem,
+            qty: $request->qty,
+            unitPrice: (float) $request->unit_price,
+            supplier: $supplier,
+            invoiceNo: $request->invoice_no,
             receivedAt: Carbon::parse($request->received_at),
         );
 
         $stockItem->refresh();
 
         return response()->json([
-            'batch'    => $batch,
+            'batch' => $batch,
             'item_wac' => $stockItem->wac,
         ], 201);
     }
@@ -152,7 +151,7 @@ class StockCatalogController extends Controller
                 $request->query('to'),
             )
         );
-        $filename = 'الأصناف_والأسعار-' . now()->format('Y-m-d') . '.xlsx';
+        $filename = 'الأصناف_والأسعار-'.now()->format('Y-m-d').'.xlsx';
 
         return response()->streamDownload(function () use ($contents) {
             echo $contents;
@@ -170,7 +169,7 @@ class StockCatalogController extends Controller
             'file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:5120'],
         ], [
             'file.required' => 'يرجى اختيار ملف Excel أو CSV.',
-            'file.mimes'    => 'الملف يجب أن يكون بصيغة Excel (.xlsx) أو CSV.',
+            'file.mimes' => 'الملف يجب أن يكون بصيغة Excel (.xlsx) أو CSV.',
         ]);
 
         $summary = $importService->import($request->file('file'));
@@ -181,7 +180,7 @@ class StockCatalogController extends Controller
             return response()->json([
                 'message' => $message,
                 'summary' => $summary,
-                'items'   => $this->catalogService->listForDashboard()->values(),
+                'items' => $this->catalogService->listForDashboard()->values(),
             ]);
         }
 
@@ -196,8 +195,8 @@ class StockCatalogController extends Controller
         $copies = max(1, min(200, (int) $request->integer('copies', 2)));
 
         return response()->view('admin.print.barcode-labels', [
-            'item'      => $stockItem,
-            'copies'    => $copies,
+            'item' => $stockItem,
+            'copies' => $copies,
             'barcodeSvg' => Code128::svg($stockItem->barcode, height: 44, moduleWidth: 1.1),
         ]);
     }

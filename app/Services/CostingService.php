@@ -21,8 +21,7 @@ class CostingService
         private readonly OperationsService $operationsService,
         private readonly MilitaryMarkupService $militaryMarkupService,
         private readonly SpecEditRequestService $editRequestService,
-    ) {
-    }
+    ) {}
 
     /**
      * استقبال الحالة من المعدلات — احتساب التكلفة والتوقف عند cost_calc.
@@ -47,15 +46,15 @@ class CostingService
             $this->militaryMarkupService->apply($case->fresh());
 
             AuditService::log(
-                action:      'receive',
+                action: 'receive',
                 description: "استلام التكاليف — {$case->case_no} — بانتظار التأكيد",
-                tag:         'pricing',
-                after:       [
-                    'case_id'        => $case->id,
-                    'pricing_request'=> $pricingRequest->request_no,
+                tag: 'pricing',
+                after: [
+                    'case_id' => $case->id,
+                    'pricing_request' => $pricingRequest->request_no,
                     'computed_total' => $pricingRequest->computed_total,
                     'internal_total' => $pricingRequest->internal_total,
-                    'stage_key'      => CaseRecord::STAGE_COST_CALC,
+                    'stage_key' => CaseRecord::STAGE_COST_CALC,
                 ],
             );
         });
@@ -96,13 +95,13 @@ class CostingService
             $this->workflowService->advance($case->fresh(), WorkflowEvent::QuoteIssued->value);
 
             AuditService::log(
-                action:      'confirm',
+                action: 'confirm',
                 description: "تأكيد التكاليف وإصدار عرض السعر — {$case->case_no}",
-                tag:         'pricing',
-                after:       [
-                    'case_id'      => $case->id,
+                tag: 'pricing',
+                after: [
+                    'case_id' => $case->id,
                     'confirmed_by' => $confirmedBy ?? 'مكتب التشغيل',
-                    'stage_key'    => CaseRecord::STAGE_OPERATIONS,
+                    'stage_key' => CaseRecord::STAGE_OPERATIONS,
                 ],
             );
         });

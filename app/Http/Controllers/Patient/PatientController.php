@@ -9,7 +9,6 @@ use App\Models\Patient;
 use App\Services\CaseTrackingQrService;
 use App\Services\PatientService;
 use App\Traits\PaginationTrait;
-use App\Support\ClinicTime;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -22,8 +21,7 @@ class PatientController extends Controller
     public function __construct(
         private readonly PatientService $patientService,
         private readonly CaseTrackingQrService $caseTrackingQrService,
-    ) {
-    }
+    ) {}
 
     /**
      * قائمة المرضى — مرشَّحة ومُرقَّمة (بدون حقول مالية).
@@ -37,9 +35,9 @@ class PatientController extends Controller
                 ->when($request->contract_company_id, fn ($q, $id) => $q->where('contract_company_id', $id))
                 ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%")
-                      ->orWhere('patient_code', 'like', "%{$search}%")
-                      ->orWhere('national_id', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('patient_code', 'like', "%{$search}%")
+                        ->orWhere('national_id', 'like', "%{$search}%");
 
                     if (ctype_digit((string) $search)) {
                         $q->orWhere('id', (int) $search);
@@ -49,7 +47,7 @@ class PatientController extends Controller
         );
 
         return response()->json([
-            'data'  => collect($patients)->map(fn (Patient $p) => $this->formatPatientListRow($p))->values(),
+            'data' => collect($patients)->map(fn (Patient $p) => $this->formatPatientListRow($p))->values(),
             'total' => $patients->count(),
         ]);
     }
@@ -86,10 +84,10 @@ class PatientController extends Controller
         return response()->json([
             ...$this->formatPatientCard($patient),
             'latest_case' => $latestCase ? [
-                'case_no'             => $latestCase->case_no,
-                'stage_key'           => $latestCase->stage_key,
+                'case_no' => $latestCase->case_no,
+                'stage_key' => $latestCase->stage_key,
                 'manufacturing_stage' => $latestCase->manufacturing_stage,
-                'delivered_at'        => $latestCase->delivered_at?->toDateString(),
+                'delivered_at' => $latestCase->delivered_at?->toDateString(),
             ] : null,
         ]);
     }
@@ -103,14 +101,14 @@ class PatientController extends Controller
         $patient->load('contractCompany:id,name');
 
         return view('reception.print.patient-card-label', [
-            'patient'     => $patient,
-            'typeLabel'   => $patient->isMilitary() ? 'عسكري' : 'مدني',
+            'patient' => $patient,
+            'typeLabel' => $patient->isMilitary() ? 'عسكري' : 'مدني',
             'queueNumber' => $patient->clinicDayQueueNumber() ?? '—',
-            'company'     => $patient->isMilitary() ? null : $patient->displayEntity(),
-            'rank'        => $patient->isMilitary() ? ($patient->rank ?: null) : null,
+            'company' => $patient->isMilitary() ? null : $patient->displayEntity(),
+            'rank' => $patient->isMilitary() ? ($patient->rank ?: null) : null,
             'trackingUrl' => $this->caseTrackingQrService->url($patient),
-            'qrSvg'       => $this->caseTrackingQrService->svg($patient, 180, 0),
-            'autoPrint'   => ! $request->boolean('embed'),
+            'qrSvg' => $this->caseTrackingQrService->svg($patient, 180, 0),
+            'autoPrint' => ! $request->boolean('embed'),
         ]);
     }
 
@@ -147,10 +145,10 @@ class PatientController extends Controller
             'status',
         ]) + [
             'queue_number' => $patient->clinicDayQueueNumber(),
-            'entity'            => $patient->entityPresentation(),
-            'tracking_url'    => $this->caseTrackingQrService->url($patient),
-            'qr_svg'          => $this->caseTrackingQrService->svg($patient),
-            'card_print_url'  => route('reception.patients.card.print', $patient),
+            'entity' => $patient->entityPresentation(),
+            'tracking_url' => $this->caseTrackingQrService->url($patient),
+            'qr_svg' => $this->caseTrackingQrService->svg($patient),
+            'card_print_url' => route('reception.patients.card.print', $patient),
             'contract_company' => $patient->relationLoaded('contractCompany')
                 ? $patient->contractCompany
                 : null,

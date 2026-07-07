@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\Quote;
@@ -16,8 +17,7 @@ class QuoteService
 {
     public function __construct(
         private readonly StockPriceService $stockPriceService,
-    ) {
-    }
+    ) {}
 
     /**
      * إنشاء أو تحديث Quote صادر من طلب تسعير محتسَب.
@@ -38,26 +38,26 @@ class QuoteService
         $quoteNo = $this->nextQuoteNo();
 
         $quote = Quote::create([
-            'quote_no'           => $quoteNo,
-            'order_ref'          => $request->order_ref,
-            'case_id'            => $request->case_id,
+            'quote_no' => $quoteNo,
+            'order_ref' => $request->order_ref,
+            'case_id' => $request->case_id,
             'pricing_request_id' => $request->id,
-            'patient_name'       => $request->patient_name,
-            'company_name'       => $request->company_name,
-            'quote_date'         => now()->toDateString(),
-            'status'             => Quote::STATUS_PENDING,
-            'status_label'       => 'بمكتب التشغيل — بانتظار الإصدار',
-            'total'              => $total,
+            'patient_name' => $request->patient_name,
+            'company_name' => $request->company_name,
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_PENDING,
+            'status_label' => 'بمكتب التشغيل — بانتظار الإصدار',
+            'total' => $total,
         ]);
 
         $this->syncQuoteItems($quote, $request);
         $this->syncCaseQuoteFields($request->case_id, $quoteNo, $total);
 
         AuditService::log(
-            action:      'create',
+            action: 'create',
             description: "إنشاء عرض السعر {$quoteNo} — {$request->request_no}",
-            tag:         'quotes',
-            after:       $quote->only(['id', 'quote_no', 'case_id', 'total', 'status']),
+            tag: 'quotes',
+            after: $quote->only(['id', 'quote_no', 'case_id', 'total', 'status']),
         );
 
         return $quote->load('items');
@@ -73,20 +73,20 @@ class QuoteService
         $quote->update([
             'patient_name' => $request->patient_name,
             'company_name' => $request->company_name,
-            'quote_date'   => now()->toDateString(),
-            'status'       => Quote::STATUS_PENDING,
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_PENDING,
             'status_label' => 'بمكتب التشغيل — بانتظار الإصدار',
-            'total'        => $total,
+            'total' => $total,
         ]);
 
         $this->syncCaseQuoteFields($request->case_id, $quote->quote_no, $total);
 
         AuditService::log(
-            action:      'reissue',
+            action: 'reissue',
             description: "تحديث عرض السعر {$quote->quote_no} بعد إعادة المسار — {$request->request_no}",
-            tag:         'quotes',
-            before:      $before,
-            after:       $quote->only(['id', 'quote_no', 'case_id', 'total', 'status', 'status_label']),
+            tag: 'quotes',
+            before: $before,
+            after: $quote->only(['id', 'quote_no', 'case_id', 'total', 'status', 'status_label']),
         );
 
         return $quote->load('items');
@@ -101,12 +101,12 @@ class QuoteService
             $lineAmount = (float) ($item->line_total ?? round($item->qty * $unitPrice, 2));
 
             QuoteItem::create([
-                'quote_id'        => $quote->id,
-                'name'            => $item->name,
-                'source'          => $item->source ?? \App\Models\BomItem::SOURCE_SPEC,
+                'quote_id' => $quote->id,
+                'name' => $item->name,
+                'source' => $item->source ?? BomItem::SOURCE_SPEC,
                 'stock_item_code' => $item->stock_item_code,
-                'qty'             => $item->qty,
-                'amount'          => $lineAmount,
+                'qty' => $item->qty,
+                'amount' => $lineAmount,
             ]);
         }
     }
@@ -114,8 +114,8 @@ class QuoteService
     private function syncCaseQuoteFields(int $caseId, string $quoteNo, float $total): void
     {
         CaseRecord::where('id', $caseId)->update([
-            'quote_no'    => $quoteNo,
-            'quote_date'  => now()->toDateString(),
+            'quote_no' => $quoteNo,
+            'quote_date' => now()->toDateString(),
             'quote_total' => $total,
         ]);
     }
@@ -146,16 +146,16 @@ class QuoteService
 
         return DB::transaction(function () use ($quote, $before) {
             $quote->update([
-                'status'       => Quote::STATUS_ISSUED,
+                'status' => Quote::STATUS_ISSUED,
                 'status_label' => 'بانتظار الدفع في الخزنة',
             ]);
 
             AuditService::log(
-                action:      'issue',
+                action: 'issue',
                 description: "إصدار عرض سعر نقدي للخزنة — {$quote->quote_no}",
-                tag:         'quotes',
-                before:      $before,
-                after:       $quote->only(['status', 'status_label']),
+                tag: 'quotes',
+                before: $before,
+                after: $quote->only(['status', 'status_label']),
             );
 
             return $quote->fresh()->load('items');
@@ -168,25 +168,25 @@ class QuoteService
     public function markIssued(Quote $quote, ?string $auditNote = null): Quote
     {
         if (! in_array($quote->status, [Quote::STATUS_PENDING, Quote::STATUS_ISSUED], true)) {
-            abort(422, 'لا يمكن إصدار عرض السعر — الحالة الحالية: ' . $quote->status);
+            abort(422, 'لا يمكن إصدار عرض السعر — الحالة الحالية: '.$quote->status);
         }
 
         $before = $quote->only(['status', 'status_label']);
 
         return DB::transaction(function () use ($quote, $before, $auditNote) {
             $quote->update([
-                'status'       => Quote::STATUS_ISSUED,
+                'status' => Quote::STATUS_ISSUED,
                 'status_label' => 'صادر للجهة — بانتظار خطاب الموافقة',
             ]);
 
             AuditService::log(
-                action:      'issue',
+                action: 'issue',
                 description: $auditNote
                     ? "{$auditNote} — {$quote->quote_no}"
                     : "إصدار عرض السعر {$quote->quote_no}",
-                tag:         'quotes',
-                before:      $before,
-                after:       $quote->only(['status', 'status_label']),
+                tag: 'quotes',
+                before: $before,
+                after: $quote->only(['status', 'status_label']),
             );
 
             return $quote->fresh()->load('items');
@@ -206,16 +206,16 @@ class QuoteService
 
         return DB::transaction(function () use ($quote, $before) {
             $quote->update([
-                'status'       => Quote::STATUS_APPROVED,
+                'status' => Quote::STATUS_APPROVED,
                 'status_label' => 'تم الدفع في الخزنة',
             ]);
 
             AuditService::log(
-                action:      'approve',
+                action: 'approve',
                 description: "تأكيد الدفع النقدي في الخزنة — {$quote->quote_no}",
-                tag:         'quotes',
-                before:      $before,
-                after:       $quote->only(['status', 'status_label']),
+                tag: 'quotes',
+                before: $before,
+                after: $quote->only(['status', 'status_label']),
             );
 
             return $quote->fresh()->load('items');
@@ -224,10 +224,10 @@ class QuoteService
 
     private function nextQuoteNo(): string
     {
-        $year   = now()->year;
+        $year = now()->year;
         $prefix = "QT-{$year}-";
 
-        $last = Quote::where('quote_no', 'like', $prefix . '%')
+        $last = Quote::where('quote_no', 'like', $prefix.'%')
             ->lockForUpdate()
             ->orderByDesc('quote_no')
             ->value('quote_no');

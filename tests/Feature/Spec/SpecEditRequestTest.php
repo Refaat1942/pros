@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\SpecEditRequest;
 use App\Models\TechOrderSpec;
 use App\Models\TechOrderSpecItem;
+use App\Services\MedicalRecordService;
 use App\Services\SpecService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -27,47 +28,47 @@ class SpecEditRequestTest extends TestCase
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $doctor  = $this->userWithRole('doctor');
-        $spec    = $this->userWithRole('spec');
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
 
         $this->actingAs($doctor);
 
         $record = MedicalRecord::create([
-            'patient_id'   => $patient->id,
+            'patient_id' => $patient->id,
             'patient_name' => $patient->name,
             'patient_type' => $patient->patient_type,
-            'diagnosis'    => 'بتر',
-            'doctor_name'  => $doctor->name,
-            'record_date'  => now()->toDateString(),
-            'status'       => MedicalRecord::STATUS_DRAFT,
-            'locked'       => false,
+            'diagnosis' => 'بتر',
+            'doctor_name' => $doctor->name,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
         ]);
 
         MedicalRecordItem::create([
             'medical_record_id' => $record->id,
-            'stock_item_code'   => 'RM-EDIT-A',
-            'name'              => 'صنف A',
-            'qty'               => 1,
+            'stock_item_code' => 'RM-EDIT-A',
+            'name' => 'صنف A',
+            'qty' => 1,
         ]);
 
-        app(\App\Services\MedicalRecordService::class)->lock($record);
+        app(MedicalRecordService::class)->lock($record);
 
         $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
 
         $draft = TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => $doctor->name,
-            'locked'       => false,
+            'doctor_name' => $doctor->name,
+            'locked' => false,
         ]);
 
         TechOrderSpecItem::create([
             'tech_order_spec_id' => $draft->id,
-            'stock_item_code'    => 'RM-EDIT-A',
-            'name'               => 'صنف A',
-            'qty'                => 1,
+            'stock_item_code' => 'RM-EDIT-A',
+            'name' => 'صنف A',
+            'qty' => 1,
         ]);
 
         $this->actingAs($spec);
@@ -88,7 +89,7 @@ class SpecEditRequestTest extends TestCase
         $this->actingAs($specUser)
             ->postJson(route('spec.spec.edit-request.store', $draft), [
                 'tech_notes' => 'تعديل الكمية',
-                'items'      => [
+                'items' => [
                     ['stock_item_code' => 'RM-EDIT-A', 'name' => 'صنف A', 'qty' => 2],
                     ['stock_item_code' => 'RM-EDIT-B', 'name' => 'صنف B', 'qty' => 1],
                 ],
@@ -98,7 +99,7 @@ class SpecEditRequestTest extends TestCase
 
         $this->assertDatabaseHas('spec_edit_requests', [
             'tech_order_spec_id' => $draft->id,
-            'status'             => SpecEditRequestStatus::Pending->value,
+            'status' => SpecEditRequestStatus::Pending->value,
         ]);
 
         $this->assertSame(
@@ -120,7 +121,7 @@ class SpecEditRequestTest extends TestCase
             ->assertCreated();
 
         $request = SpecEditRequest::where('tech_order_spec_id', $draft->id)->firstOrFail();
-        $admin   = $this->userWithRole('admin');
+        $admin = $this->userWithRole('admin');
 
         $this->actingAs($admin)
             ->postJson(route('admin.spec-edit-requests.approve', $request))
@@ -156,7 +157,7 @@ class SpecEditRequestTest extends TestCase
             ->assertCreated();
 
         $request = SpecEditRequest::firstOrFail();
-        $admin   = $this->userWithRole('admin');
+        $admin = $this->userWithRole('admin');
 
         $this->actingAs($admin)
             ->postJson(route('admin.spec-edit-requests.reject', $request), [])
@@ -185,7 +186,7 @@ class SpecEditRequestTest extends TestCase
             ->assertCreated();
 
         $request = SpecEditRequest::firstOrFail();
-        $admin   = $this->userWithRole('admin');
+        $admin = $this->userWithRole('admin');
 
         $this->actingAs($admin)
             ->postJson(route('admin.spec-edit-requests.reject', $request), [
@@ -269,7 +270,7 @@ class SpecEditRequestTest extends TestCase
             ->assertCreated();
 
         $request = SpecEditRequest::firstOrFail();
-        $admin   = $this->userWithRole('admin');
+        $admin = $this->userWithRole('admin');
 
         $this->actingAs($admin)
             ->postJson(route('admin.spec-edit-requests.reject', $request), [
@@ -300,7 +301,7 @@ class SpecEditRequestTest extends TestCase
         $this->actingAs($specUser)
             ->postJson(route('spec.spec.edit-request.store', $draft), [
                 'tech_notes' => 'استبدال الصنف',
-                'items'      => [
+                'items' => [
                     ['stock_item_code' => 'RM-EDIT-B', 'name' => 'صنف B', 'qty' => 2],
                 ],
             ])
@@ -323,7 +324,7 @@ class SpecEditRequestTest extends TestCase
         $this->actingAs($specUser)
             ->postJson(route('spec.spec.edit-request.store', $draft), [
                 'tech_notes' => 'تعديل',
-                'items'      => [
+                'items' => [
                     ['stock_item_code' => 'RM-EDIT-B', 'name' => 'صنف B', 'qty' => 1],
                 ],
             ])

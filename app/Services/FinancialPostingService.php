@@ -15,9 +15,7 @@ use App\Support\PatientEntityPresenter;
  */
 class FinancialPostingService
 {
-    public function __construct(private readonly ContractDebtService $contractDebtService)
-    {
-    }
+    public function __construct(private readonly ContractDebtService $contractDebtService) {}
 
     public function post(CaseRecord $case): void
     {
@@ -85,15 +83,15 @@ class FinancialPostingService
     {
         if (! PatientEntityPresenter::postsContractDebt($case)) {
             AuditService::log(
-                action:      'post',
+                action: 'post',
                 description: $case->isCashCivilian()
                     ? 'ترحيل مدني نقدي — حساب المريض (بدون جهة تعاقد)'
                     : 'ترحيل مدني — جهة غير متعاقدة (بدون مديونية)',
-                tag:         'financial',
-                after:       [
+                tag: 'financial',
+                after: [
                     'case_id' => $case->id,
-                    'amount'  => $amount,
-                    'mode'    => $case->entityPresentation()['kind'],
+                    'amount' => $amount,
+                    'mode' => $case->entityPresentation()['kind'],
                 ],
             );
 
@@ -102,11 +100,11 @@ class FinancialPostingService
 
         if ($amount <= 0) {
             AuditService::log(
-                action:      'post',
+                action: 'post',
                 description: 'ترحيل مدني — لا حصة على الجهة (المريض يتحمّل كامل المبلغ)',
-                tag:         'financial',
-                after:       [
-                    'case_id'    => $case->id,
+                tag: 'financial',
+                after: [
+                    'case_id' => $case->id,
                     'company_id' => $case->contract_company_id,
                 ],
             );
@@ -115,19 +113,19 @@ class FinancialPostingService
         }
 
         $company = ContractCompany::findOrFail($case->contract_company_id);
-        $before  = ['amount' => $amount];
+        $before = ['amount' => $amount];
 
         $this->contractDebtService->increaseDue($company, $amount);
 
         AuditService::log(
-            action:      'post',
+            action: 'post',
             description: 'ترحيل مستحق مدني',
-            tag:         'financial',
-            before:      $before,
-            after:       [
+            tag: 'financial',
+            before: $before,
+            after: [
                 'company_id' => $company->id,
-                'company'    => $company->name,
-                'amount'     => $amount,
+                'company' => $company->name,
+                'amount' => $amount,
             ],
         );
     }
@@ -141,27 +139,27 @@ class FinancialPostingService
             $case->loadMissing('patient');
 
             MilitaryDebt::create([
-                'case_id'             => $case->id,
-                'work_order_no'       => $case->work_order_no,
-                'patient_name'        => $case->patient?->name ?? $case->company_name ?? '—',
+                'case_id' => $case->id,
+                'work_order_no' => $case->work_order_no,
+                'patient_name' => $case->patient?->name ?? $case->company_name ?? '—',
                 'patient_national_id' => $case->patient?->national_id ?? null,
-                'sovereign_entity'    => $case->sovereign_entity ?? $case->company_name ?? '—',
-                'total_cost'          => $totalCost,
-                'collected'           => 0,
-                'delivered_at'        => $case->delivered_at?->toDateString() ?? now()->toDateString(),
-                'status'              => MilitaryDebt::STATUS_PENDING,
+                'sovereign_entity' => $case->sovereign_entity ?? $case->company_name ?? '—',
+                'total_cost' => $totalCost,
+                'collected' => 0,
+                'delivered_at' => $case->delivered_at?->toDateString() ?? now()->toDateString(),
+                'status' => MilitaryDebt::STATUS_PENDING,
             ]);
         }
 
         AuditService::log(
-            action:      'post',
+            action: 'post',
             description: 'ترحيل تكلفة عسكري — قيد مديونية سيادية',
-            tag:         'financial',
-            after:       [
-                'case_id'          => $case->id,
-                'work_order_no'    => $case->work_order_no,
+            tag: 'financial',
+            after: [
+                'case_id' => $case->id,
+                'work_order_no' => $case->work_order_no,
                 'sovereign_entity' => $case->sovereign_entity,
-                'total_cost'       => $totalCost,
+                'total_cost' => $totalCost,
             ],
         );
     }

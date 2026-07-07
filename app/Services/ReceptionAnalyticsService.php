@@ -17,11 +17,11 @@ class ReceptionAnalyticsService
 {
     public function build(): array
     {
-        $today     = ClinicTime::todayDateString();
-        $now       = ClinicTime::now();
+        $today = ClinicTime::todayDateString();
+        $now = ClinicTime::now();
         $monthStart = $now->copy()->startOfMonth();
         $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
-        $lastMonthEnd   = $now->copy()->subMonth()->endOfMonth();
+        $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
 
         $todayAppointments = Appointment::query()
             ->whereDate('appointment_date', $today)
@@ -36,15 +36,15 @@ class ReceptionAnalyticsService
             ->count();
 
         $statusToday = $this->countByStatus($todayAppointments);
-        $pathMonth   = $this->countByPatientType($monthAppointments);
+        $pathMonth = $this->countByPatientType($monthAppointments);
 
-        $patientsTotal      = Patient::query()->count();
-        $patientsThisMonth  = Patient::query()->where('created_at', '>=', $monthStart)->count();
-        $patientsCivilian   = Patient::query()->where('patient_type', Patient::TYPE_CIVILIAN)->count();
-        $patientsMilitary   = Patient::query()->where('patient_type', Patient::TYPE_MILITARY)->count();
+        $patientsTotal = Patient::query()->count();
+        $patientsThisMonth = Patient::query()->where('created_at', '>=', $monthStart)->count();
+        $patientsCivilian = Patient::query()->where('patient_type', Patient::TYPE_CIVILIAN)->count();
+        $patientsMilitary = Patient::query()->where('patient_type', Patient::TYPE_MILITARY)->count();
 
         $quotesPending = Quote::query()->where('status', Quote::STATUS_PENDING)->count();
-        $quotesIssued  = Quote::query()->where('status', Quote::STATUS_ISSUED)->count();
+        $quotesIssued = Quote::query()->where('status', Quote::STATUS_ISSUED)->count();
         $quotesApproved = Quote::query()->where('status', Quote::STATUS_APPROVED)->count();
 
         $contractsThisMonth = ApprovalContract::query()
@@ -52,7 +52,7 @@ class ReceptionAnalyticsService
             ->count();
 
         $transferredToday = $todayAppointments->where('transferred_to_clinic', true)->count();
-        $avgWaitMinutes   = $this->averageReceptionWaitMinutes($todayAppointments);
+        $avgWaitMinutes = $this->averageReceptionWaitMinutes($todayAppointments);
 
         $monthCount = $monthAppointments->count();
         $monthDelta = $lastMonthCount > 0
@@ -62,8 +62,8 @@ class ReceptionAnalyticsService
         return [
             'meta' => [
                 'generated_at' => ClinicTime::format($now),
-                'today'        => ClinicTime::format($now, 'd/m/Y'),
-                'month_label'  => $now->translatedFormat('F Y'),
+                'today' => ClinicTime::format($now, 'd/m/Y'),
+                'month_label' => $now->translatedFormat('F Y'),
             ],
             'stats' => [
                 ['icon' => '📅', 'label' => 'مواعيد اليوم', 'value' => (string) $todayAppointments->count(), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
@@ -73,18 +73,18 @@ class ReceptionAnalyticsService
                 ['icon' => '👤', 'label' => 'مرضى جدد — الشهر', 'value' => (string) $patientsThisMonth, 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
                 ['icon' => '💰', 'label' => 'عروض معلقة', 'value' => (string) $quotesPending, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
                 ['icon' => '📑', 'label' => 'عقود — الشهر', 'value' => (string) $contractsThisMonth, 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
-                ['icon' => '⏱️', 'label' => 'متوسط انتظار اليوم', 'value' => $this->formatWaitMinutes($avgWaitMinutes), 'sub' => $transferredToday . ' تحويل للعيادة', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['icon' => '⏱️', 'label' => 'متوسط انتظار اليوم', 'value' => $this->formatWaitMinutes($avgWaitMinutes), 'sub' => $transferredToday.' تحويل للعيادة', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
             ],
             'charts' => [
                 [
-                    'type'  => 'column',
+                    'type' => 'column',
                     'title' => '📈 مواعيد آخر 7 أيام',
-                    'wide'  => true,
-                    'unit'  => 'count',
+                    'wide' => true,
+                    'unit' => 'count',
                     'items' => $this->lastSevenDaysSeries(),
                 ],
                 [
-                    'type'  => 'donut',
+                    'type' => 'donut',
                     'title' => '📊 حالات مواعيد اليوم',
                     'large' => true,
                     'items' => [
@@ -100,7 +100,7 @@ class ReceptionAnalyticsService
                     ],
                 ],
                 [
-                    'type'  => 'donut',
+                    'type' => 'donut',
                     'title' => '🪖 المسار — مواعيد الشهر',
                     'large' => true,
                     'items' => [
@@ -110,17 +110,17 @@ class ReceptionAnalyticsService
                     'summary' => [
                         ['label' => 'إجمالي الشهر', 'value' => (string) $monthCount],
                         ['label' => 'الشهر السابق', 'value' => (string) $lastMonthCount],
-                        ['label' => 'التغيّر', 'value' => ($monthDelta >= 0 ? '+' : '') . $monthDelta . '%', 'color' => $monthDelta >= 0 ? '#059669' : '#dc2626'],
+                        ['label' => 'التغيّر', 'value' => ($monthDelta >= 0 ? '+' : '').$monthDelta.'%', 'color' => $monthDelta >= 0 ? '#059669' : '#dc2626'],
                     ],
                 ],
                 [
-                    'type'  => 'bar',
+                    'type' => 'bar',
                     'title' => '🩺 أنواع الزيارة — الشهر',
-                    'wide'  => true,
+                    'wide' => true,
                     'items' => $this->visitTypeBreakdown($monthAppointments),
                 ],
                 [
-                    'type'  => 'bar',
+                    'type' => 'bar',
                     'title' => '👥 سجل المرضى',
                     'items' => [
                         ['label' => 'إجمالي المسجّلين', 'value' => $patientsTotal, 'color' => '#7c3aed'],
@@ -130,7 +130,7 @@ class ReceptionAnalyticsService
                     ],
                 ],
                 [
-                    'type'  => 'bar',
+                    'type' => 'bar',
                     'title' => '💰 عروض الأسعار (مدني)',
                     'items' => [
                         ['label' => 'معلّقة', 'value' => $quotesPending, 'color' => '#d97706'],
@@ -168,7 +168,7 @@ class ReceptionAnalyticsService
             $items[] = [
                 'label' => $day->format('d/m'),
                 'value' => $count,
-                'sub'   => $isToday ? 'اليوم' : $day->translatedFormat('D'),
+                'sub' => $isToday ? 'اليوم' : $day->translatedFormat('D'),
                 'color' => $isToday ? '#059669' : '#7c3aed',
             ];
         }
@@ -177,7 +177,7 @@ class ReceptionAnalyticsService
     }
 
     /**
-     * @param Collection<int, Appointment> $appointments
+     * @param  Collection<int, Appointment>  $appointments
      * @return list<array{label: string, value: int, color?: string}>
      */
     private function visitTypeBreakdown(Collection $appointments): array
@@ -223,12 +223,12 @@ class ReceptionAnalyticsService
         }
 
         return match ($appointment->visit_type) {
-            Appointment::VISIT_EXAM     => 'كشف',
+            Appointment::VISIT_EXAM => 'كشف',
             Appointment::VISIT_FOLLOWUP => 'متابعة',
-            Appointment::VISIT_FITTING  => 'تجربة',
+            Appointment::VISIT_FITTING => 'تجربة',
             Appointment::VISIT_DELIVERY => 'تسليم',
-            Appointment::VISIT_REVIEW   => 'مراجعة',
-            default                     => $appointment->visit_type ?: '—',
+            Appointment::VISIT_REVIEW => 'مراجعة',
+            default => $appointment->visit_type ?: '—',
         };
     }
 
@@ -240,7 +240,7 @@ class ReceptionAnalyticsService
 
         foreach ($todayAppointments->where('transferred_to_clinic', true) as $appointment) {
             $start = $appointment->registrationMoment();
-            $end   = $appointment->transferredAt();
+            $end = $appointment->transferredAt();
 
             if (! $start || ! $end || $end->lessThan($start)) {
                 continue;
@@ -260,11 +260,11 @@ class ReceptionAnalyticsService
         }
 
         if ($minutes < 60) {
-            return $minutes . ' د';
+            return $minutes.' د';
         }
 
         $hours = intdiv($minutes, 60);
-        $rem   = $minutes % 60;
+        $rem = $minutes % 60;
 
         return $rem > 0 ? "{$hours} س {$rem} د" : "{$hours} س";
     }

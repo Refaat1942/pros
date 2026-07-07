@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\StockWarehouseType;
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,12 +11,12 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 /**
  * قائمة مواد التشغيل — clinic_bom_inventory
  */
-
-
-class Bom extends Model /// Bill of Materials  || "الروشتة التصنيعية للمريض" أو "قائمة المقادير".
+class Bom extends Model // / Bill of Materials  || "الروشتة التصنيعية للمريض" أو "قائمة المقادير".
 {
     public const STAGE_RAW = 'raw';
+
     public const STAGE_WIP = 'wip';
+
     public const STAGE_FINISHED = 'finished';
 
     protected $fillable = [
@@ -34,8 +33,8 @@ class Bom extends Model /// Bill of Materials  || "الروشتة التصنيع
 
     protected $casts = [
         'stock_reserved_at' => 'datetime',
-        'released_at'       => 'datetime',
-        'finished_at'       => 'datetime',
+        'released_at' => 'datetime',
+        'finished_at' => 'datetime',
     ];
 
     public function caseRecord(): BelongsTo

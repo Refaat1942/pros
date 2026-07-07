@@ -23,21 +23,21 @@ return new class extends Migration
                     return;
                 }
 
-                $due       = (float) $debt->due;
+                $due = (float) $debt->due;
                 $collected = (float) $debt->collected;
 
                 DB::table('debt_collection_entries')->insert([
-                    'payable_type'      => 'contract_company_debt',
-                    'payable_id'        => $debt->id,
-                    'installment_no'    => 1,
-                    'amount'            => $collected,
+                    'payable_type' => 'contract_company_debt',
+                    'payable_id' => $debt->id,
+                    'installment_no' => 1,
+                    'amount' => $collected,
                     'running_collected' => $collected,
-                    'remaining_after'   => max(0, round($due - $collected, 2)),
-                    'recorded_by'       => null,
-                    'recorded_by_name'  => 'ترحيل سابق',
-                    'collected_at'      => $debt->updated_at ?? $now,
-                    'created_at'        => $now,
-                    'updated_at'        => $now,
+                    'remaining_after' => max(0, round($due - $collected, 2)),
+                    'recorded_by' => null,
+                    'recorded_by_name' => 'ترحيل سابق',
+                    'collected_at' => $debt->updated_at ?? $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ]);
             });
 
@@ -53,21 +53,21 @@ return new class extends Migration
                     return;
                 }
 
-                $due       = (float) $debt->total_cost;
+                $due = (float) $debt->total_cost;
                 $collected = (float) $debt->collected;
 
                 DB::table('debt_collection_entries')->insert([
-                    'payable_type'      => 'military_debt',
-                    'payable_id'        => $debt->id,
-                    'installment_no'    => 1,
-                    'amount'            => $collected,
+                    'payable_type' => 'military_debt',
+                    'payable_id' => $debt->id,
+                    'installment_no' => 1,
+                    'amount' => $collected,
                     'running_collected' => $collected,
-                    'remaining_after'   => max(0, round($due - $collected, 2)),
-                    'recorded_by'       => null,
-                    'recorded_by_name'  => 'ترحيل سابق',
-                    'collected_at'      => $debt->collected_at ?? $debt->updated_at ?? $now,
-                    'created_at'        => $now,
-                    'updated_at'        => $now,
+                    'remaining_after' => max(0, round($due - $collected, 2)),
+                    'recorded_by' => null,
+                    'recorded_by_name' => 'ترحيل سابق',
+                    'collected_at' => $debt->collected_at ?? $debt->updated_at ?? $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ]);
             });
     }

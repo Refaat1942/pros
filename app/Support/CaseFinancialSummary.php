@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
-use App\Support\ContractBillingSplit;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -33,6 +32,7 @@ final class CaseFinancialSummary
     {
         return (float) $case->internal_cost;
     }
+
     public static function totalCost(CaseRecord $case): float
     {
         foreach ([

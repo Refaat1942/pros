@@ -20,8 +20,7 @@ class AdjustmentsService
         private readonly BomService $bomService,
         private readonly CostingService $costingService,
         private readonly SpecEditRequestService $editRequestService,
-    ) {
-    }
+    ) {}
 
     /**
      * إضافة بنود مستشار المعدلات — البنود الأصلية (الفني) تبقى للقراءة فقط.

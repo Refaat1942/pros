@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BomItem extends Model
 {
     public const SOURCE_SPEC = 'spec';
+
     public const SOURCE_ADJUSTMENT = 'adjustment';
 
     protected $fillable = [
@@ -66,7 +67,7 @@ class BomItem extends Model
     public function returnRequestMaxQty(?int $pendingReturnQty = null): int
     {
         $pending = $pendingReturnQty ?? $this->pendingReturnQty();
-        $net     = max(0, $this->returnableQty() - $pending);
+        $net = max(0, $this->returnableQty() - $pending);
 
         if ($net <= 0) {
             return 0;
@@ -95,7 +96,7 @@ class BomItem extends Model
             ->groupBy('return_notes.bom_id', 'return_note_lines.stock_item_code')
             ->selectRaw(
                 'return_notes.bom_id as bom_id, return_note_lines.stock_item_code as stock_item_code, '
-                . 'SUM(return_note_lines.qty_requested - return_note_lines.qty_returned) as pending'
+                .'SUM(return_note_lines.qty_requested - return_note_lines.qty_returned) as pending'
             )
             ->get()
             ->mapWithKeys(fn ($row) => ["{$row->bom_id}.{$row->stock_item_code}" => (int) $row->pending])

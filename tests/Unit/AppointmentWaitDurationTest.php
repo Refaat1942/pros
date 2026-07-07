@@ -17,7 +17,7 @@ class AppointmentWaitDurationTest extends TestCase
         $patient->created_at = Carbon::parse('2026-06-19 10:00:00');
 
         $appointment = new Appointment([
-            'transferred_to_clinic'    => true,
+            'transferred_to_clinic' => true,
             'transferred_to_clinic_at' => Carbon::parse('2026-06-19 10:45:00'),
         ]);
         $appointment->setRelation('patient', $patient);
@@ -31,7 +31,7 @@ class AppointmentWaitDurationTest extends TestCase
         $patient->created_at = Carbon::parse('2026-06-19 10:00:00');
 
         $appointment = new Appointment([
-            'transferred_to_clinic'    => true,
+            'transferred_to_clinic' => true,
             'transferred_to_clinic_at' => Carbon::parse('2026-06-19 10:00:30'),
         ]);
         $appointment->setRelation('patient', $patient);
@@ -42,7 +42,7 @@ class AppointmentWaitDurationTest extends TestCase
     public function test_clinic_wait_label_from_transfer_until_now(): void
     {
         $appointment = new Appointment([
-            'transferred_to_clinic'    => true,
+            'transferred_to_clinic' => true,
             'transferred_to_clinic_at' => Carbon::parse('2026-06-19 10:00:00'),
         ]);
 
@@ -54,7 +54,7 @@ class AppointmentWaitDurationTest extends TestCase
     public function test_clinic_wait_label_shows_less_than_one_minute_when_under_sixty_seconds(): void
     {
         $appointment = new Appointment([
-            'transferred_to_clinic'    => true,
+            'transferred_to_clinic' => true,
             'transferred_to_clinic_at' => Carbon::parse('2026-06-19 10:00:00'),
         ]);
 
@@ -85,7 +85,7 @@ class AppointmentWaitDurationTest extends TestCase
         $patient = new Patient(['name' => 'اختبار']);
         $patient->created_at = Carbon::parse('2026-06-26 08:19:00', 'UTC');
 
-        $appointment = new Appointment();
+        $appointment = new Appointment;
         $appointment->setRelation('patient', $patient);
 
         $this->assertStringContainsString('11:19', $appointment->registeredAtFormatted());
@@ -94,7 +94,7 @@ class AppointmentWaitDurationTest extends TestCase
     public function test_format_wait_duration_includes_days_and_hours(): void
     {
         $from = Carbon::parse('2026-06-17 08:00:00');
-        $to   = Carbon::parse('2026-06-19 10:30:00');
+        $to = Carbon::parse('2026-06-19 10:30:00');
 
         $label = Appointment::formatWaitDuration($from, $to);
 

@@ -16,23 +16,23 @@ class PatientArchiveService
         }
 
         $before = [
-            'status'      => $patient->status,
+            'status' => $patient->status,
             'archived_at' => null,
         ];
 
         $patient->update([
-            'status'      => Patient::STATUS_DONE,
+            'status' => Patient::STATUS_DONE,
             'archived_at' => now(),
             'last_visit_at' => now()->toDateString(),
         ]);
 
         AuditService::log(
-            action:      'archive',
+            action: 'archive',
             description: "أرشفة ملف المريض — {$patient->patient_code}",
-            tag:         'delivery',
-            before:      $before,
-            after:       [
-                'status'      => Patient::STATUS_DONE,
+            tag: 'delivery',
+            before: $before,
+            after: [
+                'status' => Patient::STATUS_DONE,
                 'archived_at' => now()->toIso8601String(),
             ],
         );

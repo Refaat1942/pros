@@ -28,8 +28,7 @@ class OperationsService
         private readonly WorkOrderService $workOrderService,
         private readonly BomService $bomService,
         private readonly QuoteService $quoteService,
-    ) {
-    }
+    ) {}
 
     /**
      * مكتب التشغيل (مسار الكاش): إصدار عرض السعر → تحويل الحالة للخزنة لتحصيل الدفع.
@@ -55,11 +54,11 @@ class OperationsService
             $this->workflowService->advance($case, WorkflowEvent::SentToCashier->value);
 
             AuditService::log(
-                action:      'issue',
+                action: 'issue',
                 description: "تحويل مريض كاش للخزنة لتحصيل الدفع — {$case->case_no}",
-                tag:         'operations',
-                before:      $before,
-                after:       ['stage_key' => CaseRecord::STAGE_CASHIER, 'quote_no' => $quote->quote_no],
+                tag: 'operations',
+                before: $before,
+                after: ['stage_key' => CaseRecord::STAGE_CASHIER, 'quote_no' => $quote->quote_no],
             );
 
             return $case->fresh()->load('patient');
@@ -107,14 +106,14 @@ class OperationsService
                     ->update(['status_key' => PricingRequestStatus::Insufficient->value]);
 
                 AuditService::log(
-                    action:      'insufficient',
+                    action: 'insufficient',
                     description: "فشل حجز المخزون عند اعتماد التشغيل — الصنف: {$e->stockItemCode}",
-                    tag:         'warehouse',
-                    after:       [
+                    tag: 'warehouse',
+                    after: [
                         'pricing_request_id' => $e->pricingRequestId,
-                        'missing_code'       => $e->stockItemCode,
-                        'available'          => $e->available,
-                        'required'           => $e->required,
+                        'missing_code' => $e->stockItemCode,
+                        'available' => $e->available,
+                        'required' => $e->required,
                     ],
                 );
             }
@@ -143,10 +142,10 @@ class OperationsService
             // اعتماد طلب التسعير المرتبط (انتقال الحالة المالية).
             if ($case->pricing_request_id) {
                 PricingRequest::where('id', $case->pricing_request_id)->update([
-                    'approved_at'  => now(),
-                    'approved_by'  => $approvedBy ?? 'مكتب التشغيل',
-                    'step'         => PricingRequest::STEP_QUOTE_READY,
-                    'status_key'   => PricingRequestStatus::SentToReception->value,
+                    'approved_at' => now(),
+                    'approved_by' => $approvedBy ?? 'مكتب التشغيل',
+                    'step' => PricingRequest::STEP_QUOTE_READY,
+                    'status_key' => PricingRequestStatus::SentToReception->value,
                 ]);
             }
 
@@ -155,7 +154,7 @@ class OperationsService
                 $case->update(['total_cost' => (float) $case->internal_cost]);
             } else {
                 $case->update([
-                    'approval_date'         => now()->toDateString(),
+                    'approval_date' => now()->toDateString(),
                     'approval_confirmed_at' => now(),
                 ]);
             }
@@ -165,17 +164,17 @@ class OperationsService
             $isCashier = $event === WorkflowEvent::CashierPaid->value;
 
             AuditService::log(
-                action:      'approve',
+                action: 'approve',
                 description: $isCashier
                     ? "تأكيد الدفع النقدي بالخزنة — {$case->case_no} — تحويل للمخزن"
                     : "اعتماد مكتب التشغيل — {$case->case_no} — تحويل للمخزن",
-                tag:         $isCashier ? 'financial' : 'operations',
-                before:      $before,
-                after:       [
-                    'stage_key'           => CaseRecord::STAGE_MANUFACTURING,
+                tag: $isCashier ? 'financial' : 'operations',
+                before: $before,
+                after: [
+                    'stage_key' => CaseRecord::STAGE_MANUFACTURING,
                     'manufacturing_stage' => CaseRecord::MFG_WAREHOUSE,
-                    'work_order_no'       => $case->fresh()->work_order_no,
-                    'approved_by'         => $approvedBy ?? 'مكتب التشغيل',
+                    'work_order_no' => $case->fresh()->work_order_no,
+                    'approved_by' => $approvedBy ?? 'مكتب التشغيل',
                 ],
             );
 
@@ -189,9 +188,9 @@ class OperationsService
     public function returnForRework(CaseRecord $case, string $target, ?string $reason = null): CaseRecord
     {
         $event = match ($target) {
-            CaseRecord::STAGE_TECHNICAL   => WorkflowEvent::ReturnedToTechnical->value,
+            CaseRecord::STAGE_TECHNICAL => WorkflowEvent::ReturnedToTechnical->value,
             CaseRecord::STAGE_ADJUSTMENTS => WorkflowEvent::ReturnedToAdjustments->value,
-            default                       => abort(422, 'وجهة الإعادة غير صالحة.'),
+            default => abort(422, 'وجهة الإعادة غير صالحة.'),
         };
 
         return DB::transaction(function () use ($case, $event, $target, $reason) {
@@ -213,8 +212,8 @@ class OperationsService
             $this->workflowService->advance($case, $event);
 
             CaseRecord::where('id', $case->id)->update([
-                'rework_reason'      => $reason,
-                'rework_target'      => $target,
+                'rework_reason' => $reason,
+                'rework_target' => $target,
                 'rework_returned_at' => now(),
                 'rework_returned_by' => Auth::user()?->name ?? 'مكتب التشغيل',
             ]);
@@ -224,11 +223,11 @@ class OperationsService
             }
 
             AuditService::log(
-                action:      'return',
+                action: 'return',
                 description: "إعادة من مكتب التشغيل إلى {$target} — {$case->case_no}",
-                tag:         'operations',
-                before:      $before,
-                after:       ['stage_key' => $target, 'reason' => $reason],
+                tag: 'operations',
+                before: $before,
+                after: ['stage_key' => $target, 'reason' => $reason],
             );
 
             return $case->fresh()->load('patient');

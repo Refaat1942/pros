@@ -4,8 +4,6 @@ namespace Tests\Feature\Reports;
 
 use App\Models\CaseRecord;
 use App\Services\BiReportService;
-use App\Services\StockPriceService;
-use Mockery;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -28,12 +26,12 @@ class BiReportTest extends TestCase
     {
         $mock = $this->mock(BiReportService::class);
         $mock->shouldReceive('boardPatients')->once()->andReturn([
-            'total_cases'     => 5,
-            'civilian_count'  => 3,
-            'military_count'  => 2,
-            'by_stage'        => [],
-            'sla_breaches'    => [],
-            'avg_turnaround'  => 12.5,
+            'total_cases' => 5,
+            'civilian_count' => 3,
+            'military_count' => 2,
+            'by_stage' => [],
+            'sla_breaches' => [],
+            'avg_turnaround' => 12.5,
         ]);
 
         $board = app(BiReportService::class)->boardPatients();
@@ -48,7 +46,7 @@ class BiReportTest extends TestCase
     {
         $mock = $this->mock(BiReportService::class);
         $mock->shouldReceive('boardInventory')->once()->andReturn([
-            'items'           => [],
+            'items' => [],
             'low_stock_items' => [['code' => 'RM-LOW', 'qty' => 1, 'wac' => 50.0]],
             'total_wac_value' => 1000.0,
         ]);
@@ -63,9 +61,9 @@ class BiReportTest extends TestCase
     {
         $mock = $this->mock(BiReportService::class);
         $mock->shouldReceive('boardOperations')->once()->andReturn([
-            'in_production'  => 3,
+            'in_production' => 3,
             'ready_delivery' => 1,
-            'stage_counts'   => [],
+            'stage_counts' => [],
         ]);
 
         $board = app(BiReportService::class)->boardOperations();
@@ -77,9 +75,9 @@ class BiReportTest extends TestCase
     {
         $mock = $this->mock(BiReportService::class);
         $mock->shouldReceive('boardEntitiesAndCosts')->once()->andReturn([
-            'top_debtors'    => [['name' => 'التأمين', 'due' => 5000.0]],
-            'total_due'      => 5000.0,
-            'total_collected'=> 1000.0,
+            'top_debtors' => [['name' => 'التأمين', 'due' => 5000.0]],
+            'total_due' => 5000.0,
+            'total_collected' => 1000.0,
         ]);
 
         $board = app(BiReportService::class)->boardEntitiesAndCosts();
@@ -106,8 +104,8 @@ class BiReportTest extends TestCase
     {
         $civCompany = $this->civilianCompany();
         $milCompany = $this->militaryCompany();
-        $civ        = $this->civilianPatient($civCompany);
-        $mil        = $this->militaryPatient($milCompany);
+        $civ = $this->civilianPatient($civCompany);
+        $mil = $this->militaryPatient($milCompany);
 
         $this->caseAtStage($civ, CaseRecord::STAGE_DELIVERED);
         $this->caseAtStage($mil, CaseRecord::STAGE_DELIVERED);

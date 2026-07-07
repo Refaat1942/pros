@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Models\Bom;
 use App\Models\CaseRecord;
 use Illuminate\Support\Collection;
 
@@ -22,11 +21,11 @@ class ManufacturingDeskCaseFormatter
 
             $bom = $case->bom->only(['id', 'bom_no', 'stage']) + [
                 'items_count' => count($aggregated),
-                'items'       => array_map(
+                'items' => array_map(
                     fn (array $item) => [
                         'stock_item_code' => $item['stock_item_code'],
-                        'name'            => $item['name'],
-                        'qty'             => $item['qty'],
+                        'name' => $item['name'],
+                        'qty' => $item['qty'],
                     ],
                     $aggregated
                 ),
@@ -37,8 +36,8 @@ class ManufacturingDeskCaseFormatter
             'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage',
             'work_order_no', 'patient_type', 'path', 'quote_no',
         ]) + [
-            'company_name'  => $case->displayEntity(),
-            'entity'        => $case->entityPresentation(),
+            'company_name' => $case->displayEntity(),
+            'entity' => $case->entityPresentation(),
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
             'work_order_print_url' => $case->work_order_no
                 ? route($printRouteName, $case)
@@ -58,10 +57,10 @@ class ManufacturingDeskCaseFormatter
         $mil = $cases->filter(fn ($c) => $c->isMilitary())->count();
 
         return [
-            'wip'           => $cases->count(),
-            'military'      => $mil,
-            'civilian'      => $cases->count() - $mil,
-            'total_active'  => $cases->count(),
+            'wip' => $cases->count(),
+            'military' => $mil,
+            'civilian' => $cases->count() - $mil,
+            'total_active' => $cases->count(),
         ];
     }
 
@@ -71,11 +70,11 @@ class ManufacturingDeskCaseFormatter
         $mil = $cases->filter(fn ($c) => $c->isMilitary())->count();
 
         return [
-            'ready'         => $cases->count(),
-            'military'      => $mil,
-            'civilian'      => $cases->count() - $mil,
-            'done'          => CaseRecord::countDeliveredByOps(),
-            'total_active'  => $cases->count(),
+            'ready' => $cases->count(),
+            'military' => $mil,
+            'civilian' => $cases->count() - $mil,
+            'done' => CaseRecord::countDeliveredByOps(),
+            'total_active' => $cases->count(),
         ];
     }
 }

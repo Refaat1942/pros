@@ -17,9 +17,7 @@ use Illuminate\Support\Facades\DB;
  */
 class StockCatalogService
 {
-    public function __construct(private readonly StockCategorySchemaService $categorySchema)
-    {
-    }
+    public function __construct(private readonly StockCategorySchemaService $categorySchema) {}
 
     public function listForDashboard(?string $from = null, ?string $to = null): Collection
     {
@@ -44,7 +42,7 @@ class StockCatalogService
     public function parseDateRange(?string $from, ?string $to): array
     {
         $fromDate = $from ? Carbon::parse($from)->startOfDay() : null;
-        $toDate   = $to ? Carbon::parse($to)->endOfDay() : null;
+        $toDate = $to ? Carbon::parse($to)->endOfDay() : null;
 
         if ($fromDate && $toDate && $fromDate->gt($toDate)) {
             [$fromDate, $toDate] = [$toDate->copy()->startOfDay(), $fromDate->copy()->endOfDay()];
@@ -58,36 +56,36 @@ class StockCatalogService
         $item->loadMissing(['category:id,name', 'prices:id,stock_item_id,label,amount', 'attributeValues.field', 'suppliers:id,name']);
 
         return [
-            'id'          => $item->id,
-            'code'        => $item->code,
-            'barcode'     => $item->barcode,
-            'name'        => $item->name,
-            'spec'        => $item->spec,
+            'id' => $item->id,
+            'code' => $item->code,
+            'barcode' => $item->barcode,
+            'name' => $item->name,
+            'spec' => $item->spec,
             'category_id' => $item->category_id,
-            'category'    => $item->category?->name ?? '',
-            'uom'         => $item->uom,
-            'attributes'  => $this->categorySchema->formatItemAttributes($item),
+            'category' => $item->category?->name ?? '',
+            'uom' => $item->uom,
+            'attributes' => $this->categorySchema->formatItemAttributes($item),
             'attributes_map' => collect($this->categorySchema->formatItemAttributes($item))
                 ->mapWithKeys(fn (array $row) => [$row['field_key'] => $row['value']])
                 ->all(),
-            'qty'         => (int) $item->qty,
-            'reserved'    => (int) $item->reserved,
-            'min_qty'     => (int) ($item->min_qty ?? 0),
-            'price'       => (float) $item->price,
+            'qty' => (int) $item->qty,
+            'reserved' => (int) $item->reserved,
+            'min_qty' => (int) ($item->min_qty ?? 0),
+            'price' => (float) $item->price,
             'highest_price' => $this->highestPrice($item),
             'expiry_date' => $item->expiry_date?->toDateString(),
-            'wac'         => (float) $item->wac,
-            'status'      => $item->status,
-            'created_at'  => $item->created_at?->toDateString(),
-            'updated_at'  => $item->updated_at?->toDateString(),
+            'wac' => (float) $item->wac,
+            'status' => $item->status,
+            'created_at' => $item->created_at?->toDateString(),
+            'updated_at' => $item->updated_at?->toDateString(),
             // الأسعار الإضافية (إن وُجدت — صنف بأكثر من سعر).
-            'prices'      => $item->prices->map(fn (StockItemPrice $p) => [
-                'id'     => (string) $p->id,
-                'label'  => $p->label,
+            'prices' => $item->prices->map(fn (StockItemPrice $p) => [
+                'id' => (string) $p->id,
+                'label' => $p->label,
                 'amount' => (float) $p->amount,
             ])->values()->all(),
-            'suppliers'   => $item->suppliers->map(fn (Supplier $s) => [
-                'id'   => $s->id,
+            'suppliers' => $item->suppliers->map(fn (Supplier $s) => [
+                'id' => $s->id,
                 'name' => $s->name,
             ])->values()->all(),
         ];
@@ -96,26 +94,26 @@ class StockCatalogService
     public function create(array $data): StockItem
     {
         return DB::transaction(function () use ($data) {
-            $code     = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $this->nextCode();
+            $code = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $this->nextCode();
             $category = ! empty($data['category_id']) ? StockCategory::find($data['category_id']) : null;
-            $qty      = (int) ($data['qty'] ?? 0);
-            $price    = (float) ($data['price'] ?? 0);
+            $qty = (int) ($data['qty'] ?? 0);
+            $price = (float) ($data['price'] ?? 0);
 
             $item = StockItem::create([
-                'code'        => $code,
-                'name'        => $data['name'],
-                'spec'        => $data['spec'] ?? null,
+                'code' => $code,
+                'name' => $data['name'],
+                'spec' => $data['spec'] ?? null,
                 'category_id' => $data['category_id'] ?? null,
                 'store_class' => $this->deriveStoreClass($category),
-                'uom'         => StockUom::Piece->value,
-                'barcode'     => 'BC-' . $code,
-                'qty'         => $qty,
-                'reserved'    => 0,
-                'min_qty'     => max(0, (int) ($data['min_qty'] ?? 0)),
-                'price'       => $price,
+                'uom' => StockUom::Piece->value,
+                'barcode' => 'BC-'.$code,
+                'qty' => $qty,
+                'reserved' => 0,
+                'min_qty' => max(0, (int) ($data['min_qty'] ?? 0)),
+                'price' => $price,
                 'expiry_date' => $data['expiry_date'] ?? null,
-                'wac'         => $qty > 0 ? $price : 0,
-                'status'      => StockItem::STATUS_OK,
+                'wac' => $qty > 0 ? $price : 0,
+                'status' => StockItem::STATUS_OK,
             ]);
 
             // أسعار إضافية (صنف بأكثر من سعر).
@@ -136,10 +134,10 @@ class StockCatalogService
             }
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "إضافة صنف {$item->code} — {$item->name}",
-                tag:         'admin',
-                after:       $this->formatItem($item->fresh(['category', 'prices', 'attributeValues.field'])),
+                tag: 'admin',
+                after: $this->formatItem($item->fresh(['category', 'prices', 'attributeValues.field'])),
             );
 
             return $item->fresh(['category', 'prices', 'attributeValues.field', 'suppliers']);
@@ -150,16 +148,16 @@ class StockCatalogService
     {
         return DB::transaction(function () use ($item, $data) {
             $before = $this->formatItem($item);
-            $price  = array_key_exists('price', $data) ? (float) $data['price'] : (float) $item->price;
+            $price = array_key_exists('price', $data) ? (float) $data['price'] : (float) $item->price;
 
             $item->update([
-                'name'        => $data['name'],
-                'spec'        => $data['spec'] ?? $item->spec,
-                'qty'         => (int) ($data['qty'] ?? $item->qty),
-                'min_qty'     => array_key_exists('min_qty', $data)
+                'name' => $data['name'],
+                'spec' => $data['spec'] ?? $item->spec,
+                'qty' => (int) ($data['qty'] ?? $item->qty),
+                'min_qty' => array_key_exists('min_qty', $data)
                     ? max(0, (int) $data['min_qty'])
                     : (int) ($item->min_qty ?? 0),
-                'price'       => $price,
+                'price' => $price,
                 'expiry_date' => $data['expiry_date'] ?? $item->expiry_date,
             ]);
 
@@ -190,11 +188,11 @@ class StockCatalogService
             $this->syncStatus($item->fresh());
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "تعديل صنف {$item->code}",
-                tag:         'admin',
-                before:      $before,
-                after:       $this->formatItem($item->fresh(['category', 'prices', 'attributeValues.field'])),
+                tag: 'admin',
+                before: $before,
+                after: $this->formatItem($item->fresh(['category', 'prices', 'attributeValues.field'])),
             );
 
             return $item->fresh(['category', 'prices', 'attributeValues.field', 'suppliers']);
@@ -225,10 +223,10 @@ class StockCatalogService
         $before = $this->formatItem($item);
 
         AuditService::log(
-            action:      'delete',
+            action: 'delete',
             description: "حذف صنف {$item->code} — {$item->name}",
-            tag:         'admin',
-            before:      $before,
+            tag: 'admin',
+            before: $before,
         );
 
         $item->delete();
@@ -244,15 +242,15 @@ class StockCatalogService
 
         $next = ((int) $lastNum) + 1;
 
-        return 'ITM-' . str_pad((string) $next, 3, '0', STR_PAD_LEFT);
+        return 'ITM-'.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
     }
 
     private function deriveStoreClass(?StockCategory $category): string
     {
         return match ($category?->name) {
-            'بطانات'     => StockStoreClass::Consumables->value,
-            'إكسسوارات'  => StockStoreClass::Tools->value,
-            default      => StockStoreClass::Raw->value,
+            'بطانات' => StockStoreClass::Consumables->value,
+            'إكسسوارات' => StockStoreClass::Tools->value,
+            default => StockStoreClass::Raw->value,
         };
     }
 
@@ -267,7 +265,7 @@ class StockCatalogService
 
         foreach ($prices as $index => $row) {
             $amount = (float) ($row['amount'] ?? 0);
-            $label  = trim((string) ($row['label'] ?? ''));
+            $label = trim((string) ($row['label'] ?? ''));
 
             if ($amount <= 0) {
                 continue;
@@ -275,14 +273,15 @@ class StockCatalogService
 
             $priceId = isset($row['id']) && is_numeric($row['id']) ? (int) $row['id'] : null;
             $payload = [
-                'label'  => $label !== '' ? $label : null,
+                'label' => $label !== '' ? $label : null,
                 'amount' => $amount,
-                'qty'    => 1,
+                'qty' => 1,
             ];
 
             if ($priceId && $existing = $item->prices()->whereKey($priceId)->first()) {
                 $existing->update($payload);
                 $keepIds[] = $existing->id;
+
                 continue;
             }
 

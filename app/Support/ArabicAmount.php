@@ -10,9 +10,9 @@ class ArabicAmount
     /** @return array{pounds: int, piasters: int} */
     public static function split(float $amount): array
     {
-        $rounded   = round($amount, 2);
-        $pounds    = (int) floor($rounded);
-        $piasters  = (int) round(($rounded - $pounds) * 100);
+        $rounded = round($amount, 2);
+        $pounds = (int) floor($rounded);
+        $piasters = (int) round(($rounded - $pounds) * 100);
 
         if ($piasters === 100) {
             $pounds++;
@@ -30,7 +30,7 @@ class ArabicAmount
         $parts = self::split($amount);
 
         return [
-            'pounds'   => number_format($parts['pounds']),
+            'pounds' => number_format($parts['pounds']),
             'piasters' => str_pad((string) $parts['piasters'], 2, '0', STR_PAD_LEFT),
         ];
     }
@@ -46,17 +46,17 @@ class ArabicAmount
         $text = 'فقط ';
 
         if ($parts['pounds'] > 0) {
-            $text .= self::integerToWords($parts['pounds']) . ' ' . self::poundLabel($parts['pounds']);
+            $text .= self::integerToWords($parts['pounds']).' '.self::poundLabel($parts['pounds']);
         }
 
         if ($parts['piasters'] > 0) {
             if ($parts['pounds'] > 0) {
                 $text .= ' و';
             }
-            $text .= self::integerToWords($parts['piasters']) . ' ' . self::piasterLabel($parts['piasters']);
+            $text .= self::integerToWords($parts['piasters']).' '.self::piasterLabel($parts['piasters']);
         }
 
-        return $text . ' لا غير';
+        return $text.' لا غير';
     }
 
     private static function poundLabel(int $n): string
@@ -103,14 +103,14 @@ class ArabicAmount
 
         if ($number >= 1_000_000) {
             $millions = intdiv($number, 1_000_000);
-            $parts[]  = self::groupToWords($millions) . ' ' . self::millionLabel($millions);
-            $number  %= 1_000_000;
+            $parts[] = self::groupToWords($millions).' '.self::millionLabel($millions);
+            $number %= 1_000_000;
         }
 
         if ($number >= 1_000) {
             $thousands = intdiv($number, 1_000);
-            $parts[]   = self::groupToWords($thousands) . ' ' . self::thousandLabel($thousands);
-            $number   %= 1_000;
+            $parts[] = self::groupToWords($thousands).' '.self::thousandLabel($thousands);
+            $number %= 1_000;
         }
 
         if ($number > 0) {
@@ -136,14 +136,14 @@ class ArabicAmount
 
             return $ones === 0
                 ? self::TENS[$tens]
-                : self::ONES[$ones] . ' و' . self::TENS[$tens];
+                : self::ONES[$ones].' و'.self::TENS[$tens];
         }
 
         $hundreds = intdiv($n, 100);
-        $rest     = $n % 100;
-        $head     = self::HUNDREDS[$hundreds];
+        $rest = $n % 100;
+        $head = self::HUNDREDS[$hundreds];
 
-        return $rest === 0 ? $head : $head . ' و' . self::groupToWords($rest);
+        return $rest === 0 ? $head : $head.' و'.self::groupToWords($rest);
     }
 
     private static function thousandLabel(int $n): string
@@ -181,16 +181,16 @@ class ArabicAmount
     }
 
     private const ONES = [
-        0  => 'صفر',
-        1  => 'واحد',
-        2  => 'اثنان',
-        3  => 'ثلاثة',
-        4  => 'أربعة',
-        5  => 'خمسة',
-        6  => 'ستة',
-        7  => 'سبعة',
-        8  => 'ثمانية',
-        9  => 'تسعة',
+        0 => 'صفر',
+        1 => 'واحد',
+        2 => 'اثنان',
+        3 => 'ثلاثة',
+        4 => 'أربعة',
+        5 => 'خمسة',
+        6 => 'ستة',
+        7 => 'سبعة',
+        8 => 'ثمانية',
+        9 => 'تسعة',
         10 => 'عشرة',
         11 => 'أحد عشر',
         12 => 'اثنا عشر',
@@ -204,16 +204,16 @@ class ArabicAmount
     ];
 
     private const TENS = [
-        0  => '',
-        1  => 'عشرة',
-        2  => 'عشرون',
-        3  => 'ثلاثون',
-        4  => 'أربعون',
-        5  => 'خمسون',
-        6  => 'ستون',
-        7  => 'سبعون',
-        8  => 'ثمانون',
-        9  => 'تسعون',
+        0 => '',
+        1 => 'عشرة',
+        2 => 'عشرون',
+        3 => 'ثلاثون',
+        4 => 'أربعون',
+        5 => 'خمسون',
+        6 => 'ستون',
+        7 => 'سبعون',
+        8 => 'ثمانون',
+        9 => 'تسعون',
     ];
 
     private const HUNDREDS = [

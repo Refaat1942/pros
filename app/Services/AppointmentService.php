@@ -7,8 +7,8 @@ use App\Models\ContractCompany;
 use App\Models\MilitaryRank;
 use App\Models\Patient;
 use App\Models\VisitType;
-use App\Support\ClinicTime;
 use App\Services\Notifications\NotificationService;
+use App\Support\ClinicTime;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,9 +16,8 @@ use Illuminate\Support\Facades\DB;
  */
 class AppointmentService
 {
-    public function __construct(private readonly NotificationService $notifications)
-    {
-    }
+    public function __construct(private readonly NotificationService $notifications) {}
+
     public function book(array $data): Appointment
     {
         return DB::transaction(function () use ($data) {
@@ -28,10 +27,10 @@ class AppointmentService
             $appointment = Appointment::create($payload);
 
             AuditService::log(
-                action:      'create',
+                action: 'create',
                 description: "حجز موعد {$payload['patient_name']} — {$payload['appointment_date']}",
-                tag:         'patients',
-                after:       $appointment->toArray(),
+                tag: 'patients',
+                after: $appointment->toArray(),
             );
 
             return $appointment->load('patient');
@@ -44,7 +43,7 @@ class AppointmentService
 
         return DB::transaction(function () use ($appointment, $data) {
             $visitType = VisitType::query()->findOrFail($data['visit_type_id']);
-            $before    = $appointment->toArray();
+            $before = $appointment->toArray();
 
             $companyName = $appointment->company_name;
             if ($appointment->isMilitary()) {
@@ -57,17 +56,17 @@ class AppointmentService
             }
 
             $appointment->update([
-                'patient_name'  => $data['name'],
-                'phone'         => $data['phone'] ?? null,
+                'patient_name' => $data['name'],
+                'phone' => $data['phone'] ?? null,
                 'visit_type_id' => $visitType->id,
-                'visit_type'    => $visitType->name,
-                'company_name'  => $companyName,
+                'visit_type' => $visitType->name,
+                'company_name' => $companyName,
             ]);
 
             if ($appointment->patient_id) {
                 $patientUpdates = [
-                    'name'        => $data['name'],
-                    'phone'       => $data['phone'] ?? null,
+                    'name' => $data['name'],
+                    'phone' => $data['phone'] ?? null,
                     'national_id' => $data['national_id'] ?? null,
                 ];
 
@@ -89,11 +88,11 @@ class AppointmentService
             }
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "تصحيح بيانات موعد #{$appointment->id} — {$data['name']}",
-                tag:         'patients',
-                before:      $before,
-                after:       $appointment->fresh()->toArray(),
+                tag: 'patients',
+                before: $before,
+                after: $appointment->fresh()->toArray(),
             );
 
             return $appointment->fresh()->load([
@@ -115,10 +114,10 @@ class AppointmentService
             $appointment->delete();
 
             AuditService::log(
-                action:      'delete',
+                action: 'delete',
                 description: "حذف موعد استقبال #{$snapshot['id']} — {$snapshot['patient_name']}",
-                tag:         'patients',
-                before:      $snapshot,
+                tag: 'patients',
+                before: $snapshot,
             );
 
             if (! $patient) {
@@ -126,8 +125,8 @@ class AppointmentService
             }
 
             $hasOtherAppointments = $patient->appointments()->exists();
-            $hasCases             = $patient->cases()->exists();
-            $hasRecords           = $patient->medicalRecords()->exists();
+            $hasCases = $patient->cases()->exists();
+            $hasRecords = $patient->medicalRecords()->exists();
 
             if ($hasOtherAppointments || $hasCases || $hasRecords) {
                 return;
@@ -137,10 +136,10 @@ class AppointmentService
             $patient->delete();
 
             AuditService::log(
-                action:      'delete',
+                action: 'delete',
                 description: "حذف ملف مريض {$patientSnapshot['patient_code']} — {$patientSnapshot['name']} (بيانات خاطئة)",
-                tag:         'patients',
-                before:      $patientSnapshot,
+                tag: 'patients',
+                before: $patientSnapshot,
             );
         });
     }
@@ -161,11 +160,11 @@ class AppointmentService
             ])));
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "تعديل موعد #{$appointment->id}",
-                tag:         'patients',
-                before:      $before,
-                after:       $appointment->only(['appointment_date', 'appointment_time', 'visit_type']),
+                tag: 'patients',
+                before: $before,
+                after: $appointment->only(['appointment_date', 'appointment_time', 'visit_type']),
             );
 
             return $appointment->fresh()->load('patient');
@@ -178,9 +177,9 @@ class AppointmentService
     public function advanceStatus(Appointment $appointment, string $status): Appointment
     {
         $allowed = [
-            Appointment::STATUS_WAITING   => [Appointment::STATUS_IN_CLINIC],
+            Appointment::STATUS_WAITING => [Appointment::STATUS_IN_CLINIC],
             Appointment::STATUS_IN_CLINIC => [Appointment::STATUS_DONE],
-            Appointment::STATUS_QUOTED      => [Appointment::STATUS_DONE],
+            Appointment::STATUS_QUOTED => [Appointment::STATUS_DONE],
         ];
 
         $current = $appointment->status;
@@ -197,8 +196,8 @@ class AppointmentService
                 && $before['status'] === Appointment::STATUS_WAITING;
 
             $updates = [
-                'status'                => $status,
-                'status_label'          => $this->statusLabel($status),
+                'status' => $status,
+                'status_label' => $this->statusLabel($status),
                 'transferred_to_clinic' => $status === Appointment::STATUS_IN_CLINIC
                     || $appointment->transferred_to_clinic,
             ];
@@ -215,11 +214,11 @@ class AppointmentService
             }
 
             AuditService::log(
-                action:      'update',
+                action: 'update',
                 description: "تحديث حالة موعد #{$appointment->id} → {$status}",
-                tag:         'patients',
-                before:      $before,
-                after:       ['status' => $appointment->status],
+                tag: 'patients',
+                before: $before,
+                after: ['status' => $appointment->status],
             );
 
             $appointment = $appointment->fresh()->load('patient');
@@ -245,7 +244,7 @@ class AppointmentService
             ->lockForUpdate()
             ->max('queue_number');
 
-        $payload['clinic_day']   = $clinicDay;
+        $payload['clinic_day'] = $clinicDay;
         $payload['queue_number'] = $next + 1;
 
         if (empty($payload['appointment_date'])) {
@@ -263,35 +262,35 @@ class AppointmentService
             $patient = Patient::with('contractCompany')->findOrFail($data['patient_id']);
 
             return [
-                'patient_id'        => $patient->id,
-                'appointment_date'  => $data['appointment_date'] ?? ClinicTime::clinicDayDateString(),
-                'appointment_time'  => $data['appointment_time'] ?? ClinicTime::now()->format('H:i'),
+                'patient_id' => $patient->id,
+                'appointment_date' => $data['appointment_date'] ?? ClinicTime::clinicDayDateString(),
+                'appointment_time' => $data['appointment_time'] ?? ClinicTime::now()->format('H:i'),
                 ...$visitFields,
-                'patient_name'      => $patient->name,
-                'phone'             => $patient->phone,
-                'company_name'      => $patient->isMilitary()
+                'patient_name' => $patient->name,
+                'phone' => $patient->phone,
+                'company_name' => $patient->isMilitary()
                     ? $patient->displayEntity()
                     : $patient->company_name,
-                'patient_type'      => $patient->patient_type,
-                'status'            => Appointment::STATUS_WAITING,
-                'status_label'      => $this->statusLabel(Appointment::STATUS_WAITING),
+                'patient_type' => $patient->patient_type,
+                'status' => Appointment::STATUS_WAITING,
+                'status_label' => $this->statusLabel(Appointment::STATUS_WAITING),
                 'transferred_to_clinic' => false,
-                'clinic_day'        => $data['clinic_day'] ?? null,
-                'queue_number'      => $data['queue_number'] ?? null,
+                'clinic_day' => $data['clinic_day'] ?? null,
+                'queue_number' => $data['queue_number'] ?? null,
             ];
         }
 
         return [
-            'patient_id'        => null,
-            'appointment_date'  => $data['appointment_date'],
-            'appointment_time'  => $data['appointment_time'] ?? now()->format('H:i'),
+            'patient_id' => null,
+            'appointment_date' => $data['appointment_date'],
+            'appointment_time' => $data['appointment_time'] ?? now()->format('H:i'),
             ...$visitFields,
-            'patient_name'      => $data['patient_name'],
-            'phone'             => $data['phone'] ?? null,
-            'company_name'      => $data['company_name'] ?? null,
-            'patient_type'      => $data['patient_type'] ?? Patient::TYPE_CIVILIAN,
-            'status'            => Appointment::STATUS_WAITING,
-            'status_label'      => $this->statusLabel(Appointment::STATUS_WAITING),
+            'patient_name' => $data['patient_name'],
+            'phone' => $data['phone'] ?? null,
+            'company_name' => $data['company_name'] ?? null,
+            'patient_type' => $data['patient_type'] ?? Patient::TYPE_CIVILIAN,
+            'status' => Appointment::STATUS_WAITING,
+            'status_label' => $this->statusLabel(Appointment::STATUS_WAITING),
             'transferred_to_clinic' => false,
         ];
     }
@@ -310,18 +309,18 @@ class AppointmentService
 
         return [
             'visit_type_id' => $visitType->id,
-            'visit_type'    => $visitType->name,
+            'visit_type' => $visitType->name,
         ];
     }
 
     private function statusLabel(string $status): string
     {
         return match ($status) {
-            Appointment::STATUS_WAITING   => 'في الانتظار',
+            Appointment::STATUS_WAITING => 'في الانتظار',
             Appointment::STATUS_IN_CLINIC => 'في العيادة',
-            Appointment::STATUS_QUOTED    => 'تم التسعير',
-            Appointment::STATUS_DONE      => 'منتهٍ',
-            default                       => $status,
+            Appointment::STATUS_QUOTED => 'تم التسعير',
+            Appointment::STATUS_DONE => 'منتهٍ',
+            default => $status,
         };
     }
 

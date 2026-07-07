@@ -32,7 +32,7 @@ return new class extends Migration
                 $counters[$clinicDay] = ($counters[$clinicDay] ?? 0) + 1;
 
                 DB::table('appointments')->where('id', $row->id)->update([
-                    'clinic_day'   => $clinicDay,
+                    'clinic_day' => $clinicDay,
                     'queue_number' => $counters[$clinicDay],
                 ]);
             });

@@ -9,12 +9,12 @@ class StoreReturnNoteRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'bom_id'                   => ['required', 'integer', 'exists:boms,id'],
-            'reason'                   => ['required', 'string', 'max:500'],
-            'lines'                    => ['required', 'array', 'min:1'],
-            'lines.*.stock_item_code'  => ['required', 'string', 'exists:stock_items,code'],
-            'lines.*.qty'              => ['required', 'integer', 'min:1'],
-            'lines.*.name'             => ['nullable', 'string', 'max:255'],
+            'bom_id' => ['required', 'integer', 'exists:boms,id'],
+            'reason' => ['required', 'string', 'max:500'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.stock_item_code' => ['required', 'string', 'exists:stock_items,code'],
+            'lines.*.qty' => ['required', 'integer', 'min:1'],
+            'lines.*.name' => ['nullable', 'string', 'max:255'],
         ];
     }
 

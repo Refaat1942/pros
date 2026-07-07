@@ -19,10 +19,10 @@ class ConfirmPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'method'    => ['required', 'string', Rule::in(PaymentMethod::values())],
-            'amount'    => ['nullable', 'numeric', 'min:0.01', 'max:99999999'],
+            'method' => ['required', 'string', Rule::in(PaymentMethod::values())],
+            'amount' => ['nullable', 'numeric', 'min:0.01', 'max:99999999'],
             'reference' => ['nullable', 'string', 'max:100'],
-            'notes'     => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
@@ -33,9 +33,9 @@ class ConfirmPaymentRequest extends FormRequest
     {
         return [
             'method.required' => 'يجب تحديد وسيلة الدفع.',
-            'method.in'       => 'وسيلة دفع غير صالحة.',
-            'amount.numeric'  => 'قيمة المبلغ غير صالحة.',
-            'amount.min'      => 'قيمة المبلغ غير صالحة.',
+            'method.in' => 'وسيلة دفع غير صالحة.',
+            'amount.numeric' => 'قيمة المبلغ غير صالحة.',
+            'amount.min' => 'قيمة المبلغ غير صالحة.',
         ];
     }
 }

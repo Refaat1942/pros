@@ -3,7 +3,6 @@
 namespace Tests\Feature\Finance;
 
 use App\Models\MilitaryDebt;
-use App\Models\Patient;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -17,15 +16,15 @@ class AdminMilitaryDebtsPageTest extends TestCase
         $patient = $this->militaryPatient($company);
 
         MilitaryDebt::create([
-            'case_id'             => $this->caseAtStage($patient, 'delivered')->id,
-            'work_order_no'       => 'WO-TEST-001',
-            'patient_name'        => $patient->name,
+            'case_id' => $this->caseAtStage($patient, 'delivered')->id,
+            'work_order_no' => 'WO-TEST-001',
+            'patient_name' => $patient->name,
             'patient_national_id' => $patient->national_id,
-            'sovereign_entity'    => 'القوات المسلحة',
-            'total_cost'          => 3000,
-            'collected'           => 0,
-            'delivered_at'        => now()->toDateString(),
-            'status'              => MilitaryDebt::STATUS_PENDING,
+            'sovereign_entity' => 'القوات المسلحة',
+            'total_cost' => 3000,
+            'collected' => 0,
+            'delivered_at' => now()->toDateString(),
+            'status' => MilitaryDebt::STATUS_PENDING,
         ]);
 
         $admin = $this->userWithRole('admin');
@@ -50,23 +49,23 @@ class AdminMilitaryDebtsPageTest extends TestCase
         $newerCase = $this->caseAtStage($patient, 'delivered');
 
         MilitaryDebt::create([
-            'case_id'          => $olderCase->id,
-            'work_order_no'    => 'WO-OLD-001',
-            'patient_name'     => $patient->name,
+            'case_id' => $olderCase->id,
+            'work_order_no' => 'WO-OLD-001',
+            'patient_name' => $patient->name,
             'sovereign_entity' => 'القوات المسلحة',
-            'total_cost'       => 1000,
-            'delivered_at'     => now()->subDays(5)->toDateString(),
-            'status'           => MilitaryDebt::STATUS_PENDING,
+            'total_cost' => 1000,
+            'delivered_at' => now()->subDays(5)->toDateString(),
+            'status' => MilitaryDebt::STATUS_PENDING,
         ]);
 
         MilitaryDebt::create([
-            'case_id'          => $newerCase->id,
-            'work_order_no'    => 'WO-NEW-999',
-            'patient_name'     => $patient->name,
+            'case_id' => $newerCase->id,
+            'work_order_no' => 'WO-NEW-999',
+            'patient_name' => $patient->name,
             'sovereign_entity' => 'القوات المسلحة',
-            'total_cost'       => 2000,
-            'delivered_at'     => now()->toDateString(),
-            'status'           => MilitaryDebt::STATUS_PENDING,
+            'total_cost' => 2000,
+            'delivered_at' => now()->toDateString(),
+            'status' => MilitaryDebt::STATUS_PENDING,
         ]);
 
         $response = $this->actingAs($this->userWithRole('admin'))
@@ -155,19 +154,19 @@ class AdminMilitaryDebtsPageTest extends TestCase
     {
         $company = $this->militaryCompany('جهة عسكرية');
         $patient = $this->militaryPatient($company);
-        $case    = $this->caseAtStage($patient, 'delivered');
+        $case = $this->caseAtStage($patient, 'delivered');
 
         return MilitaryDebt::create([
-            'case_id'             => $case->id,
-            'work_order_no'       => 'WO-' . $case->id,
-            'patient_name'        => $patient->name,
+            'case_id' => $case->id,
+            'work_order_no' => 'WO-'.$case->id,
+            'patient_name' => $patient->name,
             'patient_national_id' => $patient->national_id,
-            'sovereign_entity'    => 'القوات المسلحة',
-            'total_cost'          => $due,
-            'collected'           => $collected,
-            'delivered_at'        => now()->toDateString(),
-            'status'              => $status,
-            'collected_at'        => $status === MilitaryDebt::STATUS_COLLECTED ? now() : null,
+            'sovereign_entity' => 'القوات المسلحة',
+            'total_cost' => $due,
+            'collected' => $collected,
+            'delivered_at' => now()->toDateString(),
+            'status' => $status,
+            'collected_at' => $status === MilitaryDebt::STATUS_COLLECTED ? now() : null,
         ]);
     }
 }

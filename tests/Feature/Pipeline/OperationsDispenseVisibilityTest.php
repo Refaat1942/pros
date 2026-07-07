@@ -7,6 +7,7 @@ use App\Models\CaseRecord;
 use App\Services\BomService;
 use App\Services\Dashboard\DashboardPageDataService;
 use App\Services\StockPriceService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -48,8 +49,8 @@ class OperationsDispenseVisibilityTest extends TestCase
         $this->prepareStock();
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0501']);
 
         $this->actingAs($user);
@@ -69,7 +70,7 @@ class OperationsDispenseVisibilityTest extends TestCase
         $this->assertNotEmpty($case->work_order_no);
 
         $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
-        $ids  = collect($data['workshop_cases'])->pluck('id');
+        $ids = collect($data['workshop_cases'])->pluck('id');
 
         $this->assertTrue($ids->contains($case->id), 'الحالة يجب أن تظهر في ورشة التصنيع');
     }
@@ -79,8 +80,8 @@ class OperationsDispenseVisibilityTest extends TestCase
         $this->prepareStock();
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0099']);
 
         $this->actingAs($user);
@@ -101,8 +102,8 @@ class OperationsDispenseVisibilityTest extends TestCase
         $this->prepareStock();
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
-        $user    = $this->userWithRole('technical');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
 
         $this->actingAs($user);
 
@@ -110,7 +111,7 @@ class OperationsDispenseVisibilityTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
 
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
     }
@@ -121,7 +122,7 @@ class OperationsDispenseVisibilityTest extends TestCase
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
         $workshop = $this->userWithRole('workshop');
-        $case    = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-0200']);
 
         $bom = app(BomService::class)->create($case, [
@@ -129,7 +130,7 @@ class OperationsDispenseVisibilityTest extends TestCase
         ]);
 
         $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
-        $ids  = collect($data['workshop_cases'])->pluck('id');
+        $ids = collect($data['workshop_cases'])->pluck('id');
 
         $this->assertFalse(
             $ids->contains($case->id),
@@ -144,7 +145,7 @@ class OperationsDispenseVisibilityTest extends TestCase
         app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
 
         $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
-        $ids  = collect($data['workshop_cases'])->pluck('id');
+        $ids = collect($data['workshop_cases'])->pluck('id');
 
         $this->assertTrue(
             $ids->contains($case->id),

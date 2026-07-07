@@ -33,7 +33,7 @@ class MilitaryRankSeeder extends Seeder
             MilitaryRank::query()->updateOrCreate(
                 ['name' => $row['name']],
                 [
-                    'rank_code'  => $row['rank_code'],
+                    'rank_code' => $row['rank_code'],
                     'sort_order' => $row['sort_order'],
                 ],
             );

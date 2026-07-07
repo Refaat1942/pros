@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\QuoteQrService;
 use App\Services\QuoteService;
+use App\Support\IssueVoucherPresenter;
 use App\Support\QuotePrintPresenter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -20,8 +21,7 @@ class QuoteController extends Controller
     public function __construct(
         private readonly QuoteService $quoteService,
         private readonly QuoteQrService $quoteQrService,
-    ) {
-    }
+    ) {}
 
     /**
      * قائمة عروض الأسعار — مدني فقط، بعد إصدار مكتب التشغيل (issued / approved).
@@ -39,15 +39,15 @@ class QuoteController extends Controller
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('quote_no', 'like', "%{$s}%")
-                      ->orWhere('patient_name', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%");
+                        ->orWhere('patient_name', 'like', "%{$s}%")
+                        ->orWhere('order_ref', 'like', "%{$s}%");
                 }))
                 ->orderByDesc('quote_date')
                 ->orderByDesc('id')
         );
 
         return response()->json([
-            'data'  => collect($quotes)->map(fn ($q) => $this->formatQuote($q))->values(),
+            'data' => collect($quotes)->map(fn ($q) => $this->formatQuote($q))->values(),
             'total' => $quotes->count(),
         ]);
     }
@@ -61,7 +61,7 @@ class QuoteController extends Controller
 
         return response()->json([
             'message' => 'تم إصدار العرض بنجاح.',
-            'quote'   => $this->formatQuote($quote),
+            'quote' => $this->formatQuote($quote),
             'print_url' => route('reception.quote.print', $quote),
         ]);
     }
@@ -80,11 +80,11 @@ class QuoteController extends Controller
         );
 
         return view('quotes.print', [
-            'quote'      => $quote,
-            'printTotals' => \App\Support\QuotePrintPresenter::fromQuote($quote),
+            'quote' => $quote,
+            'printTotals' => QuotePrintPresenter::fromQuote($quote),
             'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
-            'embed'      => $request->boolean('embed'),
-            'autoPrint'  => ! $request->boolean('embed'),
+            'embed' => $request->boolean('embed'),
+            'autoPrint' => ! $request->boolean('embed'),
         ]);
     }
 
@@ -99,7 +99,7 @@ class QuoteController extends Controller
         abort_unless($bom, 404, 'لا توجد BOM مرتبطة بهذا الطلب.');
 
         return view('prints.issue-voucher', [
-            'voucher'   => \App\Support\IssueVoucherPresenter::fromBom($bom),
+            'voucher' => IssueVoucherPresenter::fromBom($bom),
             'autoPrint' => true,
         ]);
     }
@@ -120,7 +120,7 @@ class QuoteController extends Controller
             'status_label',
             'total',
         ]) + [
-            'gross_total'   => $printTotals['gross_total'],
+            'gross_total' => $printTotals['gross_total'],
             'display_total' => $printTotals['display_total'],
             'discount_percent' => $printTotals['discount_percent'],
             'quote_serial' => $quote->quote_no,

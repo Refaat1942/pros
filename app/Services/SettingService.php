@@ -17,9 +17,9 @@ class SettingService
 
     /** @var array<string, float> */
     private const DEFAULT_OVERHEAD_RATES = [
-        self::KEY_TECHNICAL_CHECK         => 30.0,
-        self::KEY_COMPONENTS_INTEGRATION  => 25.0,
-        self::KEY_MACHINERY_DEPRECIATION  => 23.0,
+        self::KEY_TECHNICAL_CHECK => 30.0,
+        self::KEY_COMPONENTS_INTEGRATION => 25.0,
+        self::KEY_MACHINERY_DEPRECIATION => 23.0,
         self::KEY_REHABILITATION_ASSESSMENT => 22.0,
     ];
 
@@ -70,24 +70,24 @@ class SettingService
 
         return [
             [
-                'key'   => self::KEY_TECHNICAL_CHECK,
+                'key' => self::KEY_TECHNICAL_CHECK,
                 'label' => 'تكاليف الفحص الفني والمطابقة الحركية',
-                'rate'  => $rates[self::KEY_TECHNICAL_CHECK],
+                'rate' => $rates[self::KEY_TECHNICAL_CHECK],
             ],
             [
-                'key'   => self::KEY_COMPONENTS_INTEGRATION,
+                'key' => self::KEY_COMPONENTS_INTEGRATION,
                 'label' => 'تكاليف دمج المكونات والمفاصل الذكية',
-                'rate'  => $rates[self::KEY_COMPONENTS_INTEGRATION],
+                'rate' => $rates[self::KEY_COMPONENTS_INTEGRATION],
             ],
             [
-                'key'   => self::KEY_MACHINERY_DEPRECIATION,
+                'key' => self::KEY_MACHINERY_DEPRECIATION,
                 'label' => 'مصروفات إهلاك الآلات والمعدات',
-                'rate'  => $rates[self::KEY_MACHINERY_DEPRECIATION],
+                'rate' => $rates[self::KEY_MACHINERY_DEPRECIATION],
             ],
             [
-                'key'   => self::KEY_REHABILITATION_ASSESSMENT,
+                'key' => self::KEY_REHABILITATION_ASSESSMENT,
                 'label' => 'رسوم التقييم والتأهيل الحركي',
-                'rate'  => $rates[self::KEY_REHABILITATION_ASSESSMENT],
+                'rate' => $rates[self::KEY_REHABILITATION_ASSESSMENT],
             ],
         ];
     }

@@ -4,7 +4,9 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\CaseRecord;
 use App\Models\Quote;
+use App\Models\StockItem;
 use App\Models\TechOrderSpec;
+use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -18,8 +20,8 @@ class OperationsPendingDeskTest extends TestCase
     public function test_pending_list_shows_discounted_quote_total_for_contract_company(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);
-        app(\App\Services\StockPriceService::class)->addBatch(
-            \App\Models\StockItem::first(),
+        app(StockPriceService::class)->addBatch(
+            StockItem::first(),
             10,
             200.00,
             $this->makeSupplier(),
@@ -50,8 +52,8 @@ class OperationsPendingDeskTest extends TestCase
     public function test_pending_list_shows_civilian_operations_cases_with_quote(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);
-        app(\App\Services\StockPriceService::class)->addBatch(
-            \App\Models\StockItem::first(),
+        app(StockPriceService::class)->addBatch(
+            StockItem::first(),
             10,
             200.00,
             $this->makeSupplier(),
@@ -80,8 +82,8 @@ class OperationsPendingDeskTest extends TestCase
     public function test_pending_list_includes_tech_notes_when_present(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);
-        app(\App\Services\StockPriceService::class)->addBatch(
-            \App\Models\StockItem::first(),
+        app(StockPriceService::class)->addBatch(
+            StockItem::first(),
             10,
             200.00,
             $this->makeSupplier(),
@@ -93,13 +95,13 @@ class OperationsPendingDeskTest extends TestCase
         $case = $this->operationsReadyCase($patient);
 
         TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => 'د. اختبار',
-            'tech_notes'   => 'ملاحظة لمكتب التشغيل',
-            'locked'       => true,
+            'doctor_name' => 'د. اختبار',
+            'tech_notes' => 'ملاحظة لمكتب التشغيل',
+            'locked' => true,
             'submitted_at' => now()->toDateString(),
         ]);
 
@@ -114,7 +116,7 @@ class OperationsPendingDeskTest extends TestCase
     public function test_pending_release_quote_makes_visible_at_reception_and_approves(): void
     {
         $item = $this->stockItem('RM-001', qty: 20, wac: 100.00);
-        app(\App\Services\StockPriceService::class)->addBatch(
+        app(StockPriceService::class)->addBatch(
             $item,
             10,
             200.00,
@@ -155,7 +157,7 @@ class OperationsPendingDeskTest extends TestCase
     public function test_pending_approve_reserves_stock_and_moves_to_warehouse(): void
     {
         $item = $this->stockItem('RM-001', qty: 10, wac: 100.00);
-        app(\App\Services\StockPriceService::class)->addBatch(
+        app(StockPriceService::class)->addBatch(
             $item, 10, 200.00, $this->makeSupplier(), 'INV-001', now()
         );
 
@@ -195,8 +197,8 @@ class OperationsPendingDeskTest extends TestCase
     public function test_civilian_return_blocked_after_quote_released(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);
-        app(\App\Services\StockPriceService::class)->addBatch(
-            \App\Models\StockItem::first(),
+        app(StockPriceService::class)->addBatch(
+            StockItem::first(),
             10,
             200.00,
             $this->makeSupplier(),
@@ -252,13 +254,13 @@ class OperationsPendingDeskTest extends TestCase
         $specUser = $this->userWithRole('spec');
 
         TechOrderSpec::create([
-            'order_ref'    => $case->order_ref,
-            'case_id'      => $case->id,
+            'order_ref' => $case->order_ref,
+            'case_id' => $case->id,
             'patient_name' => $patient->name,
             'company_name' => $case->company_name,
-            'doctor_name'  => 'د. اختبار',
-            'tech_notes'   => 'توصيف أولي',
-            'locked'       => true,
+            'doctor_name' => 'د. اختبار',
+            'tech_notes' => 'توصيف أولي',
+            'locked' => true,
             'submitted_at' => now()->toDateString(),
         ]);
 
@@ -272,7 +274,7 @@ class OperationsPendingDeskTest extends TestCase
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_TECHNICAL, $case->stage_key);
 
-        $spec = \App\Models\TechOrderSpec::where('case_id', $case->id)->firstOrFail();
+        $spec = TechOrderSpec::where('case_id', $case->id)->firstOrFail();
         $this->assertFalse($spec->locked);
 
         $response = $this->actingAs($specUser)
@@ -287,7 +289,7 @@ class OperationsPendingDeskTest extends TestCase
         $this->actingAs($specUser)
             ->putJson("/spec/spec/{$spec->id}", [
                 'tech_notes' => 'توصيف معدّل بعد الإرجاع',
-                'items'      => [
+                'items' => [
                     ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 2],
                 ],
             ])
@@ -302,8 +304,8 @@ class OperationsPendingDeskTest extends TestCase
     public function test_operations_can_print_quote(): void
     {
         $this->stockItem('RM-001', qty: 10);
-        app(\App\Services\StockPriceService::class)->addBatch(
-            \App\Models\StockItem::first(),
+        app(StockPriceService::class)->addBatch(
+            StockItem::first(),
             10,
             200.00,
             $this->makeSupplier(),

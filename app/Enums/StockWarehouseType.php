@@ -13,43 +13,43 @@ use App\Models\Bom;
  */
 enum StockWarehouseType: string
 {
-    case Raw        = 'raw';
+    case Raw = 'raw';
     case Production = 'wip';
-    case Delivery   = 'finished';
+    case Delivery = 'finished';
 
     public function label(): string
     {
         return match ($this) {
-            self::Raw        => 'مخزن خام',
+            self::Raw => 'مخزن خام',
             self::Production => 'مخزن إنتاج',
-            self::Delivery   => 'مخزن تسليم',
+            self::Delivery => 'مخزن تسليم',
         };
     }
 
     public function shortLabel(): string
     {
         return match ($this) {
-            self::Raw        => 'خام',
+            self::Raw => 'خام',
             self::Production => 'إنتاج',
-            self::Delivery   => 'تسليم',
+            self::Delivery => 'تسليم',
         };
     }
 
     public function description(): string
     {
         return match ($this) {
-            self::Raw        => 'البضاعة على الرف — قبل الصرف بالباركود',
+            self::Raw => 'البضاعة على الرف — قبل الصرف بالباركود',
             self::Production => 'المواد في الورشة — تحت التنفيذ',
-            self::Delivery   => 'المنتجات الجاهزة — بانتظار تسليم المريض',
+            self::Delivery => 'المنتجات الجاهزة — بانتظار تسليم المريض',
         };
     }
 
     public function icon(): string
     {
         return match ($this) {
-            self::Raw        => '📦',
+            self::Raw => '📦',
             self::Production => '🏭',
-            self::Delivery   => '✅',
+            self::Delivery => '✅',
         };
     }
 
@@ -83,10 +83,10 @@ enum StockWarehouseType: string
     {
         return array_map(
             fn (self $w) => [
-                'key'         => $w->bomStage(),
-                'label'       => $w->label(),
-                'short'       => $w->shortLabel(),
-                'icon'        => $w->icon(),
+                'key' => $w->bomStage(),
+                'label' => $w->label(),
+                'short' => $w->shortLabel(),
+                'icon' => $w->icon(),
                 'description' => $w->description(),
             ],
             self::cases()

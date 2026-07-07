@@ -9,19 +9,19 @@ use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\ReturnNote;
 use App\Models\StockItem;
+use App\Models\User;
 use App\Services\ReturnNoteService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class ReturnNoteController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly ReturnNoteService $returnNoteService)
-    {
-    }
+    public function __construct(private readonly ReturnNoteService $returnNoteService) {}
 
     /**
      * قائمة إذونات الارتجاع — مرشَّحة بالحالة.
@@ -39,8 +39,8 @@ class ReturnNoteController extends Controller
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('return_no', 'like', "%{$s}%")
-                      ->orWhere('order_ref', 'like', "%{$s}%")
-                      ->orWhere('patient_name', 'like', "%{$s}%");
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhere('patient_name', 'like', "%{$s}%");
                 }))
                 ->orderByDesc('created_at')
         );
@@ -48,7 +48,7 @@ class ReturnNoteController extends Controller
         $barcodes = $this->barcodesForNotes(collect($notes));
 
         return response()->json([
-            'data'  => collect($notes)->map(fn ($n) => $this->formatNote($n, $barcodes))->values(),
+            'data' => collect($notes)->map(fn ($n) => $this->formatNote($n, $barcodes))->values(),
             'total' => $notes->count(),
         ]);
     }
@@ -81,7 +81,7 @@ class ReturnNoteController extends Controller
             })
             ->values();
 
-        $barcodes = \App\Models\StockItem::whereIn(
+        $barcodes = StockItem::whereIn(
             'code',
             $boms->flatMap(fn (Bom $b) => $b->items->pluck('stock_item_code'))->unique()->all()
         )->pluck('barcode', 'code');
@@ -89,29 +89,29 @@ class ReturnNoteController extends Controller
         return response()->json([
             'boms' => $boms->map(function (Bom $b) use ($pendingByItem, $barcodes) {
                 return [
-                'id'            => $b->id,
-                'bom_no'        => $b->bom_no,
-                'patient_name'  => $b->patient_name,
-                'order_ref'     => $b->order_ref,
-                'work_order_no' => $b->caseRecord?->work_order_no,
-                'items'         => $b->items
-                    ->filter(function ($i) use ($pendingByItem) {
-                        $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
+                    'id' => $b->id,
+                    'bom_no' => $b->bom_no,
+                    'patient_name' => $b->patient_name,
+                    'order_ref' => $b->order_ref,
+                    'work_order_no' => $b->caseRecord?->work_order_no,
+                    'items' => $b->items
+                        ->filter(function ($i) use ($pendingByItem) {
+                            $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
 
-                        return $i->returnRequestMaxQty($pending) > 0;
-                    })
-                    ->map(function ($i) use ($pendingByItem, $barcodes) {
-                        $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
+                            return $i->returnRequestMaxQty($pending) > 0;
+                        })
+                        ->map(function ($i) use ($pendingByItem, $barcodes) {
+                            $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
 
-                        return [
-                        'stock_item_code' => $i->stock_item_code,
-                        'name'            => $i->name,
-                        'returnable_qty'  => $i->returnRequestMaxQty($pending),
-                        'issued_qty'      => $i->returnableQty(),
-                        'barcode'         => $barcodes[$i->stock_item_code] ?? null,
-                    ];
-                    })->values(),
-            ];
+                            return [
+                                'stock_item_code' => $i->stock_item_code,
+                                'name' => $i->name,
+                                'returnable_qty' => $i->returnRequestMaxQty($pending),
+                                'issued_qty' => $i->returnableQty(),
+                                'barcode' => $barcodes[$i->stock_item_code] ?? null,
+                            ];
+                        })->values(),
+                ];
             }),
         ]);
     }
@@ -123,7 +123,7 @@ class ReturnNoteController extends Controller
     {
         $bom = Bom::findOrFail($request->validated('bom_id'));
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $note = $this->returnNoteService->create(
@@ -135,7 +135,7 @@ class ReturnNoteController extends Controller
 
         return response()->json([
             'message' => 'تم إرسال طلب الارتجاع للمخزن — بانتظار الاستلام.',
-            'note'    => $this->formatNote($note),
+            'note' => $this->formatNote($note),
         ], 201);
     }
 
@@ -151,11 +151,11 @@ class ReturnNoteController extends Controller
 
         return response()->json([
             'message' => 'تم تأكيد استلام المواد المرتجعة.',
-            'note'    => $this->formatNote($note),
+            'note' => $this->formatNote($note),
         ]);
     }
 
-    private function formatNote(ReturnNote $note, ?\Illuminate\Support\Collection $barcodes = null): array
+    private function formatNote(ReturnNote $note, ?Collection $barcodes = null): array
     {
         $lines = $note->relationLoaded('lines') ? $note->lines : collect();
 
@@ -177,13 +177,13 @@ class ReturnNoteController extends Controller
                 ? $note->createdByUser->name
                 : ($note->created_by ?: null),
             'lines' => $lines->map(fn ($line) => [
-                'id'              => $line->id,
+                'id' => $line->id,
                 'stock_item_code' => $line->stock_item_code,
-                'name'            => $line->name,
-                'qty_requested'   => $line->qty_requested,
-                'qty_returned'    => $line->qty_returned,
-                'reason'          => $line->reason,
-                'barcode'         => $barcodes[$line->stock_item_code] ?? null,
+                'name' => $line->name,
+                'qty_requested' => $line->qty_requested,
+                'qty_returned' => $line->qty_returned,
+                'reason' => $line->reason,
+                'barcode' => $barcodes[$line->stock_item_code] ?? null,
             ])->values()->all(),
             'bom' => $note->relationLoaded('bom') && $note->bom
                 ? $note->bom->only(['id', 'bom_no'])
@@ -191,8 +191,8 @@ class ReturnNoteController extends Controller
         ];
     }
 
-    /** @param  \Illuminate\Support\Collection<int, ReturnNote>  $notes */
-    private function barcodesForNotes(\Illuminate\Support\Collection $notes): \Illuminate\Support\Collection
+    /** @param  Collection<int, ReturnNote>  $notes */
+    private function barcodesForNotes(Collection $notes): Collection
     {
         $codes = $notes
             ->flatMap(fn (ReturnNote $note) => $note->relationLoaded('lines')
