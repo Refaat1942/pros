@@ -16,7 +16,8 @@ use Tests\TestCase;
  * Feature — BOM full lifecycle: raw → WIP → finished → return note
  * (الفصل الخامس: المخزن والصرف الصارم + الفصل السادس: الورشة)
  *
- * IMPORTANT: releaseToWip() expects ONE barcode per unique stock_item_code (rows merged by code).
+ * IMPORTANT: releaseToWip() now expects ONE barcode scan PER UNIT — the number of
+ * scans for a code must equal that code's total quantity (strict code+item+quantity match).
  */
 class BomLifecycleTest extends TestCase
 {
@@ -70,16 +71,16 @@ class BomLifecycleTest extends TestCase
     }
 
     // ── Barcode dispense → WIP ────────────────────────────────────────────────
-    // One barcode per BomItem row (not per unit quantity)
+    // One barcode scan PER UNIT (scans-per-code must equal that code's quantity)
 
     public function test_dispense_with_correct_barcode_moves_to_wip(): void
     {
         ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
 
-        // 1 BomItem row with qty=2 → pass 1 barcode
+        // qty=2 → لازم مسحتين لنفس الباركود
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 2]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']); // 1 barcode = 1 item row
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']); // 2 scans = qty 2
 
         $bom->refresh();
         $this->assertEquals(Bom::STAGE_WIP, $bom->stage);
@@ -109,12 +110,61 @@ class BomLifecycleTest extends TestCase
         ['case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
 
-        // 1 BomItem row but 2 barcodes passed → mismatch
+        // qty=2 لكن مسحة واحدة فقط → عدد لا يطابق إجمالي الكميات
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 2]]);
 
         $this->expectException(BarcodeDispenseMismatchException::class);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']); // 2 != 1 item
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']); // 1 scan != qty 2
+    }
+
+    public function test_dispense_rejects_too_many_scans_for_a_code(): void
+    {
+        ['case' => $case, 'user' => $user] = $this->prepareCase();
+        $this->actingAs($user);
+
+        // qty=1 لكن مسحتين → زيادة عن الكمية المطلوبة
+        $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
+
+        $this->expectException(BarcodeDispenseMismatchException::class);
+
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']); // 2 scans != qty 1
+    }
+
+    public function test_dispense_into_negative_stock_then_receive_recovers(): void
+    {
+        // رصيد 0، يُصرف 2 → -2، ثم توريد 5 → الرصيد الفعلي 3 (backorder).
+        $item = $this->stockItem('RM-777', qty: 0);
+        $supplier = $this->makeSupplier();
+        app(StockPriceService::class)->addBatch($item, 10, 100.00, $supplier, 'INV-A', now());
+        $item->fresh()->update(['qty' => 0, 'reserved' => 0]); // نُرجع الرصيد لصفر مع بقاء السعر
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user = $this->userWithRole('technical');
+        $this->actingAs($user);
+
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-NEG-1']);
+
+        $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-777', 'qty' => 2]]);
+        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-777', 'BC-RM-777']);
+
+        $this->assertSame(-2, $item->fresh()->qty, 'الصرف من رصيد صفر يُنتج -2');
+
+        // توريد 5 عبر مسار الاستلام الفعلي يرفع الرصيد من -2 إلى 3.
+        $this->actingAs($user)
+            ->postJson('/technical/inventory/receive', [
+                'stock_item_id' => $item->id,
+                'supplier_id' => $supplier->id,
+                'qty' => 5,
+                'unit_price' => 100,
+                'invoice_no' => 'INV-NEG-B',
+                'moved_at' => now()->toDateString(),
+            ])
+            ->assertCreated();
+
+        $this->assertSame(3, $item->fresh()->qty, 'توريد 5 يرفع الرصيد من -2 إلى 3');
     }
 
     // ── Manufacturing sub-stages ──────────────────────────────────────────────
@@ -181,7 +231,7 @@ class BomLifecycleTest extends TestCase
 
         $item->update(['reserved' => 0]);
 
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
 
         $bom->refresh();
         $item->refresh();
@@ -202,7 +252,7 @@ class BomLifecycleTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']);
 
         $qtyAfterDispense = $item->fresh()->qty;  // 18
 
@@ -270,7 +320,7 @@ class BomLifecycleTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 4],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
 
         $note = app(ReturnNoteService::class)->create($bom->fresh(), [
             ['stock_item_code' => 'RM-001', 'qty' => 3, 'name' => 'صنف RM-001'],

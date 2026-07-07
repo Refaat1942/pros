@@ -84,35 +84,51 @@
     if (confirm) confirm.disabled = false;
   }
 
-  function expectedBarcodes() {
-    return state.items.map(function (it) {
-      return (it.expected_barcode || ('BC-' + String(it.stock_item_code).replace(/\D/g, ''))).toUpperCase();
+  function expectedBarcodeFor(it) {
+    return (it.expected_barcode || ('BC-' + String(it.stock_item_code).replace(/\D/g, ''))).toUpperCase();
+  }
+
+  // خريطة الباركود ← الكمية المطلوبة (مطابقة كود + صنف + كمية).
+  function expectedCounts() {
+    var counts = {};
+    state.items.forEach(function (it) {
+      var bc = expectedBarcodeFor(it);
+      counts[bc] = (counts[bc] || 0) + (parseInt(it.qty, 10) || 0);
     });
+    return counts;
+  }
+
+  function expectedTotal() {
+    return state.items.reduce(function (sum, it) { return sum + (parseInt(it.qty, 10) || 0); }, 0);
   }
 
   function renderRequired() {
     var el = $('dispenseRequired');
     if (!el) return;
-    el.innerHTML = '<p class="font-bold text-slate-700 mb-2">أكواد مطلوبة (' + state.items.length + '):</p>' +
+    el.innerHTML = '<p class="font-bold text-slate-700 mb-2">أكواد مطلوبة (' + state.items.length + ' صنف · ' + expectedTotal() + ' وحدة):</p>' +
       state.items.map(function (it) {
-        var bc = it.expected_barcode || ('BC-' + String(it.stock_item_code).replace(/\D/g, ''));
+        var bc = expectedBarcodeFor(it);
         return '<div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0">' +
           '<span>' + esc(it.name || it.stock_item_code) + ' ×' + it.qty + '</span>' +
-          '<code class="font-mono text-xs bg-white px-2 py-0.5 rounded border">' + esc(bc) + '</code></div>';
+          '<code class="font-mono text-xs bg-white px-2 py-0.5 rounded border">' + esc(bc) + ' ×' + it.qty + '</code></div>';
       }).join('');
   }
 
   function revalidateAlarm() {
-    var expected = expectedBarcodes();
+    var counts = expectedCounts();
+    var seen = {};
     var bad = null;
+    var over = null;
     for (var i = 0; i < state.scanned.length; i++) {
-      if (expected.indexOf(state.scanned[i]) === -1) {
-        bad = state.scanned[i];
-        break;
-      }
+      var code = state.scanned[i];
+      if (!(code in counts)) { bad = code; break; }
+      seen[code] = (seen[code] || 0) + 1;
+      if (seen[code] > counts[code]) { over = code; break; }
     }
     if (bad) {
       showAlarm('باركود غير مطابق لأمر التشغيل: ' + bad + ' — تم إيقاف الصرف!');
+    } else if (over) {
+      showAlarm('عدد مسحات الباركود ' + over + ' يتجاوز الكمية المطلوبة — تم إيقاف الصرف!');
     } else {
       hideAlarm();
     }
@@ -125,9 +141,11 @@
       el.innerHTML = '<span class="text-slate-400 text-xs">لم يُمسح أي باركود بعد.</span>';
       return;
     }
-    var expected = expectedBarcodes();
+    var counts = expectedCounts();
+    var seen = {};
     el.innerHTML = state.scanned.map(function (code, idx) {
-      var ok = expected.indexOf(code) !== -1;
+      seen[code] = (seen[code] || 0) + 1;
+      var ok = (code in counts) && seen[code] <= counts[code];
       return '<span class="inline-flex items-center gap-1 rounded-full pl-3 pr-1 py-1 text-xs font-bold ' +
         (ok ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') + '">' +
         (ok ? '✓' : '✗') + ' ' + esc(code) +
@@ -248,8 +266,8 @@
       return;
     }
 
-    if (state.scanned.length !== state.items.length) {
-      showAlarm('عدد الباركود (' + state.scanned.length + ') لا يطابق بنود القائمة (' + state.items.length + ')');
+    if (state.scanned.length !== expectedTotal()) {
+      showAlarm('عدد الباركود (' + state.scanned.length + ') لا يطابق إجمالي الكميات المطلوبة (' + expectedTotal() + ')');
       return;
     }
 

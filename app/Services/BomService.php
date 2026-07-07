@@ -729,30 +729,39 @@ class BomService
             $items = $bom->items;
             $groups = BomItemAggregator::groupModels($items);
 
-            if (count($scannedBarcodes) !== $groups->count()) {
-                throw BarcodeDispenseMismatchException::forItem('عدد الباركود لا يطابق بنود BOM');
+            // مطابقة صارمة: كود + صنف + كمية — عدد المسحات = إجمالي الكميات المطلوبة.
+            $expectedTotal = $groups->sum(fn ($rows) => (int) $rows->sum('qty'));
+
+            if (count($scannedBarcodes) !== $expectedTotal) {
+                throw BarcodeDispenseMismatchException::forItem(
+                    "عدد الباركود الممسوح ({$expectedTotal} مطلوب) لا يطابق إجمالي الكميات"
+                );
             }
 
-            $remaining = $scannedBarcodes;
+            $remaining = array_values($scannedBarcodes);
             $stockBefore = [];
 
             foreach ($groups as $code => $rows) {
                 $representative = $rows->first();
-                $matchedBarcode = null;
+                $needed = (int) $rows->sum('qty');
+                $matched = 0;
 
                 foreach ($remaining as $idx => $barcode) {
                     if ($this->barcodeValidation->validateScan($barcode, $representative)) {
-                        $matchedBarcode = $barcode;
                         unset($remaining[$idx]);
-                        break;
+                        $matched++;
+
+                        if ($matched === $needed) {
+                            break;
+                        }
                     }
                 }
 
-                if ($matchedBarcode === null) {
+                // كل صنف يلزمه عدد مسحات مساوٍ لكميته بالضبط.
+                if ($matched !== $needed) {
                     throw BarcodeDispenseMismatchException::forItem($code);
                 }
 
-                $totalQty = (int) $rows->sum('qty');
                 $stockItem = StockItem::where('code', $code)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -763,6 +772,11 @@ class BomService
                 ];
 
                 // يُسمح بالصرف حتى مع عجز الرصيد — يصبح الرصيد سالباً (backorder).
+            }
+
+            // لا يُسمح بأي باركود زائد لا يطابق بنود BOM.
+            if (count($remaining) > 0) {
+                throw BarcodeDispenseMismatchException::forItem('باركود زائد لا يطابق بنود BOM');
             }
 
             $performedById = Auth::id();
