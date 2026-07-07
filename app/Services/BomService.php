@@ -480,6 +480,65 @@ class BomService
     }
 
     /**
+     * تعديل كمية بند من بنود مستشار المعدلات — بنود الفني (source=spec) غير قابلة للتعديل.
+     * يضبط الحجز (reserved) بفرق الكمية فقط ويمنع تجاوز المتاح.
+     */
+    public function updateAdjustmentItemQty(CaseRecord $case, BomItem $item, int $newQty): Bom
+    {
+        return DB::transaction(function () use ($case, $item, $newQty) {
+            $bom = Bom::where('case_id', $case->id)->lockForUpdate()->first();
+
+            if (! $bom || $item->bom_id !== $bom->id) {
+                abort(404, 'البند غير مرتبط بهذه الحالة.');
+            }
+
+            if ($bom->stage !== Bom::STAGE_RAW) {
+                abort(422, 'لا يمكن تعديل البند — قائمة المواد لم تعد في مرحلة الإعداد.');
+            }
+
+            if ($item->source !== BomItem::SOURCE_ADJUSTMENT) {
+                abort(422, 'لا يمكن تعديل بنود التوصيف الفني — للقراءة فقط.');
+            }
+
+            if ($newQty < 1) {
+                abort(422, 'الكمية يجب أن تكون واحداً على الأقل.');
+            }
+
+            $delta = $newQty - $item->qty;
+
+            if ($delta === 0) {
+                return $bom->fresh()->load('items');
+            }
+
+            $stockItem = StockItem::where('code', $item->stock_item_code)->lockForUpdate()->first();
+
+            if (! $stockItem) {
+                abort(422, "الصنف غير موجود: {$item->stock_item_code}");
+            }
+
+            // عند الزيادة فقط نتحقق من المتاح؛ عند النقص نُحرّر الحجز.
+            if ($delta > 0 && $stockItem->availableQty() < $delta) {
+                abort(422, "الكمية المطلوبة ({$newQty}) تتجاوز المتاح للصنف {$item->stock_item_code} — الحد الأقصى للزيادة: {$stockItem->availableQty()}.");
+            }
+
+            $before = $item->only(['id', 'stock_item_code', 'name', 'qty', 'source']);
+
+            $stockItem->increment('reserved', $delta);
+            $item->update(['qty' => $newQty]);
+
+            AuditService::log(
+                action: 'update',
+                description: "تعديل كمية بند المعدلات — {$bom->bom_no} / {$item->stock_item_code}",
+                tag: 'spec',
+                before: $before,
+                after: $item->only(['id', 'stock_item_code', 'name', 'qty', 'source']),
+            );
+
+            return $bom->fresh()->load('items');
+        });
+    }
+
+    /**
      * حجز كميات BOM في سجل المخزون عند اعتماد مكتب التشغيل (الخطوة 7).
      * يضبط تكلفة الوحدة على WAC (أساس التكلفة الداخلية) ويزيد reserved.
      * يرمي InsufficientStockException عند نقص الرصيد — يتعامل معها المنادي.

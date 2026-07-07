@@ -49,6 +49,9 @@ Route::prefix('adjustments')
             Route::post('adjustments/{case}/items', [AdjustmentsController::class, 'addItems'])
                 ->name('adjustments.add-items');
 
+            Route::patch('adjustments/{case}/items/{bomItem}', [AdjustmentsController::class, 'updateItemQty'])
+                ->name('adjustments.update-item-qty');
+
             Route::delete('adjustments/{case}/items/{bomItem}', [AdjustmentsController::class, 'removeItem'])
                 ->name('adjustments.remove-item');
 

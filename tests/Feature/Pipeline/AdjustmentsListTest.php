@@ -239,6 +239,74 @@ class AdjustmentsListTest extends TestCase
         $this->assertDatabaseMissing('bom_items', ['id' => $adjItem->id]);
     }
 
+    public function test_consultant_can_edit_adjustment_item_qty_but_not_spec_qty(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $this->stockItem('RM-002', qty: 10);
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [
+                    ['stock_item_code' => 'RM-002', 'name' => 'مكوّن مستشار', 'qty' => 2],
+                ],
+            ])
+            ->assertCreated();
+
+        $specItem = BomItem::where('bom_id', $bom->id)->where('source', BomItem::SOURCE_SPEC)->firstOrFail();
+        $adjItem = BomItem::where('bom_id', $bom->id)->where('source', BomItem::SOURCE_ADJUSTMENT)->firstOrFail();
+
+        // تعديل كمية بند التوصيف مرفوض.
+        $this->actingAs($user)
+            ->patchJson("/adjustments/adjustments/{$case->id}/items/{$specItem->id}", ['qty' => 4])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'لا يمكن تعديل بنود التوصيف الفني — للقراءة فقط.');
+
+        // تعديل كمية بند المعدلات مقبول.
+        $this->actingAs($user)
+            ->patchJson("/adjustments/adjustments/{$case->id}/items/{$adjItem->id}", ['qty' => 5])
+            ->assertOk()
+            ->assertJsonPath('message', 'تم تحديث كمية البند.');
+
+        $this->assertSame(5, (int) $adjItem->fresh()->qty);
+    }
+
+    public function test_editing_adjustment_qty_above_available_is_rejected(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $this->stockItem('RM-002', qty: 3);
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 1],
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [['stock_item_code' => 'RM-002', 'name' => 'مكوّن', 'qty' => 2]],
+            ])
+            ->assertCreated();
+
+        $adjItem = BomItem::where('stock_item_code', 'RM-002')->where('source', BomItem::SOURCE_ADJUSTMENT)->firstOrFail();
+
+        // متاح متبقٍ = 3 - 2 = 1، فزيادة الكمية إلى 10 (فرق 8) تتجاوز المتاح.
+        $this->actingAs($user)
+            ->patchJson("/adjustments/adjustments/{$case->id}/items/{$adjItem->id}", ['qty' => 10])
+            ->assertStatus(422);
+
+        $this->assertSame(2, (int) $adjItem->fresh()->qty);
+    }
+
     public function test_warehouse_bom_api_merges_spec_and_adjustment_lines_with_same_code(): void
     {
         $this->seedStockWithPriceBatch();

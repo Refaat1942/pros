@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Adjustments;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Adjustments\StoreAdjustmentItemsRequest;
+use App\Http\Requests\Adjustments\UpdateAdjustmentItemQtyRequest;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\StockItem;
@@ -91,6 +92,19 @@ class AdjustmentsController extends Controller
                 'items' => $bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values(),
             ],
         ], 201);
+    }
+
+    public function updateItemQty(UpdateAdjustmentItemQtyRequest $request, CaseRecord $case, BomItem $bomItem): JsonResponse
+    {
+        $bom = $this->adjustmentsService->updateItemQty($case, $bomItem, (int) $request->validated('qty'));
+
+        return response()->json([
+            'message' => 'تم تحديث كمية البند.',
+            'bom' => [
+                'id' => $bom->id,
+                'items' => $bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values(),
+            ],
+        ]);
     }
 
     public function removeItem(CaseRecord $case, BomItem $bomItem): JsonResponse

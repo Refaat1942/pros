@@ -16,6 +16,7 @@
   var SHOW_URL = function (id) { return '/adjustments/adjustments/' + id; };
   var ADD_URL = function (id) { return '/adjustments/adjustments/' + id + '/items'; };
   var REMOVE_URL = function (caseId, itemId) { return '/adjustments/adjustments/' + caseId + '/items/' + itemId; };
+  var UPDATE_QTY_URL = function (caseId, itemId) { return '/adjustments/adjustments/' + caseId + '/items/' + itemId; };
   var COMPLETE_URL = function (id) { return '/adjustments/adjustments/' + id + '/complete'; };
   var EDIT_REQUEST_URL = function (id) { return '/adjustments/adjustments/' + id + '/edit-request'; };
 
@@ -319,22 +320,32 @@
     }
   }
 
+  function renderSpecBlock() {
+    var tbody = $('adjSpecItems');
+    if (!tbody) return;
+    var specs = specBomItems();
+    if (!specs.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty-cell">لا توجد بنود توصيف فني.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = specs.map(function (it) {
+      return '<tr>' +
+        '<td>' + esc(it.stock_item_code) + '</td>' +
+        '<td>' + esc(it.name) + '</td>' +
+        '<td>' + esc(it.qty) + '</td></tr>';
+    }).join('');
+  }
+
   function renderEditModeBom() {
+    renderSpecBlock();
+
     var tbody = $('adjBomItems');
     if (!tbody) return;
 
     var rows = [];
-    specBomItems().forEach(function (it) {
-      rows.push('<tr>' +
-        '<td>' + esc(it.stock_item_code) + '</td>' +
-        '<td>' + esc(it.name) + '</td>' +
-        '<td>' + esc(it.qty) + '</td>' +
-        '<td><span class="badge">🔒 الفني</span></td>' +
-        '<td class="adj-col-action"></td></tr>');
-    });
 
-    if (!editRequestItems.length && !specBomItems().length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود بعد.</td></tr>';
+    if (!editRequestItems.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
       return;
     }
 
@@ -496,33 +507,62 @@
   }
 
   function renderBomItems(items) {
+    renderSpecBlock();
+
     var tbody = $('adjBomItems');
     if (!tbody) return;
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود بعد.</td></tr>';
+
+    var adjItems = (items || []).filter(function (it) {
+      return !(it.read_only || it.source === 'spec');
+    });
+
+    if (!adjItems.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
       return;
     }
-    tbody.innerHTML = items.map(function (it) {
-      var ro = it.read_only || it.source === 'spec';
-      var removeBtn = ro
-        ? '<td class="adj-col-action"></td>'
-        : '<td class="adj-col-action">' +
-            '<button type="button" class="adj-remove-btn btn-remove-adj-item" data-item-id="' + esc(it.id) + '"' +
-            ' title="حذف البند" aria-label="حذف البند">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
-            ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-            '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>' +
-            '<path d="M10 11v6"/><path d="M14 11v6"/></svg></button></td>';
-      return '<tr>' +
+
+    tbody.innerHTML = adjItems.map(function (it) {
+      var removeBtn = '<td class="adj-col-action">' +
+        '<button type="button" class="adj-remove-btn btn-remove-adj-item" data-item-id="' + esc(it.id) + '"' +
+        ' title="حذف البند" aria-label="حذف البند">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+        ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>' +
+        '<path d="M10 11v6"/><path d="M14 11v6"/></svg></button></td>';
+      return '<tr data-item-id="' + esc(it.id) + '">' +
         '<td>' + esc(it.stock_item_code) + '</td>' +
         '<td>' + esc(it.name) + '</td>' +
-        '<td>' + esc(it.qty) + '</td>' +
-        '<td>' + (ro
-          ? '<span class="badge">🔒 الفني</span>'
-          : '<span class="badge done">معدّلات</span>') + '</td>' +
+        '<td><input type="number" class="form-control adj-item-qty-input" data-item-id="' + esc(it.id) + '"' +
+        ' data-qty="' + esc(it.qty) + '" min="1" value="' + esc(it.qty) + '" style="width:82px;padding:4px 8px;"></td>' +
+        '<td><span class="badge done">معدّلات</span></td>' +
         removeBtn +
         '</tr>';
     }).join('');
+  }
+
+  function updateAdjItemQty(itemId, newQty, inputEl) {
+    if (!activeCase || !window.axios || !itemId) return;
+
+    if (inputEl) inputEl.disabled = true;
+
+    axios.patch(UPDATE_QTY_URL(activeCase.id, itemId), { qty: newQty })
+      .then(function (res) {
+        clearFormError();
+        toast('تم تحديث كمية البند');
+        if (activeCase.bom) {
+          activeCase.bom.items = (res.data.bom && res.data.bom.items) || [];
+        }
+        renderBomItems((res.data.bom && res.data.bom.items) || []);
+        refreshItemPicker();
+      })
+      .catch(function (err) {
+        showError(apiMessage(err, 'تعذّر تحديث الكمية'));
+        // استرجاع القيمة السابقة عند الفشل.
+        if (inputEl) inputEl.value = inputEl.getAttribute('data-qty');
+      })
+      .finally(function () {
+        if (inputEl) inputEl.disabled = false;
+      });
   }
 
   function renderReworkBanner(rework) {
@@ -809,6 +849,19 @@
       bomItemsBody.addEventListener('change', function (e) {
         if (e.target.classList.contains('adj-edit-qty')) {
           syncEditRequestItemsFromInputs();
+          return;
+        }
+        if (e.target.classList.contains('adj-item-qty-input')) {
+          var input = e.target;
+          var itemId = input.getAttribute('data-item-id');
+          var prev = parseInt(input.getAttribute('data-qty'), 10) || 1;
+          var next = parseInt(input.value, 10);
+          if (!next || next < 1) {
+            input.value = String(prev);
+            return;
+          }
+          if (next === prev) return;
+          updateAdjItemQty(itemId, next, input);
         }
       });
     }

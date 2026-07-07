@@ -17,6 +17,27 @@
           <p style="margin:0;font-size:13px;color:#92400e;font-weight:700;">⏳ يوجد طلب تعديل معلّق — بانتظار موافقة الإدارة.</p>
         </div>
 
+        <div id="adjSpecBlock" class="adj-spec-block" style="margin-bottom:16px;">
+          <h4 style="margin:0 0 8px;font-size:14px;color:#0f172a;display:flex;align-items:center;gap:6px;">
+            🔒 بنود التوصيف الفني <span style="font-size:12px;color:#64748b;font-weight:400;">(للقراءة فقط)</span>
+          </h4>
+          <div class="bom-table-wrap" style="max-height:min(30vh,260px);">
+            <table class="bom-table">
+              <thead>
+                <tr>
+                  <th>الكود</th>
+                  <th>الصنف</th>
+                  <th>الكمية</th>
+                </tr>
+              </thead>
+              <tbody id="adjSpecItems"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <h4 style="margin:0 0 8px;font-size:14px;color:#0f172a;display:flex;align-items:center;gap:6px;">
+          🧩 بنود المعدلات <span style="font-size:12px;color:#64748b;font-weight:400;">(الكمية قابلة للتعديل)</span>
+        </h4>
         <div class="bom-table-wrap">
           <table class="bom-table">
             <thead>
