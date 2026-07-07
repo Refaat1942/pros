@@ -14,10 +14,14 @@
 
   var LIST_URL = '/costing/queue/list';
   var SHOW_URL = function (id) { return '/costing/queue/' + id; };
+  var MODE_URL = function (id) { return '/costing/queue/' + id + '/mode'; };
   var CONFIRM_URL = function (id) { return '/costing/queue/' + id + '/confirm'; };
 
   var activeCaseId = null;
   var refreshInFlight = false;
+  var costingModes = [];
+  var canSeeInternal = false;
+  var currentInternalTotal = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -103,57 +107,67 @@
       });
   }
 
-  function renderOverheadSummary(pricing, canInternal) {
-    var summary = $('costingOverheadSummary');
-    var breakdown = pricing.overhead_breakdown || {};
-    if (!summary) return;
+  function renderModePicker(currentKey) {
+    var select = $('costingModeSelect');
+    if (!select) return;
 
-    summary.style.display = '';
+    var opts = ['<option value="">— بدون نمط (المواد فقط) —</option>'];
+    costingModes.forEach(function (m) {
+      var selected = m.key === currentKey ? ' selected' : '';
+      opts.push('<option value="' + esc(m.key) + '"' + selected + '>' + esc(m.label) +
+        ' (ربح ' + esc(m.profit_rate) + '%)</option>');
+    });
+    select.innerHTML = opts.join('');
 
-    var linesEl = $('costingOverheadLines');
+    var hint = $('costingModeHint');
+    if (hint) {
+      var mode = costingModes.filter(function (m) { return m.key === currentKey; })[0];
+      hint.textContent = mode
+        ? (mode.has_components
+            ? 'المكوّنات نسبة من المواد، ثم يُضاف هامش الربح على إجمالي التكلفة.'
+            : 'صرف سريع: هامش ربح مباشر على المواد بدون مكوّنات.')
+        : 'اختر نمط التكاليف لاحتساب سعر البيع.';
+    }
+  }
+
+  function renderBreakdown(costing) {
+    if (!costing) return;
+
+    if ($('costingMaterialsTotal')) $('costingMaterialsTotal').textContent = fmt(costing.materials_total) + ' ج.م';
+
+    var linesEl = $('costingComponentLines');
     if (linesEl) {
-      if (canInternal && breakdown.overheads && breakdown.overheads.length) {
-        linesEl.innerHTML = breakdown.overheads.map(function (row) {
+      if (costing.components && costing.components.length) {
+        linesEl.style.display = '';
+        linesEl.innerHTML = costing.components.map(function (row) {
           return '<div class="costing-overhead-row">' +
             '<span>' + esc(row.label) + ' (' + esc(row.rate) + '%)</span>' +
             '<strong>' + fmt(row.amount) + ' ج.م</strong></div>';
         }).join('');
-        linesEl.style.display = '';
       } else {
-        linesEl.innerHTML = '';
         linesEl.style.display = 'none';
+        linesEl.innerHTML = '';
       }
     }
 
-    if ($('costingWacRow')) {
-      $('costingWacRow').style.display = canInternal ? '' : 'none';
-    }
-    if ($('costingWacTotal') && canInternal) {
-      $('costingWacTotal').textContent = fmt(pricing.internal_total) + ' ج.م';
-    }
-    if ($('costingGrossTotal')) {
-      $('costingGrossTotal').textContent = fmt(breakdown.gross_before_discount != null ? breakdown.gross_before_discount : pricing.computed_total) + ' ج.م';
-    }
-
-    var discountPct = parseFloat(breakdown.discount_percent || 0);
-    var discountRow = $('costingDiscountRow');
-    if (discountRow) {
-      if (discountPct > 0) {
-        discountRow.style.display = '';
-        if ($('costingDiscountLabel')) {
-          $('costingDiscountLabel').textContent = 'خصم جهة التعاقد (' + discountPct + '%)';
-        }
-        if ($('costingDiscountAmount')) {
-          $('costingDiscountAmount').textContent = '− ' + fmt(breakdown.discount_amount) + ' ج.م';
-        }
+    var compTotalRow = $('costingComponentsTotalRow');
+    if (compTotalRow) {
+      if (costing.components && costing.components.length) {
+        compTotalRow.style.display = '';
+        if ($('costingComponentsTotal')) $('costingComponentsTotal').textContent = fmt(costing.components_total) + ' ج.م';
       } else {
-        discountRow.style.display = 'none';
+        compTotalRow.style.display = 'none';
       }
     }
 
-    if ($('costingNetTotal')) {
-      $('costingNetTotal').textContent = fmt(breakdown.net_offer_total != null ? breakdown.net_offer_total : pricing.computed_total) + ' ج.م';
-    }
+    if ($('costingTotalCost')) $('costingTotalCost').textContent = fmt(costing.total_cost) + ' ج.م';
+
+    if ($('costingWacRow')) $('costingWacRow').style.display = canSeeInternal ? '' : 'none';
+    if ($('costingWacTotal') && canSeeInternal) $('costingWacTotal').textContent = fmt(currentInternalTotal) + ' ج.م';
+
+    if ($('costingProfitLabel')) $('costingProfitLabel').textContent = 'هامش الربح (' + (costing.profit_rate || 0) + '%)';
+    if ($('costingProfitAmount')) $('costingProfitAmount').textContent = fmt(costing.profit_amount) + ' ج.م';
+    if ($('costingSellingPrice')) $('costingSellingPrice').textContent = fmt(costing.selling_price) + ' ج.م';
   }
 
   function openModal(caseId) {
@@ -162,7 +176,10 @@
       .then(function (res) {
         var c = res.data.case || {};
         var pricing = res.data.pricing || {};
-        var canInternal = res.data.can_see_internal;
+        var costing = res.data.costing || null;
+        costingModes = res.data.costing_modes || [];
+        canSeeInternal = !!res.data.can_see_internal;
+        currentInternalTotal = pricing.internal_total || 0;
 
         if ($('costingModalTitle')) {
           $('costingModalTitle').textContent = '💰 ' + (c.case_no || '') + ' — ' + (c.patient && c.patient.name || '');
@@ -183,12 +200,31 @@
           }).join('');
         }
 
-        renderOverheadSummary(pricing, canInternal);
+        renderModePicker(costing ? costing.mode_key : null);
+        renderBreakdown(costing);
 
         var modal = $('costingModal');
         if (modal) modal.classList.add('visible');
       })
       .catch(function (err) { toast(apiMessage(err, 'تعذّر فتح التفاصيل'), true); });
+  }
+
+  function changeMode() {
+    if (!activeCaseId || !window.axios) return;
+    var select = $('costingModeSelect');
+    if (!select) return;
+
+    var modeKey = select.value || '';
+    select.disabled = true;
+
+    axios.post(MODE_URL(activeCaseId), { mode: modeKey })
+      .then(function (res) {
+        var costing = res.data.costing || null;
+        renderModePicker(costing ? costing.mode_key : null);
+        renderBreakdown(costing);
+      })
+      .catch(function (err) { toast(apiMessage(err, 'تعذّر تحديث النمط'), true); })
+      .finally(function () { select.disabled = false; });
   }
 
   function closeModal() {
@@ -220,6 +256,7 @@
     if ($('closeCostingModal')) $('closeCostingModal').addEventListener('click', closeModal);
     if ($('btnCancelCosting')) $('btnCancelCosting').addEventListener('click', closeModal);
     if ($('btnConfirmCosting')) $('btnConfirmCosting').addEventListener('click', confirmCosting);
+    if ($('costingModeSelect')) $('costingModeSelect').addEventListener('change', changeMode);
     var modal = $('costingModal');
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
   });

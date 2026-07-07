@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Costing;
 use App\Http\Controllers\Controller;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
+use App\Services\CostingModeService;
 use App\Services\CostingService;
+use App\Services\CostingSnapshotService;
 use App\Services\PricingService;
 use App\Services\StockCategorySchemaService;
 use App\Support\CaseFinancialSummary;
@@ -27,6 +29,8 @@ class CostingController extends Controller
         private readonly PricingService $pricingService,
         private readonly OverheadCostingEngine $overheadCostingEngine,
         private readonly StockCategorySchemaService $categorySchema,
+        private readonly CostingSnapshotService $snapshotService,
+        private readonly CostingModeService $modeService,
     ) {}
 
     /**
@@ -82,9 +86,17 @@ class CostingController extends Controller
             $pricing->refresh()->load(['items.stockItem.attributeValues.field']);
         }
 
+        // إبقاء لقطة سعر البيع متزامنة مع المواد الحالية.
+        if ($pricing) {
+            $pricing = $this->snapshotService->refresh($pricing);
+            $pricing->load(['items.stockItem.attributeValues.field']);
+        }
+
         return response()->json([
             'case' => $this->formatSummary($case),
             'pricing' => $pricing ? $this->formatPricingDetail($pricing, $case) : null,
+            'costing' => $pricing ? $this->formatCostingBreakdown($pricing) : null,
+            'costing_modes' => $this->modeService->allModes(),
             'bom' => $case->bom ? [
                 'id' => $case->bom->id,
                 'bom_no' => $case->bom->bom_no,
@@ -93,6 +105,23 @@ class CostingController extends Controller
                 ]))->values(),
             ] : null,
             'can_see_internal' => CaseFinancialSummary::canSeeInternalCost(),
+        ]);
+    }
+
+    /**
+     * ضبط نمط التكاليف (طرف صناعي / صرف سريع) وإعادة احتساب سعر البيع.
+     */
+    public function setMode(Request $request, CaseRecord $case): JsonResponse
+    {
+        $modeKey = $request->input('mode');
+        $modeKey = is_string($modeKey) && $modeKey !== '' ? $modeKey : null;
+
+        $case->load('pricingRequest');
+        $pricing = $this->snapshotService->applyMode($case, $modeKey);
+
+        return response()->json([
+            'message' => 'تم تحديث نمط التكاليف.',
+            'costing' => $this->formatCostingBreakdown($pricing),
         ]);
     }
 
@@ -122,6 +151,8 @@ class CostingController extends Controller
             'display_entity' => $case->displayEntity(),
             'tech_notes' => $case->resolvedTechNotes(),
             'computed_total' => $pricing ? (float) $pricing->computed_total : null,
+            'selling_price' => $pricing ? (float) $pricing->selling_price : null,
+            'costing_mode' => $pricing?->costing_mode,
             'internal_total' => CaseFinancialSummary::canSeeInternalCost() && $pricing
                 ? (float) $pricing->internal_total
                 : null,
@@ -129,6 +160,26 @@ class CostingController extends Controller
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name'])
                 : null,
+        ];
+    }
+
+    /**
+     * تفصيل التكاليف الجديد (نمط + مكوّنات + ربح + سعر بيع) — الأساس لعرض السعر.
+     */
+    private function formatCostingBreakdown(PricingRequest $pricing): array
+    {
+        $breakdown = $this->snapshotService->breakdown($pricing);
+
+        return [
+            'mode_key' => $pricing->costing_mode,
+            'mode_label' => $breakdown['mode_label'],
+            'materials_total' => $breakdown['materials_total'],
+            'components' => $breakdown['components'],
+            'components_total' => $breakdown['components_total'],
+            'total_cost' => $breakdown['total_cost'],
+            'profit_rate' => $breakdown['profit_rate'],
+            'profit_amount' => $breakdown['profit_amount'],
+            'selling_price' => $breakdown['selling_price'],
         ];
     }
 

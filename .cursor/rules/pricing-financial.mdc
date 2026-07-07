@@ -10,23 +10,40 @@ alwaysApply: false
 
 Runs after technical spec is saved. Technician never sees prices during spec entry.
 
-## Quote cost basis — Highest Purchase Price (not WAC)
+## Materials basis — Highest Purchase Price (not WAC)
 
-For patient quotes and pending pricing:
+Materials are always valued at the highest registered purchase price:
 
 ```
-line_cost   = qty × highest_registered_purchase_price(item)
-quote_total = Σ line_cost            # materials only, at highest purchase price
+line_cost       = qty × highest_registered_purchase_price(item)
+materials_total = Σ line_cost        # PricingRequest.computed_total
 ```
-
-The issued `quote_total` is the raw sum of line costs — **no overhead/margin is
-folded into it**. The overhead rates (technical check, components integration,
-machinery depreciation, rehabilitation assessment) are computed by
-`OverheadCostingEngine` for the **internal admin costing dashboard only** and are
-never added to the patient/entity offer. Contract-entity discount is applied for
-**display/print and AR posting**, not to the stored `quote_total`.
 
 WAC is for **inventory valuation and financial reports only** — not for civilian quote building.
+
+## Costing engine — modes → selling price becomes the quote
+
+After adjustments, `PricingRequest.computed_total` (materials) is frozen, then a
+configurable costing mode (`costing_modes` / `costing_components`, editable in
+Admin → costing settings) is applied by `CostingEngine`:
+
+```
+component.amount = rate% × materials_total          # per configured component
+components_total = Σ component.amount                # only when mode.has_components
+total_cost       = materials_total + components_total
+selling_price    = total_cost × (1 + profit_rate%)  # PricingRequest.selling_price
+```
+
+- `طرف صناعي` (`prosthetic_limb`): materials + components + profit.
+- `الصرف السريع` (`quick_dispense`): materials + profit only (no components).
+- No mode selected → `selling_price = materials_total` (no profit).
+
+The frozen snapshot (mode, components JSON, total_cost, profit_rate,
+`selling_price`) lives on `pricing_requests`. On confirm, **`selling_price`
+becomes the issued `Quote.total`** (falling back to `computed_total` only when no
+selling price is set). The legacy `OverheadCostingEngine` breakdown remains
+**internal admin display only** and is never the patient/entity offer.
+Contract-entity discount is applied for **display/print and AR posting**.
 
 ## Civilian financial flow
 

@@ -345,6 +345,62 @@ class CostingDashboardTest extends TestCase
         $this->assertEquals($firstQuoteNo, Quote::where('case_id', $case->id)->value('quote_no'));
     }
 
+    public function test_setting_quick_mode_applies_profit_on_materials(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        // المواد = RM-001 ×2 @200 = 400 ؛ صرف سريع 40% ⇒ 560
+        $response = $this->actingAs($costing)
+            ->postJson("/costing/queue/{$case->id}/mode", ['mode' => 'quick_dispense'])
+            ->assertOk();
+
+        $this->assertEquals(400.0, (float) $response->json('costing.materials_total'));
+        $this->assertEquals(0.0, (float) $response->json('costing.components_total'));
+        $this->assertEquals(560.0, (float) $response->json('costing.selling_price'));
+    }
+
+    public function test_setting_limb_mode_adds_components_then_profit(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        // المواد 400 ؛ المكوّنات 100% ⇒ 400 ؛ إجمالي التكلفة 800 ؛ ربح 95% ⇒ 1560
+        $response = $this->actingAs($costing)
+            ->postJson("/costing/queue/{$case->id}/mode", ['mode' => 'prosthetic_limb'])
+            ->assertOk();
+
+        $this->assertEquals(400.0, (float) $response->json('costing.components_total'));
+        $this->assertEquals(800.0, (float) $response->json('costing.total_cost'));
+        $this->assertEquals(1560.0, (float) $response->json('costing.selling_price'));
+    }
+
+    public function test_confirm_uses_selling_price_as_quote_amount(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $this->actingAs($costing)
+            ->postJson("/costing/queue/{$case->id}/mode", ['mode' => 'quick_dispense'])
+            ->assertOk();
+
+        $this->actingAs($costing)
+            ->postJson("/costing/queue/{$case->id}/confirm")
+            ->assertOk();
+
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $this->assertEquals(560.00, (float) $quote->total);
+    }
+
     public function test_military_costing_confirm_auto_approves_to_warehouse(): void
     {
         $this->seedStock();

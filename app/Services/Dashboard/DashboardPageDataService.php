@@ -174,6 +174,7 @@ class DashboardPageDataService
         return [
             'overhead_rate_definitions' => $settings->overheadRateDefinitions(),
             'overhead_rates_sum' => $settings->overheadRatesSum(),
+            'costing_modes' => app(\App\Services\CostingModeService::class)->allModes(),
         ];
     }
 

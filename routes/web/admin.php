@@ -193,6 +193,9 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,costing-settings')->group(function () {
             Route::put('costing-settings', [CostingSettingsController::class, 'update'])
                 ->name('costing-settings.update');
+
+            Route::put('costing-modes', [CostingSettingsController::class, 'updateModes'])
+                ->name('costing-modes.update');
         });
 
         // ── Visit Types — JSON API (الصفحة Blade: GET admin/visit-types) ─────

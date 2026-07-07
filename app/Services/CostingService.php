@@ -21,6 +21,7 @@ class CostingService
         private readonly OperationsService $operationsService,
         private readonly MilitaryMarkupService $militaryMarkupService,
         private readonly SpecEditRequestService $editRequestService,
+        private readonly CostingSnapshotService $snapshotService,
     ) {}
 
     /**
@@ -38,6 +39,9 @@ class CostingService
             $this->workflowService->advance($case, WorkflowEvent::AdjustmentsCompleted->value);
 
             $pricingRequest = $this->pricingService->createAndCalculateForCase($case->fresh());
+
+            // تجميد لقطة التكاليف الأولية (بلا نمط بعد → سعر البيع = المواد).
+            $pricingRequest = $this->snapshotService->refresh($pricingRequest);
 
             CaseRecord::where('id', $case->id)->update([
                 'internal_cost' => (float) $pricingRequest->internal_total,
@@ -86,10 +90,16 @@ class CostingService
                 $pricingRequest->refresh();
             }
 
+            // إعادة تجميد اللقطة على المواد المحدّثة ثم اعتماد سعر البيع كقيمة العرض.
+            $pricingRequest = $this->snapshotService->refresh($pricingRequest);
+            $quoteAmount = (float) $pricingRequest->selling_price > 0
+                ? (float) $pricingRequest->selling_price
+                : (float) $pricingRequest->computed_total;
+
             $this->workflowService->advance($case->fresh(), WorkflowEvent::CostingCompleted->value);
 
             if (! $case->fresh()->isMilitary()) {
-                $this->quoteService->issue($pricingRequest, (float) $pricingRequest->computed_total);
+                $this->quoteService->issue($pricingRequest, $quoteAmount);
             }
 
             $this->workflowService->advance($case->fresh(), WorkflowEvent::QuoteIssued->value);

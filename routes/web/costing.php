@@ -29,6 +29,9 @@ Route::prefix('costing')
             Route::get('queue/{case}', [CostingController::class, 'show'])
                 ->name('queue.show');
 
+            Route::post('queue/{case}/mode', [CostingController::class, 'setMode'])
+                ->name('queue.mode');
+
             Route::post('queue/{case}/confirm', [CostingController::class, 'confirm'])
                 ->name('queue.confirm');
         });
