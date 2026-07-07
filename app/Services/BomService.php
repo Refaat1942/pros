@@ -315,19 +315,27 @@ class BomService
                 $code = $row['stock_item_code'];
                 $qty  = (int) $row['qty'];
 
-                $stockItem = StockItem::where('code', $code)->first();
+                if ($qty < 1) {
+                    abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
+                }
+
+                $stockItem = StockItem::where('code', $code)->lockForUpdate()->first();
 
                 if (! $stockItem) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
 
-                $alreadyInBom = (int) $bom->items
-                    ->where('stock_item_code', $code)
-                    ->sum('qty');
-
                 $existingAdj = $bom->items->first(
                     fn (BomItem $i) => $i->stock_item_code === $code && $i->source === BomItem::SOURCE_ADJUSTMENT
                 );
+
+                $available = $stockItem->availableQty();
+
+                if ($qty > $available) {
+                    abort(422, "الكمية المطلوبة ({$qty}) تتجاوز المتاح للصنف {$code} — الحد الأقصى: {$available}.");
+                }
+
+                $stockItem->increment('reserved', $qty);
 
                 if ($existingAdj) {
                     $existingAdj->update(['qty' => $existingAdj->qty + $qty]);
@@ -376,15 +384,37 @@ class BomService
                 abort(422, 'لا يمكن تعديل بنود المعدلات — قائمة المواد لم تعد في مرحلة الإعداد.');
             }
 
+            $bom->loadMissing('items');
+
+            foreach ($bom->items->where('source', BomItem::SOURCE_ADJUSTMENT) as $old) {
+                if ($stockItem = StockItem::where('code', $old->stock_item_code)->lockForUpdate()->first()) {
+                    $this->reverseReservedDelta($stockItem, $old->qty);
+                }
+            }
+
             $bom->items()->where('source', BomItem::SOURCE_ADJUSTMENT)->delete();
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
                 $qty  = (int) $row['qty'];
 
-                if (! StockItem::where('code', $code)->exists()) {
+                if ($qty < 1) {
+                    abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
+                }
+
+                $stockItem = StockItem::where('code', $code)->lockForUpdate()->first();
+
+                if (! $stockItem) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
+
+                $available = $stockItem->availableQty();
+
+                if ($qty > $available) {
+                    abort(422, "الكمية المطلوبة ({$qty}) تتجاوز المتاح للصنف {$code} — الحد الأقصى: {$available}.");
+                }
+
+                $stockItem->increment('reserved', $qty);
 
                 BomItem::create([
                     'bom_id'          => $bom->id,
@@ -430,6 +460,11 @@ class BomService
             }
 
             $snapshot = $item->only(['id', 'stock_item_code', 'name', 'qty', 'source']);
+
+            if ($stockItem = StockItem::where('code', $item->stock_item_code)->lockForUpdate()->first()) {
+                $this->reverseReservedDelta($stockItem, $item->qty);
+            }
+
             $item->delete();
 
             AuditService::log(
@@ -598,6 +633,12 @@ class BomService
 
         if (! $stockItem) {
             abort(422, "الصنف غير موجود: {$code}");
+        }
+
+        $available = $stockItem->availableQty();
+
+        if ($qty > $available) {
+            throw new InsufficientStockException($code, $qty, $available, $case->pricing_request_id);
         }
 
         $unitCost = $this->stockPriceService->highestUnitPrice($code);
