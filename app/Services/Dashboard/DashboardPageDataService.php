@@ -35,6 +35,7 @@ use App\Services\AdminPatientTrackService;
 use App\Services\AdminReportsHubService;
 use App\Services\AdminReportsService;
 use App\Services\BomService;
+use App\Services\CostingModeService;
 use App\Services\DoctorTransferService;
 use App\Services\MilitaryDebtService;
 use App\Services\Notifications\NotificationService;
@@ -174,7 +175,7 @@ class DashboardPageDataService
         return [
             'overhead_rate_definitions' => $settings->overheadRateDefinitions(),
             'overhead_rates_sum' => $settings->overheadRatesSum(),
-            'costing_modes' => app(\App\Services\CostingModeService::class)->allModes(),
+            'costing_modes' => app(CostingModeService::class)->allModes(),
         ];
     }
 

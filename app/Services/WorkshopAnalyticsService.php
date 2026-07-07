@@ -149,11 +149,17 @@ class WorkshopAnalyticsService
 
     private function countFinishedBetween(string $from, string $to): int
     {
+        // مقارنة على مستوى اللحظة بحدود يوم المركز محوّلةً لتوقيت التخزين
+        // (تفادي انزياح التاريخ بين توقيت المركز Africa/Cairo وتوقيت التخزين).
+        $range = ClinicTime::parseDateRange($from, $to);
+        $appTz = config('app.timezone', 'UTC');
+        $fromAt = $range['from']?->copy()->timezone($appTz);
+        $toAt = $range['to']?->copy()->timezone($appTz);
+
         return Bom::query()
             ->where('stage', Bom::STAGE_FINISHED)
             ->whereNotNull('finished_at')
-            ->whereDate('finished_at', '>=', $from)
-            ->whereDate('finished_at', '<=', $to)
+            ->whereBetween('finished_at', [$fromAt, $toAt])
             ->count();
     }
 
