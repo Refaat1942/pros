@@ -21,8 +21,8 @@
             </div>
 
             <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">رقم العملية (اختياري)</label>
-                <input type="text" id="cashierPaymentReference" placeholder="لإنستاباي / فودافون كاش"
+                <label id="cashierPaymentReferenceLabel" class="block text-sm font-bold text-slate-700 mb-1">رقم العملية (اختياري)</label>
+                <input type="text" id="cashierPaymentReference" placeholder="رقم الشيك / مرجع التحويل"
                        class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
             </div>
 
@@ -33,7 +33,7 @@
             </div>
 
             <p class="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed">
-                بعد التأكيد يتحول الطلب تلقائياً إلى المخزن لصرف المواد بالباركود للورشة.
+                بعد التأكيد تُسجَّل الدفعة ويُطبع الإيصال، وتُعاد الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.
             </p>
         </div>
 

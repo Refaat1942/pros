@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Cashier;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cashier\ConfirmPaymentRequest;
 use App\Models\CaseRecord;
+use App\Models\Payment;
 use App\Services\CashierPaymentService;
+use App\Support\PaymentReceiptPresenter;
 use App\Traits\PaginationTrait;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -62,7 +65,21 @@ class CashierDeskController extends Controller
                 'payment_no' => $payment->payment_no,
                 'amount' => (float) $payment->amount,
                 'method' => $payment->method,
+                'receipt_url' => route('cashier.payments.receipt', $payment),
             ],
+        ]);
+    }
+
+    /**
+     * إيصال دفع مطبوع (A4) — يظهر رقم الدفعة كسيريال رسمي.
+     */
+    public function printReceipt(Request $request, Payment $payment): View
+    {
+        $payment->load(['caseRecord', 'patient']);
+
+        return view('prints.payment-receipt', [
+            'receipt' => PaymentReceiptPresenter::fromPayment($payment),
+            'autoPrint' => ! $request->boolean('embed'),
         ]);
     }
 

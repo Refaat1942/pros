@@ -238,8 +238,8 @@ class AdminCaseDetailTest extends TestCase
             'patient_id' => $patient->id,
             'patient_name' => $patient->name,
             'amount' => 1000.00,
-            'method' => 'vodafone_cash',
-            'reference' => 'VF-998877',
+            'method' => 'bank_transfer',
+            'reference' => 'TRF-998877',
             'received_by' => 'موظف الخزنة',
             'received_at' => now(),
         ]);
@@ -248,8 +248,8 @@ class AdminCaseDetailTest extends TestCase
             ->getJson('/admin/cases/'.$case->id.'/detail')
             ->assertOk()
             ->assertJsonPath('quote.status_label', 'تم الدفع في الخزنة')
-            ->assertJsonPath('payment.method', 'vodafone_cash')
-            ->assertJsonPath('payment.method_label', 'فودافون كاش');
+            ->assertJsonPath('payment.method', 'bank_transfer')
+            ->assertJsonPath('payment.method_label', 'تحويل على الحساب');
     }
 
     public function test_admin_case_quote_print_returns_print_view(): void

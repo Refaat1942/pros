@@ -158,6 +158,62 @@ class CashierPaymentFlowTest extends TestCase
         $this->assertSame(CaseRecord::STAGE_CASHIER, $case->fresh()->stage_key);
     }
 
+    public function test_bank_transfer_and_cheque_require_reference(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $case = $this->cashierAwaitingCase();
+        $cashier = $this->userWithRole('cashier');
+
+        foreach (['bank_transfer', 'bank_cheque'] as $method) {
+            $this->actingAs($cashier)
+                ->postJson('/cashier/payments/'.$case->id.'/confirm', [
+                    'method' => $method,
+                    'amount' => 1000,
+                ])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['reference']);
+        }
+
+        $this->assertSame(CaseRecord::STAGE_CASHIER, $case->fresh()->stage_key);
+    }
+
+    public function test_cheque_payment_with_reference_succeeds(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $case = $this->cashierAwaitingCase();
+        $cashier = $this->userWithRole('cashier');
+
+        $this->actingAs($cashier)
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', [
+                'method' => 'bank_cheque',
+                'amount' => 1000,
+                'reference' => 'CHQ-55123',
+            ])
+            ->assertOk()
+            ->assertJsonPath('payment.method', 'bank_cheque');
+
+        $payment = Payment::where('case_id', $case->id)->firstOrFail();
+        $this->assertSame('CHQ-55123', $payment->reference);
+    }
+
+    public function test_payment_receipt_print_shows_serial_and_amount(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $case = $this->cashierAwaitingCase();
+
+        $payment = app(CashierPaymentService::class)->confirmPayment($case, [
+            'method' => 'cash',
+            'amount' => 1325,
+        ]);
+
+        $this->actingAs($this->userWithRole('cashier'))
+            ->get('/cashier/payments/'.$payment->id.'/receipt')
+            ->assertOk()
+            ->assertSee('إيصال دفع', false)
+            ->assertSee($payment->payment_no, false)
+            ->assertSee('جنيه', false);
+    }
+
     public function test_admin_cash_income_report_lists_collected_payments(): void
     {
         $this->stockItem('RM-001', qty: 10);

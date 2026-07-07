@@ -46,6 +46,7 @@
                         <th class="px-4 py-3 text-right font-bold">الوسيلة</th>
                         <th class="px-4 py-3 text-right font-bold">المبلغ</th>
                         <th class="px-4 py-3 text-right font-bold">التاريخ</th>
+                        <th class="px-4 py-3 text-right font-bold">إيصال</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -59,9 +60,15 @@
                             </td>
                             <td class="px-4 py-3 font-bold text-emerald-700">{{ number_format((float) $payment->amount, 0) }} ج.م</td>
                             <td class="px-4 py-3 text-xs text-slate-500">{{ \App\Support\ClinicTime::format($payment->received_at, 'd/m/Y H:i') }}</td>
+                            <td class="px-4 py-3">
+                                <a href="{{ route('cashier.payments.receipt', $payment) }}" target="_blank" rel="noopener"
+                                   class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block">
+                                    🖨️ طباعة الإيصال
+                                </a>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد دفعات محصّلة بعد.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">لا توجد دفعات محصّلة بعد.</td></tr>
                     @endforelse
                 </tbody>
             </table>

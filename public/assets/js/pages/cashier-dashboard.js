@@ -109,6 +109,19 @@
       btn.classList.toggle('text-white', on);
       btn.classList.toggle('border-emerald-600', on);
     });
+    syncReferenceField(value);
+  }
+
+  // الكاش: المرجع اختياري؛ التحويل/الشيك: مطلوب مع تسمية مناسبة.
+  function syncReferenceField(value) {
+    var label = $('cashierPaymentReferenceLabel');
+    var input = $('cashierPaymentReference');
+    var isCash = value === 'cash';
+    var text = value === 'bank_cheque'
+      ? 'رقم الشيك المصرفي'
+      : (value === 'bank_transfer' ? 'رقم/مرجع التحويل' : 'رقم العملية (اختياري)');
+    if (label) label.textContent = text;
+    if (input) input.placeholder = isCash ? 'اختياري' : text;
   }
 
   function openPaymentModal(caseId, caseNo, patient, amount) {
@@ -140,7 +153,13 @@
     var amount = parseFloat(($('cashierPaymentAmount') && $('cashierPaymentAmount').value) || '0');
     if (!amount || amount <= 0) { toast('أدخل مبلغاً صحيحاً.', true); return; }
 
-    if (!window.confirm('تأكيد استلام مبلغ ' + fmt(amount) + ' ج.م؟\n\nبعد التأكيد يتحول الطلب للمخزن تلقائياً.')) return;
+    var reference = ($('cashierPaymentReference') && $('cashierPaymentReference').value) || null;
+    if (selectedMethod !== 'cash' && !reference) {
+      toast('يرجى إدخال رقم الشيك أو مرجع التحويل.', true);
+      return;
+    }
+
+    if (!window.confirm('تأكيد استلام مبلغ ' + fmt(amount) + ' ج.م؟\n\nسيُطبع إيصال الدفع وتُعاد الحالة لمكتب التشغيل.')) return;
 
     var btn = $('btnSubmitCashierPayment');
     if (btn) btn.disabled = true;
@@ -148,13 +167,16 @@
     axios.post(CONFIRM_URL(activeCaseId), {
       method: selectedMethod,
       amount: amount,
-      reference: ($('cashierPaymentReference') && $('cashierPaymentReference').value) || null,
+      reference: reference,
       notes: ($('cashierPaymentNotes') && $('cashierPaymentNotes').value) || null,
     })
       .then(function (res) {
         toast((res.data && res.data.message) || 'تم تأكيد استلام المبلغ.', false, { title: 'تم التحصيل', type: 'success', duration: 7000 });
         closePaymentModal();
         refreshList();
+        // فتح إيصال الدفع للطباعة تلقائياً.
+        var receiptUrl = res.data && res.data.payment && res.data.payment.receipt_url;
+        if (receiptUrl) { window.open(receiptUrl, '_blank', 'noopener'); }
       })
       .catch(function (err) { toast(apiMessage(err, 'تعذّر تأكيد الدفع'), true); })
       .finally(function () { if (btn) btn.disabled = false; });

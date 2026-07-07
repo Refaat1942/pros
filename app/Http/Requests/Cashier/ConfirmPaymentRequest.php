@@ -18,10 +18,15 @@ class ConfirmPaymentRequest extends FormRequest
      */
     public function rules(): array
     {
+        $method = $this->input('method');
+        $needsReference = is_string($method)
+            && (PaymentMethod::tryFrom($method)?->requiresReference() ?? false);
+
         return [
             'method' => ['required', 'string', Rule::in(PaymentMethod::values())],
             'amount' => ['nullable', 'numeric', 'min:0.01', 'max:99999999'],
-            'reference' => ['nullable', 'string', 'max:100'],
+            // التحويل والشيك يتطلبان رقماً مرجعياً؛ الكاش اختياري.
+            'reference' => [$needsReference ? 'required' : 'nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -36,6 +41,7 @@ class ConfirmPaymentRequest extends FormRequest
             'method.in' => 'وسيلة دفع غير صالحة.',
             'amount.numeric' => 'قيمة المبلغ غير صالحة.',
             'amount.min' => 'قيمة المبلغ غير صالحة.',
+            'reference.required' => 'يرجى إدخال رقم الشيك أو مرجع التحويل.',
         ];
     }
 }
