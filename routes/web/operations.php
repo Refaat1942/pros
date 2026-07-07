@@ -53,8 +53,8 @@ Route::prefix('operations')
             ->middleware('dashboard.page:operations,quotes-awaiting')
             ->name('quotes-awaiting.list');
 
-        Route::redirect('operations', '/technical/delivery');
-        Route::redirect('operations/operations', '/technical/delivery');
+        Route::redirect('operations', '/reception/delivery');
+        Route::redirect('operations/operations', '/reception/delivery');
 
         // ── Return requests (طلب ارتجاع مواد → المخزن) ─────────────────────
         Route::middleware('dashboard.page:operations,returns')->group(function () {

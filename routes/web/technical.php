@@ -3,7 +3,6 @@
 use App\Http\Controllers\Bom\BomController;
 use App\Http\Controllers\Bom\ReturnNoteController;
 use App\Http\Controllers\Dashboard\TechnicalDashboardController;
-use App\Http\Controllers\Manufacturing\ManufacturingStageController;
 use App\Http\Controllers\Quote\QuoteController;
 use App\Http\Controllers\Stock\StockReceiveController;
 use Illuminate\Support\Facades\Route;
@@ -63,15 +62,6 @@ Route::prefix('technical')
 
             Route::get('quote/{quote}/print-issue-voucher', [QuoteController::class, 'printIssueVoucher'])
                 ->name('quote.print-issue-voucher');
-        });
-
-        // ── Delivery (تم التسليم — إغلاق الطلب) ─────────────────────────────
-        Route::middleware('dashboard.page:technical,delivery')->group(function () {
-            Route::get('delivery/list', [ManufacturingStageController::class, 'index'])
-                ->name('delivery.list');
-
-            Route::post('delivery/{case}/deliver', [ManufacturingStageController::class, 'deliver'])
-                ->name('delivery.deliver');
         });
 
         // ── Return notes — استلام المخزن فقط ───────────────────────────────

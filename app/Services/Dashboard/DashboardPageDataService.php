@@ -96,7 +96,6 @@ class DashboardPageDataService
             'spec.spec' => $this->specPreview(),
             'adjustments.adjustments' => $this->adjustmentsHistory(),
             'adjustments.history' => $this->adjustmentsHistory(),
-            'technical.delivery' => $this->operationsDeliveryDesk(),
             'cashier.payments' => $this->cashierPayments(),
             'cashier.statistics' => $this->cashierStatistics(),
             'workshop.workshop' => $this->workshopDesk(),
@@ -697,41 +696,6 @@ class DashboardPageDataService
                 'military' => $milCount,
                 'civilian' => $civCount,
                 'total_active' => $cases->count(),
-            ],
-        ];
-    }
-
-    private function operationsDeliveryDesk(): array
-    {
-        $cases = CaseRecord::query()
-            ->operationsDeliveryQueue()
-            ->with([
-                'patient:id,patient_code,name',
-                'bom:id,case_id,bom_no,stage',
-                'bom.items:id,bom_id,stock_item_code,name,qty',
-            ])
-            ->orderByDesc('updated_at')
-            ->get();
-
-        $readyCount = $cases->count();
-        $doneCount = CaseRecord::countDeliveredByOps();
-        $milCount = $cases->filter(fn ($c) => $c->isMilitary())->count();
-        $civCount = $cases->count() - $milCount;
-
-        return [
-            'ops_cases' => $cases,
-            'ops_stats' => [
-                ['icon' => '✅', 'label' => 'جاهز للتسليم', 'value' => (string) $readyCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '🪖', 'label' => 'مسار عسكري', 'value' => (string) $milCount, 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
-                ['icon' => '🌐', 'label' => 'مسار مدني', 'value' => (string) $civCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '📁', 'label' => 'تم التسليم', 'value' => (string) $doneCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-            ],
-            'ops_summary' => [
-                'ready' => $readyCount,
-                'done' => $doneCount,
-                'military' => $milCount,
-                'civilian' => $civCount,
-                'total_active' => $readyCount,
             ],
         ];
     }

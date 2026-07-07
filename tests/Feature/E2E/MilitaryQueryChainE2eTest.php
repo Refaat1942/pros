@@ -122,8 +122,8 @@ class MilitaryQueryChainE2eTest extends TestCase
         }
         $this->postJson("/workshop/workshop/{$case->id}/finish-quality")->assertOk();
 
-        $this->actingAs($tech);
-        $this->postJson("/technical/delivery/{$case->id}/deliver")->assertOk();
+        $this->actingAs($this->userWithRole('reception'));
+        $this->postJson('/reception/delivery/scan', ['scanned_qr' => $patient->patient_qr])->assertOk();
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);

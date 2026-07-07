@@ -195,12 +195,13 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertContains($bom->id, $queues->technicalBomRawIds());
 
         $mismatch = $this->postJson("/technical/bom/{$bom->id}/dispense", [
-            'scanned_barcodes' => ['BC-RM-999'],
+            'scanned_barcodes' => ['BC-RM-999', 'BC-RM-999'],
         ]);
         $mismatch->assertStatus(422)->assertJsonPath('blocked', true);
 
+        // qty=2 يتطلب مسحتين لنفس الباركود (مطابقة كود + صنف + كمية).
         $dispense = $this->postJson("/technical/bom/{$bom->id}/dispense", [
-            'scanned_barcodes' => ['BC-RM-001'],
+            'scanned_barcodes' => ['BC-RM-001', 'BC-RM-001'],
         ]);
         $dispense->assertOk();
         $this->assertEquals(Bom::STAGE_WIP, $bom->fresh()->stage);
@@ -227,9 +228,9 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertEquals(CaseRecord::STAGE_READY_DELIVERY, $case->stage_key);
         $this->assertContains($case->id, $queues->receptionDeliveryReadyCaseIds());
 
-        // ── Step 8: Warehouse final delivery — closed + invoice + archive ─
-        $this->actingAs($tech);
-        $close = $this->postJson("/technical/delivery/{$case->id}/deliver");
+        // ── Step 8: Reception final delivery — closed + invoice + archive ─
+        $this->actingAs($this->userWithRole('reception'));
+        $close = $this->postJson('/reception/delivery/scan', ['scanned_qr' => $patient->patient_qr]);
         $close->assertOk()->assertJsonPath('closed', true);
 
         $case->refresh();

@@ -214,7 +214,6 @@ return [
         'pages' => [
             'inventory' => ['title' => 'المخزن — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزن'],
             'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد للورشة'],
-            'delivery' => ['title' => 'المخزن — تسليم للمرضى', 'icon' => '✅', 'label' => 'تسليم للمرضى'],
             'returns' => ['title' => 'استلام ارتجاع المواد — من الورشة', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
@@ -231,7 +230,6 @@ return [
             'assets/js/shared/inventory-returns.js',
             'assets/js/pages/technical-dashboard.js',
             'assets/js/pages/technical-bom-dashboard.js',
-            'assets/js/pages/technical-delivery-dashboard.js',
             'assets/js/pages/returns-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],

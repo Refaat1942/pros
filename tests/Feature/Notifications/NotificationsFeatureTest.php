@@ -104,24 +104,25 @@ class NotificationsFeatureTest extends TestCase
 
         $this->assertSame(
             0,
-            AppNotification::forRole(Role::SLUG_TECHNICAL)
+            AppNotification::forRole(Role::SLUG_RECEPTION)
                 ->where('event', WorkflowEvent::BomFinished->value)
                 ->count(),
         );
 
         $this->postJson("/workshop/workshop/{$case->id}/finish-quality")->assertOk();
 
-        $notification = AppNotification::forRole(Role::SLUG_TECHNICAL)
+        // تسليم المرضى في الاستقبال — الإشعار يذهب لموظف الاستقبال.
+        $notification = AppNotification::forRole(Role::SLUG_RECEPTION)
             ->where('event', WorkflowEvent::BomFinished->value)
             ->first();
 
         $this->assertNotNull($notification);
         $this->assertSame($case->id, $notification->case_id);
         $this->assertStringContainsString($patient->name, $notification->body);
-        $this->assertStringContainsString('المخزن', $notification->title);
+        $this->assertStringContainsString('الاستقبال', $notification->title);
         $this->assertSame(
             0,
-            AppNotification::forRole(Role::SLUG_OPERATIONS)
+            AppNotification::forRole(Role::SLUG_TECHNICAL)
                 ->where('event', WorkflowEvent::BomFinished->value)
                 ->count(),
         );
