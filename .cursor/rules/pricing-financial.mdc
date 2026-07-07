@@ -15,9 +15,16 @@ Runs after technical spec is saved. Technician never sees prices during spec ent
 For patient quotes and pending pricing:
 
 ```
-line_cost = qty × highest_registered_purchase_price(item)
-quote_total = Σ line_cost + configured margin
+line_cost   = qty × highest_registered_purchase_price(item)
+quote_total = Σ line_cost            # materials only, at highest purchase price
 ```
+
+The issued `quote_total` is the raw sum of line costs — **no overhead/margin is
+folded into it**. The overhead rates (technical check, components integration,
+machinery depreciation, rehabilitation assessment) are computed by
+`OverheadCostingEngine` for the **internal admin costing dashboard only** and are
+never added to the patient/entity offer. Contract-entity discount is applied for
+**display/print and AR posting**, not to the stored `quote_total`.
 
 WAC is for **inventory valuation and financial reports only** — not for civilian quote building.
 
