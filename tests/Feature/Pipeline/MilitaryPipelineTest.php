@@ -147,12 +147,12 @@ class MilitaryPipelineTest extends TestCase
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
         $case->update(['work_order_no' => 'WO-2026-MIL-0001']);
 
-        // 1 BomItem row with qty=3 → 1 barcode required
+        // qty=3 → مطلوب 3 مسحات لنفس الباركود
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 3],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
 
         $item->refresh();
         $this->assertEquals(7, $item->qty);

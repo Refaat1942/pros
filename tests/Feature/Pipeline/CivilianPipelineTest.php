@@ -275,12 +275,12 @@ class CivilianPipelineTest extends TestCase
 
         $this->actingAs($user);
 
-        // 1 BomItem row with qty=2 → 1 barcode required
+        // qty=2 → مطلوب مسحتان لنفس الباركود
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']); // 1 barcode per row
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']); // مسحة لكل وحدة
 
         $bom->refresh();
         $this->assertEquals(Bom::STAGE_WIP, $bom->stage);

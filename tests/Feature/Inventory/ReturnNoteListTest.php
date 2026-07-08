@@ -52,7 +52,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
 
         $this->getJson('/workshop/returns/create')
             ->assertOk()
@@ -75,7 +75,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
 
         app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -104,7 +104,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
 
         $pending = app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -122,7 +122,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $completedBom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($completedBom->fresh(), ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($completedBom->fresh(), ['BC-RM-001', 'BC-RM-001']);
 
         $done = app(ReturnNoteService::class)->create(
             $completedBom->fresh(),

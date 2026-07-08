@@ -288,10 +288,15 @@ trait ProstheticTestHelper
 
         $bom = Bom::with('items')->where('case_id', $case->id)->firstOrFail();
 
-        app(BomService::class)->releaseToWip(
-            $bom,
-            $bom->items->map(fn ($i) => 'BC-'.$i->stock_item_code)->all(),
-        );
+        // مسح باركود لكل وحدة (مطابقة صارمة: عدد المسحات = الكمية لكل صنف).
+        $scans = [];
+        foreach ($bom->items as $item) {
+            for ($n = 0; $n < (int) $item->qty; $n++) {
+                $scans[] = 'BC-'.$item->stock_item_code;
+            }
+        }
+
+        app(BomService::class)->releaseToWip($bom, $scans);
 
         return $case->fresh();
     }

@@ -30,7 +30,7 @@ class AdminReturnsPageTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 3],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
 
         $note = app(ReturnNoteService::class)->create(
             $bom->fresh(),
