@@ -25,6 +25,7 @@ use App\Support\ClinicTime;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -37,6 +38,8 @@ class AdminReportsHubService
         private readonly AdminReportsService $snapshotReports,
         private readonly SupplierService $supplierService,
         private readonly AdminPatientTrackService $patientTracks,
+        private readonly FinancialBalanceService $balanceService,
+        private readonly ProfitabilityReportService $profitabilityService,
     ) {}
 
     /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
@@ -94,6 +97,16 @@ class AdminReportsHubService
             $cards[] = $extra;
         }
 
+        if (Gate::allows('view-costs')) {
+            foreach ([
+                ['id' => 'opening-balance', 'label' => 'رصيد أول المدة', 'icon' => '🏦', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الافتتاحية للخزنة والمديونيات وقيمة المخزون في بداية الفترة'],
+                ['id' => 'closing-balance', 'label' => 'رصيد آخر المدة', 'icon' => '🧾', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الختامية بعد حركة الفترة للخزنة والمديونيات وقيمة المخزون'],
+                ['id' => 'profitability', 'label' => 'مراجعة التكاليف والربحية', 'icon' => '📈', 'group' => 'التعاقد والمالية', 'description' => 'مقارنة الإيراد بالتكلفة الداخلية (WAC) للحالات المُسلَّمة ومجمل الربح'],
+            ] as $extra) {
+                $cards[] = $extra;
+            }
+        }
+
         return $cards;
     }
 
@@ -131,6 +144,9 @@ class AdminReportsHubService
             'contracts' => $this->buildContracts($from, $to),
             'civilian-debts' => $this->buildCivilianDebts($from, $to),
             'audit' => $this->buildAudit($from, $to),
+            'opening-balance' => $this->buildOpeningBalance($from, $to),
+            'closing-balance' => $this->buildClosingBalance($from, $to),
+            'profitability' => $this->buildProfitability($from, $to),
             default => throw new InvalidArgumentException("تقرير غير معروف: {$section}"),
         };
     }
@@ -828,6 +844,134 @@ class AdminReportsHubService
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [],
             'headers' => ['التاريخ', 'المستخدم', 'الإجراء', 'الوسم', 'الوصف'],
+            'rows' => $rows,
+        ];
+    }
+
+    /** @return array{from: Carbon, to: Carbon} */
+    private function resolveFinanceRange(?Carbon $from, ?Carbon $to): array
+    {
+        $now = ClinicTime::now();
+
+        return [
+            'from' => ($from ?? $now->copy()->startOfMonth())->copy()->startOfDay(),
+            'to' => ($to ?? $now->copy()->endOfMonth())->copy()->endOfDay(),
+        ];
+    }
+
+    /** @return list<array{key: string, label: string}> */
+    private function financeDomains(): array
+    {
+        $domains = [
+            ['key' => FinancialBalanceService::DOMAIN_CASH, 'label' => 'الخزنة النقدية'],
+            ['key' => FinancialBalanceService::DOMAIN_CIVILIAN, 'label' => 'مديونية الجهات المدنية'],
+        ];
+
+        if (Gate::allows('view-military-profit')) {
+            $domains[] = ['key' => FinancialBalanceService::DOMAIN_MILITARY, 'label' => 'المستحق السيادي (عسكري)'];
+        }
+
+        $domains[] = ['key' => FinancialBalanceService::DOMAIN_INVENTORY, 'label' => 'قيمة المخزون (تقريبي)'];
+
+        return $domains;
+    }
+
+    private function money(float $value): string
+    {
+        return number_format($value, 2).' ج.م';
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildOpeningBalance(?Carbon $from, ?Carbon $to): array
+    {
+        $range = $this->resolveFinanceRange($from, $to);
+        $balances = $this->balanceService->balances($range['from'], $range['to']);
+
+        $rows = [];
+        $total = 0.0;
+        foreach ($this->financeDomains() as $domain) {
+            $opening = (float) ($balances[$domain['key']]['opening'] ?? 0);
+            $total += $opening;
+            $rows[] = [$domain['label'], $this->money($opening)];
+        }
+
+        return [
+            'title' => 'رصيد أول المدة',
+            'period_label' => $this->periodLabel($range['from'], $range['to']),
+            'summary' => [
+                ['label' => 'إجمالي رصيد أول المدة', 'value' => $this->money($total)],
+            ],
+            'headers' => ['المجال', 'رصيد أول المدة'],
+            'rows' => $rows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildClosingBalance(?Carbon $from, ?Carbon $to): array
+    {
+        $range = $this->resolveFinanceRange($from, $to);
+        $balances = $this->balanceService->balances($range['from'], $range['to']);
+
+        $rows = [];
+        $totalClosing = 0.0;
+        foreach ($this->financeDomains() as $domain) {
+            $data = $balances[$domain['key']] ?? [];
+            $opening = (float) ($data['opening'] ?? 0);
+            $movement = (float) ($data['movement'] ?? 0);
+            $closing = (float) ($data['closing'] ?? 0);
+            $totalClosing += $closing;
+            $rows[] = [$domain['label'], $this->money($opening), $this->money($movement), $this->money($closing)];
+        }
+
+        return [
+            'title' => 'رصيد آخر المدة',
+            'period_label' => $this->periodLabel($range['from'], $range['to']),
+            'summary' => [
+                ['label' => 'إجمالي رصيد آخر المدة', 'value' => $this->money($totalClosing)],
+            ],
+            'headers' => ['المجال', 'رصيد أول المدة', 'حركة الفترة', 'رصيد آخر المدة'],
+            'rows' => $rows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildProfitability(?Carbon $from, ?Carbon $to): array
+    {
+        $range = $this->resolveFinanceRange($from, $to);
+        $report = $this->profitabilityService->report($range['from'], $range['to']);
+        $showMilitary = Gate::allows('view-military-profit');
+
+        $cases = collect($report['cases'])
+            ->reject(fn (array $row) => ! $showMilitary && ($row['patient_type'] ?? null) === Patient::TYPE_MILITARY)
+            ->values();
+
+        $rows = $cases->map(fn (array $row) => [
+            $row['case_no'] ?? '—',
+            $row['patient_name'] ?? '—',
+            ($row['patient_type'] ?? null) === Patient::TYPE_MILITARY ? 'عسكري' : 'مدني',
+            $row['company'] ?? '—',
+            $this->money((float) ($row['revenue'] ?? 0)),
+            $this->money((float) ($row['cost'] ?? 0)),
+            $this->money((float) ($row['margin'] ?? 0)),
+            number_format((float) ($row['margin_pct'] ?? 0), 2).'%',
+        ])->values()->all();
+
+        $revenue = (float) $cases->sum('revenue');
+        $cost = (float) $cases->sum('cost');
+        $margin = round($revenue - $cost, 2);
+        $marginPct = $revenue > 0 ? round(($margin / $revenue) * 100, 2) : 0.0;
+
+        return [
+            'title' => 'مراجعة التكاليف والربحية',
+            'period_label' => $this->periodLabel($range['from'], $range['to']),
+            'summary' => [
+                ['label' => 'عدد الحالات المُسلَّمة', 'value' => (string) $cases->count()],
+                ['label' => 'إجمالي الإيراد', 'value' => $this->money($revenue)],
+                ['label' => 'إجمالي التكلفة (WAC)', 'value' => $this->money($cost)],
+                ['label' => 'مجمل الربح', 'value' => $this->money($margin)],
+                ['label' => 'نسبة الربح', 'value' => number_format($marginPct, 2).'%'],
+            ],
+            'headers' => ['رقم الحالة', 'المريض', 'النوع', 'الجهة', 'الإيراد', 'التكلفة', 'مجمل الربح', 'نسبة الربح'],
             'rows' => $rows,
         ];
     }
