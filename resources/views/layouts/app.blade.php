@@ -24,5 +24,7 @@
     @endif
 
     @stack('scripts')
+
+    @include('partials.app-tools')
 </body>
 </html>
