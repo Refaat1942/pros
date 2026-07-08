@@ -101,8 +101,9 @@
       .reduce(function (sum, it) { return sum + (parseInt(it.qty, 10) || 0); }, 0);
   }
 
+  // المتبقّي قبل الدخول في السالب — قد يكون سالباً (يُسمح بالبيع بالسالب/طلب توريد).
   function maxAddableQty(catalogItem) {
-    return Math.max(0, catalogItemAvailable(catalogItem) - qtyAlreadyInBom(catalogItem.code));
+    return catalogItemAvailable(catalogItem) - qtyAlreadyInBom(catalogItem.code);
   }
 
   function findCatalogItem(code) {
@@ -110,8 +111,9 @@
   }
 
   function getSelectedCodes() {
+    // يُسمح باختيار أي صنف حتى لو كان المتاح صفراً/سالباً (بيع بالسالب).
     return Object.keys(pickerSelectedCodes).filter(function (code) {
-      return pickerSelectedCodes[code] && findCatalogItem(code) && maxAddableQty(findCatalogItem(code)) > 0;
+      return pickerSelectedCodes[code] && findCatalogItem(code);
     });
   }
 
@@ -181,27 +183,18 @@
     }
 
     list.innerHTML = items.map(function (item) {
-      var maxQty = maxAddableQty(item);
-      var disabled = maxQty < 1;
+      // يُسمح باختيار كل الأصناف؛ الصنف غير المتاح يظهر بوسم «طلب توريد» بلا حظر.
+      var isBackorder = maxAddableQty(item) < 1;
       var checked = !!pickerSelectedCodes[item.code];
 
-      if (disabled) {
-        return '<li class="adj-picker-option is-disabled" aria-disabled="true">' +
-          '<label class="adj-picker-check-label">' +
-          '<input type="checkbox" class="adj-picker-checkbox" disabled>' +
-          '<span class="adj-picker-check-body">' +
-          '<span class="adj-picker-code">' + esc(item.code) + '</span>' +
-          '<span class="adj-picker-name">' + esc(item.name) + ' <span class="adj-picker-muted">(غير متاح)</span></span>' +
-          '</span></label></li>';
-      }
-
-      return '<li class="adj-picker-option' + (checked ? ' is-selected' : '') + '">' +
+      return '<li class="adj-picker-option' + (checked ? ' is-selected' : '') + (isBackorder ? ' is-backorder' : '') + '">' +
         '<label class="adj-picker-check-label">' +
         '<input type="checkbox" class="adj-picker-checkbox" value="' + esc(item.code) + '"' +
         (checked ? ' checked' : '') + '>' +
         '<span class="adj-picker-check-body">' +
         '<span class="adj-picker-code">' + esc(item.code) + '</span>' +
-        '<span class="adj-picker-name">' + esc(item.name) + '</span>' +
+        '<span class="adj-picker-name">' + esc(item.name) +
+        (isBackorder ? ' <span class="adj-picker-muted">(طلب توريد)</span>' : '') + '</span>' +
         '</span></label></li>';
     }).join('');
 
@@ -211,7 +204,7 @@
   function refreshItemPicker() {
     Object.keys(pickerSelectedCodes).forEach(function (code) {
       var item = findCatalogItem(code);
-      if (!item || maxAddableQty(item) < 1) delete pickerSelectedCodes[code];
+      if (!item) delete pickerSelectedCodes[code];
     });
     updatePickerLabel();
     renderItemPickerList();
@@ -272,13 +265,10 @@
 
     var codes = getSelectedCodes();
     var hasItems = codes.length > 0;
-    var minMax = hasItems ? codes.reduce(function (min, code) {
-      var maxQty = maxAddableQty(findCatalogItem(code));
-      return Math.min(min, maxQty);
-    }, Infinity) : 0;
 
+    // لا سقف على الكمية — يُسمح بتجاوز المتاح (بيع بالسالب/طلب توريد).
     qtyEl.disabled = !hasItems;
-    qtyEl.max = hasItems ? String(minMax) : '';
+    qtyEl.removeAttribute('max');
     qtyEl.min = hasItems ? '1' : '0';
 
     if (!hasItems) {
@@ -289,10 +279,9 @@
 
     var current = parseInt(qtyEl.value, 10);
     if (!current || current < 1) current = 1;
-    if (current > minMax) current = minMax;
     qtyEl.value = String(current);
 
-    if (addBtn) addBtn.disabled = minMax < 1;
+    if (addBtn) addBtn.disabled = false;
   }
 
   function specBomItems() {
@@ -924,13 +913,8 @@
 
     if (qtyInput) {
       qtyInput.addEventListener('input', function () {
-        var codes = getSelectedCodes();
-        if (!codes.length) return;
-        var minMax = codes.reduce(function (min, code) {
-          return Math.min(min, maxAddableQty(findCatalogItem(code)));
-        }, Infinity);
+        // لا سقف على الكمية (بيع بالسالب مسموح) — فقط منع القيم أقل من 1.
         var val = parseInt(qtyInput.value, 10);
-        if (val > minMax) qtyInput.value = String(minMax);
         if (val < 1 && qtyInput.value !== '') qtyInput.value = '1';
       });
     }
