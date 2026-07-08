@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SpecEditRequestController as AdminSpecEditRequest
 use App\Http\Controllers\Admin\StockCategoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitTypeController;
+use App\Http\Controllers\Admin\WorkflowSettingsController;
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\CivilianDebtController;
@@ -51,6 +52,8 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,cases')->group(function () {
             Route::get('cases/{case}/detail', [AdminCaseController::class, 'show'])->name('cases.detail');
             Route::get('cases/{case}/quote', [AdminCaseController::class, 'quotePrint'])->name('cases.quote');
+            Route::post('cases/{case}/workflow/skip', [AdminCaseController::class, 'skipStage'])
+                ->name('cases.workflow.skip');
         });
     });
 
@@ -206,6 +209,12 @@ Route::prefix('admin')
 
             Route::post('pathway-settings/reset', [PathwaySettingsController::class, 'reset'])
                 ->name('pathway-settings.reset');
+
+            Route::put('workflow-policies', [WorkflowSettingsController::class, 'update'])
+                ->name('workflow-policies.update');
+
+            Route::post('workflow-policies/reset', [WorkflowSettingsController::class, 'reset'])
+                ->name('workflow-policies.reset');
         });
 
         // ── Visit Types — JSON API (الصفحة Blade: GET admin/visit-types) ─────

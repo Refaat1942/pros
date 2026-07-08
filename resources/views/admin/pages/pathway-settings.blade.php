@@ -2,8 +2,17 @@
     $civilianSteps = $pathway_civilian_steps ?? [];
     $militarySteps = $pathway_military_steps ?? [];
     $stageKeyOptions = $pathway_stage_key_options ?? [];
+    $civilianPolicies = $workflow_civilian_policies ?? [];
+    $militaryPolicies = $workflow_military_policies ?? [];
+    $skipRoleOptions = $workflow_skip_role_options ?? [];
 @endphp
 <div class="section-view" id="section-pathway-settings">
+    <div class="pathway-settings-tabs pathway-settings-tabs--main">
+        <button type="button" class="pathway-tab active" data-main-tab="display">🔢 ترقيم العرض</button>
+        <button type="button" class="pathway-tab" data-main-tab="workflow">⚡ قواعد التدفق والتخطي</button>
+    </div>
+
+    <div id="pathwayMainDisplay">
     <div class="panel">
         <div class="panel-header">
             <h3>🧭 ترقيم مسار العمل — المدني والعسكري</h3>
@@ -11,7 +20,7 @@
 
         <p class="pathway-settings-hint">
             تحكم في <strong>ترقيم وعناوين خطوات المسار</strong> كما تظهر في المتابعة العامة ولوحة مسار المرضى ونافذة «خط السير».
-            هذا الإعداد <strong>للعرض والمتابعة فقط</strong> — لا يغيّر قواعد انتقال المراحل في النظام.
+            هذا الإعداد <strong>للعرض والمتابعة فقط</strong>.
         </p>
 
         <div class="pathway-settings-tabs">
@@ -57,6 +66,43 @@
             @endforeach
         </ul>
     </div>
+    </div>
+
+    <div id="pathwayMainWorkflow" hidden>
+    <div class="panel">
+        <div class="panel-header">
+            <h3>⚡ قواعد التدفق — تخطي المراحل الاختيارية</h3>
+        </div>
+        <p class="pathway-settings-hint">
+            حدّد المراحل التي يمكن <strong>تخطيها</strong> أو <strong>تخطيها تلقائياً</strong> — مع الحفاظ على المراحل المقفلة (عرض السعر، التشغيل، المخزن، …).
+            المدير يمكنه تخطي مرحلة اختيارية من <strong>متابعة الحالات</strong> عند الحاجة.
+        </p>
+        <div class="pathway-settings-tabs">
+            <button type="button" class="pathway-tab active" data-wf-tab="civilian">🌐 المسار المدني</button>
+            <button type="button" class="pathway-tab" data-wf-tab="military">🪖 المسار العسكري</button>
+        </div>
+        <div class="pathway-editor" id="wfEditorCivilian">
+            <div class="pathway-editor-toolbar">
+                <button type="button" class="btn-action" id="btnResetWfCivilian">↩️ استعادة الافتراضي</button>
+            </div>
+            <div id="civilianPoliciesList" class="pathway-steps-list"></div>
+            <div id="wfCivilianError" class="pathway-settings-error" style="display:none;"></div>
+            <div class="pathway-settings-actions">
+                <button type="button" class="btn-action success" id="btnSaveWfCivilian">💾 حفظ قواعد المدني</button>
+            </div>
+        </div>
+        <div class="pathway-editor" id="wfEditorMilitary" hidden>
+            <div class="pathway-editor-toolbar">
+                <button type="button" class="btn-action" id="btnResetWfMilitary">↩️ استعادة الافتراضي</button>
+            </div>
+            <div id="militaryPoliciesList" class="pathway-steps-list"></div>
+            <div id="wfMilitaryError" class="pathway-settings-error" style="display:none;"></div>
+            <div class="pathway-settings-actions">
+                <button type="button" class="btn-action success" id="btnSaveWfMilitary">💾 حفظ قواعد العسكري</button>
+            </div>
+        </div>
+    </div>
+    </div>
 </div>
 
 <script type="application/json" id="pathwaySettingsBootstrap">
@@ -64,6 +110,9 @@
     'civilian' => $civilianSteps,
     'military' => $militarySteps,
     'stageKeyOptions' => $stageKeyOptions,
+    'workflowCivilian' => $civilianPolicies,
+    'workflowMilitary' => $militaryPolicies,
+    'skipRoleOptions' => $skipRoleOptions,
     'csrf' => csrf_token(),
 ], JSON_UNESCAPED_UNICODE) !!}
 </script>
@@ -78,6 +127,9 @@
         color: #1e40af;
         font-size: 13px;
         line-height: 1.7;
+    }
+    #section-pathway-settings .pathway-settings-tabs--main {
+        padding: 16px 16px 0;
     }
     #section-pathway-settings .pathway-settings-tabs {
         display: flex;
@@ -181,6 +233,10 @@
         columns: 2;
         font-size: 13px;
         line-height: 1.8;
+    }
+    #section-pathway-settings .pathway-step-card--locked {
+        background: #fffbeb;
+        border-color: #fcd34d;
     }
     @media (max-width: 640px) {
         #section-pathway-settings .pathway-stage-ref { columns: 1; }
@@ -375,5 +431,130 @@
     renderList('military');
     bindEditor('civilian');
     bindEditor('military');
+
+    // ── Main tabs: display vs workflow ──
+    document.querySelectorAll('[data-main-tab]').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var m = tab.getAttribute('data-main-tab');
+            document.querySelectorAll('[data-main-tab]').forEach(function (t) { t.classList.toggle('active', t === tab); });
+            document.getElementById('pathwayMainDisplay').hidden = m !== 'display';
+            document.getElementById('pathwayMainWorkflow').hidden = m !== 'workflow';
+        });
+    });
+
+    // ── Workflow policies ──
+    var wfState = {
+        civilian: (boot.workflowCivilian || []).slice(),
+        military: (boot.workflowMilitary || []).slice(),
+    };
+    var roleOpts = boot.skipRoleOptions || [];
+
+    function renderPolicies(pathway) {
+        var list = document.getElementById(pathway === 'civilian' ? 'civilianPoliciesList' : 'militaryPoliciesList');
+        if (!list) return;
+        list.innerHTML = wfState[pathway].map(function (p, idx) {
+            var locked = !!p.locked;
+            var roles = p.skip_roles || [];
+            var roleChecks = roleOpts.map(function (opt) {
+                var checked = roles.indexOf(opt.value) >= 0 ? ' checked' : '';
+                var dis = locked ? ' disabled' : '';
+                return '<label><input type="checkbox" data-wf-role data-idx="' + idx + '" data-pathway="' + pathway + '" value="' + esc(opt.value) + '"' + checked + dis + '> ' + esc(opt.label) + '</label>';
+            }).join('');
+
+            return ''
+                + '<div class="pathway-step-card' + (locked ? ' pathway-step-card--locked' : '') + '">'
+                + '  <div class="pathway-step-head" style="grid-template-columns:1fr;">'
+                + '    <div class="pathway-step-fields">'
+                + '      <strong>' + esc(p.label) + '</strong> <code style="font-size:11px;">' + esc(p.stage_key) + '</code>'
+                + '      <span style="font-size:12px;color:#64748b;">' + esc(p.description || '') + '</span>'
+                + '      <label class="pw-field"><span>إلزامية</span><select data-wf-field="required" data-idx="' + idx + '" data-pathway="' + pathway + '"' + (locked ? ' disabled' : '') + '>'
+                + '        <option value="1"' + (p.required ? ' selected' : '') + '>إلزامية</option>'
+                + '        <option value="0"' + (!p.required ? ' selected' : '') + '>اختيارية (قابلة للتخطي)</option>'
+                + '      </select></label>'
+                + '      <label class="pw-field"><span>تخطي تلقائي</span><select data-wf-field="auto_skip" data-idx="' + idx + '" data-pathway="' + pathway + '"' + (locked || p.required ? ' disabled' : '') + '>'
+                + '        <option value="0"' + (!p.auto_skip ? ' selected' : '') + '>لا</option>'
+                + '        <option value="1"' + (p.auto_skip ? ' selected' : '') + '>نعم — تخطي فوري</option>'
+                + '      </select></label>'
+                + (locked ? '<p style="margin:0;font-size:12px;color:#b45309;">🔒 مقفلة — حماية المنطق التجاري</p>' : '')
+                + '      <div class="pw-stage-keys">' + roleChecks + '</div>'
+                + '    </div>'
+                + '  </div>'
+                + '</div>';
+        }).join('');
+    }
+
+    function bindWfList(pathway) {
+        var list = document.getElementById(pathway === 'civilian' ? 'civilianPoliciesList' : 'militaryPoliciesList');
+        if (!list || list.dataset.bound) return;
+        list.dataset.bound = '1';
+        list.addEventListener('change', function (e) {
+            var t = e.target;
+            var idx = parseInt(t.getAttribute('data-idx'), 10);
+            var p = t.getAttribute('data-pathway');
+            if (t.hasAttribute('data-wf-field')) {
+                wfState[p][idx][t.getAttribute('data-wf-field')] = t.value === '1';
+                if (wfState[p][idx].required) wfState[p][idx].auto_skip = false;
+                renderPolicies(p);
+            }
+            if (t.hasAttribute('data-wf-role')) {
+                var roles = wfState[p][idx].skip_roles || [];
+                if (t.checked && roles.indexOf(t.value) < 0) roles.push(t.value);
+                if (!t.checked) roles = roles.filter(function (r) { return r !== t.value; });
+                wfState[p][idx].skip_roles = roles;
+            }
+        });
+    }
+
+    function saveWf(pathway) {
+        var errEl = document.getElementById(pathway === 'civilian' ? 'wfCivilianError' : 'wfMilitaryError');
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        fetch('/admin/workflow-policies', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+            body: JSON.stringify({ pathway: pathway, policies: wfState[pathway] }),
+        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+              if (!res.ok) {
+                  if (errEl) { errEl.style.display = 'block'; errEl.textContent = res.data.message || 'تعذّر الحفظ'; }
+                  return;
+              }
+              wfState[pathway] = res.data.policies || wfState[pathway];
+              renderPolicies(pathway);
+              alert(res.data.message || 'تم الحفظ');
+          });
+    }
+
+    function resetWf(pathway) {
+        if (!confirm('استعادة قواعد التدفق الافتراضية؟')) return;
+        fetch('/admin/workflow-policies/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+            body: JSON.stringify({ pathway: pathway }),
+        }).then(function (r) { return r.json(); })
+          .then(function (data) {
+              wfState[pathway] = data.policies || [];
+              renderPolicies(pathway);
+              alert(data.message || 'تمت الاستعادة');
+          });
+    }
+
+    document.querySelectorAll('[data-wf-tab]').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var p = tab.getAttribute('data-wf-tab');
+            document.querySelectorAll('[data-wf-tab]').forEach(function (t) { t.classList.toggle('active', t === tab); });
+            document.getElementById('wfEditorCivilian').hidden = p !== 'civilian';
+            document.getElementById('wfEditorMilitary').hidden = p !== 'military';
+        });
+    });
+
+    document.getElementById('btnSaveWfCivilian')?.addEventListener('click', function () { saveWf('civilian'); });
+    document.getElementById('btnSaveWfMilitary')?.addEventListener('click', function () { saveWf('military'); });
+    document.getElementById('btnResetWfCivilian')?.addEventListener('click', function () { resetWf('civilian'); });
+    document.getElementById('btnResetWfMilitary')?.addEventListener('click', function () { resetWf('military'); });
+
+    renderPolicies('civilian');
+    renderPolicies('military');
+    bindWfList('civilian');
+    bindWfList('military');
 })();
 </script>

@@ -299,7 +299,7 @@ return [
             'permissions' => ['title' => 'مصفوفة الصلاحيات', 'icon' => '🛡️', 'label' => 'الصلاحيات'],
             'military-ranks' => ['title' => 'الرتب العسكرية', 'icon' => '🪖', 'label' => 'الرتب العسكرية'],
             'costing-settings' => ['title' => 'إعدادات التكاليف الإضافية', 'icon' => '💰', 'label' => 'إعدادات التكاليف'],
-            'pathway-settings' => ['title' => 'ترقيم مسار العمل — مدني وعسكري', 'icon' => '🧭', 'label' => 'ترقيم المسار'],
+            'pathway-settings' => ['title' => 'إعدادات المسار والتدفق — مدني وعسكري', 'icon' => '🧭', 'label' => 'المسار والتدفق'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css'],

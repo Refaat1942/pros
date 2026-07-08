@@ -23,6 +23,7 @@ class MedicalRecordService
         private readonly CaseService $caseService,
         private readonly DashboardQueueService $queueService,
         private readonly NotificationService $notifications,
+        private readonly CaseWorkflowSkipService $workflowSkip,
     ) {}
 
     /**
@@ -110,39 +111,20 @@ class MedicalRecordService
      */
     public function skipExam(Appointment $appointment): CaseRecord
     {
-        abort_unless(
-            $appointment->status === Appointment::STATUS_IN_CLINIC && $appointment->transferred_to_clinic,
-            422,
-            'يجب تحويل المريض من الاستقبال قبل تخطّي الكشف.'
-        );
-
         $lockedExists = MedicalRecord::where('appointment_id', $appointment->id)
             ->where('locked', true)
             ->exists();
 
         abort_if($lockedExists, 422, 'تم اعتماد تقرير لهذا الموعد مسبقاً — لا يمكن التخطّي.');
 
-        return DB::transaction(function () use ($appointment) {
-            $patient = Patient::findOrFail($appointment->patient_id);
+        $user = Auth::user();
+        abort_unless($user, 403);
 
-            $case = $this->caseService->initiateFromReception($patient);
+        $case = $this->workflowSkip->skipExamForAppointment($appointment, $user);
 
-            Appointment::where('id', $appointment->id)->update([
-                'status' => Appointment::STATUS_DONE,
-                'status_label' => 'منتهٍ',
-            ]);
+        $this->maybeNotifyReceptionIfClinicQueueEmpty($appointment->id);
 
-            AuditService::log(
-                action: 'skip',
-                description: "تخطّي الكشف الطبي — {$patient->name} (موعد #{$appointment->id})",
-                tag: 'medical',
-                after: ['case_id' => $case->id, 'appointment_id' => $appointment->id],
-            );
-
-            $this->maybeNotifyReceptionIfClinicQueueEmpty($appointment->id);
-
-            return $case;
-        });
+        return $case;
     }
 
     private function createDraft(array $data): MedicalRecord

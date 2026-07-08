@@ -147,11 +147,27 @@ class WorkflowService
             return $case;
         });
 
+        $updated = $this->finalizeAfterTransition($updated);
+
         // إشعار اللوحة التالية بعد نجاح الانتقال — لا يُعطّل التدفق إن فشل الإرسال.
         try {
             $this->notifications->notifyTransition($updated, $event);
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    /**
+     * بعد أي انتقال — تطبيق التخطي التلقائي للمراحل الاختيارية (مثل المعدلات العسكرية).
+     */
+    public function finalizeAfterTransition(CaseRecord $case): CaseRecord
+    {
+        $case = $case->fresh();
+
+        if (! app(WorkflowPolicyService::class)->shouldAutoSkip($case)) {
+            return $case;
+        }
+
+        return app(CaseWorkflowSkipService::class)->applyConfiguredAutoSkip($case);
     }
 }

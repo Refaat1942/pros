@@ -29,6 +29,7 @@ use App\Models\Supplier;
 use App\Models\TechOrderSpec;
 use App\Models\User;
 use App\Models\VisitType;
+use App\Models\WorkflowStagePolicy;
 use App\Services\AdjustmentsTransferHistoryService;
 use App\Services\AdminCaseTrackingService;
 use App\Services\AdminCivilianDebtService;
@@ -50,6 +51,7 @@ use App\Services\StockCatalogService;
 use App\Services\StockCategorySchemaService;
 use App\Services\StockPriceService;
 use App\Services\SupplierService;
+use App\Services\WorkflowPolicyService;
 use App\Services\WorkshopAnalyticsService;
 use App\Support\ClinicTime;
 use Carbon\Carbon;
@@ -184,11 +186,15 @@ class DashboardPageDataService
     private function adminPathwaySettings(): array
     {
         $config = app(PathwayConfigService::class);
+        $policies = app(WorkflowPolicyService::class);
 
         return [
             'pathway_civilian_steps' => $config->steps(PathwayStep::PATHWAY_CIVILIAN),
             'pathway_military_steps' => $config->steps(PathwayStep::PATHWAY_MILITARY),
             'pathway_stage_key_options' => $config->availableStageKeys(),
+            'workflow_civilian_policies' => $policies->policies(WorkflowStagePolicy::PATHWAY_CIVILIAN),
+            'workflow_military_policies' => $policies->policies(WorkflowStagePolicy::PATHWAY_MILITARY),
+            'workflow_skip_role_options' => $policies->availableSkipRoles(),
         ];
     }
 

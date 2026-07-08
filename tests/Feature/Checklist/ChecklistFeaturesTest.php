@@ -42,6 +42,9 @@ class ChecklistFeaturesTest extends TestCase
             Appointment::STATUS_IN_CLINIC,
         );
 
+        $doctor = $this->userWithRole('doctor');
+        $this->actingAs($doctor);
+
         $case = app(MedicalRecordService::class)->skipExam($appointment->fresh());
 
         $this->assertSame(CaseRecord::STAGE_TECHNICAL, $case->stage_key);

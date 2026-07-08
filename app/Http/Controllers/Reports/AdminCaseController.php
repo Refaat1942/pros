@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Reports;
 
+use App\Enums\CaseStage;
 use App\Http\Controllers\Controller;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\AdminCaseDetailService;
+use App\Services\CaseWorkflowSkipService;
 use App\Services\QuoteQrService;
+use App\Services\WorkflowPolicyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,6 +20,8 @@ class AdminCaseController extends Controller
     public function __construct(
         private readonly AdminCaseDetailService $detailService,
         private readonly QuoteQrService $quoteQrService,
+        private readonly CaseWorkflowSkipService $workflowSkip,
+        private readonly WorkflowPolicyService $workflowPolicies,
     ) {}
 
     /**
@@ -48,6 +53,30 @@ class AdminCaseController extends Controller
             'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
             'embed' => $embed,
             'autoPrint' => ! $embed,
+        ]);
+    }
+
+    /**
+     * تخطي مرحلة اختيارية للحالة — للإدارة حسب سياسات التدفق.
+     */
+    public function skipStage(CaseRecord $case): JsonResponse
+    {
+        $user = auth()->user();
+        abort_unless($user, 403);
+
+        $updated = $this->workflowSkip->skipCurrentStage($case, $user);
+
+        return response()->json([
+            'message' => 'تم تخطي المرحلة.',
+            'case' => [
+                'id' => $updated->id,
+                'case_no' => $updated->case_no,
+                'stage_key' => $updated->stage_key,
+                'stage_label' => CaseStage::labelFor($updated->stage_key),
+            ],
+            'skippable' => $this->workflowPolicies->skippableStageKeys(
+                $this->workflowPolicies->pathwayForCase($updated),
+            ),
         ]);
     }
 }
