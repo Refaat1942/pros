@@ -36,6 +36,18 @@ class PathwayConfigService
         ],
     ];
 
+    /** @var array<string, string> */
+    private const LOCK_REASONS = [
+        CaseRecord::STAGE_RECEPTION => 'لا يمكن تخطي التسجيل — كل مريض يبدأ من الاستقبال.',
+        CaseRecord::STAGE_TECHNICAL => 'التوصيف الفني إلزامي — بدون مواصفات لا يُصنع الطرف.',
+        CaseRecord::STAGE_COST_CALC => 'حساب التكلفة إلزامي — أساس عرض السعر والفواتير.',
+        CaseRecord::STAGE_QUOTE => 'عرض السعر إلزامي للمسار المدني — قبل التشغيل والتحصيل.',
+        CaseRecord::STAGE_OPERATIONS => 'مكتب التشغيل إلزامي — نقطة اعتماد الحالة وإصدار أمر الشغل.',
+        CaseRecord::STAGE_MANUFACTURING => 'المخزن والورشة إلزاميان — صرف بالباركود ثم تصنيع.',
+        CaseRecord::STAGE_READY_DELIVERY => 'مرحلة التسليم إلزامية — مسح QR قبل إغلاق الحالة.',
+        CaseRecord::STAGE_DELIVERED => 'إغلاق الحالة نهائي — لا يُتخطى.',
+    ];
+
     /** @var array<string, list<array<string, mixed>>> */
     private const DEFAULTS = [
         PathwayStep::PATHWAY_CIVILIAN => [
@@ -488,25 +500,46 @@ class PathwayConfigService
     /** @return array<string, mixed> */
     private function formatStep(string $pathway, PathwayStep $step): array
     {
+        $default = $this->defaultRow($pathway, $step->key);
         $primaryStage = ($step->stage_keys ?? [])[0] ?? $step->key;
         $locked = $this->isBusinessLocked($pathway, $primaryStage);
 
         return [
             'key' => $step->key,
-            'label' => $step->label,
+            'label' => $step->label ?: ($default['label'] ?? $step->key),
             'sort' => (int) $step->sort,
             'stage_keys' => array_values($step->stage_keys ?? []),
             'active' => (bool) $step->active,
             'description' => $step->description,
-            'owner_department' => $step->owner_department,
-            'action_summary' => $step->action_summary,
-            'on_complete' => $step->on_complete,
-            'required' => $locked ? true : (bool) $step->required,
-            'auto_skip' => $locked ? false : (bool) $step->auto_skip,
-            'skip_roles' => $locked ? [] : array_values($step->skip_roles ?? []),
-            'handlers' => $step->handlers ?? [],
+            'owner_department' => $step->owner_department ?: ($default['owner_department'] ?? 'reception'),
+            'action_summary' => $step->action_summary ?: ($default['action_summary'] ?? ''),
+            'on_complete' => $step->on_complete ?: ($default['on_complete'] ?? ''),
+            'required' => $locked ? true : (bool) ($step->required ?? $default['required'] ?? true),
+            'auto_skip' => $locked ? false : (bool) ($step->auto_skip ?? $default['auto_skip'] ?? false),
+            'skip_roles' => $locked ? [] : array_values($step->skip_roles ?? $default['skip_roles'] ?? []),
+            'handlers' => array_merge($default['handlers'] ?? [], $step->handlers ?? []),
             'locked' => $locked,
+            'lock_reason' => $locked ? $this->lockReason($primaryStage) : null,
+            'can_skip' => ! $locked,
         ];
+    }
+
+    /** @return array<string, mixed> */
+    private function defaultRow(string $pathway, string $key): array
+    {
+        foreach (self::DEFAULTS[$pathway] ?? [] as $row) {
+            if (($row['key'] ?? '') === $key) {
+                return $row;
+            }
+        }
+
+        return [];
+    }
+
+    private function lockReason(string $stageKey): string
+    {
+        return self::LOCK_REASONS[$stageKey]
+            ?? 'خطوة أساسية في المسار — يمكنك تعديل «ماذا يفعل» و«من ينفّذ» لكن لا يمكن تخطيها.';
     }
 
     /**
@@ -534,6 +567,8 @@ class PathwayConfigService
                 'skip_roles' => array_values($row['skip_roles'] ?? []),
                 'handlers' => $row['handlers'] ?? [],
                 'locked' => $locked,
+                'lock_reason' => $locked ? $this->lockReason($primaryStage) : null,
+                'can_skip' => ! $locked,
             ];
         }, $defaults);
 

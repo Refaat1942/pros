@@ -14,9 +14,10 @@
         </div>
 
         <p class="pathway-designer-intro">
-            حدّد <strong>من يعمل ماذا</strong> في كل خطوة — و<strong>ماذا يحدث بعدها</strong>.
-            مثال: بعد التكاليف يُصدر عرض سعر وينتقل للتشغيل — ومن يصدر أمر الشغل يمكن تغييره من خطوة «التشغيل».
-            المراحل المقفلة 🔒 محمية بحكم المنطق التجاري (عرض السعر، التصنيع، …).
+            <strong>شاشة واحدة — من يعمل ماذا وإيه اللي بعدها.</strong><br>
+            ✅ <strong>تقدر تعدّل:</strong> القسم المسؤول — ماذا يفعل — ماذا يحدث بعد الإكمال — من يصدر أمر الشغل.<br>
+            🔒 <strong>مقفول = لا يُتخطى فقط</strong> (مثلاً: ماينفعش نتخطى عرض السعر أو التصنيع) — لكن تقدر تغيّر الوصف والقسم المسؤول.<br>
+            ⏭️ <strong>الخطوات اللي تقدر تخطيها:</strong> الكشف الطبي — المعدلات (اختياري).
         </p>
 
         <div class="pathway-designer-tabs">
@@ -74,38 +75,36 @@
     .pathway-timeline {
         padding: 0 16px 16px;
         display: grid;
-        gap: 0;
-        position: relative;
+        gap: 12px;
+        direction: rtl;
     }
-    .pathway-timeline::before {
-        content: '';
-        position: absolute;
-        top: 24px;
-        bottom: 24px;
-        right: 27px;
-        width: 3px;
-        background: #cbd5e1;
-        border-radius: 2px;
-    }
+    .pathway-timeline::before { display: none; }
     .pf-card {
         position: relative;
-        margin-bottom: 12px;
-        padding: 14px 14px 14px 56px;
+        padding: 16px;
         background: #fff;
         border: 1px solid var(--border);
         border-radius: 12px;
         box-shadow: 0 1px 3px rgba(0,0,0,.04);
+        direction: rtl;
     }
     .pf-card--locked {
         background: #fffbeb;
         border-color: #fcd34d;
     }
+    .pf-card-head {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e2e8f0;
+    }
     .pf-num {
-        position: absolute;
-        right: 12px;
-        top: 14px;
-        width: 32px;
-        height: 32px;
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         background: #1e40af;
         color: #fff;
@@ -113,11 +112,12 @@
         align-items: center;
         justify-content: center;
         font-weight: 800;
-        font-size: 14px;
-        z-index: 1;
+        font-size: 16px;
     }
     .pf-card--locked .pf-num { background: #b45309; }
-    .pf-title { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
+    .pf-head-text { flex: 1; min-width: 0; }
+    .pf-title { margin: 0 0 4px; font-size: 17px; font-weight: 800; line-height: 1.4; }
+    .pf-step-hint { margin: 0; font-size: 12px; color: #64748b; }
     .pf-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -165,11 +165,16 @@
         font-size: 12px;
     }
     .pf-lock-note {
-        margin: 8px 0 0;
-        font-size: 12px;
-        color: #b45309;
+        margin: 0;
+        padding: 10px 12px;
+        font-size: 13px;
+        color: #92400e;
         font-weight: 600;
+        background: #fef3c7;
+        border-radius: 8px;
+        line-height: 1.6;
     }
+    .pf-skip-title { margin: 0 0 6px; font-size: 13px; font-weight: 800; color: #334155; }
     .pathway-designer-error {
         margin: 0 16px;
         padding: 10px 12px;
@@ -230,32 +235,44 @@
 
             var roleChecks = skipRoles.map(function (r) {
                 var checked = (step.skip_roles || []).indexOf(r.value) >= 0 ? ' checked' : '';
-                var dis = locked || step.required ? ' disabled' : '';
-                return '<label><input type="checkbox" data-role="' + esc(r.value) + '" data-idx="' + idx + '"' + checked + dis + '> ' + esc(r.label) + '</label>';
+                return '<label><input type="checkbox" data-role="' + esc(r.value) + '" data-idx="' + idx + '"' + checked + '> ' + esc(r.label) + '</label>';
             }).join('');
+
+            var skipBlock = '';
+            if (step.can_skip !== false && !locked) {
+                skipBlock = '<div class="pf-skip-row">'
+                    + '<p class="pf-skip-title">⏭️ تخطي هذه الخطوة (اختياري)</p>'
+                    + '<label class="pf-field"><span>هل يمكن تخطيها؟</span><select data-f="required" data-idx="' + idx + '">'
+                    + '<option value="1"' + (step.required !== false ? ' selected' : '') + '>لا — إلزامية</option>'
+                    + '<option value="0"' + (step.required === false ? ' selected' : '') + '>نعم — يمكن تخطيها</option>'
+                    + '</select></label>'
+                    + '<label class="pf-field"><span>تخطي تلقائي؟</span><select data-f="auto_skip" data-idx="' + idx + '"' + (step.required !== false ? ' disabled' : '') + '>'
+                    + '<option value="0"' + (!step.auto_skip ? ' selected' : '') + '>لا</option>'
+                    + '<option value="1"' + (step.auto_skip ? ' selected' : '') + '>نعم — تخطي فوري</option>'
+                    + '</select></label>'
+                    + '<div class="pf-skip-roles">' + roleChecks + '</div>'
+                    + '</div>';
+            } else if (locked && step.lock_reason) {
+                skipBlock = '<p class="pf-lock-note">🔒 ' + esc(step.lock_reason) + '</p>';
+            }
 
             return ''
                 + '<article class="pf-card' + (locked ? ' pf-card--locked' : '') + '" data-idx="' + idx + '">'
-                + '<div class="pf-num">' + step.sort + '</div>'
-                + '<h4 class="pf-title">' + esc(step.label) + '</h4>'
+                + '<div class="pf-card-head">'
+                + '  <div class="pf-num">' + step.sort + '</div>'
+                + '  <div class="pf-head-text">'
+                + '    <h4 class="pf-title">' + esc(step.label) + '</h4>'
+                + '    <p class="pf-step-hint">الخطوة ' + step.sort + ' في المسار</p>'
+                + '  </div>'
+                + '</div>'
                 + '<div class="pf-grid">'
-                + '<label class="pf-field"><span>القسم المسؤول</span><select data-f="owner_department" data-idx="' + idx + '"' + (locked ? ' disabled' : '') + '>' + deptOptions(step.owner_department) + '</select></label>'
-                + '<label class="pf-field pf-field--wide"><span>ماذا يفعل هنا؟</span><textarea data-f="action_summary" data-idx="' + idx + '"' + (locked ? ' disabled' : '') + '>' + esc(step.action_summary || '') + '</textarea></label>'
-                + '<label class="pf-field pf-field--wide"><span>بعد الإكمال — ماذا يحدث؟</span><input type="text" data-f="on_complete" data-idx="' + idx + '" value="' + esc(step.on_complete || '') + '"' + (locked ? ' disabled' : '') + '></label>'
+                + '<label class="pf-field"><span>👤 القسم المسؤول</span><select data-f="owner_department" data-idx="' + idx + '">' + deptOptions(step.owner_department) + '</select></label>'
+                + '<label class="pf-field pf-field--wide"><span>📋 ماذا يفعل هنا؟</span><textarea data-f="action_summary" data-idx="' + idx + '" placeholder="اكتب وظيفة هذا القسم في هذه المرحلة…">' + esc(step.action_summary || '') + '</textarea></label>'
+                + '<label class="pf-field pf-field--wide"><span>➡️ بعد الإكمال — ماذا يحدث؟</span><input type="text" data-f="on_complete" data-idx="' + idx + '" value="' + esc(step.on_complete || '') + '" placeholder="مثال: ينتقل لمكتب التشغيل"></label>'
                 + '</div>'
                 + handlerHtml
-                + '<div class="pf-skip-row">'
-                + '<label class="pf-field"><span>هل يمكن تخطي هذه الخطوة؟</span><select data-f="required" data-idx="' + idx + '"' + (locked ? ' disabled' : '') + '>'
-                + '<option value="1"' + (step.required !== false ? ' selected' : '') + '>لا — إلزامية</option>'
-                + '<option value="0"' + (step.required === false ? ' selected' : '') + '>نعم — اختيارية</option>'
-                + '</select></label>'
-                + '<label class="pf-field"><span>تخطي تلقائي؟</span><select data-f="auto_skip" data-idx="' + idx + '"' + (locked || step.required !== false ? ' disabled' : '') + '>'
-                + '<option value="0"' + (!step.auto_skip ? ' selected' : '') + '>لا</option>'
-                + '<option value="1"' + (step.auto_skip ? ' selected' : '') + '>نعم — تخطي فوري</option>'
-                + '</select></label>'
-                + '<div class="pf-skip-roles">' + roleChecks + '</div>'
-                + (locked ? '<p class="pf-lock-note">🔒 مرحلة مقفلة — لا يمكن جعلها اختيارية (حماية المنطق التجاري)</p>' : '')
-                + '</div></article>';
+                + skipBlock
+                + '</article>';
         }).join('');
 
         bindEvents();
