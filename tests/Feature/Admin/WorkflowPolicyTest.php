@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
+use App\Models\PathwayStep;
 use App\Models\WorkflowStagePolicy;
 use App\Services\BomService;
 use App\Services\WorkflowPolicyService;
@@ -35,9 +36,9 @@ class WorkflowPolicyTest extends TestCase
             ])
             ->assertOk();
 
-        $this->assertDatabaseHas('workflow_stage_policies', [
-            'pathway' => WorkflowStagePolicy::PATHWAY_CIVILIAN,
-            'stage_key' => CaseRecord::STAGE_EXAM,
+        $this->assertDatabaseHas('pathway_steps', [
+            'pathway' => PathwayStep::PATHWAY_CIVILIAN,
+            'key' => 'exam',
             'required' => false,
         ]);
     }

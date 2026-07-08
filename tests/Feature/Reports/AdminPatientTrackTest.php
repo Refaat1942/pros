@@ -64,7 +64,7 @@ class AdminPatientTrackTest extends TestCase
         $this->assertNotNull($track);
         $this->assertSame('civilian', $track['pathway']);
         $this->assertCount(10, $track['steps']);
-        $this->assertSame('التوصيف', $track['steps'][2]['label']);
+        $this->assertSame('التوصيف الفني', $track['steps'][2]['label']);
     }
 
     public function test_military_track_uses_configured_pathway_steps(): void
@@ -77,8 +77,8 @@ class AdminPatientTrackTest extends TestCase
 
         $this->assertNotNull($track);
         $this->assertSame('military', $track['pathway']);
-        $this->assertCount(5, $track['steps']);
-        $this->assertSame('التوصيف والتحضير', $track['steps'][2]['label']);
+        $this->assertCount(7, $track['steps']);
+        $this->assertSame('التوصيف الفني', $track['steps'][2]['label']);
     }
 
     public function test_civilian_track_includes_journey_events(): void

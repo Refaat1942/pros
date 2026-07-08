@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * خطوة مرقّمة في مسار المريض (مدني / عسكري) — للعرض والمتابعة فقط.
+ * خطوة في مصمم مسار المريض — عرض + تدفق + القسم المسؤول.
  */
 class PathwayStep extends Model
 {
@@ -21,11 +21,22 @@ class PathwayStep extends Model
         'stage_keys',
         'active',
         'description',
+        'owner_department',
+        'action_summary',
+        'on_complete',
+        'required',
+        'auto_skip',
+        'skip_roles',
+        'handlers',
     ];
 
     protected $casts = [
         'sort' => 'integer',
         'stage_keys' => 'array',
         'active' => 'boolean',
+        'required' => 'boolean',
+        'auto_skip' => 'boolean',
+        'skip_roles' => 'array',
+        'handlers' => 'array',
     ];
 }

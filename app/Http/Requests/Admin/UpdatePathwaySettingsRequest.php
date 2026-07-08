@@ -28,16 +28,14 @@ class UpdatePathwaySettingsRequest extends FormRequest
             'steps.*.stage_keys' => ['required', 'array', 'min:1'],
             'steps.*.stage_keys.*' => ['required', 'string', 'max:64'],
             'steps.*.active' => ['sometimes', 'boolean'],
-            'steps.*.description' => ['nullable', 'string', 'max:255'],
-        ];
-    }
-
-    /** @return array<string, string> */
-    public function messages(): array
-    {
-        return [
-            'steps.*.key.regex' => 'مفتاح الخطوة يجب أن يكون حروفاً إنجليزية صغيرة وأرقام وشرطة سفلية فقط.',
-            'steps.min' => 'يجب تعريف خطوة واحدة على الأقل في المسار.',
+            'steps.*.owner_department' => ['nullable', 'string', 'max:32'],
+            'steps.*.action_summary' => ['nullable', 'string', 'max:500'],
+            'steps.*.on_complete' => ['nullable', 'string', 'max:255'],
+            'steps.*.required' => ['sometimes', 'boolean'],
+            'steps.*.auto_skip' => ['sometimes', 'boolean'],
+            'steps.*.skip_roles' => ['nullable', 'array'],
+            'steps.*.skip_roles.*' => ['string', 'max:32'],
+            'steps.*.handlers' => ['nullable', 'array'],
         ];
     }
 }

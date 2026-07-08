@@ -5,14 +5,37 @@ namespace App\Services;
 use App\Enums\CaseStage;
 use App\Models\CaseRecord;
 use App\Models\PathwayStep;
+use App\Support\PathwayDepartments;
 use Illuminate\Support\Facades\DB;
 
 /**
- * إعدادات مسار العمل — ترقيم وخطوات العرض (مدني / عسكري).
- * لا يغيّر محرك WorkflowService؛ يتحكم في الترقيم والعناوين والمتابعة فقط.
+ * مصمم مسار العمل — مصدر واحد للعرض + التدفق + القسم المسؤول.
  */
 class PathwayConfigService
 {
+    /** مراحل مقفلة — لا يمكن جعلها اختيارية (حماية المنطق التجاري). */
+    public const BUSINESS_LOCKED = [
+        PathwayStep::PATHWAY_CIVILIAN => [
+            CaseRecord::STAGE_RECEPTION,
+            CaseRecord::STAGE_TECHNICAL,
+            CaseRecord::STAGE_COST_CALC,
+            CaseRecord::STAGE_QUOTE,
+            CaseRecord::STAGE_OPERATIONS,
+            CaseRecord::STAGE_MANUFACTURING,
+            CaseRecord::STAGE_READY_DELIVERY,
+            CaseRecord::STAGE_DELIVERED,
+        ],
+        PathwayStep::PATHWAY_MILITARY => [
+            CaseRecord::STAGE_RECEPTION,
+            CaseRecord::STAGE_TECHNICAL,
+            CaseRecord::STAGE_COST_CALC,
+            CaseRecord::STAGE_OPERATIONS,
+            CaseRecord::STAGE_MANUFACTURING,
+            CaseRecord::STAGE_READY_DELIVERY,
+            CaseRecord::STAGE_DELIVERED,
+        ],
+    ];
+
     /** @var array<string, list<array<string, mixed>>> */
     private const DEFAULTS = [
         PathwayStep::PATHWAY_CIVILIAN => [
@@ -20,71 +43,134 @@ class PathwayConfigService
                 'key' => 'reception',
                 'label' => 'الاستقبال',
                 'sort' => 1,
+                'owner_department' => 'reception',
+                'action_summary' => 'تسجيل المريض — فتح الملف — حجز الموعد — طباعة QR المتابعة',
+                'on_complete' => 'ينتقل للكشف الطبي',
                 'stage_keys' => [CaseRecord::STAGE_RECEPTION],
-                'description' => 'تسجيل + موعد',
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
             ],
             [
                 'key' => 'exam',
-                'label' => 'الطبيب',
+                'label' => 'الكشف الطبي',
                 'sort' => 2,
+                'owner_department' => 'doctor',
+                'action_summary' => 'فحص المريض — تقرير طبي — تحويل للتوصيف',
+                'on_complete' => 'ينتقل للتوصيف الفني',
                 'stage_keys' => [CaseRecord::STAGE_EXAM],
-                'description' => 'كشف وتحويل للتوصيف',
+                'required' => false,
+                'auto_skip' => false,
+                'skip_roles' => ['admin', 'doctor'],
+                'handlers' => [],
             ],
             [
                 'key' => 'technical',
-                'label' => 'التوصيف',
+                'label' => 'التوصيف الفني',
                 'sort' => 3,
+                'owner_department' => 'spec',
+                'action_summary' => 'كتابة المواصفات الفنية واختيار الأصناف',
+                'on_complete' => 'ينتقل للمعدلات',
                 'stage_keys' => [CaseRecord::STAGE_TECHNICAL],
-                'description' => 'مواصفات فنية',
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
             ],
             [
                 'key' => 'adjustments',
                 'label' => 'المعدلات',
                 'sort' => 4,
+                'owner_department' => 'adjustments',
+                'action_summary' => 'مراجعة البنود — إضافة أو تعديل الكميات',
+                'on_complete' => 'ينتقل لحساب التكاليف',
                 'stage_keys' => [CaseRecord::STAGE_ADJUSTMENTS],
-                'description' => 'إضافة/تعديل البنود',
+                'required' => false,
+                'auto_skip' => false,
+                'skip_roles' => ['admin', 'adjustments', 'operations'],
+                'handlers' => [],
             ],
             [
-                'key' => 'costing',
-                'label' => 'التكاليف',
+                'key' => 'cost_calc',
+                'label' => 'حساب التكاليف',
                 'sort' => 5,
-                'stage_keys' => [CaseRecord::STAGE_COST_CALC, CaseRecord::STAGE_QUOTE],
-                'description' => 'تسعير وعرض سعر',
+                'owner_department' => 'costing',
+                'action_summary' => 'احتساب التكلفة — تجميد اللقطة — تأكيد السعر',
+                'on_complete' => 'يُصدر عرض سعر ← ينتقل لمكتب التشغيل',
+                'stage_keys' => [CaseRecord::STAGE_COST_CALC],
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
+            ],
+            [
+                'key' => 'quote',
+                'label' => 'عرض السعر',
+                'sort' => 6,
+                'owner_department' => 'operations',
+                'action_summary' => 'طباعة عرض السعر للمريض / الجهة المتعاقدة',
+                'on_complete' => 'ينتقل لمكتب التشغيل لاعتماد الحالة',
+                'stage_keys' => [CaseRecord::STAGE_QUOTE],
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
             ],
             [
                 'key' => 'operations',
-                'label' => 'التشغيل',
-                'sort' => 6,
+                'label' => 'مكتب التشغيل',
+                'sort' => 7,
+                'owner_department' => 'operations',
+                'action_summary' => 'مراجعة العرض — خطاب موافقة الجهة — اعتماد الحالة',
+                'on_complete' => 'إصدار أمر الشغل ← الخزنة (كاش) أو المخزن مباشرة',
                 'stage_keys' => [CaseRecord::STAGE_OPERATIONS],
-                'description' => 'إصدار العرض — خطاب موافقة — إصدار أمر الشغل',
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [
+                    'work_order' => 'operations',
+                    'entity_approval' => 'reception',
+                ],
             ],
             [
                 'key' => 'cashier',
                 'label' => 'الخزنة',
-                'sort' => 7,
-                'stage_keys' => [CaseRecord::STAGE_CASHIER],
-                'description' => 'تحصيل (نقدي فقط)',
-            ],
-            [
-                'key' => 'warehouse',
-                'label' => 'المخزن',
                 'sort' => 8,
-                'stage_keys' => [CaseRecord::STAGE_MANUFACTURING],
-                'description' => 'صرف بالباركود للورشة',
+                'owner_department' => 'cashier',
+                'action_summary' => 'تحصيل المبلغ من المريض (نقدي فقط)',
+                'on_complete' => 'يرجع للتشغيل لإصدار أمر الشغل',
+                'stage_keys' => [CaseRecord::STAGE_CASHIER],
+                'required' => false,
+                'auto_skip' => false,
+                'skip_roles' => ['admin'],
+                'handlers' => ['collect_payment' => 'cashier'],
             ],
             [
-                'key' => 'workshop',
-                'label' => 'الورشة',
+                'key' => 'manufacturing',
+                'label' => 'المخزن والورشة',
                 'sort' => 9,
+                'owner_department' => 'warehouse',
+                'action_summary' => 'صرف بالباركود — تصنيع — إغلاق الجودة',
+                'on_complete' => 'ينتقل للتسليمات',
                 'stage_keys' => [CaseRecord::STAGE_MANUFACTURING],
-                'description' => 'تصنيع وإغلاق الجودة',
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => ['barcode_dispense' => 'warehouse', 'production' => 'workshop'],
             ],
             [
                 'key' => 'delivery',
                 'label' => 'التسليمات',
                 'sort' => 10,
+                'owner_department' => 'delivery',
+                'action_summary' => 'مسح QR — تسليم للمريض — إغلاق الحالة',
+                'on_complete' => 'الحالة مكتملة',
                 'stage_keys' => [CaseRecord::STAGE_READY_DELIVERY, CaseRecord::STAGE_DELIVERED],
-                'description' => 'مسح QR وإغلاق الحالة',
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
             ],
         ],
         PathwayStep::PATHWAY_MILITARY => [
@@ -92,59 +178,147 @@ class PathwayConfigService
                 'key' => 'reception',
                 'label' => 'الاستقبال',
                 'sort' => 1,
+                'owner_department' => 'reception',
+                'action_summary' => 'تسجيل عسكري — فتح ملف — موعد',
+                'on_complete' => 'ينتقل للكشف',
                 'stage_keys' => [CaseRecord::STAGE_RECEPTION],
-                'description' => 'تسجيل عسكري',
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
             ],
             [
                 'key' => 'exam',
-                'label' => 'الطبيب',
+                'label' => 'الكشف الطبي',
                 'sort' => 2,
+                'owner_department' => 'doctor',
+                'action_summary' => 'كشف طبي (اختياري)',
+                'on_complete' => 'ينتقل للتوصيف',
                 'stage_keys' => [CaseRecord::STAGE_EXAM],
-                'description' => 'كشف طبي',
+                'required' => false,
+                'auto_skip' => false,
+                'skip_roles' => ['admin', 'doctor'],
+                'handlers' => [],
             ],
             [
-                'key' => 'preparation',
-                'label' => 'التوصيف والتحضير',
+                'key' => 'technical',
+                'label' => 'التوصيف الفني',
                 'sort' => 3,
-                'stage_keys' => [
-                    CaseRecord::STAGE_TECHNICAL,
-                    CaseRecord::STAGE_ADJUSTMENTS,
-                    CaseRecord::STAGE_COST_CALC,
-                    CaseRecord::STAGE_QUOTE,
-                    CaseRecord::STAGE_OPERATIONS,
-                ],
-                'description' => 'توصيف → معدلات → تكاليف → اعتماد تلقائي',
+                'owner_department' => 'spec',
+                'action_summary' => 'مواصفات فنية للطرف',
+                'on_complete' => 'ينتقل للمعدلات',
+                'stage_keys' => [CaseRecord::STAGE_TECHNICAL],
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
             ],
             [
-                'key' => 'production',
-                'label' => 'المخزن والورشة',
+                'key' => 'adjustments',
+                'label' => 'المعدلات',
                 'sort' => 4,
+                'owner_department' => 'adjustments',
+                'action_summary' => 'مراجعة البنود',
+                'on_complete' => 'ينتقل للتكاليف',
+                'stage_keys' => [CaseRecord::STAGE_ADJUSTMENTS],
+                'required' => false,
+                'auto_skip' => true,
+                'skip_roles' => ['admin', 'adjustments'],
+                'handlers' => [],
+            ],
+            [
+                'key' => 'cost_calc',
+                'label' => 'حساب التكاليف',
+                'sort' => 5,
+                'owner_department' => 'costing',
+                'action_summary' => 'تسجيل التكلفة صامتاً (مديونية سيادية)',
+                'on_complete' => 'اعتماد تلقائي ← أمر شغل ← المخزن',
+                'stage_keys' => [CaseRecord::STAGE_COST_CALC, CaseRecord::STAGE_QUOTE, CaseRecord::STAGE_OPERATIONS],
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
+            ],
+            [
+                'key' => 'manufacturing',
+                'label' => 'المخزن والورشة',
+                'sort' => 6,
+                'owner_department' => 'warehouse',
+                'action_summary' => 'صرف وتصنيع',
+                'on_complete' => 'ينتقل للتسليمات',
                 'stage_keys' => [CaseRecord::STAGE_MANUFACTURING],
-                'description' => 'صرف وتصنيع',
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => ['work_order' => 'operations', 'barcode_dispense' => 'warehouse'],
             ],
             [
                 'key' => 'delivery',
                 'label' => 'التسليمات',
-                'sort' => 5,
+                'sort' => 7,
+                'owner_department' => 'delivery',
+                'action_summary' => 'تسليم للمريض',
+                'on_complete' => 'إغلاق الحالة',
                 'stage_keys' => [CaseRecord::STAGE_READY_DELIVERY, CaseRecord::STAGE_DELIVERED],
-                'description' => 'تسليم للمريض',
+                'required' => true,
+                'auto_skip' => false,
+                'skip_roles' => [],
+                'handlers' => [],
             ],
         ],
     ];
 
-    /**
-     * @return list<array{value: string, label: string}>
-     */
-    public function availableStageKeys(): array
+    /** @return list<array{value: string, label: string, icon: string}> */
+    public function departmentOptions(): array
     {
-        return array_map(
-            fn (CaseStage $stage) => ['value' => $stage->value, 'label' => $stage->label()],
-            CaseStage::cases(),
-        );
+        return PathwayDepartments::options();
+    }
+
+    /** @return list<array{value: string, label: string}> */
+    public function availableSkipRoles(): array
+    {
+        return [
+            ['value' => 'admin', 'label' => 'الإدارة'],
+            ['value' => 'doctor', 'label' => 'الطبيب'],
+            ['value' => 'reception', 'label' => 'الاستقبال'],
+            ['value' => 'spec', 'label' => 'التوصيف'],
+            ['value' => 'adjustments', 'label' => 'المعدلات'],
+            ['value' => 'operations', 'label' => 'التشغيل'],
+            ['value' => 'cashier', 'label' => 'الخزنة'],
+        ];
+    }
+
+    /** @return list<array{key: string, label: string}> */
+    public function configurableHandlers(): array
+    {
+        return [
+            ['key' => 'work_order', 'label' => 'من يصدر أمر الشغل (WO)'],
+            ['key' => 'entity_approval', 'label' => 'من يستلم خطاب موافقة الجهة'],
+            ['key' => 'collect_payment', 'label' => 'من يحصّل الدفع'],
+        ];
+    }
+
+    public function isBusinessLocked(string $pathway, string $stageKey): bool
+    {
+        return in_array($stageKey, self::BUSINESS_LOCKED[$pathway] ?? [], true);
+    }
+
+    public function workOrderDepartment(bool $isMilitary): string
+    {
+        $pathway = $isMilitary ? PathwayStep::PATHWAY_MILITARY : PathwayStep::PATHWAY_CIVILIAN;
+
+        foreach ($this->steps($pathway) as $step) {
+            $handlers = $step['handlers'] ?? [];
+            if (! empty($handlers['work_order'])) {
+                return (string) $handlers['work_order'];
+            }
+        }
+
+        return 'operations';
     }
 
     /**
-     * @return list<array{key: string, label: string, sort: int, stage_keys: list<string>, active: bool, description: ?string}>
+     * @return list<array<string, mixed>>
      */
     public function steps(string $pathway, bool $activeOnly = false): array
     {
@@ -162,15 +336,13 @@ class PathwayConfigService
         $stored = $query->get();
 
         if ($stored->isEmpty()) {
-            return $this->normalizeDefaults(self::DEFAULTS[$pathway], $activeOnly);
+            return $this->normalizeDefaults($pathway, self::DEFAULTS[$pathway], $activeOnly);
         }
 
-        return $stored->map(fn (PathwayStep $step) => $this->formatStep($step))->values()->all();
+        return $stored->map(fn (PathwayStep $step) => $this->formatStep($pathway, $step))->values()->all();
     }
 
-    /**
-     * @return list<array{key: string, label: string}>
-     */
+    /** @return list<array{key: string, label: string}> */
     public function displaySteps(bool $isMilitary): array
     {
         $pathway = $isMilitary ? PathwayStep::PATHWAY_MILITARY : PathwayStep::PATHWAY_CIVILIAN;
@@ -196,8 +368,7 @@ class PathwayConfigService
 
         if (! $isMilitary && $awaitingEntityApproval) {
             $approvalIndex = $this->indexOfKey($steps, 'operations')
-                ?? $this->indexOfKey($steps, 'approval')
-                ?? $this->indexOfKey($steps, 'costing');
+                ?? $this->indexOfKey($steps, 'quote');
 
             if ($approvalIndex !== null) {
                 return $approvalIndex;
@@ -219,8 +390,29 @@ class PathwayConfigService
         return $matched ?? 0;
     }
 
+    /** @return ?array<string, mixed> */
+    public function policyForStage(string $pathway, string $stageKey): ?array
+    {
+        foreach ($this->steps($pathway) as $step) {
+            if (in_array($stageKey, $step['stage_keys'], true)) {
+                return [
+                    'stage_key' => $stageKey,
+                    'label' => $step['label'],
+                    'sort' => $step['sort'],
+                    'required' => $step['required'],
+                    'auto_skip' => $step['auto_skip'],
+                    'skip_roles' => $step['skip_roles'],
+                    'locked' => $step['locked'],
+                    'description' => $step['action_summary'],
+                ];
+            }
+        }
+
+        return null;
+    }
+
     /**
-     * @param  list<array{key: string, label: string, sort: int, stage_keys: list<string>, active: bool, description?: ?string}>  $steps
+     * @param  list<array<string, mixed>>  $steps
      */
     public function saveSteps(string $pathway, array $steps): void
     {
@@ -230,6 +422,9 @@ class PathwayConfigService
             PathwayStep::query()->where('pathway', $pathway)->delete();
 
             foreach ($steps as $row) {
+                $primaryStage = ($row['stage_keys'] ?? [])[0] ?? $row['key'];
+                $locked = $this->isBusinessLocked($pathway, $primaryStage);
+
                 PathwayStep::create([
                     'pathway' => $pathway,
                     'key' => $row['key'],
@@ -238,6 +433,13 @@ class PathwayConfigService
                     'stage_keys' => array_values($row['stage_keys'] ?? []),
                     'active' => (bool) ($row['active'] ?? true),
                     'description' => $row['description'] ?? null,
+                    'owner_department' => $row['owner_department'] ?? null,
+                    'action_summary' => $row['action_summary'] ?? null,
+                    'on_complete' => $row['on_complete'] ?? null,
+                    'required' => $locked ? true : (bool) ($row['required'] ?? true),
+                    'auto_skip' => $locked ? false : (bool) ($row['auto_skip'] ?? false),
+                    'skip_roles' => $locked ? [] : array_values($row['skip_roles'] ?? []),
+                    'handlers' => $row['handlers'] ?? [],
                 ]);
             }
         });
@@ -246,17 +448,34 @@ class PathwayConfigService
     public function resetToDefaults(string $pathway): void
     {
         $this->assertPathway($pathway);
-        $this->saveSteps($pathway, $this->normalizeDefaults(self::DEFAULTS[$pathway], false));
+        $this->saveSteps($pathway, $this->normalizeDefaults($pathway, self::DEFAULTS[$pathway], false));
+    }
+
+    /** @return array<string, mixed> */
+    public function designerPayload(): array
+    {
+        return [
+            'civilian' => $this->steps(PathwayStep::PATHWAY_CIVILIAN),
+            'military' => $this->steps(PathwayStep::PATHWAY_MILITARY),
+            'departments' => $this->departmentOptions(),
+            'skip_roles' => $this->availableSkipRoles(),
+            'handlers' => $this->configurableHandlers(),
+        ];
     }
 
     /** @return array<string, list<array<string, mixed>>> */
     public function allForAdmin(): array
     {
-        return [
-            PathwayStep::PATHWAY_CIVILIAN => $this->steps(PathwayStep::PATHWAY_CIVILIAN),
-            PathwayStep::PATHWAY_MILITARY => $this->steps(PathwayStep::PATHWAY_MILITARY),
-            'stage_key_options' => $this->availableStageKeys(),
-        ];
+        $payload = $this->designerPayload();
+
+        return array_merge($payload, [
+            'pathway_civilian_steps' => $payload['civilian'],
+            'pathway_military_steps' => $payload['military'],
+            'stage_key_options' => array_map(
+                fn (CaseStage $stage) => ['value' => $stage->value, 'label' => $stage->label()],
+                CaseStage::cases(),
+            ),
+        ]);
     }
 
     private function assertPathway(string $pathway): void
@@ -266,9 +485,12 @@ class PathwayConfigService
         }
     }
 
-    /** @return array{key: string, label: string, sort: int, stage_keys: list<string>, active: bool, description: ?string} */
-    private function formatStep(PathwayStep $step): array
+    /** @return array<string, mixed> */
+    private function formatStep(string $pathway, PathwayStep $step): array
     {
+        $primaryStage = ($step->stage_keys ?? [])[0] ?? $step->key;
+        $locked = $this->isBusinessLocked($pathway, $primaryStage);
+
         return [
             'key' => $step->key,
             'label' => $step->label,
@@ -276,23 +498,44 @@ class PathwayConfigService
             'stage_keys' => array_values($step->stage_keys ?? []),
             'active' => (bool) $step->active,
             'description' => $step->description,
+            'owner_department' => $step->owner_department,
+            'action_summary' => $step->action_summary,
+            'on_complete' => $step->on_complete,
+            'required' => $locked ? true : (bool) $step->required,
+            'auto_skip' => $locked ? false : (bool) $step->auto_skip,
+            'skip_roles' => $locked ? [] : array_values($step->skip_roles ?? []),
+            'handlers' => $step->handlers ?? [],
+            'locked' => $locked,
         ];
     }
 
     /**
      * @param  list<array<string, mixed>>  $defaults
-     * @return list<array{key: string, label: string, sort: int, stage_keys: list<string>, active: bool, description: ?string}>
+     * @return list<array<string, mixed>>
      */
-    private function normalizeDefaults(array $defaults, bool $activeOnly): array
+    private function normalizeDefaults(string $pathway, array $defaults, bool $activeOnly): array
     {
-        $rows = array_map(fn (array $row) => [
-            'key' => $row['key'],
-            'label' => $row['label'],
-            'sort' => (int) $row['sort'],
-            'stage_keys' => array_values($row['stage_keys']),
-            'active' => true,
-            'description' => $row['description'] ?? null,
-        ], $defaults);
+        $rows = array_map(function (array $row) use ($pathway) {
+            $primaryStage = ($row['stage_keys'] ?? [])[0] ?? $row['key'];
+            $locked = $this->isBusinessLocked($pathway, $primaryStage);
+
+            return [
+                'key' => $row['key'],
+                'label' => $row['label'],
+                'sort' => (int) $row['sort'],
+                'stage_keys' => array_values($row['stage_keys']),
+                'active' => true,
+                'description' => $row['description'] ?? null,
+                'owner_department' => $row['owner_department'] ?? null,
+                'action_summary' => $row['action_summary'] ?? null,
+                'on_complete' => $row['on_complete'] ?? null,
+                'required' => $locked ? true : (bool) ($row['required'] ?? true),
+                'auto_skip' => $locked ? false : (bool) ($row['auto_skip'] ?? false),
+                'skip_roles' => array_values($row['skip_roles'] ?? []),
+                'handlers' => $row['handlers'] ?? [],
+                'locked' => $locked,
+            ];
+        }, $defaults);
 
         if ($activeOnly) {
             return array_values(array_filter($rows, fn (array $row) => $row['active']));
