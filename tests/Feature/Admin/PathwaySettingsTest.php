@@ -19,7 +19,9 @@ class PathwaySettingsTest extends TestCase
             ->get('/admin/pathway-settings')
             ->assertOk()
             ->assertSee('مصمم مسار العمل', false)
-            ->assertSee('pathwayDesignerBootstrap', false);
+            ->assertSee('pathwayDesignerBootstrap', false)
+            ->assertSee('pathwayFlowMap', false)
+            ->assertSee('بعد الإكمال — ينتقل إلى', false);
     }
 
     public function test_admin_can_save_civilian_pathway_steps(): void
