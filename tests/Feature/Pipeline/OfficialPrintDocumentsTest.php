@@ -5,7 +5,6 @@ namespace Tests\Feature\Pipeline;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Quote;
-use App\Services\OperationsService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -55,7 +54,7 @@ class OfficialPrintDocumentsTest extends TestCase
         $this->stockItem('RM-001', qty: 10);
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
-        app(OperationsService::class)->approve($case->fresh(), 'اختبار');
+        $this->approveAtOperations($case);
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $technical = $this->userWithRole('technical');
 
@@ -74,7 +73,7 @@ class OfficialPrintDocumentsTest extends TestCase
         $this->stockItem('RM-001', qty: 10);
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
-        app(OperationsService::class)->approve($case->fresh(), 'اختبار');
+        $this->approveAtOperations($case);
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $technical = $this->userWithRole('technical');
 

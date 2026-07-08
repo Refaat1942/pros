@@ -142,8 +142,9 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $this->assertContains($case->id, $queues->operationsPendingCaseIds());
 
+        // تسعير تلقائي (طرف صناعي): مواد 400 + مكوّنات 400 = 800 × 1.95 = 1560.
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
-        $this->assertEquals(400.00, (float) $quote->total);
+        $this->assertEquals(1560.00, (float) $quote->total);
         $this->assertEquals(Quote::STATUS_PENDING, $quote->status);
 
         // ── Step 5: مكتب التشغيل — إصدار عرض السعر للاستقبال ───────────────
@@ -154,7 +155,8 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertEquals(Quote::STATUS_ISSUED, $quote->status);
         $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
 
-        // ── Step 5c: Operations prints quote + OCR approval letter → WO ─────
+        // ── Step 5c: Reception prints quote + processes OCR approval letter ─
+        // (يُسجّل موافقة الجهة فقط — لا يُصدر أمر الشغل)
         $this->actingAs($ops);
 
         $printOps = $this->get("/operations/quote/{$quote->id}/print");
@@ -178,14 +180,25 @@ class CivilianQueryChainE2eTest extends TestCase
         $ocrOk = $this->postJson('/reception/ocr/process', [
             'quote_no' => $quote->quote_no,
             'patient_name' => $patient->name,
-            'approved_amount' => 400.00,
+            'approved_amount' => 1560.00,
             'company_name' => $company->name,
             'letter_ref' => 'LTR-E2E-001',
         ]);
         $ocrOk->assertOk();
-        $this->assertMatchesRegularExpression('/^WO-\d{4}-\d{4}$/', $ocrOk->json('work_order_no'));
+
+        // الموافقة مُسجّلة، الحالة ما زالت في مكتب التشغيل بلا أمر شغل.
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
+        $this->assertNull($case->work_order_no);
+        $this->assertEquals(Quote::STATUS_APPROVED, $quote->fresh()->status);
+
+        // ── Step 5d: Operations issues the work order → manufacturing ───────
+        $this->actingAs($ops);
+        $approve = $this->postJson("/operations/pending/{$case->id}/approve");
+        $approve->assertOk();
 
         $case->refresh();
+        $this->assertMatchesRegularExpression('/^WO-\d{4}-\d{4}$/', (string) $case->work_order_no);
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
         $this->assertNotContains($case->id, $queues->operationsManufacturingCaseIds());
 
@@ -237,7 +250,7 @@ class CivilianQueryChainE2eTest extends TestCase
         $patient->refresh();
         $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);
         $this->assertNotNull($case->invoice_no);
-        $this->assertEquals(400.00, (float) $case->invoice_total);
+        $this->assertEquals(1560.00, (float) $case->invoice_total);
         $this->assertTrue($queues->patientIsArchived($patient->id));
         $this->assertNotContains($case->id, $queues->receptionDeliveryReadyCaseIds());
         $this->assertContains($case->id, $queues->deliveredCaseIds());

@@ -135,6 +135,7 @@ class PricingStatusTransitionTest extends TestCase
         $patient = $this->civilianPatient($company);
         $case = $this->operationsReadyCase($patient);
 
+        $this->markEntityApproved($case);
         app(OperationsService::class)->approve($case, 'مكتب التشغيل');
 
         // DB must show 'sent_to_reception'
@@ -239,6 +240,7 @@ class PricingStatusTransitionTest extends TestCase
         ]);
 
         // اعتماد مكتب التشغيل → sent_to_reception
+        $this->markEntityApproved($case);
         app(OperationsService::class)->approve($case, 'مكتب التشغيل');
         $this->assertDatabaseHas('pricing_requests', [
             'case_id' => $case->id,

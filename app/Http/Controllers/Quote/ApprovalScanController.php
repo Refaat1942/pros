@@ -36,7 +36,7 @@ class ApprovalScanController extends Controller
         }
 
         return response()->json([
-            'message' => 'تم تأكيد الموافقة بنجاح — الحالة جاهزة للتصنيع.',
+            'message' => 'تم تسجيل موافقة الجهة — بانتظار إصدار أمر الشغل من مكتب التشغيل.',
             'case' => $case->only([
                 'id', 'case_no', 'stage_key', 'manufacturing_stage',
                 'work_order_no', 'approval_date', 'approval_confirmed_at',

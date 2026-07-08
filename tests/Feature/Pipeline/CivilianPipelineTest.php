@@ -16,6 +16,7 @@ use App\Services\ApprovalService;
 use App\Services\BomService;
 use App\Services\DeliveryService;
 use App\Services\MedicalRecordService;
+use App\Services\OperationsService;
 use App\Services\QuoteService;
 use App\Services\StockPriceService;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -200,9 +201,9 @@ class CivilianPipelineTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'issue', 'tag' => 'quotes']);
     }
 
-    // ── Stage 4c: QR approval scan at operations → reserve + work order ───────
+    // ── Stage 4c: reception approval records approval; operations issues WO ────
 
-    public function test_ocr_approval_scan_generates_work_order_and_unlocks_manufacturing(): void
+    public function test_reception_approval_records_approval_then_operations_issues_work_order(): void
     {
         $this->seedStockWithPriceBatch();
 
@@ -218,14 +219,39 @@ class CivilianPipelineTest extends TestCase
 
         $case->refresh();
 
+        // مسح خطاب الموافقة في الاستقبال يُسجّل الموافقة فقط — بلا أمر شغل.
         app(ApprovalService::class)->confirm($case, $quote->quote_no);
 
         $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
+        $this->assertNull($case->work_order_no);
+        $this->assertEquals(Quote::STATUS_APPROVED, $quote->fresh()->status);
+
+        // مكتب التشغيل يُصدر أمر الشغل بعد تسجيل الموافقة.
+        $case = app(OperationsService::class)->approve($case, 'موافقة الجهة');
+
         $this->assertEquals(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
         $this->assertEquals(CaseRecord::MFG_WAREHOUSE, $case->manufacturing_stage);
         $this->assertNotNull($case->work_order_no);
         $this->assertStringStartsWith('WO-', $case->work_order_no);
-        $this->assertEquals(Quote::STATUS_APPROVED, $quote->fresh()->status);
+    }
+
+    public function test_operations_approve_blocked_before_entity_approval(): void
+    {
+        $this->seedStockWithPriceBatch();
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case = $this->operationsReadyCase($patient);
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+
+        $this->actingAs($this->userWithRole('operations'))
+            ->postJson("/operations/pending/{$case->id}/release-quote")
+            ->assertOk();
+
+        // لا موافقة جهة بعد ⇒ لا يمكن إصدار أمر الشغل.
+        $this->expectException(HttpException::class);
+        app(OperationsService::class)->approve($case->fresh(), 'قبل الموافقة');
     }
 
     public function test_scanning_wrong_qr_does_not_unlock_case(): void

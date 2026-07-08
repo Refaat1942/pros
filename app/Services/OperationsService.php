@@ -109,6 +109,15 @@ class OperationsService
                 abort(422, 'الحالة ليست في مكتب التشغيل — لا يمكن الاعتماد.');
             }
 
+            // مسار التعاقد المدني: لا يُصدر أمر الشغل إلا بعد تسجيل موافقة الجهة
+            // (مسح خطاب الموافقة في الاستقبال يُعلِّم العرض «معتمد»). الكاش والعسكري مستثنيان.
+            if (! $case->isMilitary() && ! $case->isCashCivilian()) {
+                $quote = Quote::where('case_id', $case->id)->orderByDesc('id')->first();
+                if (! $quote || $quote->status !== Quote::STATUS_APPROVED) {
+                    abort(422, 'لا يمكن إصدار أمر الشغل — بانتظار موافقة الجهة (مسح خطاب الموافقة في الاستقبال).');
+                }
+            }
+
             $before = ['stage_key' => $case->stage_key];
 
             // الحجز الفوري في سجل المخزون (Reserved) — قبل أي تحويل.

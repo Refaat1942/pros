@@ -165,6 +165,9 @@ class OperationsPendingDeskTest extends TestCase
         $case = $this->operationsReadyCase($patient);
         $ops = $this->userWithRole('operations');
 
+        // موافقة الجهة (مسح خطاب الموافقة في الاستقبال) قبل إصدار أمر الشغل.
+        $this->markEntityApproved($case);
+
         $this->actingAs($ops)
             ->postJson("/operations/pending/{$case->id}/approve")
             ->assertOk();

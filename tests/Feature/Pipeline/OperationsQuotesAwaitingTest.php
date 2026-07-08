@@ -4,7 +4,6 @@ namespace Tests\Feature\Pipeline;
 
 use App\Models\Quote;
 use App\Services\Dashboard\DashboardQueueService;
-use App\Services\OperationsService;
 use App\Services\QuoteService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -77,7 +76,7 @@ class OperationsQuotesAwaitingTest extends TestCase
         $ops = $this->userWithRole('operations');
 
         app(QuoteService::class)->releaseToReception($quote);
-        app(OperationsService::class)->approve($case->fresh(), 'اختبار');
+        $this->approveAtOperations($case);
 
         $quote->update(['status' => Quote::STATUS_APPROVED, 'status_label' => 'معتمد']);
 

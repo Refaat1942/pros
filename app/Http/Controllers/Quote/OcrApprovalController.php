@@ -28,7 +28,7 @@ class OcrApprovalController extends Controller
         }
 
         return response()->json([
-            'message' => 'تمت مطابقة OCR — تم فك التجميد وتوليد أمر التشغيل.',
+            'message' => 'تمت مطابقة OCR وتسجيل موافقة الجهة — بانتظار إصدار أمر الشغل من مكتب التشغيل.',
             'case' => $case->only([
                 'id', 'case_no', 'stage_key', 'manufacturing_stage',
                 'work_order_no', 'approval_date', 'approval_confirmed_at',

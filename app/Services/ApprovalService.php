@@ -8,19 +8,16 @@ use App\Models\Quote;
 use Illuminate\Support\Facades\DB;
 
 /**
- * تأكيد موافقة جهة التعاقد عبر مسح QR — مسار مدني فقط.
+ * تسجيل موافقة جهة التعاقد عبر مسح QR — مسار مدني فقط.
  *
- * في الهيكلة الجديدة تهبط الموافقات في مكتب التشغيل (الخطوة 7)؛ مسح QR هنا هو
- * أحد محفّزات اعتماد مكتب التشغيل ويُفوّض الحجز/التحويل لـ OperationsService.
+ * في الهيكلة الجديدة: مسح خطاب الموافقة في الاستقبال يُسجِّل الموافقة فقط
+ * (يعلّم عرض السعر «معتمد من الجهة»)، وتبقى الحالة في مكتب التشغيل بانتظار
+ * إصدار أمر الشغل من مكتب التشغيل (OperationsService::approve).
  */
 class ApprovalService
 {
-    public function __construct(
-        private readonly OperationsService $operationsService,
-    ) {}
-
     /**
-     * معالجة مسح QR من خطاب الموافقة — يعتمد الحالة في مكتب التشغيل ويفتح الصرف.
+     * معالجة مسح QR من خطاب الموافقة — يُسجِّل موافقة الجهة دون إصدار أمر الشغل.
      */
     public function confirm(CaseRecord $case, string $scannedQr): CaseRecord
     {
@@ -40,7 +37,7 @@ class ApprovalService
             abort(422, 'يجب إصدار العرض للجهة قبل مسح الموافقة.');
         }
 
-        if (! $this->caseAwaitingEntityApproval($case)) {
+        if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
             abort(422, 'الحالة ليست بانتظار اعتماد موافقة الجهة.');
         }
 
@@ -48,11 +45,6 @@ class ApprovalService
             'stage_key' => $case->stage_key,
             'quote_status' => $quote->status,
         ];
-
-        // إن لم يُعتمد الصرف بعد (مسار قديم) — حجز فوري + أمر شغل + تحويل للمخزن.
-        if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
-            $case = $this->operationsService->approve($case, 'موافقة الجهة (QR)');
-        }
 
         DB::transaction(function () use ($quote) {
             $quote->update([
@@ -63,26 +55,15 @@ class ApprovalService
 
         AuditService::log(
             action: 'scan',
-            description: "مسح موافقة الجهة — {$quote->quote_no} — {$case->work_order_no}",
+            description: "مسح موافقة الجهة — {$quote->quote_no} — بانتظار إصدار أمر الشغل من مكتب التشغيل",
             tag: 'quotes',
             before: $before,
             after: [
                 'stage_key' => $case->stage_key,
-                'work_order_no' => $case->work_order_no,
                 'quote_status' => Quote::STATUS_APPROVED,
             ],
         );
 
         return $case->fresh()->load('patient');
-    }
-
-    private function caseAwaitingEntityApproval(CaseRecord $case): bool
-    {
-        if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
-            return true;
-        }
-
-        return $case->stage_key === CaseRecord::STAGE_MANUFACTURING
-            && $case->manufacturing_stage === CaseRecord::MFG_WAREHOUSE;
     }
 }
