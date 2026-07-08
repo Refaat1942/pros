@@ -15,6 +15,12 @@ class SettingService
 
     public const KEY_REHABILITATION_ASSESSMENT = 'rehabilitation_assessment_rate';
 
+    public const KEY_ORG_HEADER_LINES = 'org_header_lines';
+
+    public const KEY_ORG_CENTER_NAME = 'org_center_name';
+
+    public const KEY_ORG_LOGO_PATH = 'org_logo_path';
+
     /** @var array<string, float> */
     private const DEFAULT_OVERHEAD_RATES = [
         self::KEY_TECHNICAL_CHECK => 30.0,
@@ -22,6 +28,18 @@ class SettingService
         self::KEY_MACHINERY_DEPRECIATION => 23.0,
         self::KEY_REHABILITATION_ASSESSMENT => 22.0,
     ];
+
+    /** @var list<string> */
+    private const DEFAULT_ORG_HEADER_LINES = [
+        'وزارة الدفاع',
+        'مركز الطب الطبيعي والتأهيلي',
+        'وعلاج الروماتيزم ق.م',
+        'مصنع الأجهزة التعويضية',
+    ];
+
+    private const DEFAULT_ORG_CENTER_NAME = 'مركز الأطراف الصناعية';
+
+    private const DEFAULT_ORG_LOGO_PATH = 'assets/images/org-logo.png';
 
     /** @return array<string, float> */
     public function overheadRates(): array
@@ -90,5 +108,64 @@ class SettingService
                 'rate' => $rates[self::KEY_REHABILITATION_ASSESSMENT],
             ],
         ];
+    }
+
+    /**
+     * بيانات العلامة الرسمية للمطبوعات (أسطر الترويسة + الاسم المختصر + مسار الشعار).
+     *
+     * @return array{lines: list<string>, center_name: string, logo_path: string}
+     */
+    public function branding(): array
+    {
+        return Cache::rememberForever('settings.branding', function () {
+            $stored = Setting::query()
+                ->whereIn('key', [
+                    self::KEY_ORG_HEADER_LINES,
+                    self::KEY_ORG_CENTER_NAME,
+                    self::KEY_ORG_LOGO_PATH,
+                ])
+                ->pluck('value', 'key');
+
+            $linesRaw = $stored[self::KEY_ORG_HEADER_LINES] ?? null;
+            $lines = is_string($linesRaw) && trim($linesRaw) !== ''
+                ? array_values(array_filter(array_map(
+                    'trim',
+                    preg_split('/\r\n|\r|\n/', $linesRaw) ?: []
+                ), static fn ($line) => $line !== ''))
+                : self::DEFAULT_ORG_HEADER_LINES;
+
+            if ($lines === []) {
+                $lines = self::DEFAULT_ORG_HEADER_LINES;
+            }
+
+            $centerName = trim((string) ($stored[self::KEY_ORG_CENTER_NAME] ?? ''));
+            $logoPath = trim((string) ($stored[self::KEY_ORG_LOGO_PATH] ?? ''));
+
+            return [
+                'lines' => $lines,
+                'center_name' => $centerName !== '' ? $centerName : self::DEFAULT_ORG_CENTER_NAME,
+                'logo_path' => $logoPath !== '' ? $logoPath : self::DEFAULT_ORG_LOGO_PATH,
+            ];
+        });
+    }
+
+    /** @param array<string, string|null> $data */
+    public function updateBranding(array $data): void
+    {
+        $map = [
+            self::KEY_ORG_HEADER_LINES => $data['lines'] ?? null,
+            self::KEY_ORG_CENTER_NAME => $data['center_name'] ?? null,
+            self::KEY_ORG_LOGO_PATH => $data['logo_path'] ?? null,
+        ];
+
+        foreach ($map as $key => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            Setting::updateOrCreate(['key' => $key], ['value' => (string) $value]);
+        }
+
+        Cache::forget('settings.branding');
     }
 }

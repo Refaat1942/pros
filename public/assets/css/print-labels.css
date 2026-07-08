@@ -1,0 +1,375 @@
+/* ============================================================
+   print-labels.css — بطاقة المريض + ملصقات الباركود
+   خط عربي ثقيل مضمّن (Cairo) للعمل بلا إنترنت.
+   ============================================================ */
+
+@font-face {
+    font-family: 'Cairo';
+    src: url('../fonts/Cairo-Variable.ttf') format('truetype-variations'),
+         url('../fonts/Cairo-Variable.ttf') format('truetype');
+    font-weight: 200 1000;
+    font-style: normal;
+    font-display: swap;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Cairo', 'Tahoma', 'Arial', sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* ── شريط أدوات الشاشة (لا يُطبع) ── */
+.toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 28px;
+}
+
+.toolbar h2 {
+    color: #f1f5f9;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.toolbar .meta {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.toolbar button {
+    background: #059669;
+    color: #fff;
+    border: 0;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 8px;
+}
+
+.toolbar button:hover {
+    background: #047857;
+}
+
+/* ============================================================
+   بطاقة المريض
+   ============================================================ */
+body.patient-card-body {
+    background: #334155;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+}
+
+.card {
+    width: 340px;
+    background: #fff;
+    color: #000;
+    border: 2px solid #000;
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+}
+
+.card-head .card-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.card-head .card-logo {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    object-fit: contain;
+    filter: grayscale(100%) contrast(1.4);
+}
+
+.card-head .center-name {
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.card-head .badge {
+    font-size: 12px;
+    font-weight: 900;
+    border: 1.5px solid #000;
+    border-radius: 6px;
+    padding: 3px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 16px;
+}
+
+.card-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.card-info .pt-name {
+    font-size: 19px;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 2px;
+}
+
+.card-info .pt-row {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.card-info .pt-row b {
+    font-weight: 900;
+}
+
+.card-info .pt-sub {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.card-qr {
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+    border: 1.5px solid #000;
+    border-radius: 6px;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-qr svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.card-foot {
+    font-size: 11.5px;
+    font-weight: 800;
+    text-align: center;
+    border-top: 2px solid #000;
+    padding-top: 10px;
+    margin-top: 14px;
+}
+
+.card-foot .track {
+    display: block;
+    direction: ltr;
+    font-size: 10px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-top: 4px;
+    word-break: break-all;
+}
+
+@media print {
+    body.patient-card-body {
+        background: #fff;
+        padding: 0;
+        display: block;
+        min-height: auto;
+    }
+
+    body.patient-card-body .toolbar {
+        display: none;
+    }
+
+    .card {
+        border: 2px solid #000;
+        margin: 12mm auto;
+    }
+
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
+}
+
+/* ============================================================
+   ملصقات الباركود الحرارية
+   ============================================================ */
+body.labels-body {
+    background: #f1f5f9;
+    padding: 8px;
+}
+
+.labels-toolbar {
+    max-width: 760px;
+    margin: 0 auto 12px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.labels-toolbar h1 {
+    font-size: 15px;
+    margin-bottom: 8px;
+    color: #0f172a;
+}
+
+.labels-toolbar .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px 12px;
+    margin-bottom: 10px;
+}
+
+.labels-toolbar label {
+    display: block;
+    font-size: 12px;
+    color: #475569;
+    margin-bottom: 2px;
+}
+
+.labels-toolbar input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.labels-toolbar .actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.labels-toolbar button {
+    background: #2563eb;
+    color: #fff;
+    border: 0;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.labels-toolbar button.secondary {
+    background: #475569;
+}
+
+.labels-toolbar .count {
+    font-size: 13px;
+    color: #475569;
+}
+
+.labels-sheet {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap);
+    justify-content: flex-start;
+    background: #fff;
+    padding: var(--page-margin);
+    width: calc(76mm + var(--gap) + (var(--page-margin) * 2));
+    margin: 0 auto;
+}
+
+.label {
+    width: 38mm;
+    height: 25mm;
+    border: 1px dashed #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1mm;
+    padding-inline-start: calc(1mm + var(--offset-x));
+    padding-top: calc(1mm + var(--offset-y));
+    overflow: hidden;
+    page-break-inside: avoid;
+}
+
+.label .name {
+    font-size: 7pt;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.1;
+    max-height: 6mm;
+    overflow: hidden;
+    margin-bottom: 0.5mm;
+}
+
+.label .barcode {
+    width: 34mm;
+    height: 11mm;
+}
+
+.label .barcode svg {
+    width: 100%;
+    height: 100%;
+}
+
+.label .code {
+    font-size: 8pt;
+    font-weight: 800;
+    direction: ltr;
+    letter-spacing: 0.5px;
+    margin-top: 0.5mm;
+}
+
+@media print {
+    body.labels-body {
+        background: #fff;
+        padding: 0;
+    }
+
+    body.labels-body .labels-toolbar {
+        display: none;
+    }
+
+    .labels-sheet {
+        width: auto;
+        padding: 0;
+        gap: var(--gap);
+    }
+
+    .label {
+        border: none;
+    }
+
+    @page {
+        margin: var(--page-margin);
+    }
+}
