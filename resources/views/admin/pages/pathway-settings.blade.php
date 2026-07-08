@@ -14,10 +14,11 @@
         </div>
 
         <p class="pathway-designer-intro">
-            <strong>شاشة واحدة — من يعمل ماذا وإيه اللي بعدها.</strong><br>
-            ✅ <strong>تقدر تعدّل:</strong> القسم المسؤول — ماذا يفعل — ماذا يحدث بعد الإكمال — من يصدر أمر الشغل.<br>
-            🔒 <strong>مقفول = لا يُتخطى فقط</strong> (مثلاً: ماينفعش نتخطى عرض السعر أو التصنيع) — لكن تقدر تغيّر الوصف والقسم المسؤول.<br>
-            ⏭️ <strong>الخطوات اللي تقدر تخطيها:</strong> الكشف الطبي — المعدلات (اختياري).
+            <strong>شاشة واحدة — من يعمل ماذا ← وبعدها يروح فين.</strong><br>
+            1️⃣ <strong>القسم المسؤول</strong> — مين يشتغل في الخطوة دي.<br>
+            2️⃣ <strong>ماذا يفعل</strong> — وصف مختصر للمهمة.<br>
+            3️⃣ <strong>بعد الإكمال — ينتقل إلى</strong> — اختار من القائمة الخطوة اللي بعدها (مش كتابة يدوي).<br>
+            🔒 <strong>مقفول</strong> = ماينفعش تتخطى — لكن تقدر تغيّر القسم والوصف والخطوة التالية.
         </p>
 
         <div class="pathway-designer-tabs">
@@ -26,6 +27,7 @@
             <button type="button" class="btn-action" id="btnResetPathway">↩️ استعادة الافتراضي</button>
         </div>
 
+        <div id="pathwayFlowMap" class="pathway-flow-map" aria-live="polite"></div>
         <div id="pathwayTimeline" class="pathway-timeline"></div>
         <div id="pathwayDesignerError" class="pathway-designer-error" style="display:none;"></div>
 
@@ -71,6 +73,61 @@
         background: #1e40af;
         color: #fff;
         border-color: #1e40af;
+    }
+    .pathway-flow-map {
+        margin: 0 16px 16px;
+        padding: 12px 14px;
+        background: #0f172a;
+        border-radius: 12px;
+        color: #e2e8f0;
+        overflow-x: auto;
+    }
+    .pf-flow-title {
+        margin: 0 0 10px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #94a3b8;
+    }
+    .pf-flow-strip {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 4px;
+        direction: rtl;
+    }
+    .pf-flow-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 999px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+    .pf-flow-chip b {
+        display: inline-flex;
+        width: 22px;
+        height: 22px;
+        align-items: center;
+        justify-content: center;
+        background: #2563eb;
+        border-radius: 50%;
+        font-size: 11px;
+        color: #fff;
+    }
+    .pf-flow-arrow {
+        color: #64748b;
+        font-size: 16px;
+        padding: 0 2px;
+    }
+    .pf-connector {
+        text-align: center;
+        padding: 4px 0 8px;
+        font-size: 13px;
+        color: #2563eb;
+        font-weight: 700;
     }
     .pathway-timeline {
         padding: 0 16px 16px;
@@ -209,8 +266,81 @@
         }).join('');
     }
 
+    function deptLabel(value) {
+        for (var i = 0; i < depts.length; i++) {
+            if (depts[i].value === value) return depts[i].label;
+        }
+        return value || '—';
+    }
+
+    function syncNextStepMeta(pathwayKey) {
+        var list = state[pathwayKey];
+        list.forEach(function (step, idx) {
+            var nextKey = step.next_step_key;
+            if (!nextKey) {
+                nextKey = (list[idx + 1] && list[idx + 1].key) || '_completed';
+            }
+            step.next_step_key = nextKey;
+            if (nextKey === '_completed') {
+                step.next_step_label = 'إغلاق المسار';
+                step.on_complete = 'الحالة مكتملة';
+                return;
+            }
+            var next = null;
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].key === nextKey) { next = list[i]; break; }
+            }
+            step.next_step_label = next ? next.label : nextKey;
+            step.on_complete = 'ينتقل إلى ' + step.next_step_label;
+        });
+    }
+
+    function nextStepOptions(list, currentIdx, selectedKey) {
+        var html = '';
+        list.forEach(function (s, i) {
+            if (i === currentIdx) return;
+            var sel = selectedKey === s.key ? ' selected' : '';
+            html += '<option value="' + esc(s.key) + '"' + sel + '>' + esc(s.sort + '. ' + s.label) + '</option>';
+        });
+        var doneSel = selectedKey === '_completed' ? ' selected' : '';
+        html += '<option value="_completed"' + doneSel + '>✅ إغلاق المسار (مكتمل)</option>';
+        return html;
+    }
+
+    function renderFlowMap(list) {
+        var el = document.getElementById('pathwayFlowMap');
+        if (!el || !list.length) {
+            if (el) el.innerHTML = '';
+            return;
+        }
+
+        var byKey = {};
+        list.forEach(function (s) { byKey[s.key] = s; });
+
+        var chain = [];
+        var current = list[0];
+        var seen = {};
+        while (current && !seen[current.key] && chain.length <= list.length) {
+            seen[current.key] = true;
+            chain.push(current);
+            if (!current.next_step_key || current.next_step_key === '_completed') break;
+            current = byKey[current.next_step_key];
+            if (!current) break;
+        }
+
+        var chips = chain.map(function (s, i) {
+            var arrow = (i < chain.length - 1 && s.next_step_key !== '_completed')
+                ? '<span class="pf-flow-arrow">←</span>' : '';
+            return '<span class="pf-flow-chip"><b>' + s.sort + '</b> ' + esc(s.label) + '</span>' + arrow;
+        }).join('');
+
+        el.innerHTML = '<p class="pf-flow-title">📍 مسار الحالة — من البداية للنهاية</p><div class="pf-flow-strip">' + chips + '</div>';
+    }
+
     function render() {
+        syncNextStepMeta(activePathway);
         var list = state[activePathway];
+        renderFlowMap(list);
         var el = document.getElementById('pathwayTimeline');
         if (!el) return;
 
@@ -262,17 +392,20 @@
                 + '  <div class="pf-num">' + step.sort + '</div>'
                 + '  <div class="pf-head-text">'
                 + '    <h4 class="pf-title">' + esc(step.label) + '</h4>'
-                + '    <p class="pf-step-hint">الخطوة ' + step.sort + ' في المسار</p>'
+                + '    <p class="pf-step-hint">👤 ' + esc(deptLabel(step.owner_department)) + '</p>'
                 + '  </div>'
                 + '</div>'
                 + '<div class="pf-grid">'
                 + '<label class="pf-field"><span>👤 القسم المسؤول</span><select data-f="owner_department" data-idx="' + idx + '">' + deptOptions(step.owner_department) + '</select></label>'
+                + '<label class="pf-field pf-field--wide"><span>➡️ بعد الإكمال — ينتقل إلى</span><select data-f="next_step_key" data-idx="' + idx + '">' + nextStepOptions(list, idx, step.next_step_key) + '</select></label>'
                 + '<label class="pf-field pf-field--wide"><span>📋 ماذا يفعل هنا؟</span><textarea data-f="action_summary" data-idx="' + idx + '" placeholder="اكتب وظيفة هذا القسم في هذه المرحلة…">' + esc(step.action_summary || '') + '</textarea></label>'
-                + '<label class="pf-field pf-field--wide"><span>➡️ بعد الإكمال — ماذا يحدث؟</span><input type="text" data-f="on_complete" data-idx="' + idx + '" value="' + esc(step.on_complete || '') + '" placeholder="مثال: ينتقل لمكتب التشغيل"></label>'
                 + '</div>'
                 + handlerHtml
                 + skipBlock
-                + '</article>';
+                + '</article>'
+                + (step.next_step_key && step.next_step_key !== '_completed'
+                    ? '<div class="pf-connector">↓ ينتقل إلى: <strong>' + esc(step.next_step_label || '') + '</strong></div>'
+                    : '');
         }).join('');
 
         bindEvents();
@@ -303,6 +436,19 @@
         el.addEventListener('change', function (e) {
             var t = e.target;
             var idx = parseInt(t.getAttribute('data-idx'), 10);
+            var field = t.getAttribute('data-f');
+            if (field) {
+                if (field === 'required' || field === 'auto_skip') {
+                    state[activePathway][idx][field] = t.value === '1';
+                } else {
+                    state[activePathway][idx][field] = t.value;
+                }
+                if (field === 'required' && t.value === '1') {
+                    state[activePathway][idx].auto_skip = false;
+                }
+                render();
+                return;
+            }
             if (t.hasAttribute('data-h')) {
                 state[activePathway][idx].handlers = state[activePathway][idx].handlers || {};
                 state[activePathway][idx].handlers[t.getAttribute('data-h')] = t.value;

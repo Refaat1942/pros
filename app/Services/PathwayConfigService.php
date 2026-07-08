@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
  */
 class PathwayConfigService
 {
+    public const NEXT_COMPLETED = '_completed';
+
     /** مراحل مقفلة — لا يمكن جعلها اختيارية (حماية المنطق التجاري). */
     public const BUSINESS_LOCKED = [
         PathwayStep::PATHWAY_CIVILIAN => [
@@ -58,6 +60,7 @@ class PathwayConfigService
                 'owner_department' => 'reception',
                 'action_summary' => 'تسجيل المريض — فتح الملف — حجز الموعد — طباعة QR المتابعة',
                 'on_complete' => 'ينتقل للكشف الطبي',
+                'next_step_key' => 'exam',
                 'stage_keys' => [CaseRecord::STAGE_RECEPTION],
                 'required' => true,
                 'auto_skip' => false,
@@ -71,6 +74,7 @@ class PathwayConfigService
                 'owner_department' => 'doctor',
                 'action_summary' => 'فحص المريض — تقرير طبي — تحويل للتوصيف',
                 'on_complete' => 'ينتقل للتوصيف الفني',
+                'next_step_key' => 'technical',
                 'stage_keys' => [CaseRecord::STAGE_EXAM],
                 'required' => false,
                 'auto_skip' => false,
@@ -84,6 +88,7 @@ class PathwayConfigService
                 'owner_department' => 'spec',
                 'action_summary' => 'كتابة المواصفات الفنية واختيار الأصناف',
                 'on_complete' => 'ينتقل للمعدلات',
+                'next_step_key' => 'adjustments',
                 'stage_keys' => [CaseRecord::STAGE_TECHNICAL],
                 'required' => true,
                 'auto_skip' => false,
@@ -97,6 +102,7 @@ class PathwayConfigService
                 'owner_department' => 'adjustments',
                 'action_summary' => 'مراجعة البنود — إضافة أو تعديل الكميات',
                 'on_complete' => 'ينتقل لحساب التكاليف',
+                'next_step_key' => 'cost_calc',
                 'stage_keys' => [CaseRecord::STAGE_ADJUSTMENTS],
                 'required' => false,
                 'auto_skip' => false,
@@ -110,6 +116,7 @@ class PathwayConfigService
                 'owner_department' => 'costing',
                 'action_summary' => 'احتساب التكلفة — تجميد اللقطة — تأكيد السعر',
                 'on_complete' => 'يُصدر عرض سعر ← ينتقل لمكتب التشغيل',
+                'next_step_key' => 'quote',
                 'stage_keys' => [CaseRecord::STAGE_COST_CALC],
                 'required' => true,
                 'auto_skip' => false,
@@ -123,6 +130,7 @@ class PathwayConfigService
                 'owner_department' => 'operations',
                 'action_summary' => 'طباعة عرض السعر للمريض / الجهة المتعاقدة',
                 'on_complete' => 'ينتقل لمكتب التشغيل لاعتماد الحالة',
+                'next_step_key' => 'operations',
                 'stage_keys' => [CaseRecord::STAGE_QUOTE],
                 'required' => true,
                 'auto_skip' => false,
@@ -136,6 +144,7 @@ class PathwayConfigService
                 'owner_department' => 'operations',
                 'action_summary' => 'مراجعة العرض — خطاب موافقة الجهة — اعتماد الحالة',
                 'on_complete' => 'إصدار أمر الشغل ← الخزنة (كاش) أو المخزن مباشرة',
+                'next_step_key' => 'cashier',
                 'stage_keys' => [CaseRecord::STAGE_OPERATIONS],
                 'required' => true,
                 'auto_skip' => false,
@@ -152,6 +161,7 @@ class PathwayConfigService
                 'owner_department' => 'cashier',
                 'action_summary' => 'تحصيل المبلغ من المريض (نقدي فقط)',
                 'on_complete' => 'يرجع للتشغيل لإصدار أمر الشغل',
+                'next_step_key' => 'manufacturing',
                 'stage_keys' => [CaseRecord::STAGE_CASHIER],
                 'required' => false,
                 'auto_skip' => false,
@@ -165,6 +175,7 @@ class PathwayConfigService
                 'owner_department' => 'warehouse',
                 'action_summary' => 'صرف بالباركود — تصنيع — إغلاق الجودة',
                 'on_complete' => 'ينتقل للتسليمات',
+                'next_step_key' => 'delivery',
                 'stage_keys' => [CaseRecord::STAGE_MANUFACTURING],
                 'required' => true,
                 'auto_skip' => false,
@@ -178,6 +189,7 @@ class PathwayConfigService
                 'owner_department' => 'delivery',
                 'action_summary' => 'مسح QR — تسليم للمريض — إغلاق الحالة',
                 'on_complete' => 'الحالة مكتملة',
+                'next_step_key' => self::NEXT_COMPLETED,
                 'stage_keys' => [CaseRecord::STAGE_READY_DELIVERY, CaseRecord::STAGE_DELIVERED],
                 'required' => true,
                 'auto_skip' => false,
@@ -193,6 +205,7 @@ class PathwayConfigService
                 'owner_department' => 'reception',
                 'action_summary' => 'تسجيل عسكري — فتح ملف — موعد',
                 'on_complete' => 'ينتقل للكشف',
+                'next_step_key' => 'exam',
                 'stage_keys' => [CaseRecord::STAGE_RECEPTION],
                 'required' => true,
                 'auto_skip' => false,
@@ -206,6 +219,7 @@ class PathwayConfigService
                 'owner_department' => 'doctor',
                 'action_summary' => 'كشف طبي (اختياري)',
                 'on_complete' => 'ينتقل للتوصيف',
+                'next_step_key' => 'technical',
                 'stage_keys' => [CaseRecord::STAGE_EXAM],
                 'required' => false,
                 'auto_skip' => false,
@@ -219,6 +233,7 @@ class PathwayConfigService
                 'owner_department' => 'spec',
                 'action_summary' => 'مواصفات فنية للطرف',
                 'on_complete' => 'ينتقل للمعدلات',
+                'next_step_key' => 'adjustments',
                 'stage_keys' => [CaseRecord::STAGE_TECHNICAL],
                 'required' => true,
                 'auto_skip' => false,
@@ -232,6 +247,7 @@ class PathwayConfigService
                 'owner_department' => 'adjustments',
                 'action_summary' => 'مراجعة البنود',
                 'on_complete' => 'ينتقل للتكاليف',
+                'next_step_key' => 'cost_calc',
                 'stage_keys' => [CaseRecord::STAGE_ADJUSTMENTS],
                 'required' => false,
                 'auto_skip' => true,
@@ -245,6 +261,7 @@ class PathwayConfigService
                 'owner_department' => 'costing',
                 'action_summary' => 'تسجيل التكلفة صامتاً (مديونية سيادية)',
                 'on_complete' => 'اعتماد تلقائي ← أمر شغل ← المخزن',
+                'next_step_key' => 'manufacturing',
                 'stage_keys' => [CaseRecord::STAGE_COST_CALC, CaseRecord::STAGE_QUOTE, CaseRecord::STAGE_OPERATIONS],
                 'required' => true,
                 'auto_skip' => false,
@@ -258,6 +275,7 @@ class PathwayConfigService
                 'owner_department' => 'warehouse',
                 'action_summary' => 'صرف وتصنيع',
                 'on_complete' => 'ينتقل للتسليمات',
+                'next_step_key' => 'delivery',
                 'stage_keys' => [CaseRecord::STAGE_MANUFACTURING],
                 'required' => true,
                 'auto_skip' => false,
@@ -271,6 +289,7 @@ class PathwayConfigService
                 'owner_department' => 'delivery',
                 'action_summary' => 'تسليم للمريض',
                 'on_complete' => 'إغلاق الحالة',
+                'next_step_key' => self::NEXT_COMPLETED,
                 'stage_keys' => [CaseRecord::STAGE_READY_DELIVERY, CaseRecord::STAGE_DELIVERED],
                 'required' => true,
                 'auto_skip' => false,
@@ -348,10 +367,12 @@ class PathwayConfigService
         $stored = $query->get();
 
         if ($stored->isEmpty()) {
-            return $this->normalizeDefaults($pathway, self::DEFAULTS[$pathway], $activeOnly);
+            return $this->enrichStepsWithNext($pathway, $this->normalizeDefaults($pathway, self::DEFAULTS[$pathway], $activeOnly));
         }
 
-        return $stored->map(fn (PathwayStep $step) => $this->formatStep($pathway, $step))->values()->all();
+        $rows = $stored->map(fn (PathwayStep $step) => $this->formatStep($pathway, $step))->values()->all();
+
+        return $this->enrichStepsWithNext($pathway, $rows);
     }
 
     /** @return list<array{key: string, label: string}> */
@@ -433,7 +454,9 @@ class PathwayConfigService
         DB::transaction(function () use ($pathway, $steps) {
             PathwayStep::query()->where('pathway', $pathway)->delete();
 
-            foreach ($steps as $row) {
+            $enriched = $this->enrichStepsWithNext($pathway, $steps);
+
+            foreach ($enriched as $row) {
                 $primaryStage = ($row['stage_keys'] ?? [])[0] ?? $row['key'];
                 $locked = $this->isBusinessLocked($pathway, $primaryStage);
 
@@ -448,6 +471,7 @@ class PathwayConfigService
                     'owner_department' => $row['owner_department'] ?? null,
                     'action_summary' => $row['action_summary'] ?? null,
                     'on_complete' => $row['on_complete'] ?? null,
+                    'next_step_key' => $row['next_step_key'] ?? null,
                     'required' => $locked ? true : (bool) ($row['required'] ?? true),
                     'auto_skip' => $locked ? false : (bool) ($row['auto_skip'] ?? false),
                     'skip_roles' => $locked ? [] : array_values($row['skip_roles'] ?? []),
@@ -514,6 +538,7 @@ class PathwayConfigService
             'owner_department' => $step->owner_department ?: ($default['owner_department'] ?? 'reception'),
             'action_summary' => $step->action_summary ?: ($default['action_summary'] ?? ''),
             'on_complete' => $step->on_complete ?: ($default['on_complete'] ?? ''),
+            'next_step_key' => $step->next_step_key ?: ($default['next_step_key'] ?? null),
             'required' => $locked ? true : (bool) ($step->required ?? $default['required'] ?? true),
             'auto_skip' => $locked ? false : (bool) ($step->auto_skip ?? $default['auto_skip'] ?? false),
             'skip_roles' => $locked ? [] : array_values($step->skip_roles ?? $default['skip_roles'] ?? []),
@@ -562,6 +587,7 @@ class PathwayConfigService
                 'owner_department' => $row['owner_department'] ?? null,
                 'action_summary' => $row['action_summary'] ?? null,
                 'on_complete' => $row['on_complete'] ?? null,
+                'next_step_key' => $row['next_step_key'] ?? null,
                 'required' => $locked ? true : (bool) ($row['required'] ?? true),
                 'auto_skip' => $locked ? false : (bool) ($row['auto_skip'] ?? false),
                 'skip_roles' => array_values($row['skip_roles'] ?? []),
@@ -577,6 +603,68 @@ class PathwayConfigService
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $steps
+     * @return list<array<string, mixed>>
+     */
+    private function enrichStepsWithNext(string $pathway, array $steps): array
+    {
+        if ($steps === []) {
+            return [];
+        }
+
+        $knownKeys = [];
+        foreach ($steps as $step) {
+            $knownKeys[$step['key']] = true;
+        }
+
+        return array_map(function (array $step, int $index) use ($pathway, $steps, $knownKeys) {
+            $default = $this->defaultRow($pathway, $step['key']);
+            $nextKey = $step['next_step_key'] ?? $default['next_step_key'] ?? null;
+
+            if (! $nextKey) {
+                $nextKey = $steps[$index + 1]['key'] ?? self::NEXT_COMPLETED;
+            }
+
+            if ($nextKey !== self::NEXT_COMPLETED && ! isset($knownKeys[$nextKey])) {
+                $nextKey = $steps[$index + 1]['key'] ?? self::NEXT_COMPLETED;
+            }
+
+            $nextLabel = $this->labelForNextKey($steps, $nextKey);
+
+            $step['next_step_key'] = $nextKey;
+            $step['next_step_label'] = $nextLabel;
+            $step['on_complete'] = $this->onCompleteText($nextLabel, $nextKey);
+
+            return $step;
+        }, $steps, array_keys($steps));
+    }
+
+    /** @param  list<array<string, mixed>>  $steps */
+    private function labelForNextKey(array $steps, string $nextKey): string
+    {
+        if ($nextKey === self::NEXT_COMPLETED) {
+            return 'إغلاق المسار';
+        }
+
+        foreach ($steps as $step) {
+            if (($step['key'] ?? '') === $nextKey) {
+                return (string) ($step['label'] ?? $nextKey);
+            }
+        }
+
+        return PathwayDepartments::label($nextKey);
+    }
+
+    private function onCompleteText(string $nextLabel, string $nextKey): string
+    {
+        if ($nextKey === self::NEXT_COMPLETED) {
+            return 'الحالة مكتملة';
+        }
+
+        return 'ينتقل إلى '.$nextLabel;
     }
 
     /** @param  list<array{key: string}>  $steps */

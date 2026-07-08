@@ -31,6 +31,7 @@ class UpdatePathwaySettingsRequest extends FormRequest
             'steps.*.owner_department' => ['nullable', 'string', 'max:32'],
             'steps.*.action_summary' => ['nullable', 'string', 'max:500'],
             'steps.*.on_complete' => ['nullable', 'string', 'max:255'],
+            'steps.*.next_step_key' => ['nullable', 'string', 'max:64', 'regex:/^(_completed|[a-z0-9_]+)$/'],
             'steps.*.required' => ['sometimes', 'boolean'],
             'steps.*.auto_skip' => ['sometimes', 'boolean'],
             'steps.*.skip_roles' => ['nullable', 'array'],

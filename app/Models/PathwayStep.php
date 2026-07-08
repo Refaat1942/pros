@@ -24,6 +24,7 @@ class PathwayStep extends Model
         'owner_department',
         'action_summary',
         'on_complete',
+        'next_step_key',
         'required',
         'auto_skip',
         'skip_roles',
