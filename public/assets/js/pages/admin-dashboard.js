@@ -775,6 +775,7 @@
         qty: item.qty || 0,
         reserved: item.reserved || 0,
         status: item.status || 'ok',
+        is_quick_dispense: !!item.is_quick_dispense,
         prices: (item.prices || []).map(function (p) {
           return {
             id: String(p.id || ''),
@@ -898,6 +899,8 @@
       var catSel = document.getElementById('catalogCategory');
       if (catSel) catSel.selectedIndex = catSel.options.length > 1 ? 1 : 0;
       document.getElementById('catalogQty').value = '0';
+      var quickReset = document.getElementById('catalogIsQuickDispense');
+      if (quickReset) quickReset.checked = false;
       document.getElementById('itemPricesList').innerHTML = priceRowHtml({}, 'NEW');
     }
 
@@ -924,6 +927,8 @@
           }
         }
         document.getElementById('catalogQty').value = item.qty || 0;
+        var quickEdit = document.getElementById('catalogIsQuickDispense');
+        if (quickEdit) quickEdit.checked = !!item.is_quick_dispense;
         document.getElementById('itemPricesList').innerHTML = (item.prices && item.prices.length)
           ? item.prices.map(function(p) { return priceRowHtml(p, item.code); }).join('')
           : priceRowHtml({}, item.code);
@@ -1122,6 +1127,7 @@
       var spec = document.getElementById('catalogSpec').value.trim() || null;
       var categoryId = document.getElementById('catalogCategory').value;
       var qty = parseInt(document.getElementById('catalogQty').value, 10) || 0;
+      var isQuickDispense = !!(document.getElementById('catalogIsQuickDispense') || {}).checked;
       var prices = collectPricesFromForm();
       if (!name) {
         alert('يرجى إدخال اسم الصنف');
@@ -1141,6 +1147,7 @@
         spec: spec,
         category_id: parseInt(categoryId, 10),
         qty: qty,
+        is_quick_dispense: isQuickDispense,
         prices: prices
       };
 

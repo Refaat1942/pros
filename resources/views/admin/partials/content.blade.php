@@ -177,6 +177,12 @@
               <label>الكمية الابتدائية</label>
               <input type="number" id="catalogQty" min="0" value="0">
             </div>
+            <div style="display:flex;align-items:center;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;">
+                <input type="checkbox" id="catalogIsQuickDispense" style="width:auto;">
+                <span>صنف صرف سريع (ربح مباشر 40%)</span>
+              </label>
+            </div>
           </div>
           <div class="prices-block">
             <h4>💰 أسعار الصنف (متعددة — أكواد / موردين)</h4>

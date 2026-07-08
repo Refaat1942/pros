@@ -63,6 +63,7 @@ class StockCatalogService
             'spec' => $item->spec,
             'category_id' => $item->category_id,
             'category' => $item->category?->name ?? '',
+            'is_quick_dispense' => (bool) $item->is_quick_dispense,
             'uom' => $item->uom,
             'attributes' => $this->categorySchema->formatItemAttributes($item),
             'attributes_map' => collect($this->categorySchema->formatItemAttributes($item))
@@ -105,6 +106,7 @@ class StockCatalogService
                 'spec' => $data['spec'] ?? null,
                 'category_id' => $data['category_id'] ?? null,
                 'store_class' => $this->deriveStoreClass($category),
+                'is_quick_dispense' => (bool) ($data['is_quick_dispense'] ?? false),
                 'uom' => $this->normalizeUom($data['uom'] ?? null),
                 'barcode' => 'BC-'.$code,
                 'qty' => $qty,
@@ -162,6 +164,9 @@ class StockCatalogService
                     : (int) ($item->min_qty ?? 0),
                 'price' => $price,
                 'expiry_date' => $data['expiry_date'] ?? $item->expiry_date,
+                'is_quick_dispense' => array_key_exists('is_quick_dispense', $data)
+                    ? (bool) $data['is_quick_dispense']
+                    : (bool) $item->is_quick_dispense,
             ]);
 
             if (! empty($data['category_id'])) {

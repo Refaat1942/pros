@@ -9,6 +9,7 @@ use App\Models\ContractCompany;
 use App\Models\ContractCompanyDebt;
 use App\Models\Patient;
 use App\Models\Permission;
+use App\Models\Quote;
 use App\Models\Role;
 use App\Models\StockItem;
 use App\Models\Supplier;
@@ -187,13 +188,14 @@ trait ProstheticTestHelper
         ]);
     }
 
-    protected function stockItem(string $code = 'RM-001', int $qty = 20, float $wac = 100.00): StockItem
+    protected function stockItem(string $code = 'RM-001', int $qty = 20, float $wac = 100.00, bool $quick = false): StockItem
     {
         return StockItem::create([
             'code' => $code,
             'name' => "صنف {$code}",
             'spec' => 'مواصفات قياسية',
             'store_class' => 'A',
+            'is_quick_dispense' => $quick,
             'uom' => 'piece',
             'barcode' => "BC-{$code}",
             'qty' => $qty,
@@ -283,6 +285,14 @@ trait ProstheticTestHelper
         $case = $this->operationsReadyCase($patient, $codes);
 
         if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
+            // محاكاة موافقة الجهة (مسح خطاب الموافقة في الاستقبال) قبل إصدار أمر الشغل.
+            if (! $case->isMilitary() && ! $case->isCashCivilian()) {
+                Quote::where('case_id', $case->id)
+                    ->orderByDesc('id')
+                    ->limit(1)
+                    ->update(['status' => Quote::STATUS_APPROVED, 'status_label' => 'معتمد من الجهة']);
+            }
+
             $case = app(OperationsService::class)->approve($case, 'اختبار');
         }
 
@@ -299,6 +309,31 @@ trait ProstheticTestHelper
         app(BomService::class)->releaseToWip($bom, $scans);
 
         return $case->fresh();
+    }
+
+    /**
+     * يسجّل موافقة الجهة على آخر عرض سعر (محاكاة مسح خطاب الموافقة في الاستقبال).
+     */
+    protected function markEntityApproved(CaseRecord $case): void
+    {
+        Quote::where('case_id', $case->id)
+            ->orderByDesc('id')
+            ->limit(1)
+            ->update(['status' => Quote::STATUS_APPROVED, 'status_label' => 'معتمد من الجهة']);
+    }
+
+    /**
+     * يسجّل موافقة الجهة (للمدني التعاقدي) ثم يعتمد الحالة في مكتب التشغيل (إصدار أمر الشغل).
+     */
+    protected function approveAtOperations(CaseRecord $case, string $note = 'اختبار'): CaseRecord
+    {
+        $case = $case->fresh();
+
+        if (! $case->isMilitary() && ! $case->isCashCivilian()) {
+            $this->markEntityApproved($case);
+        }
+
+        return app(OperationsService::class)->approve($case, $note);
     }
 
     protected function advanceCaseToFinishing(CaseRecord $case): CaseRecord

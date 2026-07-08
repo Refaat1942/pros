@@ -19,6 +19,9 @@ class UpdateCatalogItemRequest extends BaseRequest
             'min_qty' => ['nullable', 'integer', 'min:0'],
             'expiry_date' => ['nullable', 'date'],
 
+            // صنف صرف سريع — هامش ربح مباشر (40%) بلا مكوّنات.
+            'is_quick_dispense' => ['nullable', 'boolean'],
+
             // أسعار إضافية (صنف بأكثر من سعر) — اختيارية.
             'prices' => ['nullable', 'array'],
             'prices.*.id' => ['nullable'],

@@ -16,6 +16,7 @@ class StoreStockItemRequest extends BaseRequest
             'spec' => ['nullable', 'string', 'max:500'],
             'category_id' => ['nullable', 'integer', 'exists:stock_categories,id'],
             'store_class' => ['nullable', 'string', 'in:'.implode(',', StockStoreClass::values())],
+            'is_quick_dispense' => ['nullable', 'boolean'],
             'uom' => ['required', 'string', 'in:'.implode(',', StockUom::values())],
             'barcode' => ['required', 'string', 'max:100', 'unique:stock_items,barcode'],
         ];
