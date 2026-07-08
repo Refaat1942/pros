@@ -71,6 +71,26 @@ class CostingModeService
     }
 
     /**
+     * بروفايل الطرف الصناعي (95% + مكوّنات) — للتسعير التلقائي المدمج.
+     *
+     * @return array{key:string, label:string, profit_rate:float, has_components:bool, components:list<array{label:string, rate:float}>}|null
+     */
+    public function limbProfile(): ?array
+    {
+        return $this->find(self::MODE_LIMB);
+    }
+
+    /**
+     * بروفايل الصرف السريع (40% مباشر بلا مكوّنات) — للتسعير التلقائي المدمج.
+     *
+     * @return array{key:string, label:string, profit_rate:float, has_components:bool, components:list<array{label:string, rate:float}>}|null
+     */
+    public function quickProfile(): ?array
+    {
+        return $this->find(self::MODE_QUICK);
+    }
+
+    /**
      * نمط واحد بمفتاحه — أو null.
      *
      * @return array{key:string, label:string, profit_rate:float, has_components:bool, components:list<array{label:string, rate:float}>}|null

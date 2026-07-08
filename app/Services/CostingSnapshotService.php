@@ -2,15 +2,16 @@
 
 namespace App\Services;
 
-use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Support\CostingEngine;
 
 /**
- * لقطة التكاليف — تربط النمط المختار بمحرك التكاليف وتُجمّد النتيجة على طلب التسعير.
+ * لقطة التكاليف — تحسب سعر البيع تلقائياً من البنود الحيّة وتُجمّد النتيجة على طلب التسعير.
  *
- * إجمالي المواد = computed_total (أعلى سعر شراء). سعر البيع الناتج يصبح عرض السعر.
- * عند غياب النمط: selling_price = المواد (سلوك متوافق مع ما قبل الأنماط).
+ * لا يوجد «نمط» يُختار يدوياً بعد الآن:
+ *   - بنود «صنف صرف سريع» (is_quick_dispense) → 40% مباشرة بلا مكوّنات.
+ *   - باقي البنود (الطرف الصناعي) → مواد + مكوّنات + 95%.
+ * سعر البيع = مجموع الجزأين، ويصبح قيمة عرض السعر.
  */
 class CostingSnapshotService
 {
@@ -20,57 +21,33 @@ class CostingSnapshotService
     ) {}
 
     /**
-     * حساب التفصيل الحالي (بدون حفظ) لطلب تسعير حسب نمطه المخزّن.
+     * حساب التفصيل الحالي (بدون حفظ) لطلب تسعير من بنوده الحيّة.
      *
-     * @return array{mode_key:string|null, mode_label:string|null, materials_total:float, components:list<array{label:string, rate:float, amount:float}>, components_total:float, total_cost:float, profit_rate:float, profit_amount:float, selling_price:float}
+     * @return array<string, mixed>
      */
     public function breakdown(PricingRequest $request): array
     {
-        $mode = $this->modeService->find($request->costing_mode);
+        [$baseMaterials, $quickMaterials] = $this->splitMaterials($request);
 
-        return $this->engine->calculate($mode, (float) $request->computed_total);
+        return $this->engine->calculateSplit(
+            $this->modeService->limbProfile(),
+            $this->modeService->quickProfile(),
+            $baseMaterials,
+            $quickMaterials,
+        );
     }
 
     /**
-     * إعادة احتساب اللقطة من النمط المخزّن + المواد الحالية، وحفظها.
+     * إعادة احتساب اللقطة من البنود الحالية وحفظها.
      */
     public function refresh(PricingRequest $request): PricingRequest
     {
-        return $this->persist($request, $request->costing_mode);
+        return $this->persist($request);
     }
 
-    /**
-     * ضبط نمط التكاليف لحالة في مرحلة التكاليف ثم إعادة الاحتساب والحفظ.
-     */
-    public function applyMode(CaseRecord $case, ?string $modeKey): PricingRequest
+    private function persist(PricingRequest $request): PricingRequest
     {
-        abort_unless($case->isInCostCalc(), 422, 'الحالة ليست في مرحلة التكاليف.');
-
-        $request = $case->pricingRequest;
-        abort_unless($request !== null, 422, 'لا يوجد طلب تسعير لهذه الحالة.');
-
-        if ($modeKey !== null && $modeKey !== '' && $this->modeService->find($modeKey) === null) {
-            abort(422, 'نمط التكاليف غير معروف.');
-        }
-
-        $before = $request->only(['costing_mode', 'selling_price']);
-        $request = $this->persist($request, $modeKey);
-
-        AuditService::log(
-            action: 'update',
-            description: "ضبط نمط التكاليف — {$request->request_no}",
-            tag: 'pricing',
-            before: $before,
-            after: $request->only(['costing_mode', 'total_cost', 'profit_rate', 'selling_price']),
-        );
-
-        return $request;
-    }
-
-    private function persist(PricingRequest $request, ?string $modeKey): PricingRequest
-    {
-        $mode = $this->modeService->find($modeKey);
-        $result = $this->engine->calculate($mode, (float) $request->computed_total);
+        $result = $this->breakdown($request);
 
         $request->update([
             'costing_mode' => $result['mode_key'],
@@ -78,9 +55,39 @@ class CostingSnapshotService
             'total_cost' => $result['total_cost'],
             'profit_rate' => $result['profit_rate'],
             'selling_price' => $result['selling_price'],
-            'components_snapshot' => json_encode($result['components'], JSON_UNESCAPED_UNICODE),
+            'components_snapshot' => json_encode($result, JSON_UNESCAPED_UNICODE),
         ]);
 
         return $request->fresh();
+    }
+
+    /**
+     * تقسيم إجمالي المواد إلى (طرف صناعي، صرف سريع) حسب علم الصنف.
+     *
+     * @return array{0: float, 1: float}
+     */
+    private function splitMaterials(PricingRequest $request): array
+    {
+        $request->load('items.stockItem');
+
+        if ($request->items->isEmpty()) {
+            // لا بنود مُفصّلة — نعامل الإجمالي كطرف صناعي (توافق خلفي).
+            return [(float) $request->computed_total, 0.0];
+        }
+
+        $base = 0.0;
+        $quick = 0.0;
+
+        foreach ($request->items as $item) {
+            $lineTotal = (float) $item->line_total;
+
+            if ($item->stockItem?->is_quick_dispense) {
+                $quick += $lineTotal;
+            } else {
+                $base += $lineTotal;
+            }
+        }
+
+        return [round($base, 2), round($quick, 2)];
     }
 }

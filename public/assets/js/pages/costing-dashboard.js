@@ -14,12 +14,10 @@
 
   var LIST_URL = '/costing/queue/list';
   var SHOW_URL = function (id) { return '/costing/queue/' + id; };
-  var MODE_URL = function (id) { return '/costing/queue/' + id + '/mode'; };
   var CONFIRM_URL = function (id) { return '/costing/queue/' + id + '/confirm'; };
 
   var activeCaseId = null;
   var refreshInFlight = false;
-  var costingModes = [];
   var canSeeInternal = false;
   var canSeeRates = false;
   var currentInternalTotal = 0;
@@ -108,32 +106,6 @@
       });
   }
 
-  function renderModePicker(currentKey) {
-    var select = $('costingModeSelect');
-    if (!select) return;
-
-    var opts = ['<option value="">— بدون نمط (المواد فقط) —</option>'];
-    costingModes.forEach(function (m) {
-      var selected = m.key === currentKey ? ' selected' : '';
-      // النِسَب تظهر للأدمن فقط — غير الأدمن يرى اسم النمط فقط.
-      var suffix = (canSeeRates && m.profit_rate != null) ? ' (ربح ' + esc(m.profit_rate) + '%)' : '';
-      opts.push('<option value="' + esc(m.key) + '"' + selected + '>' + esc(m.label) + suffix + '</option>');
-    });
-    select.innerHTML = opts.join('');
-
-    var hint = $('costingModeHint');
-    if (hint) {
-      var mode = costingModes.filter(function (m) { return m.key === currentKey; })[0];
-      if (mode && canSeeRates) {
-        hint.textContent = mode.has_components
-          ? 'المكوّنات نسبة من المواد، ثم يُضاف هامش الربح على إجمالي التكلفة.'
-          : 'صرف سريع: هامش ربح مباشر على المواد بدون مكوّنات.';
-      } else {
-        hint.textContent = 'اختر نمط التكاليف لاحتساب سعر البيع.';
-      }
-    }
-  }
-
   function renderBreakdown(costing) {
     if (!costing) return;
 
@@ -174,12 +146,34 @@
       }
     }
 
+    // سعر بيع الطرف الصناعي (95%) — يظهر فقط عند وجود مواد طرف.
+    var hasBase = (parseFloat(costing.base_materials) || 0) > 0;
+    var baseRow = $('costingBaseSellingRow');
+    if (baseRow) {
+      baseRow.style.display = hasBase ? '' : 'none';
+      if (hasBase) {
+        if ($('costingBaseSellingLabel')) $('costingBaseSellingLabel').textContent = 'سعر بيع الطرف الصناعي (' + (costing.base_profit_rate || 0) + '%)';
+        if ($('costingBaseSelling')) $('costingBaseSelling').textContent = fmt(costing.base_selling) + ' ج.م';
+      }
+    }
+
+    // بند الصرف السريع (40%) — يظهر فقط عند وجود أصناف صرف سريع.
+    var hasQuick = (parseFloat(costing.quick_materials) || 0) > 0;
+    var quickRow = $('costingQuickRow');
+    if (quickRow) {
+      quickRow.style.display = hasQuick ? '' : 'none';
+      if (hasQuick) {
+        if ($('costingQuickLabel')) $('costingQuickLabel').textContent = 'الصرف السريع (' + (costing.quick_profit_rate || 0) + '%)';
+        if ($('costingQuickSelling')) $('costingQuickSelling').textContent = fmt(costing.quick_selling) + ' ج.م';
+      }
+    }
+
     if ($('costingTotalCost')) $('costingTotalCost').textContent = fmt(costing.total_cost) + ' ج.م';
 
     if ($('costingWacRow')) $('costingWacRow').style.display = canSeeInternal ? '' : 'none';
     if ($('costingWacTotal') && canSeeInternal) $('costingWacTotal').textContent = fmt(currentInternalTotal) + ' ج.م';
 
-    if ($('costingProfitLabel')) $('costingProfitLabel').textContent = 'هامش الربح (' + (costing.profit_rate || 0) + '%)';
+    if ($('costingProfitLabel')) $('costingProfitLabel').textContent = 'إجمالي هامش الربح (' + (costing.profit_rate || 0) + '%)';
     if ($('costingProfitAmount')) $('costingProfitAmount').textContent = fmt(costing.profit_amount) + ' ج.م';
     if ($('costingSellingPrice')) $('costingSellingPrice').textContent = fmt(costing.selling_price) + ' ج.م';
   }
@@ -191,7 +185,6 @@
         var c = res.data.case || {};
         var pricing = res.data.pricing || {};
         var costing = res.data.costing || null;
-        costingModes = res.data.costing_modes || [];
         canSeeInternal = !!res.data.can_see_internal;
         canSeeRates = !!res.data.can_see_rates;
         currentInternalTotal = pricing.internal_total || 0;
@@ -215,31 +208,12 @@
           }).join('');
         }
 
-        renderModePicker(costing ? costing.mode_key : null);
         renderBreakdown(costing);
 
         var modal = $('costingModal');
         if (modal) modal.classList.add('visible');
       })
       .catch(function (err) { toast(apiMessage(err, 'تعذّر فتح التفاصيل'), true); });
-  }
-
-  function changeMode() {
-    if (!activeCaseId || !window.axios) return;
-    var select = $('costingModeSelect');
-    if (!select) return;
-
-    var modeKey = select.value || '';
-    select.disabled = true;
-
-    axios.post(MODE_URL(activeCaseId), { mode: modeKey })
-      .then(function (res) {
-        var costing = res.data.costing || null;
-        renderModePicker(costing ? costing.mode_key : null);
-        renderBreakdown(costing);
-      })
-      .catch(function (err) { toast(apiMessage(err, 'تعذّر تحديث النمط'), true); })
-      .finally(function () { select.disabled = false; });
   }
 
   function closeModal() {
@@ -271,7 +245,6 @@
     if ($('closeCostingModal')) $('closeCostingModal').addEventListener('click', closeModal);
     if ($('btnCancelCosting')) $('btnCancelCosting').addEventListener('click', closeModal);
     if ($('btnConfirmCosting')) $('btnConfirmCosting').addEventListener('click', confirmCosting);
-    if ($('costingModeSelect')) $('costingModeSelect').addEventListener('change', changeMode);
     var modal = $('costingModal');
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
   });

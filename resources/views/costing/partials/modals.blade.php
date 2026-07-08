@@ -26,12 +26,6 @@
         </div>
 
         <div class="costing-grid__panel">
-          <div class="costing-mode-picker">
-            <label for="costingModeSelect" class="costing-mode-picker__label">🧮 نمط التكاليف</label>
-            <select id="costingModeSelect" class="form-control"></select>
-            <p class="costing-mode-picker__hint" id="costingModeHint"></p>
-          </div>
-
           <div id="costingBreakdown" class="costing-breakdown">
             <h4 class="costing-breakdown__title" id="costingBreakdownTitle">📊 تفصيل التكلفة وسعر البيع</h4>
             {{-- التفاصيل الداخلية (نِسَب/مكوّنات/تكلفة) تظهر للأدمن فقط --}}
@@ -44,6 +38,14 @@
               <div class="costing-overhead-row" id="costingComponentsTotalRow" style="display:none;">
                 <span>إجمالي المكوّنات</span>
                 <strong id="costingComponentsTotal">—</strong>
+              </div>
+              <div class="costing-overhead-row costing-overhead-row--highlight" id="costingBaseSellingRow" style="display:none;">
+                <span id="costingBaseSellingLabel">سعر بيع الطرف الصناعي</span>
+                <strong id="costingBaseSelling">—</strong>
+              </div>
+              <div class="costing-overhead-row" id="costingQuickRow" style="display:none;">
+                <span id="costingQuickLabel">الصرف السريع</span>
+                <strong id="costingQuickSelling">—</strong>
               </div>
               <div class="costing-overhead-row costing-overhead-row--highlight">
                 <span>إجمالي التكلفة</span>
@@ -83,25 +85,6 @@
   }
   @media (max-width: 860px) {
     .costing-grid { grid-template-columns: 1fr; }
-  }
-  .costing-mode-picker {
-    padding: 12px 14px;
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    border-radius: 10px;
-    margin-bottom: 12px;
-  }
-  .costing-mode-picker__label {
-    display: block;
-    font-weight: 800;
-    font-size: 14px;
-    color: #3730a3;
-    margin-bottom: 6px;
-  }
-  .costing-mode-picker__hint {
-    margin: 6px 0 0;
-    font-size: 12px;
-    color: #4f46e5;
   }
   .costing-breakdown {
     padding: 14px;

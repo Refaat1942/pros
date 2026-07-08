@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Costing;
 use App\Http\Controllers\Controller;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
-use App\Services\CostingModeService;
 use App\Services\CostingService;
 use App\Services\CostingSnapshotService;
 use App\Services\PricingService;
@@ -30,7 +29,6 @@ class CostingController extends Controller
         private readonly OverheadCostingEngine $overheadCostingEngine,
         private readonly StockCategorySchemaService $categorySchema,
         private readonly CostingSnapshotService $snapshotService,
-        private readonly CostingModeService $modeService,
     ) {}
 
     /**
@@ -98,9 +96,6 @@ class CostingController extends Controller
             'case' => $this->formatSummary($case),
             'pricing' => $pricing ? $this->formatPricingDetail($pricing, $case) : null,
             'costing' => $pricing ? $this->formatCostingBreakdown($pricing, $canSeeRates) : null,
-            'costing_modes' => $canSeeRates
-                ? $this->modeService->allModes()
-                : $this->sanitizeModes($this->modeService->allModes()),
             'bom' => $case->bom ? [
                 'id' => $case->bom->id,
                 'bom_no' => $case->bom->bom_no,
@@ -119,37 +114,6 @@ class CostingController extends Controller
     private function canSeeRates(): bool
     {
         return (bool) Auth::user()?->isAdmin();
-    }
-
-    /**
-     * إخفاء النِسَب والمكوّنات عن غير الأدمن — يبقى الاسم والمفتاح فقط لاختيار النمط.
-     *
-     * @param  array<int, array<string, mixed>>  $modes
-     * @return array<int, array{key: string, label: string}>
-     */
-    private function sanitizeModes(array $modes): array
-    {
-        return array_map(fn (array $m) => [
-            'key' => $m['key'],
-            'label' => $m['label'],
-        ], $modes);
-    }
-
-    /**
-     * ضبط نمط التكاليف (طرف صناعي / صرف سريع) وإعادة احتساب سعر البيع.
-     */
-    public function setMode(Request $request, CaseRecord $case): JsonResponse
-    {
-        $modeKey = $request->input('mode');
-        $modeKey = is_string($modeKey) && $modeKey !== '' ? $modeKey : null;
-
-        $case->load('pricingRequest');
-        $pricing = $this->snapshotService->applyMode($case, $modeKey);
-
-        return response()->json([
-            'message' => 'تم تحديث نمط التكاليف.',
-            'costing' => $this->formatCostingBreakdown($pricing, $this->canSeeRates()),
-        ]);
     }
 
     /**
@@ -191,31 +155,36 @@ class CostingController extends Controller
     }
 
     /**
-     * تفصيل التكاليف الجديد (نمط + مكوّنات + ربح + سعر بيع) — الأساس لعرض السعر.
+     * تفصيل التكاليف التلقائي (طرف صناعي 95% + صرف سريع 40%) — الأساس لعرض السعر.
      */
     private function formatCostingBreakdown(PricingRequest $pricing, bool $canSeeRates = true): array
     {
-        $breakdown = $this->snapshotService->breakdown($pricing);
+        $b = $this->snapshotService->breakdown($pricing);
 
-        // غير الأدمن: سعر البيع واسم النمط فقط — بدون نِسَب أو مكوّنات أو تكلفة داخلية.
+        // غير الأدمن: سعر البيع فقط — بدون نِسَب أو مكوّنات أو تكلفة داخلية.
         if (! $canSeeRates) {
             return [
-                'mode_key' => $pricing->costing_mode,
-                'mode_label' => $breakdown['mode_label'],
-                'selling_price' => $breakdown['selling_price'],
+                'selling_price' => $b['selling_price'],
             ];
         }
 
         return [
-            'mode_key' => $pricing->costing_mode,
-            'mode_label' => $breakdown['mode_label'],
-            'materials_total' => $breakdown['materials_total'],
-            'components' => $breakdown['components'],
-            'components_total' => $breakdown['components_total'],
-            'total_cost' => $breakdown['total_cost'],
-            'profit_rate' => $breakdown['profit_rate'],
-            'profit_amount' => $breakdown['profit_amount'],
-            'selling_price' => $breakdown['selling_price'],
+            'materials_total' => $b['materials_total'],
+            'base_materials' => $b['base_materials'],
+            'quick_materials' => $b['quick_materials'],
+            'components' => $b['components'],
+            'components_total' => $b['components_total'],
+            'base_total_cost' => $b['base_total_cost'],
+            'base_profit_rate' => $b['base_profit_rate'],
+            'base_profit_amount' => $b['base_profit_amount'],
+            'base_selling' => $b['base_selling'],
+            'quick_profit_rate' => $b['quick_profit_rate'],
+            'quick_profit_amount' => $b['quick_profit_amount'],
+            'quick_selling' => $b['quick_selling'],
+            'total_cost' => $b['total_cost'],
+            'profit_rate' => $b['profit_rate'],
+            'profit_amount' => $b['profit_amount'],
+            'selling_price' => $b['selling_price'],
         ];
     }
 

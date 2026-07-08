@@ -75,4 +75,37 @@ class CostingEngineTest extends TestCase
         $this->assertSame(0.0, $result['materials_total']);
         $this->assertSame(0.0, $result['selling_price']);
     }
+
+    public function test_split_pure_limb_matches_limb_build(): void
+    {
+        $result = (new CostingEngine)->calculateSplit($this->limbMode(), $this->quickMode(), 1000.0, 0.0);
+
+        // مكوّنات 100% ⇒ 1000 ؛ تكلفة 2000 ؛ بيع 3900 ؛ لا صرف سريع.
+        $this->assertSame(1000.0, $result['components_total']);
+        $this->assertSame(3900.0, $result['base_selling']);
+        $this->assertSame(0.0, $result['quick_selling']);
+        $this->assertSame(3900.0, $result['selling_price']);
+    }
+
+    public function test_split_pure_quick_applies_forty_percent_only(): void
+    {
+        $result = (new CostingEngine)->calculateSplit($this->limbMode(), $this->quickMode(), 0.0, 1000.0);
+
+        $this->assertSame(0.0, $result['components_total']);
+        $this->assertSame(0.0, $result['base_selling']);
+        $this->assertSame(1400.0, $result['quick_selling']);
+        $this->assertSame(1400.0, $result['selling_price']);
+    }
+
+    public function test_split_mixed_sums_both_blocks(): void
+    {
+        // طرف 1000 → 3900 ؛ صرف سريع 500 → 700 ؛ المجموع 4600.
+        $result = (new CostingEngine)->calculateSplit($this->limbMode(), $this->quickMode(), 1000.0, 500.0);
+
+        $this->assertSame(3900.0, $result['base_selling']);
+        $this->assertSame(700.0, $result['quick_selling']);
+        $this->assertSame(4600.0, $result['selling_price']);
+        // إجمالي التكلفة = 2000 (طرف) + 500 (صرف سريع) = 2500.
+        $this->assertSame(2500.0, $result['total_cost']);
+    }
 }

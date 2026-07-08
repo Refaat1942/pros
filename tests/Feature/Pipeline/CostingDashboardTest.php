@@ -345,7 +345,7 @@ class CostingDashboardTest extends TestCase
         $this->assertEquals($firstQuoteNo, Quote::where('case_id', $case->id)->value('quote_no'));
     }
 
-    public function test_setting_quick_mode_applies_profit_on_materials(): void
+    public function test_costing_auto_applies_limb_build_for_normal_items(): void
     {
         $costing = $this->userWithRole('costing');
         $case = $this->caseInAdjustments();
@@ -353,45 +353,82 @@ class CostingDashboardTest extends TestCase
         $this->actingAs($this->userWithRole('adjustments'))
             ->postJson("/adjustments/adjustments/{$case->id}/complete");
 
-        // المواد = RM-001 ×2 @200 = 400 ؛ صرف سريع 40% ⇒ 560
+        // بند عادي (طرف صناعي): مواد 400 ؛ مكوّنات 100% ⇒ 400 ؛ تكلفة 800 ؛ ربح 95% ⇒ 1560.
         $response = $this->actingAs($costing)
-            ->postJson("/costing/queue/{$case->id}/mode", ['mode' => 'quick_dispense'])
+            ->getJson("/costing/queue/{$case->id}")
             ->assertOk();
 
-        // موظف التكاليف (غير أدمن) يرى سعر البيع فقط — لا نِسَب/مكوّنات.
-        $this->assertEquals(560.0, (float) $response->json('costing.selling_price'));
-        $this->assertNull($response->json('costing.components_total'));
-        $this->assertNull($response->json('costing.materials_total'));
+        // موظف التكاليف (غير أدمن) يرى سعر البيع فقط.
+        $this->assertEquals(1560.0, (float) $response->json('costing.selling_price'));
+        $this->assertNull($response->json('costing.total_cost'));
 
-        // الحساب الداخلي محفوظ في لقطة طلب التسعير.
+        $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
+        $this->assertEquals(400.0, (float) $pricing->computed_total);
+        $this->assertEquals(400.0, (float) $pricing->components_total);
+        $this->assertEquals(800.0, (float) $pricing->total_cost);
+        $this->assertEquals(1560.0, (float) $pricing->selling_price);
+    }
+
+    public function test_costing_auto_applies_quick_dispense_for_flagged_item(): void
+    {
+        $costing = $this->userWithRole('costing');
+
+        // صنف مُعلَّم «صرف سريع» — يأخذ 40% مباشرة بلا مكوّنات.
+        $item = $this->stockItem('QD-001', qty: 20, quick: true);
+        app(StockPriceService::class)->addBatch($item, 20, 200.00, $this->makeSupplier(), 'INV-QD', now());
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'QD-001', 'qty' => 2],
+        ]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($costing)
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk();
+
+        // مواد 400 × 1.40 = 560 ، بلا مكوّنات.
+        $this->assertEquals(560.0, (float) $response->json('costing.selling_price'));
+
         $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
         $this->assertEquals(400.0, (float) $pricing->computed_total);
         $this->assertEquals(0.0, (float) $pricing->components_total);
         $this->assertEquals(560.0, (float) $pricing->selling_price);
     }
 
-    public function test_setting_limb_mode_adds_components_then_profit(): void
+    public function test_costing_auto_mixes_limb_build_and_quick_dispense(): void
     {
         $costing = $this->userWithRole('costing');
-        $case = $this->caseInAdjustments();
 
-        $this->actingAs($this->userWithRole('adjustments'))
+        // بند طرف صناعي عادي (RM-001 ×2 @200 = 400) + بند صرف سريع (QD-001 ×1 @100 = 100).
+        $this->seedStock();
+        $quick = $this->stockItem('QD-001', qty: 20, quick: true);
+        app(StockPriceService::class)->addBatch($quick, 20, 100.00, Supplier::query()->firstOrFail(), 'INV-QD', now());
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
+        ]);
+
+        $adjustments = $this->userWithRole('adjustments');
+        $this->actingAs($adjustments)
+            ->postJson("/adjustments/adjustments/{$case->id}/items", [
+                'items' => [['stock_item_code' => 'QD-001', 'name' => 'صنف QD-001', 'qty' => 1]],
+            ])
+            ->assertCreated();
+
+        $this->actingAs($adjustments)
             ->postJson("/adjustments/adjustments/{$case->id}/complete");
 
-        // المواد 400 ؛ المكوّنات 100% ⇒ 400 ؛ إجمالي التكلفة 800 ؛ ربح 95% ⇒ 1560
-        $response = $this->actingAs($costing)
-            ->postJson("/costing/queue/{$case->id}/mode", ['mode' => 'prosthetic_limb'])
-            ->assertOk();
-
-        // موظف التكاليف يرى سعر البيع فقط.
-        $this->assertEquals(1560.0, (float) $response->json('costing.selling_price'));
-        $this->assertNull($response->json('costing.total_cost'));
-
-        // الحساب الداخلي محفوظ في لقطة طلب التسعير.
         $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
-        $this->assertEquals(400.0, (float) $pricing->components_total);
-        $this->assertEquals(800.0, (float) $pricing->total_cost);
-        $this->assertEquals(1560.0, (float) $pricing->selling_price);
+
+        // الطرف: 400 + مكوّنات 400 = 800 × 1.95 = 1560 ؛ الصرف السريع: 100 × 1.40 = 140 ؛ المجموع 1700.
+        $this->assertEquals(1700.0, (float) $pricing->selling_price);
+        $this->assertEquals(500.0, (float) $pricing->computed_total);
     }
 
     public function test_costing_recomputes_selling_from_live_bom(): void
@@ -410,10 +447,11 @@ class CostingDashboardTest extends TestCase
             ->getJson("/costing/queue/{$case->id}")
             ->assertOk();
 
-        // بلا نمط: سعر البيع = المواد = 3 × 200 = 600 (يُعاد احتسابه من BOM تلقائياً).
-        $this->assertEquals(600.0, (float) $response->json('costing.selling_price'));
+        // طرف صناعي تلقائي: مواد 3×200=600 ؛ مكوّنات 600 ؛ تكلفة 1200 ؛ ربح 95% ⇒ 2340.
+        $this->assertEquals(2340.0, (float) $response->json('costing.selling_price'));
         $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
         $this->assertEquals(600.0, (float) $pricing->computed_total);
+        $this->assertEquals(2340.0, (float) $pricing->selling_price);
     }
 
     public function test_costing_hides_rates_and_components_from_non_admin(): void
@@ -434,12 +472,6 @@ class CostingDashboardTest extends TestCase
         $this->assertNull($response->json('costing.components'));
         $this->assertNull($response->json('costing.total_cost'));
         $this->assertNotNull($response->json('costing.selling_price'));
-
-        // قائمة الأنماط للواجهة بلا نِسَب.
-        $modes = $response->json('costing_modes');
-        $this->assertNotEmpty($modes);
-        $this->assertArrayNotHasKey('profit_rate', $modes[0]);
-        $this->assertArrayHasKey('label', $modes[0]);
     }
 
     public function test_confirm_uses_selling_price_as_quote_amount(): void
@@ -451,15 +483,12 @@ class CostingDashboardTest extends TestCase
             ->postJson("/adjustments/adjustments/{$case->id}/complete");
 
         $this->actingAs($costing)
-            ->postJson("/costing/queue/{$case->id}/mode", ['mode' => 'quick_dispense'])
-            ->assertOk();
-
-        $this->actingAs($costing)
             ->postJson("/costing/queue/{$case->id}/confirm")
             ->assertOk();
 
+        // طرف صناعي تلقائي ⇒ سعر البيع 1560 يصبح قيمة عرض السعر.
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
-        $this->assertEquals(560.00, (float) $quote->total);
+        $this->assertEquals(1560.00, (float) $quote->total);
     }
 
     public function test_military_costing_confirm_auto_approves_to_warehouse(): void
