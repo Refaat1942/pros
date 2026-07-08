@@ -13,7 +13,10 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
  */
 class PublicTrackingService
 {
-    public function __construct(private readonly TrackingUidService $trackingUidService) {}
+    public function __construct(
+        private readonly TrackingUidService $trackingUidService,
+        private readonly PathwayConfigService $pathwayConfig,
+    ) {}
 
     /**
      * @return array{
@@ -47,9 +50,13 @@ class PublicTrackingService
         $isMilitary = $this->resolveIsMilitary($case, $patient);
         $pathway = $isMilitary ? 'military' : 'civilian';
 
-        $steps = $this->stepsForPath($isMilitary);
-        $stageKey = $case?->stage_key;
-        $currentIndex = $this->currentStepIndex($case, $isMilitary, $case === null);
+        $steps = $this->pathwayConfig->displaySteps($isMilitary);
+        $currentIndex = $this->pathwayConfig->resolveCurrentIndex(
+            $case,
+            $isMilitary,
+            $case === null,
+            $case !== null && ! $isMilitary && $this->isAwaitingEntityApproval($case),
+        );
 
         $mappedSteps = array_map(function (array $step, int $index) use ($currentIndex) {
             $status = match (true) {
@@ -85,78 +92,6 @@ class PublicTrackingService
         }
 
         return $patient?->isMilitary() ?? false;
-    }
-
-    /** @return list<array{key: string, label: string}> */
-    private function stepsForPath(bool $isMilitary): array
-    {
-        if ($isMilitary) {
-            return [
-                ['key' => 'registered', 'label' => 'تسجيل واستقبال'],
-                ['key' => 'exam', 'label' => 'الكشف الطبي'],
-                ['key' => 'technical', 'label' => 'التوصيف الفني والتحضير'],
-                ['key' => 'manufacturing', 'label' => 'التصنيع بالورشة'],
-                ['key' => 'ready', 'label' => 'جاهز للتسليم'],
-                ['key' => 'delivered', 'label' => 'تم التسليم'],
-            ];
-        }
-
-        return [
-            ['key' => 'registered', 'label' => 'تسجيل واستقبال'],
-            ['key' => 'exam', 'label' => 'الكشف الطبي'],
-            ['key' => 'technical', 'label' => 'التوصيف الفني والتحضير'],
-            ['key' => 'approval', 'label' => 'التسعير واعتماد التشغيل'],
-            ['key' => 'manufacturing', 'label' => 'التصنيع بالورشة'],
-            ['key' => 'ready', 'label' => 'جاهز للتسليم'],
-            ['key' => 'delivered', 'label' => 'تم التسليم'],
-        ];
-    }
-
-    private function currentStepIndex(?CaseRecord $case, bool $isMilitary, bool $noCase): int
-    {
-        if ($noCase || ! $case) {
-            return 0;
-        }
-
-        $stageKey = $case->stage_key;
-
-        if (! $stageKey) {
-            return 0;
-        }
-
-        if (! $isMilitary && $this->isAwaitingEntityApproval($case)) {
-            return 3;
-        }
-
-        if ($isMilitary) {
-            return match ($stageKey) {
-                CaseRecord::STAGE_RECEPTION => 0,
-                CaseRecord::STAGE_EXAM => 1,
-                CaseRecord::STAGE_TECHNICAL,
-                CaseRecord::STAGE_ADJUSTMENTS,
-                CaseRecord::STAGE_COST_CALC,
-                CaseRecord::STAGE_QUOTE,
-                CaseRecord::STAGE_OPERATIONS => 2,
-                CaseRecord::STAGE_MANUFACTURING => 3,
-                CaseRecord::STAGE_READY_DELIVERY => 4,
-                CaseRecord::STAGE_DELIVERED => 5,
-                default => 2,
-            };
-        }
-
-        return match ($stageKey) {
-            CaseRecord::STAGE_RECEPTION => 0,
-            CaseRecord::STAGE_EXAM => 1,
-            CaseRecord::STAGE_TECHNICAL,
-            CaseRecord::STAGE_ADJUSTMENTS,
-            CaseRecord::STAGE_COST_CALC => 2,
-            CaseRecord::STAGE_QUOTE,
-            CaseRecord::STAGE_OPERATIONS => 3,
-            CaseRecord::STAGE_MANUFACTURING => 4,
-            CaseRecord::STAGE_READY_DELIVERY => 5,
-            CaseRecord::STAGE_DELIVERED => 6,
-            default => 2,
-        };
     }
 
     private function publicStageLabel(?CaseRecord $case, bool $noCase, bool $isMilitary): string

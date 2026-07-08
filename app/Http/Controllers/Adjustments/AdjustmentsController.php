@@ -9,9 +9,11 @@ use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\StockItem;
 use App\Services\AdjustmentsService;
+use App\Support\StockItemUomLookup;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 /**
  * مكتب المعدلات (الخطوة 4) — مراجعة بنود الفني (للقراءة) وإضافة مكوّنات قبل التكاليف.
@@ -66,13 +68,14 @@ class AdjustmentsController extends Controller
 
         $stockCatalog = StockItem::query()
             ->orderBy('name')
-            ->get(['id', 'code', 'name', 'qty', 'reserved'])
+            ->get(['id', 'code', 'name', 'qty', 'reserved', 'uom'])
             ->map(fn (StockItem $item) => [
                 'code' => $item->code,
                 'name' => $item->name,
                 'qty' => (int) $item->qty,
                 'reserved' => (int) $item->reserved,
                 'available' => $item->availableQty(),
+                'uom' => $item->uom ?? 'قطعة',
             ]);
 
         return response()->json([
@@ -89,7 +92,7 @@ class AdjustmentsController extends Controller
             'message' => 'تمت إضافة البنود إلى قائمة المواد.',
             'bom' => [
                 'id' => $bom->id,
-                'items' => $bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values(),
+                'items' => $this->mapBomItems($bom->items)->values(),
             ],
         ], 201);
     }
@@ -102,7 +105,7 @@ class AdjustmentsController extends Controller
             'message' => 'تم تحديث كمية البند.',
             'bom' => [
                 'id' => $bom->id,
-                'items' => $bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values(),
+                'items' => $this->mapBomItems($bom->items)->values(),
             ],
         ]);
     }
@@ -115,7 +118,7 @@ class AdjustmentsController extends Controller
             'message' => 'تم حذف البند من قائمة المعدلات.',
             'bom' => [
                 'id' => $bom->id,
-                'items' => $bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values(),
+                'items' => $this->mapBomItems($bom->items)->values(),
             ],
         ]);
     }
@@ -155,20 +158,30 @@ class AdjustmentsController extends Controller
                     'bom_no' => $case->bom->bom_no,
                     'stage' => $case->bom->stage,
                     'items' => $case->bom->relationLoaded('items')
-                        ? $case->bom->items->map(fn (BomItem $i) => $this->formatBomItem($i))->values()
+                        ? $this->mapBomItems($case->bom->items)
                         : [],
                 ]
                 : null,
         ];
     }
 
-    private function formatBomItem(BomItem $item): array
+    /** @param  Collection<int, BomItem>  $items */
+    private function mapBomItems($items): Collection
+    {
+        $uomMap = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->all());
+
+        return $items->map(fn (BomItem $i) => $this->formatBomItem($i, $uomMap));
+    }
+
+    /** @param  array<string, string>  $uomMap */
+    private function formatBomItem(BomItem $item, array $uomMap = []): array
     {
         return [
             'id' => $item->id,
             'stock_item_code' => $item->stock_item_code,
             'name' => $item->name,
             'qty' => $item->qty,
+            'uom' => $uomMap[$item->stock_item_code] ?? 'قطعة',
             'source' => $item->source,
             'read_only' => $item->source === BomItem::SOURCE_SPEC,
         ];

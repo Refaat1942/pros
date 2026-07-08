@@ -14,6 +14,7 @@ use App\Models\ContractCompany;
 use App\Models\MedicalRecord;
 use App\Models\MilitaryDebt;
 use App\Models\MilitaryRank;
+use App\Models\PathwayStep;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\PricingRequest;
@@ -39,6 +40,7 @@ use App\Services\CostingModeService;
 use App\Services\DoctorTransferService;
 use App\Services\MilitaryDebtService;
 use App\Services\Notifications\NotificationService;
+use App\Services\PathwayConfigService;
 use App\Services\PermissionCatalogService;
 use App\Services\ReceptionAnalyticsService;
 use App\Services\SettingService;
@@ -69,6 +71,7 @@ class DashboardPageDataService
             'admin.military-ranks' => $this->adminMilitaryRanks(),
             'admin.visit-types' => $this->adminVisitTypes(),
             'admin.costing-settings' => $this->adminCostingSettings(),
+            'admin.pathway-settings' => $this->adminPathwaySettings(),
             'admin.stock-categories' => $this->adminStockCategories(),
             'admin.catalog' => $this->adminCatalog(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
@@ -175,6 +178,17 @@ class DashboardPageDataService
             'overhead_rate_definitions' => $settings->overheadRateDefinitions(),
             'overhead_rates_sum' => $settings->overheadRatesSum(),
             'costing_modes' => app(CostingModeService::class)->allModes(),
+        ];
+    }
+
+    private function adminPathwaySettings(): array
+    {
+        $config = app(PathwayConfigService::class);
+
+        return [
+            'pathway_civilian_steps' => $config->steps(PathwayStep::PATHWAY_CIVILIAN),
+            'pathway_military_steps' => $config->steps(PathwayStep::PATHWAY_MILITARY),
+            'pathway_stage_key_options' => $config->availableStageKeys(),
         ];
     }
 

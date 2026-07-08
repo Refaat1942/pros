@@ -71,8 +71,16 @@
     // اعتماد الصرف: للعسكري، أو لمريض كاش رجع من الخزنة مدفوعاً (بانتظار إصدار أمر الشغل).
     var approveBtn = (isMil || c.is_paid)
       ? '<button type="button" class="btn-action success btn-approve-pending" data-case-id="' + c.id + '" style="margin-left:4px;">'
-        + (c.is_paid ? '✅ اعتماد وإصدار أمر الشغل' : '✅ موافقة واعتماد الصرف') + '</button>'
+        + (c.is_paid ? '✅ إصدار أمر الشغل' : '✅ موافقة وإصدار أمر الشغل') + '</button>'
       : '';
+
+    var letterBtn = '';
+    if (c.approval_letter && c.approval_letter.has_letter && c.approval_letter.letter_url) {
+      var al = c.approval_letter;
+      letterBtn = '<button type="button" class="btn-action btn-view-letter" style="margin-left:4px;background:#fef3c7;color:#92400e;" ' +
+        'data-letter-url="' + esc(al.letter_url) + '" data-contract-no="' + esc(al.contract_no || '') + '" ' +
+        'data-letter-ext="' + esc(al.letter_ext || '') + '">📄 خطاب الموافقة</button>';
+    }
 
     var canRework = isMil || !quote || quote.status === 'pending';
     var reworkBtn = canRework
@@ -90,6 +98,7 @@
       '<td>' + (total ? fmt(total) + ' ج.م' : '—') + '</td>' +
       '<td class="col-actions" style="white-space:nowrap;">' +
         printBtn +
+        letterBtn +
         releaseBtn +
         approveBtn +
         reworkBtn +
@@ -106,6 +115,17 @@
     document.querySelectorAll('.btn-rework-pending').forEach(function (btn) {
       btn.addEventListener('click', function () {
         openReworkModal(btn.getAttribute('data-case-id'), btn.getAttribute('data-case-no'));
+      });
+    });
+    document.querySelectorAll('.btn-view-letter').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (typeof window.openContractLetterView === 'function') {
+          window.openContractLetterView(
+            btn.getAttribute('data-letter-url'),
+            btn.getAttribute('data-contract-no'),
+            btn.getAttribute('data-letter-ext')
+          );
+        }
       });
     });
   }

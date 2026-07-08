@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Bom\ReturnNoteController;
+use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Dashboard\OperationsDashboardController;
 use App\Http\Controllers\Manufacturing\ManufacturingStageController;
 use App\Http\Controllers\Operations\OperationsDeskController;
@@ -46,6 +47,9 @@ Route::prefix('operations')
 
             Route::get('case/{case}/print-work-order', [ManufacturingStageController::class, 'printWorkOrder'])
                 ->name('work-order.print');
+
+            Route::get('contracts/{contract}/letter', [ContractController::class, 'letter'])
+                ->name('contracts.letter');
         });
 
         // ── Quotes awaiting (عروض بانتظار الموافقة) ───────────────────────

@@ -1,0 +1,176 @@
+/* خط سير المسار — نافذة مرجعية */
+.workflow-path-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+}
+
+.workflow-path-modal[hidden] {
+    display: none !important;
+}
+
+.workflow-path-dialog {
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow: auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+}
+
+.workflow-path-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.workflow-path-head h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.workflow-path-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #64748b;
+    line-height: 1;
+}
+
+.workflow-path-body {
+    padding: 20px;
+}
+
+.workflow-path-section {
+    margin-bottom: 20px;
+}
+
+.workflow-path-section h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.workflow-steps {
+    margin: 0;
+    padding-right: 22px;
+    line-height: 1.85;
+    font-size: 13.5px;
+}
+
+.workflow-steps li {
+    margin-bottom: 4px;
+}
+
+.workflow-path-note {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.workflow-path-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #334155;
+}
+
+.workflow-path-trigger:hover {
+    background: #f1f5f9;
+}
+
+/* إشعار سياقي — الاستقبال */
+.reception-screen-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1.5px solid #93c5fd;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+}
+
+.reception-screen-hint__badge {
+    flex-shrink: 0;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reception-screen-hint__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.reception-screen-hint__title {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #1e3a8a;
+}
+
+.reception-screen-hint__msg {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #334155;
+}
+
+.reception-screen-hint__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.reception-screen-hint__link {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1d4ed8;
+    text-decoration: none;
+}
+
+.reception-screen-hint__dismiss {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #64748b;
+    line-height: 1;
+    padding: 2px 6px;
+}

@@ -166,6 +166,11 @@ class CaseRecord extends Model
         return $this->hasMany(Quote::class, 'case_id');
     }
 
+    public function latestApprovalContract(): HasOne
+    {
+        return $this->hasOne(ApprovalContract::class, 'case_id')->latestOfMany();
+    }
+
     public function bom(): HasOne
     {
         return $this->hasOne(Bom::class, 'case_id');

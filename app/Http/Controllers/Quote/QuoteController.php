@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Quote;
 
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalContract;
 use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\QuoteQrService;
@@ -132,6 +133,34 @@ class QuoteController extends Controller
                 ? $quote->caseRecord->only(['id', 'case_no', 'stage_key', 'work_order_no'])
                 : null,
             'print_url' => route('reception.quote.print', ['quote' => $quote, 'embed' => 1]),
+            'approval_letter' => $this->formatApprovalLetter($quote),
+        ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function formatApprovalLetter(Quote $quote): ?array
+    {
+        $contract = ApprovalContract::query()
+            ->where(function ($q) use ($quote) {
+                $q->where('quote_id', $quote->id);
+                if ($quote->case_id) {
+                    $q->orWhere('case_id', $quote->case_id);
+                }
+            })
+            ->whereNotNull('letter_path')
+            ->latest('id')
+            ->first();
+
+        if (! $contract || ! $contract->letter_path) {
+            return null;
+        }
+
+        return [
+            'contract_id' => $contract->id,
+            'contract_no' => $contract->contract_no,
+            'letter_url' => route('reception.contracts.letter', $contract),
+            'letter_ext' => strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION)),
+            'has_letter' => true,
         ];
     }
 }

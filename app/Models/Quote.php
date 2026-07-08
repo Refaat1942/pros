@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * عرض السعر الرسمي — quotations في reception-dashboard.js
@@ -63,6 +64,11 @@ class Quote extends Model
     public function items(): HasMany
     {
         return $this->hasMany(QuoteItem::class);
+    }
+
+    public function approvalContract(): HasOne
+    {
+        return $this->hasOne(ApprovalContract::class, 'quote_id')->latestOfMany();
     }
 
     /**

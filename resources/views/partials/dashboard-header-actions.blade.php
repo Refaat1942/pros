@@ -20,6 +20,7 @@
             @endif
         </a>
     @endif
+    <button type="button" class="workflow-path-trigger" data-workflow-path-open title="خط سير المسار">🧭 خط السير</button>
     <div class="user-chip">
         <div class="avatar">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
         <span>{{ auth()->user()->name }}</span>

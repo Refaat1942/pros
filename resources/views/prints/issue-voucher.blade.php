@@ -1,9 +1,11 @@
 @php
+    use App\Support\StockItemUomLookup;
+
     $voucherNo   = $voucher['voucher_no'] ?? '—';
     $patientName = $voucher['patient_name'] ?? '—';
     $companyName = $voucher['company_name'] ?? '—';
     $items       = $voucher['items'] ?? collect();
-    $dateDisplay = now()->format('d/m/Y');
+    $uomMap      = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->filter()->all());
 @endphp
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -12,28 +14,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إذن صرف — {{ $voucherNo }}</title>
     @include('prints.partials.a4-base')
-    <style>
-        .body-lines { margin: 24px 0 36px; font-size: 15pt; line-height: 2.4; }
-        .items-block {
-            border-bottom: 1px dotted #000;
-            min-height: 28mm;
-            padding: 4px 0 8px;
-            display: block;
-            line-height: 1.9;
-        }
-        .sign-footer {
-            margin-top: 48px;
-            text-align: left;
-            font-weight: 700;
-            font-size: 14pt;
-        }
-        .sign-footer .sig-line {
-            margin-top: 32px;
-            border-top: 1px dotted #000;
-            width: 55mm;
-        }
-        .sign-footer .sig-title { margin-top: 4px; font-size: 12pt; }
-    </style>
 </head>
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
 
@@ -42,43 +22,58 @@
 </div>
 
 <div class="sheet avoid-break">
-    <header class="doc-header">
-        <div class="header-right">
-            @foreach (app(\App\Services\SettingService::class)->branding()['lines'] as $line)
-                <div>{{ $line }}</div>
-            @endforeach
-            <div class="dept">القسم المالي</div>
-        </div>
-        <div class="header-left">
-            @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
-        </div>
-    </header>
+    @include('prints.partials.org-header', ['dept' => 'قسم المخازن'])
 
-    <h1 class="doc-title">إذن صرف رقم ( <span class="fill" style="min-width:22mm;">{{ $voucherNo }}</span> )</h1>
+    <h1 class="doc-title">إذن صرف مواد — رقم ( <span class="fill">{{ $voucherNo }}</span> )</h1>
 
-    <section class="body-lines">
-        <p class="line">السيد / رئيس المخازن : <span class="fill fill-wide">&nbsp;</span></p>
-        <p class="line">
-            رجاء التكرم بصرف :
-            <span class="items-block fill-wide" style="min-width:85%;">
-                @if ($items->isNotEmpty())
-                    {{ $items->map(fn ($item) => $item->name . ($item->qty > 1 ? ' — عدد ' . $item->qty : ''))->implode(' — ') }}
-                @else
-                    &nbsp;
-                @endif
-            </span>
-        </p>
-        <p class="line">اسم المريض : <span class="fill fill-wide">{{ $patientName }}</span></p>
-        <p class="line">
-            بناء على التصديق الوارد لنا من :
-            <span class="fill fill-wide">{{ $companyName }}</span>
-        </p>
-    </section>
+    <table class="meta-table print-table" style="margin-bottom: 14px;">
+        <tbody>
+            <tr>
+                <th style="width:28%;">اسم المريض</th>
+                <td>{{ $patientName }}</td>
+                <th style="width:28%;">الجهة / التصديق</th>
+                <td>{{ $companyName }}</td>
+            </tr>
+            <tr>
+                <th>التاريخ</th>
+                <td colspan="3">{{ now()->format('d/m/Y') }}</td>
+            </tr>
+        </tbody>
+    </table>
 
-    <footer class="sign-footer">
+    <p class="line" style="font-weight:800;margin-bottom:8px;">رجاء التكرم بصرف الأصناف التالية للورشة:</p>
+
+    <table class="print-table items-table">
+        <thead>
+            <tr>
+                <th style="width:8%;">#</th>
+                <th style="width:16%;">الكود</th>
+                <th>اسم الصنف</th>
+                <th style="width:12%;">الكمية</th>
+                <th style="width:12%;">الوحدة</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($items as $index => $item)
+                <tr>
+                    <td class="num">{{ $index + 1 }}</td>
+                    <td class="mono">{{ $item->stock_item_code ?? '—' }}</td>
+                    <td>{{ $item->name ?? '—' }}</td>
+                    <td class="num">{{ (int) ($item->qty ?? 0) }}</td>
+                    <td>{{ $uomMap[$item->stock_item_code ?? ''] ?? 'قطعة' }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="5" class="empty-row">&nbsp;</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <footer class="sign-footer" style="margin-top:36px;text-align:left;font-weight:800;">
         <div>يعتمد ،،</div>
-        <div class="sig-line">&nbsp;</div>
-        <div class="sig-title">رئيس القسم المالي</div>
+        <div class="sig-line" style="margin-top:28px;border-top:1.5px solid #000;width:55mm;">&nbsp;</div>
+        <div class="sig-title" style="margin-top:4px;font-size:12pt;">رئيس المخازن</div>
     </footer>
 </div>
 

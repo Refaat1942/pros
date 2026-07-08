@@ -109,9 +109,23 @@
       state.items.map(function (it) {
         var bc = expectedBarcodeFor(it);
         return '<div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0">' +
-          '<span>' + esc(it.name || it.stock_item_code) + ' ×' + it.qty + '</span>' +
+          '<span>' + esc(it.name || it.stock_item_code) + ' ×' + it.qty + ' ' + esc(it.uom || 'قطعة') + '</span>' +
           '<code class="font-mono text-xs bg-white px-2 py-0.5 rounded border">' + esc(bc) + ' ×' + it.qty + '</code></div>';
       }).join('');
+    renderScanProgress();
+  }
+
+  function renderScanProgress() {
+    var total = expectedTotal();
+    var done = state.scanned.length;
+    var label = $('scanProgressLabel');
+    var bar = $('scanProgressBar');
+    if (label) label.textContent = done + ' / ' + total;
+    if (bar) {
+      var pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+      bar.style.width = pct + '%';
+      bar.className = 'h-full transition-all duration-200 ' + (done === total && total > 0 ? 'bg-emerald-500' : 'bg-cyan-500');
+    }
   }
 
   function revalidateAlarm() {
@@ -153,6 +167,7 @@
         (ok ? 'hover:bg-emerald-200' : 'hover:bg-red-200') + ' text-current leading-none" ' +
         'data-scan-idx="' + idx + '" title="حذف المسح" aria-label="حذف ' + esc(code) + '">×</button></span>';
     }).join('');
+    renderScanProgress();
   }
 
   function removeScan(index) {
@@ -160,6 +175,7 @@
     state.scanned.splice(index, 1);
     revalidateAlarm();
     renderScanned();
+    renderScanProgress();
     clearBarcodeInputError();
     if ($('barcodeInput')) $('barcodeInput').focus();
   }
@@ -203,7 +219,9 @@
     hideAlarm();
     clearBarcodeInputError();
     renderScanned();
+    renderScanProgress();
     if ($('barcodeInput')) $('barcodeInput').value = '';
+    if ($('scanQtyInput')) $('scanQtyInput').value = '1';
 
     axios.get('/technical/bom/' + bomId)
       .then(function (res) {
@@ -242,10 +260,15 @@
       showBarcodeInputError('الباركود غير صالح.');
       return;
     }
+    var qtyInput = $('scanQtyInput');
+    var addQty = Math.max(1, parseInt(qtyInput && qtyInput.value, 10) || 1);
     clearBarcodeInputError();
-    state.scanned.push(code);
+    for (var n = 0; n < addQty; n++) {
+      state.scanned.push(code);
+    }
     revalidateAlarm();
     renderScanned();
+    renderScanProgress();
     if ($('barcodeInput')) { $('barcodeInput').value = ''; $('barcodeInput').focus(); }
   }
 
@@ -302,7 +325,7 @@
     var tbody = $('bomItemsBody');
     if (!tbody) return;
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-8 text-center text-slate-400">لا توجد بنود.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-slate-400">لا توجد بنود.</td></tr>';
       return;
     }
     tbody.innerHTML = items.map(function (item) {
@@ -310,6 +333,7 @@
         '<td class="px-3 py-2 font-mono text-xs text-slate-500">' + esc(item.stock_item_code) + '</td>' +
         '<td class="px-3 py-2 font-semibold text-slate-800">' + esc(item.name || item.stock_item_code) + '</td>' +
         '<td class="px-3 py-2 text-center font-bold">' + esc(item.qty) + '</td>' +
+        '<td class="px-3 py-2 text-center text-slate-600">' + esc(item.uom || 'قطعة') + '</td>' +
         '<td class="px-3 py-2 text-center font-bold text-emerald-700">' + esc(item.issued_qty != null ? item.issued_qty : 0) + '</td>' +
         '<td class="px-3 py-2 text-center font-bold text-amber-700">' + esc(item.returned_qty != null ? item.returned_qty : 0) + '</td>' +
         '</tr>';

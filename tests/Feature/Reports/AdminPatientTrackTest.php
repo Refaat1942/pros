@@ -53,7 +53,7 @@ class AdminPatientTrackTest extends TestCase
             ->assertSee($patient->name, false);
     }
 
-    public function test_civilian_track_has_seven_steps(): void
+    public function test_civilian_track_uses_configured_pathway_steps(): void
     {
         $patient = $this->civilianPatient($this->civilianCompany());
         $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
@@ -63,11 +63,11 @@ class AdminPatientTrackTest extends TestCase
 
         $this->assertNotNull($track);
         $this->assertSame('civilian', $track['pathway']);
-        $this->assertCount(7, $track['steps']);
-        $this->assertSame('التسعير واعتماد التشغيل', $track['steps'][3]['label']);
+        $this->assertCount(10, $track['steps']);
+        $this->assertSame('التوصيف', $track['steps'][2]['label']);
     }
 
-    public function test_military_track_has_six_steps_without_approval(): void
+    public function test_military_track_uses_configured_pathway_steps(): void
     {
         $patient = $this->militaryPatient($this->militaryCompany());
         $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
@@ -77,8 +77,8 @@ class AdminPatientTrackTest extends TestCase
 
         $this->assertNotNull($track);
         $this->assertSame('military', $track['pathway']);
-        $this->assertCount(6, $track['steps']);
-        $this->assertSame('التصنيع بالورشة', $track['steps'][3]['label']);
+        $this->assertCount(5, $track['steps']);
+        $this->assertSame('التوصيف والتحضير', $track['steps'][2]['label']);
     }
 
     public function test_civilian_track_includes_journey_events(): void

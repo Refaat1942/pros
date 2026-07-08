@@ -315,14 +315,15 @@
     if (!tbody) return;
     var specs = specBomItems();
     if (!specs.length) {
-      tbody.innerHTML = '<tr><td colspan="3" class="empty-cell">لا توجد بنود توصيف فني.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">لا توجد بنود توصيف فني.</td></tr>';
       return;
     }
     tbody.innerHTML = specs.map(function (it) {
       return '<tr>' +
         '<td>' + esc(it.stock_item_code) + '</td>' +
         '<td>' + esc(it.name) + '</td>' +
-        '<td>' + esc(it.qty) + '</td></tr>';
+        '<td>' + esc(it.qty) + '</td>' +
+        '<td>' + esc(it.uom || 'قطعة') + '</td></tr>';
     }).join('');
   }
 
@@ -335,7 +336,7 @@
     var rows = [];
 
     if (!editRequestItems.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
       return;
     }
 
@@ -345,6 +346,7 @@
         '<td>' + esc(it.name) + '</td>' +
         '<td><input type="number" class="form-control adj-edit-qty" data-idx="' + idx + '" min="1" value="' + esc(it.qty) + '"' +
         (activeCase && activeCase.has_pending_edit_request ? ' disabled' : '') + ' style="width:72px;padding:4px 8px;"></td>' +
+        '<td>' + esc(it.uom || findCatalogItem(it.stock_item_code)?.uom || 'قطعة') + '</td>' +
         '<td><span class="badge done">معدّلات</span></td>' +
         '<td class="adj-col-action">' +
         (activeCase && activeCase.has_pending_edit_request ? '' :
@@ -354,7 +356,7 @@
         '</td></tr>');
     });
 
-    tbody.innerHTML = rows.join('') || '<tr><td colspan="5" class="empty-cell">لا توجد بنود معدّلات.</td></tr>';
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات.</td></tr>';
   }
 
   function syncEditRequestItemsFromInputs() {
@@ -507,7 +509,7 @@
     });
 
     if (!adjItems.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
       return;
     }
 
@@ -524,6 +526,7 @@
         '<td>' + esc(it.name) + '</td>' +
         '<td><input type="number" class="form-control adj-item-qty-input" data-item-id="' + esc(it.id) + '"' +
         ' data-qty="' + esc(it.qty) + '" min="1" value="' + esc(it.qty) + '" style="width:82px;padding:4px 8px;"></td>' +
+        '<td>' + esc(it.uom || 'قطعة') + '</td>' +
         '<td><span class="badge done">معدّلات</span></td>' +
         removeBtn +
         '</tr>';

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
+use App\Http\Controllers\Admin\PathwaySettingsController;
 use App\Http\Controllers\Admin\PermissionMatrixController;
 use App\Http\Controllers\Admin\SpecEditRequestController as AdminSpecEditRequestController;
 use App\Http\Controllers\Admin\StockCategoryController;
@@ -196,6 +197,15 @@ Route::prefix('admin')
 
             Route::put('costing-modes', [CostingSettingsController::class, 'updateModes'])
                 ->name('costing-modes.update');
+        });
+
+        // ── Pathway step numbering (display only) ───────────────────────────
+        Route::middleware('dashboard.page:admin,pathway-settings')->group(function () {
+            Route::put('pathway-settings', [PathwaySettingsController::class, 'update'])
+                ->name('pathway-settings.update');
+
+            Route::post('pathway-settings/reset', [PathwaySettingsController::class, 'reset'])
+                ->name('pathway-settings.reset');
         });
 
         // ── Visit Types — JSON API (الصفحة Blade: GET admin/visit-types) ─────

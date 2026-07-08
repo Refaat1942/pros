@@ -16,6 +16,7 @@
 
 @push('styles-late')
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/workflow-path.css') }}?v={{ filemtime(public_path('assets/css/workflow-path.css')) }}">
     @include('partials.dashboard-date-filters-assets')
 @endpush
 
@@ -30,4 +31,5 @@
     @foreach ($dashboardConfig['scripts'] as $script)
         <script src="{{ str_starts_with($script, 'http') ? $script : asset($script) }}"></script>
     @endforeach
+    @include('partials.workflow-path-modal')
 @endpush

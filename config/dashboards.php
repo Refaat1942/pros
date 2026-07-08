@@ -34,7 +34,7 @@ return [
             'statistics' => ['title' => 'إحصائيات الاستقبال', 'icon' => '📊', 'label' => 'الإحصائيات'],
             'quote' => ['title' => 'عروض الأسعار', 'icon' => '💰', 'label' => 'عروض الأسعار'],
             // تسليم الطرف عبر مسح QR — شاشة تسليم سريعة للاستقبال (إغلاق فوري بالمسح).
-            'delivery' => ['title' => 'تسليم الطرف للمريض', 'icon' => '✅', 'label' => 'تسليم للمريض'],
+            'delivery' => ['title' => 'التسليمات — مسح QR', 'icon' => '📦', 'label' => 'التسليمات'],
             // 'contracts' => ['title' => 'العقود والاتفاقيات', 'icon' => '📑', 'label' => 'العقود والاتفاقيات'],
             'selfservice' => ['title' => 'متابعة حالة الطلب (خدمة ذاتية)', 'icon' => '📱', 'label' => 'متابعة حالة الطلب'],
             'patients' => ['title' => 'سجل المرضى المسجلين', 'icon' => '👤', 'label' => 'المرضى'],
@@ -51,6 +51,7 @@ return [
             'assets/js/pages/reception-dashboard.js',
             'assets/js/pages/reception-statistics.js',
             'assets/js/pages/reception-delivery-dashboard.js',
+            'assets/js/shared/reception-screen-hints.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => '',
@@ -265,7 +266,7 @@ return [
             [
                 'label' => 'الرقابة والنظام',
                 'icon' => '⚙️',
-                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'costing-settings'],
+                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'costing-settings', 'pathway-settings'],
             ],
         ],
         'pages' => [
@@ -298,6 +299,7 @@ return [
             'permissions' => ['title' => 'مصفوفة الصلاحيات', 'icon' => '🛡️', 'label' => 'الصلاحيات'],
             'military-ranks' => ['title' => 'الرتب العسكرية', 'icon' => '🪖', 'label' => 'الرتب العسكرية'],
             'costing-settings' => ['title' => 'إعدادات التكاليف الإضافية', 'icon' => '💰', 'label' => 'إعدادات التكاليف'],
+            'pathway-settings' => ['title' => 'ترقيم مسار العمل — مدني وعسكري', 'icon' => '🧭', 'label' => 'ترقيم المسار'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css'],

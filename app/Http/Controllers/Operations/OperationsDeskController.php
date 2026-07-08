@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
@@ -267,6 +268,37 @@ class OperationsDeskController extends Controller
                     'items_count' => $case->bom->relationLoaded('items') ? $case->bom->items->count() : 0,
                 ]
                 : null,
+            'approval_letter' => $this->formatApprovalLetter($case),
+        ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function formatApprovalLetter(CaseRecord $case): ?array
+    {
+        if ($case->isMilitary()) {
+            return null;
+        }
+
+        $contract = ApprovalContract::query()
+            ->where('case_id', $case->id)
+            ->whereNotNull('letter_path')
+            ->latest('id')
+            ->first();
+
+        if (! $contract || ! $contract->letter_path) {
+            return null;
+        }
+
+        $ext = strtolower(pathinfo($contract->letter_path, PATHINFO_EXTENSION));
+
+        return [
+            'contract_id' => $contract->id,
+            'contract_no' => $contract->contract_no,
+            'letter_ref' => $contract->letter_ref,
+            'letter_date' => $contract->letter_date,
+            'letter_url' => route('operations.contracts.letter', $contract),
+            'letter_ext' => $ext,
+            'has_letter' => true,
         ];
     }
 }

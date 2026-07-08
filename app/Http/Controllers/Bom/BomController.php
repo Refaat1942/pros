@@ -17,6 +17,7 @@ use App\Models\TechOrderSpecItem;
 use App\Services\BomService;
 use App\Support\BomItemAggregator;
 use App\Support\IssueVoucherPresenter;
+use App\Support\StockItemUomLookup;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -215,12 +216,17 @@ class BomController extends Controller
                 ->pluck('barcode', 'code')
             : collect();
 
+        $uomMap = $bom->relationLoaded('items') && $bom->items->isNotEmpty()
+            ? StockItemUomLookup::forCodes($bom->items->pluck('stock_item_code')->all())
+            : [];
+
         return $this->formatSummary($bom) + [
             'items' => $bom->relationLoaded('items')
                 ? collect(BomItemAggregator::byStockCode($bom->items))
-                    ->map(function (array $item) use ($barcodes) {
+                    ->map(function (array $item) use ($barcodes, $uomMap) {
                         return $item + [
                             'expected_barcode' => $barcodes[$item['stock_item_code']] ?? null,
+                            'uom' => $uomMap[$item['stock_item_code']] ?? 'قطعة',
                         ];
                     })
                     ->values()

@@ -13,6 +13,7 @@ use App\Http\Controllers\Quote\ApprovalScanController;
 use App\Http\Controllers\Quote\OcrApprovalController;
 use App\Http\Controllers\Quote\OcrExtractController;
 use App\Http\Controllers\Quote\QuoteController;
+use App\Http\Controllers\Reception\ReceptionHintController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -41,6 +42,9 @@ Route::prefix('reception')
 
         Route::get('lookup/companies', [ContractCompanyController::class, 'index'])
             ->name('lookup.companies');
+
+        Route::get('screen-hints', [ReceptionHintController::class, 'show'])
+            ->name('screen-hints');
 
         Route::post('lookup/companies', [ContractCompanyController::class, 'storeFromReception'])
             ->name('lookup.companies.store');

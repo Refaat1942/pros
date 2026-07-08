@@ -28,6 +28,7 @@
                   <th>الكود</th>
                   <th>الصنف</th>
                   <th>الكمية</th>
+                  <th>الوحدة</th>
                 </tr>
               </thead>
               <tbody id="adjSpecItems"></tbody>
@@ -45,6 +46,7 @@
                 <th>الكود</th>
                 <th>الصنف</th>
                 <th>الكمية</th>
+                <th>الوحدة</th>
                 <th>المصدر</th>
                 <th class="adj-col-action" aria-label="إجراءات"></th>
               </tr>

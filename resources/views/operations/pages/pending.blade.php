@@ -1,7 +1,7 @@
 <div class="section-view" id="section-pending">
   <div class="panel inventory-wrap">
     <div class="panel-header">
-      <h3>✅ مكتب التشغيل — موافقات وعروض الأسعار</h3>
+      <h3>✅ مكتب التشغيل — إصدار أمر الشغل واعتماد الصرف</h3>
       <div style="display:flex;align-items:center;gap:10px;">
         <input type="search" id="pendingSearch" placeholder="🔍 بحث رقم الحالة / العرض / مريض..."
                class="form-control table-search-input">
@@ -26,3 +26,5 @@
     </div>
   </div>
 </div>
+
+@include('partials.contract-letter-modal')

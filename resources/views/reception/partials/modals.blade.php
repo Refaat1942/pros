@@ -282,3 +282,5 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+@include('partials.contract-letter-modal')

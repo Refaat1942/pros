@@ -155,13 +155,30 @@
             </div>
             <div class="p-5 space-y-4">
                 <div id="dispenseRequired" class="rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm space-y-2"></div>
-                <div class="flex gap-2">
-                    <input type="text" id="barcodeInput" autofocus
-                           placeholder="امسح الباركود"
-                           maxlength="100"
-                           class="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                <div id="scanProgressWrap" class="rounded-xl border border-slate-200 bg-white p-3">
+                    <div class="flex justify-between items-center mb-2 text-sm font-bold text-slate-700">
+                        <span>تقدّم المسح</span>
+                        <span id="scanProgressLabel">0 / 0</span>
+                    </div>
+                    <div class="h-3 rounded-full bg-slate-200 overflow-hidden">
+                        <div id="scanProgressBar" class="h-full bg-emerald-500 transition-all duration-200" style="width:0%;"></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-[88px_1fr_auto] gap-2 items-end">
+                    <div>
+                        <label for="scanQtyInput" class="block text-xs font-bold text-slate-600 mb-1">الكمية</label>
+                        <input type="number" id="scanQtyInput" min="1" value="1"
+                               class="w-full rounded-xl border border-slate-300 px-3 py-3 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                    </div>
+                    <div>
+                        <label for="barcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح الباركود</label>
+                        <input type="text" id="barcodeInput" autofocus
+                               placeholder="امسح أو اكتب الباركود"
+                               maxlength="100"
+                               class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                    </div>
                     <button type="button" id="btnAddBarcode"
-                            class="rounded-xl bg-slate-800 text-white px-4 py-2 text-sm font-bold">إضافة</button>
+                            class="rounded-xl bg-slate-800 text-white px-4 py-3 text-sm font-bold self-end">إضافة</button>
                 </div>
                 <div id="scannedList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
                 <div id="dispenseAlarm" class="hidden rounded-xl border-2 border-red-500 bg-red-50 p-4 text-red-800 font-bold animate-pulse">
@@ -196,6 +213,7 @@
                         <th class="px-3 py-2 text-right font-bold">الكود</th>
                         <th class="px-3 py-2 text-right font-bold">الصنف</th>
                         <th class="px-3 py-2 text-right font-bold w-16">المطلوب</th>
+                        <th class="px-3 py-2 text-right font-bold w-16">الوحدة</th>
                         <th class="px-3 py-2 text-right font-bold w-16">المصروف</th>
                         <th class="px-3 py-2 text-right font-bold w-16">المرتجع</th>
                     </tr>

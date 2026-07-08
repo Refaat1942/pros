@@ -20,6 +20,7 @@ class AdminPatientTrackService
     public function __construct(
         private readonly PublicTrackingService $publicTracking,
         private readonly AdminPatientJourneyService $journey,
+        private readonly PathwayConfigService $pathwayConfig,
     ) {}
 
     /** @return list<array{value: string, label: string}> */
@@ -245,36 +246,11 @@ class AdminPatientTrackService
         }, $steps, array_keys($steps));
     }
 
-    /** @return list<array{key: string, label: string}> */
-    private function stepsForPath(bool $isMilitary): array
-    {
-        if ($isMilitary) {
-            return [
-                ['key' => 'registered', 'label' => 'تسجيل واستقبال'],
-                ['key' => 'exam', 'label' => 'الكشف الطبي'],
-                ['key' => 'technical', 'label' => 'التوصيف الفني والتحضير'],
-                ['key' => 'manufacturing', 'label' => 'التصنيع بالورشة'],
-                ['key' => 'ready', 'label' => 'جاهز للتسليم'],
-                ['key' => 'delivered', 'label' => 'تم التسليم'],
-            ];
-        }
-
-        return [
-            ['key' => 'registered', 'label' => 'تسجيل واستقبال'],
-            ['key' => 'exam', 'label' => 'الكشف الطبي'],
-            ['key' => 'technical', 'label' => 'التوصيف الفني والتحضير'],
-            ['key' => 'approval', 'label' => 'التسعير واعتماد التشغيل'],
-            ['key' => 'manufacturing', 'label' => 'التصنيع بالورشة'],
-            ['key' => 'ready', 'label' => 'جاهز للتسليم'],
-            ['key' => 'delivered', 'label' => 'تم التسليم'],
-        ];
-    }
-
     /** @return array{tracking_uid: ?string, pathway: string, stage_label: string, current_index: int, steps: list<array{key: string, label: string, status: string}>} */
     private function fallbackTracking(Patient $patient, ?CaseRecord $case, ?Appointment $appointment): array
     {
         $isMilitary = $patient->isMilitary();
-        $steps = $this->stepsForPath($isMilitary);
+        $steps = $this->pathwayConfig->displaySteps($isMilitary);
 
         $stageLabel = match ($appointment?->status) {
             Appointment::STATUS_WAITING => 'في الاستقبال — بانتظار التحويل للعيادة',

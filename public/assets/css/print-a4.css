@@ -262,6 +262,22 @@ body {
     font-weight: 900;
 }
 
+.meta-table th {
+    background: #f3f4f6;
+    font-weight: 800;
+    width: 22%;
+}
+
+.meta-table td,
+.meta-table th {
+    padding: 6px 8px;
+}
+
+.items-table .mono {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+}
+
 /* ── أدوات الشاشة (لا تُطبع) ── */
 .no-print {
     position: fixed;

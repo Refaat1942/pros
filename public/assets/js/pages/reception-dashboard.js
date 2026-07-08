@@ -71,6 +71,7 @@
               grossTotal:  parseFloat(q.gross_total != null ? q.gross_total : q.total) || 0,
               status:      q.status,
               statusLabel: q.status_label,
+              approvalLetter: q.approval_letter || null,
               items:       (q.items || []).map(function (i) {
                 return { name: i.name, qty: i.qty, amount: parseFloat(i.amount) || 0 };
               })
@@ -397,13 +398,19 @@
         var ocrBtn = q.status === 'issued'
           ? ' <button type="button" class="btn" style="padding:6px 14px;font-size:12px;margin-right:4px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="openOcrApprovalModal(quotations.find(function(x){return x.id===\'' + q.id + '\';}))">📄 رفع خطاب الموافقة</button>'
           : '';
+        var letterBtn = (q.approvalLetter && q.approvalLetter.has_letter && q.approvalLetter.letter_url)
+          ? ' <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:12px;margin-right:4px;" onclick="openContractLetterView(\'' +
+            String(q.approvalLetter.letter_url).replace(/'/g, "\\'") + '\', \'' +
+            String(q.approvalLetter.contract_no || q.id).replace(/'/g, "\\'") + '\', \'' +
+            String(q.approvalLetter.letter_ext || '').replace(/'/g, "\\'") + '\')">👁️ خطاب الموافقة</button>'
+          : '';
         return '<tr>' +
           '<td><strong style="color:var(--primary);">' + q.id + '</strong></td>' +
           '<td><strong>' + q.patient + '</strong></td>' +
           '<td>' + q.company + '</td>' +
           '<td>' + q.date + '</td>' +
           '<td><span class="quote-status-tag ' + q.status + '">' + q.statusLabel + '</span></td>' +
-          '<td>' + viewBtn + issueBtn + ocrBtn + '</td>' +
+          '<td>' + viewBtn + issueBtn + ocrBtn + letterBtn + '</td>' +
           '</tr>';
       }).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">لا توجد عروض مطابقة</td></tr>';
 
@@ -2133,8 +2140,10 @@
         .then(function (res) {
           var woText    = document.getElementById('ocrSuccessWO');
           var succText  = document.getElementById('ocrSuccessText');
-          if (woText)   woText.textContent   = '📋 أمر التشغيل: ' + (res.work_order_no || '—');
-          if (succText) succText.textContent = 'تم اعتماد عرض السعر ' + _ocrCurrentQuote.id + ' للمريض ' + name;
+          if (woText)   woText.textContent   = res.work_order_no
+            ? ('📋 أمر التشغيل: ' + res.work_order_no)
+            : '📋 أمر التشغل سيصدر من مكتب التشغيل';
+          if (succText) succText.textContent = 'تم اعتماد عرض السعر ' + _ocrCurrentQuote.id + ' — الحالة في مكتب التشغيل بانتظار إصدار أمر الشغل.';
 
           var q = quotations.find(function(x) { return x.id === _ocrCurrentQuote.id; });
           if (q) {
