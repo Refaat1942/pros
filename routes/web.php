@@ -29,6 +29,7 @@ foreach ([
     'workshop',
     'technical',
     'admin',
+    'assistant',
     'notifications',
     'fallback',
 ] as $routeFile) {
