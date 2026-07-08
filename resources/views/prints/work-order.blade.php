@@ -101,10 +101,9 @@
 <div class="sheet">
     <header class="doc-header">
         <div class="header-right">
-            <div>وزارة الدفاع</div>
-            <div>مركز الطب الطبيعي والتأهيلي</div>
-            <div>وعلاج الروماتيزم ق.م</div>
-            <div>مصنع الأجهزة التعويضية</div>
+            @foreach (app(\App\Services\SettingService::class)->branding()['lines'] as $line)
+                <div>{{ $line }}</div>
+            @endforeach
             <div class="dept">القسم المالي</div>
         </div>
         <div class="header-left">
@@ -162,7 +161,7 @@
         <span>تاريخ التجربة الثانية: <span class="fill" style="min-width:22mm;">&nbsp;</span></span>
     </div>
 
-    <table class="labor-table avoid-break">
+    <table class="labor-table print-table avoid-break">
         <thead>
             <tr>
                 <th rowspan="2">القسم المختص</th>

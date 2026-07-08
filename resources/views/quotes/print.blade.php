@@ -32,6 +32,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>عرض سعر — {{ $quote->quote_no }}</title>
+    @include('prints.partials.a4-base')
     <style>
         @page {
             size: A4 portrait;
@@ -53,8 +54,9 @@
         }
 
         body {
-            font-family: 'Traditional Arabic', 'Simplified Arabic', 'Segoe UI', 'Tahoma', sans-serif;
+            font-family: 'Cairo', 'Traditional Arabic', 'Simplified Arabic', 'Segoe UI', 'Tahoma', sans-serif;
             font-size: 13.5pt;
+            font-weight: 600;
             line-height: 1.55;
             color: var(--ink);
             background: #fff;

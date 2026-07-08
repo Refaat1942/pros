@@ -44,10 +44,9 @@
 <div class="sheet avoid-break">
     <header class="doc-header">
         <div class="header-right">
-            <div>وزارة الدفاع</div>
-            <div>مركز الطب الطبيعي والتأهيلي</div>
-            <div>وعلاج الروماتيزم ق.م</div>
-            <div>مصنع الأجهزة التعويضية</div>
+            @foreach (app(\App\Services\SettingService::class)->branding()['lines'] as $line)
+                <div>{{ $line }}</div>
+            @endforeach
             <div class="dept">القسم المالي</div>
         </div>
         <div class="header-left">

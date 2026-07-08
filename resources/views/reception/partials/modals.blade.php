@@ -186,9 +186,9 @@
             <tbody id="patientFileVisits"></tbody>
           </table>
         </div>
-        <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+        <div class="print-scope-hide" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
           <button class="btn btn-secondary" id="btnClosePatientFile">إغلاق</button>
-          <button class="btn btn-primary" id="btnPrintPatientFile" onclick="window.print()">🖨️ طباعة الملف</button>
+          <button class="btn btn-primary" id="btnPrintPatientFile" type="button" data-print-scope data-print-target="#patientFileModal .modal-body">🖨️ طباعة الملف</button>
         </div>
       </div>
     </div>

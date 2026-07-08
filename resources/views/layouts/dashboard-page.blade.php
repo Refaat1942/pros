@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/entity-badges.css') }}?v={{ filemtime(public_path('assets/css/entity-badges.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-table-search.css') }}?v={{ filemtime(public_path('assets/css/dashboard-table-search.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/print-scope.css') }}?v={{ filemtime(public_path('assets/css/print-scope.css')) }}">
     @include('partials.dashboard-date-filters-assets')
 @endpush
 
@@ -61,6 +62,7 @@
     <script src="{{ asset('assets/js/shared/toast.js') }}?v={{ filemtime(public_path('assets/js/shared/toast.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}?v={{ filemtime(public_path('assets/js/shared/table-pagination.js')) }}"></script>
+    <script src="{{ asset('assets/js/shared/print-scope.js') }}?v={{ filemtime(public_path('assets/js/shared/print-scope.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/entity-badges.js') }}?v={{ filemtime(public_path('assets/js/shared/entity-badges.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/tech-notes-modal.js') }}"></script>
     @if (! empty($dashboardConfig['nav_groups']))

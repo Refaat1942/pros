@@ -1,0 +1,43 @@
+/* ============================================================
+   print-scope.css — طباعة عنصر واحد فقط من الشاشة (مودال/بطاقة)
+   يمنع طباعة لوحة التحكم كاملة عند الضغط على زر طباعة داخل مودال.
+   يفعّله print-scope.js عبر إضافة .print-scope-active للـ body
+   و .print-scope-target للعنصر المطلوب طباعته.
+   ============================================================ */
+
+@media print {
+    body.print-scope-active * {
+        visibility: hidden !important;
+    }
+
+    body.print-scope-active .print-scope-target,
+    body.print-scope-active .print-scope-target * {
+        visibility: visible !important;
+    }
+
+    body.print-scope-active .print-scope-target {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        margin: 0 auto;
+        width: 100%;
+        max-width: 190mm;
+        max-height: none !important;
+        padding: 0;
+        overflow: visible !important;
+        background: #fff !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    body.print-scope-active .print-scope-target * {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    body.print-scope-active .print-scope-hide,
+    body.print-scope-active .print-scope-target .print-scope-hide {
+        display: none !important;
+    }
+}
