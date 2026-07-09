@@ -87,6 +87,28 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="form-group" id="grpMilitaryNumber" style="display:{{ $classification === 'military' ? '' : 'none' }};">
+                        <label>الرقم العسكري <span style="color:red">*</span></label>
+                        <input type="text" class="form-control" name="military_number" id="newMilitaryNumber"
+                               placeholder="رقم العسكري" maxlength="30" value="{{ old('military_number') }}"
+                               data-v-rules="required,min:1,max:30" data-v-when="patient_classification=military">
+                    </div>
+                    <div class="form-group" id="grpSeniorityNumber" style="display:{{ $classification === 'military' ? '' : 'none' }};">
+                        <label>رقم الأقدمية <span style="color:red">*</span></label>
+                        <input type="text" class="form-control" name="seniority_number" id="newSeniorityNumber"
+                               placeholder="رقم الأقدمية" maxlength="30" value="{{ old('seniority_number') }}"
+                               data-v-rules="required,min:1,max:30" data-v-when="patient_classification=military">
+                    </div>
+                    <div class="form-group" id="grpMilitaryWeapon" style="display:{{ $classification === 'military' ? '' : 'none' }};">
+                        <label>السلاح / الفرع <span style="color:red">*</span></label>
+                        <select class="form-control" name="military_weapon" id="newMilitaryWeapon"
+                                data-v-rules="required,select" data-v-when="patient_classification=military">
+                            <option value="">— اختر السلاح —</option>
+                            @foreach ($military_weapons ?? [] as $weapon)
+                                <option value="{{ $weapon }}" @selected(old('military_weapon') === $weapon)>{{ $weapon }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="form-group" id="grpCompany" style="display:{{ ($classification === 'entity' && old('entity_billing_type')) ? '' : 'none' }};">
                         <label>جهة التعاقد <span style="color:red">*</span></label>
                         <select class="form-control" name="contract_company_id" id="newCompanyId">

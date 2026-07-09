@@ -581,6 +581,9 @@
         nationalId: patient.national_id || '',
         contractCompanyId: patient.contract_company_id || null,
         militaryRankId: patient.military_rank_id || null,
+        militaryNumber: patient.military_number || '',
+        seniorityNumber: patient.seniority_number || '',
+        militaryWeapon: patient.military_weapon || '',
         company: affiliation,
         entity: entity,
         entityHtml: window.EntityBadges ? EntityBadges.renderColumnHtml(row) : affiliation,
@@ -866,6 +869,7 @@
       cloneSelectOptions('newVisitTypeId', 'editVisitTypeId', false);
       cloneSelectOptions('newCompanyId', 'editCompanyId', true);
       cloneSelectOptions('newRankId', 'editRankId', true);
+      cloneSelectOptions('newMilitaryWeapon', 'editMilitaryWeapon', true);
 
       document.getElementById('editAppointmentId').value = String(appt.id);
       document.getElementById('editPatientName').value = appt.name === '—' ? '' : appt.name;
@@ -876,6 +880,9 @@
       var isMilitary = appt.patient_type === 'military';
       document.getElementById('grpEditCompany').style.display = isMilitary ? 'none' : '';
       document.getElementById('grpEditRank').style.display = isMilitary ? '' : 'none';
+      document.getElementById('grpEditMilitaryNumber').style.display = isMilitary ? '' : 'none';
+      document.getElementById('grpEditSeniorityNumber').style.display = isMilitary ? '' : 'none';
+      document.getElementById('grpEditMilitaryWeapon').style.display = isMilitary ? '' : 'none';
 
       if (!isMilitary && appt.contractCompanyId) {
         document.getElementById('editCompanyId').value = String(appt.contractCompanyId);
@@ -888,6 +895,10 @@
       } else {
         document.getElementById('editRankId').value = '';
       }
+
+      document.getElementById('editMilitaryNumber').value = appt.militaryNumber || '';
+      document.getElementById('editSeniorityNumber').value = appt.seniorityNumber || '';
+      document.getElementById('editMilitaryWeapon').value = appt.militaryWeapon || '';
 
       document.getElementById('editAppointmentModal').style.display = 'flex';
     }
@@ -906,6 +917,9 @@
 
       if (appt.patient_type === 'military') {
         payload.military_rank_id = parseInt(document.getElementById('editRankId').value, 10) || null;
+        payload.military_number = (document.getElementById('editMilitaryNumber').value || '').trim();
+        payload.seniority_number = (document.getElementById('editSeniorityNumber').value || '').trim();
+        payload.military_weapon = document.getElementById('editMilitaryWeapon').value || null;
       } else {
         var companyVal = document.getElementById('editCompanyId').value;
         payload.contract_company_id = companyVal ? parseInt(companyVal, 10) : null;
@@ -921,6 +935,18 @@
       }
       if (appt.patient_type === 'military' && !payload.military_rank_id) {
         showToast('الرتبة العسكرية مطلوبة', true);
+        return;
+      }
+      if (appt.patient_type === 'military' && !payload.military_number) {
+        showToast('الرقم العسكري مطلوب', true);
+        return;
+      }
+      if (appt.patient_type === 'military' && !payload.seniority_number) {
+        showToast('رقم الأقدمية مطلوب', true);
+        return;
+      }
+      if (appt.patient_type === 'military' && !payload.military_weapon) {
+        showToast('السلاح / الفرع مطلوب', true);
         return;
       }
 
@@ -1111,6 +1137,9 @@
         '<div class="item"><div class="lbl">رقم الهاتف</div><div class="val" style="direction:ltr;text-align:right;">' + patient.phone + '</div></div>' +
         (patient.patient_type === 'military'
           ? '<div class="item"><div class="lbl">الرتبة العسكرية</div><div class="val">' + (patient.rank || '—') + '</div></div>'
+            + '<div class="item"><div class="lbl">الرقم العسكري</div><div class="val">' + (patient.militaryNumber || patient.military_number || '—') + '</div></div>'
+            + '<div class="item"><div class="lbl">رقم الأقدمية</div><div class="val">' + (patient.seniorityNumber || patient.seniority_number || '—') + '</div></div>'
+            + '<div class="item"><div class="lbl">السلاح</div><div class="val">' + (patient.militaryWeapon || patient.military_weapon || '—') + '</div></div>'
           : '<div class="item"><div class="lbl">جهة التعاقد</div><div class="val">' + patient.company + '</div></div>') +
         '<div class="item"><div class="lbl">تاريخ التسجيل</div><div class="val">' + patient.registered + '</div></div>' +
         '<div class="item"><div class="lbl">آخر زيارة</div><div class="val">' + patient.lastVisit + '</div></div>' +
@@ -1495,6 +1524,9 @@
       var isCash = classification === 'cash';
 
       var grpRank = document.getElementById('grpRank');
+      var grpMilitaryNumber = document.getElementById('grpMilitaryNumber');
+      var grpSeniorityNumber = document.getElementById('grpSeniorityNumber');
+      var grpMilitaryWeapon = document.getElementById('grpMilitaryWeapon');
       var grpEntityBilling = document.getElementById('grpEntityBilling');
       var grpCompany = document.getElementById('grpCompany');
       var grpCashHint = document.getElementById('grpCashHint');
@@ -1503,6 +1535,9 @@
       var companySel = document.getElementById('newCompanyId');
 
       if (grpRank) grpRank.style.display = isMilitary ? '' : 'none';
+      if (grpMilitaryNumber) grpMilitaryNumber.style.display = isMilitary ? '' : 'none';
+      if (grpSeniorityNumber) grpSeniorityNumber.style.display = isMilitary ? '' : 'none';
+      if (grpMilitaryWeapon) grpMilitaryWeapon.style.display = isMilitary ? '' : 'none';
       if (grpEntityBilling) grpEntityBilling.style.display = isEntity ? '' : 'none';
       if (grpCashHint) grpCashHint.style.display = isCash ? '' : 'none';
 

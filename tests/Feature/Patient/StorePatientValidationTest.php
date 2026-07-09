@@ -88,6 +88,9 @@ class StorePatientValidationTest extends TestCase
             'national_id' => '29901010100002',
             'patient_type' => Patient::TYPE_MILITARY,
             'military_rank_id' => $rank->id,
+            'military_number' => 'MIL-12345',
+            'seniority_number' => 'SEN-9876',
+            'military_weapon' => 'المشاة',
             'visit_type_id' => $visitType->id,
         ]);
 
@@ -101,5 +104,25 @@ class StorePatientValidationTest extends TestCase
         $this->assertNull($patient->contract_company_id);
         $this->assertNull($patient->company_name);
         $this->assertSame('نقيب', $patient->rank);
+        $this->assertSame('MIL-12345', $patient->military_number);
+        $this->assertSame('SEN-9876', $patient->seniority_number);
+        $this->assertSame('المشاة', $patient->military_weapon);
+    }
+
+    public function test_store_military_patient_requires_weapon_and_military_numbers(): void
+    {
+        $user = $this->userWithRole('reception');
+        $rank = MilitaryRank::create(['name' => 'رائد', 'rank_code' => 'MAJ', 'sort_order' => 2]);
+        $visitType = VisitType::create(['name' => 'كشف عسكري']);
+
+        $response = $this->actingAs($user)->post(route('reception.patients.store'), [
+            'form' => 'patient',
+            'name' => 'ضابط بدون بيانات',
+            'patient_classification' => 'military',
+            'military_rank_id' => $rank->id,
+            'visit_type_id' => $visitType->id,
+        ]);
+
+        $response->assertSessionHasErrors(['military_number', 'seniority_number', 'military_weapon']);
     }
 }

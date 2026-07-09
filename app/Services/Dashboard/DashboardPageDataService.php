@@ -28,6 +28,7 @@ use App\Models\Supplier;
 use App\Models\TechOrderSpec;
 use App\Models\User;
 use App\Models\VisitType;
+use App\Support\MilitaryWeapons;
 use App\Services\AdjustmentsTransferHistoryService;
 use App\Services\AdminCaseTrackingService;
 use App\Services\AdminCivilianDebtService;
@@ -368,6 +369,7 @@ class DashboardPageDataService
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'military_weapons' => MilitaryWeapons::labels(),
             'civilian_companies' => ContractCompany::query()
                 ->where('is_military', false)
                 ->orderByDesc('is_contracted')

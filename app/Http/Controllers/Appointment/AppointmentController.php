@@ -30,7 +30,7 @@ class AppointmentController extends Controller
         $date = $request->date ?? ClinicTime::todayDateString();
 
         $query = Appointment::with([
-            'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity,national_id,military_rank_id',
+            'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity,national_id,military_rank_id,military_number,seniority_number,military_weapon',
             'patient.contractCompany:id,name,is_contracted',
             'visitTypeRecord:id,name',
         ])

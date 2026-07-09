@@ -40,6 +40,9 @@ class Patient extends Model
         'national_id',
         'patient_type',
         'military_rank_id',
+        'military_number',
+        'seniority_number',
+        'military_weapon',
         'rank',               // نص مشتق من military_rank.name — للعرض السريع
         'sovereign_entity',
         'contract_company_id',

@@ -17,14 +17,21 @@
     ];
 @endphp
 
-<aside class="dev-role-switcher" aria-label="شريط التبديل السريع بين الأدوار">
+<aside class="dev-role-switcher is-collapsed" aria-label="شريط التنقّل بين الأقسام">
     <div class="dev-role-switcher__inner">
+        <button type="button"
+                class="dev-role-switcher__toggle"
+                data-role-switcher-toggle
+                aria-expanded="false"
+                title="إظهار شريط التنقّل">
+            <span aria-hidden="true">🧭</span>
+        </button>
         <span class="dev-role-switcher__label">
-            <span class="dev-role-switcher__badge">LOCAL</span>
-            {{ $isAdmin ? 'تنقّل بين اللوحات' : 'تبديل سريع' }}
+            <span class="dev-role-switcher__badge">ADMIN</span>
+            تنقّل بين الأقسام
         </span>
-        <div class="dev-role-switcher__track" role="group" aria-label="أدوار العرض التوضيحي">
-            @if ($isAdmin && $currentPrefix !== 'admin')
+        <div class="dev-role-switcher__track" role="group" aria-label="لوحات الأقسام" hidden>
+            @if ($currentPrefix !== 'admin')
                 <a href="{{ route('admin.dashboard') }}"
                    class="dev-role-switcher__btn dev-role-switcher__link"
                    title="لوحة الإدارة">
@@ -34,31 +41,25 @@
             @endif
             @foreach ($roles as $slug => $meta)
                 @php
-                    $isActive = $currentPrefix === $slug || ($currentSlug === $slug && ! $isAdmin);
-                    $canVisit = $isAdmin ? $user->canAccessDashboard($slug) : false;
+                    $isActive = $currentPrefix === $slug;
+                    $canVisit = $user->canAccessDashboard($slug);
                 @endphp
-
-                @if ($isAdmin)
-                    @if ($canVisit)
-                        <a href="{{ route($meta['route']) }}"
-                           class="dev-role-switcher__btn dev-role-switcher__link{{ $isActive ? ' is-active' : '' }}"
-                           title="{{ $meta['label'] }}">
-                            <span class="dev-role-switcher__icon" aria-hidden="true">{{ $icons[$slug] ?? '👤' }}</span>
-                            <span>{{ $meta['label'] }}</span>
-                        </a>
-                    @endif
-                @else
-                    <form method="POST" action="{{ route('dev.role-switch', $slug) }}" class="dev-role-switcher__form">
-                        @csrf
-                        <button type="submit"
-                                class="dev-role-switcher__btn{{ $isActive ? ' is-active' : '' }}"
-                                title="{{ $meta['label'] }} — {{ $slug }}">
-                            <span class="dev-role-switcher__icon" aria-hidden="true">{{ $icons[$slug] ?? '👤' }}</span>
-                            <span>{{ $meta['label'] }}</span>
-                        </button>
-                    </form>
+                @if ($canVisit)
+                    <a href="{{ route($meta['route']) }}"
+                       class="dev-role-switcher__btn dev-role-switcher__link{{ $isActive ? ' is-active' : '' }}"
+                       title="{{ $meta['label'] }}">
+                        <span class="dev-role-switcher__icon" aria-hidden="true">{{ $icons[$slug] ?? '👤' }}</span>
+                        <span>{{ $meta['label'] }}</span>
+                    </a>
                 @endif
             @endforeach
         </div>
+        <button type="button"
+                class="dev-role-switcher__collapse"
+                data-role-switcher-toggle
+                aria-label="إخفاء شريط التنقّل"
+                title="إخفاء">
+            ▾
+        </button>
     </div>
 </aside>

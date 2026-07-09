@@ -5,6 +5,7 @@ namespace App\Http\Requests\Patient;
 use App\Http\Requests\BaseRequest;
 use App\Models\ContractCompany;
 use App\Models\Patient;
+use App\Support\MilitaryWeapons;
 use Illuminate\Validation\Rule;
 
 class StorePatientRequest extends BaseRequest
@@ -70,6 +71,9 @@ class StorePatientRequest extends BaseRequest
             'patient_type' => ['required', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
             'entity_billing_type' => ['nullable', 'string', Rule::in(['contracted', 'non_contracted'])],
             'military_rank_id' => ['nullable', 'integer', 'exists:military_ranks,id'],
+            'military_number' => ['nullable', 'string', 'max:30'],
+            'seniority_number' => ['nullable', 'string', 'max:30'],
+            'military_weapon' => MilitaryWeapons::optionalValidationRule(),
             'sovereign_entity' => ['nullable', 'string', 'min:2', 'max:255'],
             'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
             'visit_type_id' => ['required', 'integer', Rule::exists('visit_types', 'id')],
@@ -83,6 +87,18 @@ class StorePatientRequest extends BaseRequest
 
             if ($class === self::CLASS_MILITARY && ! $this->filled('military_rank_id')) {
                 $validator->errors()->add('military_rank_id', 'الرتبة العسكرية مطلوبة للمريض العسكري.');
+            }
+
+            if ($class === self::CLASS_MILITARY && ! $this->filled('military_number')) {
+                $validator->errors()->add('military_number', 'الرقم العسكري مطلوب.');
+            }
+
+            if ($class === self::CLASS_MILITARY && ! $this->filled('seniority_number')) {
+                $validator->errors()->add('seniority_number', 'رقم الأقدمية مطلوب.');
+            }
+
+            if ($class === self::CLASS_MILITARY && ! $this->filled('military_weapon')) {
+                $validator->errors()->add('military_weapon', 'السلاح / الفرع مطلوب.');
             }
 
             if ($class !== self::CLASS_ENTITY) {

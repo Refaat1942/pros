@@ -129,6 +129,60 @@ body.has-dev-role-switcher {
     padding-bottom: 72px !important;
 }
 
+.dev-role-switcher.is-collapsed {
+    padding: 0 12px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+.dev-role-switcher.is-collapsed .dev-role-switcher__inner {
+    width: auto;
+    max-width: none;
+    margin-inline-start: auto;
+    margin-inline-end: 12px;
+    padding: 6px 10px;
+    gap: 0;
+}
+
+.dev-role-switcher.is-collapsed .dev-role-switcher__collapse {
+    display: none;
+}
+
+.dev-role-switcher:not(.is-collapsed) .dev-role-switcher__toggle {
+    display: none;
+}
+
+.dev-role-switcher__toggle,
+.dev-role-switcher__collapse {
+    appearance: none;
+    -webkit-appearance: none;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(30, 41, 59, 0.85);
+    color: #e2e8f0;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.dev-role-switcher__toggle:hover,
+.dev-role-switcher__collapse:hover {
+    background: rgba(51, 65, 85, 0.95);
+    border-color: rgba(226, 232, 240, 0.4);
+    color: #fff;
+}
+
+.dev-role-switcher__collapse {
+    font-size: 14px;
+    margin-inline-start: 4px;
+}
+
 body.has-dev-role-switcher .main,
 body.has-dev-role-switcher .sidebar {
     /* لا يُغطى المحتوى خلف الشريط */

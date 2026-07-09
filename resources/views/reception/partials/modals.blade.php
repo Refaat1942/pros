@@ -271,6 +271,20 @@
                 <option value="">— اختر الرتبة —</option>
               </select>
             </div>
+            <div class="form-group" id="grpEditMilitaryNumber" style="display:none;">
+              <label>الرقم العسكري <span style="color:red">*</span></label>
+              <input type="text" class="form-control" id="editMilitaryNumber" maxlength="30">
+            </div>
+            <div class="form-group" id="grpEditSeniorityNumber" style="display:none;">
+              <label>رقم الأقدمية <span style="color:red">*</span></label>
+              <input type="text" class="form-control" id="editSeniorityNumber" maxlength="30">
+            </div>
+            <div class="form-group" id="grpEditMilitaryWeapon" style="display:none;">
+              <label>السلاح / الفرع <span style="color:red">*</span></label>
+              <select class="form-control" id="editMilitaryWeapon">
+                <option value="">— اختر السلاح —</option>
+              </select>
+            </div>
           </div>
         </form>
       </div>

@@ -72,6 +72,9 @@ class AppointmentService
 
                 if ($appointment->isMilitary()) {
                     $patientUpdates['military_rank_id'] = $data['military_rank_id'] ?? null;
+                    $patientUpdates['military_number'] = $data['military_number'] ?? null;
+                    $patientUpdates['seniority_number'] = $data['seniority_number'] ?? null;
+                    $patientUpdates['military_weapon'] = $data['military_weapon'] ?? null;
                     $patientUpdates['rank'] = MilitaryRank::query()
                         ->whereKey($data['military_rank_id'] ?? null)
                         ->value('name');
@@ -96,7 +99,7 @@ class AppointmentService
             );
 
             return $appointment->fresh()->load([
-                'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity,national_id,military_rank_id',
+                'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity,national_id,military_rank_id,military_number,seniority_number,military_weapon',
                 'patient.contractCompany:id,name,is_contracted',
                 'visitTypeRecord:id,name',
             ]);
