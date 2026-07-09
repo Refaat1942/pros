@@ -102,15 +102,41 @@
     return state.items.reduce(function (sum, it) { return sum + (parseInt(it.qty, 10) || 0); }, 0);
   }
 
+  function scanCounts() {
+    var counts = {};
+    state.scanned.forEach(function (code) {
+      counts[code] = (counts[code] || 0) + 1;
+    });
+    return counts;
+  }
+
   function renderRequired() {
     var el = $('dispenseRequired');
     if (!el) return;
-    el.innerHTML = '<p class="font-bold text-slate-700 mb-2">أكواد مطلوبة (' + state.items.length + ' صنف · ' + expectedTotal() + ' وحدة):</p>' +
+    var scanned = scanCounts();
+    el.innerHTML = '<p class="font-bold text-slate-800 mb-3 text-base">أكواد مطلوبة (' + state.items.length + ' صنف · ' + expectedTotal() + ' وحدة):</p>' +
       state.items.map(function (it) {
         var bc = expectedBarcodeFor(it);
-        return '<div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0">' +
-          '<span>' + esc(it.name || it.stock_item_code) + ' ×' + it.qty + ' ' + esc(it.uom || 'قطعة') + '</span>' +
-          '<code class="font-mono text-xs bg-white px-2 py-0.5 rounded border">' + esc(bc) + ' ×' + it.qty + '</code></div>';
+        var required = parseInt(it.qty, 10) || 0;
+        var done = scanned[bc] || 0;
+        var complete = done >= required && required > 0;
+        var statusLabel = complete
+          ? '✓ تم'
+          : (done > 0 ? done + ' / ' + required : '—');
+        var rowCls = complete
+          ? 'bg-emerald-50 border-emerald-200'
+          : (done > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100');
+        return '<div class="flex justify-between items-center gap-3 py-2 px-3 rounded-lg border ' + rowCls + ' mb-1.5 last:mb-0">' +
+          '<div class="flex items-center gap-2 min-w-0">' +
+          '<span class="shrink-0 w-8 h-8 rounded-full inline-flex items-center justify-center text-sm font-black ' +
+          (complete ? 'bg-emerald-600 text-white' : (done > 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500')) + '">' +
+          (complete ? '✓' : (done > 0 ? done : '○')) + '</span>' +
+          '<span class="truncate">' + esc(it.name || it.stock_item_code) + ' ×' + it.qty + ' ' + esc(it.uom || 'قطعة') + '</span>' +
+          '</div>' +
+          '<div class="text-left shrink-0">' +
+          '<code class="font-mono text-sm bg-white px-2 py-1 rounded border block">' + esc(bc) + '</code>' +
+          '<span class="text-xs font-bold mt-1 block text-center ' + (complete ? 'text-emerald-700' : 'text-slate-500') + '">' + statusLabel + '</span>' +
+          '</div></div>';
       }).join('');
     renderScanProgress();
   }
@@ -152,7 +178,9 @@
     var el = $('scannedList');
     if (!el) return;
     if (!state.scanned.length) {
-      el.innerHTML = '<span class="text-slate-400 text-xs">لم يُمسح أي باركود بعد.</span>';
+      el.innerHTML = '<span class="text-slate-400 text-sm">لم يُمسح أي باركود بعد.</span>';
+      renderScanProgress();
+      renderRequired();
       return;
     }
     var counts = expectedCounts();
@@ -168,6 +196,7 @@
         'data-scan-idx="' + idx + '" title="حذف المسح" aria-label="حذف ' + esc(code) + '">×</button></span>';
     }).join('');
     renderScanProgress();
+    renderRequired();
   }
 
   function removeScan(index) {
@@ -175,7 +204,6 @@
     state.scanned.splice(index, 1);
     revalidateAlarm();
     renderScanned();
-    renderScanProgress();
     clearBarcodeInputError();
     if ($('barcodeInput')) $('barcodeInput').focus();
   }

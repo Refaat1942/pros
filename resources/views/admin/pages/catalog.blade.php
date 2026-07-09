@@ -164,7 +164,7 @@
             <input type="hidden" id="slimEditCode" value="">
             <div class="catalog-form-cards">
                 <section class="catalog-form-card">
-                    <h4 class="catalog-form-card__title">📦 بيانات الصنf</h4>
+                    <h4 class="catalog-form-card__title">📦 بيانات الصنف</h4>
                     <div class="catalog-form-grid catalog-form-grid--basic">
                 <div>
                     <label class="catalog-form-label">كود الصنف / الباركود</label>
@@ -198,6 +198,12 @@
                 <div>
                     <label class="catalog-form-label">السعر الأساسي</label>
                     <input type="number" id="slimPrice" min="0" step="0.01" value="0" class="catalog-form-input">
+                </div>
+                <div class="catalog-form-grid__full">
+                    <label class="catalog-quick-dispense-label">
+                        <input type="checkbox" id="slimIsQuickDispense">
+                        <span>⚡ صنف صرف سريع (ربح مباشر 40% — يُباع كما هو بدون تصنيع)</span>
+                    </label>
                 </div>
                     </div>
                 </section>
@@ -385,6 +391,29 @@
     }
     .catalog-form-grid--basic {
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+    .catalog-form-grid__full {
+        grid-column: 1 / -1;
+    }
+    .catalog-quick-dispense-label {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        cursor: pointer;
+        margin: 4px 0 0;
+        padding: 12px 14px;
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.6;
+        color: #92400e;
+    }
+    .catalog-quick-dispense-label input {
+        width: auto;
+        margin-top: 4px;
+        flex-shrink: 0;
     }
     @media (min-width: 900px) {
         .catalog-form-grid--basic {
@@ -821,6 +850,8 @@
         document.getElementById('slimEditCode').value = v.code || '';
         document.getElementById('slimExtraPrices').innerHTML = '';
         (v.prices || []).forEach(function (p) { window.addSlimPriceRow(p.amount); });
+        var quickEl = document.getElementById('slimIsQuickDispense');
+        if (quickEl) quickEl.checked = !!v.is_quick_dispense;
         var first = (v.suppliers || [])[0];
         setSupplierValue(first ? first.id : '', first ? first.name : '');
         document.getElementById('slimCatalogError').style.display = 'none';
@@ -998,6 +1029,7 @@
             + detailBox('القسم', item.category || '—')
             + detailBox('المورد', supplierNamesLabel(item))
             + detailBox('خصائص القسم', window.CatalogSections ? window.CatalogSections.formatAttributesSummary(item) : '—')
+            + detailBox('صرف سريع', item.is_quick_dispense ? '⚡ نعم (ربح 40%)' : '—')
             + detailBox('السعر الأساسي', '<span class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</span>')
             + detailBox('أعلى سعر', '<span class="catalog-price-cell">' + formatCatalogPrice(itemHighestPrice(item)) + '</span>')
             + '</div>'
@@ -1089,6 +1121,7 @@
             category_id: parseInt(document.getElementById('slimCategoryId').value || '0', 10) || null,
             attributes: window.CatalogSections ? window.CatalogSections.collectAttributes() : {},
             supplier_ids: supplierIds,
+            is_quick_dispense: !!(document.getElementById('slimIsQuickDispense') || {}).checked,
         };
 
         if (!id) {

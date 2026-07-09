@@ -142,9 +142,9 @@
 <div id="dispenseModal" class="fixed inset-0 z-[200] hidden" aria-hidden="true">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" id="dispenseBackdrop"></div>
     <div class="relative flex min-h-full items-center justify-center p-4">
-        <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden animate-[fadeIn_0.15s_ease]">
-            <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white flex items-center justify-between gap-3">
-                <h3 class="font-bold">📤 صرف للورشة — مسح الباركود</h3>
+        <div class="w-full max-w-5xl max-h-[92vh] rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden animate-[fadeIn_0.15s_ease] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white flex items-center justify-between gap-3 shrink-0">
+                <h3 class="font-bold text-lg">📤 صرف للورشة — مسح الباركود</h3>
                 <div class="flex items-center gap-2">
                     <a id="printIssueVoucherLink" href="#" target="_blank" rel="noopener"
                        class="hidden rounded-lg bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 text-xs font-bold">
@@ -153,8 +153,8 @@
                     <button type="button" id="closeDispenseModal" class="text-2xl leading-none opacity-80 hover:opacity-100">&times;</button>
                 </div>
             </div>
-            <div class="p-5 space-y-4">
-                <div id="dispenseRequired" class="rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm space-y-2"></div>
+            <div class="p-6 space-y-5 overflow-y-auto flex-1">
+                <div id="dispenseRequired" class="rounded-xl bg-slate-50 border border-slate-200 p-5 text-base space-y-1 max-h-[42vh] overflow-y-auto"></div>
                 <div id="scanProgressWrap" class="rounded-xl border border-slate-200 bg-white p-3">
                     <div class="flex justify-between items-center mb-2 text-sm font-bold text-slate-700">
                         <span>تقدّم المسح</span>
@@ -181,7 +181,7 @@
                             class="rounded-xl bg-slate-800 text-white px-4 py-3 text-sm font-bold self-end">إضافة</button>
                 </div>
                 <div id="scannedList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
-                <div id="dispenseAlarm" class="hidden rounded-xl border-2 border-red-500 bg-red-50 p-4 text-red-800 font-bold animate-pulse">
+                <div id="dispenseAlarm" class="hidden rounded-xl border-2 border-red-500 bg-red-50 p-5 text-red-800 font-bold text-base animate-pulse">
                     ⛔ <span id="dispenseAlarmText">باركود غير مطابق — تم إيقاف الصرف!</span>
                 </div>
                 <div class="flex gap-3 justify-end pt-2">
@@ -198,7 +198,7 @@
 </div>
 
 <div id="bomItemsModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <div>
                 <h3 class="font-bold text-slate-800">📦 بنود قائمة المواد</h3>

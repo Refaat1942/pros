@@ -21,10 +21,10 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet avoid-break">
+<div class="sheet avoid-break issue-voucher-sheet">
     @include('prints.partials.org-header', ['dept' => 'قسم المخازن'])
 
-    <h1 class="doc-title">إذن صرف مواد — رقم ( <span class="fill">{{ $voucherNo }}</span> )</h1>
+    <h1 class="doc-title issue-voucher-title">إذن صرف مواد — رقم ( <span class="fill">{{ $voucherNo }}</span> )</h1>
 
     <table class="meta-table print-table" style="margin-bottom: 14px;">
         <tbody>
