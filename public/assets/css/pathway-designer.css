@@ -1,0 +1,352 @@
+.pathway-designer-page .pathway-designer-intro {
+    margin: 0 16px 12px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    color: #1e3a5f;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.pathway-designer-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 0 16px 12px;
+}
+
+.pathway-designer-toolbar__hint {
+    margin-right: auto;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.pathway-matrix-wrap {
+    margin: 0 16px 16px;
+    overflow-x: auto;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.pathway-matrix {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.pathway-matrix thead th {
+    background: #fef08a;
+    font-weight: 800;
+    padding: 12px 10px;
+    border: 1px solid #ca8a04;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.pathway-matrix tbody td {
+    border: 1px solid #e2e8f0;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.pathway-matrix__num {
+    width: 44px;
+    font-weight: 800;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 14px;
+}
+
+.pathway-matrix__cell {
+    padding: 0;
+    min-width: 180px;
+}
+
+.pathway-matrix__cell--shared {
+    background: #f0fdf4;
+}
+
+.pathway-matrix__btn {
+    display: block;
+    width: 100%;
+    min-height: 52px;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+    color: #1e293b;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+
+.pathway-matrix__btn:hover {
+    background: #eff6ff;
+}
+
+.pathway-matrix__btn.is-selected {
+    background: #dbeafe;
+    box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+.pathway-matrix__btn.is-locked {
+    background: #fffbeb;
+}
+
+.pathway-matrix__btn.is-empty {
+    color: #cbd5e1;
+    cursor: default;
+    font-weight: 400;
+}
+
+.pathway-matrix__btn-sub {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.pathway-matrix__badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.pathway-flow-map {
+    margin: 0 16px 16px;
+    padding: 12px 14px;
+    background: #0f172a;
+    border-radius: 12px;
+    color: #e2e8f0;
+    overflow-x: auto;
+}
+
+.pf-flow-title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.pf-flow-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 4px;
+    direction: rtl;
+}
+
+.pf-flow-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 999px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.pf-flow-chip b {
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    background: #2563eb;
+    border-radius: 50%;
+    font-size: 11px;
+    color: #fff;
+}
+
+.pf-flow-arrow {
+    color: #64748b;
+    font-size: 16px;
+    padding: 0 2px;
+}
+
+.pathway-step-editor {
+    margin: 0 16px 16px;
+}
+
+.pathway-step-editor[hidden] {
+    display: none !important;
+}
+
+.pf-card {
+    position: relative;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    direction: rtl;
+}
+
+.pf-card--locked {
+    background: #fffbeb;
+    border-color: #fcd34d;
+}
+
+.pf-card-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.pf-num {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #1e40af;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.pf-card--locked .pf-num {
+    background: #b45309;
+}
+
+.pf-head-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.pf-title {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.pf-step-hint {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.pf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.pf-field {
+    display: grid;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.pf-field input,
+.pf-field select,
+.pf-field textarea {
+    padding: 8px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 400;
+    font-size: 13px;
+}
+
+.pf-field textarea {
+    min-height: 56px;
+    resize: vertical;
+}
+
+.pf-field--wide {
+    grid-column: 1 / -1;
+}
+
+.pf-handlers {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+    display: grid;
+    gap: 8px;
+}
+
+.pf-handlers-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #1e40af;
+    margin: 0;
+}
+
+.pf-skip-row {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f8fafc;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+}
+
+.pf-skip-roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    font-size: 12px;
+}
+
+.pf-lock-note {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #92400e;
+    font-weight: 600;
+    background: #fef3c7;
+    border-radius: 8px;
+    line-height: 1.6;
+}
+
+.pf-skip-title {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+}
+
+.pathway-designer-error {
+    margin: 0 16px;
+    padding: 10px 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    color: #b91c1c;
+}
+
+.pathway-designer-actions {
+    padding: 0 16px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
