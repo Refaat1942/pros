@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\CaseStage;
 use App\Models\CaseRecord;
 use App\Models\Patient;
+use App\Models\PathwayStep;
 use App\Models\Quote;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -47,15 +48,13 @@ class PublicTrackingService
             $patient = $case->patient;
         }
 
-        $isMilitary = $this->resolveIsMilitary($case, $patient);
-        $pathway = $isMilitary ? 'military' : 'civilian';
+        $pathway = $this->pathwayConfig->resolvePathway($patient, $case);
 
-        $steps = $this->pathwayConfig->displaySteps($isMilitary);
-        $currentIndex = $this->pathwayConfig->resolveCurrentIndex(
+        $steps = $this->pathwayConfig->displayStepsForPathway($pathway);
+        $currentIndex = $this->pathwayConfig->resolveCurrentIndexForPathway(
             $case,
-            $isMilitary,
+            $pathway,
             $case === null,
-            $case !== null && ! $isMilitary && $this->isAwaitingEntityApproval($case),
         );
 
         $mappedSteps = array_map(function (array $step, int $index) use ($currentIndex) {
@@ -76,7 +75,7 @@ class PublicTrackingService
         return [
             'tracking_uid' => $uid,
             'pathway' => $pathway,
-            'stage_label' => $this->publicStageLabel($case, $case === null, $isMilitary),
+            'stage_label' => $this->publicStageLabel($case, $case === null, $pathway),
             'current_index' => $currentIndex,
             'progress_percent' => $progressPercent,
             'steps' => $mappedSteps,
@@ -94,16 +93,17 @@ class PublicTrackingService
         return $patient?->isMilitary() ?? false;
     }
 
-    private function publicStageLabel(?CaseRecord $case, bool $noCase, bool $isMilitary): string
+    private function publicStageLabel(?CaseRecord $case, bool $noCase, string $pathway): string
     {
         if ($noCase || ! $case) {
             return 'تم التسجيل — في انتظار الكشف الطبي';
         }
 
         $stageKey = $case->stage_key;
+        $isMilitary = $pathway === PathwayStep::PATHWAY_MILITARY;
 
-        if (! $isMilitary && $this->isAwaitingEntityApproval($case)) {
-            return 'بانتظار موافقة الجهة';
+        if ($pathway === PathwayStep::PATHWAY_ENTITY && $this->isAwaitingEntityApproval($case)) {
+            return 'بانتظار موافقة الجهة — خطاب التأمين';
         }
 
         if (! $isMilitary) {

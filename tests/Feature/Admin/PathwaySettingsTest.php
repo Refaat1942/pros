@@ -93,6 +93,40 @@ class PathwaySettingsTest extends TestCase
         ]);
     }
 
+    public function test_default_pathways_match_official_order(): void
+    {
+        $service = app(PathwayConfigService::class);
+
+        $service->resetToDefaults(PathwayStep::PATHWAY_CIVILIAN);
+        $civilian = $service->steps(PathwayStep::PATHWAY_CIVILIAN);
+        $this->assertCount(11, $civilian);
+        $this->assertSame('warehouse', $civilian[6]['key']);
+        $this->assertSame('delivery', $civilian[10]['key']);
+
+        $service->resetToDefaults(PathwayStep::PATHWAY_MILITARY);
+        $military = $service->steps(PathwayStep::PATHWAY_MILITARY);
+        $this->assertCount(11, $military);
+        $this->assertTrue($military[9]['auto_skip'] ?? false, 'الخزنة تُتخطى في المسار العسكري');
+
+        $service->resetToDefaults(PathwayStep::PATHWAY_ENTITY);
+        $entity = $service->steps(PathwayStep::PATHWAY_ENTITY);
+        $this->assertCount(13, $entity);
+        $this->assertSame('quote', $entity[5]['key']);
+        $this->assertSame('entity_return', $entity[6]['key']);
+    }
+
+    public function test_admin_can_reset_entity_pathway_to_defaults(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.pathway-settings.reset'), [
+                'pathway' => PathwayStep::PATHWAY_ENTITY,
+            ])
+            ->assertOk()
+            ->assertJsonPath('steps.5.key', 'quote');
+    }
+
     public function test_pathway_update_rejects_invalid_key(): void
     {
         $admin = $this->userWithRole('admin');

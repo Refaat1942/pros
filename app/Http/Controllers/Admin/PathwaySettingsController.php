@@ -25,9 +25,11 @@ class PathwaySettingsController extends Controller
 
         AuditService::log(
             action: 'update',
-            description: $pathway === PathwayStep::PATHWAY_MILITARY
-                ? 'تحديث ترقيم مسار المريض العسكري'
-                : 'تحديث ترقيم مسار المريض المدني',
+            description: match ($pathway) {
+                PathwayStep::PATHWAY_MILITARY => 'تحديث ترقيم مسار المريض العسكري',
+                PathwayStep::PATHWAY_ENTITY => 'تحديث ترقيم مسار جهات التعاقد',
+                default => 'تحديث ترقيم مسار المريض المدني',
+            },
             tag: 'admin',
             before: $before,
             after: $after,
@@ -43,7 +45,7 @@ class PathwaySettingsController extends Controller
     public function reset(Request $request): JsonResponse
     {
         $pathway = $request->validate([
-            'pathway' => ['required', 'string', 'in:civilian,military'],
+            'pathway' => ['required', 'string', 'in:civilian,military,entity'],
         ])['pathway'];
 
         $before = $this->pathwayConfig->steps($pathway);
@@ -52,7 +54,7 @@ class PathwaySettingsController extends Controller
 
         AuditService::log(
             action: 'update',
-            description: 'استعادة الإعدادات الافتراضية لمسار '.($pathway === PathwayStep::PATHWAY_MILITARY ? 'عسكري' : 'مدني'),
+            description: 'استعادة الإعدادات الافتراضية لمسار '.$this->pathwayConfig->pathwayLabel($pathway),
             tag: 'admin',
             before: $before,
             after: $after,

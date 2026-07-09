@@ -300,7 +300,7 @@ return [
             'military-ranks' => ['title' => 'الرتب العسكرية', 'icon' => '🪖', 'label' => 'الرتب العسكرية'],
             'costing-settings' => ['title' => 'إعدادات التكاليف الإضافية', 'icon' => '💰', 'label' => 'إعدادات التكاليف'],
             'branding-settings' => ['title' => 'الهوية البصرية — الشعار والترويسة', 'icon' => '🎨', 'label' => 'الهوية البصرية'],
-            'pathway-settings' => ['title' => 'مصمم مسار العمل — مدني وعسكري', 'icon' => '🧭', 'label' => 'مصمم المسار'],
+            'pathway-settings' => ['title' => 'مصمم مسار العمل — مدني / عسكري / جهات', 'icon' => '🧭', 'label' => 'مصمم المسار'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css'],

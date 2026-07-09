@@ -2,6 +2,7 @@
     $designer = [
         'civilian' => $pathway_civilian_steps ?? ($civilian ?? []),
         'military' => $pathway_military_steps ?? ($military ?? []),
+        'entity' => $pathway_entity_steps ?? ($entity ?? []),
         'departments' => $departments ?? [],
         'skip_roles' => $skip_roles ?? ($workflow_skip_role_options ?? []),
         'handlers' => $handlers ?? [],
@@ -14,16 +15,45 @@
         </div>
 
         <p class="pathway-designer-intro">
-            <strong>شاشة واحدة — من يعمل ماذا ← وبعدها يروح فين.</strong><br>
-            1️⃣ <strong>القسم المسؤول</strong> — مين يشتغل في الخطوة دي.<br>
-            2️⃣ <strong>ماذا يفعل</strong> — وصف مختصر للمهمة.<br>
-            3️⃣ <strong>بعد الإكمال — ينتقل إلى</strong> — اختار من القائمة الخطوة اللي بعدها (مش كتابة يدوي).<br>
-            🔒 <strong>مقفول</strong> = ماينفعش تتخطى — لكن تقدر تغيّر القسم والوصف والخطوة التالية.
+            <strong>ثلاثة مسارات — نفس ترتيب جدول العميل:</strong><br>
+            🌐 <strong>مدني (نقدي)</strong> — 11 خطوة بدون عرض سعر.<br>
+            🪖 <strong>عسكري</strong> — نفس 11 خطوة (الخزنة تُتخطى تلقائياً).<br>
+            🏢 <strong>جهات</strong> — 13 خطوة: عرض سعر ← خطاب موافقة ← ثم التصنيع.<br>
+            1️⃣ القسم المسؤول · 2️⃣ ماذا يفعل · 3️⃣ بعد الإكمال — ينتقل إلى (قائمة)
         </p>
 
+        <div class="pathway-order-ref" aria-label="مرجع ترتيب المسارات">
+            <table class="pathway-order-ref__table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>مدني</th>
+                        <th>عسكري</th>
+                        <th>جهات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>1</td><td colspan="3">استقبال</td></tr>
+                    <tr><td>2</td><td colspan="3">طبيب</td></tr>
+                    <tr><td>3</td><td colspan="3">توصيف</td></tr>
+                    <tr><td>4</td><td colspan="3">معدلات</td></tr>
+                    <tr><td>5</td><td colspan="3">تكاليف</td></tr>
+                    <tr><td>6</td><td>تشغيل — أمر شغل</td><td>تشغيل — أمر شغل</td><td>تشغيل — عرض سعر</td></tr>
+                    <tr><td>7</td><td>مخزن — صرف</td><td>مخزن — صرف</td><td>استقبال — خطاب موافقة</td></tr>
+                    <tr><td>8</td><td>ورشة — تصنيع</td><td>ورشة — تصنيع</td><td>تشغيل — أمر شغل</td></tr>
+                    <tr><td>9</td><td>تشغيل — أمر صرف</td><td>تشغيل — أمر صرف</td><td>مخزن — صرف</td></tr>
+                    <tr><td>10</td><td>خزنة — دفع</td><td>خزنة — دفع</td><td>ورشة — تصنيع</td></tr>
+                    <tr><td>11</td><td>استقبال — تسليم</td><td>استقبال — تسليم</td><td>تشغيل — أمر صرف</td></tr>
+                    <tr><td>12</td><td>—</td><td>—</td><td>خزنة — دفع</td></tr>
+                    <tr><td>13</td><td>—</td><td>—</td><td>استقبال — تسليم</td></tr>
+                </tbody>
+            </table>
+        </div>
+
         <div class="pathway-designer-tabs">
-            <button type="button" class="pathway-tab active" data-pathway-select="civilian">🌐 المسار المدني</button>
-            <button type="button" class="pathway-tab" data-pathway-select="military">🪖 المسار العسكري</button>
+            <button type="button" class="pathway-tab active" data-pathway-select="civilian">🌐 مدني (نقدي)</button>
+            <button type="button" class="pathway-tab" data-pathway-select="military">🪖 عسكري</button>
+            <button type="button" class="pathway-tab" data-pathway-select="entity">🏢 جهات</button>
             <button type="button" class="btn-action" id="btnResetPathway">↩️ استعادة الافتراضي</button>
         </div>
 
@@ -43,7 +73,7 @@
 
 <style>
     .pathway-designer-page .pathway-designer-intro {
-        margin: 0 16px 16px;
+        margin: 0 16px 12px;
         padding: 14px 16px;
         background: linear-gradient(135deg, #eff6ff, #f0fdf4);
         border: 1px solid #bfdbfe;
@@ -51,6 +81,34 @@
         color: #1e3a5f;
         font-size: 14px;
         line-height: 1.8;
+    }
+    .pathway-order-ref {
+        margin: 0 16px 16px;
+        overflow-x: auto;
+    }
+    .pathway-order-ref__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .pathway-order-ref__table th,
+    .pathway-order-ref__table td {
+        border: 1px solid #e2e8f0;
+        padding: 8px 10px;
+        text-align: center;
+    }
+    .pathway-order-ref__table thead th {
+        background: #fef9c3;
+        font-weight: 800;
+    }
+    .pathway-order-ref__table td:first-child {
+        font-weight: 800;
+        background: #f8fafc;
+        width: 36px;
     }
     .pathway-designer-tabs {
         display: flex;
@@ -249,6 +307,7 @@
     var state = {
         civilian: (boot.civilian || []).slice(),
         military: (boot.military || []).slice(),
+        entity: (boot.entity || []).slice(),
     };
     var activePathway = 'civilian';
     var depts = boot.departments || [];

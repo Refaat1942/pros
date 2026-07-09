@@ -165,7 +165,7 @@ class AdminPatientTrackService
             'case_no' => $activeCase?->case_no,
             'stage_key' => $this->resolveStageKey($activeCase, $appointment),
             'pathway' => $tracking['pathway'],
-            'pathway_label' => $tracking['pathway'] === 'military' ? 'عسكري' : 'مدني',
+            'pathway_label' => app(PathwayConfigService::class)->pathwayLabel($tracking['pathway']),
             'stage_label' => $tracking['stage_label'],
             'progress_percent' => $progressPercent,
             'steps' => $steps,
@@ -249,8 +249,8 @@ class AdminPatientTrackService
     /** @return array{tracking_uid: ?string, pathway: string, stage_label: string, current_index: int, steps: list<array{key: string, label: string, status: string}>} */
     private function fallbackTracking(Patient $patient, ?CaseRecord $case, ?Appointment $appointment): array
     {
-        $isMilitary = $patient->isMilitary();
-        $steps = $this->pathwayConfig->displaySteps($isMilitary);
+        $pathway = $this->pathwayConfig->resolvePathway($patient, $case);
+        $steps = $this->pathwayConfig->displayStepsForPathway($pathway);
 
         $stageLabel = match ($appointment?->status) {
             Appointment::STATUS_WAITING => 'في الاستقبال — بانتظار التحويل للعيادة',
@@ -262,7 +262,7 @@ class AdminPatientTrackService
 
         return [
             'tracking_uid' => null,
-            'pathway' => $isMilitary ? 'military' : 'civilian',
+            'pathway' => $pathway,
             'stage_label' => $case
                 ? CaseStage::labelFor($case->stage_key)
                 : $stageLabel,

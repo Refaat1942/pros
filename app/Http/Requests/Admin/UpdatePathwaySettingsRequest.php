@@ -20,6 +20,7 @@ class UpdatePathwaySettingsRequest extends FormRequest
             'pathway' => ['required', 'string', Rule::in([
                 PathwayStep::PATHWAY_CIVILIAN,
                 PathwayStep::PATHWAY_MILITARY,
+                PathwayStep::PATHWAY_ENTITY,
             ])],
             'steps' => ['required', 'array', 'min:1'],
             'steps.*.key' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9_]+$/'],
