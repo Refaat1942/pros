@@ -3,15 +3,26 @@
 namespace App\Services;
 
 use App\Models\AppNotification;
-use App\Models\Patient;
 use App\Models\StockItem;
 use Illuminate\Support\Facades\DB;
 
 /**
- * حذف كل بيانات المرضى والحالات مع الإبقاء على الإعدادات والمستخدمين والكتalog.
+ * حذف كل ما له علاقة بالمرضى — مع الإبقاء على الكور (مستخدمون، مخزن، إعدادات، جهات).
  */
 class PatientDataPurgeService
 {
+    /** @var list<string> */
+    private const PATIENT_AUDIT_TAGS = [
+        'patients',
+        'medical',
+        'spec',
+        'pricing',
+        'quotes',
+        'operations',
+        'delivery',
+        'reception',
+    ];
+
     /** @return array<string, int> */
     public function purge(bool $resetContractDebts = true, bool $syncStock = true): array
     {
@@ -45,6 +56,10 @@ class PatientDataPurgeService
             $counts['appointments'] = DB::table('appointments')->delete();
             $counts['patients'] = DB::table('patients')->delete();
 
+            $counts['audit_logs_patient'] = DB::table('audit_logs')
+                ->whereIn('tag', self::PATIENT_AUDIT_TAGS)
+                ->delete();
+
             if ($resetContractDebts) {
                 $counts['contract_debts_reset'] = DB::table('contract_company_debts')->update([
                     'due' => 0,
@@ -62,9 +77,11 @@ class PatientDataPurgeService
         return $counts;
     }
 
-    public function hasPatientData(): bool
+    public function hasPatientRelatedData(): bool
     {
-        return Patient::query()->exists();
+        return DB::table('patients')->exists()
+            || DB::table('cases')->exists()
+            || DB::table('appointments')->exists();
     }
 
     private function syncStockFromMovements(): int
