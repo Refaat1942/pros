@@ -1,7 +1,7 @@
 @php
     $branding = $branding ?? app(\App\Services\SettingService::class)->branding();
     $logoRel = $branding['logo_path'] ?? '';
-    $logoExists = $logoRel !== '' && is_file(public_path($logoRel));
+    $logoExists = app(\App\Services\SettingService::class)->brandingLogoExists($logoRel);
 @endphp
 <div class="section-view" id="section-branding-settings">
     <div class="panel">

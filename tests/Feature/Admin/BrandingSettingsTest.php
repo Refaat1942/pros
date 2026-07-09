@@ -23,7 +23,7 @@ class BrandingSettingsTest extends TestCase
 
     public function test_admin_can_update_branding_settings(): void
     {
-        Storage::fake('local');
+        Storage::fake('public');
         $admin = $this->userWithRole('admin');
 
         $logo = UploadedFile::fake()->image('logo.png', 200, 200);
@@ -36,6 +36,8 @@ class BrandingSettingsTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('branding.center_name', 'مركز تجريبي');
+
+        $this->assertTrue(Storage::disk('public')->exists('branding/logo.png'));
 
         $this->assertDatabaseHas('settings', [
             'key' => 'org_center_name',

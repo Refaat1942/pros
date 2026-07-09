@@ -10,8 +10,9 @@
     <div class="sidebar-brand">
         @php
             $orgBranding = app(\App\Services\SettingService::class)->branding();
+            $settings = app(\App\Services\SettingService::class);
             $sidebarLogo = $orgBranding['logo_path'] ?? '';
-            $hasSidebarLogo = $sidebarLogo !== '' && is_file(public_path($sidebarLogo));
+            $hasSidebarLogo = $settings->brandingLogoExists($sidebarLogo);
         @endphp
         @if ($hasSidebarLogo)
             <img class="sidebar-brand__logo"

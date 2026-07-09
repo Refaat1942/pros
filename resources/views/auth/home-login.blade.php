@@ -25,6 +25,8 @@
         <form method="POST" action="{{ route('login.submit') }}" novalidate id="dashboardLoginForm">
             @csrf
 
+            @include('partials.flash-messages')
+
             <input type="hidden" name="device_id" id="device_id" value="">
             <input type="hidden" name="device_type" id="device_type" value="web">
 

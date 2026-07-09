@@ -5,7 +5,7 @@
     $seal = $seal ?? false;
     $logoClass = trim('org-logo-thermal ' . ($logoClass ?? '') . ($seal ? ' org-logo-thermal--seal' : ''));
     $logoRel = $branding['logo_path'];
-    $logoExists = $logoRel !== '' && is_file(public_path($logoRel));
+    $logoExists = app(\App\Services\SettingService::class)->brandingLogoExists($logoRel);
 @endphp
 @if ($logoExists)
     <div class="{{ $logoClass }}" style="--org-logo-size: {{ $logoSize }};" aria-hidden="true">

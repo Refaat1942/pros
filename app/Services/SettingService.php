@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class SettingService
 {
@@ -170,6 +171,20 @@ class SettingService
         Cache::forget('settings.branding');
     }
 
+    public function brandingLogoExists(?string $path): bool
+    {
+        if ($path === null || trim($path) === '') {
+            return false;
+        }
+
+        $path = trim($path);
+        if (str_starts_with($path, 'storage/')) {
+            return Storage::disk('public')->exists(substr($path, strlen('storage/')));
+        }
+
+        return is_file(public_path($path));
+    }
+
     public function storeUploadedLogo(UploadedFile $file): string
     {
         $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'png');
@@ -179,20 +194,17 @@ class SettingService
             throw new \InvalidArgumentException('صيغة الشعار غير مدعومة — استخدم PNG أو JPG أو WEBP أو SVG.');
         }
 
-        $dir = public_path('assets/branding');
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
+        Storage::disk('public')->makeDirectory('branding');
 
-        foreach (glob($dir.DIRECTORY_SEPARATOR.'logo.*') ?: [] as $old) {
-            if (is_file($old)) {
-                @unlink($old);
+        foreach (Storage::disk('public')->files('branding') as $old) {
+            if (str_starts_with(basename($old), 'logo.')) {
+                Storage::disk('public')->delete($old);
             }
         }
 
         $filename = 'logo.'.$ext;
-        $file->move($dir, $filename);
+        Storage::disk('public')->putFileAs('branding', $file, $filename);
 
-        return 'assets/branding/'.$filename;
+        return 'storage/branding/'.$filename;
     }
 }

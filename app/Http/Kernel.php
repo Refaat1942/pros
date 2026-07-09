@@ -3,6 +3,7 @@
 namespace App\Http;
 
 use App\Http\Middleware\AuditContextMiddleware;
+use App\Http\Middleware\EnforceIdleSessionTimeout;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\DashboardGuardMiddleware;
 use App\Http\Middleware\DashboardPagePermissionMiddleware;
@@ -59,6 +60,7 @@ class Kernel extends HttpKernel
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
+            EnforceIdleSessionTimeout::class,
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
             SubstituteBindings::class,

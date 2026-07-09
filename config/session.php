@@ -31,9 +31,21 @@ return [
     |
     */
 
-    'lifetime' => env('SESSION_LIFETIME', 120),
+    'lifetime' => (int) env('SESSION_LIFETIME', env('SESSION_IDLE_TIMEOUT', 5)),
 
     'expire_on_close' => false,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Idle Session Timeout (minutes)
+    |--------------------------------------------------------------------------
+    |
+    | After this many minutes without activity the user is logged out and
+    | must sign in again. Enforced by EnforceIdleSessionTimeout middleware.
+    |
+    */
+
+    'idle_timeout' => (int) env('SESSION_IDLE_TIMEOUT', 5),
 
     /*
     |--------------------------------------------------------------------------

@@ -14,9 +14,13 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('prosthetics:housekeeping')
             ->cron('0 3 */3 * *')
-            ->at('03:00')
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/housekeeping.log'));
+
+        $schedule->command('prosthetics:backup')
+            ->dailyAt('02:00')
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/backup.log'));
     }
 
     /**

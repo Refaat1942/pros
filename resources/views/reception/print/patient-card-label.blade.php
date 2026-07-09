@@ -1,7 +1,7 @@
 @php
     $branding = app(\App\Services\SettingService::class)->branding();
     $logoRel = $branding['logo_path'];
-    $logoExists = $logoRel !== '' && is_file(public_path($logoRel));
+    $logoExists = app(\App\Services\SettingService::class)->brandingLogoExists($logoRel);
 @endphp
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">

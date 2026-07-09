@@ -1,7 +1,8 @@
 @php
     $branding = $branding ?? app(\App\Services\SettingService::class)->branding();
+    $settings = app(\App\Services\SettingService::class);
     $logoRel = $branding['logo_path'] ?? '';
-    $logoExists = $logoRel !== '' && is_file(public_path($logoRel));
+    $logoExists = $settings->brandingLogoExists($logoRel);
     $size = $size ?? 'md';
     $showLines = $showLines ?? true;
     $lineClass = $lineClass ?? '';
