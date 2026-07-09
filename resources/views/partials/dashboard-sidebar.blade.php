@@ -8,7 +8,16 @@
 @endphp
 <aside class="sidebar">
     <div class="sidebar-brand">
-        <div class="icon">{{ $sidebar['icon'] ?? '📊' }}</div>
+        @php
+            $orgBranding = app(\App\Services\SettingService::class)->branding();
+            $sidebarLogo = $orgBranding['logo_path'] ?? '';
+            $hasSidebarLogo = $sidebarLogo !== '' && is_file(public_path($sidebarLogo));
+        @endphp
+        @if ($hasSidebarLogo)
+            @include('partials.org-brand-mark', ['branding' => $orgBranding, 'size' => 'sm', 'showLines' => false])
+        @else
+            <div class="icon">{{ $sidebar['icon'] ?? '📊' }}</div>
+        @endif
         <h2>{{ $sidebar['title'] ?? $cfg['title'] }}</h2>
         <span>{{ $sidebar['subtitle'] ?? '' }}</span>
     </div>

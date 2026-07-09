@@ -266,7 +266,7 @@ return [
             [
                 'label' => 'الرقابة والنظام',
                 'icon' => '⚙️',
-                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'costing-settings', 'pathway-settings'],
+                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'branding-settings', 'costing-settings', 'pathway-settings'],
             ],
         ],
         'pages' => [
@@ -299,6 +299,7 @@ return [
             'permissions' => ['title' => 'مصفوفة الصلاحيات', 'icon' => '🛡️', 'label' => 'الصلاحيات'],
             'military-ranks' => ['title' => 'الرتب العسكرية', 'icon' => '🪖', 'label' => 'الرتب العسكرية'],
             'costing-settings' => ['title' => 'إعدادات التكاليف الإضافية', 'icon' => '💰', 'label' => 'إعدادات التكاليف'],
+            'branding-settings' => ['title' => 'الهوية البصرية — الشعار والترويسة', 'icon' => '🎨', 'label' => 'الهوية البصرية'],
             'pathway-settings' => ['title' => 'مصمم مسار العمل — مدني وعسكري', 'icon' => '🧭', 'label' => 'مصمم المسار'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],

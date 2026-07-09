@@ -30,9 +30,22 @@ class AuthController extends Controller
     }
 
     /**
-     * معالجة طلب تسجيل الدخول — الدور الأساسي أو صلاحية الوصول للوحة عبر المصفوفة.
+     * تسجيل دخول موحّد — يوجّه المستخدم إلى لوحة دوره تلقائياً.
+     */
+    public function loginUnified(LoginRequest $request): RedirectResponse
+    {
+        return $this->completeLogin($request, null);
+    }
+
+    /**
+     * @deprecated استخدم /login — يُحوَّل للصفحة الرئيسية
      */
     public function login(LoginRequest $request, string $dashboard): RedirectResponse
+    {
+        return $this->completeLogin($request, $dashboard);
+    }
+
+    private function completeLogin(LoginRequest $request, ?string $requestedDashboard): RedirectResponse
     {
         $credentials = $request->only('username', 'password');
 
@@ -53,14 +66,28 @@ class AuthController extends Controller
                 ->withErrors(['username' => 'هذا الحساب معطّل — تواصل مع الإدارة.']);
         }
 
-        $userSlug = $user->role?->slug;
+        $dashboard = $user->role?->slug;
 
-        if ($userSlug !== $dashboard && ! $user->canAccessDashboard($dashboard)) {
+        if (! $dashboard || ! config("dashboards.{$dashboard}")) {
             Auth::logout();
 
             return back()
                 ->withInput($request->only('username'))
-                ->withErrors(['username' => 'هذا الحساب غير مصرّح له بالدخول لهذه اللوحة..']);
+                ->withErrors(['username' => 'لا توجد لوحة مرتبطة بهذا الحساب.']);
+        }
+
+        if ($requestedDashboard !== null
+            && $dashboard !== $requestedDashboard
+            && ! $user->canAccessDashboard($requestedDashboard)) {
+            Auth::logout();
+
+            return back()
+                ->withInput($request->only('username'))
+                ->withErrors(['username' => 'هذا الحساب غير مصرّح له بالدخول لهذه اللوحة.']);
+        }
+
+        if ($requestedDashboard !== null && $user->canAccessDashboard($requestedDashboard)) {
+            $dashboard = $requestedDashboard;
         }
 
         $request->session()->regenerate();
@@ -70,7 +97,6 @@ class AuthController extends Controller
         /** @var User $authUser */
         $authUser = Auth::user();
 
-        // استلام بيانات الجهاز (device_id, device_type) وتسجيلها لإشعارات FCM.
         $this->deviceService->register(
             $authUser,
             $request->input('device_id'),

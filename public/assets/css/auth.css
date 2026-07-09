@@ -211,3 +211,101 @@ body {
 }
 
 .auth-footer .back-link:hover { opacity: 0.75; }
+
+/* ── Unified home login ── */
+body.auth-home {
+  --auth-primary: #1e40af;
+  --auth-dark: #1e3a8a;
+  --auth-light: #3b82f6;
+  --auth-glow: rgba(30, 64, 175, 0.22);
+  --auth-bg-from: #f8fafc;
+  --auth-bg-to: #eff6ff;
+}
+
+.auth-card--home { max-width: 480px; margin: 0 auto; }
+
+.auth-brand--home { margin-bottom: 24px; }
+
+.auth-home-tagline {
+  margin-top: 14px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.auth-footer--home { margin-top: 18px; }
+
+.org-brand-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.org-brand-mark__logo {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #e2e8f0;
+  padding: 8px;
+}
+
+.org-brand-mark--lg .org-brand-mark__logo {
+  width: 140px;
+  height: 140px;
+}
+
+.org-brand-mark--sm .org-brand-mark__logo {
+  width: 48px;
+  height: 48px;
+  border-width: 2px;
+  padding: 4px;
+}
+
+.org-brand-mark__placeholder {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--auth-primary), var(--auth-light));
+  color: #fff;
+}
+
+.org-brand-mark__line {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.org-brand-mark__name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--auth-dark);
+  margin-top: 4px;
+}
+
+.sidebar-brand .org-brand-mark {
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sidebar-brand .org-brand-mark__line {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.sidebar-brand .org-brand-mark__name {
+  font-size: 14px;
+  color: inherit;
+}
+
+.sidebar-brand .org-brand-mark__text .org-brand-mark__line,
+.sidebar-brand .org-brand-mark__text .org-brand-mark__name {
+  color: rgba(255, 255, 255, 0.92);
+}

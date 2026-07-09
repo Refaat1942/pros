@@ -70,6 +70,7 @@ class DashboardPageDataService
             'admin.military-ranks' => $this->adminMilitaryRanks(),
             'admin.visit-types' => $this->adminVisitTypes(),
             'admin.costing-settings' => $this->adminCostingSettings(),
+            'admin.branding-settings' => $this->adminBrandingSettings(),
             'admin.pathway-settings' => $this->adminPathwaySettings(),
             'admin.stock-categories' => $this->adminStockCategories(),
             'admin.catalog' => $this->adminCatalog(),
@@ -183,6 +184,13 @@ class DashboardPageDataService
     private function adminPathwaySettings(): array
     {
         return app(PathwayConfigService::class)->allForAdmin();
+    }
+
+    private function adminBrandingSettings(): array
+    {
+        return [
+            'branding' => app(SettingService::class)->branding(),
+        ];
     }
 
     private function adminStockCategories(): array

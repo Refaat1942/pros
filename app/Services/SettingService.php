@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Setting;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 
 class SettingService
@@ -167,5 +168,31 @@ class SettingService
         }
 
         Cache::forget('settings.branding');
+    }
+
+    public function storeUploadedLogo(UploadedFile $file): string
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'png');
+        $allowed = ['jpg', 'jpeg', 'png', 'webp', 'svg'];
+
+        if (! in_array($ext, $allowed, true)) {
+            throw new \InvalidArgumentException('صيغة الشعار غير مدعومة — استخدم PNG أو JPG أو WEBP أو SVG.');
+        }
+
+        $dir = public_path('assets/branding');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        foreach (glob($dir.DIRECTORY_SEPARATOR.'logo.*') ?: [] as $old) {
+            if (is_file($old)) {
+                @unlink($old);
+            }
+        }
+
+        $filename = 'logo.'.$ext;
+        $file->move($dir, $filename);
+
+        return 'assets/branding/'.$filename;
     }
 }

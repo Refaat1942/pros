@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BrandingSettingsController;
 use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Admin\PathwaySettingsController;
@@ -202,7 +203,11 @@ Route::prefix('admin')
                 ->name('costing-modes.update');
         });
 
-        // ── Pathway step numbering (display only) ───────────────────────────
+        Route::middleware('dashboard.page:admin,branding-settings')->group(function () {
+            Route::put('branding-settings', [BrandingSettingsController::class, 'update'])
+                ->name('branding-settings.update');
+        });
+
         Route::middleware('dashboard.page:admin,pathway-settings')->group(function () {
             Route::put('pathway-settings', [PathwaySettingsController::class, 'update'])
                 ->name('pathway-settings.update');
