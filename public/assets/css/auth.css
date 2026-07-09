@@ -289,23 +289,3 @@ body.auth-home {
   color: var(--auth-dark);
   margin-top: 4px;
 }
-
-.sidebar-brand .org-brand-mark {
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.sidebar-brand .org-brand-mark__line {
-  font-size: 11px;
-  opacity: 0.75;
-}
-
-.sidebar-brand .org-brand-mark__name {
-  font-size: 14px;
-  color: inherit;
-}
-
-.sidebar-brand .org-brand-mark__text .org-brand-mark__line,
-.sidebar-brand .org-brand-mark__text .org-brand-mark__name {
-  color: rgba(255, 255, 255, 0.92);
-}

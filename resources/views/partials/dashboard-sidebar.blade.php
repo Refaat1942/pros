@@ -14,7 +14,9 @@
             $hasSidebarLogo = $sidebarLogo !== '' && is_file(public_path($sidebarLogo));
         @endphp
         @if ($hasSidebarLogo)
-            @include('partials.org-brand-mark', ['branding' => $orgBranding, 'size' => 'sm', 'showLines' => false])
+            <img class="sidebar-brand__logo"
+                 src="{{ asset($sidebarLogo) }}"
+                 alt="{{ $orgBranding['center_name'] }}">
         @else
             <div class="icon">{{ $sidebar['icon'] ?? '📊' }}</div>
         @endif

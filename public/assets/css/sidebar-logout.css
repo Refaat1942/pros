@@ -71,6 +71,43 @@ aside.sidebar .sidebar-footer .btn-sidebar-logout .nav-icon {
   flex-shrink: 0;
 }
 
+aside.sidebar .sidebar-brand {
+  text-align: center;
+  overflow: hidden;
+}
+
+aside.sidebar .sidebar-brand__logo {
+  width: 64px;
+  height: 64px;
+  max-width: calc(100% - 8px);
+  margin: 0 auto 10px;
+  display: block;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+aside.sidebar .sidebar-brand .icon {
+  margin-bottom: 8px;
+}
+
+aside.sidebar .sidebar-brand h2 {
+  font-size: 15px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+aside.sidebar .sidebar-brand span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.65;
+  word-break: break-word;
+}
+
 aside.sidebar .nav-menu li a .nav-label {
   flex: 1;
   min-width: 0;
