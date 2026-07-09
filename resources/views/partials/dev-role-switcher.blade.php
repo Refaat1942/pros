@@ -1,9 +1,7 @@
 @php
     $roles = config('dev-role-switcher.roles', []);
     $user = auth()->user();
-    $currentSlug = $user->role?->slug;
     $currentPrefix = request()->segment(1);
-    $isAdmin = $user?->isAdmin() ?? false;
     $icons = [
         'reception'   => '📋',
         'doctor'      => '🩺',
@@ -17,20 +15,28 @@
     ];
 @endphp
 
-<aside class="dev-role-switcher is-collapsed" aria-label="شريط التنقّل بين الأقسام">
-    <div class="dev-role-switcher__inner">
+<aside class="dev-role-switcher is-hidden" aria-label="شريط التنقّل بين الأقسام">
+    <button type="button"
+            class="dev-role-switcher__fab"
+            data-role-switcher-show
+            aria-label="إظهار شريط التنقّل بين الأقسام"
+            title="إظهار شريط التنقّل">
+        <span aria-hidden="true">🧭</span>
+    </button>
+
+    <div class="dev-role-switcher__panel" role="group" aria-label="لوحات الأقسام">
         <button type="button"
-                class="dev-role-switcher__toggle"
-                data-role-switcher-toggle
-                aria-expanded="false"
-                title="إظهار شريط التنقّل">
-            <span aria-hidden="true">🧭</span>
+                class="dev-role-switcher__drag"
+                data-role-switcher-drag
+                aria-label="اسحب لتحريك الشريط"
+                title="اسحب للتحريك">
+            ⠿
         </button>
         <span class="dev-role-switcher__label">
             <span class="dev-role-switcher__badge">ADMIN</span>
             تنقّل بين الأقسام
         </span>
-        <div class="dev-role-switcher__track" role="group" aria-label="لوحات الأقسام" hidden>
+        <div class="dev-role-switcher__track">
             @if ($currentPrefix !== 'admin')
                 <a href="{{ route('admin.dashboard') }}"
                    class="dev-role-switcher__btn dev-role-switcher__link"
@@ -55,11 +61,11 @@
             @endforeach
         </div>
         <button type="button"
-                class="dev-role-switcher__collapse"
-                data-role-switcher-toggle
+                class="dev-role-switcher__hide"
+                data-role-switcher-hide
                 aria-label="إخفاء شريط التنقّل"
                 title="إخفاء">
-            ▾
+            ✕
         </button>
     </div>
 </aside>
