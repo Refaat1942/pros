@@ -10,10 +10,6 @@
 
 use Illuminate\Support\Facades\Route;
 
-if (app()->environment('local')) {
-    require __DIR__.'/web/dev-role-switcher.php';
-}
-
 require __DIR__.'/web/dashboard-routes.php';
 
 foreach ([

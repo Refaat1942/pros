@@ -12,16 +12,9 @@
 
     @stack('styles')
     @stack('styles-late')
-    @if (config('app.env') === 'local' && auth()->check())
-        <link rel="stylesheet" href="{{ asset('assets/css/dev-role-switcher.css') }}?v={{ filemtime(public_path('assets/css/dev-role-switcher.css')) }}">
-    @endif
 </head>
-<body @yield('body-attributes')@if (config('app.env') === 'local' && auth()->check()) class="has-dev-role-switcher"@endif>
+<body @yield('body-attributes')>
     @yield('content')
-
-    @if (config('app.env') === 'local' && auth()->check())
-        @include('partials.dev-role-switcher')
-    @endif
 
     @stack('scripts')
 

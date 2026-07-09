@@ -131,11 +131,11 @@
     var items = (caseData.bom && caseData.bom.items) || [];
     tbody.innerHTML = items.length
       ? items.map(function (item) {
-          return '<tr><td class="px-3 py-2 font-mono text-xs text-slate-500">' + esc(item.stock_item_code) + '</td>' +
-            '<td class="px-3 py-2 font-semibold text-slate-800">' + esc(item.name || item.stock_item_code) + '</td>' +
-            '<td class="px-3 py-2 text-center font-bold">' + esc(item.qty) + '</td></tr>';
+          return '<tr><td class="px-4 py-3 font-mono text-sm text-slate-600">' + esc(item.stock_item_code) + '</td>' +
+            '<td class="px-4 py-3 font-semibold text-slate-800">' + esc(item.name || item.stock_item_code) + '</td>' +
+            '<td class="px-4 py-3 text-center text-lg font-bold">' + esc(item.qty) + '</td></tr>';
         }).join('')
-      : '<tr><td colspan="3" class="px-3 py-8 text-center text-slate-400">لا توجد بنود.</td></tr>';
+      : '<tr><td colspan="3" class="px-4 py-10 text-center text-slate-400 text-base">لا توجد بنود.</td></tr>';
 
     modal.classList.remove('hidden');
   }

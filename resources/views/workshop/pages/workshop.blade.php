@@ -115,22 +115,22 @@
     </div>
 </div>
 
-<div id="workshopBomItemsModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+<div id="workshopBomItemsModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 md:p-8">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
             <div>
-                <h3 class="font-bold text-slate-800">📦 بنود أمر التشغيل</h3>
-                <p class="text-xs text-slate-500 mt-1" id="workshopBomItemsSubtitle">—</p>
+                <h3 class="text-xl font-bold text-slate-800">📦 بنود أمر التشغيل</h3>
+                <p class="text-sm text-slate-500 mt-1" id="workshopBomItemsSubtitle">—</p>
             </div>
-            <button type="button" id="closeWorkshopBomItemsModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
+            <button type="button" id="closeWorkshopBomItemsModal" class="text-3xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
         </div>
-        <div class="overflow-y-auto flex-1 p-4">
-            <table class="w-full text-sm">
+        <div class="overflow-y-auto flex-1 p-5 md:p-6">
+            <table class="w-full text-base">
                 <thead class="bg-slate-50 text-slate-600">
                     <tr>
-                        <th class="px-3 py-2 text-right font-bold">الكود</th>
-                        <th class="px-3 py-2 text-right font-bold">الصنف</th>
-                        <th class="px-3 py-2 text-right font-bold w-20">الكمية</th>
+                        <th class="px-4 py-3 text-right font-bold">الكود</th>
+                        <th class="px-4 py-3 text-right font-bold">الصنف</th>
+                        <th class="px-4 py-3 text-right font-bold w-28">الكمية</th>
                     </tr>
                 </thead>
                 <tbody id="workshopBomItemsBody" class="divide-y divide-slate-100"></tbody>
