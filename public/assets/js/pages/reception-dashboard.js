@@ -950,6 +950,22 @@
         return;
       }
 
+      var phoneEl = document.getElementById('editPatientPhone');
+      var nationalEl = document.getElementById('editNationalId');
+      if (window.DashboardValidation) {
+        if (phoneEl && DashboardValidation.validateField(phoneEl)) {
+          showToast(DashboardValidation.validateField(phoneEl), true);
+          return;
+        }
+        if (nationalEl && DashboardValidation.validateField(nationalEl)) {
+          showToast(DashboardValidation.validateField(nationalEl), true);
+          return;
+        }
+      } else if (payload.phone && !/^01[0125]\d{8}$/.test(payload.phone.replace(/\D/g, ''))) {
+        showToast('رقم الهاتف يجب أن يكون 11 رقماً (010 / 011 / 012 / 015)', true);
+        return;
+      }
+
       fetch('/reception/appointments/' + id + '/correct', {
         method: 'PATCH',
         headers: {

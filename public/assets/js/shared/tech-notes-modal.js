@@ -20,15 +20,26 @@
         'data-tech-notes-payload="' + payload + '">📝 عرض الملاحظة</button>';
     },
 
-    open: function (notes, caseLabel) {
+    writtenItemsButtonHtml: function (text, caseNo) {
+      if (!hasNotes(text)) return '';
+      var payload = esc(JSON.stringify({ notes: String(text), case_no: caseNo || '', title: 'الوصف الحر' }));
+      return '<button type="button" class="btn-action btn-view-tech-notes" style="margin-left:4px;" ' +
+        'data-tech-notes-payload="' + payload + '">📄 الوصف الحر</button>';
+    },
+
+    open: function (notes, caseLabel, modalTitle) {
       var modal = document.getElementById('techNotesModal');
       var body = document.getElementById('techNotesBody');
       var title = document.getElementById('techNotesTitle');
       if (!modal || !body) return;
       if (title) {
-        title.textContent = caseLabel
-          ? '📝 ملاحظات التوصيف — ' + caseLabel
-          : '📝 ملاحظات التوصيف';
+        if (modalTitle) {
+          title.textContent = modalTitle + (caseLabel ? ' — ' + caseLabel : '');
+        } else {
+          title.textContent = caseLabel
+            ? '📝 ملاحظات التوصيف — ' + caseLabel
+            : '📝 ملاحظات التوصيف';
+        }
       }
       body.textContent = notes || '';
       modal.classList.add('visible');
@@ -48,7 +59,7 @@
           var raw = btn.getAttribute('data-tech-notes-payload') || '{}';
           try {
             var data = JSON.parse(raw);
-            self.open(data.notes || '', data.case_no || '');
+            self.open(data.notes || '', data.case_no || '', data.title || '');
           } catch (e) {
             self.open('', '');
           }

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Appointment;
 use App\Http\Requests\BaseRequest;
 use App\Models\Appointment;
 use App\Models\Patient;
+use App\Services\FormFieldPolicyService;
 use Illuminate\Validation\Rule;
 
 class StoreAppointmentRequest extends BaseRequest
@@ -24,7 +25,9 @@ class StoreAppointmentRequest extends BaseRequest
                 Appointment::VISIT_REVIEW,
             ])],
             'patient_name' => ['required_without:patient_id', 'nullable', ...$this->personNameRules(false)],
-            'phone' => $this->egyptianMobileRules(),
+            'phone' => $this->egyptianMobileRules(
+                required: app(FormFieldPolicyService::class)->isRequired('appointment', 'phone')
+            ),
             'company_name' => ['nullable', 'string', 'max:255'],
             'patient_type' => ['nullable', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
         ];

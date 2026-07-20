@@ -249,11 +249,13 @@
             </div>
             <div class="form-group">
               <label>رقم الهاتف</label>
-              <input type="tel" class="form-control" id="editPatientPhone" maxlength="11" inputmode="numeric">
+              <input type="tel" class="form-control" id="editPatientPhone" maxlength="11" inputmode="numeric"
+                     data-v-digits-only="1" data-v-rules="egyptian-mobile" autocomplete="tel">
             </div>
             <div class="form-group">
               <label>الرقم القومي</label>
-              <input type="text" class="form-control" id="editNationalId" maxlength="14" inputmode="numeric">
+              <input type="text" class="form-control" id="editNationalId" maxlength="14" inputmode="numeric"
+                     data-v-digits-only="1" data-v-rules="egyptian-national-id" autocomplete="off">
             </div>
             <div class="form-group">
               <label>نوع الزيارة <span style="color:red">*</span></label>

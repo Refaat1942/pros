@@ -4,6 +4,7 @@
 (function () {
     var OPEN_KEY = 'prosthetics-admin-role-switcher-open';
     var POS_KEY = 'prosthetics-admin-role-switcher-pos';
+    var LAYOUT_KEY = 'prosthetics-admin-role-switcher-layout';
 
     var root = document.querySelector('.dev-role-switcher');
     if (!root) return;
@@ -11,7 +12,43 @@
     var panel = root.querySelector('.dev-role-switcher__panel');
     var fab = root.querySelector('[data-role-switcher-show]');
     var hideBtn = root.querySelector('[data-role-switcher-hide]');
+    var expandBtn = root.querySelector('[data-role-switcher-expand]');
     var movedDuringDrag = false;
+    var layoutModes = ['default', 'wide', 'wrap'];
+
+    function applyLayout(mode) {
+        root.classList.remove('is-wide', 'is-wrap');
+        if (mode === 'wide') root.classList.add('is-wide');
+        if (mode === 'wrap') root.classList.add('is-wrap');
+        if (expandBtn) {
+            expandBtn.title = mode === 'default'
+                ? 'توسيع الشريط'
+                : (mode === 'wide' ? 'التفاف الأزرار على أكثر من سطر' : 'العودة للعرض العادي');
+            expandBtn.textContent = mode === 'wrap' ? '↕' : '↔';
+        }
+        try {
+            localStorage.setItem(LAYOUT_KEY, mode);
+        } catch (e) { /* ignore */ }
+        requestAnimationFrame(restorePosition);
+    }
+
+    function cycleLayout() {
+        var current = 'default';
+        try {
+            current = localStorage.getItem(LAYOUT_KEY) || 'default';
+        } catch (e) { /* ignore */ }
+        var idx = layoutModes.indexOf(current);
+        var next = layoutModes[(idx + 1) % layoutModes.length];
+        applyLayout(next);
+    }
+
+    function restoreLayout() {
+        var mode = 'default';
+        try {
+            mode = localStorage.getItem(LAYOUT_KEY) || 'default';
+        } catch (e) { /* ignore */ }
+        applyLayout(layoutModes.indexOf(mode) === -1 ? 'default' : mode);
+    }
 
     function readPos() {
         try {
@@ -143,6 +180,12 @@
         bindDrag(fab);
     }
 
+    if (expandBtn) {
+        expandBtn.addEventListener('click', function () {
+            cycleLayout();
+        });
+    }
+
     root.querySelectorAll('[data-role-switcher-drag]').forEach(bindDrag);
 
     var storedOpen = null;
@@ -151,6 +194,7 @@
     } catch (e) { /* ignore */ }
 
     setHidden(storedOpen === null ? false : storedOpen !== '1');
+    restoreLayout();
     restorePosition();
 
     window.addEventListener('resize', restorePosition);

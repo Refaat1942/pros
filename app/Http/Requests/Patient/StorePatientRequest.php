@@ -5,6 +5,7 @@ namespace App\Http\Requests\Patient;
 use App\Http\Requests\BaseRequest;
 use App\Models\ContractCompany;
 use App\Models\Patient;
+use App\Services\FormFieldPolicyService;
 use App\Support\MilitaryWeapons;
 use Illuminate\Validation\Rule;
 
@@ -63,10 +64,12 @@ class StorePatientRequest extends BaseRequest
 
     public function rules(): array
     {
+        $policy = app(FormFieldPolicyService::class);
+
         return [
             'name' => $this->personNameRules(),
-            'phone' => $this->egyptianMobileRules(required: false),
-            'national_id' => $this->egyptianNationalIdRules(),
+            'phone' => $this->egyptianMobileRules(required: $policy->isRequired('reception', 'phone')),
+            'national_id' => $this->egyptianNationalIdRules(required: $policy->isRequired('reception', 'national_id')),
             'patient_classification' => ['required', 'string', Rule::in([self::CLASS_CASH, self::CLASS_ENTITY, self::CLASS_MILITARY])],
             'patient_type' => ['required', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
             'entity_billing_type' => ['nullable', 'string', Rule::in(['contracted', 'non_contracted'])],
@@ -84,20 +87,27 @@ class StorePatientRequest extends BaseRequest
     {
         $validator->after(function ($validator) {
             $class = $this->input('patient_classification');
+            $policy = app(FormFieldPolicyService::class);
 
             if ($class === self::CLASS_MILITARY && ! $this->filled('military_rank_id')) {
                 $validator->errors()->add('military_rank_id', 'الرتبة العسكرية مطلوبة للمريض العسكري.');
             }
 
-            if ($class === self::CLASS_MILITARY && ! $this->filled('military_number')) {
+            if ($class === self::CLASS_MILITARY
+                && $policy->isRequired('reception', 'military_number')
+                && ! $this->filled('military_number')) {
                 $validator->errors()->add('military_number', 'الرقم العسكري مطلوب.');
             }
 
-            if ($class === self::CLASS_MILITARY && ! $this->filled('seniority_number')) {
+            if ($class === self::CLASS_MILITARY
+                && $policy->isRequired('reception', 'seniority_number')
+                && ! $this->filled('seniority_number')) {
                 $validator->errors()->add('seniority_number', 'رقم الأقدمية مطلوب.');
             }
 
-            if ($class === self::CLASS_MILITARY && ! $this->filled('military_weapon')) {
+            if ($class === self::CLASS_MILITARY
+                && $policy->isRequired('reception', 'military_weapon')
+                && ! $this->filled('military_weapon')) {
                 $validator->errors()->add('military_weapon', 'السلاح / الفرع مطلوب.');
             }
 
@@ -109,9 +119,13 @@ class StorePatientRequest extends BaseRequest
                 $validator->errors()->add('entity_billing_type', 'اختر نوع الجهة (متعاقد أو غير متعاقد).');
             }
 
-            if (! $this->filled('contract_company_id')) {
+            if ($policy->isRequired('reception', 'contract_company_id') && ! $this->filled('contract_company_id')) {
                 $validator->errors()->add('contract_company_id', 'جهة التعاقد مطلوبة.');
 
+                return;
+            }
+
+            if (! $this->filled('contract_company_id')) {
                 return;
             }
 

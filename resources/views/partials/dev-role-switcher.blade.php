@@ -61,6 +61,13 @@
             @endforeach
         </div>
         <button type="button"
+                class="dev-role-switcher__expand"
+                data-role-switcher-expand
+                aria-label="توسيع أو التفاف شريط التنقل"
+                title="توسيع / التفاف">
+            ↔
+        </button>
+        <button type="button"
                 class="dev-role-switcher__hide"
                 data-role-switcher-hide
                 aria-label="إخفاء شريط التنقّل"

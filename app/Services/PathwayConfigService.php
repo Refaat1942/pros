@@ -279,6 +279,25 @@ class PathwayConfigService
             }
         }
 
+        if ($stageKey === CaseRecord::STAGE_OPERATIONS && $pathway === PathwayStep::PATHWAY_ENTITY) {
+            if ($this->caseEntityQuotePendingAtOperations($case)) {
+                $quote = $this->indexOfKey($steps, 'quote');
+                if ($quote !== null) {
+                    return (string) $steps[$quote]['label'];
+                }
+            }
+            if ($this->caseAwaitingEntityApproval($case)) {
+                $entityReturn = $this->indexOfKey($steps, 'entity_return');
+                if ($entityReturn !== null) {
+                    return (string) $steps[$entityReturn]['label'];
+                }
+            }
+            $workOrder = $this->indexOfKey($steps, 'operations_wo');
+            if ($workOrder !== null) {
+                return (string) $steps[$workOrder]['label'];
+            }
+        }
+
         foreach ($steps as $step) {
             if (! in_array($stageKey, $step['stage_keys'] ?? [], true)) {
                 continue;
@@ -610,10 +629,18 @@ class PathwayConfigService
         }
 
         if ($stageKey === CaseRecord::STAGE_OPERATIONS) {
-            if ($pathway === PathwayStep::PATHWAY_ENTITY && $this->caseAwaitingEntityApproval($case)) {
-                $entityReturn = $this->indexOfKey($steps, 'entity_return');
-                if ($entityReturn !== null) {
-                    return $entityReturn;
+            if ($pathway === PathwayStep::PATHWAY_ENTITY) {
+                if ($this->caseEntityQuotePendingAtOperations($case)) {
+                    $quote = $this->indexOfKey($steps, 'quote');
+                    if ($quote !== null) {
+                        return $quote;
+                    }
+                }
+                if ($this->caseAwaitingEntityApproval($case)) {
+                    $entityReturn = $this->indexOfKey($steps, 'entity_return');
+                    if ($entityReturn !== null) {
+                        return $entityReturn;
+                    }
                 }
             }
             $workOrder = $this->indexOfKey($steps, 'operations_wo');
@@ -632,6 +659,20 @@ class PathwayConfigService
         return $matched;
     }
 
+    /** مفتاح خطوة مسار الجهات عند مرحلة التشغيل (عرض سعر / خطاب / أمر شغل). */
+    public function entityOperationsStepKey(CaseRecord $case): string
+    {
+        if ($this->caseEntityQuotePendingAtOperations($case)) {
+            return 'quote';
+        }
+
+        if ($this->caseAwaitingEntityApproval($case)) {
+            return 'entity_return';
+        }
+
+        return 'operations_wo';
+    }
+
     private function caseAwaitingEntityApproval(CaseRecord $case): bool
     {
         if ($case->patient_type === Patient::TYPE_MILITARY
@@ -641,10 +682,34 @@ class PathwayConfigService
         }
 
         if (! $case->relationLoaded('quotes')) {
-            $case->load('quotes:id,case_id,status');
+            $case->load('quotes:id,case_id,status,status_label');
         }
 
-        return $case->quotes->contains(fn (Quote $q) => $q->status === Quote::STATUS_ISSUED);
+        return $case->quotes->contains(function (Quote $q) {
+            if ($q->status !== Quote::STATUS_ISSUED) {
+                return false;
+            }
+
+            $label = (string) ($q->status_label ?? '');
+
+            return str_contains($label, 'موافقة') || str_contains($label, 'خطاب');
+        });
+    }
+
+    /** عرض السعر أُنشئ ولا يزال بمكتب التشغيل — قبل إرساله للاستقبال. */
+    private function caseEntityQuotePendingAtOperations(CaseRecord $case): bool
+    {
+        if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
+            return false;
+        }
+
+        if (! $case->relationLoaded('quotes')) {
+            $case->load('quotes:id,case_id,status,status_label');
+        }
+
+        $latest = $case->quotes->sortByDesc('id')->first();
+
+        return $latest !== null && $latest->status === Quote::STATUS_PENDING;
     }
 
     /** @param  list<array{key: string}>  $steps */

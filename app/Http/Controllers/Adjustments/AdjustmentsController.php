@@ -38,7 +38,7 @@ class AdjustmentsController extends Controller
             CaseRecord::inAdjustmentsDesk()
                 ->with([
                     'patient:id,patient_code,name,patient_type',
-                    'techOrderSpec:id,case_id,tech_notes',
+                    'techOrderSpec:id,case_id,tech_notes,written_items',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,source,qty',
                     'pendingAdjustmentEditRequest:id,case_id,status,source',
@@ -66,7 +66,7 @@ class AdjustmentsController extends Controller
 
         $case->load([
             'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank',
-            'techOrderSpec:id,case_id,tech_notes',
+            'techOrderSpec:id,case_id,tech_notes,written_items',
             'bom.items',
             'pendingAdjustmentEditRequest',
         ]);
@@ -154,6 +154,7 @@ class AdjustmentsController extends Controller
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
             'display_entity' => $case->displayEntity(),
             'tech_notes' => $case->resolvedTechNotes(),
+            'written_items' => $case->resolvedWrittenItems(),
             'rework' => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
             'stage_label' => $isCostCalc ? 'بانتظار التكاليف' : 'المعدلات',
             'can_modify_directly' => $case->isInAdjustments(),

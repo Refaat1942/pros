@@ -108,6 +108,10 @@ class PublicTrackingService
             return 'بانتظار موافقة الجهة — خطاب التأمين';
         }
 
+        if ($pathway === PathwayStep::PATHWAY_ENTITY && $this->isEntityQuotePendingAtOperations($case)) {
+            return 'بمكتب التشغيل — إصدار عرض السعر';
+        }
+
         if (! $isMilitary) {
             return match ($stageKey) {
                 CaseRecord::STAGE_RECEPTION => 'في الاستقبال',
@@ -150,9 +154,32 @@ class PublicTrackingService
         }
 
         if (! $case->relationLoaded('quotes')) {
+            $case->load('quotes:id,case_id,status,status_label');
+        }
+
+        return $case->quotes->contains(function (Quote $q) {
+            if ($q->status !== Quote::STATUS_ISSUED) {
+                return false;
+            }
+
+            $label = (string) ($q->status_label ?? '');
+
+            return str_contains($label, 'موافقة') || str_contains($label, 'خطاب');
+        });
+    }
+
+    private function isEntityQuotePendingAtOperations(CaseRecord $case): bool
+    {
+        if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
+            return false;
+        }
+
+        if (! $case->relationLoaded('quotes')) {
             $case->load('quotes:id,case_id,status');
         }
 
-        return $case->quotes->contains(fn (Quote $q) => $q->status === Quote::STATUS_ISSUED);
+        $latest = $case->quotes->sortByDesc('id')->first();
+
+        return $latest !== null && $latest->status === Quote::STATUS_PENDING;
     }
 }

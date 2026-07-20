@@ -350,3 +350,42 @@
     flex-wrap: wrap;
     gap: 8px;
 }
+
+.form-field-settings-wrap {
+    margin: 0 16px 16px;
+    display: grid;
+    gap: 16px;
+}
+
+.form-field-settings-feature {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    background: #fff;
+}
+
+.form-field-settings-feature__title {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #0f172a;
+}
+
+.form-field-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px 16px;
+}
+
+.form-field-settings-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #334155;
+    cursor: pointer;
+}
+
+.form-field-settings-item input {
+    width: 16px;
+    height: 16px;
+}

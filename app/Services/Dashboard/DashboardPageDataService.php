@@ -40,6 +40,7 @@ use App\Services\CostingModeService;
 use App\Services\DoctorTransferService;
 use App\Services\MilitaryDebtService;
 use App\Services\Notifications\NotificationService;
+use App\Services\FormFieldPolicyService;
 use App\Services\PathwayConfigService;
 use App\Services\PermissionCatalogService;
 use App\Services\ReceptionAnalyticsService;
@@ -184,7 +185,17 @@ class DashboardPageDataService
 
     private function adminPathwaySettings(): array
     {
-        return app(PathwayConfigService::class)->allForAdmin();
+        return array_merge(
+            app(PathwayConfigService::class)->allForAdmin(),
+            [
+                'form_field_policies' => app(FormFieldPolicyService::class)->catalogForAdmin(),
+                'form_field_feature_labels' => [
+                    'reception' => 'الاستقبال — تسجيل مريض',
+                    'spec' => 'التوصيف الفني',
+                    'appointment' => 'المواعيد',
+                ],
+            ],
+        );
     }
 
     private function adminBrandingSettings(): array

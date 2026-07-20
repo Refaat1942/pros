@@ -4,15 +4,20 @@ namespace App\Http\Requests\TechOrderSpec;
 
 use App\Http\Requests\BaseRequest;
 use App\Models\CaseRecord;
+use App\Services\FormFieldPolicyService;
 
 class StoreTechOrderSpecRequest extends BaseRequest
 {
     public function rules(): array
     {
+        $policy = app(FormFieldPolicyService::class);
+
         return [
             'case_id' => ['required', 'integer', 'exists:cases,id'],
-            'tech_notes' => $this->notesRules(5000),
-            'written_items' => ['nullable', 'string', 'max:5000'],
+            'tech_notes' => $this->notesRules(5000, $policy->isRequired('spec', 'tech_notes')),
+            'written_items' => $policy->isRequired('spec', 'written_items')
+                ? ['required', 'string', 'max:5000']
+                : ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.stock_item_code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-_]+$/'],
             'items.*.name' => ['required', 'string', 'min:1', 'max:255'],

@@ -310,6 +310,20 @@
     }
   }
 
+  function renderWrittenItemsBlock() {
+    var block = $('adjWrittenItemsBlock');
+    var body = $('adjWrittenItemsText');
+    if (!block || !body) return;
+    var text = activeCase && String(activeCase.written_items || '').trim();
+    if (!text) {
+      block.hidden = true;
+      body.textContent = '';
+      return;
+    }
+    block.hidden = false;
+    body.textContent = text;
+  }
+
   function renderSpecBlock() {
     var tbody = $('adjSpecItems');
     if (!tbody) return;
@@ -425,6 +439,7 @@
       '<td>' + items.length + '</td>' +
       '<td class="col-actions">' +
         (window.TechNotesModal ? window.TechNotesModal.buttonHtml(c.tech_notes, c.case_no) : '') +
+        (window.TechNotesModal && c.written_items ? window.TechNotesModal.writtenItemsButtonHtml(c.written_items, c.case_no) : '') +
         '<button type="button" class="btn-action primary btn-open-adj" data-case-id="' + c.id + '">' + btnLabel + '</button>' +
       '</td></tr>';
   }
@@ -601,6 +616,8 @@
           } else {
             renderEditModeBom();
           }
+
+          renderWrittenItemsBlock();
 
           renderReworkBanner(activeCase.rework || null);
           resetItemPicker();

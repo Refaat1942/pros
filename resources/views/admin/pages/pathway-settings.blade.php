@@ -6,6 +6,8 @@
         'departments' => $departments ?? [],
         'skip_roles' => $skip_roles ?? ($workflow_skip_role_options ?? []),
         'handlers' => $handlers ?? [],
+        'form_field_policies' => $form_field_policies ?? [],
+        'form_field_feature_labels' => $form_field_feature_labels ?? [],
     ];
 @endphp
 
@@ -44,6 +46,20 @@
             <button type="button" class="btn-action success" id="btnSaveAllPathways">💾 حفظ الثلاثة</button>
         </div>
     </div>
+
+    <div class="panel" style="margin-top:20px;">
+        <div class="panel-header">
+            <h3>📝 إلزامية حقول النماذج</h3>
+        </div>
+        <p class="pathway-designer-intro">
+            حدّد أي حقول إلزامية وأيها اختياري في كل شاشة — يُطبَّق على الاستقبال والتوصيف والمواعيد.
+        </p>
+        <div id="formFieldSettingsWrap" class="form-field-settings-wrap"></div>
+        <div id="formFieldSettingsError" class="pathway-designer-error" style="display:none;"></div>
+        <div class="pathway-designer-actions">
+            <button type="button" class="btn-action success" id="btnSaveFormFields">💾 حفظ إعدادات الحقول</button>
+        </div>
+    </div>
 </div>
 
 <script type="application/json" id="pathwayDesignerBootstrap">
@@ -52,4 +68,5 @@
 
 @push('scripts')
     <script src="{{ asset('assets/js/pages/pathway-designer.js') }}?v={{ filemtime(public_path('assets/js/pages/pathway-designer.js')) }}"></script>
+    <script src="{{ asset('assets/js/pages/form-field-settings.js') }}?v={{ filemtime(public_path('assets/js/pages/form-field-settings.js')) }}"></script>
 @endpush

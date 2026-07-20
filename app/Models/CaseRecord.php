@@ -347,6 +347,18 @@ class CaseRecord extends Model
         return $notes !== '' ? $notes : null;
     }
 
+    /** بنود الوصف الحر من التوصيف — null إذا فارغة. */
+    public function resolvedWrittenItems(): ?string
+    {
+        if (! $this->relationLoaded('techOrderSpec')) {
+            return null;
+        }
+
+        $text = trim((string) ($this->techOrderSpec?->written_items ?? ''));
+
+        return $text !== '' ? $text : null;
+    }
+
     public function clearReworkNotice(): void
     {
         $this->forceFill([

@@ -140,12 +140,29 @@ class PathwayTransitionMessageService
             }
         }
 
+        if ($pathway === \App\Models\PathwayStep::PATHWAY_ENTITY && $stageKey === CaseRecord::STAGE_OPERATIONS) {
+            $quoteStep = $this->pathwayConfig->entityOperationsStepKey($case);
+            foreach ($steps as $step) {
+                if (($step['key'] ?? '') === $quoteStep) {
+                    $dept = $step['owner_department'] ?? 'operations';
+
+                    return self::DEPT_ROLE[$dept] ?? Role::SLUG_ADMIN;
+                }
+            }
+        }
+
         foreach ($steps as $step) {
             if (! in_array($stageKey, $step['stage_keys'] ?? [], true)) {
                 continue;
             }
 
             if ($stageKey === CaseRecord::STAGE_READY_DELIVERY && ($step['key'] ?? '') === 'operations_release') {
+                continue;
+            }
+
+            if ($pathway === \App\Models\PathwayStep::PATHWAY_ENTITY
+                && $stageKey === CaseRecord::STAGE_OPERATIONS
+                && ($step['key'] ?? '') !== $this->pathwayConfig->entityOperationsStepKey($case)) {
                 continue;
             }
 

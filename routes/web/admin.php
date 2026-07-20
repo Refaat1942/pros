@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\FormFieldSettingsController;
 use App\Http\Controllers\Admin\BrandingSettingsController;
 use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
@@ -214,6 +215,9 @@ Route::prefix('admin')
 
             Route::post('pathway-settings/reset', [PathwaySettingsController::class, 'reset'])
                 ->name('pathway-settings.reset');
+
+            Route::put('form-field-settings', [FormFieldSettingsController::class, 'update'])
+                ->name('form-field-settings.update');
 
             Route::put('workflow-policies', [WorkflowSettingsController::class, 'update'])
                 ->name('workflow-policies.update');
