@@ -284,7 +284,7 @@ final class PathwayDefaultSteps
                 'action_summary' => 'مسح QR — تسليم الطرف — إغلاق الحالة',
                 'on_complete' => 'الحالة مكتملة',
                 'next_step_key' => PathwayConfigService::NEXT_COMPLETED,
-                'stage_keys' => [CaseRecord::STAGE_DELIVERED],
+                'stage_keys' => [CaseRecord::STAGE_READY_DELIVERY, CaseRecord::STAGE_DELIVERED],
                 'required' => true,
                 'auto_skip' => false,
                 'skip_roles' => [],

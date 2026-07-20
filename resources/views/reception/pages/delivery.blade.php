@@ -74,11 +74,23 @@
 </div>
 
 <div class="space-y-6" id="deliveryRoot">
-    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-        <p class="text-sm text-emerald-900 leading-relaxed">
-            الحالات الظاهرة هنا اكتمل تصنيعها (<strong>BOM تام</strong>) وهي <strong>جاهزة للتسليم</strong>.
-            امسح <strong>QR بطاقة المريض</strong> لتأكيد التسليم وإغلاق الحالة نهائياً.
-        </p>
+    <div class="rounded-2xl border border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50 p-5">
+        <div class="flex flex-col sm:flex-row sm:items-start gap-4">
+            <div class="text-4xl shrink-0">📦</div>
+            <div>
+                <h2 class="font-bold text-emerald-900 text-lg mb-2">التسليم النهائي — من الاستقبال</h2>
+                <p class="text-sm text-emerald-900 leading-relaxed">
+                    هذه الشاشة <strong>الخطوة الأخيرة</strong> في مسار المريض.
+                    بعد اكتمال التصنيع (<strong>BOM تام</strong>) تظهر الحالة هنا.
+                    <strong>امسح QR بطاقة المريض</strong> (لا تُقبل نسخة يدوية بدون مسح) لتأكيد التسليم وإغلاق الملف.
+                </p>
+                <ol class="mt-3 text-xs text-emerald-800 space-y-1 list-decimal list-inside">
+                    <li>اختر المريض من قائمة «جاهز للتسليم»</li>
+                    <li>امسح QR بطاقة المريض بالقارئ</li>
+                    <li>اضغط «تأكيد التسليم» — يُغلق الملف ويُصدر مرجع الفاتورة (مدني)</li>
+                </ol>
+            </div>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
@@ -103,6 +115,11 @@
                                 <p class="font-bold text-slate-800">{{ $case->patient?->name ?? '—' }}</p>
                                 <p class="text-xs text-slate-500 mt-1">{{ $case->case_no }} · {{ $case->work_order_no ?? '—' }}</p>
                                 <p class="text-xs text-slate-400">{{ $case->displayEntity() }}</p>
+                                @if($case->patient?->patient_type === 'military')
+                                    <span class="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">🪖 عسكري</span>
+                                @else
+                                    <span class="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-100 text-cyan-700">🌐 مدني</span>
+                                @endif
                             </div>
                             <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">BOM تام</span>
                         </div>
@@ -121,25 +138,35 @@
             </div>
 
             <div id="deliveryEmpty" class="flex-1 flex flex-col items-center justify-center p-10 text-center text-slate-400">
-                <div class="text-5xl mb-3">📦</div>
-                <p>اختر حالة من القائمة أو امسح QR مباشرة</p>
+                <div class="text-5xl mb-3">📋</div>
+                <p class="font-bold text-slate-600 mb-1">بانتظار اختيار حالة للتسليم</p>
+                <p class="text-sm">اختر مريضاً من القائمة على اليسار، ثم امسح QR بطاقته</p>
             </div>
 
             <div id="deliveryWorkspace" class="hidden flex-1 p-6 space-y-5 overflow-y-auto">
+                <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-3 text-sm text-emerald-900 font-bold text-center">
+                    الخطوة 2 — امسح QR بطاقة المريض للتأكيد
+                </div>
                 <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
-                    <h4 class="font-bold text-slate-800 text-lg" id="delPatientName">—</h4>
+                    <div class="flex items-start justify-between gap-2">
+                        <h4 class="font-bold text-slate-800 text-lg" id="delPatientName">—</h4>
+                        <span id="delPatientType" class="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0"></span>
+                    </div>
                     <div class="grid grid-cols-2 gap-3 mt-3 text-sm text-slate-600">
                         <div>الحالة: <strong id="delCaseNo" class="text-slate-800">—</strong></div>
                         <div>WO: <strong id="delWorkOrder" class="font-mono text-emerald-700">—</strong></div>
                         <div>الجهة: <strong id="delCompany">—</strong></div>
                         <div>BOM: <strong id="delBomStage" class="text-emerald-700">—</strong></div>
+                        <div class="col-span-2">اكتمال التصنيع: <strong id="delFinishedAt" class="text-slate-700">—</strong></div>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">رمز QR لبطاقة المريض</label>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">رمز QR لبطاقة المريض <span class="text-red-600">*</span></label>
+                    <p class="text-xs text-slate-500 mb-2">يجب مسح البطاقة فعلياً — لا تُقبل الحالة بدون تطابق QR</p>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="deliveryQrInput" placeholder="امسح أو أدخل QR..."
+                        <input type="text" id="deliveryQrInput" placeholder="امسح QR بالقارئ..."
+                               autocomplete="off"
                                data-v-rules="required,qr" maxlength="100"
                                class="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-recv/50">
                         <button type="button" id="btnConfirmDelivery"

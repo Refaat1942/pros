@@ -6,6 +6,7 @@ use App\Enums\WorkflowEvent;
 use App\Exceptions\InvalidWorkflowTransitionException;
 use App\Models\CaseRecord;
 use App\Services\Notifications\NotificationService;
+use App\Services\PathwayTransitionMessageService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -13,7 +14,10 @@ use Illuminate\Support\Facades\DB;
  */
 class WorkflowService
 {
-    public function __construct(private readonly NotificationService $notifications) {}
+    public function __construct(
+        private readonly NotificationService $notifications,
+        private readonly PathwayTransitionMessageService $transitionMessages,
+    ) {}
 
     /**
      * خريطة الانتقالات: الحدث → [المراحل المسموحة, المرحلة الهدف, manufacturing_stage|null]
@@ -107,7 +111,9 @@ class WorkflowService
 
     public function advance(CaseRecord $case, string $event): void
     {
-        $updated = DB::transaction(function () use ($case, $event) {
+        $fromStageKey = null;
+
+        $updated = DB::transaction(function () use ($case, $event, &$fromStageKey) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             $rule = self::TRANSITIONS[$event] ?? null;
@@ -120,6 +126,7 @@ class WorkflowService
                 'stage_key' => $case->stage_key,
                 'manufacturing_stage' => $case->manufacturing_stage,
             ];
+            $fromStageKey = $before['stage_key'];
 
             $updates = ['stage_key' => $rule['to']];
 
@@ -133,9 +140,15 @@ class WorkflowService
 
             $case->update($updates);
 
+            $transferMessage = $this->transitionMessages->transferMessage(
+                $case->fresh(['patient']),
+                $event,
+                $before['stage_key'],
+            );
+
             AuditService::log(
                 action: 'update',
-                description: "انتقال workflow: {$event} — {$before['stage_key']} → {$rule['to']}",
+                description: "انتقال workflow: {$transferMessage}",
                 tag: 'medical',
                 before: $before,
                 after: [
@@ -151,7 +164,7 @@ class WorkflowService
 
         // إشعار اللوحة التالية بعد نجاح الانتقال — لا يُعطّل التدفق إن فشل الإرسال.
         try {
-            $this->notifications->notifyTransition($updated, $event);
+            $this->notifications->notifyTransition($updated, $event, $fromStageKey);
         } catch (\Throwable $e) {
             report($e);
         }

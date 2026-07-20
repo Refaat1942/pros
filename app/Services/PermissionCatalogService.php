@@ -107,18 +107,33 @@ class PermissionCatalogService
         $dashboards = [];
 
         foreach ($labels as $key => $meta) {
-            if ($key === Role::SLUG_ADMIN) {
-                continue;
-            }
-
             $dashPerms = $permissions->where('dashboard', $key);
-            $dashboards[$key] = [
+            $entry = [
                 'key' => $key,
                 'label' => $meta['label_ar'] ?? $key,
                 'icon' => $meta['icon'] ?? '📊',
                 'views' => $dashPerms->where('type', Permission::TYPE_VIEW)->values(),
                 'actions' => $dashPerms->where('type', Permission::TYPE_ACTION)->values(),
+                'groups' => [],
             ];
+
+            if ($key === Role::SLUG_ADMIN) {
+                $adminConfig = config('dashboards.admin', []);
+                foreach ($adminConfig['nav_groups'] ?? [] as $group) {
+                    $pageKeys = $group['pages'] ?? [];
+                    $views = $dashPerms->where('type', Permission::TYPE_VIEW)
+                        ->filter(fn (Permission $p) => in_array($p->page, $pageKeys, true));
+                    if ($views->isNotEmpty()) {
+                        $entry['groups'][] = [
+                            'label' => $group['label'] ?? '',
+                            'icon' => $group['icon'] ?? '📁',
+                            'views' => $views->values(),
+                        ];
+                    }
+                }
+            }
+
+            $dashboards[$key] = $entry;
         }
 
         return [

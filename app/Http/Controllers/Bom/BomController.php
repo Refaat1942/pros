@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Bom;
 
+use App\Enums\WorkflowEvent;
 use App\Exceptions\BarcodeDispenseMismatchException;
 use App\Exceptions\InvalidWorkflowTransitionException;
 use App\Http\Controllers\Controller;
@@ -15,6 +16,7 @@ use App\Models\Quote;
 use App\Models\StockItem;
 use App\Models\TechOrderSpecItem;
 use App\Services\BomService;
+use App\Services\PathwayTransitionMessageService;
 use App\Support\BomItemAggregator;
 use App\Support\IssueVoucherPresenter;
 use App\Support\StockItemUomLookup;
@@ -27,7 +29,10 @@ class BomController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly BomService $bomService) {}
+    public function __construct(
+        private readonly BomService $bomService,
+        private readonly PathwayTransitionMessageService $transitions,
+    ) {}
 
     /**
      * قائمة BOM — مرشَّحة حسب المرحلة (raw / wip / finished).
@@ -109,6 +114,9 @@ class BomController extends Controller
      */
     public function scanDispense(DispenseBomRequest $request, Bom $bom): JsonResponse
     {
+        $case = $bom->caseRecord;
+        $fromStage = $case?->stage_key ?? CaseRecord::STAGE_MANUFACTURING;
+
         try {
             $bom = $this->bomService->releaseToWip($bom, $request->validated('scanned_barcodes'));
         } catch (BarcodeDispenseMismatchException $e) {
@@ -119,8 +127,12 @@ class BomController extends Controller
             ], 422);
         }
 
+        $case = $bom->caseRecord?->load('patient');
+
         return response()->json([
-            'message' => 'تم صرف الأصناف بنجاح — وهي في مرحلة التصنيع حالياً.',
+            'message' => $case
+                ? $this->transitions->transferMessage($case, WorkflowEvent::BomDispensed->value, $fromStage)
+                : 'تم صرف الأصناف بنجاح.',
             'bom' => $this->formatDetail($bom),
         ]);
     }
@@ -143,14 +155,21 @@ class BomController extends Controller
      */
     public function closeFinished(Bom $bom): JsonResponse
     {
+        $case = $bom->caseRecord;
+        $fromStage = $case?->stage_key ?? CaseRecord::STAGE_MANUFACTURING;
+
         try {
             $bom = $this->bomService->finish($bom);
         } catch (InvalidWorkflowTransitionException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
+        $case = $bom->caseRecord?->load('patient');
+
         return response()->json([
-            'message' => 'تم إغلاق BOM — الحالة جاهزة للتسليم.',
+            'message' => $case
+                ? $this->transitions->transferMessage($case, WorkflowEvent::BomFinished->value, $fromStage)
+                : 'تم إغلاق BOM — الحالة جاهزة للتسليم.',
             'bom' => $this->formatDetail($bom),
             'can_deliver' => $this->bomService->canDeliver($bom->caseRecord),
         ]);

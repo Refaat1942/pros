@@ -264,7 +264,7 @@ class AdminPatientTrackService
             'tracking_uid' => null,
             'pathway' => $pathway,
             'stage_label' => $case
-                ? CaseStage::labelFor($case->stage_key)
+                ? $this->pathwayConfig->currentStepLabelForCase($case)
                 : $stageLabel,
             'current_index' => $currentIndex,
             'steps' => $this->remapStepStatuses($steps, $currentIndex),

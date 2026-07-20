@@ -15,8 +15,9 @@
         <div>
             <h3 class="perm-page-title">🛡️ إدارة الصلاحيات</h3>
             <p class="perm-page-subtitle">
-                تحكّم في صلاحيات العرض والإجراءات لكل دور. مسؤول النظام يصل تلقائياً للوحة الإدارة،
-                ويمكنه زيارة اللوحات الأخرى حسب الصلاحيات الممنوحة هنا.
+                تحكّم في صلاحيات العرض والإجراءات لكل دور — بما فيها لوحة الإدارة والمالية.
+                دور <strong>مسؤول النظام</strong> (سوبر أدمن) يصل تلقائياً لكل شيء؛
+                يمكنك تضييق صلاحيات الأدوار الأخرى من هنا (من يرى الأسعار، الإيرادات، الصفحات…).
             </p>
         </div>
         <div class="perm-header-actions">
@@ -55,7 +56,6 @@
                 @php $slugs = (array) ($matrix[$role->id] ?? []); @endphp
                 <div class="perm-role-store" data-role-id="{{ $role->id }}" data-slugs="{{ json_encode($slugs) }}">
                     @foreach ($catalog as $slug => $meta)
-                        @continue(($meta['dashboard'] ?? '') === 'admin')
                         @php $permId = $permissionIds[$slug] ?? null; @endphp
                         @if ($permId)
                             <input type="checkbox"
@@ -90,7 +90,32 @@
                         </div>
                     </header>
 
-                    @if ($dash['views']->isNotEmpty())
+                    @if (!empty($dash['groups']))
+                        @foreach ($dash['groups'] as $group)
+                            <section class="perm-card-section">
+                                <h5 class="perm-section-label">
+                                    <span class="perm-badge perm-badge-view">{{ $group['icon'] ?? '📁' }}</span>
+                                    {{ $group['label'] }}
+                                </h5>
+                                <ul class="perm-toggle-list">
+                                    @foreach ($group['views'] as $perm)
+                                        <li class="perm-toggle-item">
+                                            <label class="perm-toggle">
+                                                <input type="checkbox"
+                                                       class="perm-visible-cb"
+                                                       data-perm-id="{{ $perm->id }}"
+                                                       data-slug="{{ $perm->slug }}">
+                                                <span class="perm-toggle-track"><span class="perm-toggle-thumb"></span></span>
+                                                <span class="perm-toggle-text">
+                                                    <strong>{{ $perm->label_ar }}</strong>
+                                                </span>
+                                            </label>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </section>
+                        @endforeach
+                    @elseif ($dash['views']->isNotEmpty())
                         <section class="perm-card-section">
                             <h5 class="perm-section-label">
                                 <span class="perm-badge perm-badge-view">عرض</span>

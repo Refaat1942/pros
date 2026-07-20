@@ -19,6 +19,18 @@ final class CaseFinancialSummary
         return Gate::allows('view-costs');
     }
 
+    /** أسعار البيع وعروض الأسعار — للعرض في اللوحات والتقارير. */
+    public static function canSeePrices(): bool
+    {
+        return Gate::allows('view-prices') || Gate::allows('view-costs');
+    }
+
+    /** الإيرادات والمؤشرات المالية في لوحة الإدارة. */
+    public static function canSeeRevenue(): bool
+    {
+        return Gate::allows('view-revenue') || Gate::allows('view-costs');
+    }
+
     /**
      * نِسَب الربحية العسكرية — للسوبر أدمن فقط (صلاحية view-military-profit).
      */

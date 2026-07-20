@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Costing;
 
+use App\Enums\WorkflowEvent;
 use App\Http\Controllers\Controller;
 use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Services\CostingService;
 use App\Services\CostingSnapshotService;
+use App\Services\PathwayTransitionMessageService;
 use App\Services\PricingService;
 use App\Services\StockCategorySchemaService;
 use App\Support\CaseFinancialSummary;
@@ -29,6 +31,7 @@ class CostingController extends Controller
         private readonly OverheadCostingEngine $overheadCostingEngine,
         private readonly StockCategorySchemaService $categorySchema,
         private readonly CostingSnapshotService $snapshotService,
+        private readonly PathwayTransitionMessageService $transitions,
     ) {}
 
     /**
@@ -121,12 +124,15 @@ class CostingController extends Controller
      */
     public function confirm(CaseRecord $case): JsonResponse
     {
+        $fromStage = $case->stage_key;
         $case = $this->costingService->confirmAndIssueQuote($case, Auth::user()?->name);
 
         return response()->json([
-            'message' => $case->isMilitary()
-                ? 'تم تأكيد التكاليف — اعتماد عسكري تلقائي وتحويل للمخزن.'
-                : 'تم تأكيد التكاليف  — الحالة في مكتب التشغيل.',
+            'message' => $this->transitions->transferMessage(
+                $case->load('patient'),
+                WorkflowEvent::QuoteIssued->value,
+                $fromStage,
+            ),
             'case' => $this->formatSummary($case->load(['patient', 'pricingRequest', 'quotes'])),
         ]);
     }

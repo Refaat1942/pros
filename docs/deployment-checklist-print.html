@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Prosthetics ERP — PostgreSQL Deploy Manual</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Tajawal', Arial, sans-serif; font-size: 10.5pt; line-height: 1.5; color: #0f172a; background: #f1f5f9; }
+        .page { width: 210mm; min-height: 297mm; margin: 12px auto; padding: 12mm 14mm; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.08); page-break-after: always; }
+        .page:last-child { page-break-after: auto; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; border-bottom: 3px solid #1e40af; padding-bottom: 8px; margin-bottom: 12px; }
+        .header h1 { font-size: 16pt; font-weight: 800; color: #1e3a8a; line-height: 1.3; }
+        .header .sub { font-size: 9.5pt; color: #64748b; margin-top: 3px; }
+        .badge { background: #1e40af; color: #fff; font-size: 8.5pt; font-weight: 800; padding: 5px 10px; border-radius: 8px; text-align: center; }
+        h2 { font-size: 11pt; font-weight: 800; color: #1e40af; margin: 10px 0 6px; padding-bottom: 3px; border-bottom: 1px solid #cbd5e1; }
+        h3 { font-size: 10pt; font-weight: 800; color: #334155; margin: 8px 0 4px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; background: #f8fafc; font-size: 10pt; }
+        .box strong { color: #1e3a8a; }
+        table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 9.5pt; }
+        th, td { border: 1px solid #cbd5e1; padding: 5px 7px; text-align: right; vertical-align: top; }
+        th { background: #eff6ff; font-weight: 800; color: #1e3a8a; }
+        .steps { counter-reset: step; list-style: none; margin: 4px 0; }
+        .steps li { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px dotted #e2e8f0; font-size: 9.5pt; }
+        .steps li:last-child { border-bottom: none; }
+        .steps li::before { counter-increment: step; content: counter(step); flex-shrink: 0; width: 20px; height: 20px; background: #1e40af; color: #fff; border-radius: 50%; font-size: 9pt; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+        .checklist { list-style: none; }
+        .checklist li { display: flex; gap: 6px; padding: 3px 0; font-size: 9.5pt; border-bottom: 1px dotted #e2e8f0; }
+        .box-check { width: 12px; height: 12px; border: 2px solid #64748b; border-radius: 2px; flex-shrink: 0; margin-top: 4px; }
+        .warn { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; padding: 8px; margin: 8px 0; font-size: 9.5pt; }
+        .ok { background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 6px; padding: 8px; margin: 8px 0; font-size: 9.5pt; }
+        .pg { background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px; padding: 8px; margin: 6px 0; font-size: 9pt; }
+        .fill-line { border-bottom: 1px solid #94a3b8; min-width: 100px; display: inline-block; height: 14px; }
+        code { background: #f1f5f9; padding: 1px 4px; border-radius: 4px; font-size: 8.5pt; direction: ltr; unicode-bidi: embed; }
+        .cmd { background: #0f172a; color: #e2e8f0; padding: 7px 9px; border-radius: 6px; font-size: 8pt; direction: ltr; text-align: left; margin: 5px 0; white-space: pre-wrap; font-family: Consolas, monospace; }
+        .diagram { text-align: center; background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 6px; padding: 10px; margin: 6px 0; font-size: 9.5pt; direction: ltr; }
+        .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #cbd5e1; font-size: 8.5pt; color: #64748b; display: flex; justify-content: space-between; }
+        @media print { body { background: #fff; } .page { margin: 0; box-shadow: none; width: 100%; } @page { size: A4; margin: 10mm; } }
+    </style>
+</head>
+<body>
+
+<!-- PAGE 1 — OVERVIEW + PREREQUISITES -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>دليل النشر — PostgreSQL · Windows · LAN</h1>
+            <div class="sub">Smart Prosthetics ERP · Offline Local Server · v2.0</div>
+        </div>
+        <div class="badge">1 / 3<br>Overview</div>
+    </div>
+
+    <div class="grid-2">
+        <div class="box">
+            <strong>العميل:</strong> <span class="fill-line"></span><br>
+            <strong>التاريخ:</strong> <span class="fill-line"></span><br>
+            <strong>المنفّذ:</strong> <span class="fill-line"></span>
+        </div>
+        <div class="box">
+            <strong>IP السيرفر:</strong> <span class="fill-line"></span><br>
+            <strong>رابط الموظفين:</strong> <code>http://___IP___</code><br>
+            <strong>DB:</strong> PostgreSQL · <code>prosthetics</code>
+        </div>
+    </div>
+
+    <div class="diagram">
+        [Staff PCs — Chrome only] → LAN → [Windows Server]<br>
+        Laragon (Apache+PHP) + PostgreSQL 5432 + Laravel<br>
+        Daily backup: pg_dump → storage/backups
+    </div>
+
+    <div class="ok">
+        <strong>✅ للموظفين:</strong> متصفح فقط — <strong>لا تثبيت</strong> على أجهزتهم.<br>
+        <strong>✅ أوفلاين:</strong> الإنترنت الخارجي غير مطلوب للعمل اليومي داخل المركز.
+    </div>
+
+    <h2>قبل الزيارة — تحقق</h2>
+    <ul class="checklist">
+        <li><span class="box-check"></span> جهاز Windows مخصص للسيرفر + UPS</li>
+        <li><span class="box-check"></span> IP ثابت (DHCP Reservation في الراوتر)</li>
+        <li><span class="box-check"></span> شبكة LAN بين أجهزة المركز</li>
+        <li><span class="box-check"></span> Laragon Full + PostgreSQL add-on</li>
+        <li><span class="box-check"></span> Git + Composer</li>
+    </ul>
+
+    <h2>PostgreSQL — لماذا؟</h2>
+    <table>
+        <tr><th>الميزة</th><th>الفائدة</th></tr>
+        <tr><td>UTF8</td><td>دعم كامل للعربية</td></tr>
+        <tr><td>موثوقية</td><td>بيانات مرضى · مخزون · مالية</td></tr>
+        <tr><td>pg_dump</td><td>نسخ احتياطي يومي تلقائي</td></tr>
+        <tr><td>مستخدم مخصص</td><td>أمان — ليس superuser في .env</td></tr>
+    </table>
+
+    <h2>البرامج المطلوبة</h2>
+    <table>
+        <tr><th>البرنامج</th><th>الرابط / المكان</th></tr>
+        <tr><td>Laragon Full</td><td>laragon.org/download</td></tr>
+        <tr><td>PostgreSQL</td><td>Laragon → Menu → PostgreSQL → Install</td></tr>
+        <tr><td>Git</td><td>git-scm.com/download/win</td></tr>
+        <tr><td>المشروع</td><td><code>C:\laragon\www\prosthetics</code></td></tr>
+    </table>
+
+    <div class="warn">
+        <strong>⚠️ ممنوع:</strong> APP_DEBUG=true · postgres superuser في .env · MySQL (الافتراضي الآن PostgreSQL) · فتح port 80 للإنترنت بدون IT
+    </div>
+
+    <div class="footer"><span>Deploy Manual v2.0 · PostgreSQL</span><span>github.com/Refaat1942/pros</span></div>
+</div>
+
+<!-- PAGE 2 — STEP BY STEP DEPLOYMENT -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>خطوات النشر — بالترتيب</h1>
+            <div class="sub">Follow steps 1→19 · Copy commands exactly</div>
+        </div>
+        <div class="badge">2 / 3<br>Steps</div>
+    </div>
+
+    <h2>أ — تثبيت</h2>
+    <ol class="steps">
+        <li>Windows Update → Restart</li>
+        <li>Laragon Full → Install → <strong>Start All</strong></li>
+        <li>Laragon → Menu → PostgreSQL → Install → Start All</li>
+        <li>Git → Install</li>
+        <li>تحقق: <code>php -m | findstr pgsql</code> → يظهر pdo_pgsql</li>
+    </ol>
+
+    <h2>ب — PostgreSQL (انسخ في psql)</h2>
+    <div class="pg">Laragon → Menu → PostgreSQL → psql · أو CMD → psql -U postgres</div>
+    <div class="cmd">CREATE DATABASE prosthetics ENCODING 'UTF8';
+CREATE USER prosthetics_user WITH PASSWORD 'StrongPassword2026!';
+GRANT ALL PRIVILEGES ON DATABASE prosthetics TO prosthetics_user;
+\c prosthetics
+GRANT ALL ON SCHEMA public TO prosthetics_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO prosthetics_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO prosthetics_user;</div>
+
+    <h2>ج — التطبيق</h2>
+    <div class="cmd">cd C:\laragon\www
+git clone https://github.com/Refaat1942/pros.git prosthetics
+cd prosthetics
+composer install --no-dev --optimize-autoloader
+copy .env.example .env
+php artisan key:generate</div>
+
+    <h3>ملف .env — عدّل:</h3>
+    <table>
+        <tr><th>Key</th><th>Value</th></tr>
+        <tr><td>APP_ENV</td><td><code>production</code></td></tr>
+        <tr><td>APP_DEBUG</td><td><code>false</code></td></tr>
+        <tr><td>APP_URL</td><td><code>http://SERVER-IP</code></td></tr>
+        <tr><td>DB_CONNECTION</td><td><code>pgsql</code></td></tr>
+        <tr><td>DB_PORT</td><td><code>5432</code></td></tr>
+        <tr><td>DB_DATABASE</td><td><code>prosthetics</code></td></tr>
+        <tr><td>DB_USERNAME</td><td><code>prosthetics_user</code></td></tr>
+        <tr><td>DB_PASSWORD</td><td>كلمة المرور أعلاه</td></tr>
+        <tr><td>SESSION_IDLE_TIMEOUT</td><td><code>5</code></td></tr>
+        <tr><td>TELEGRAM_ERROR_NOTIFY</td><td><code>false</code></td></tr>
+    </table>
+
+    <div class="cmd">php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache</div>
+
+    <h2>د — الشبكة والاختبار</h2>
+    <ol class="steps">
+        <li><code>ipconfig</code> → IPv4 → حدّث APP_URL → config:cache</li>
+        <li>اختبار السيرفر: <code>http://127.0.0.1</code></li>
+        <li>اختبار PC آخر: <code>http://SERVER-IP</code></li>
+        <li>Firewall: Apache → Private ✓ · Public ✗</li>
+    </ol>
+
+    <h2>هـ — النسخ الاحتياطي</h2>
+    <div class="cmd">php artisan prosthetics:backup</div>
+    <ul class="checklist">
+        <li><span class="box-check"></span> الملفات: <code>storage\backups</code> · pg_dump · 7 أيام</li>
+        <li><span class="box-check"></span> Task Scheduler: يومياً 2:00 AM</li>
+        <li><span class="box-check"></span> نسخ أسبوعي لقرص خارجي</li>
+    </ul>
+
+    <h2>و — التسليم</h2>
+    <ol class="steps">
+        <li>Admin + حسابات الأقسام (login منفصل لكل موظف)</li>
+        <li>اختصار Desktop: <code>http://SERVER-IP</code> — «نظام الأطراف الصناعية»</li>
+        <li>سلّم صفحة 3 لـ IT العميل</li>
+    </ol>
+
+    <div class="footer"><span>Steps 1–19 complete checklist in deploy-manual-postgresql.md</span><span>Page 2/3</span></div>
+</div>
+
+<!-- PAGE 3 — CLIENT IT + TROUBLESHOOTING -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>ورقة التشغيل — IT / إدارة المركز</h1>
+            <div class="sub">Operations · Backup · Troubleshooting · Updates</div>
+        </div>
+        <div class="badge">3 / 3<br>Client IT</div>
+    </div>
+
+    <h2>1 — بيانات النظام</h2>
+    <table>
+        <tr><th>البند</th><th>القيمة</th></tr>
+        <tr><td>رابط الموظفين</td><td><code>http://_________________</code></td></tr>
+        <tr><td>جهاز السيرفر</td><td><span class="fill-line"></span></td></tr>
+        <tr><td>IP ثابت</td><td><span class="fill-line"></span></td></tr>
+        <tr><td>قاعدة البيانات</td><td>PostgreSQL · prosthetics · port 5432</td></tr>
+        <tr><td>مسؤول النظام</td><td><span class="fill-line"></span> · <span class="fill-line"></span></td></tr>
+        <tr><td>الدعم الفني</td><td><span class="fill-line"></span> · <span class="fill-line"></span></td></tr>
+    </table>
+
+    <h2>2 — قواعد التشغيل</h2>
+    <ul class="checklist">
+        <li><span class="box-check"></span> السيرفر يظل شغّالاً · Laragon → Start All بعد انقطاع كهرباء</li>
+        <li><span class="box-check"></span> لا تغيير IP بدون تحديث .env</li>
+        <li><span class="box-check"></span> كل موظف login خاص · خروج تلقائي 5 دقائق</li>
+        <li><span class="box-check"></span> التحديثات بعد ساعات العمل فقط</li>
+        <li><span class="box-check"></span> LAN فقط — VPN للوصول الخارجي</li>
+    </ul>
+
+    <h2>3 — النسخ الاحتياطي</h2>
+    <table>
+        <tr><th>البند</th><th>التفاصيل</th></tr>
+        <tr><td>الأداة</td><td>pg_dump (تلقائي)</td></tr>
+        <tr><td>الأمر</td><td><code>php artisan prosthetics:backup</code></td></tr>
+        <tr><td>المسار</td><td><code>C:\laragon\www\prosthetics\storage\backups</code></td></tr>
+        <tr><td>التوقيت</td><td>يومياً 2:00 AM</td></tr>
+        <tr><td>الاحتفاظ</td><td>7 أيام + نسخ USB أسبوعي</td></tr>
+    </table>
+
+    <h2>4 — اختصار الموظف</h2>
+    <p style="font-size:9.5pt;margin:4px 0;">يمين Desktop → جديد → اختصار → <code>http://SERVER-IP</code> → «نظام الأطراف الصناعية»</p>
+
+    <h2>5 — حل المشاكل (PostgreSQL)</h2>
+    <table>
+        <tr><th>المشكلة</th><th>الحل</th></tr>
+        <tr><td>الصفحة لا تفتح</td><td>Start All · Firewall · IP صحيح</td></tr>
+        <tr><td>could not connect to server</td><td>PostgreSQL غير شغّال</td></tr>
+        <tr><td>password authentication failed</td><td>راجع DB_PASSWORD في .env</td></tr>
+        <tr><td>could not find driver</td><td>فعّل pdo_pgsql في php.ini</td></tr>
+        <tr><td>pg_dump failed</td><td>PostgreSQL bin في PATH</td></tr>
+        <tr><td>بعد تحديث</td><td>Ctrl+F5 في المتصفح</td></tr>
+    </table>
+
+    <h2>6 — تحديث النظام (فني فقط)</h2>
+    <div class="cmd">cd C:\laragon\www\prosthetics
+git pull
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:clear && php artisan view:clear
+php artisan config:cache</div>
+
+    <h2>7 — قائمة تحقق نهائية</h2>
+    <div class="grid-2">
+        <ul class="checklist">
+            <li><span class="box-check"></span> PostgreSQL + pdo_pgsql</li>
+            <li><span class="box-check"></span> prosthetics DB + user</li>
+            <li><span class="box-check"></span> migrate OK</li>
+            <li><span class="box-check"></span> Login من PC آخر</li>
+        </ul>
+        <ul class="checklist">
+            <li><span class="box-check"></span> backup يدوي OK</li>
+            <li><span class="box-check"></span> Task Scheduler</li>
+            <li><span class="box-check"></span> حسابات الأقسام</li>
+            <li><span class="box-check"></span> اختصارات Desktop</li>
+        </ul>
+    </div>
+
+    <div class="warn"><strong>طوارئ:</strong> لا تحذف storage\backups · backup قبل أي تحديث كبير</div>
+    <div class="footer"><span>تسليم بتاريخ: _______________</span><span>Smart Prosthetics ERP v2.0</span></div>
+</div>
+
+</body>
+</html>

@@ -10,6 +10,7 @@ use App\Models\CaseRecord;
 use App\Models\Role;
 use App\Models\SpecEditRequest;
 use App\Models\UserDevice;
+use App\Services\PathwayTransitionMessageService;
 
 /**
  * مركز الإشعارات بين اللوحات — يترجم أحداث محرك التدفق إلى إشعارات
@@ -19,7 +20,10 @@ use App\Models\UserDevice;
  */
 class NotificationService
 {
-    public function __construct(private readonly FirebaseService $firebase) {}
+    public function __construct(
+        private readonly FirebaseService $firebase,
+        private readonly PathwayTransitionMessageService $transitionMessages,
+    ) {}
 
     /**
      * خريطة الحدث → [الدور المستهدف, العنوان, قالب الرسالة].
@@ -197,24 +201,19 @@ class NotificationService
     /**
      * يُطلق إشعار انتقال المرحلة للدور المستهدف.
      */
-    public function notifyTransition(CaseRecord $case, string $event): ?AppNotification
+    public function notifyTransition(CaseRecord $case, string $event, ?string $fromStageKey = null): ?AppNotification
     {
-        $rule = self::MAP[$event] ?? null;
+        $fromStageKey ??= $case->stage_key;
+        $payload = $this->transitionMessages->notificationPayload($case, $event, $fromStageKey);
 
-        if ($rule === null) {
+        if ($payload === null) {
             return null;
         }
 
-        $case->loadMissing('patient:id,name,patient_code');
-        $patient = $case->patient?->name ?? 'غير معروف';
-        $caseNo = $case->case_no ?? ('#'.$case->id);
-
-        $body = strtr($rule['body'], ['{patient}' => $patient, '{case}' => $caseNo]);
-
         return $this->push(
-            roleSlug: $rule['role'],
-            title: $rule['title'],
-            body: $body,
+            roleSlug: $payload['role'],
+            title: $payload['title'],
+            body: $payload['body'],
             case: $case,
             event: $event,
         );

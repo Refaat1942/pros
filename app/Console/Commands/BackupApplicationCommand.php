@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 use Symfony\Component\Process\Process;
 
 /**
- * نسخ احتياطي يومي — قاعدة البيانات + ملفات الشعار المرفوعة.
+ * نسخ احتياطي يومي — PostgreSQL / MySQL + ملفات الشعار المرفوعة.
  */
 class BackupApplicationCommand extends Command
 {
@@ -40,13 +40,80 @@ class BackupApplicationCommand extends Command
     {
         $connection = config('database.default');
         $config = config("database.connections.{$connection}");
+        $driver = (string) ($config['driver'] ?? '');
 
-        if (($config['driver'] ?? '') !== 'mysql') {
-            $this->error('Database backup requires MySQL (mysqldump). Current driver: '.($config['driver'] ?? 'unknown'));
+        $sql = match ($driver) {
+            'pgsql' => $this->dumpPostgres($config),
+            'mysql' => $this->dumpMysql($config),
+            default => null,
+        };
+
+        if ($sql === null) {
+            $this->error('Database backup requires PostgreSQL (pg_dump) or MySQL (mysqldump). Current driver: '.$driver);
 
             return false;
         }
 
+        if ($sql === false) {
+            return false;
+        }
+
+        $gz = gzencode($sql, 9);
+        if ($gz === false) {
+            $this->error('Failed to compress database dump.');
+
+            return false;
+        }
+
+        file_put_contents($targetPath, $gz);
+        $this->line('Database: '.basename($targetPath));
+
+        return true;
+    }
+
+    /** @param  array<string, mixed>  $config */
+    private function dumpPostgres(array $config): string|false
+    {
+        $database = (string) ($config['database'] ?? '');
+        if ($database === '') {
+            $this->error('Database name is not configured.');
+
+            return false;
+        }
+
+        $cmd = [
+            'pg_dump',
+            '--host='.(string) ($config['host'] ?? '127.0.0.1'),
+            '--port='.(string) ($config['port'] ?? '5432'),
+            '--username='.(string) ($config['username'] ?? ''),
+            '--no-owner',
+            '--no-acl',
+            '--format=plain',
+            $database,
+        ];
+
+        $env = [];
+        $password = (string) ($config['password'] ?? '');
+        if ($password !== '') {
+            $env['PGPASSWORD'] = $password;
+        }
+
+        $dump = new Process($cmd, null, $env);
+        $dump->setTimeout(600);
+        $dump->run();
+
+        if (! $dump->isSuccessful()) {
+            $this->error('pg_dump failed: '.trim($dump->getErrorOutput() ?: $dump->getOutput()));
+
+            return false;
+        }
+
+        return $dump->getOutput();
+    }
+
+    /** @param  array<string, mixed>  $config */
+    private function dumpMysql(array $config): string|false
+    {
         $database = (string) ($config['database'] ?? '');
         if ($database === '') {
             $this->error('Database name is not configured.');
@@ -81,17 +148,7 @@ class BackupApplicationCommand extends Command
             return false;
         }
 
-        $gz = gzencode($dump->getOutput(), 9);
-        if ($gz === false) {
-            $this->error('Failed to compress database dump.');
-
-            return false;
-        }
-
-        file_put_contents($targetPath, $gz);
-        $this->line('Database: '.basename($targetPath));
-
-        return true;
+        return $dump->getOutput();
     }
 
     private function archiveBrandingUploads(string $targetPath): void

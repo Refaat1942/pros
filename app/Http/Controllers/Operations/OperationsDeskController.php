@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Operations;
 
+use App\Enums\WorkflowEvent;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\OperationsService;
+use App\Services\PathwayTransitionMessageService;
 use App\Services\QuoteService;
 use App\Support\CaseFinancialSummary;
 use App\Support\QuotePrintPresenter;
@@ -27,6 +29,7 @@ class OperationsDeskController extends Controller
     public function __construct(
         private readonly OperationsService $operationsService,
         private readonly QuoteService $quoteService,
+        private readonly PathwayTransitionMessageService $transitions,
     ) {}
 
     /**
@@ -106,11 +109,16 @@ class OperationsDeskController extends Controller
 
         // مسار الكاش: المريض على نفقته الشخصية (بلا جهة تعاقد) ⬅️ تحويل تلقائي للخزنة.
         if ($case->isCashCivilian()) {
+            $fromStage = $case->stage_key;
             $case = $this->operationsService->sendToCashier($case, $quote);
             $quote = $quote->fresh();
 
             return response()->json([
-                'message' => 'تم إصدار عرض السعر — حُوّلت الحالة للخزنة لتحصيل الدفع النقدي.',
+                'message' => $this->transitions->transferMessage(
+                    $case->load('patient'),
+                    WorkflowEvent::SentToCashier->value,
+                    $fromStage,
+                ),
                 'quote' => [
                     'id' => $quote->id,
                     'quote_no' => $quote->quote_no,
@@ -141,10 +149,15 @@ class OperationsDeskController extends Controller
      */
     public function approve(CaseRecord $case): JsonResponse
     {
+        $fromStage = $case->stage_key;
         $case = $this->operationsService->approve($case, Auth::user()?->name);
 
         return response()->json([
-            'message' => 'تم الاعتماد — حُجزت المواد وحُوّلت الحالة للمخزن.',
+            'message' => $this->transitions->transferMessage(
+                $case->load('patient'),
+                WorkflowEvent::OperationsApproved->value,
+                $fromStage,
+            ),
             'case' => $case->only(['id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no']),
         ]);
     }

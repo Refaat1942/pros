@@ -75,7 +75,9 @@ class PublicTrackingService
         return [
             'tracking_uid' => $uid,
             'pathway' => $pathway,
-            'stage_label' => $this->publicStageLabel($case, $case === null, $pathway),
+            'stage_label' => $case
+                ? $this->pathwayConfig->currentStepLabelForCase($case)
+                : $this->publicStageLabel($case, $case === null, $pathway),
             'current_index' => $currentIndex,
             'progress_percent' => $progressPercent,
             'steps' => $mappedSteps,

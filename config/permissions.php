@@ -35,6 +35,18 @@ return [
             'label_ar' => 'نِسَب الربحية العسكرية',
             'dashboard' => 'admin',
         ],
+        'view-prices' => [
+            'label_ar' => 'أسعار البيع وعروض الأسعار',
+            'dashboard' => 'admin',
+        ],
+        'view-revenue' => [
+            'label_ar' => 'الإيرادات والمؤشرات المالية',
+            'dashboard' => 'admin',
+        ],
+        'super-admin' => [
+            'label_ar' => 'سوبر أدمن — صلاحية كاملة على النظام',
+            'dashboard' => 'admin',
+        ],
         'approve-pricing' => [
             'label_ar' => 'اعتماد التسعير في مكتب التشغيل',
             'dashboard' => 'operations',
@@ -77,6 +89,13 @@ return [
         'technical' => [],
         'spec' => [],
         'adjustments' => [],
-        'admin' => [],
+        'admin' => [
+            'view-prices',
+            'view-revenue',
+            'view-costs',
+            'view-military-profit',
+            'manage-permissions',
+            'super-admin',
+        ],
     ],
 ];

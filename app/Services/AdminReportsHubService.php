@@ -878,6 +878,10 @@ class AdminReportsHubService
 
     private function money(float $value): string
     {
+        if (! CaseFinancialSummary::canSeeRevenue()) {
+            return '—';
+        }
+
         return number_format($value, 2).' ج.م';
     }
 

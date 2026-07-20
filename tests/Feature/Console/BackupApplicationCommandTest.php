@@ -6,9 +6,10 @@ use Tests\TestCase;
 
 class BackupApplicationCommandTest extends TestCase
 {
-    public function test_backup_command_fails_on_non_mysql_driver(): void
+    public function test_backup_command_fails_on_unsupported_driver(): void
     {
         $this->artisan('prosthetics:backup')
+            ->expectsOutputToContain('PostgreSQL (pg_dump) or MySQL (mysqldump)')
             ->assertFailed();
     }
 }

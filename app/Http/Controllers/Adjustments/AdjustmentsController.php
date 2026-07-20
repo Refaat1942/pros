@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Adjustments;
 
+use App\Enums\WorkflowEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Adjustments\StoreAdjustmentItemsRequest;
 use App\Http\Requests\Adjustments\UpdateAdjustmentItemQtyRequest;
@@ -9,6 +10,7 @@ use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\StockItem;
 use App\Services\AdjustmentsService;
+use App\Services\PathwayTransitionMessageService;
 use App\Support\StockItemUomLookup;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +24,10 @@ class AdjustmentsController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly AdjustmentsService $adjustmentsService) {}
+    public function __construct(
+        private readonly AdjustmentsService $adjustmentsService,
+        private readonly PathwayTransitionMessageService $transitions,
+    ) {}
 
     /**
      * الحالات في المعدلات أو بانتظار تأكيد التكاليف.
@@ -125,10 +130,15 @@ class AdjustmentsController extends Controller
 
     public function complete(CaseRecord $case): JsonResponse
     {
+        $fromStage = $case->stage_key;
         $case = $this->adjustmentsService->complete($case);
 
         return response()->json([
-            'message' => 'تم إغلاق المعدلات — الحالة في طابور التكاليف بانتظار التأكيد.',
+            'message' => $this->transitions->transferMessage(
+                $case->load('patient'),
+                WorkflowEvent::AdjustmentsCompleted->value,
+                $fromStage,
+            ),
             'case' => $this->formatCase($case->load(['patient:id,patient_code,name', 'bom.items'])),
         ]);
     }

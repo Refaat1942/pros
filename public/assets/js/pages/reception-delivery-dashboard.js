@@ -53,6 +53,11 @@
     $('deliveryWorkspace') && $('deliveryWorkspace').classList.remove('hidden');
     clearError();
 
+    if ($('deliveryQrInput')) {
+      $('deliveryQrInput').value = '';
+      $('deliveryQrInput').focus();
+    }
+
     if (!window.axios || !caseId) return;
 
     axios.get('/reception/delivery/' + caseId)
@@ -63,7 +68,22 @@
         $('delWorkOrder') && ($('delWorkOrder').textContent = c.work_order_no || '—');
         $('delCompany') && ($('delCompany').textContent = c.company_name || '—');
         $('delBomStage') && ($('delBomStage').textContent = c.bom && c.bom.stage === 'finished' ? '✅ تام' : '—');
-        if ($('deliveryQrInput') && patientQr) $('deliveryQrInput').value = patientQr;
+        var typeEl = $('delPatientType');
+        if (typeEl) {
+          if (c.patient_type === 'military') {
+            typeEl.textContent = '🪖 عسكري';
+            typeEl.className = 'text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 bg-indigo-100 text-indigo-700';
+          } else {
+            typeEl.textContent = '🌐 مدني';
+            typeEl.className = 'text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 bg-cyan-100 text-cyan-700';
+          }
+        }
+        var finEl = $('delFinishedAt');
+        if (finEl) {
+          finEl.textContent = c.bom && c.bom.finished_at
+            ? new Date(c.bom.finished_at).toLocaleString('ar-EG')
+            : '—';
+        }
       })
       .catch(function () {
         showError('تعذّر تحميل تفاصيل الحالة.');
@@ -71,7 +91,10 @@
   }
 
   function confirmDelivery() {
-    if (!window.axios) return;
+    if (!window.axios) {
+      showError('تعذّر الاتصال — أعد تحميل الصفحة.');
+      return;
+    }
     var qrInput = $('deliveryQrInput');
     if (window.DashboardValidation && qrInput) {
       var qrErr = DashboardValidation.validateField(qrInput);
@@ -161,13 +184,16 @@
         list.innerHTML = cases.map(function (c) {
           var qr = c.patient && c.patient.patient_qr ? c.patient.patient_qr : '';
           var search = [c.patient && c.patient.name, c.work_order_no, c.case_no].join(' ');
+          var typeBadge = c.patient_type === 'military'
+            ? '<span class="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">🪖 عسكري</span>'
+            : '<span class="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-100 text-cyan-700">🌐 مدني</span>';
           return '<li class="delivery-item cursor-pointer px-5 py-4 hover:bg-emerald-50 transition-colors" data-case-id="' + c.id +
             '" data-patient-qr="' + qr + '" data-search="' + search + '">' +
             '<div class="flex items-start justify-between gap-2"><div>' +
             '<p class="font-bold text-slate-800">' + (c.patient && c.patient.name || '—') + '</p>' +
             '<p class="text-xs text-slate-500 mt-1">' + c.case_no + ' · ' + (c.work_order_no || '—') + '</p>' +
-            '<p class="text-xs text-slate-400">' + (c.company_name || '—') + '</p></div>' +
-            '<span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">BOM تام</span></div></li>';
+            '<p class="text-xs text-slate-400">' + (c.company_name || '—') + '</p>' + typeBadge + '</div>' +
+            '<span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">BOM تام</span></div></li>';
         }).join('');
 
         bindListEvents();

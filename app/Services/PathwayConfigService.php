@@ -222,6 +222,78 @@ class PathwayConfigService
         return $this->resolveCurrentIndexForPathway($case, $pathway, false);
     }
 
+    /** تسمية الخطوة الحالية حسب المسار المُخصَّص — للعرض في التتبع والإشعارات. */
+    public function currentStepLabelForCase(CaseRecord $case): string
+    {
+        $case->loadMissing('patient');
+        $pathway = $this->resolvePathway($case->patient, $case);
+        $steps = $this->steps($pathway, activeOnly: true);
+
+        if ($steps === []) {
+            return CaseStage::labelFor($case->stage_key);
+        }
+
+        $index = $this->resolveIndexForCase($case, $steps, $pathway);
+
+        return (string) ($steps[$index]['label'] ?? CaseStage::labelFor($case->stage_key));
+    }
+
+    /** تسمية خطوة المسار لمرحلة workflow محددة. */
+    public function stepLabelForStage(CaseRecord $case, string $stageKey): string
+    {
+        $case->loadMissing(['patient', 'bom']);
+        $pathway = $this->resolvePathway($case->patient, $case);
+        $steps = $this->steps($pathway, activeOnly: true);
+
+        if ($stageKey === CaseRecord::STAGE_READY_DELIVERY) {
+            $delivery = $this->indexOfKey($steps, 'delivery');
+            if ($delivery !== null) {
+                return (string) $steps[$delivery]['label'];
+            }
+        }
+
+        if ($stageKey === CaseRecord::STAGE_MANUFACTURING) {
+            $bomStage = $case->bom?->stage;
+            if ($bomStage === Bom::STAGE_FINISHED) {
+                $delivery = $this->indexOfKey($steps, 'delivery');
+                if ($delivery !== null) {
+                    return (string) $steps[$delivery]['label'];
+                }
+            }
+            if ($bomStage === Bom::STAGE_WIP) {
+                $workshop = $this->indexOfKey($steps, 'workshop');
+                if ($workshop !== null) {
+                    return (string) $steps[$workshop]['label'];
+                }
+            }
+            $warehouse = $this->indexOfKey($steps, 'warehouse');
+            if ($warehouse !== null) {
+                return (string) $steps[$warehouse]['label'];
+            }
+        }
+
+        if ($stageKey === CaseRecord::STAGE_CASHIER) {
+            $cashier = $this->indexOfKey($steps, 'cashier');
+            if ($cashier !== null) {
+                return (string) $steps[$cashier]['label'];
+            }
+        }
+
+        foreach ($steps as $step) {
+            if (! in_array($stageKey, $step['stage_keys'] ?? [], true)) {
+                continue;
+            }
+
+            if ($stageKey === CaseRecord::STAGE_READY_DELIVERY && ($step['key'] ?? '') === 'operations_release') {
+                continue;
+            }
+
+            return (string) ($step['label'] ?? CaseStage::labelFor($stageKey));
+        }
+
+        return CaseStage::labelFor($stageKey);
+    }
+
     /** @return ?array<string, mixed> */
     public function policyForStage(string $pathway, string $stageKey): ?array
     {
@@ -497,18 +569,22 @@ class PathwayConfigService
         }
 
         if ($stageKey === CaseRecord::STAGE_READY_DELIVERY) {
-            $release = $this->indexOfKey($steps, 'operations_release');
-            if ($release !== null) {
-                return $release;
-            }
             $delivery = $this->indexOfKey($steps, 'delivery');
             if ($delivery !== null) {
                 return $delivery;
+            }
+            $release = $this->indexOfKey($steps, 'operations_release');
+            if ($release !== null) {
+                return $release;
             }
         }
 
         if ($stageKey === CaseRecord::STAGE_MANUFACTURING && $bomStage) {
             if ($bomStage === Bom::STAGE_FINISHED) {
+                $delivery = $this->indexOfKey($steps, 'delivery');
+                if ($delivery !== null) {
+                    return $delivery;
+                }
                 $release = $this->indexOfKey($steps, 'operations_release');
                 if ($release !== null) {
                     return $release;
