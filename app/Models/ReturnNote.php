@@ -22,6 +22,7 @@ class ReturnNote extends Model
         'return_no',
         'bom_id',
         'case_id',
+        'spec_edit_request_id',
         'order_ref',
         'work_order_no',
         'patient_name',

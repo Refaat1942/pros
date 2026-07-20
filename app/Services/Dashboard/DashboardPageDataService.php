@@ -52,6 +52,8 @@ use App\Services\StockCategorySchemaService;
 use App\Services\StockPriceService;
 use App\Services\SupplierService;
 use App\Services\WorkshopAnalyticsService;
+use App\Services\WorkshopSectionService;
+use App\Services\WorkshopTrackingService;
 use App\Support\ClinicTime;
 use Carbon\Carbon;
 
@@ -84,6 +86,10 @@ class DashboardPageDataService
             'admin.cases' => $this->adminCases(),
             'admin.patient-tracks' => $this->adminPatientTracks(),
             'admin.spec-edit-requests' => $this->adminSpecEditRequests(),
+            'admin.workshop-sections' => $this->adminWorkshopSections(),
+            'admin.workshop-tracking' => $this->adminWorkshopTracking(),
+            'admin.dispense-approvals' => $this->adminDispenseApprovals(),
+            'admin.services-approvals' => $this->adminServicesApprovals(),
             'admin.contracts' => $this->contractsPage(isAdmin: true),
             'admin.civilian-debts' => $this->adminCivilianDebts(),
             'admin.military-debts' => $this->adminMilitaryDebts(),
@@ -381,6 +387,12 @@ class DashboardPageDataService
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'military_weapons' => MilitaryWeapons::labels(),
+            'military_beneficiary_categories' => [
+                ['value' => Patient::BENEFICIARY_ENLISTED, 'label' => 'مجند / فرد'],
+                ['value' => Patient::BENEFICIARY_OFFICER, 'label' => 'ضابط'],
+                ['value' => Patient::BENEFICIARY_CIVILIAN_WORKER, 'label' => 'مدني بالجهة'],
+                ['value' => Patient::BENEFICIARY_FAMILY, 'label' => 'تابع / عائلة'],
+            ],
             'civilian_companies' => ContractCompany::query()
                 ->where('is_military', false)
                 ->orderByDesc('is_contracted')
@@ -618,6 +630,46 @@ class DashboardPageDataService
         ];
     }
 
+    private function adminWorkshopSections(): array
+    {
+        $service = app(WorkshopSectionService::class);
+
+        return [
+            'workshop_sections' => $service->listForAdmin(),
+            'workshop_technicians' => $service->workshopTechnicians(),
+        ];
+    }
+
+    private function adminWorkshopTracking(): array
+    {
+        $service = app(WorkshopTrackingService::class);
+        $sections = app(WorkshopSectionService::class)->listActive();
+
+        return [
+            'workshop_tracking' => $service->trackingList(),
+            'workshop_sections' => collect($sections)->map(fn ($s) => $s->only(['id', 'name', 'code']))->values(),
+        ];
+    }
+
+    private function adminDispenseApprovals(): array
+    {
+        return [
+            'dispense_requires_approval' => config('inventory.dispense_requires_approval', true),
+        ];
+    }
+
+    private function adminServicesApprovals(): array
+    {
+        return [
+            'beneficiary_labels' => [
+                Patient::BENEFICIARY_OFFICER => 'ضابط',
+                Patient::BENEFICIARY_ENLISTED => 'مجند / فرد',
+                Patient::BENEFICIARY_CIVILIAN_WORKER => 'مدني بالجهة',
+                Patient::BENEFICIARY_FAMILY => 'تابع / عائلة',
+            ],
+        ];
+    }
+
     private function workshopStatistics(): array
     {
         return [
@@ -761,6 +813,7 @@ class DashboardPageDataService
             'inventory_suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'inbound_document_upload' => config('inventory.inbound_document_upload', true),
             'inventory_stats' => [
                 ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $totalCount, 'color' => '#4338ca', 'bg' => 'rgba(67,56,202,0.1)'],
                 ['icon' => '✅', 'label' => 'متوفر', 'value' => (string) $okCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],

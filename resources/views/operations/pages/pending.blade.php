@@ -25,6 +25,20 @@
       </table>
     </div>
   </div>
+
+  <div class="panel" id="workshopAssignmentPanel" style="margin-top:16px;">
+    <div class="panel-header"><h3>🏭 تخصيص الورشة (اختياري عند الاعتماد)</h3></div>
+    <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;padding:16px;">
+      <div class="form-group" style="min-width:220px;">
+        <label>قسم الورشة</label>
+        <select id="approveWorkshopSection" class="form-control"><option value="">— بدون —</option></select>
+      </div>
+      <div class="form-group" style="min-width:220px;">
+        <label>الفني</label>
+        <select id="approveWorkshopTechnician" class="form-control"><option value="">— بدون —</option></select>
+      </div>
+    </div>
+  </div>
 </div>
 
 @include('partials.contract-letter-modal')

@@ -26,6 +26,8 @@ class SpecEditRequest extends Model
         'rejection_notes',
         'reviewed_by_user_id',
         'reviewed_at',
+        'before_snapshot',
+        'after_snapshot',
     ];
 
     protected $casts = [
@@ -33,6 +35,8 @@ class SpecEditRequest extends Model
         'status' => SpecEditRequestStatus::class,
         'original_items' => 'array',
         'proposed_items' => 'array',
+        'before_snapshot' => 'array',
+        'after_snapshot' => 'array',
         'reviewed_at' => 'datetime',
     ];
 

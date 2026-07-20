@@ -6,11 +6,15 @@ use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Admin\PathwaySettingsController;
 use App\Http\Controllers\Admin\PermissionMatrixController;
+use App\Http\Controllers\Admin\ServicesApprovalController;
 use App\Http\Controllers\Admin\SpecEditRequestController as AdminSpecEditRequestController;
 use App\Http\Controllers\Admin\StockCategoryController;
+use App\Http\Controllers\Admin\StockDispenseApprovalController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\WorkflowSettingsController;
+use App\Http\Controllers\Admin\WorkshopSectionController;
+use App\Http\Controllers\Admin\WorkshopTrackingController;
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Finance\CivilianDebtController;
@@ -242,6 +246,66 @@ Route::prefix('admin')
 
             Route::post('visit-types/reorder', [VisitTypeController::class, 'reorder'])
                 ->name('visit-types.reorder');
+        });
+
+        // ── Workshop sections ───────────────────────────────────────────────
+        Route::middleware('dashboard.page:admin,workshop-sections')->group(function () {
+            Route::get('workshop-sections/list', [WorkshopSectionController::class, 'index'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-sections.list');
+
+            Route::post('workshop-sections', [WorkshopSectionController::class, 'store'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-sections.store');
+
+            Route::put('workshop-sections/{workshopSection}', [WorkshopSectionController::class, 'update'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-sections.update');
+
+            Route::delete('workshop-sections/{workshopSection}', [WorkshopSectionController::class, 'destroy'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-sections.destroy');
+        });
+
+        Route::get('workshop-sections/options', [WorkshopSectionController::class, 'options'])
+            ->middleware(['dashboard.page:admin,workshop-sections', 'can:manage-workshop-sections'])
+            ->name('workshop-sections.options');
+
+        // ── Workshop tracking ───────────────────────────────────────────────
+        Route::middleware('dashboard.page:admin,workshop-tracking')->group(function () {
+            Route::get('workshop-tracking/list', [WorkshopTrackingController::class, 'index'])
+                ->middleware('can:view-workshop-tracking')
+                ->name('workshop-tracking.list');
+        });
+
+        // ── Dispense approvals ──────────────────────────────────────────────
+        Route::middleware('dashboard.page:admin,dispense-approvals')->group(function () {
+            Route::get('dispense-approvals/list', [StockDispenseApprovalController::class, 'index'])
+                ->middleware('can:approve-dispense')
+                ->name('dispense-approvals.list');
+
+            Route::get('dispense-approvals/{stockDispenseRequest}', [StockDispenseApprovalController::class, 'show'])
+                ->middleware('can:approve-dispense')
+                ->name('dispense-approvals.show');
+
+            Route::post('dispense-approvals/{stockDispenseRequest}/approve', [StockDispenseApprovalController::class, 'approve'])
+                ->middleware('can:approve-dispense')
+                ->name('dispense-approvals.approve');
+
+            Route::post('dispense-approvals/{stockDispenseRequest}/reject', [StockDispenseApprovalController::class, 'reject'])
+                ->middleware('can:approve-dispense')
+                ->name('dispense-approvals.reject');
+        });
+
+        // ── Services approvals (military pathway) ───────────────────────────
+        Route::middleware('dashboard.page:admin,services-approvals')->group(function () {
+            Route::get('services-approvals/list', [ServicesApprovalController::class, 'index'])
+                ->middleware('can:approve-services')
+                ->name('services-approvals.list');
+
+            Route::post('services-approvals/{case}/approve', [ServicesApprovalController::class, 'approve'])
+                ->middleware('can:approve-services')
+                ->name('services-approvals.approve');
         });
 
         // ── Stock Categories (أقسام الأصناف + حقول ديناميكية) ───────────────

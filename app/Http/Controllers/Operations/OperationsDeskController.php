@@ -11,6 +11,7 @@ use App\Models\Quote;
 use App\Services\OperationsService;
 use App\Services\PathwayTransitionMessageService;
 use App\Services\QuoteService;
+use App\Services\WorkshopSectionService;
 use App\Support\CaseFinancialSummary;
 use App\Support\QuotePrintPresenter;
 use App\Traits\PaginationTrait;
@@ -30,6 +31,7 @@ class OperationsDeskController extends Controller
         private readonly OperationsService $operationsService,
         private readonly QuoteService $quoteService,
         private readonly PathwayTransitionMessageService $transitions,
+        private readonly WorkshopSectionService $workshopSections,
     ) {}
 
     /**
@@ -147,10 +149,20 @@ class OperationsDeskController extends Controller
     /**
      * اعتماد الحالة — حجز فوري للمواد + أمر شغل + تحويل للمخزن.
      */
-    public function approve(CaseRecord $case): JsonResponse
+    public function approve(Request $request, CaseRecord $case): JsonResponse
     {
+        $validated = $request->validate([
+            'workshop_section_id' => ['nullable', 'integer', 'exists:workshop_sections,id'],
+            'assigned_technician_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
         $fromStage = $case->stage_key;
-        $case = $this->operationsService->approve($case, Auth::user()?->name);
+        $case = $this->operationsService->approve(
+            $case,
+            Auth::user()?->name,
+            $validated['workshop_section_id'] ?? null,
+            $validated['assigned_technician_id'] ?? null,
+        );
 
         return response()->json([
             'message' => $this->transitions->transferMessage(
@@ -158,7 +170,26 @@ class OperationsDeskController extends Controller
                 WorkflowEvent::OperationsApproved->value,
                 $fromStage,
             ),
-            'case' => $case->only(['id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no']),
+            'case' => $case->only([
+                'id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no',
+                'workshop_section_id', 'assigned_technician_id',
+            ]),
+        ]);
+    }
+
+    /** أقسام الورشة + فنيين — لنموذج الاعتماد. */
+    public function workshopAssignmentOptions(): JsonResponse
+    {
+        if (! config('workshop.enabled', true)) {
+            return response()->json(['sections' => []]);
+        }
+
+        return response()->json([
+            'sections' => collect($this->workshopSections->listActive())->map(fn ($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'technicians' => $s->technicians->map(fn ($u) => $u->only(['id', 'name']))->values(),
+            ])->values(),
         ]);
     }
 

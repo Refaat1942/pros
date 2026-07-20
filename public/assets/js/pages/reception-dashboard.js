@@ -1543,6 +1543,7 @@
       var grpMilitaryNumber = document.getElementById('grpMilitaryNumber');
       var grpSeniorityNumber = document.getElementById('grpSeniorityNumber');
       var grpMilitaryWeapon = document.getElementById('grpMilitaryWeapon');
+      var grpBeneficiaryCategory = document.getElementById('grpBeneficiaryCategory');
       var grpEntityBilling = document.getElementById('grpEntityBilling');
       var grpCompany = document.getElementById('grpCompany');
       var grpCashHint = document.getElementById('grpCashHint');
@@ -1554,6 +1555,7 @@
       if (grpMilitaryNumber) grpMilitaryNumber.style.display = isMilitary ? '' : 'none';
       if (grpSeniorityNumber) grpSeniorityNumber.style.display = isMilitary ? '' : 'none';
       if (grpMilitaryWeapon) grpMilitaryWeapon.style.display = isMilitary ? '' : 'none';
+      if (grpBeneficiaryCategory) grpBeneficiaryCategory.style.display = isMilitary ? '' : 'none';
       if (grpEntityBilling) grpEntityBilling.style.display = isEntity ? '' : 'none';
       if (grpCashHint) grpCashHint.style.display = isCash ? '' : 'none';
 

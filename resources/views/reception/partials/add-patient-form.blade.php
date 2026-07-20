@@ -109,6 +109,16 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="form-group" id="grpBeneficiaryCategory" style="display:{{ $classification === 'military' ? '' : 'none' }};">
+                        <label>تصنيف المستفيد <span style="color:red">*</span></label>
+                        <select class="form-control" name="military_beneficiary_category" id="newBeneficiaryCategory"
+                                data-v-rules="required,select" data-v-when="patient_classification=military">
+                            <option value="">— اختر التصنيف —</option>
+                            @foreach ($military_beneficiary_categories ?? [] as $cat)
+                                <option value="{{ $cat['value'] }}" @selected(old('military_beneficiary_category') === $cat['value'])>{{ $cat['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="form-group" id="grpCompany" style="display:{{ ($classification === 'entity' && old('entity_billing_type')) ? '' : 'none' }};">
                         <label>جهة التعاقد <span style="color:red">*</span></label>
                         <select class="form-control" name="contract_company_id" id="newCompanyId">

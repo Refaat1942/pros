@@ -49,7 +49,101 @@
           </table>
         </div>
       </div>
+
+      <div class="panel inventory-wrap" style="margin-top:16px;">
+        <div class="panel-header">
+          <h3>📥 استلام وارد — تسجيل فاتورة</h3>
+        </div>
+        <form id="inventoryReceiveForm" class="panel-body" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+          <div class="form-group">
+            <label>الصنف</label>
+            <select id="receiveStockItemId" class="form-control" required>
+              <option value="">— اختر —</option>
+              @foreach ($inventory_items ?? [] as $item)
+                <option value="{{ $item['id'] ?? $item->id }}">{{ ($item['code'] ?? $item->code) }} — {{ ($item['name'] ?? $item->name) }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الكمية</label>
+            <input type="number" min="1" id="receiveQty" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>سعر الوحدة</label>
+            <input type="number" min="0.01" step="0.01" id="receiveUnitPrice" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>المورد</label>
+            <select id="receiveSupplierId" class="form-control" required>
+              <option value="">— اختر —</option>
+              @foreach ($inventory_suppliers ?? [] as $sup)
+                <option value="{{ $sup->id }}">{{ $sup->name }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="form-group">
+            <label>رقم الفاتورة</label>
+            <input type="text" id="receiveInvoiceNo" class="form-control" required maxlength="100">
+          </div>
+          <div class="form-group">
+            <label>تاريخ الاستلام</label>
+            <input type="date" id="receiveMovedAt" class="form-control" value="{{ date('Y-m-d') }}" required>
+          </div>
+          @if ($inbound_document_upload ?? true)
+          <div class="form-group">
+            <label>مرفق الفاتورة (PDF/صورة)</label>
+            <input type="file" id="receiveDocument" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+          </div>
+          @endif
+          <div class="form-group" style="align-self:end;">
+            <button type="submit" class="btn-action success" id="btnSubmitReceive">💾 تسجيل الاستلام</button>
+          </div>
+        </form>
+        <div id="receiveFormMessage" style="padding:0 16px 16px;display:none;"></div>
+      </div>
     </div>
 <script>
 window.__INVENTORY_ITEMS = @json($inventory_items ?? []);
+window.__INBOUND_RECEIVE_ENABLED = @json($inbound_document_upload ?? true);
+</script>
+<script>
+(function () {
+  if (document.body.dataset.dashboard !== 'technical') return;
+  if (document.body.dataset.activePage !== 'inventory') return;
+  var form = document.getElementById('inventoryReceiveForm');
+  if (!form) return;
+  var csrf = document.querySelector('meta[name="csrf-token"]');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var fd = new FormData();
+    fd.append('stock_item_id', document.getElementById('receiveStockItemId').value);
+    fd.append('qty', document.getElementById('receiveQty').value);
+    fd.append('unit_price', document.getElementById('receiveUnitPrice').value);
+    fd.append('supplier_id', document.getElementById('receiveSupplierId').value);
+    fd.append('invoice_no', document.getElementById('receiveInvoiceNo').value);
+    fd.append('moved_at', document.getElementById('receiveMovedAt').value);
+    var doc = document.getElementById('receiveDocument');
+    if (doc && doc.files && doc.files[0]) fd.append('document', doc.files[0]);
+    fetch('/technical/inventory/receive', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '', 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+      body: fd,
+    }).then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
+      .then(function (res) {
+        var el = document.getElementById('receiveFormMessage');
+        el.style.display = 'block';
+        el.style.color = '#059669';
+        el.textContent = res.message || 'تم الاستلام';
+        form.reset();
+        document.getElementById('receiveMovedAt').value = new Date().toISOString().slice(0, 10);
+      })
+      .catch(function (err) {
+        var el = document.getElementById('receiveFormMessage');
+        el.style.display = 'block';
+        el.style.color = '#dc2626';
+        el.textContent = (err && err.message) ? err.message : 'فشل الاستلام';
+      });
+  });
+})();
 </script>

@@ -181,10 +181,19 @@
 
   function approveCase(caseId, btn) {
     if (!caseId || !window.axios) return;
+
+    var payload = {};
+    if (window.__WORKSHOP_ASSIGNMENT_ENABLED !== false) {
+      var sectionEl = document.getElementById('approveWorkshopSection');
+      var techEl = document.getElementById('approveWorkshopTechnician');
+      if (sectionEl && sectionEl.value) payload.workshop_section_id = parseInt(sectionEl.value, 10);
+      if (techEl && techEl.value) payload.assigned_technician_id = parseInt(techEl.value, 10);
+    }
+
     if (!window.confirm('اعتماد الصرف؟ سيتم حجز المواد فوراً وتحويل الحالة للمخزن.')) return;
 
     if (btn) btn.disabled = true;
-    axios.post(APPROVE_URL(caseId))
+    axios.post(APPROVE_URL(caseId), payload)
       .then(function (res) {
         toast(res.data.message || 'تم الاعتماد بنجاح');
         refreshList();
@@ -231,6 +240,24 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    if (window.axios) {
+      axios.get('/operations/workshop-assignment/options').then(function (res) {
+        var sections = (res.data && res.data.sections) || [];
+        var sectionSel = document.getElementById('approveWorkshopSection');
+        var techSel = document.getElementById('approveWorkshopTechnician');
+        if (!sectionSel || !techSel) return;
+        sectionSel.innerHTML = '<option value="">— بدون —</option>' + sections.map(function (s) {
+          return '<option value="' + s.id + '">' + s.name + '</option>';
+        }).join('');
+        sectionSel.addEventListener('change', function () {
+          var sec = sections.find(function (s) { return String(s.id) === String(sectionSel.value); });
+          var techs = sec ? (sec.technicians || []) : [];
+          techSel.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
+            return '<option value="' + t.id + '">' + t.name + '</option>';
+          }).join('');
+        });
+      }).catch(function () {});
+    }
     refreshList();
     var search = $('pendingSearch');
     if (search) search.addEventListener('input', filterSearch);

@@ -110,15 +110,30 @@ class BomController extends Controller
     }
 
     /**
-     * صرف BOM بالباركود — raw → wip.
+     * صرف BOM بالباركود — raw → wip (أو طلب معلّق عند تفعيل اعتماد الإدارة).
      */
     public function scanDispense(DispenseBomRequest $request, Bom $bom): JsonResponse
     {
         $case = $bom->caseRecord;
         $fromStage = $case?->stage_key ?? CaseRecord::STAGE_MANUFACTURING;
+        $barcodes = $request->validated('scanned_barcodes');
+
+        if (config('inventory.dispense_requires_approval', true)) {
+            $dispenseRequest = app(\App\Services\StockDispenseRequestService::class)->submit(
+                $bom,
+                $barcodes,
+                $request->user(),
+            );
+
+            return response()->json([
+                'message' => 'تم إرسال طلب الصرف — بانتظار اعتماد الإدارة.',
+                'pending_approval' => true,
+                'dispense_request' => $dispenseRequest->only(['id', 'status', 'work_order_no']),
+            ], 202);
+        }
 
         try {
-            $bom = $this->bomService->releaseToWip($bom, $request->validated('scanned_barcodes'));
+            $bom = $this->bomService->releaseToWip($bom, $barcodes);
         } catch (BarcodeDispenseMismatchException $e) {
             return response()->json([
                 'message' => $e->getMessage(),

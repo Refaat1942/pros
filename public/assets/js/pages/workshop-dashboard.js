@@ -169,7 +169,12 @@
     var btn = $('btnRefreshWorkshop');
     if (btn) { btn.disabled = true; btn.textContent = '↻ جاري التحديث...'; }
 
-    axios.get('/workshop/workshop/list')
+    axios.get('/workshop/workshop/list', {
+      params: {
+        filter: activeFilter === 'mine' ? 'mine' : (activeFilter === 'section' ? 'section' : undefined),
+        section_id: activeFilter === 'section' ? (document.getElementById('workshopSectionFilter') || {}).value : undefined,
+      },
+    })
       .then(function (res) {
         casesCache = res.data.data || [];
         var tbody = $('workshopTableBody');

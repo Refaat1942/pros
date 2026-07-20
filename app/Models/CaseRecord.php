@@ -29,6 +29,8 @@ class CaseRecord extends Model
 
     public const STAGE_COST_CALC = 'cost_calc';
 
+    public const STAGE_SERVICES_APPROVAL = 'services_approval';
+
     public const STAGE_QUOTE = 'quote';
 
     public const STAGE_OPERATIONS = 'operations';
@@ -82,6 +84,10 @@ class CaseRecord extends Model
         'stage_key',
         'manufacturing_stage',
         'work_order_no',
+        'workshop_section_id',
+        'assigned_technician_id',
+        'workshop_assigned_at',
+        'workshop_progress_pct',
         'pricing_request_id',
         'quote_no',
         'quote_date',
@@ -122,6 +128,8 @@ class CaseRecord extends Model
         'delivered_at' => 'datetime',
         'credit_note_amount' => 'decimal:2',
         'rework_returned_at' => 'datetime',
+        'workshop_assigned_at' => 'datetime',
+        'workshop_progress_pct' => 'integer',
     ];
 
     public function patient(): BelongsTo
@@ -132,6 +140,28 @@ class CaseRecord extends Model
     public function contractCompany(): BelongsTo
     {
         return $this->belongsTo(ContractCompany::class);
+    }
+
+    public function workshopSection(): BelongsTo
+    {
+        return $this->belongsTo(WorkshopSection::class, 'workshop_section_id');
+    }
+
+    public function assignedTechnician(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_technician_id');
+    }
+
+    public function servicesApproval(): HasOne
+    {
+        return $this->hasOne(ServicesApproval::class, 'case_id');
+    }
+
+    public function needsServicesApproval(): bool
+    {
+        $this->loadMissing('patient');
+
+        return $this->patient?->needsServicesApproval() ?? false;
     }
 
     public function pricingRequest(): BelongsTo

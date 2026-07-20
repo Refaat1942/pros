@@ -15,6 +15,7 @@ class ReceiveStockRequest extends BaseRequest
             'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
             'invoice_no' => ['required', 'string', 'max:100'],
             'moved_at' => ['required', 'date', 'before_or_equal:today'],
+            'document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 

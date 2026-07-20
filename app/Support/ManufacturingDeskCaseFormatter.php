@@ -35,6 +35,7 @@ class ManufacturingDeskCaseFormatter
         $payload = $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage',
             'work_order_no', 'patient_type', 'path', 'quote_no',
+            'workshop_section_id', 'assigned_technician_id', 'workshop_progress_pct', 'workshop_assigned_at',
         ]) + [
             'company_name' => $case->displayEntity(),
             'entity' => $case->entityPresentation(),
@@ -44,6 +45,12 @@ class ManufacturingDeskCaseFormatter
                 : null,
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name'])
+                : null,
+            'workshop_section' => $case->relationLoaded('workshopSection') && $case->workshopSection
+                ? $case->workshopSection->only(['id', 'name', 'code'])
+                : null,
+            'assigned_technician' => $case->relationLoaded('assignedTechnician') && $case->assignedTechnician
+                ? $case->assignedTechnician->only(['id', 'name'])
                 : null,
             'bom' => $bom,
         ];

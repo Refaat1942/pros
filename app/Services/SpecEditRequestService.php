@@ -4,9 +4,12 @@ namespace App\Services;
 
 use App\Enums\SpecEditRequestSource;
 use App\Enums\SpecEditRequestStatus;
+use App\Enums\WorkflowEvent;
 use App\Exceptions\InvalidSpecItemException;
+use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
+use App\Models\Quote;
 use App\Models\SpecEditRequest;
 use App\Models\StockItem;
 use App\Models\TechOrderSpec;
@@ -26,6 +29,8 @@ class SpecEditRequestService
         private readonly BomService $bomService,
         private readonly PricingService $pricingService,
         private readonly NotificationService $notifications,
+        private readonly WorkflowService $workflowService,
+        private readonly ReturnNoteService $returnNoteService,
     ) {}
 
     public function canRequestSpecEdit(TechOrderSpec $spec): bool
@@ -189,6 +194,7 @@ class SpecEditRequestService
 
         return match ($request->source) {
             SpecEditRequestSource::Adjustments => $this->approveAdjustmentEdit($request, $reviewer),
+            SpecEditRequestSource::PostWorkOrder => $this->approvePostWorkOrderEdit($request, $reviewer),
             default => $this->approveSpecEdit($request, $reviewer),
         };
     }
@@ -390,6 +396,191 @@ class SpecEditRequestService
             );
 
             $this->notifications->notifyEditRequestApproved($request->fresh()->load('caseRecord.patient', 'requestedBy.role'));
+
+            return $request->fresh(['techOrderSpec.items', 'caseRecord', 'requestedBy', 'reviewedBy']);
+        });
+    }
+
+    public function canRequestPostWorkOrderEdit(CaseRecord $case): bool
+    {
+        $case->loadMissing('bom', 'pendingEditRequest');
+
+        if ($case->pendingEditRequest || ! $case->work_order_no || ! $case->bom) {
+            return false;
+        }
+
+        if ($case->stage_key !== CaseRecord::STAGE_MANUFACTURING) {
+            return false;
+        }
+
+        return in_array($case->bom->stage, [Bom::STAGE_RAW, Bom::STAGE_WIP], true);
+    }
+
+    /**
+     * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
+     */
+    public function submitPostWorkOrderEdit(CaseRecord $case, User $requester, array $items, ?string $techNotes): SpecEditRequest
+    {
+        if (! $this->canRequestPostWorkOrderEdit($case)) {
+            abort(422, 'لا يمكن طلب تعديل التوصيف بعد أمر الشغل في هذه المرحلة.');
+        }
+
+        $this->validateItems($items, requireAtLeastOne: true);
+        $case->load(['bom.items', 'techOrderSpec.items']);
+
+        $spec = $case->techOrderSpec;
+        if (! $spec) {
+            abort(422, 'لا يوجد توصيف مرتبط.');
+        }
+
+        $beforeSnapshot = [
+            'case' => $case->only(['id', 'case_no', 'work_order_no', 'stage_key', 'manufacturing_stage']),
+            'bom_stage' => $case->bom->stage,
+            'items' => $spec->items->map(fn ($i) => $i->only(['stock_item_code', 'name', 'qty']))->values()->all(),
+            'tech_notes' => $spec->tech_notes,
+        ];
+
+        return DB::transaction(function () use ($case, $requester, $items, $techNotes, $spec, $beforeSnapshot) {
+            $request = SpecEditRequest::create([
+                'source' => SpecEditRequestSource::PostWorkOrder,
+                'tech_order_spec_id' => $spec->id,
+                'case_id' => $case->id,
+                'requested_by_user_id' => $requester->id,
+                'status' => SpecEditRequestStatus::Pending,
+                'original_items' => $beforeSnapshot['items'],
+                'proposed_items' => $this->normalizeItems($items),
+                'original_tech_notes' => $spec->tech_notes,
+                'proposed_tech_notes' => $techNotes,
+                'before_snapshot' => $beforeSnapshot,
+                'after_snapshot' => [
+                    'items' => $this->normalizeItems($items),
+                    'tech_notes' => $techNotes,
+                ],
+            ]);
+
+            AuditService::log(
+                action: 'request',
+                description: "طلب تعديل توصيف بعد WO — {$case->case_no}",
+                tag: 'spec',
+                after: ['spec_edit_request_id' => $request->id],
+            );
+
+            $this->notifications->notifyEditRequestSubmitted($request->load('caseRecord.patient', 'requestedBy'));
+
+            return $request;
+        });
+    }
+
+    private function approvePostWorkOrderEdit(SpecEditRequest $request, User $reviewer): SpecEditRequest
+    {
+        $case = $request->caseRecord;
+        $case->loadMissing('bom', 'techOrderSpec', 'quotes');
+
+        if ($case->stage_key !== CaseRecord::STAGE_MANUFACTURING || ! $case->bom) {
+            abort(422, 'الحالة لم تعد في مرحلة التصنيع.');
+        }
+
+        return DB::transaction(function () use ($request, $reviewer, $case) {
+            $bom = $case->bom;
+            $dispensed = $bom->stage === Bom::STAGE_WIP;
+
+            if ($dispensed) {
+                $diffLines = SpecEditRequestItemDiff::modifiedItems(
+                    $request->original_items ?? [],
+                    $request->proposed_items ?? [],
+                );
+
+                $returnLines = collect($diffLines)
+                    ->flatMap(function (array $row) {
+                        if (($row['change'] ?? '') === 'removed') {
+                            return [[
+                                'stock_item_code' => $row['stock_item_code'],
+                                'name' => $row['name'] ?? $row['stock_item_code'],
+                                'qty' => (int) ($row['qty'] ?? 0),
+                            ]];
+                        }
+
+                        if (($row['change'] ?? '') === 'updated') {
+                            $prev = (int) ($row['previous_qty'] ?? 0);
+                            $next = (int) ($row['qty'] ?? 0);
+                            if ($prev > $next) {
+                                return [[
+                                    'stock_item_code' => $row['stock_item_code'],
+                                    'name' => $row['name'] ?? $row['stock_item_code'],
+                                    'qty' => $prev - $next,
+                                ]];
+                            }
+                        }
+
+                        return [];
+                    })
+                    ->values()
+                    ->all();
+
+                if ($returnLines !== []) {
+                    $note = $this->returnNoteService->create(
+                        $bom,
+                        $returnLines,
+                        'ارتجاع مرتبط بتعديل توصيف بعد WO',
+                        $reviewer,
+                    );
+                    $note->update(['spec_edit_request_id' => $request->id]);
+                }
+            } else {
+                $this->bomService->releaseBomReservation($bom);
+                $case->update([
+                    'work_order_no' => null,
+                    'workshop_section_id' => null,
+                    'assigned_technician_id' => null,
+                    'workshop_assigned_at' => null,
+                    'workshop_progress_pct' => 0,
+                    'manufacturing_stage' => null,
+                ]);
+                $this->workflowService->advance($case->fresh(), WorkflowEvent::SpecEditPostWoRollback->value);
+            }
+
+            $spec = $request->techOrderSpec;
+            $items = $request->proposed_items ?? [];
+
+            if ($spec) {
+                $spec->update(['tech_notes' => $request->proposed_tech_notes]);
+                $spec->items()->delete();
+                foreach ($items as $row) {
+                    TechOrderSpecItem::create([
+                        'tech_order_spec_id' => $spec->id,
+                        'stock_item_code' => $row['stock_item_code'],
+                        'name' => $row['name'],
+                        'qty' => (int) $row['qty'],
+                    ]);
+                }
+            }
+
+            if (! $dispensed) {
+                $this->bomService->replaceSpecSourceItems($case->fresh(), $items);
+            }
+
+            $quote = $case->quotes->sortByDesc('id')->first();
+            if ($quote && in_array($quote->status, [Quote::STATUS_ISSUED, Quote::STATUS_APPROVED, Quote::STATUS_PENDING], true)) {
+                $quote->update(['status' => Quote::STATUS_PENDING]);
+            }
+
+            $request->update([
+                'status' => SpecEditRequestStatus::Approved,
+                'reviewed_by_user_id' => $reviewer->id,
+                'reviewed_at' => now(),
+                'after_snapshot' => [
+                    'case' => $case->fresh()->only(['id', 'case_no', 'work_order_no', 'stage_key']),
+                    'bom_stage' => $case->bom?->fresh()?->stage,
+                    'dispensed' => $dispensed,
+                ],
+            ]);
+
+            AuditService::log(
+                action: 'approve',
+                description: "اعتماد تعديل توصيف بعد WO — {$case->case_no}",
+                tag: 'spec',
+                after: ['spec_edit_request_id' => $request->id, 'dispensed' => $dispensed],
+            );
 
             return $request->fresh(['techOrderSpec.items', 'caseRecord', 'requestedBy', 'reviewedBy']);
         });

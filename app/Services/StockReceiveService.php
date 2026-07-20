@@ -30,8 +30,11 @@ class StockReceiveService
         string $invoiceNo,
         Carbon $movedAt,
         User $performedBy,
+        ?string $documentPath = null,
+        ?string $documentOriginalName = null,
+        ?string $documentMime = null,
     ): StockMovement {
-        return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $performedBy) {
+        return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $performedBy, $documentPath, $documentOriginalName, $documentMime) {
             $item = StockItem::lockForUpdate()->findOrFail($item->id);
 
             $before = [
@@ -48,6 +51,9 @@ class StockReceiveService
                 'unit_cost' => $unitPrice,
                 'balance_after' => $balanceAfter,
                 'invoice_no' => $invoiceNo,
+                'document_path' => $documentPath,
+                'document_original_name' => $documentOriginalName,
+                'document_mime' => $documentMime,
                 'supplier_id' => $supplier->id,
                 'reference_type' => null,
                 'reference_id' => null,

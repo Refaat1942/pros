@@ -28,6 +28,7 @@ class OperationsService
         private readonly WorkOrderService $workOrderService,
         private readonly BomService $bomService,
         private readonly QuoteService $quoteService,
+        private readonly WorkshopAssignmentService $workshopAssignment,
     ) {}
 
     /**
@@ -73,10 +74,14 @@ class OperationsService
      *   - مسار الكاش بعد رجوع الحالة من الخزنة مدفوعةً.
      *   - المسار العسكري (اعتماد صامت تلقائي).
      */
-    public function approve(CaseRecord $case, ?string $approvedBy = null): CaseRecord
-    {
+    public function approve(
+        CaseRecord $case,
+        ?string $approvedBy = null,
+        ?int $workshopSectionId = null,
+        ?int $assignedTechnicianId = null,
+    ): CaseRecord {
         try {
-            return $this->doApprove($case, $approvedBy);
+            return $this->doApprove($case, $approvedBy, $workshopSectionId, $assignedTechnicianId);
         } catch (InsufficientStockException $e) {
             // يعمل خارج الـ transaction المُلغاة — هذا الحفظ ينجح.
             if ($e->pricingRequestId) {
@@ -100,9 +105,13 @@ class OperationsService
         }
     }
 
-    private function doApprove(CaseRecord $case, ?string $approvedBy): CaseRecord
-    {
-        return DB::transaction(function () use ($case, $approvedBy) {
+    private function doApprove(
+        CaseRecord $case,
+        ?string $approvedBy,
+        ?int $workshopSectionId = null,
+        ?int $assignedTechnicianId = null,
+    ): CaseRecord {
+        return DB::transaction(function () use ($case, $approvedBy, $workshopSectionId, $assignedTechnicianId) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
@@ -148,6 +157,12 @@ class OperationsService
 
             $this->workflowService->advance($case->fresh(), WorkflowEvent::OperationsApproved->value);
 
+            $case = $this->workshopAssignment->assignOnApprove(
+                $case->fresh(),
+                $workshopSectionId,
+                $assignedTechnicianId,
+            );
+
             AuditService::log(
                 action: 'approve',
                 description: "اعتماد مكتب التشغيل — {$case->case_no} — إصدار أمر الشغل وتحويل للمخزن",
@@ -156,12 +171,14 @@ class OperationsService
                 after: [
                     'stage_key' => CaseRecord::STAGE_MANUFACTURING,
                     'manufacturing_stage' => CaseRecord::MFG_WAREHOUSE,
-                    'work_order_no' => $case->fresh()->work_order_no,
+                    'work_order_no' => $case->work_order_no,
                     'approved_by' => $approvedBy ?? 'مكتب التشغيل',
+                    'workshop_section_id' => $case->workshop_section_id,
+                    'assigned_technician_id' => $case->assigned_technician_id,
                 ],
             );
 
-            return $case->fresh()->load('patient');
+            return $case->fresh()->load(['patient', 'workshopSection', 'assignedTechnician']);
         });
     }
 

@@ -9,6 +9,8 @@ use App\Models\ContractCompany;
 use App\Models\ContractCompanyDebt;
 use App\Models\Patient;
 use App\Models\Permission;
+use App\Models\PricingRequest;
+use App\Models\PricingRequestItem;
 use App\Models\Quote;
 use App\Models\Role;
 use App\Models\StockItem;
@@ -267,7 +269,11 @@ trait ProstheticTestHelper
             WorkflowEvent::SpecSaved->value,
         );
 
-        $case = app(AdjustmentsService::class)->complete($case->fresh());
+        $case = $case->fresh();
+
+        if ($case->stage_key === CaseRecord::STAGE_ADJUSTMENTS) {
+            $case = app(AdjustmentsService::class)->complete($case);
+        }
 
         return $this->costingConfirmedCase($case);
     }
@@ -278,6 +284,57 @@ trait ProstheticTestHelper
     protected function costingConfirmedCase(CaseRecord $case): CaseRecord
     {
         return app(CostingService::class)->confirmAndIssueQuote($case->fresh());
+    }
+
+    /** حالة في cost_calc جاهزة لتأكيد التكاليف — قبل إصدار العرض. */
+    protected function costCalcReadyCase(Patient $patient, array $codes = ['RM-001']): CaseRecord
+    {
+        foreach ($codes as $code) {
+            if (! StockItem::where('code', $code)->exists()) {
+                $this->stockItem($code, 20, 100.00);
+            }
+        }
+
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+
+        app(BomService::class)->createSpecRaw(
+            $case,
+            array_map(fn (string $c) => [
+                'stock_item_code' => $c,
+                'name' => "صنف {$c}",
+                'qty' => 1,
+            ], $codes),
+        );
+
+        static $pricingSeq = 0;
+        $pricingSeq++;
+
+        $req = PricingRequest::create([
+            'request_no' => 'PR-TEST-'.$pricingSeq,
+            'case_id' => $case->id,
+            'patient_type' => $patient->patient_type,
+            'order_ref' => $case->order_ref,
+            'patient_name' => $patient->name,
+            'request_date' => now()->toDateString(),
+            'status_key' => 'awaiting_admin_approval',
+            'computed_total' => 150.00,
+            'internal_total' => 100.00,
+        ]);
+
+        foreach ($codes as $code) {
+            PricingRequestItem::create([
+                'pricing_request_id' => $req->id,
+                'stock_item_code' => $code,
+                'name' => "صنف {$code}",
+                'qty' => 1,
+                'unit_price' => 150.00,
+                'line_total' => 150.00,
+            ]);
+        }
+
+        $case->update(['pricing_request_id' => $req->id]);
+
+        return $case->fresh();
     }
 
     /**

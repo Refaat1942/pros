@@ -96,9 +96,29 @@ class CostingService
                 ? (float) $pricingRequest->selling_price
                 : (float) $pricingRequest->computed_total;
 
-            $this->workflowService->advance($case->fresh(), WorkflowEvent::CostingCompleted->value);
+            $case = $case->fresh()->load('patient');
 
-            if (! $case->fresh()->isMilitary()) {
+            if ($case->needsServicesApproval()) {
+                $this->workflowService->advance($case, WorkflowEvent::ServicesApprovalRequired->value);
+                app(ServicesApprovalService::class)->openForCase($case);
+
+                AuditService::log(
+                    action: 'confirm',
+                    description: "تأكيد التكاليف — بانتظار تصديق إدارة الخدمات — {$case->case_no}",
+                    tag: 'pricing',
+                    after: [
+                        'case_id' => $case->id,
+                        'confirmed_by' => $confirmedBy ?? 'مكتب التكاليف',
+                        'stage_key' => CaseRecord::STAGE_SERVICES_APPROVAL,
+                    ],
+                );
+
+                return;
+            }
+
+            $this->workflowService->advance($case, WorkflowEvent::CostingCompleted->value);
+
+            if (! $case->isMilitary()) {
                 $this->quoteService->issue($pricingRequest, $quoteAmount);
             }
 
@@ -118,7 +138,7 @@ class CostingService
 
         $fresh = $case->fresh();
 
-        if ($fresh->isMilitary()) {
+        if ($fresh->isMilitary() && $fresh->stage_key === CaseRecord::STAGE_OPERATIONS) {
             $fresh = $this->operationsService->approve($fresh, 'النظام — اعتماد تلقائي عسكري');
         }
 

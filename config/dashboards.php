@@ -251,12 +251,17 @@ return [
             [
                 'label' => 'المرضى والحالات',
                 'icon' => '🧭',
-                'pages' => ['patient-tracks', 'cases', 'spec-edit-requests', 'visit-types'],
+                'pages' => ['patient-tracks', 'cases', 'spec-edit-requests', 'services-approvals', 'visit-types'],
+            ],
+            [
+                'label' => 'الورشة والإنتاج',
+                'icon' => '🏭',
+                'pages' => ['workshop-sections', 'workshop-tracking'],
             ],
             [
                 'label' => 'المخزون والتوريد',
                 'icon' => '📦',
-                'pages' => ['stock-categories', 'catalog', 'inventory-overview', 'suppliers', 'returns'],
+                'pages' => ['stock-categories', 'catalog', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns'],
             ],
             [
                 'label' => 'التعاقد والمالية',
@@ -279,12 +284,16 @@ return [
             // ── مسار المرضى والحالات ───────────────────────────────────────────
             'patient-tracks' => ['title' => 'مسار المرضى — تتبع المراحل', 'icon' => '📍', 'label' => 'مسار المرضى'],
             'spec-edit-requests' => ['title' => 'طلبات تعديل التوصيف والمعدلات', 'icon' => '✏️', 'label' => 'تعديل التوصيف والمعدلات'],
+            'services-approvals' => ['title' => 'تصديقات إدارة الخدمات — مسار عسكري', 'icon' => '🪖', 'label' => 'تصديقات الخدمات'],
+            'workshop-sections' => ['title' => 'أقسام الورشة — الفنيين والتخصيص', 'icon' => '🏭', 'label' => 'أقسام الورشة'],
+            'workshop-tracking' => ['title' => 'تتبع أوامر الشغل — الورشة', 'icon' => '📍', 'label' => 'تتبع الورشة'],
             'cases' => ['title' => 'متابعة المرضى', 'icon' => '📁', 'label' => 'متابعة المرضى'],
             'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
             // ── المخزون والتوريد ───────────────────────────────────────────────
             'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'الأقسام'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
             'inventory-overview' => ['title' => 'متابعة حركة الأصناف', 'icon' => '🔬', 'label' => 'متابعة حركة الأصناف'],
+            'dispense-approvals' => ['title' => 'اعتمادات صرف المخزن — BOM', 'icon' => '✅', 'label' => 'اعتماد الصرف'],
             'suppliers' => ['title' => 'الموردون', 'icon' => '🏭', 'label' => 'الموردون'],
             'returns' => ['title' => 'طلبات ارتجاع المواد — مراقبة وقراءة فقط', 'icon' => '↩️', 'label' => 'طلبات الارتجاع'],
             // ── التعاقد والمالية ───────────────────────────────────────────────
@@ -316,6 +325,10 @@ return [
             'assets/js/shared/bulk-table-select.js',
             'assets/js/pages/admin-dashboard.js',
             'assets/js/pages/admin-spec-edit-requests.js',
+            'assets/js/pages/admin-workshop-sections.js',
+            'assets/js/pages/admin-workshop-tracking.js',
+            'assets/js/pages/admin-dispense-approvals.js',
+            'assets/js/pages/admin-services-approvals.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => '',

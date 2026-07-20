@@ -705,6 +705,56 @@ class BomService
     }
 
     /**
+     * التحقق من الباركود قبل تقديم طلب الصرف (بدون خصم).
+     *
+     * @param  list<string>  $scannedBarcodes
+     */
+    public function validateDispenseBarcodes(Bom $bom, array $scannedBarcodes): void
+    {
+        $bom->loadMissing(['items', 'caseRecord']);
+
+        if ($bom->stage !== Bom::STAGE_RAW) {
+            abort(422, 'BOM ليست في مرحلة raw — لا يمكن الصرف.');
+        }
+
+        $groups = BomItemAggregator::groupModels($bom->items);
+        $expectedTotal = $groups->sum(fn ($rows) => (int) $rows->sum('qty'));
+
+        if (count($scannedBarcodes) !== $expectedTotal) {
+            throw BarcodeDispenseMismatchException::forItem(
+                "عدد الباركود الممسوح ({$expectedTotal} مطلوب) لا يطابق إجمالي الكميات"
+            );
+        }
+
+        $remaining = array_values($scannedBarcodes);
+
+        foreach ($groups as $code => $rows) {
+            $representative = $rows->first();
+            $needed = (int) $rows->sum('qty');
+            $matched = 0;
+
+            foreach ($remaining as $idx => $barcode) {
+                if ($this->barcodeValidation->validateScan($barcode, $representative)) {
+                    unset($remaining[$idx]);
+                    $matched++;
+
+                    if ($matched === $needed) {
+                        break;
+                    }
+                }
+            }
+
+            if ($matched !== $needed) {
+                throw BarcodeDispenseMismatchException::forItem($code);
+            }
+        }
+
+        if (count($remaining) > 0) {
+            throw BarcodeDispenseMismatchException::forItem('باركود زائد لا يطابق بنود BOM');
+        }
+    }
+
+    /**
      * التحقق من الباركود وصرف المواد إلى WIP.
      *
      * @param  list<string>  $scannedBarcodes
@@ -714,54 +764,20 @@ class BomService
         return DB::transaction(function () use ($bom, $scannedBarcodes) {
             $bom = Bom::lockForUpdate()->with(['items', 'caseRecord'])->findOrFail($bom->id);
 
-            if ($bom->stage !== Bom::STAGE_RAW) {
-                abort(422, 'BOM ليست في مرحلة raw — لا يمكن الصرف.');
-            }
+            $this->validateDispenseBarcodes($bom, $scannedBarcodes);
 
             $case = $bom->caseRecord;
 
-            // الحجز تم مسبقاً في مكتب التشغيل — هنا نضمن فقط ضبط تكلفة الوحدة (WAC).
             if ($bom->items->contains(fn ($i) => (float) $i->unit_cost <= 0)) {
                 $this->ensureUnitCosts($bom);
                 $bom->refresh()->load('items');
             }
 
-            $items = $bom->items;
-            $groups = BomItemAggregator::groupModels($items);
-
-            // مطابقة صارمة: كود + صنف + كمية — عدد المسحات = إجمالي الكميات المطلوبة.
-            $expectedTotal = $groups->sum(fn ($rows) => (int) $rows->sum('qty'));
-
-            if (count($scannedBarcodes) !== $expectedTotal) {
-                throw BarcodeDispenseMismatchException::forItem(
-                    "عدد الباركود الممسوح ({$expectedTotal} مطلوب) لا يطابق إجمالي الكميات"
-                );
-            }
-
-            $remaining = array_values($scannedBarcodes);
+            $groups = BomItemAggregator::groupModels($bom->items);
             $stockBefore = [];
+            $performedById = Auth::id();
 
             foreach ($groups as $code => $rows) {
-                $representative = $rows->first();
-                $needed = (int) $rows->sum('qty');
-                $matched = 0;
-
-                foreach ($remaining as $idx => $barcode) {
-                    if ($this->barcodeValidation->validateScan($barcode, $representative)) {
-                        unset($remaining[$idx]);
-                        $matched++;
-
-                        if ($matched === $needed) {
-                            break;
-                        }
-                    }
-                }
-
-                // كل صنف يلزمه عدد مسحات مساوٍ لكميته بالضبط.
-                if ($matched !== $needed) {
-                    throw BarcodeDispenseMismatchException::forItem($code);
-                }
-
                 $stockItem = StockItem::where('code', $code)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -770,16 +786,7 @@ class BomService
                     'qty' => $stockItem->qty,
                     'reserved' => $stockItem->reserved,
                 ];
-
-                // يُسمح بالصرف حتى مع عجز الرصيد — يصبح الرصيد سالباً (backorder).
             }
-
-            // لا يُسمح بأي باركود زائد لا يطابق بنود BOM.
-            if (count($remaining) > 0) {
-                throw BarcodeDispenseMismatchException::forItem('باركود زائد لا يطابق بنود BOM');
-            }
-
-            $performedById = Auth::id();
 
             foreach ($groups as $code => $rows) {
                 foreach ($rows as $bomItem) {

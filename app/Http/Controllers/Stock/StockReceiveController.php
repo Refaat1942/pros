@@ -69,6 +69,9 @@ class StockReceiveController extends Controller
             invoiceNo: $request->validated('invoice_no'),
             movedAt: Carbon::parse($request->validated('moved_at')),
             performedBy: $user,
+            documentPath: $this->storeInboundDocument($request),
+            documentOriginalName: $request->file('document')?->getClientOriginalName(),
+            documentMime: $request->file('document')?->getClientMimeType(),
         );
 
         return response()->json([
@@ -130,10 +133,23 @@ class StockReceiveController extends Controller
             'quantity',
             'balance_after',
             'invoice_no',
+            'document_original_name',
             'moved_at',
         ]) + [
             'supplier' => $movement->supplier?->only(['id', 'name']),
             'performed_by' => $movement->performedBy?->only(['id', 'name']),
+            'has_document' => (bool) $movement->document_path,
         ];
+    }
+
+    private function storeInboundDocument(ReceiveStockRequest $request): ?string
+    {
+        if (! config('inventory.inbound_document_upload', true)) {
+            return null;
+        }
+
+        $file = $request->file('document');
+
+        return $file ? $file->store('stock-invoices', 'local') : null;
     }
 }

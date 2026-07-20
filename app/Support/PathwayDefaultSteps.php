@@ -18,6 +18,7 @@ final class PathwayDefaultSteps
             PathwayStep::PATHWAY_CIVILIAN => self::directCivilian(),
             PathwayStep::PATHWAY_MILITARY => self::military(),
             PathwayStep::PATHWAY_ENTITY => self::entity(),
+            PathwayStep::PATHWAY_MILITARY_SERVICES => self::militaryServices(),
         ];
     }
 
@@ -101,6 +102,46 @@ final class PathwayDefaultSteps
                 self::operationsWorkOrderStep(8, 'الاطلاع على خطاب الموافقة — إصدار أمر شغل'),
             ],
             self::productionAndCloseSteps(9),
+        );
+    }
+
+    /** مسار عسكري — ضباط / مدنيين / عائلات — تصديق إدارة الخدمات قبل التشغيل */
+    private static function militaryServices(): array
+    {
+        $steps = self::openSteps('الطبيب', 'تسجيل عسكري — فتح ملف — موعد');
+        foreach ($steps as &$step) {
+            if ($step['key'] === 'adjustments') {
+                $step['auto_skip'] = true;
+                $step['skip_roles'] = ['admin', 'adjustments'];
+            }
+            if ($step['key'] === 'cost_calc') {
+                $step['action_summary'] = 'تسجيل التكلفة صامتاً — بانتظار تصديق إدارة الخدمات';
+                $step['on_complete'] = 'ينتقل لتصديق إدارة الخدمات';
+                $step['next_step_key'] = 'services_approval';
+            }
+        }
+        unset($step);
+
+        return array_merge(
+            $steps,
+            [
+                [
+                    'key' => 'services_approval',
+                    'label' => 'إدارة الخدمات — تصديق',
+                    'sort' => 6,
+                    'owner_department' => 'admin',
+                    'action_summary' => 'مراجعة خطاب التصديق — بدون تكلفة على المريض',
+                    'on_complete' => 'ينتقل للتشغيل',
+                    'next_step_key' => 'operations_wo',
+                    'stage_keys' => [CaseRecord::STAGE_SERVICES_APPROVAL],
+                    'required' => true,
+                    'auto_skip' => false,
+                    'skip_roles' => [],
+                    'handlers' => ['services_approval' => 'admin'],
+                ],
+                self::operationsWorkOrderStep(7, 'اعتماد الحالة — إصدار أمر شغل'),
+            ],
+            self::productionAndCloseSteps(8, cashierAutoSkip: true),
         );
     }
 

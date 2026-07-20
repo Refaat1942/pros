@@ -30,6 +30,30 @@ class Patient extends Model
 
     public const STATUS_DONE = 'done';
 
+    public const BENEFICIARY_OFFICER = 'officer';
+
+    public const BENEFICIARY_ENLISTED = 'enlisted';
+
+    public const BENEFICIARY_CIVILIAN_WORKER = 'civilian_worker';
+
+    public const BENEFICIARY_FAMILY = 'family_dependent';
+
+    /** @return list<string> */
+    public static function servicesApprovalCategories(): array
+    {
+        return [
+            self::BENEFICIARY_OFFICER,
+            self::BENEFICIARY_CIVILIAN_WORKER,
+            self::BENEFICIARY_FAMILY,
+        ];
+    }
+
+    public function needsServicesApproval(): bool
+    {
+        return $this->isMilitary()
+            && in_array($this->military_beneficiary_category, self::servicesApprovalCategories(), true);
+    }
+
     protected $fillable = [
         'patient_code',
         'patient_serial',
@@ -43,6 +67,7 @@ class Patient extends Model
         'military_number',
         'seniority_number',
         'military_weapon',
+        'military_beneficiary_category',
         'rank',               // نص مشتق من military_rank.name — للعرض السريع
         'sovereign_entity',
         'contract_company_id',

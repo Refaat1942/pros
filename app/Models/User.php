@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -126,6 +127,16 @@ class User extends Authenticatable
     public function medicalRecords(): HasMany
     {
         return $this->hasMany(MedicalRecord::class, 'doctor_user_id');
+    }
+
+    public function workshopSections(): BelongsToMany
+    {
+        return $this->belongsToMany(WorkshopSection::class, 'workshop_section_user');
+    }
+
+    public function assignedWorkshopCases(): HasMany
+    {
+        return $this->hasMany(CaseRecord::class, 'assigned_technician_id');
     }
 
     public function approvedPricingRequests(): HasMany

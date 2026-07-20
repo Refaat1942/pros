@@ -75,6 +75,22 @@ return [
             'label_ar' => 'إدارة مصفوفة الصلاحيات',
             'dashboard' => 'admin',
         ],
+        'manage-workshop-sections' => [
+            'label_ar' => 'إدارة أقسام الورشة وربط الفنيين',
+            'dashboard' => 'admin',
+        ],
+        'view-workshop-tracking' => [
+            'label_ar' => 'لوحة تتبع أوامر الشغل في الورشة',
+            'dashboard' => 'admin',
+        ],
+        'approve-dispense' => [
+            'label_ar' => 'اعتماد طلبات صرف المخزن',
+            'dashboard' => 'admin',
+        ],
+        'approve-services' => [
+            'label_ar' => 'تصديق إدارة الخدمات — مسار عسكري',
+            'dashboard' => 'admin',
+        ],
     ],
 
     /**
@@ -95,6 +111,10 @@ return [
             'view-costs',
             'view-military-profit',
             'manage-permissions',
+            'manage-workshop-sections',
+            'view-workshop-tracking',
+            'approve-dispense',
+            'approve-services',
             'super-admin',
         ],
     ],

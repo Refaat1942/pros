@@ -50,6 +50,16 @@ class PathwayConfigService
             CaseRecord::STAGE_READY_DELIVERY,
             CaseRecord::STAGE_DELIVERED,
         ],
+        PathwayStep::PATHWAY_MILITARY_SERVICES => [
+            CaseRecord::STAGE_RECEPTION,
+            CaseRecord::STAGE_TECHNICAL,
+            CaseRecord::STAGE_COST_CALC,
+            CaseRecord::STAGE_SERVICES_APPROVAL,
+            CaseRecord::STAGE_OPERATIONS,
+            CaseRecord::STAGE_MANUFACTURING,
+            CaseRecord::STAGE_READY_DELIVERY,
+            CaseRecord::STAGE_DELIVERED,
+        ],
     ];
 
     /** @var array<string, string> */
@@ -57,6 +67,7 @@ class PathwayConfigService
         CaseRecord::STAGE_RECEPTION => 'لا يمكن تخطي التسجيل — كل مريض يبدأ من الاستقبال.',
         CaseRecord::STAGE_TECHNICAL => 'التوصيف الفني إلزامي — بدون مواصفات لا يُصنع الطرف.',
         CaseRecord::STAGE_COST_CALC => 'حساب التكلفة إلزامي — أساس عرض السعر والفواتير.',
+        CaseRecord::STAGE_SERVICES_APPROVAL => 'تصديق إدارة الخدمات إلزامي — قبل إصدار أمر الشغل.',
         CaseRecord::STAGE_QUOTE => 'عرض السعر إلزامي للمسار المدني — قبل التشغيل والتحصيل.',
         CaseRecord::STAGE_OPERATIONS => 'مكتب التشغيل إلزامي — نقطة اعتماد الحالة وإصدار أمر الشغل.',
         CaseRecord::STAGE_MANUFACTURING => 'المخزن والورشة إلزاميان — صرف بالباركود ثم تصنيع.',
@@ -150,6 +161,10 @@ class PathwayConfigService
     {
         if ($case) {
             if ($case->patient_type === Patient::TYPE_MILITARY || $case->path === CaseRecord::PATH_MILITARY) {
+                if ($case->needsServicesApproval()) {
+                    return PathwayStep::PATHWAY_MILITARY_SERVICES;
+                }
+
                 return PathwayStep::PATHWAY_MILITARY;
             }
             if ($case->contract_company_id) {
@@ -160,6 +175,10 @@ class PathwayConfigService
         }
 
         if ($patient?->isMilitary()) {
+            if ($patient->needsServicesApproval()) {
+                return PathwayStep::PATHWAY_MILITARY_SERVICES;
+            }
+
             return PathwayStep::PATHWAY_MILITARY;
         }
         if ($patient?->contract_company_id) {
@@ -173,6 +192,7 @@ class PathwayConfigService
     {
         return match ($pathway) {
             PathwayStep::PATHWAY_MILITARY => 'عسكري',
+            PathwayStep::PATHWAY_MILITARY_SERVICES => 'عسكري — إدارة الخدمات',
             PathwayStep::PATHWAY_ENTITY => 'جهات',
             default => 'مدني',
         };

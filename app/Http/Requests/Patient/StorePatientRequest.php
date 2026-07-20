@@ -77,6 +77,16 @@ class StorePatientRequest extends BaseRequest
             'military_number' => ['nullable', 'string', 'max:30'],
             'seniority_number' => ['nullable', 'string', 'max:30'],
             'military_weapon' => MilitaryWeapons::optionalValidationRule(),
+            'military_beneficiary_category' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    Patient::BENEFICIARY_OFFICER,
+                    Patient::BENEFICIARY_ENLISTED,
+                    Patient::BENEFICIARY_CIVILIAN_WORKER,
+                    Patient::BENEFICIARY_FAMILY,
+                ]),
+            ],
             'sovereign_entity' => ['nullable', 'string', 'min:2', 'max:255'],
             'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
             'visit_type_id' => ['required', 'integer', Rule::exists('visit_types', 'id')],
@@ -91,6 +101,10 @@ class StorePatientRequest extends BaseRequest
 
             if ($class === self::CLASS_MILITARY && ! $this->filled('military_rank_id')) {
                 $validator->errors()->add('military_rank_id', 'الرتبة العسكرية مطلوبة للمريض العسكري.');
+            }
+
+            if ($class === self::CLASS_MILITARY && ! $this->filled('military_beneficiary_category')) {
+                $validator->errors()->add('military_beneficiary_category', 'تصنيف المستفيد مطلوب للمريض العسكري.');
             }
 
             if ($class === self::CLASS_MILITARY

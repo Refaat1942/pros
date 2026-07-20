@@ -55,6 +55,17 @@ class WorkflowService
             'to' => CaseRecord::STAGE_QUOTE,
             'mfg' => null,
         ],
+        // التكاليف → تصديق إدارة الخدمات (مسار عسكري خاص).
+        WorkflowEvent::ServicesApprovalRequired->value => [
+            'from' => [CaseRecord::STAGE_COST_CALC],
+            'to' => CaseRecord::STAGE_SERVICES_APPROVAL,
+            'mfg' => null,
+        ],
+        WorkflowEvent::ServicesApproved->value => [
+            'from' => [CaseRecord::STAGE_SERVICES_APPROVAL],
+            'to' => CaseRecord::STAGE_OPERATIONS,
+            'mfg' => null,
+        ],
         // عرض السعر → مكتب التشغيل (مركز القرار).
         WorkflowEvent::QuoteIssued->value => [
             'from' => [CaseRecord::STAGE_QUOTE],
@@ -89,6 +100,11 @@ class WorkflowService
         WorkflowEvent::ReturnedToTechnical->value => [
             'from' => [CaseRecord::STAGE_OPERATIONS, CaseRecord::STAGE_ADJUSTMENTS],
             'to' => CaseRecord::STAGE_TECHNICAL,
+            'mfg' => null,
+        ],
+        WorkflowEvent::SpecEditPostWoRollback->value => [
+            'from' => [CaseRecord::STAGE_MANUFACTURING],
+            'to' => CaseRecord::STAGE_ADJUSTMENTS,
             'mfg' => null,
         ],
         // المخزن: صرف المواد بالباركود → دخول الورشة.
@@ -130,7 +146,9 @@ class WorkflowService
 
             $updates = ['stage_key' => $rule['to']];
 
-            if ($rule['mfg'] !== null) {
+            if ($rule['to'] !== CaseRecord::STAGE_MANUFACTURING) {
+                $updates['manufacturing_stage'] = null;
+            } elseif ($rule['mfg'] !== null) {
                 $updates['manufacturing_stage'] = $rule['mfg'];
             }
 

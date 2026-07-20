@@ -16,6 +16,9 @@ class PathwayStep extends Model
     /** مدني مرتبط بجهة تعاقد (تأمين / شركة) — مسار عرض السعر وخطاب الموافقة. */
     public const PATHWAY_ENTITY = 'entity';
 
+    /** مسار عسكري يحتاج تصديق إدارة الخدمات (ضباط / مدنيين / عائلات). */
+    public const PATHWAY_MILITARY_SERVICES = 'military_services';
+
     protected $fillable = [
         'pathway',
         'key',

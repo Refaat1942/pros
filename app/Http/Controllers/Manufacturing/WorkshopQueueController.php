@@ -11,6 +11,7 @@ use App\Support\ManufacturingDeskCaseFormatter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class WorkshopQueueController extends Controller
@@ -32,9 +33,13 @@ class WorkshopQueueController extends Controller
             CaseRecord::workshopDeskQueue()
                 ->with([
                     'patient:id,patient_code,name',
+                    'workshopSection:id,name,code',
+                    'assignedTechnician:id,name',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,qty,source',
                 ])
+                ->when($request->filter === 'mine' && Auth::id(), fn ($q) => $q->where('assigned_technician_id', Auth::id()))
+                ->when($request->filter === 'section' && $request->section_id, fn ($q) => $q->where('workshop_section_id', $request->integer('section_id')))
                 ->when($request->manufacturing_stage, fn ($q, $s) => $q->where('manufacturing_stage', $s))
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
