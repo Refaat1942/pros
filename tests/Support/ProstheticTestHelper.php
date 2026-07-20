@@ -33,6 +33,7 @@ trait ProstheticTestHelper
     protected function makeRole(string $slug): Role
     {
         $labels = [
+            'super_admin' => 'سوبر أدمن',
             'admin' => 'مسؤول النظام',
             'reception' => 'موظف استقبال',
             'doctor' => 'طبيب',
@@ -50,6 +51,11 @@ trait ProstheticTestHelper
 
     protected function userWithRole(string $slug): User
     {
+        // الاختبارات التي تطلب admin تتوقع صلاحية كاملة — استخدم سوبر أدمن.
+        if ($slug === Role::SLUG_ADMIN) {
+            $slug = Role::SLUG_SUPER_ADMIN;
+        }
+
         $role = $this->makeRole($slug);
         $this->seedDefaultPermissions($role);
 

@@ -49,9 +49,26 @@ class User extends Authenticatable
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    /** سوبر أدمن — صلاحية كاملة على النظام ومصفوفة الصلاحيات. */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role?->slug === Role::SLUG_SUPER_ADMIN;
+    }
+
+    /** أدمن محدود أو سوبر أدمن — أي حساب يرى لوحة الإدارة. */
     public function isAdmin(): bool
     {
-        return $this->role?->slug === Role::SLUG_ADMIN;
+        return $this->role?->isAdminPanelRole() ?? false;
+    }
+
+    /** لوحة التوجيه بعد تسجيل الدخول (super_admin → admin). */
+    public function dashboardSlug(): string
+    {
+        if ($this->isSuperAdmin()) {
+            return Role::SLUG_ADMIN;
+        }
+
+        return $this->role?->slug ?? 'home';
     }
 
     /**
@@ -59,6 +76,10 @@ class User extends Authenticatable
      */
     public function hasPermission(string $slug): bool
     {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
         return (bool) $this->role?->loadMissing('permissions')->hasPermission($slug);
     }
 
@@ -67,7 +88,7 @@ class User extends Authenticatable
      */
     public function canViewDashboardPage(string $dashboard, string $page): bool
     {
-        if ($this->isAdmin() && $dashboard === Role::SLUG_ADMIN) {
+        if ($this->isSuperAdmin()) {
             return true;
         }
 
@@ -83,6 +104,10 @@ class User extends Authenticatable
     {
         if ($dashboard === 'home' || ! config("dashboards.{$dashboard}")) {
             return false;
+        }
+
+        if ($this->isSuperAdmin() && $dashboard === Role::SLUG_ADMIN) {
+            return true;
         }
 
         if ($this->role?->slug === $dashboard) {

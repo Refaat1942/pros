@@ -38,7 +38,7 @@ class UserService
             'status' => $data['status'],
         ];
 
-        if ($user->role?->slug === Role::SLUG_ADMIN) {
+        if (in_array($user->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
             $payload['status'] = User::STATUS_ACTIVE;
         } else {
             $payload['role_id'] = $data['role_id'];
@@ -65,8 +65,8 @@ class UserService
     {
         $user->loadMissing('role:id,slug');
 
-        if ($user->role?->slug === Role::SLUG_ADMIN) {
-            throw new \InvalidArgumentException('لا يمكن تعطيل حساب مسؤول النظام.');
+        if (in_array($user->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
+            throw new \InvalidArgumentException('لا يمكن تعطيل حساب السوبر أدمن أو مسؤول النظام.');
         }
 
         $before = $user->only(['status']);

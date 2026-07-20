@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\PermissionCatalogService;
@@ -9,14 +10,15 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Seeder;
 
 /**
- * الأدوار السبعة + مستخدم اختبار لكل لوحة تحكم.
+ * الأدوار + سوبر أدمن (كامل) + مستخدم اختبار لكل لوحة تشغيلية.
  */
 class RolesAndAdminSeeder extends Seeder
 {
     public function run(): void
     {
         $roles = [
-            ['slug' => Role::SLUG_ADMIN,       'label_ar' => 'مسؤول النظام'],
+            ['slug' => Role::SLUG_SUPER_ADMIN, 'label_ar' => 'سوبر أدمن'],
+            ['slug' => Role::SLUG_ADMIN,       'label_ar' => 'مسؤول النظام (محدود)'],
             ['slug' => Role::SLUG_RECEPTION,   'label_ar' => 'موظف استقبال'],
             ['slug' => Role::SLUG_DOCTOR,      'label_ar' => 'طبيب'],
             ['slug' => Role::SLUG_SPEC,        'label_ar' => 'فني مواصفات'],
@@ -34,7 +36,21 @@ class RolesAndAdminSeeder extends Seeder
 
         $this->seedPermissions();
 
+        User::updateOrCreate(
+            ['username' => 'superadmin'],
+            [
+                'name' => 'سوبر أدمن',
+                'password' => UserFactory::TEST_PASSWORD,
+                'role_id' => Role::where('slug', Role::SLUG_SUPER_ADMIN)->value('id'),
+                'status' => User::STATUS_ACTIVE,
+            ]
+        );
+
         foreach (Role::ALL_SLUGS as $slug) {
+            if ($slug === Role::SLUG_SUPER_ADMIN) {
+                continue;
+            }
+
             User::updateOrCreate(
                 ['username' => $slug],
                 [
@@ -47,10 +63,6 @@ class RolesAndAdminSeeder extends Seeder
         }
     }
 
-    /**
-     * يسجّل سجل الصلاحيات ويُسند الافتراضي لكل دور.
-     * الأدمن يمتلك كل شيء ضمنياً (Gate::before) فلا يحتاج إسناداً.
-     */
     private function seedPermissions(): void
     {
         app(PermissionCatalogService::class)->seedRoleDefaults(fullSync: true);

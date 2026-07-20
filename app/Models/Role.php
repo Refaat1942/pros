@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Role extends Model
 {
+    public const SLUG_SUPER_ADMIN = 'super_admin';
+
     public const SLUG_ADMIN = 'admin';
 
     public const SLUG_RECEPTION = 'reception';
@@ -33,6 +35,7 @@ class Role extends Model
 
     /** جميع الـ slugs الصحيحة المطابقة لبادئات المسارات */
     public const ALL_SLUGS = [
+        self::SLUG_SUPER_ADMIN,
         self::SLUG_ADMIN,
         self::SLUG_RECEPTION,
         self::SLUG_DOCTOR,
@@ -60,20 +63,27 @@ class Role extends Model
         return $this->belongsToMany(Permission::class, 'role_permission');
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->slug === self::SLUG_SUPER_ADMIN;
+    }
+
     public function isAdmin(): bool
     {
         return $this->slug === self::SLUG_ADMIN;
     }
 
+    /** أدوار لوحة الإدارة — سوبر أدمن (كامل) أو أدمن محدود. */
+    public function isAdminPanelRole(): bool
+    {
+        return $this->isSuperAdmin() || $this->isAdmin();
+    }
+
     /**
-     * هل يملك هذا الدور الصلاحية؟ الأدمن (السوبر أدمن) يملك كل شيء.
+     * هل يملك هذا الدور الصلاحية؟ (تُدار من مصفوفة الصلاحيات لكل دور).
      */
     public function hasPermission(string $slug): bool
     {
-        if ($this->isAdmin()) {
-            return true;
-        }
-
         return $this->permissions->contains('slug', $slug);
     }
 }

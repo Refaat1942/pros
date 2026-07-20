@@ -17,9 +17,9 @@ class HomeController extends Controller
     public function index(): View|RedirectResponse
     {
         if (auth()->check()) {
-            $slug = auth()->user()->role?->slug;
+            $slug = auth()->user()->dashboardSlug();
 
-            return redirect($slug ? "/{$slug}" : '/');
+            return redirect($slug && $slug !== 'home' ? "/{$slug}" : '/');
         }
 
         return view('auth.home-login', [

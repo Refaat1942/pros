@@ -3,8 +3,8 @@
     use App\Models\User;
     $editUser = $edit_user ?? null;
     $openModal = $editUser || old('form') === 'employee';
-    $isAdminEdit = $editUser?->role?->slug === Role::SLUG_ADMIN;
-    $assignableRoles = ($roles ?? collect())->filter(fn ($r) => $r->slug !== Role::SLUG_ADMIN);
+    $isAdminEdit = in_array($editUser?->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true);
+    $assignableRoles = ($roles ?? collect())->filter(fn ($r) => $r->slug !== Role::SLUG_SUPER_ADMIN);
 @endphp
 <div class="panel">
     <div class="panel-header">

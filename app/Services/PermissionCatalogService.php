@@ -48,41 +48,30 @@ class PermissionCatalogService
     {
         $this->syncToDatabase();
 
-        // جميع الصلاحيات التشغيلية (كل لوحة ما عدا admin)
-        $allIds = Permission::query()
+        $operationalIds = Permission::query()
             ->where('dashboard', '!=', Role::SLUG_ADMIN)
             ->pluck('id');
 
-        Role::query()->each(function (Role $role) use ($allIds, $fullSync) {
+        $adminViewIds = Permission::query()
+            ->where('dashboard', Role::SLUG_ADMIN)
+            ->where('type', Permission::TYPE_VIEW)
+            ->pluck('id');
+
+        Role::query()->each(function (Role $role) use ($operationalIds, $adminViewIds, $fullSync) {
+            if ($role->slug === Role::SLUG_SUPER_ADMIN) {
+                return;
+            }
+
+            $ids = $role->slug === Role::SLUG_ADMIN
+                ? $operationalIds->merge($adminViewIds)->unique()->values()
+                : $operationalIds;
+
             if ($fullSync) {
-                $role->permissions()->sync($allIds);
+                $role->permissions()->sync($ids);
             } else {
-                $role->permissions()->syncWithoutDetaching($allIds);
+                $role->permissions()->syncWithoutDetaching($ids);
             }
         });
-    }
-
-    /**
-     * يمنح مسؤول النظام كل صلاحيات عرض وإجراءات اللوحات التشغيلية.
-     * لوحة الإدارة نفسها وصولها تلقائي عبر Gate::before.
-     */
-    private function seedAdminFullAccess(bool $fullSync = false): void
-    {
-        $admin = Role::where('slug', Role::SLUG_ADMIN)->first();
-
-        if (! $admin) {
-            return;
-        }
-
-        $ids = Permission::query()
-            ->where('dashboard', '!=', Role::SLUG_ADMIN)
-            ->pluck('id');
-
-        if ($fullSync) {
-            $admin->permissions()->sync($ids);
-        } else {
-            $admin->permissions()->syncWithoutDetaching($ids);
-        }
     }
 
     /**
@@ -93,6 +82,7 @@ class PermissionCatalogService
     public function matrixPageData(): array
     {
         $roles = Role::query()
+            ->where('slug', '!=', Role::SLUG_SUPER_ADMIN)
             ->with('permissions:id,slug')
             ->orderBy('label_ar')
             ->get(['id', 'slug', 'label_ar']);

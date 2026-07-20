@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
- * مصفوفة الصلاحيات التفصيلية — يضبط صلاحيات كل دور (عدا الأدمن).
+ * مصفوفة الصلاحيات التفصيلية — للسوبر أدمن فقط.
  */
 class PermissionMatrixController extends Controller
 {
@@ -21,11 +23,17 @@ class PermissionMatrixController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
+        /** @var User|null $actor */
+        $actor = Auth::user();
+
+        abort_unless($actor?->isSuperAdmin(), 403, 'فقط السوبر أدمن يمكنه تعديل مصفوفة الصلاحيات.');
+
         $matrix = (array) $request->input('matrix', []);
 
         $validPermissionIds = Permission::pluck('id')->all();
 
         Role::query()
+            ->where('slug', '!=', Role::SLUG_SUPER_ADMIN)
             ->get()
             ->each(function (Role $role) use ($matrix, $validPermissionIds) {
                 $ids = array_values(array_intersect(

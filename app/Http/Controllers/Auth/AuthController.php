@@ -66,7 +66,7 @@ class AuthController extends Controller
                 ->withErrors(['username' => 'هذا الحساب معطّل — تواصل مع الإدارة.']);
         }
 
-        $dashboard = $user->role?->slug;
+        $dashboard = $user->dashboardSlug();
 
         if (! $dashboard || ! config("dashboards.{$dashboard}")) {
             Auth::logout();

@@ -38,10 +38,10 @@ class UserController extends Controller
     {
         $user->loadMissing('role:id,slug');
 
-        if ($user->role?->slug === Role::SLUG_ADMIN) {
+        if (in_array($user->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
             return redirect()
                 ->route('admin.employees')
-                ->with('error', 'لا يمكن تعطيل حساب مسؤول النظام.');
+                ->with('error', 'لا يمكن تعطيل حساب السوبر أدمن أو مسؤول النظام.');
         }
 
         $user = $this->userService->toggleStatus($user);
@@ -61,8 +61,8 @@ class UserController extends Controller
 
         $user->loadMissing('role:id,slug');
 
-        if ($user->role?->slug === Role::SLUG_ADMIN) {
-            return response()->json(['message' => 'لا يمكن حذف حساب مسؤول النظام.'], 422);
+        if (in_array($user->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
+            return response()->json(['message' => 'لا يمكن حذف حساب السوبر أدمن أو مسؤول النظام.'], 422);
         }
 
         $this->userService->delete($user);
