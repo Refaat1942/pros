@@ -45,9 +45,13 @@ class NotificationController extends Controller
             ])
             ->values();
 
+        $alerts = app(\App\Services\SettingService::class)->notificationAlerts();
+
         return response()->json([
             'unread_count' => $unreadCount,
             'items' => $items,
+            'sound_enabled' => $alerts['sound_enabled'],
+            'reminder_minutes' => $alerts['reminder_minutes'],
         ]);
     }
 

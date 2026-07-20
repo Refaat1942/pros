@@ -1649,6 +1649,58 @@
       overflow-y: auto;
     }
 
+    .catalog-modal-body .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--secondary);
+    }
+
+    .catalog-modal-body .form-group .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .catalog-modal-body .form-group .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+    }
+
+    .catalog-modal-body .form-group textarea.form-control {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .catalog-modal-body .form-group select.form-control[multiple] {
+      min-height: 130px;
+      padding: 6px 8px;
+    }
+
+    .catalog-modal-body .form-check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--secondary);
+      cursor: pointer;
+    }
+
+    .catalog-modal-body .form-check-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
     .catalog-detail-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));

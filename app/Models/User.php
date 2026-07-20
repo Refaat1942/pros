@@ -89,6 +89,26 @@ class User extends Authenticatable
      */
     public function canViewDashboardPage(string $dashboard, string $page): bool
     {
+        if ($page === 'notifications') {
+            if ($this->isSuperAdmin()) {
+                return true;
+            }
+
+            if ($this->role?->slug === $dashboard) {
+                return true;
+            }
+
+            $prefix = "{$dashboard}.";
+
+            return $this->role?->loadMissing('permissions')->permissions
+                ->contains(fn (Permission $permission) => str_starts_with($permission->slug, $prefix)
+                    && str_ends_with($permission->slug, '.view')) ?? false;
+        }
+
+        if ($page === 'notification-settings') {
+            return $this->isSuperAdmin();
+        }
+
         if ($this->isSuperAdmin()) {
             return true;
         }

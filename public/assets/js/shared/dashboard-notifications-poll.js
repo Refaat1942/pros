@@ -1,10 +1,9 @@
 /**
  * إشعارات منبثقة في كل شاشة عبر Polling خفيف للسيرفر.
  *
- * يعمل بدون Firebase (مناسب للنظام المحلي/Offline):
- *   - يستعلم عن /notifications/feed كل فترة قصيرة.
- *   - عند وصول إشعار جديد للدور الحالي: صوت + Toast + إشعار متصفح + تحديث عدّاد الجرس.
- *   - أول استعلام يضبط الأساس فقط (لا يُظهر توست للقديم).
+ * - يستعلم عن /notifications/feed كل فترة قصيرة.
+ * - عند وصول إشعار جديد: صوت + Toast + إشعار متصفح + تحديث عدّاد الجرس.
+ * - ما دامت إشعارات غير مقروءة ولم يفتح المستخدم صفحة الإشعارات: تكرار الصوت كل N دقيقة (إعداد السوبر أدمن).
  */
 (function () {
   'use strict';
@@ -12,9 +11,30 @@
   var FEED_URL = window.__NOTIF_FEED_URL || '/notifications/feed';
   var POLL_MS = 20000;
   var TOAST_ID = 'notifToast';
-  var seen = null; // خريطة معرّفات معروفة؛ null حتى أول استعلام
+  var seen = null;
+  var unreadCount = 0;
+  var reminderTimer = null;
+  var firstPollDone = false;
+
+  function soundEnabled() {
+    return window.__NOTIF_SOUND_ENABLED !== false;
+  }
+
+  function reminderMs() {
+    var ms = parseInt(window.__NOTIF_REMINDER_MS, 10);
+    return ms > 0 ? ms : 60000;
+  }
+
+  function isOnNotificationsPage() {
+    return document.body.getAttribute('data-active-page') === 'notifications';
+  }
+
+  function shouldRemind() {
+    return soundEnabled() && unreadCount > 0 && !isOnNotificationsPage();
+  }
 
   function beep() {
+    if (!soundEnabled()) return;
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
@@ -32,6 +52,25 @@
       osc.start();
       osc.stop(ctx.currentTime + 0.34);
     } catch (e) { /* صامت */ }
+  }
+
+  function stopReminder() {
+    if (reminderTimer) {
+      clearInterval(reminderTimer);
+      reminderTimer = null;
+    }
+  }
+
+  function startReminder() {
+    stopReminder();
+    if (!shouldRemind()) return;
+    reminderTimer = setInterval(function () {
+      if (shouldRemind()) {
+        beep();
+      } else {
+        stopReminder();
+      }
+    }, reminderMs());
   }
 
   function toast(title, body) {
@@ -77,6 +116,15 @@
     }
   }
 
+  function applyFeedSettings(data) {
+    if (typeof data.sound_enabled === 'boolean') {
+      window.__NOTIF_SOUND_ENABLED = data.sound_enabled;
+    }
+    if (data.reminder_minutes) {
+      window.__NOTIF_REMINDER_MS = Math.max(1, parseInt(data.reminder_minutes, 10) || 1) * 60000;
+    }
+  }
+
   function poll() {
     fetch(FEED_URL, {
       headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -85,18 +133,24 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data) return;
-        setBadge(data.unread_count || 0);
+
+        applyFeedSettings(data);
+        unreadCount = data.unread_count || 0;
+        setBadge(unreadCount);
 
         var items = data.items || [];
 
         if (seen === null) {
-          // أول تحميل: نتذكّر غير المقروء الحالي بدون إظهار توست.
           seen = {};
           items.forEach(function (it) { seen[it.id] = true; });
+          firstPollDone = true;
+          if (shouldRemind()) {
+            beep();
+            startReminder();
+          }
           return;
         }
 
-        // العناصر الجديدة التي لم تُعرض بعد — من الأقدم للأحدث.
         var fresh = items.filter(function (it) { return !seen[it.id]; });
         fresh.reverse().forEach(function (it) {
           seen[it.id] = true;
@@ -105,8 +159,16 @@
           browserNotif(it.title, it.body);
         });
         items.forEach(function (it) { seen[it.id] = true; });
+
+        if (firstPollDone) {
+          if (shouldRemind()) {
+            startReminder();
+          } else {
+            stopReminder();
+          }
+        }
       })
-      .catch(function () { /* صامت — لا نُزعج المستخدم عند انقطاع مؤقت */ });
+      .catch(function () { /* صامت */ });
   }
 
   document.addEventListener('DOMContentLoaded', function () {

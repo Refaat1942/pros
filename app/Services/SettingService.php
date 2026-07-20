@@ -23,6 +23,12 @@ class SettingService
 
     public const KEY_ORG_LOGO_PATH = 'org_logo_path';
 
+    public const KEY_NOTIFICATION_SOUND_ENABLED = 'notification_sound_enabled';
+
+    public const KEY_NOTIFICATION_REMINDER_MINUTES = 'notification_reminder_minutes';
+
+    private const DEFAULT_NOTIFICATION_REMINDER_MINUTES = 1;
+
     /** @var array<string, float> */
     private const DEFAULT_OVERHEAD_RATES = [
         self::KEY_TECHNICAL_CHECK => 30.0,
@@ -206,5 +212,53 @@ class SettingService
         Storage::disk('public')->putFileAs('branding', $file, $filename);
 
         return 'storage/branding/'.$filename;
+    }
+
+    /**
+     * إعدادات التنبيه الصوتي للإشعارات (يتحكم فيها السوبر أدمن).
+     *
+     * @return array{sound_enabled: bool, reminder_minutes: int}
+     */
+    public function notificationAlerts(): array
+    {
+        return Cache::rememberForever('settings.notification_alerts', function () {
+            $stored = Setting::query()
+                ->whereIn('key', [
+                    self::KEY_NOTIFICATION_SOUND_ENABLED,
+                    self::KEY_NOTIFICATION_REMINDER_MINUTES,
+                ])
+                ->pluck('value', 'key');
+
+            $minutes = (int) ($stored[self::KEY_NOTIFICATION_REMINDER_MINUTES] ?? self::DEFAULT_NOTIFICATION_REMINDER_MINUTES);
+            $minutes = max(1, min(60, $minutes));
+
+            $enabledRaw = $stored[self::KEY_NOTIFICATION_SOUND_ENABLED] ?? '1';
+
+            return [
+                'sound_enabled' => filter_var($enabledRaw, FILTER_VALIDATE_BOOLEAN),
+                'reminder_minutes' => $minutes,
+            ];
+        });
+    }
+
+    /** @param array{sound_enabled?: bool, reminder_minutes?: int} $data */
+    public function updateNotificationAlerts(array $data): void
+    {
+        if (array_key_exists('sound_enabled', $data)) {
+            Setting::updateOrCreate(
+                ['key' => self::KEY_NOTIFICATION_SOUND_ENABLED],
+                ['value' => ($data['sound_enabled'] ?? false) ? '1' : '0'],
+            );
+        }
+
+        if (array_key_exists('reminder_minutes', $data)) {
+            $minutes = max(1, min(60, (int) $data['reminder_minutes']));
+            Setting::updateOrCreate(
+                ['key' => self::KEY_NOTIFICATION_REMINDER_MINUTES],
+                ['value' => (string) $minutes],
+            );
+        }
+
+        Cache::forget('settings.notification_alerts');
     }
 }

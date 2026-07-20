@@ -1,6 +1,6 @@
 @php
     $pages = config("dashboards.{$dashboardKey}.pages", []);
-    $canNotifications = isset($pages['notifications'])
+    $canNotifications = auth()->check()
         && auth()->user()?->canViewDashboardPage($dashboardKey, 'notifications');
     $unreadCount = (int) ($headerBadges['notifications'] ?? 0);
     $isNotifActive = ($activePage ?? '') === 'notifications';

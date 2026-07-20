@@ -271,7 +271,7 @@ return [
             [
                 'label' => 'الرقابة والنظام',
                 'icon' => '⚙️',
-                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'branding-settings', 'costing-settings', 'pathway-settings'],
+                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'branding-settings', 'costing-settings', 'pathway-settings', 'notification-settings'],
             ],
         ],
         'pages' => [
@@ -310,6 +310,7 @@ return [
             'costing-settings' => ['title' => 'إعدادات التكاليف الإضافية', 'icon' => '💰', 'label' => 'إعدادات التكاليف'],
             'branding-settings' => ['title' => 'الهوية البصرية — الشعار والترويسة', 'icon' => '🎨', 'label' => 'الهوية البصرية'],
             'pathway-settings' => ['title' => 'مصمم مسار العمل — مدني / عسكري / جهات', 'icon' => '🧭', 'label' => 'مصمم المسار'],
+            'notification-settings' => ['title' => 'إعدادات التنبيه الصوتي — الإشعارات', 'icon' => '🔔', 'label' => 'تنبيه الإشعارات'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css'],

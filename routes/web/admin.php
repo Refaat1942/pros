@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\FormFieldSettingsController;
 use App\Http\Controllers\Admin\BrandingSettingsController;
 use App\Http\Controllers\Admin\CostingSettingsController;
+use App\Http\Controllers\Admin\NotificationSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Admin\PathwaySettingsController;
 use App\Http\Controllers\Admin\PermissionMatrixController;
@@ -211,6 +212,11 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,branding-settings')->group(function () {
             Route::put('branding-settings', [BrandingSettingsController::class, 'update'])
                 ->name('branding-settings.update');
+        });
+
+        Route::middleware('dashboard.page:admin,notification-settings')->group(function () {
+            Route::put('notification-settings', [NotificationSettingsController::class, 'update'])
+                ->name('notification-settings.update');
         });
 
         Route::middleware('dashboard.page:admin,pathway-settings')->group(function () {

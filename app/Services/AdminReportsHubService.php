@@ -46,7 +46,7 @@ class AdminReportsHubService
     public function sections(): array
     {
         $pages = config('dashboards.admin.pages', []);
-        $skip = ['overview', 'bi', 'general-view', 'reports', 'reports-section', 'permissions', 'employees', 'notifications', 'military-ranks', 'military-debts', 'costing-settings', 'branding-settings', 'pathway-settings'];
+        $skip = ['overview', 'bi', 'general-view', 'reports', 'reports-section', 'permissions', 'employees', 'notifications', 'military-ranks', 'military-debts', 'costing-settings', 'branding-settings', 'pathway-settings', 'notification-settings'];
 
         $cards = [];
         $groups = [

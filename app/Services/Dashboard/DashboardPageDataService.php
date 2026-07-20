@@ -75,6 +75,7 @@ class DashboardPageDataService
             'admin.visit-types' => $this->adminVisitTypes(),
             'admin.costing-settings' => $this->adminCostingSettings(),
             'admin.branding-settings' => $this->adminBrandingSettings(),
+            'admin.notification-settings' => $this->adminNotificationSettings(),
             'admin.pathway-settings' => $this->adminPathwaySettings(),
             'admin.stock-categories' => $this->adminStockCategories(),
             'admin.catalog' => $this->adminCatalog(),
@@ -208,6 +209,13 @@ class DashboardPageDataService
     {
         return [
             'branding' => app(SettingService::class)->branding(),
+        ];
+    }
+
+    private function adminNotificationSettings(): array
+    {
+        return [
+            'notification_alerts' => app(SettingService::class)->notificationAlerts(),
         ];
     }
 
