@@ -23,7 +23,7 @@ class NotificationController extends Controller
      */
     public function feed(Request $request): JsonResponse
     {
-        $roleSlug = Auth::user()?->role?->slug;
+        $roleSlug = Auth::user()?->notificationRoleSlug($request->query('dashboard'));
 
         if (! $roleSlug) {
             return response()->json(['unread_count' => 0, 'items' => []]);
@@ -58,9 +58,9 @@ class NotificationController extends Controller
     /**
      * تعليم إشعار واحد كمقروء — للدور الحالي فقط.
      */
-    public function markRead(AppNotification $notification): RedirectResponse
+    public function markRead(Request $request, AppNotification $notification): RedirectResponse
     {
-        $this->authorizeForRole($notification);
+        $this->authorizeForRole($notification, $request->input('dashboard'));
 
         if ($notification->read_at === null) {
             $notification->update(['read_at' => now()]);
@@ -74,7 +74,7 @@ class NotificationController extends Controller
      */
     public function markAllRead(Request $request): RedirectResponse
     {
-        $roleSlug = Auth::user()?->role?->slug;
+        $roleSlug = Auth::user()?->notificationRoleSlug($request->input('dashboard'));
 
         $updated = $this->notifications->markAllReadForRole($roleSlug);
 
@@ -83,9 +83,9 @@ class NotificationController extends Controller
             : 'لا توجد إشعارات غير مقروءة.');
     }
 
-    private function authorizeForRole(AppNotification $notification): void
+    private function authorizeForRole(AppNotification $notification, ?string $dashboardKey = null): void
     {
-        $roleSlug = Auth::user()?->role?->slug;
+        $roleSlug = Auth::user()?->notificationRoleSlug($dashboardKey);
 
         abort_unless($roleSlug && $notification->role_slug === $roleSlug, 403);
     }

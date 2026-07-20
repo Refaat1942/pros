@@ -50,9 +50,41 @@ class NotificationSettingsTest extends TestCase
         $user = $this->userWithRole('reception');
 
         $this->actingAs($user)
-            ->getJson('/notifications/feed')
+            ->getJson('/notifications/feed?dashboard=reception')
             ->assertOk()
             ->assertJsonPath('reminder_minutes', 2)
             ->assertJsonPath('sound_enabled', true);
+    }
+
+    public function test_super_admin_feed_uses_dashboard_role_for_all_transfers(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        \App\Models\AppNotification::query()->create([
+            'role_slug' => 'spec',
+            'title' => '🔧 حالة جديدة — التوصيف',
+            'body' => 'المريض تجريبي — تم التحويل من الطبيب إلى التوصيف.',
+        ]);
+
+        \App\Models\AppNotification::query()->create([
+            'role_slug' => 'operations',
+            'title' => '🎯 حالة بانتظار التشغيل',
+            'body' => 'حالة أخرى.',
+        ]);
+
+        $this->actingAs($super)
+            ->getJson('/notifications/feed?dashboard=spec')
+            ->assertOk()
+            ->assertJsonPath('unread_count', 1);
+
+        $this->actingAs($super)
+            ->getJson('/notifications/feed?dashboard=operations')
+            ->assertOk()
+            ->assertJsonPath('unread_count', 1);
+
+        $this->actingAs($super)
+            ->getJson('/notifications/feed')
+            ->assertOk()
+            ->assertJsonPath('unread_count', 0);
     }
 }

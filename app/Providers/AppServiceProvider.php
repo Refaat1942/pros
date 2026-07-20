@@ -38,7 +38,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer(['partials.dashboard-sidebar', 'partials.dashboard-header-actions'], function ($view) {
             $dashboardKey = $view->getData()['dashboardKey'] ?? '';
-            $roleSlug = Auth::user()?->role?->slug;
+            $roleSlug = Auth::user()?->notificationRoleSlug($dashboardKey ?: null);
 
             $badges = $view->getData()['sidebarBadges'] ?? $view->getData()['headerBadges'] ?? [];
 

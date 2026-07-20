@@ -72,7 +72,8 @@
         $notifAlerts = app(\App\Services\SettingService::class)->notificationAlerts();
     @endphp
     <script>
-        window.__NOTIF_FEED_URL = "{{ route('notifications.feed') }}";
+        window.__NOTIF_DASHBOARD_KEY = @json($dashboardKey);
+        window.__NOTIF_FEED_URL = "{{ route('notifications.feed') }}?dashboard={{ urlencode($dashboardKey) }}";
         window.__NOTIF_SOUND_ENABLED = @json($notifAlerts['sound_enabled']);
         window.__NOTIF_REMINDER_MS = {{ max(1, (int) $notifAlerts['reminder_minutes']) * 60000 }};
     </script>

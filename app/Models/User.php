@@ -73,6 +73,29 @@ class User extends Authenticatable
     }
 
     /**
+     * الدور المستخدم لعرض/قراءة الإشعارات — على اللوحة الحالية وليس دور تسجيل الدخول فقط.
+     * (مهم للسوبر أدمن والأدمن عند التنقل بين الأقسام عبر شريط التنقل.)
+     */
+    public function notificationRoleSlug(?string $dashboardKey = null): ?string
+    {
+        $ownRole = $this->role?->slug;
+
+        if ($ownRole === null) {
+            return null;
+        }
+
+        if ($dashboardKey === null || $dashboardKey === '' || ! config("dashboards.{$dashboardKey}")) {
+            return $ownRole;
+        }
+
+        if ($this->isSuperAdmin() || ($this->isAdmin() && $this->canAccessDashboard($dashboardKey))) {
+            return $dashboardKey;
+        }
+
+        return $ownRole;
+    }
+
+    /**
      * هل يملك المستخدم الصلاحية التفصيلية (عبر دوره)؟
      */
     public function hasPermission(string $slug): bool

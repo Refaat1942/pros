@@ -65,7 +65,7 @@ class DashboardPageDataService
     public function resolve(string $dashboardKey, string $page): array
     {
         if ($page === 'notifications') {
-            return $this->notificationsInbox();
+            return $this->notificationsInbox($dashboardKey);
         }
 
         return match ("{$dashboardKey}.{$page}") {
@@ -1022,9 +1022,9 @@ class DashboardPageDataService
     /**
      * صفحة الإشعارات — أرشيف كامل مع pagination من السيرفر (بلا polling).
      */
-    private function notificationsInbox(): array
+    private function notificationsInbox(string $dashboardKey): array
     {
-        $roleSlug = auth()->user()?->role?->slug ?? '';
+        $roleSlug = auth()->user()?->notificationRoleSlug($dashboardKey) ?? '';
 
         if ($roleSlug !== '') {
             app(NotificationService::class)->markAllReadForRole($roleSlug);

@@ -46,6 +46,7 @@
                 @if ($items && $items->total() > 0)
                     <form method="POST" action="{{ route('notifications.read-all') }}" class="notif-mark-all-form">
                         @csrf
+                        <input type="hidden" name="dashboard" value="{{ $dashboardKey }}">
                         <button type="submit" class="notif-btn notif-btn-outline">✓ تعليم الكل كمقروء</button>
                     </form>
                 @endif
@@ -85,6 +86,7 @@
                             <form method="POST" action="{{ route('notifications.read', $notification) }}"
                                 class="notif-card-action">
                                 @csrf
+                                <input type="hidden" name="dashboard" value="{{ $dashboardKey }}">
                                 <button type="submit" class="notif-btn notif-btn-read">✓ مقروء</button>
                             </form>
                         @endunless

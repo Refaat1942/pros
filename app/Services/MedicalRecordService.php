@@ -79,6 +79,9 @@ class MedicalRecordService
 
             if ($record->case_id) {
                 $case = CaseRecord::findOrFail($record->case_id);
+                if (in_array($case->stage_key, [CaseRecord::STAGE_RECEPTION, CaseRecord::STAGE_EXAM], true)) {
+                    $this->caseService->advance($case, WorkflowEvent::ExamApproved->value);
+                }
             } else {
                 $case = $this->caseService->initiate($patient, $record);
                 $this->caseService->advance($case, WorkflowEvent::ExamApproved->value);
