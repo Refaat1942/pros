@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('spec_edit_requests', function (Blueprint $table) {
-            $table->json('before_snapshot')->nullable()->after('tech_notes');
+            $table->json('before_snapshot')->nullable()->after('proposed_tech_notes');
             $table->json('after_snapshot')->nullable()->after('before_snapshot');
         });
 
