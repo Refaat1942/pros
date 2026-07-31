@@ -64,9 +64,38 @@
         return searchUrl + sep + params.toString();
     }
 
+    function renderDiagram(diagram) {
+        if (!diagram || !diagram.length) {
+            return '';
+        }
+
+        var html = '<div class="assistant-flow" aria-label="مخطط">';
+        diagram.forEach(function (node, index) {
+            if (index > 0) {
+                html += '<div class="assistant-flow__arrow" aria-hidden="true">↓</div>';
+            }
+            html += '<div class="assistant-flow__node';
+            if (node.branch) {
+                html += ' assistant-flow__node--branch';
+            }
+            html += '">';
+            html += '<div class="assistant-flow__label">' + escapeHtml(node.label) + '</div>';
+            if (node.sub) {
+                html += '<div class="assistant-flow__sub">' + escapeHtml(node.sub) + '</div>';
+            }
+            if (node.branch) {
+                html += '<div class="assistant-flow__branch">' + escapeHtml(node.branch) + '</div>';
+            }
+            html += '</div>';
+        });
+        html += '</div>';
+
+        return html;
+    }
+
     function renderResults(results) {
         if (!results || !results.length) {
-            resultsBox.innerHTML = '<div class="assistant-empty">مفيش نتيجة مطابقة. جرّب كلمة تانية زي «طباعة» أو «صرف مواد» أو «عرض السعر».</div>';
+            resultsBox.innerHTML = '<div class="assistant-empty">مفيش نتيجة مطابقة. جرّب كلمة تانية زي «طباعة» أو «صرف مواد» أو «ارسم مسار الحالة».</div>';
             return;
         }
 
@@ -75,6 +104,9 @@
             html += '<div class="assistant-card">';
             html += '<div class="assistant-card__title">💡 ' + escapeHtml(item.title) + '</div>';
             html += '<div class="assistant-card__answer">' + escapeHtml(item.answer) + '</div>';
+            if (item.diagram && item.diagram.length) {
+                html += renderDiagram(item.diagram);
+            }
             if (item.steps && item.steps.length) {
                 html += '<ol class="assistant-card__steps">';
                 item.steps.forEach(function (step) {
@@ -145,10 +177,10 @@
                 '<button type="button" class="assistant-panel__close" aria-label="إغلاق">&times;</button>' +
             '</div>' +
             '<div class="assistant-panel__search">' +
-                '<input type="search" autocomplete="off" placeholder="اكتب سؤالك بالعامية… مثلاً: أطبع عرض السعر إزاي؟">' +
+                '<input type="search" autocomplete="off" placeholder="اكتب سؤالك بالعامية… مثلاً: أطبع عرض السعر إزاي؟ أو: ارسم مسار الحالة">' +
             '</div>' +
             '<div class="assistant-panel__body">' +
-                '<div class="assistant-hint">اسألني عن أي شاشة أو خطوة، وأنا أرشدك خطوة بخطوة.</div>' +
+                '<div class="assistant-hint">اسألني عن أي شاشة أو خطوة. لو عايز رسم توضيحي، اكتب «بالرسم» أو «ارسم».</div>' +
                 '<div class="assistant-results"></div>' +
             '</div>';
 

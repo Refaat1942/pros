@@ -13,6 +13,55 @@ class AssistantService
     /** @var array<int, array<string, mixed>>|null */
     private ?array $knowledge = null;
 
+    /** @var list<string> */
+    private const DIAGRAM_QUERY_TOKENS = [
+        'رسم', 'ارسم', 'بالرسم', 'مخطط', 'diagram', 'flow', 'flowchart',
+        'chart', 'خريطه', 'خريطة', 'مسار مرسوم', 'flow chart',
+    ];
+
+    public function __construct(
+        private readonly AssistantCatalogService $catalog,
+    ) {}
+
+    /**
+     * مخطط مسار الحالة الافتراضي — يُعرض عند طلب «بالرسم».
+     *
+     * @return list<array{label: string, sub?: string, branch?: string}>
+     */
+    public static function defaultWorkflowDiagram(): array
+    {
+        return [
+            ['label' => 'استقبال', 'sub' => 'تسجيل + QR'],
+            ['label' => 'طبيب', 'sub' => 'كشف'],
+            ['label' => 'توصيف', 'sub' => 'أكواد'],
+            ['label' => 'معدلات', 'sub' => 'تجربة'],
+            ['label' => 'تكاليف', 'sub' => 'تسعير'],
+            ['label' => 'عرض سعر', 'sub' => 'مدني', 'branch' => 'مدني'],
+            ['label' => 'موافقة جهة', 'sub' => 'خطاب', 'branch' => 'مدني'],
+            ['label' => 'تشغيل', 'sub' => 'أمر شغل'],
+            ['label' => 'مخزن', 'sub' => 'باركود'],
+            ['label' => 'ورشة', 'sub' => 'تصنيع'],
+            ['label' => 'تسليم', 'sub' => 'QR + إغلاق'],
+        ];
+    }
+
+    /**
+     * مخطط مسار عسكري مبسّط.
+     *
+     * @return list<array{label: string, sub?: string}>
+     */
+    public static function militaryWorkflowDiagram(): array
+    {
+        return [
+            ['label' => 'استقبال', 'sub' => 'عسكري'],
+            ['label' => 'طبيب', 'sub' => 'كشف'],
+            ['label' => 'توصيف → معدلات → تكاليف', 'sub' => 'بدون عرض سعر'],
+            ['label' => 'تصديق خدمات', 'sub' => 'ضباط/عائلات'],
+            ['label' => 'تشغيل', 'sub' => 'أمر شغل'],
+            ['label' => 'مخزن → ورشة → تسليم', 'sub' => 'تكلفة سيادية'],
+        ];
+    }
+
     /**
      * اقتراحات سياقية للوحة/الصفحة الحالية + مقدمة عامة.
      *
@@ -34,7 +83,10 @@ class AssistantService
 
         $merged = $this->uniqueEntries(array_merge($contextual, $general));
 
-        return array_map([$this, 'present'], array_slice($merged, 0, $limit));
+        return array_map(
+            fn (array $entry) => $this->present($entry, false, null),
+            array_slice($merged, 0, $limit)
+        );
     }
 
     /**
@@ -60,16 +112,25 @@ class AssistantService
         }
 
         $scored = [];
+        $wantsDiagram = $this->wantsDiagram($normalizedQuery, $tokens);
 
         foreach ($this->accessibleEntries($user) as $index => $entry) {
             $score = $this->scoreEntry($entry, $normalizedQuery, $tokens);
 
-            if ($score <= 0) {
+            if ($score <= 0 && ! $wantsDiagram) {
                 continue;
+            }
+
+            if ($wantsDiagram && ! empty($entry['diagram'])) {
+                $score += 8;
             }
 
             if ($this->matchesContext($entry, $dashboard, $page)) {
                 $score += 3;
+            }
+
+            if ($score <= 0) {
+                continue;
             }
 
             $scored[] = ['score' => $score, 'order' => $index, 'entry' => $entry];
@@ -80,9 +141,13 @@ class AssistantService
         });
 
         $results = array_map(
-            fn (array $row) => $this->present($row['entry']),
+            fn (array $row) => $this->present($row['entry'], $wantsDiagram, $normalizedQuery),
             array_slice($scored, 0, $limit)
         );
+
+        if ($results === [] && $wantsDiagram) {
+            return [$this->presentDiagramFallback($normalizedQuery)];
+        }
 
         return array_values($results);
     }
@@ -206,15 +271,87 @@ class AssistantService
     /**
      * @return array<string, mixed>
      */
-    private function present(array $entry): array
+    private function present(array $entry, bool $wantsDiagram = false, ?string $normalizedQuery = null): array
     {
+        $diagram = $entry['diagram'] ?? null;
+
+        if ($wantsDiagram && empty($diagram)) {
+            if ($this->isMilitaryQuery($normalizedQuery)) {
+                $diagram = self::militaryWorkflowDiagram();
+            } elseif ($this->isWorkflowEntry($entry)) {
+                $diagram = self::defaultWorkflowDiagram();
+            }
+        }
+
         return [
             'title' => $entry['title'] ?? '',
             'answer' => $entry['answer'] ?? '',
             'steps' => array_values($entry['steps'] ?? []),
+            'diagram' => is_array($diagram) ? array_values($diagram) : null,
             'dashboard' => $entry['dashboard'] ?? '*',
             'page' => $entry['page'] ?? '*',
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function presentDiagramFallback(?string $normalizedQuery): array
+    {
+        $military = $this->isMilitaryQuery($normalizedQuery);
+
+        return [
+            'title' => $military ? 'مخطط المسار العسكري' : 'مخطط مسار الحالة (مدني)',
+            'answer' => $military
+                ? 'ده مخطط مبسّط للمسار العسكري — من التسجيل لحد التسليم بدون عرض سعر مدني.'
+                : 'ده مخطط مبسّط لمسار الحالة المدنية — من الاستقبال لحد التسليم.',
+            'steps' => [],
+            'diagram' => $military ? self::militaryWorkflowDiagram() : self::defaultWorkflowDiagram(),
+            'dashboard' => '*',
+            'page' => '*',
+        ];
+    }
+
+    private function wantsDiagram(string $normalizedQuery, array $tokens): bool
+    {
+        foreach (self::DIAGRAM_QUERY_TOKENS as $token) {
+            if (str_contains($normalizedQuery, $this->normalize($token))) {
+                return true;
+            }
+        }
+
+        foreach ($tokens as $token) {
+            if (in_array($token, ['رسم', 'ارسم', 'مخطط', 'diagram', 'flow', 'chart'], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isMilitaryQuery(?string $normalizedQuery): bool
+    {
+        if ($normalizedQuery === null || $normalizedQuery === '') {
+            return false;
+        }
+
+        foreach (['عسكري', 'عسكريه', 'جيش', 'ضابط', 'ضباط', 'services'] as $token) {
+            if (str_contains($normalizedQuery, $this->normalize($token))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isWorkflowEntry(array $entry): bool
+    {
+        $keywords = $entry['keywords'] ?? [];
+
+        return in_array('workflow', $keywords, true)
+            || in_array('مسار', $keywords, true)
+            || ($entry['dashboard'] ?? '') === '*'
+            && str_contains($this->normalize($entry['title'] ?? ''), 'تمشي');
     }
 
     /**
@@ -225,10 +362,42 @@ class AssistantService
         if ($this->knowledge === null) {
             $path = resource_path('assistant/knowledge.php');
             $data = is_file($path) ? require $path : [];
-            $this->knowledge = is_array($data) ? $data : [];
+            $static = is_array($data) ? $data : [];
+            $this->knowledge = $this->mergeKnowledge($static, $this->catalog->pageEntries());
         }
 
         return $this->knowledge;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $static
+     * @param  list<array<string, mixed>>  $catalog
+     * @return list<array<string, mixed>>
+     */
+    private function mergeKnowledge(array $static, array $catalog): array
+    {
+        $keys = [];
+        foreach ($static as $entry) {
+            $keys[$this->entryKey($entry)] = true;
+        }
+
+        $merged = $static;
+
+        foreach ($catalog as $entry) {
+            $key = $this->entryKey($entry);
+            if (isset($keys[$key])) {
+                continue;
+            }
+            $keys[$key] = true;
+            $merged[] = $entry;
+        }
+
+        return $merged;
+    }
+
+    private function entryKey(array $entry): string
+    {
+        return ($entry['dashboard'] ?? '*').'|'.($entry['page'] ?? '*').'|'.($entry['title'] ?? '');
     }
 
     private function normalize(string $value): string

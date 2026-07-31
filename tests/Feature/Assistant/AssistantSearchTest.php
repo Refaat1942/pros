@@ -77,4 +77,49 @@ class AssistantSearchTest extends TestCase
         $response->assertOk();
         $this->assertNotEmpty($response->json('results'));
     }
+
+    public function test_diagram_returned_when_user_asks_for_drawing(): void
+    {
+        $user = $this->userWithRole('reception');
+
+        $response = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('ارسم مسار الحالة')
+        );
+
+        $response->assertOk();
+        $results = $response->json('results');
+
+        $this->assertNotEmpty($results);
+        $this->assertNotNull($results[0]['diagram'] ?? null);
+        $this->assertNotEmpty($results[0]['diagram']);
+    }
+
+    public function test_military_diagram_when_query_mentions_military(): void
+    {
+        $user = $this->userWithRole('admin');
+
+        $response = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('مخطط المسار العسكري')
+        );
+
+        $response->assertOk();
+        $results = $response->json('results');
+
+        $this->assertNotEmpty($results);
+        $diagram = $results[0]['diagram'] ?? [];
+        $labels = implode(' ', array_column($diagram, 'label'));
+        $this->assertStringContainsString('تصديق', $labels);
+    }
+
+    public function test_catalog_fills_pages_without_static_knowledge(): void
+    {
+        $user = $this->userWithRole('admin');
+
+        $response = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('الموردون')
+        );
+
+        $response->assertOk();
+        $this->assertNotEmpty($response->json('results'));
+    }
 }
