@@ -228,11 +228,27 @@ class StockCatalogController extends Controller
     /**
      * إعدادات الطباعة القابلة للضبط (بالمليمتر إلا حيث يُذكر).
      *
-     * @return array{page_margin:float, gap:float, module_width:float, barcode_height:int, offset_x:float, offset_y:float, copies:int, label_width_in:float, label_height_in:float}
+     * @return array{
+     *     page_margin:float, gap:float, module_width:float, barcode_height:int,
+     *     offset_x:float, offset_y:float, copies:int,
+     *     label_width_mm:float, label_height_mm:float,
+     *     margin_left_mm:float, margin_top_mm:float,
+     *     label_width_in:float, label_height_in:float,
+     *     field_help: array<string, string>
+     * }
      */
     private function labelSettings(Request $request): array
     {
         $defaults = config('label-print', []);
+
+        $widthMm = max(10.0, round((float) $request->query(
+            'label_width_mm',
+            (string) ($defaults['label_width_mm'] ?? 104),
+        ), 2));
+        $heightMm = max(10.0, round((float) $request->query(
+            'label_height_mm',
+            (string) ($defaults['label_height_mm'] ?? 51),
+        ), 2));
 
         return [
             'page_margin' => round((float) $request->query('page_margin', '0'), 2),
@@ -242,15 +258,19 @@ class StockCatalogController extends Controller
             'offset_x' => round((float) $request->query('offset_x', '0'), 2),
             'offset_y' => round((float) $request->query('offset_y', '0'), 2),
             'copies' => max(1, min(200, (int) $request->integer('copies', 1))),
-            'label_width_in' => max(0.5, round((float) $request->query(
-                'label_width_in',
-                (string) ($defaults['label_width_in'] ?? 4.098),
-            ), 3)),
-            'label_height_in' => max(0.5, round((float) $request->query(
-                'label_height_in',
-                (string) ($defaults['label_height_in'] ?? 2.0),
-            ), 3)),
-            'printer_hint' => (string) ($defaults['printer_hint'] ?? ''),
+            'label_width_mm' => $widthMm,
+            'label_height_mm' => $heightMm,
+            'margin_left_mm' => round((float) $request->query(
+                'margin_left_mm',
+                (string) ($defaults['margin_left_mm'] ?? 0),
+            ), 2),
+            'margin_top_mm' => round((float) $request->query(
+                'margin_top_mm',
+                (string) ($defaults['margin_top_mm'] ?? 0),
+            ), 2),
+            'label_width_in' => round($widthMm / 25.4, 3),
+            'label_height_in' => round($heightMm / 25.4, 3),
+            'field_help' => (array) ($defaults['field_help'] ?? []),
         ];
     }
 

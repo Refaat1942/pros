@@ -1,17 +1,27 @@
 <?php
 
 /**
- * إعدادات ملصق الباركود — متزامنة مع ZDesigner ZD220-203dpi ZPL.
+ * إعدادات ملصق الباركود — عامة لأي طابعة حرارية أو عادية.
  *
- * Page Setup (Printing Preferences):
- * - Custom width × height
- * - Media: Labels with gaps
- * - Rotation: 0° Portrait
- * - Mark offset: 0
+ * اضبط width/height ليطابقا «Page Setup» في driver الطابعة (Custom size).
+ * استخدم margin_left / margin_top لمعايرة موضع الطباعة على الملصق.
  */
 return [
-    'label_width_in' => 4.098,
-    'label_height_in' => 2.0,
-    'rotation_deg' => 0,
-    'printer_hint' => 'ZDesigner ZD220 — Custom 4.098" × 2" · Portrait 0° · Labels with gaps',
+    'label_width_mm' => 104,
+    'label_height_mm' => 51,
+    'margin_left_mm' => 0,
+    'margin_top_mm' => 0,
+    'field_help' => [
+        'copies' => 'عدد الملصقات المطبوعة لكل صنف.',
+        'label_width_mm' => 'عرض الملصق بالمليمتر — نفس «Width» في إعدادات الطابعة (Custom).',
+        'label_height_mm' => 'ارتفاع الملصق بالمليمتر — نفس «Height» في إعدادات الطابعة.',
+        'margin_left_mm' => 'إزاحة الملصق يساراً على الورقة — لضبط موضع الطباعة على أي طابعة.',
+        'margin_top_mm' => 'إزاحة الملصق للأسفل — إذا كان الباركود طالع فوق أو تحت المطلوب.',
+        'page_margin' => 'هامش حول المعاينة على الشاشة فقط (لا يؤثر على الطباعة).',
+        'gap' => 'المسافة بين ملصقين متتاليين عند طباعة أكثر من نسخة.',
+        'module_width' => 'سُمك خطوط الباركود — أكبر = باركود أعرض (0.5–3).',
+        'barcode_height' => 'ارتفاع صورة الباركود بالبكسل داخل الملصق.',
+        'offset_x' => 'تحريك المحتوى يميناً/يساراً داخل الملصق (مم).',
+        'offset_y' => 'تحريك المحتوى لأعلى/أسفل داخل الملصق (مم).',
+    ],
 ];
