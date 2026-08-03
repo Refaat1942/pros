@@ -196,7 +196,7 @@ class StockCatalogController extends Controller
         $settings = $this->labelSettings($request);
 
         return response()->view('admin.print.barcode-labels', [
-            'labels' => $this->buildLabels([$stockItem], $copies, $settings['module_width'], $settings['barcode_height']),
+            'labels' => $this->buildLabels([$stockItem], $copies, $settings),
             'settings' => $settings,
             'heading' => $stockItem->name,
         ]);
@@ -219,7 +219,7 @@ class StockCatalogController extends Controller
         $settings = $this->labelSettings($request);
 
         return response()->view('admin.print.barcode-labels', [
-            'labels' => $this->buildLabels($items->all(), $copies, $settings['module_width'], $settings['barcode_height']),
+            'labels' => $this->buildLabels($items->all(), $copies, $settings),
             'settings' => $settings,
             'heading' => $items->count().' صنف',
         ]);
@@ -234,6 +234,7 @@ class StockCatalogController extends Controller
      *     label_width_mm:float, label_height_mm:float,
      *     margin_left_mm:float, margin_top_mm:float,
      *     label_width_in:float, label_height_in:float,
+     *     barcode_width_pct:float, barcode_height_pct:float,
      *     field_help: array<string, string>
      * }
      */
@@ -253,8 +254,16 @@ class StockCatalogController extends Controller
         return [
             'page_margin' => round((float) $request->query('page_margin', '0'), 2),
             'gap' => round((float) $request->query('gap', '0'), 2),
-            'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '1.1'), 2))),
-            'barcode_height' => max(20, min(80, (int) $request->integer('barcode_height', 38))),
+            'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '0.9'), 2))),
+            'barcode_height' => max(20, min(80, (int) $request->integer('barcode_height', 32))),
+            'barcode_width_pct' => max(20.0, min(95.0, round((float) $request->query(
+                'barcode_width_pct',
+                (string) ($defaults['barcode_width_pct'] ?? 60),
+            ), 1))),
+            'barcode_height_pct' => max(15.0, min(70.0, round((float) $request->query(
+                'barcode_height_pct',
+                (string) ($defaults['barcode_height_pct'] ?? 35),
+            ), 1))),
             'offset_x' => round((float) $request->query('offset_x', '0'), 2),
             'offset_y' => round((float) $request->query('offset_y', '0'), 2),
             'copies' => max(1, min(200, (int) $request->integer('copies', 1))),
@@ -275,17 +284,30 @@ class StockCatalogController extends Controller
     }
 
     /**
-     * يبني قائمة الملصقات (اسم + باركود + SVG) مع تكرار النسخ.
-     *
      * @param  list<StockItem>  $items
+     * @param  array<string, mixed>  $settings
      * @return list<array{name:string, barcode:string, svg:string, svg_data_uri:string}>
      */
-    private function buildLabels(array $items, int $copies, float $moduleWidth, int $height): array
+    private function buildLabels(array $items, int $copies, array $settings): array
     {
         $labels = [];
+        $moduleWidth = (float) ($settings['module_width'] ?? 0.9);
+        $widthPct = (float) ($settings['barcode_width_pct'] ?? 60);
+        $heightPct = (float) ($settings['barcode_height_pct'] ?? 35);
+        $labelWidthMm = (float) ($settings['label_width_mm'] ?? 104);
+        $labelHeightMm = (float) ($settings['label_height_mm'] ?? 51);
+        $dpi = 203;
+        $maxWidthPx = ($labelWidthMm * ($widthPct / 100)) * ($dpi / 25.4);
+        $maxHeightPx = (int) round(($labelHeightMm * ($heightPct / 100)) * ($dpi / 25.4));
+        $barcodeHeight = min((int) ($settings['barcode_height'] ?? 32), max(20, $maxHeightPx));
 
         foreach ($items as $item) {
-            $svg = Code128::svg((string) $item->barcode, height: $height, moduleWidth: $moduleWidth);
+            $svg = Code128::svgFit(
+                (string) $item->barcode,
+                height: $barcodeHeight,
+                moduleWidth: $moduleWidth,
+                maxWidthPx: $maxWidthPx,
+            );
             $dataUri = 'data:image/svg+xml;base64,'.base64_encode($svg);
             for ($i = 0; $i < $copies; $i++) {
                 $labels[] = [

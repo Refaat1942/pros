@@ -15,6 +15,8 @@
             --gap: {{ $settings['gap'] }}mm;
             --offset-x: {{ $settings['offset_x'] }}mm;
             --offset-y: {{ $settings['offset_y'] }}mm;
+            --barcode-width-pct: {{ $settings['barcode_width_pct'] }};
+            --barcode-height-pct: {{ $settings['barcode_height_pct'] }};
         }
 
         @media print {
@@ -69,6 +71,16 @@
                     <label>ارتفاع الباركود (بكسل)</label>
                     <input type="number" name="barcode_height" step="1" min="20" max="80" value="{{ $settings['barcode_height'] }}">
                     <span class="field-help">{{ $settings['field_help']['barcode_height'] ?? '' }}</span>
+                </div>
+                <div>
+                    <label>عرض الباركود (% من الملصق)</label>
+                    <input type="number" name="barcode_width_pct" step="1" min="20" max="95" value="{{ $settings['barcode_width_pct'] }}">
+                    <span class="field-help">{{ $settings['field_help']['barcode_width_pct'] ?? '' }}</span>
+                </div>
+                <div>
+                    <label>ارتفاع الباركود (% من الملصق)</label>
+                    <input type="number" name="barcode_height_pct" step="1" min="15" max="70" value="{{ $settings['barcode_height_pct'] }}">
+                    <span class="field-help">{{ $settings['field_help']['barcode_height_pct'] ?? '' }}</span>
                 </div>
                 <div>
                     <label>إزاحة المحتوى X (مم)</label>

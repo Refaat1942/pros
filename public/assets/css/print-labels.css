@@ -383,10 +383,11 @@ body.labels-body {
 }
 
 .label .barcode {
-    width: calc(var(--label-width) - 4mm);
-    height: calc(var(--label-height) - 14mm);
-    flex: 1 1 auto;
-    min-height: 10mm;
+    width: calc(var(--label-width) * var(--barcode-width-pct) / 100);
+    max-width: calc(var(--label-width) * var(--barcode-width-pct) / 100);
+    height: auto;
+    max-height: calc(var(--label-height) * var(--barcode-height-pct) / 100);
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -395,9 +396,9 @@ body.labels-body {
 .label .barcode-img {
     display: block;
     width: 100%;
-    height: 100%;
-    max-width: calc(var(--label-width) - 4mm);
-    max-height: calc(var(--label-height) - 14mm);
+    height: auto;
+    max-width: 100%;
+    max-height: calc(var(--label-height) * var(--barcode-height-pct) / 100);
     object-fit: contain;
     image-rendering: pixelated;
     image-rendering: crisp-edges;

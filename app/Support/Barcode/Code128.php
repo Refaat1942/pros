@@ -37,6 +37,44 @@ final class Code128
      */
     public static function svg(string $data, int $height = 50, float $moduleWidth = 1.4, int $quietZone = 10): string
     {
+        return self::renderSvg($data, $height, $moduleWidth, $quietZone);
+    }
+
+    /**
+     * يولّد SVG لا يتجاوز عرضاً أقصى (بكسل) — يُصغّر moduleWidth تلقائياً.
+     */
+    public static function svgFit(
+        string $data,
+        int $height,
+        float $moduleWidth,
+        float $maxWidthPx,
+        int $quietZone = 10,
+    ): string {
+        $width = max(20.0, $moduleWidth);
+
+        while ($width >= 0.5) {
+            if (self::estimatedWidthPx($data, $width, $quietZone) <= $maxWidthPx) {
+                return self::renderSvg($data, $height, $width, $quietZone);
+            }
+            $width = round($width - 0.05, 2);
+        }
+
+        return self::renderSvg($data, $height, 0.5, $quietZone);
+    }
+
+    private static function estimatedWidthPx(string $data, float $moduleWidth, int $quietZone): float
+    {
+        $modules = self::modules($data);
+        $unitCount = 0;
+        foreach ($modules as [$moduleUnits]) {
+            $unitCount += $moduleUnits;
+        }
+
+        return ($unitCount + ($quietZone * 2)) * $moduleWidth;
+    }
+
+    private static function renderSvg(string $data, int $height, float $moduleWidth, int $quietZone): string
+    {
         $modules = self::modules($data);
 
         $unitCount = 0;
