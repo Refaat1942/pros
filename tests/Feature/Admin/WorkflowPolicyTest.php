@@ -43,27 +43,27 @@ class WorkflowPolicyTest extends TestCase
         ]);
     }
 
-    public function test_locked_stages_cannot_be_marked_optional(): void
+    public function test_admin_can_mark_any_stage_optional(): void
     {
         $service = app(WorkflowPolicyService::class);
 
         $service->savePolicies(WorkflowStagePolicy::PATHWAY_CIVILIAN, [
             [
-                'stage_key' => CaseRecord::STAGE_QUOTE,
-                'label' => 'عرض',
-                'sort' => 6,
+                'stage_key' => CaseRecord::STAGE_COST_CALC,
+                'label' => 'تكاليف',
+                'sort' => 5,
                 'required' => false,
                 'auto_skip' => true,
                 'skip_roles' => ['admin'],
             ],
         ]);
 
-        $policies = $service->policies(WorkflowStagePolicy::PATHWAY_CIVILIAN);
-        $quote = collect($policies)->firstWhere('stage_key', CaseRecord::STAGE_QUOTE);
-
-        $this->assertTrue($quote['required']);
-        $this->assertFalse($quote['auto_skip']);
-        $this->assertTrue($quote['locked']);
+        $this->assertDatabaseHas('pathway_steps', [
+            'pathway' => PathwayStep::PATHWAY_CIVILIAN,
+            'key' => 'cost_calc',
+            'required' => false,
+            'auto_skip' => true,
+        ]);
     }
 
     public function test_military_auto_skip_adjustments_after_spec_saved(): void

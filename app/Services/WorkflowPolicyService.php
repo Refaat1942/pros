@@ -48,7 +48,7 @@ class WorkflowPolicyService
                     'required' => $step['required'],
                     'auto_skip' => $step['auto_skip'],
                     'skip_roles' => $step['skip_roles'],
-                    'locked' => $step['locked'],
+                    'locked' => false,
                     'description' => $step['action_summary'],
                 ];
             }, $this->pathway->steps($pathway)),
@@ -58,12 +58,11 @@ class WorkflowPolicyService
 
     public function shouldAutoSkip(CaseRecord $case): bool
     {
-        $pathway = $this->pathwayForCase($case);
-        $policy = $this->pathway->policyForStage($pathway, (string) $case->stage_key);
+        $step = $this->pathway->currentStepForCase($case);
 
-        return $policy !== null
-            && ! $policy['required']
-            && $policy['auto_skip'];
+        return $step !== null
+            && ! ($step['required'] ?? true)
+            && ($step['auto_skip'] ?? false);
     }
 
     public function canManualSkip(CaseRecord $case, string $stageKey, ?User $user = null): bool
@@ -72,26 +71,42 @@ class WorkflowPolicyService
             return false;
         }
 
-        return $this->roleMaySkipStage($this->pathwayForCase($case), $stageKey, $user);
+        $step = $this->pathway->currentStepForCase($case);
+
+        if ($step === null || ($step['required'] ?? true)) {
+            return false;
+        }
+
+        return $this->roleMaySkipStep($step, $user, $stageKey);
     }
 
     public function canSkipStageForPathway(string $pathway, string $stageKey, ?User $user = null): bool
     {
-        $policy = $this->pathway->policyForStage($pathway, $stageKey);
+        foreach ($this->pathway->steps($pathway) as $step) {
+            if (! in_array($stageKey, $step['stage_keys'] ?? [], true)) {
+                continue;
+            }
 
-        if ($policy === null || $policy['required'] || $policy['locked']) {
-            return false;
+            if ($step['required'] ?? true) {
+                return false;
+            }
+
+            return $this->roleMaySkipStep($step, $user, $stageKey);
         }
 
-        return $this->roleMaySkipStage($pathway, $stageKey, $user);
+        return false;
     }
 
     /** @return list<string> */
     public function skippableStageKeys(string $pathway): array
     {
-        return array_values(array_map(
-            fn (array $p) => $p['stage_key'],
-            array_filter($this->policies($pathway), fn (array $p) => ! $p['required'] && ! $p['locked']),
+        return array_values(array_filter(
+            array_map(function (array $step) {
+                $stageKey = ($step['stage_keys'] ?? [])[0] ?? null;
+
+                return ($step['required'] ?? true) ? null : $stageKey;
+            }, $this->pathway->steps($pathway)),
+            fn ($stageKey) => is_string($stageKey) && $stageKey !== '',
         ));
     }
 
@@ -140,14 +155,8 @@ class WorkflowPolicyService
             && $case->stage_key === CaseRecord::STAGE_RECEPTION;
     }
 
-    private function roleMaySkipStage(string $pathway, string $stageKey, ?User $user): bool
+    private function roleMaySkipStep(array $step, ?User $user, string $stageKey): bool
     {
-        $policy = $this->pathway->policyForStage($pathway, $stageKey);
-
-        if ($policy === null || $policy['required'] || $policy['locked']) {
-            return false;
-        }
-
         if ($user === null) {
             return false;
         }
@@ -157,8 +166,9 @@ class WorkflowPolicyService
         }
 
         $roleSlug = $user->role?->slug;
+        $skipRoles = $step['skip_roles'] ?? [];
 
-        if ($roleSlug && in_array($roleSlug, $policy['skip_roles'], true)) {
+        if ($roleSlug && in_array($roleSlug, $skipRoles, true)) {
             return true;
         }
 

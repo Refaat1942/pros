@@ -94,9 +94,9 @@
     }
 
     function skipBadges(st) {
-        if (!st || st.locked) return '';
+        if (!st) return '';
         var html = '';
-        if (st.required === false) {
+        if (isStepOptional(st)) {
             html += '<span class="pathway-matrix__badge pathway-matrix__badge--optional">⏭️ قابل للتخطي</span>';
         }
         if (st.auto_skip) {
@@ -105,12 +105,8 @@
         return html;
     }
 
-    function isSharedRow(rowIdx) {
-        return rowIdx < 5 && labelsMatchAcrossRow(rowIdx);
-    }
-
     function syncSharedRowField(rowIdx, field, value) {
-        if (!isSharedRow(rowIdx)) return;
+        if (rowIdx >= 5) return;
         pathwayOrder.forEach(function (pk) {
             if (state[pk][rowIdx]) {
                 state[pk][rowIdx][field] = value;
@@ -118,12 +114,68 @@
         });
     }
 
-    function refreshViews(opts) {
-        opts = opts || {};
-        if (opts.matrix !== false) renderMatrix();
-        if (opts.flow !== false) renderFlowMap(state[activePathway]);
-        if (opts.hint !== false) updateHint();
-        if (opts.editor === true) renderEditor();
+    function isStepOptional(step) {
+        return step && step.required === false;
+    }
+
+    function patchMatrixCell(pathway, rowIdx) {
+        var step = state[pathway] && state[pathway][rowIdx];
+        if (!step) return;
+
+        var shared = rowIdx < 5 && labelsMatchAcrossRow(rowIdx);
+        var btn;
+
+        if (shared) {
+            btn = document.querySelector('[data-shared-row="' + rowIdx + '"]');
+        } else {
+            btn = document.querySelector('[data-pathway="' + pathway + '"][data-idx="' + rowIdx + '"]');
+        }
+
+        if (!btn) {
+            renderMatrix();
+            return;
+        }
+
+        var selected = pathway === activePathway && activeStepIdx === rowIdx;
+        var cls = 'pathway-matrix__btn'
+            + (shared ? ' pathway-matrix__btn--shared' : '')
+            + (selected ? ' is-selected' : '');
+
+        btn.className = cls;
+        btn.innerHTML = esc(step.label)
+            + '<span class="pathway-matrix__btn-sub">' + esc(shared ? 'مشترك — يُحدَّث في الجدول فوراً' : deptLabel(step.owner_department)) + '</span>'
+            + skipBadges(step);
+    }
+
+    function patchMatrixRow(rowIdx) {
+        if (rowIdx < 5 && labelsMatchAcrossRow(rowIdx)) {
+            patchMatrixCell('civilian', rowIdx);
+            return;
+        }
+        pathwayOrder.forEach(function (pk) {
+            patchMatrixCell(pk, rowIdx);
+        });
+    }
+
+    function updateNextStepSelect() {
+        if (activeStepIdx === null) return;
+        var editor = document.getElementById('pathwayStepEditor');
+        var step = state[activePathway][activeStepIdx];
+        var sel = editor && editor.querySelector('[data-f="next_step_key"]');
+        if (!sel || !step) return;
+        var current = sel.value;
+        sel.innerHTML = nextStepOptions(state[activePathway], activeStepIdx, step.next_step_key);
+        sel.value = step.next_step_key || current;
+    }
+
+    function refreshAfterEdit(field) {
+        syncAllPathways();
+        renderMatrix();
+        renderFlowMap(state[activePathway]);
+        updateHint();
+        updateEditorLiveFields();
+        if (field === 'next_step_key') updateNextStepSelect();
+        if (field === 'required' || field === 'auto_skip') updateSkipControls();
     }
 
     function updateEditorLiveFields() {
@@ -300,7 +352,6 @@
         var step = list[activeStepIdx];
         var idx = activeStepIdx;
         step.sort = idx + 1;
-        var locked = !!step.locked;
         var handlers = step.handlers || {};
         var handlerHtml = '';
         var relHandlers = relevantHandlers(step);
@@ -320,11 +371,9 @@
             return '<label><input type="checkbox" data-role="' + esc(r.value) + '"' + checked + '> ' + esc(r.label) + '</label>';
         }).join('');
 
-        var skipBlock = '';
-        if (step.can_skip !== false && !locked) {
-            skipBlock = '<div class="pf-skip-row">'
-                + '<p class="pf-skip-title">⏭️ تخطي هذه الخطوة — للحالات الخاصة</p>'
-                + '<p class="pf-skip-desc">فعّل التخطي عندما تختلف الحالة (مثلاً: بدون كشف، بدون معدلات، تخطي الخزنة للعسكري).</p>'
+        var skipBlock = '<div class="pf-skip-row">'
+                + '<p class="pf-skip-title">⏭️ تخطي هذه الخطوة — أنت تختار</p>'
+                + '<p class="pf-skip-desc">كل خطوة في المسار يمكن جعلها إلزامية أو اختيارية — للحالات المختلفة (بدون كشف، بدون معدلات، تخطي الخزنة، …).</p>'
                 + '<label class="pf-field"><span>هل الخطوة إلزامية؟</span><select data-f="required">'
                 + '<option value="1"' + (step.required !== false ? ' selected' : '') + '>نعم — إلزامية (لا تُتخطى)</option>'
                 + '<option value="0"' + (step.required === false ? ' selected' : '') + '>لا — اختيارية (يمكن تخطيها)</option>'
@@ -335,14 +384,11 @@
                 + '</select></label>'
                 + '<div class="pf-skip-roles"><p class="pf-skip-roles-label">من يستطيع التخطي يدوياً؟</p>' + roleChecks + '</div>'
                 + '</div>';
-        } else if (locked && step.lock_reason) {
-            skipBlock = '<p class="pf-lock-note">🔒 ' + esc(step.lock_reason) + '</p>';
-        }
 
         var meta = pathwayMeta[activePathway] || { label: activePathway, icon: '' };
 
         editor.innerHTML = ''
-            + '<article class="pf-card' + (locked ? ' pf-card--locked' : '') + '">'
+            + '<article class="pf-card">'
             + '<div class="pf-card-head">'
             + '  <div class="pf-num">' + step.sort + '</div>'
             + '  <div class="pf-head-text">'
@@ -359,8 +405,6 @@
             + handlerHtml
             + skipBlock
             + '</article>';
-
-        bindEditorEvents();
     }
 
     function applyField(field, value) {
@@ -382,19 +426,15 @@
             syncSharedRowField(activeStepIdx, field, value);
         }
 
-        if (field === 'label' || field === 'action_summary') {
-            refreshViews({ editor: false });
-            updateEditorLiveFields();
-            return;
-        }
+        refreshAfterEdit(field);
+    }
 
-        if (field === 'required' || field === 'auto_skip') {
-            refreshViews({ editor: false });
-            updateSkipControls();
-            return;
-        }
-
-        refreshViews({ editor: field === 'next_step_key' });
+    function refreshViews(opts) {
+        opts = opts || {};
+        if (opts.matrix !== false) renderMatrix();
+        if (opts.flow !== false) renderFlowMap(state[activePathway]);
+        if (opts.hint !== false) updateHint();
+        if (opts.editor === true) renderEditor();
     }
 
     function bindEditorEvents() {
@@ -417,18 +457,19 @@
             if (t.hasAttribute('data-h') && activeStepIdx !== null) {
                 state[activePathway][activeStepIdx].handlers = state[activePathway][activeStepIdx].handlers || {};
                 state[activePathway][activeStepIdx].handlers[t.getAttribute('data-h')] = t.value;
-                refreshViews({ editor: false });
-                updateEditorLiveFields();
+                refreshAfterEdit('owner_department');
             }
             if (t.hasAttribute('data-role') && activeStepIdx !== null) {
                 var roles = state[activePathway][activeStepIdx].skip_roles || [];
                 if (t.checked && roles.indexOf(t.getAttribute('data-role')) < 0) roles.push(t.getAttribute('data-role'));
                 if (!t.checked) roles = roles.filter(function (r) { return r !== t.getAttribute('data-role'); });
                 state[activePathway][activeStepIdx].skip_roles = roles;
-                refreshViews({ editor: false });
+                refreshAfterEdit('skip_roles');
             }
         });
     }
+
+    bindEditorEvents();
 
     function render() {
         refreshViews({ editor: activeStepIdx !== null });
@@ -459,7 +500,6 @@
                 return;
             }
             state[activePathway] = res.data.steps || state[activePathway];
-            document.getElementById('pathwayStepEditor').dataset.bound = '';
             render();
             alert(res.data.message || 'تم الحفظ');
         });
@@ -478,7 +518,6 @@
             });
         });
         chain.then(function () {
-            document.getElementById('pathwayStepEditor').dataset.bound = '';
             render();
             alert('تم حفظ المسارات الثلاثة.');
         }).catch(function (e) {
@@ -490,7 +529,6 @@
         if (!confirm('استعادة المسار الحالي للافتراضي؟')) return;
         resetPathway(activePathway).then(function (data) {
             state[activePathway] = data.steps || [];
-            document.getElementById('pathwayStepEditor').dataset.bound = '';
             render();
             alert(data.message || 'تمت الاستعادة');
         });
@@ -507,7 +545,6 @@
             });
         });
         chain.then(function () {
-            document.getElementById('pathwayStepEditor').dataset.bound = '';
             render();
             alert('تمت استعادة المسارات الثلاثة.');
         });

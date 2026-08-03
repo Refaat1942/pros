@@ -11,7 +11,7 @@ use App\Models\WorkflowStagePolicy;
 use Illuminate\Support\Facades\DB;
 
 /**
- * تخطي مراحل اختيارية في مسار الحالة — مع الحفاظ على الآثار الجانبية (تكاليف، BOM، …).
+ * تخطي مراحل اختيارية في مسار الحالة — حسب إعدادات المصمم.
  */
 class CaseWorkflowSkipService
 {
@@ -20,6 +20,7 @@ class CaseWorkflowSkipService
         private readonly WorkflowService $workflow,
         private readonly CostingService $costingService,
         private readonly CaseService $caseService,
+        private readonly PathwayConfigService $pathwayConfig,
     ) {}
 
     /**
@@ -57,7 +58,7 @@ class CaseWorkflowSkipService
         return match ($stageKey) {
             CaseRecord::STAGE_RECEPTION => $this->skipExamFromReception($case, $user, $auto),
             CaseRecord::STAGE_ADJUSTMENTS => $this->skipAdjustmentsStage($case, $user, $auto),
-            default => abort(422, 'تخطي هذه المرحلة غير مدعوم حالياً.'),
+            default => $this->skipConfiguredStage($case, $user, $auto),
         };
     }
 
@@ -79,6 +80,28 @@ class CaseWorkflowSkipService
         $updated = $this->costingService->receiveFromAdjustments($case);
 
         return $this->afterSkip($updated, CaseRecord::STAGE_ADJUSTMENTS, $user, $auto);
+    }
+
+    private function skipConfiguredStage(CaseRecord $case, ?User $user, bool $auto): CaseRecord
+    {
+        $current = $this->pathwayConfig->currentStepForCase($case);
+        $target = $this->pathwayConfig->skipTargetStepForCase($case);
+
+        if (! $current || ! $target) {
+            abort(422, 'لا توجد خطوة تالية — لا يمكن التخطي.');
+        }
+
+        $skippedStage = $this->pathwayConfig->primaryStageKey($current) ?? $case->stage_key;
+
+        if ($case->stage_key === CaseRecord::STAGE_EXAM) {
+            $updated = $this->workflow->forceAdvanceToStep($case, $target);
+
+            return $this->afterSkip($updated, $skippedStage, $user, $auto);
+        }
+
+        $updated = $this->workflow->forceAdvanceToStep($case, $target);
+
+        return $this->afterSkip($updated, $skippedStage, $user, $auto);
     }
 
     private function afterSkip(CaseRecord $case, string $skippedStage, ?User $user, bool $auto): CaseRecord

@@ -189,6 +189,59 @@ class WorkflowService
     }
 
     /**
+     * انتقال إداري لتخطي خطوة — يُحرّك الحالة إلى الخطوة التالية في المصمم.
+     *
+     * @param  array<string, mixed>  $targetStep
+     */
+    public function forceAdvanceToStep(CaseRecord $case, array $targetStep): CaseRecord
+    {
+        $stageKey = ($targetStep['stage_keys'] ?? [])[0] ?? null;
+
+        if (! $stageKey) {
+            abort(422, 'الخطوة التالية غير معرّفة في مسار العمل.');
+        }
+
+        return DB::transaction(function () use ($case, $targetStep, $stageKey) {
+            $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
+
+            $before = [
+                'stage_key' => $case->stage_key,
+                'manufacturing_stage' => $case->manufacturing_stage,
+            ];
+
+            $updates = ['stage_key' => $stageKey];
+            $stepKey = (string) ($targetStep['key'] ?? '');
+
+            $mfg = match ($stepKey) {
+                'warehouse' => CaseRecord::MFG_WAREHOUSE,
+                'workshop' => CaseRecord::MFG_ISSUE,
+                default => null,
+            };
+
+            if ($stageKey === CaseRecord::STAGE_MANUFACTURING && $mfg !== null) {
+                $updates['manufacturing_stage'] = $mfg;
+            } elseif ($stageKey !== CaseRecord::STAGE_MANUFACTURING) {
+                $updates['manufacturing_stage'] = null;
+            }
+
+            $case->update($updates);
+
+            AuditService::log(
+                action: 'skip',
+                description: "تخطي إلى {$targetStep['label']} — {$case->case_no}",
+                tag: 'medical',
+                before: $before,
+                after: [
+                    'stage_key' => $case->stage_key,
+                    'manufacturing_stage' => $case->manufacturing_stage,
+                ],
+            );
+
+            return $case->fresh();
+        });
+    }
+
+    /**
      * بعد أي انتقال — تطبيق التخطي التلقائي للمراحل الاختيارية (مثل المعدلات العسكرية).
      */
     public function finalizeAfterTransition(CaseRecord $case): CaseRecord
