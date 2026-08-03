@@ -62,13 +62,15 @@ class StockDispenseApprovalController extends Controller
     public function reject(Request $request, StockDispenseRequest $stockDispenseRequest): JsonResponse
     {
         $validated = $request->validate([
-            'reason' => ['nullable', 'string', 'max:1000'],
+            'reason' => ['required', 'string', 'max:1000'],
+        ], [
+            'reason.required' => 'سبب الرفض مطلوب.',
         ]);
 
         $row = $this->dispenseRequests->reject(
             $stockDispenseRequest,
             Auth::user(),
-            $validated['reason'] ?? null,
+            $validated['reason'],
         );
 
         return response()->json([

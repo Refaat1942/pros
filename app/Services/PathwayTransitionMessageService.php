@@ -48,6 +48,20 @@ class PathwayTransitionMessageService
     ];
 
     /** @var array<string, string> */
+    private const ROLE_ACTION_URL = [
+        Role::SLUG_RECEPTION => '/reception/appointments',
+        Role::SLUG_DOCTOR => '/doctor/queue',
+        Role::SLUG_SPEC => '/spec/spec',
+        Role::SLUG_ADJUSTMENTS => '/adjustments/adjustments',
+        Role::SLUG_COSTING => '/costing/costing',
+        Role::SLUG_OPERATIONS => '/operations/pending',
+        Role::SLUG_CASHIER => '/cashier/cashier',
+        Role::SLUG_TECHNICAL => '/technical/bom',
+        Role::SLUG_WORKSHOP => '/workshop/workshop',
+        Role::SLUG_ADMIN => '/admin/dashboard',
+    ];
+
+    /** @var array<string, string> */
     private const TITLE_PREFIX = [
         WorkflowEvent::ExamApproved->value => '🔧',
         WorkflowEvent::ExamSkipped->value => '🔧',
@@ -72,7 +86,7 @@ class PathwayTransitionMessageService
 
     public function transferMessage(CaseRecord $case, string $event, string $fromStageKey): string
     {
-        $targetStage = self::TARGET_STAGE[$event] ?? null;
+        $targetStage = $this->resolveTargetStage($case, $event);
 
         if ($targetStage === null) {
             return 'تم تحديث حالة الطلب.';
@@ -92,11 +106,11 @@ class PathwayTransitionMessageService
     }
 
     /**
-     * @return array{role: string, title: string, body: string}|null
+     * @return array{role: string, title: string, body: string, url: string}|null
      */
     public function notificationPayload(CaseRecord $case, string $event, string $fromStageKey): ?array
     {
-        $targetStage = self::TARGET_STAGE[$event] ?? null;
+        $targetStage = $this->resolveTargetStage($case, $event);
 
         if ($targetStage === null) {
             return null;
@@ -123,7 +137,41 @@ class PathwayTransitionMessageService
             'role' => $role,
             'title' => $title,
             'body' => $body,
+            'url' => $this->actionUrl($case, $event, $targetStage, $role),
         ];
+    }
+
+    public function resolveTargetStage(CaseRecord $case, string $event): ?string
+    {
+        $case->loadMissing('patient');
+
+        if ($event === WorkflowEvent::CostingCompleted->value) {
+            if ($case->needsServicesApproval()) {
+                return CaseRecord::STAGE_SERVICES_APPROVAL;
+            }
+
+            if ($case->isMilitary()) {
+                return CaseRecord::STAGE_OPERATIONS;
+            }
+
+            return CaseRecord::STAGE_QUOTE;
+        }
+
+        return self::TARGET_STAGE[$event] ?? null;
+    }
+
+    public function actionUrl(CaseRecord $case, string $event, string $targetStage, string $role): string
+    {
+        return match ($event) {
+            WorkflowEvent::BomFinished->value => '/reception/delivery',
+            WorkflowEvent::SentToCashier->value => '/cashier/cashier',
+            WorkflowEvent::OperationsApproved->value => '/technical/bom',
+            WorkflowEvent::BomDispensed->value => '/workshop/workshop',
+            WorkflowEvent::QuoteIssued->value => $role === Role::SLUG_RECEPTION
+                ? '/reception/quote'
+                : '/operations/pending',
+            default => self::ROLE_ACTION_URL[$role] ?? '/',
+        };
     }
 
     private function targetRoleForStage(CaseRecord $case, string $stageKey, string $event): string
@@ -134,6 +182,7 @@ class PathwayTransitionMessageService
         $preferredKey = match ($event) {
             WorkflowEvent::BomDispensed->value => 'workshop',
             WorkflowEvent::BomFinished->value => 'delivery',
+            WorkflowEvent::CostingCompleted->value => $case->isMilitary() ? 'operations' : null,
             default => null,
         };
 

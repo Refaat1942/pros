@@ -9,7 +9,6 @@ use App\Models\Patient;
 use App\Services\CaseTrackingQrService;
 use App\Services\PatientService;
 use App\Traits\PaginationTrait;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,8 +64,7 @@ class PatientController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', "تم تسجيل المريض «{$patient->name}» — {$patient->patient_code}.")
-            ->with('show_patient_card', $patient->id);
+            ->with('success', "تم تسجيل المريض «{$patient->name}» — {$patient->patient_code}.");
     }
 
     /**
@@ -89,26 +87,6 @@ class PatientController extends Controller
                 'manufacturing_stage' => $latestCase->manufacturing_stage,
                 'delivered_at' => $latestCase->delivered_at?->toDateString(),
             ] : null,
-        ]);
-    }
-
-    /**
-     * ملصق بطاقة المريض — طباعة حرارية 38mm × 25mm.
-     * ?embed=1 لمعاينة بدون طباعة تلقائية.
-     */
-    public function printCard(Request $request, Patient $patient): View
-    {
-        $patient->load('contractCompany:id,name');
-
-        return view('reception.print.patient-card-label', [
-            'patient' => $patient,
-            'typeLabel' => $patient->isMilitary() ? 'عسكري' : 'مدني',
-            'queueNumber' => $patient->clinicDayQueueNumber() ?? '—',
-            'company' => $patient->isMilitary() ? null : $patient->displayEntity(),
-            'rank' => $patient->isMilitary() ? ($patient->rank ?: null) : null,
-            'trackingUrl' => $this->caseTrackingQrService->url($patient),
-            'qrSvg' => $this->caseTrackingQrService->svg($patient, 180, 0),
-            'autoPrint' => ! $request->boolean('embed'),
         ]);
     }
 
@@ -151,7 +129,6 @@ class PatientController extends Controller
             'entity' => $patient->entityPresentation(),
             'tracking_url' => $this->caseTrackingQrService->url($patient),
             'qr_svg' => $this->caseTrackingQrService->svg($patient),
-            'card_print_url' => route('reception.patients.card.print', $patient),
             'contract_company' => $patient->relationLoaded('contractCompany')
                 ? $patient->contractCompany
                 : null,

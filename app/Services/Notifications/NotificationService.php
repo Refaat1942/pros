@@ -216,6 +216,7 @@ class NotificationService
             body: $payload['body'],
             case: $case,
             event: $event,
+            data: ['url' => $payload['url'] ?? null],
         );
     }
 

@@ -110,4 +110,12 @@ class BarcodeValidationTest extends TestCase
         $item->refresh();
         $this->assertEquals(10, $item->qty, 'Stock must not change on a blocked scan');
     }
+
+    public function test_item_code_scan_matches_without_barcode_prefix(): void
+    {
+        $this->stockItem('RM-CODE', qty: 5);
+        $bomItem = $this->bomItemForCode('RM-CODE');
+
+        $this->assertTrue($this->service->validateScan('RM-CODE', $bomItem));
+    }
 }

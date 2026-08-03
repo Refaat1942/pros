@@ -164,21 +164,13 @@
                         <div id="scanProgressBar" class="h-full bg-emerald-500 transition-all duration-200" style="width:0%;"></div>
                     </div>
                 </div>
-                <div class="grid grid-cols-[88px_1fr_auto] gap-2 items-end">
-                    <div>
-                        <label for="scanQtyInput" class="block text-xs font-bold text-slate-600 mb-1">الكمية</label>
-                        <input type="number" id="scanQtyInput" min="1" value="1"
-                               class="w-full rounded-xl border border-slate-300 px-3 py-3 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-                    </div>
-                    <div>
-                        <label for="barcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح الباركود</label>
-                        <input type="text" id="barcodeInput" autofocus
-                               placeholder="امسح أو اكتب الباركود"
-                               maxlength="100"
-                               class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-                    </div>
-                    <button type="button" id="btnAddBarcode"
-                            class="rounded-xl bg-slate-800 text-white px-4 py-3 text-sm font-bold self-end">إضافة</button>
+                <div>
+                    <label for="barcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح كود الصنف أو الباركود</label>
+                    <input type="text" id="barcodeInput" autofocus
+                           placeholder="كل مسح = وحدة واحدة (كود الصنف أو BC-...)"
+                           maxlength="100"
+                           class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                    <p class="text-xs text-slate-500 mt-1">يُحسب تلقائياً — لا حاجة لزر إضافة أو كمية يدوية.</p>
                 </div>
                 <div id="scannedList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
                 <div id="dispenseAlarm" class="hidden rounded-xl border-2 border-red-500 bg-red-50 p-5 text-red-800 font-bold text-base animate-pulse">

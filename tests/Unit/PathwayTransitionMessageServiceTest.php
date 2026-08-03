@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
+use App\Models\Role;
 use App\Services\PathwayConfigService;
 use App\Services\PathwayTransitionMessageService;
 use Tests\Support\ProstheticTestHelper;
@@ -37,5 +38,31 @@ class PathwayTransitionMessageServiceTest extends TestCase
         $label = app(PathwayConfigService::class)->currentStepLabelForCase($case);
 
         $this->assertStringContainsString('التسليم', $label);
+    }
+
+    public function test_military_costing_message_targets_operations_not_quote(): void
+    {
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_COST_CALC);
+
+        $service = app(PathwayTransitionMessageService::class);
+        $message = $service->transferMessage(
+            $case->load('patient'),
+            WorkflowEvent::CostingCompleted->value,
+            CaseRecord::STAGE_COST_CALC,
+        );
+
+        $this->assertStringContainsString('تم التحويل من', $message);
+        $this->assertStringNotContainsString('عرض سعر', $message);
+
+        $payload = $service->notificationPayload(
+            $case,
+            WorkflowEvent::CostingCompleted->value,
+            CaseRecord::STAGE_COST_CALC,
+        );
+
+        $this->assertNotNull($payload);
+        $this->assertSame(Role::SLUG_OPERATIONS, $payload['role']);
+        $this->assertSame('/operations/pending', $payload['url']);
     }
 }

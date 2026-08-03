@@ -117,7 +117,7 @@ class StockDispenseRequestService
         });
     }
 
-    public function reject(StockDispenseRequest $request, User $approver, ?string $reason): StockDispenseRequest
+    public function reject(StockDispenseRequest $request, User $approver, string $reason): StockDispenseRequest
     {
         if (! $approver->hasPermission('approve-dispense')) {
             abort(403, 'لا تملك صلاحية اعتماد الصرف.');
@@ -126,6 +126,8 @@ class StockDispenseRequestService
         if (! $request->isPending()) {
             abort(422, 'طلب الصرف ليس معلّقاً.');
         }
+
+        $request->loadMissing(['caseRecord', 'requestedBy']);
 
         $request->update([
             'status' => StockDispenseRequest::STATUS_REJECTED,
@@ -140,6 +142,26 @@ class StockDispenseRequestService
             tag: 'warehouse',
             after: ['reason' => $reason],
         );
+
+        $case = $request->caseRecord;
+        if ($case) {
+            try {
+                $body = "الحالة {$case->case_no} — رُفض طلب الصرف.";
+                if ($reason) {
+                    $body .= " السبب: {$reason}";
+                }
+                $this->notifications->push(
+                    roleSlug: Role::SLUG_TECHNICAL,
+                    title: '❌ رُفض طلب صرف مخزني',
+                    body: $body,
+                    case: $case,
+                    event: 'dispense_request_rejected',
+                    data: ['url' => '/technical/bom', 'request_id' => (string) $request->id],
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         return $request->fresh();
     }

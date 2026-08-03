@@ -1,5 +1,20 @@
 <div class="section-view" id="section-pending">
-  <div class="panel inventory-wrap">
+  <div class="panel" id="workshopAssignmentPanel">
+    <div class="panel-header"><h3>🏭 تخصيص الورشة عند الاعتماد</h3></div>
+    <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;padding:16px;">
+      <p class="text-muted" style="width:100%;margin:0 0 4px;">اختر القسم والفني قبل الضغط على «إصدار أمر الشغل» — يُطبَّق على الحالة التالية التي تعتمدها.</p>
+      <div class="form-group" style="min-width:240px;">
+        <label>قسم الورشة</label>
+        <select id="approveWorkshopSection" class="form-control"><option value="">— بدون —</option></select>
+      </div>
+      <div class="form-group" style="min-width:240px;">
+        <label>الفني</label>
+        <select id="approveWorkshopTechnician" class="form-control"><option value="">— بدون —</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel inventory-wrap" style="margin-top:16px;">
     <div class="panel-header">
       <h3>✅ مكتب التشغيل — إصدار أمر الشغل واعتماد الصرف</h3>
       <div style="display:flex;align-items:center;gap:10px;">
@@ -23,20 +38,6 @@
           <tr><td colspan="5" class="empty-cell">جاري تحميل الحالات…</td></tr>
         </tbody>
       </table>
-    </div>
-  </div>
-
-  <div class="panel" id="workshopAssignmentPanel" style="margin-top:16px;">
-    <div class="panel-header"><h3>🏭 تخصيص الورشة (اختياري عند الاعتماد)</h3></div>
-    <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;padding:16px;">
-      <div class="form-group" style="min-width:220px;">
-        <label>قسم الورشة</label>
-        <select id="approveWorkshopSection" class="form-control"><option value="">— بدون —</option></select>
-      </div>
-      <div class="form-group" style="min-width:220px;">
-        <label>الفني</label>
-        <select id="approveWorkshopTechnician" class="form-control"><option value="">— بدون —</option></select>
-      </div>
     </div>
   </div>
 </div>

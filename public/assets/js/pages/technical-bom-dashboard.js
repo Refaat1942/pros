@@ -249,7 +249,6 @@
     renderScanned();
     renderScanProgress();
     if ($('barcodeInput')) $('barcodeInput').value = '';
-    if ($('scanQtyInput')) $('scanQtyInput').value = '1';
 
     axios.get('/technical/bom/' + bomId)
       .then(function (res) {
@@ -288,12 +287,8 @@
       showBarcodeInputError('الباركود غير صالح.');
       return;
     }
-    var qtyInput = $('scanQtyInput');
-    var addQty = Math.max(1, parseInt(qtyInput && qtyInput.value, 10) || 1);
     clearBarcodeInputError();
-    for (var n = 0; n < addQty; n++) {
-      state.scanned.push(code);
-    }
+    state.scanned.push(code);
     revalidateAlarm();
     renderScanned();
     renderScanProgress();
@@ -518,9 +513,6 @@
     $('closeDispenseModal') && $('closeDispenseModal').addEventListener('click', closeModal);
     $('cancelDispense') && $('cancelDispense').addEventListener('click', closeModal);
     $('dispenseBackdrop') && $('dispenseBackdrop').addEventListener('click', closeModal);
-    $('btnAddBarcode') && $('btnAddBarcode').addEventListener('click', function () {
-      addScan($('barcodeInput') && $('barcodeInput').value);
-    });
     $('barcodeInput') && $('barcodeInput').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); addScan(e.target.value); }
     });

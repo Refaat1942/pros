@@ -188,6 +188,7 @@ class OperationsDeskController extends Controller
             'sections' => collect($this->workshopSections->listActive())->map(fn ($s) => [
                 'id' => $s->id,
                 'name' => $s->name,
+                'code' => $s->code,
                 'technicians' => $s->technicians->map(fn ($u) => $u->only(['id', 'name']))->values(),
             ])->values(),
         ]);

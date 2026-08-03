@@ -73,10 +73,16 @@
     }, reminderMs());
   }
 
-  function toast(title, body) {
+  function toast(title, body, url) {
     var msg = body ? (title + ' — ' + body) : title;
     if (window.DashboardToast) {
-      window.DashboardToast.show(msg, { id: TOAST_ID, type: 'info', title: 'إشعار جديد', duration: 7000 });
+      window.DashboardToast.show(msg, {
+        id: TOAST_ID,
+        type: 'info',
+        title: 'إشعار جديد',
+        duration: 9000,
+        onClick: url ? function () { window.location.href = url; } : undefined,
+      });
       return;
     }
     var el = document.getElementById(TOAST_ID);
@@ -155,7 +161,7 @@
         fresh.reverse().forEach(function (it) {
           seen[it.id] = true;
           beep();
-          toast(it.title, it.body);
+          toast(it.title, it.body, it.url);
           browserNotif(it.title, it.body);
         });
         items.forEach(function (it) { seen[it.id] = true; });

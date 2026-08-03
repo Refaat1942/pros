@@ -66,6 +66,13 @@ class NotificationController extends Controller
             $notification->update(['read_at' => now()]);
         }
 
+        $url = $request->input('redirect')
+            ?? (is_array($notification->data) ? ($notification->data['url'] ?? null) : null);
+
+        if (is_string($url) && $url !== '' && str_starts_with($url, '/')) {
+            return redirect($url);
+        }
+
         return back()->with('status', 'تم تعليم الإشعار كمقروء.');
     }
 

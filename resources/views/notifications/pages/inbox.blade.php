@@ -56,6 +56,9 @@
         @if ($items && $items->count() > 0)
             <ul class="notif-feed">
                 @foreach ($items as $notification)
+                    @php
+                        $actionUrl = is_array($notification->data) ? ($notification->data['url'] ?? null) : null;
+                    @endphp
                     <li class="notif-card {{ $notification->read_at ? 'is-read' : 'is-unread' }}">
                         <div class="notif-card-accent"></div>
                         <div class="notif-card-body">
@@ -82,14 +85,23 @@
                                 </div>
                             @endif
                         </div>
-                        @unless ($notification->read_at)
-                            <form method="POST" action="{{ route('notifications.read', $notification) }}"
-                                class="notif-card-action">
-                                @csrf
-                                <input type="hidden" name="dashboard" value="{{ $dashboardKey }}">
-                                <button type="submit" class="notif-btn notif-btn-read">✓ مقروء</button>
-                            </form>
-                        @endunless
+                        <div class="notif-card-action">
+                            @if ($actionUrl)
+                                <form method="POST" action="{{ route('notifications.read', $notification) }}">
+                                    @csrf
+                                    <input type="hidden" name="dashboard" value="{{ $dashboardKey }}">
+                                    <input type="hidden" name="redirect" value="{{ $actionUrl }}">
+                                    <button type="submit" class="notif-btn notif-btn-open">↗ فتح المطلوب</button>
+                                </form>
+                            @endif
+                            @unless ($notification->read_at)
+                                <form method="POST" action="{{ route('notifications.read', $notification) }}">
+                                    @csrf
+                                    <input type="hidden" name="dashboard" value="{{ $dashboardKey }}">
+                                    <button type="submit" class="notif-btn notif-btn-read">✓ مقروء</button>
+                                </form>
+                            @endunless
+                        </div>
                     </li>
                 @endforeach
             </ul>

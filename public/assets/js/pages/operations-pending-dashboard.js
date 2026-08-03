@@ -247,7 +247,8 @@
         var techSel = document.getElementById('approveWorkshopTechnician');
         if (!sectionSel || !techSel) return;
         sectionSel.innerHTML = '<option value="">— بدون —</option>' + sections.map(function (s) {
-          return '<option value="' + s.id + '">' + s.name + '</option>';
+          var label = s.name + (s.code ? ' (' + s.code + ')' : '');
+          return '<option value="' + s.id + '">' + label + '</option>';
         }).join('');
         sectionSel.addEventListener('change', function () {
           var sec = sections.find(function (s) { return String(s.id) === String(sectionSel.value); });

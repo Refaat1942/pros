@@ -223,7 +223,6 @@
         </div>
         <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
           <button class="btn btn-secondary" id="btnClosePatientCard">إغلاق</button>
-          <button class="btn btn-primary" id="btnPrintPatientCard" type="button">🖨️ طباعة البطاقة</button>
         </div>
       </div>
     </div>

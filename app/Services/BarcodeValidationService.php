@@ -57,8 +57,21 @@ class BarcodeValidationService
 
     private function barcodeMatchesCode(string $barcode, string $stockItemCode): bool
     {
-        $stockItem = StockItem::where('barcode', $barcode)->first();
+        $stockItem = $this->resolveStockItem($barcode);
 
         return $stockItem !== null && $stockItem->code === $stockItemCode;
+    }
+
+    private function resolveStockItem(string $scan): ?StockItem
+    {
+        $scan = trim($scan);
+        if ($scan === '') {
+            return null;
+        }
+
+        return StockItem::query()
+            ->where('barcode', $scan)
+            ->orWhere('code', $scan)
+            ->first();
     }
 }

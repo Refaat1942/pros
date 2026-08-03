@@ -121,6 +121,17 @@
     el.classList.remove('hidden');
     el.classList.add('show');
 
+    if (typeof options.onClick === 'function') {
+      el.style.cursor = 'pointer';
+      el.onclick = function (e) {
+        if (e.target.closest('.toast__close')) return;
+        options.onClick();
+      };
+    } else {
+      el.onclick = null;
+      el.style.cursor = '';
+    }
+
     var duration = options.duration || DEFAULT_MS;
     timers[timerId(el)] = setTimeout(function () {
       hide(el);
