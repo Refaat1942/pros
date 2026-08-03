@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Prosthetics ERP — Simple Install Guide (Print / PDF)</title>
+    <style>
+        @page { size: A4; margin: 12mm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.45;
+            color: #0f172a;
+            background: #e2e8f0;
+        }
+        .page {
+            width: 210mm;
+            min-height: 277mm;
+            margin: 10px auto;
+            padding: 14mm 16mm;
+            background: #fff;
+            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+            page-break-after: always;
+        }
+        .page:last-child { page-break-after: auto; }
+        .header {
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .header h1 { font-size: 17pt; color: #1e3a8a; line-height: 1.25; }
+        .header .sub { font-size: 9.5pt; color: #64748b; margin-top: 4px; }
+        .badge {
+            background: #1e40af; color: #fff; font-size: 8pt; font-weight: bold;
+            padding: 6px 10px; border-radius: 8px; text-align: center; white-space: nowrap;
+        }
+        h2 {
+            font-size: 11pt; color: #1e40af; margin: 14px 0 8px;
+            padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;
+        }
+        h3 { font-size: 10pt; color: #334155; margin: 10px 0 6px; }
+        p, li { font-size: 10pt; }
+        ul, ol { margin: 6px 0 6px 18px; }
+        li { margin: 3px 0; }
+        .box {
+            border: 1px solid #cbd5e1; border-radius: 8px;
+            padding: 10px 12px; margin: 8px 0; background: #f8fafc;
+        }
+        .box strong { color: #1e3a8a; }
+        .tip {
+            background: #ecfdf5; border: 1px solid #6ee7b7;
+            border-radius: 8px; padding: 10px 12px; margin: 8px 0; font-size: 9.5pt;
+        }
+        .warn {
+            background: #fef3c7; border: 1px solid #fcd34d;
+            border-radius: 8px; padding: 10px 12px; margin: 8px 0; font-size: 9.5pt;
+        }
+        table {
+            width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.5pt;
+        }
+        th, td {
+            border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top;
+        }
+        th { background: #eff6ff; color: #1e3a8a; font-weight: bold; }
+        .cmd {
+            background: #0f172a; color: #e2e8f0; padding: 8px 10px;
+            border-radius: 6px; font-size: 8.5pt; font-family: Consolas, monospace;
+            margin: 6px 0; white-space: pre-wrap; line-height: 1.35;
+        }
+        .checklist { list-style: none; margin-left: 0; }
+        .checklist li {
+            display: flex; gap: 8px; padding: 4px 0;
+            border-bottom: 1px dotted #e2e8f0; font-size: 9.5pt;
+        }
+        .checklist li:last-child { border-bottom: none; }
+        .box-check {
+            width: 13px; height: 13px; border: 2px solid #64748b;
+            border-radius: 2px; flex-shrink: 0; margin-top: 2px;
+        }
+        .fill-line {
+            border-bottom: 1px solid #94a3b8; min-width: 140px;
+            display: inline-block; height: 14px;
+        }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .footer {
+            margin-top: 12px; padding-top: 8px; border-top: 1px solid #cbd5e1;
+            font-size: 8.5pt; color: #64748b; display: flex; justify-content: space-between;
+        }
+        @media print {
+            body { background: #fff; }
+            .page { margin: 0; box-shadow: none; width: 100%; }
+            .no-print { display: none; }
+        }
+        .print-btn {
+            position: fixed; top: 12px; right: 12px; z-index: 99;
+            background: #1e40af; color: #fff; border: none; padding: 10px 18px;
+            border-radius: 8px; font-size: 11pt; cursor: pointer; font-weight: bold;
+        }
+        .print-btn:hover { background: #1e3a8a; }
+    </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+
+<!-- PAGE 1 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Simple Install Guide</h1>
+            <div class="sub">Smart Prosthetics ERP · Local network · No internet needed after setup</div>
+        </div>
+        <div class="badge">Page 1 / 4</div>
+    </div>
+
+    <div class="tip">
+        <strong>In simple words:</strong> One computer = <strong>server</strong> (holds the program + data).
+        Other computers only open <strong>Chrome</strong> and use a link. No program install on staff PCs.
+    </div>
+
+    <div class="grid-2">
+        <div class="box">
+            <strong>Client name:</strong> <span class="fill-line"></span><br>
+            <strong>Install date:</strong> <span class="fill-line"></span><br>
+            <strong>Your name:</strong> <span class="fill-line"></span>
+        </div>
+        <div class="box">
+            <strong>Server IP (write here):</strong> <span class="fill-line"></span><br>
+            <strong>Staff link:</strong> http://<span class="fill-line"></span>/prosthetics/public<br>
+            <strong>DB password:</strong> <span class="fill-line"></span>
+        </div>
+    </div>
+
+    <h2>Part A — At home (with internet) — prepare USB</h2>
+    <ol>
+        <li>Download <strong>Laragon Full</strong> → laragon.org/download</li>
+        <li>Download <strong>Git</strong> (optional) → git-scm.com/download/win</li>
+        <li>On your PC with Laragon, run:</li>
+    </ol>
+    <div class="cmd">cd C:\laragon\www
+git clone https://github.com/Refaat1942/pros.git prosthetics
+cd prosthetics
+git pull origin master
+composer install --no-dev --optimize-autoloader</div>
+    <div class="warn">
+        <strong>Important:</strong> Copy the whole folder <code>C:\laragon\www\prosthetics</code> to USB.
+        It must include the <strong>vendor</strong> folder. Without it, the system will not work offline.
+    </div>
+
+    <h2>Part B — At the client — the server PC</h2>
+    <h3>Step 1 — Choose the server computer</h3>
+    <ul>
+        <li>One Windows PC that stays ON during work hours</li>
+        <li>Connect a UPS (battery backup) if possible</li>
+        <li>Ask IT for a fixed IP (example: 192.168.1.50)</li>
+    </ul>
+
+    <h3>Step 2 — Install Laragon</h3>
+    <ol>
+        <li>Run Laragon installer from USB → install to <code>C:\laragon</code></li>
+        <li>Open Laragon → click <strong>Start All</strong> (Apache must be green)</li>
+    </ol>
+
+    <h3>Step 3 — Install PostgreSQL (database)</h3>
+    <ol>
+        <li>Laragon → <strong>Menu → PostgreSQL → Install</strong></li>
+        <li>Click <strong>Start All</strong> again</li>
+    </ol>
+    <p><em>PostgreSQL = where all patient and system data is stored.</em></p>
+
+    <div class="footer">
+        <span>Smart Prosthetics ERP · Simple Guide v1.0</span>
+        <span>github.com/Refaat1942/pros</span>
+    </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Copy project &amp; create database</h1>
+            <div class="sub">Steps 4–7</div>
+        </div>
+        <div class="badge">Page 2 / 4</div>
+    </div>
+
+    <h3>Step 4 — Copy the project from USB</h3>
+    <p>Copy folder to: <code>C:\laragon\www\prosthetics</code></p>
+    <p>Check inside: folders <code>vendor</code>, <code>public</code>, file <code>.env.example</code></p>
+
+    <h3>Step 5 — Create database (one time)</h3>
+    <p>Laragon → <strong>Menu → PostgreSQL → psql</strong> (black window opens)</p>
+    <p>Paste this (change the password!):</p>
+    <div class="cmd">CREATE DATABASE prosthetics ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0;
+CREATE USER prosthetics_user WITH PASSWORD 'StrongPassword2026!ChangeMe';
+GRANT ALL PRIVILEGES ON DATABASE prosthetics TO prosthetics_user;
+\c prosthetics
+GRANT ALL ON SCHEMA public TO prosthetics_user;
+GRANT CREATE ON SCHEMA public TO prosthetics_user;
+\q</div>
+    <p><code>\q</code> = exit. Write the same password in Step 6.</p>
+
+    <h3>Step 6 — Edit settings file (.env)</h3>
+    <p>Open Command Prompt (search "cmd") and type:</p>
+    <div class="cmd">cd C:\laragon\www\prosthetics
+copy .env.example .env
+php artisan key:generate
+notepad .env</div>
+    <p>In Notepad, change these lines (use real server IP):</p>
+    <div class="cmd">APP_URL=http://192.168.1.50
+APP_DEBUG=false
+DB_DATABASE=prosthetics
+DB_USERNAME=prosthetics_user
+DB_PASSWORD=StrongPassword2026!ChangeMe
+SESSION_SECURE_COOKIE=false
+TELEGRAM_ERROR_NOTIFY=false
+FIREBASE_ENABLED=false</div>
+    <p>Save and close Notepad.</p>
+
+    <h3>Step 7 — Start the system (run once)</h3>
+    <div class="cmd">cd C:\laragon\www\prosthetics
+php artisan migrate --force
+php artisan db:seed --class=Database\Seeders\RolesAndAdminSeeder
+php artisan storage:link
+php artisan config:cache</div>
+
+    <table>
+        <tr><th>Command</th><th>What it does (simple)</th></tr>
+        <tr><td>migrate</td><td>Creates empty tables in the database</td></tr>
+        <tr><td>db:seed RolesAndAdminSeeder</td><td>Creates login accounts (admin, reception, doctor…)</td></tr>
+        <tr><td>storage:link</td><td>Lets system save uploaded files</td></tr>
+        <tr><td>config:cache</td><td>Saves settings for faster running</td></tr>
+    </table>
+
+    <div class="warn">
+        Do <strong>NOT</strong> run full <code>php artisan db:seed</code> — it adds fake demo patients.
+        Use <strong>RolesAndAdminSeeder</strong> only.
+    </div>
+
+    <div class="footer">
+        <span>Smart Prosthetics ERP · Simple Guide v1.0</span>
+        <span>Page 2</span>
+    </div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Login, network &amp; staff PCs</h1>
+            <div class="sub">Steps 8–11</div>
+        </div>
+        <div class="badge">Page 3 / 4</div>
+    </div>
+
+    <h3>Step 8 — First login (on server)</h3>
+    <ol>
+        <li>Open <strong>Chrome</strong></li>
+        <li>Go to: <code>http://prosthetics.test</code> OR <code>http://YOUR-IP/prosthetics/public</code></li>
+        <li>Login: username <strong>superadmin</strong> · password <strong>123456</strong></li>
+        <li><strong>Change password immediately!</strong></li>
+    </ol>
+
+    <h3>Step 9 — Test from another computer</h3>
+    <p>On another PC on the same network, open Chrome:</p>
+    <div class="cmd">http://192.168.1.50/prosthetics/public</div>
+    <p>(Replace with your real server IP)</p>
+
+    <p><strong>If it does not work:</strong></p>
+    <ul>
+        <li>Server is ON and Laragon → Start All (green)</li>
+        <li>Windows Firewall: allow Apache on Private network (ask IT)</li>
+        <li>Wrong IP — run <code>ipconfig</code> on server, find IPv4 Address</li>
+    </ul>
+
+    <h3>Step 10 — Staff computers (easy)</h3>
+    <p>On each staff PC — <strong>nothing to install</strong>:</p>
+    <ol>
+        <li>Open Chrome → go to the link above</li>
+        <li>Bookmark (Ctrl+D)</li>
+        <li>Optional: desktop shortcut named "Prosthetics ERP"</li>
+    </ol>
+
+    <h3>Step 11 — Backup (important)</h3>
+    <p>Test once on server:</p>
+    <div class="cmd">cd C:\laragon\www\prosthetics
+php artisan prosthetics:backup</div>
+    <p>Backup files: <code>C:\laragon\www\prosthetics\storage\backups</code></p>
+    <p>Schedule daily at 2:00 AM (Task Scheduler) or copy folder to USB weekly.</p>
+
+    <h2>Words you can ignore (simple meaning)</h2>
+    <table>
+        <tr><th>Word</th><th>Meaning</th></tr>
+        <tr><td>Laravel</td><td>The program framework — Laragon runs it for you</td></tr>
+        <tr><td>PostgreSQL</td><td>Database — stores all records</td></tr>
+        <tr><td>.env</td><td>Settings file — edit once</td></tr>
+        <tr><td>migrate</td><td>Build empty tables in database</td></tr>
+        <tr><td>vendor</td><td>Pre-downloaded libraries — must be on USB</td></tr>
+        <tr><td>Composer</td><td>Downloads libraries — do at home, not at client</td></tr>
+    </table>
+
+    <div class="footer">
+        <span>Smart Prosthetics ERP · Simple Guide v1.0</span>
+        <span>Page 3</span>
+    </div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Checklists &amp; troubleshooting</h1>
+            <div class="sub">Print and use on site</div>
+        </div>
+        <div class="badge">Page 4 / 4</div>
+    </div>
+
+    <h2>Before visit checklist</h2>
+    <ul class="checklist">
+        <li><span class="box-check"></span> USB has Laragon installer</li>
+        <li><span class="box-check"></span> USB has full prosthetics folder (with vendor)</li>
+        <li><span class="box-check"></span> Wrote client name, date, your phone number</li>
+    </ul>
+
+    <h2>On server checklist</h2>
+    <ul class="checklist">
+        <li><span class="box-check"></span> Laragon installed → Start All green</li>
+        <li><span class="box-check"></span> PostgreSQL installed → Start All green</li>
+        <li><span class="box-check"></span> Project in C:\laragon\www\prosthetics</li>
+        <li><span class="box-check"></span> Database created (Step 5)</li>
+        <li><span class="box-check"></span> .env edited (IP + password)</li>
+        <li><span class="box-check"></span> Step 7 commands finished OK</li>
+        <li><span class="box-check"></span> Login works on server</li>
+        <li><span class="box-check"></span> Login works from another PC</li>
+        <li><span class="box-check"></span> superadmin password changed</li>
+    </ul>
+
+    <h2>Staff handover checklist</h2>
+    <ul class="checklist">
+        <li><span class="box-check"></span> Gave everyone the link</li>
+        <li><span class="box-check"></span> Created real user accounts (not default 123456)</li>
+        <li><span class="box-check"></span> Backup tested</li>
+        <li><span class="box-check"></span> Client knows: do not turn off server during work hours</li>
+    </ul>
+
+    <h2>If something breaks</h2>
+    <table>
+        <tr><th>Problem</th><th>Try this</th></tr>
+        <tr><td>Blank page / error</td><td>Laragon → Stop All → Start All</td></tr>
+        <tr><td>Cannot open from another PC</td><td>Check IP, Firewall, server is ON</td></tr>
+        <tr><td>Database error (red text)</td><td>Password in .env must match Step 5</td></tr>
+        <tr><td>After power cut</td><td>Turn server ON → Laragon → Start All</td></tr>
+    </table>
+
+    <h2>Later update (when internet is back — server only)</h2>
+    <div class="cmd">cd C:\laragon\www\prosthetics
+git pull origin master
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache</div>
+    <p>Tell staff: press <strong>Ctrl + F5</strong> in Chrome.</p>
+
+    <div class="tip" style="margin-top:14px;">
+        <strong>One-line summary:</strong> One PC runs Laragon + the program.
+        Everyone else opens a link in Chrome on the local network. No internet needed for daily work.
+    </div>
+
+    <div class="footer">
+        <span>Smart Prosthetics ERP · Simple Guide v1.0 · July 2026</span>
+        <span>Press Ctrl+P → Save as PDF</span>
+    </div>
+</div>
+
+</body>
+</html>
