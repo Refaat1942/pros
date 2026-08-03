@@ -244,25 +244,25 @@ class StockCatalogController extends Controller
 
         $widthMm = max(10.0, round((float) $request->query(
             'label_width_mm',
-            (string) ($defaults['label_width_mm'] ?? 104),
+            (string) ($defaults['label_width_mm'] ?? 38),
         ), 2));
         $heightMm = max(10.0, round((float) $request->query(
             'label_height_mm',
-            (string) ($defaults['label_height_mm'] ?? 51),
+            (string) ($defaults['label_height_mm'] ?? 25),
         ), 2));
 
         return [
             'page_margin' => round((float) $request->query('page_margin', '0'), 2),
             'gap' => round((float) $request->query('gap', '0'), 2),
-            'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '0.9'), 2))),
-            'barcode_height' => max(20, min(80, (int) $request->integer('barcode_height', 32))),
+            'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '1.0'), 2))),
+            'barcode_height' => max(16, min(80, (int) $request->integer('barcode_height', 28))),
             'barcode_width_pct' => max(20.0, min(95.0, round((float) $request->query(
                 'barcode_width_pct',
-                (string) ($defaults['barcode_width_pct'] ?? 60),
+                (string) ($defaults['barcode_width_pct'] ?? 65),
             ), 1))),
             'barcode_height_pct' => max(15.0, min(70.0, round((float) $request->query(
                 'barcode_height_pct',
-                (string) ($defaults['barcode_height_pct'] ?? 35),
+                (string) ($defaults['barcode_height_pct'] ?? 42),
             ), 1))),
             'offset_x' => round((float) $request->query('offset_x', '0'), 2),
             'offset_y' => round((float) $request->query('offset_y', '0'), 2),
@@ -291,15 +291,15 @@ class StockCatalogController extends Controller
     private function buildLabels(array $items, int $copies, array $settings): array
     {
         $labels = [];
-        $moduleWidth = (float) ($settings['module_width'] ?? 0.9);
-        $widthPct = (float) ($settings['barcode_width_pct'] ?? 60);
-        $heightPct = (float) ($settings['barcode_height_pct'] ?? 35);
-        $labelWidthMm = (float) ($settings['label_width_mm'] ?? 104);
-        $labelHeightMm = (float) ($settings['label_height_mm'] ?? 51);
+        $moduleWidth = (float) ($settings['module_width'] ?? 1.0);
+        $widthPct = (float) ($settings['barcode_width_pct'] ?? 65);
+        $heightPct = (float) ($settings['barcode_height_pct'] ?? 42);
+        $labelWidthMm = (float) ($settings['label_width_mm'] ?? 38);
+        $labelHeightMm = (float) ($settings['label_height_mm'] ?? 25);
         $dpi = 203;
         $maxWidthPx = ($labelWidthMm * ($widthPct / 100)) * ($dpi / 25.4);
         $maxHeightPx = (int) round(($labelHeightMm * ($heightPct / 100)) * ($dpi / 25.4));
-        $barcodeHeight = min((int) ($settings['barcode_height'] ?? 32), max(20, $maxHeightPx));
+        $barcodeHeight = min((int) ($settings['barcode_height'] ?? 28), max(16, $maxHeightPx));
 
         foreach ($items as $item) {
             $svg = Code128::svgFit(

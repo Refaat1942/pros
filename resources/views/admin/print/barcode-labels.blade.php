@@ -33,7 +33,7 @@
         <p class="labels-toolbar-hint">
             ملصق <strong>{{ number_format($settings['label_width_mm'], 1) }} × {{ number_format($settings['label_height_mm'], 1) }} مم</strong>
             (≈ {{ number_format($settings['label_width_in'], 3) }}" × {{ number_format($settings['label_height_in'], 2) }}")
-            — طبّق نفس المقاس في driver الطابعة (Custom size).
+            — <strong>لازم</strong> نفس المقاس في driver الطابعة (Custom size) وChrome Scale = 100%.
         </p>
         <form id="settingsForm" onsubmit="applySettings(event)">
             <div class="fields">
@@ -69,7 +69,7 @@
                 </div>
                 <div>
                     <label>ارتفاع الباركود (بكسل)</label>
-                    <input type="number" name="barcode_height" step="1" min="20" max="80" value="{{ $settings['barcode_height'] }}">
+                    <input type="number" name="barcode_height" step="1" min="16" max="80" value="{{ $settings['barcode_height'] }}">
                     <span class="field-help">{{ $settings['field_help']['barcode_height'] ?? '' }}</span>
                 </div>
                 <div>

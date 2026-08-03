@@ -7,12 +7,12 @@
  * استخدم margin_left / margin_top لمعايرة موضع الطباعة على الملصق.
  */
 return [
-    'label_width_mm' => 104,
-    'label_height_mm' => 51,
+    'label_width_mm' => 38,
+    'label_height_mm' => 25,
     'margin_left_mm' => 0,
     'margin_top_mm' => 0,
-    'barcode_width_pct' => 60,
-    'barcode_height_pct' => 35,
+    'barcode_width_pct' => 65,
+    'barcode_height_pct' => 42,
     'field_help' => [
         'copies' => 'عدد الملصقات المطبوعة لكل صنف.',
         'label_width_mm' => 'عرض الملصق بالمليمتر — نفس «Width» في إعدادات الطابعة (Custom).',
