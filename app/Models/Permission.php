@@ -79,6 +79,22 @@ class Permission extends Model
         return "{$dashboard}.{$page}.view";
     }
 
+    /**
+     * صفحة لوحة التحكم المرتبطة بصلاحية إجراء (إن وُجدت).
+     *
+     * @return array{dashboard: string, page: string}|null
+     */
+    public static function pageForAction(string $actionSlug): ?array
+    {
+        $alias = config("permissions.page_action_aliases.{$actionSlug}");
+
+        if (! is_array($alias) || count($alias) < 2) {
+            return null;
+        }
+
+        return ['dashboard' => (string) $alias[0], 'page' => (string) $alias[1]];
+    }
+
     public static function isViewSlug(string $slug): bool
     {
         return str_ends_with($slug, '.view');

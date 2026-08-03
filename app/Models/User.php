@@ -104,7 +104,14 @@ class User extends Authenticatable
             return true;
         }
 
-        return (bool) $this->role?->loadMissing('permissions')->hasPermission($slug);
+        if ($this->role?->loadMissing('permissions')->hasPermission($slug)) {
+            return true;
+        }
+
+        $page = Permission::pageForAction($slug);
+
+        return $page !== null
+            && $this->canViewDashboardPage($page['dashboard'], $page['page']);
     }
 
     /**

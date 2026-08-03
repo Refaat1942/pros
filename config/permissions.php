@@ -94,6 +94,21 @@ return [
     ],
 
     /**
+     * إجراءات مرتبطة بصفحة إدارية — منح {dashboard}.{page}.view يكفي لفتح الشاشة وتشغيلها.
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    'page_action_aliases' => [
+        'view-workshop-tracking' => ['admin', 'workshop-tracking'],
+        'manage-workshop-sections' => ['admin', 'workshop-sections'],
+        'approve-dispense' => ['admin', 'dispense-approvals'],
+        'approve-services' => ['admin', 'services-approvals'],
+        'manage-permissions' => ['admin', 'permissions'],
+        'view-inventory-overview' => ['admin', 'inventory-overview'],
+        'manage-inventory' => ['admin', 'catalog'],
+    ],
+
+    /**
      * الإسناد الافتراضي للإجراءات عند تشغيل الـ seeder (عدا صلاحيات العرض).
      */
     'default_actions' => [

@@ -54,6 +54,60 @@ class SuperAdminPermissionsTest extends TestCase
         $this->assertFalse($limited->canViewDashboardPage('admin', 'permissions'));
     }
 
+    public function test_page_view_grants_linked_admin_action_permission(): void
+    {
+        app(PermissionCatalogService::class)->syncToDatabase();
+
+        $adminRole = $this->makeRole(Role::SLUG_ADMIN);
+        $viewSlug = Permission::viewSlug('admin', 'workshop-tracking');
+
+        $adminRole->permissions()->sync(
+            Permission::query()->where('slug', $viewSlug)->pluck('id')
+        );
+
+        $user = User::updateOrCreate(
+            ['username' => 'admin-workshop-view-only'],
+            [
+                'name' => 'أدمن متابعة ورشة',
+                'password' => UserFactory::TEST_PASSWORD,
+                'role_id' => $adminRole->id,
+                'status' => User::STATUS_ACTIVE,
+            ]
+        );
+
+        $user = $user->fresh();
+
+        $this->assertTrue($user->canViewDashboardPage('admin', 'workshop-tracking'));
+        $this->assertFalse($user->role->hasPermission('view-workshop-tracking'));
+        $this->assertTrue($user->hasPermission('view-workshop-tracking'));
+
+        $this->actingAs($user)->getJson(route('admin.workshop-tracking.list'))->assertOk();
+    }
+
+    public function test_patient_tracks_list_requires_patient_tracks_page_not_overview(): void
+    {
+        app(PermissionCatalogService::class)->syncToDatabase();
+
+        $adminRole = $this->makeRole(Role::SLUG_ADMIN);
+        $adminRole->permissions()->sync(
+            Permission::query()->where('slug', Permission::viewSlug('admin', 'patient-tracks'))->pluck('id')
+        );
+
+        $user = User::updateOrCreate(
+            ['username' => 'admin-patient-tracks-only'],
+            [
+                'name' => 'أدمن مسار المرضى',
+                'password' => UserFactory::TEST_PASSWORD,
+                'role_id' => $adminRole->id,
+                'status' => User::STATUS_ACTIVE,
+            ]
+        );
+
+        $this->actingAs($user->fresh())
+            ->getJson(route('admin.patient-tracks.list'))
+            ->assertOk();
+    }
+
     public function test_superadmin_login_redirects_to_admin_dashboard(): void
     {
         app(PermissionCatalogService::class)->syncToDatabase();

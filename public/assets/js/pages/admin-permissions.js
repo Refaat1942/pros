@@ -10,6 +10,44 @@
 
     let activeRoleId = roleSelect.value;
 
+    let pageActionAliases = {};
+    try {
+        pageActionAliases = JSON.parse(form.dataset.pageActionAliases || '{}');
+    } catch (e) {
+        pageActionAliases = {};
+    }
+
+    /** slug عرض الصفحة ← slugs الإجراءات المرتبطة */
+    const viewToActions = {};
+    Object.keys(pageActionAliases).forEach((actionSlug) => {
+        const pair = pageActionAliases[actionSlug];
+        if (!Array.isArray(pair) || pair.length < 2) return;
+        const viewSlug = pair[0] + '.' + pair[1] + '.view';
+        if (!viewToActions[viewSlug]) {
+            viewToActions[viewSlug] = [];
+        }
+        viewToActions[viewSlug].push(actionSlug);
+    });
+
+    function setSlugChecked(slug, checked) {
+        const visible = form.querySelector('.perm-visible-cb[data-slug="' + slug + '"]');
+        if (visible) {
+            visible.checked = checked;
+        }
+        const hidden = form.querySelector(
+            '.perm-hidden-cb[data-role="' + activeRoleId + '"][data-slug="' + slug + '"]'
+        );
+        if (hidden) {
+            hidden.checked = checked;
+        }
+    }
+
+    function syncLinkedActionsForView(viewSlug, checked) {
+        (viewToActions[viewSlug] || []).forEach((actionSlug) => {
+            setSlugChecked(actionSlug, checked);
+        });
+    }
+
     function hiddenCheckboxes(roleId) {
         return form.querySelectorAll(`.perm-hidden-cb[data-role="${roleId}"]`);
     }
@@ -83,6 +121,9 @@
             );
             if (hidden) {
                 hidden.checked = visible.checked;
+            }
+            if (slug.endsWith('.view')) {
+                syncLinkedActionsForView(slug, visible.checked);
             }
         });
     });

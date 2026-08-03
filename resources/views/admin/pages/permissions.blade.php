@@ -18,6 +18,8 @@
                 <strong>سوبر أدمن</strong> يتحكم في كل شيء ويضبط من هنا ما يراه كل دور —
                 بما في ذلك حسابات «مسؤول النظام (محدود)» التي تُنشأ من صفحة الموظفين.
                 السوبر أدمن نفسه لا يظهر في المصفوفة لأنه يملك كل الصلاحيات تلقائياً.
+                <br>
+                <span class="perm-role-banner-hint">تفعيل «عرض الصفحة» يكفي لتشغيل الشاشة — لا حاجة لتفعيل إجراء منفصل لنفس الشاشة.</span>
             </p>
         </div>
         <div class="perm-header-actions">
@@ -47,7 +49,8 @@
         <div class="perm-flash-success">✅ {{ session('status') }}</div>
     @endif
 
-    <form method="POST" action="{{ route('admin.permissions.update') }}" id="permMatrixForm">
+    <form method="POST" action="{{ route('admin.permissions.update') }}" id="permMatrixForm"
+          data-page-action-aliases='@json(config('permissions.page_action_aliases', []))'>
         @csrf
 
         {{-- مصفوفة كاملة مخفية — تُحدَّث عبر JS عند التبديل بين الأدوار --}}

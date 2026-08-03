@@ -44,6 +44,9 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,overview')->group(function () {
             Route::get('overview', [AdminOverviewController::class, 'index'])->name('overview');
             Route::get('overview/export', [AdminOverviewController::class, 'export'])->name('overview.export');
+        });
+
+        Route::middleware('dashboard.page:admin,patient-tracks')->group(function () {
             Route::get('patient-tracks/list', [AdminOverviewController::class, 'patientTracksApi'])->name('patient-tracks.list');
         });
 
