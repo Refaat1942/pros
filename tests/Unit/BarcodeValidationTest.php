@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
+use App\Models\StockItem;
 use App\Services\BarcodeValidationService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -29,7 +30,7 @@ class BarcodeValidationTest extends TestCase
         $this->service = app(BarcodeValidationService::class);
     }
 
-    private function bomItemForCode(string $code): BomItem
+    private function bomItemForCode(string $operationalCode): BomItem
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -45,8 +46,8 @@ class BarcodeValidationTest extends TestCase
 
         return BomItem::create([
             'bom_id' => $bom->id,
-            'stock_item_code' => $code,
-            'name' => "Bom Item {$code}",
+            'stock_item_code' => $operationalCode,
+            'name' => "Bom Item {$operationalCode}",
             'qty' => 2,
             'unit_cost' => 100.00,
             'issued_qty' => 0,
@@ -56,10 +57,11 @@ class BarcodeValidationTest extends TestCase
 
     public function test_correct_barcode_returns_true(): void
     {
-        $this->stockItem('RM-001');          // barcode = BC-RM-001
-        $bomItem = $this->bomItemForCode('RM-001');
+        $code = '4821';
+        $this->stockItem($code);
+        $bomItem = $this->bomItemForCode($code);
 
-        $result = $this->service->validateScan('BC-RM-001', $bomItem);
+        $result = $this->service->validateScan('BC-4821', $bomItem);
 
         $this->assertTrue($result);
     }
@@ -67,22 +69,22 @@ class BarcodeValidationTest extends TestCase
     /** الفصل الخامس: إنذار حاد — قطعة مش في الـ BOM */
     public function test_wrong_barcode_returns_false(): void
     {
-        $this->stockItem('RM-002');
-        $this->stockItem('RM-099');
-        $bomItem = $this->bomItemForCode('RM-002');
+        $this->stockItem('4822');
+        $this->stockItem('7399');
+        $bomItem = $this->bomItemForCode('4822');
 
-        $result = $this->service->validateScan('BC-RM-099', $bomItem);
+        $result = $this->service->validateScan('BC-7399', $bomItem);
 
         $this->assertFalse($result);
     }
 
     public function test_wrong_barcode_writes_blocked_audit_entry(): void
     {
-        $this->stockItem('RM-003');
-        $this->stockItem('RM-099');
-        $bomItem = $this->bomItemForCode('RM-003');
+        $this->stockItem('4833');
+        $this->stockItem('7399');
+        $bomItem = $this->bomItemForCode('4833');
 
-        $this->service->validateScan('BC-RM-099', $bomItem);
+        $this->service->validateScan('BC-7399', $bomItem);
 
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'blocked',
@@ -92,7 +94,7 @@ class BarcodeValidationTest extends TestCase
 
     public function test_non_existent_barcode_returns_false(): void
     {
-        $bomItem = $this->bomItemForCode('RM-003');
+        $bomItem = $this->bomItemForCode('4844');
 
         $result = $this->service->validateScan('TOTALLY-FAKE-BARCODE', $bomItem);
 
@@ -101,34 +103,67 @@ class BarcodeValidationTest extends TestCase
 
     public function test_stock_qty_unchanged_after_wrong_scan(): void
     {
-        $item = $this->stockItem('RM-004', qty: 10);
-        $this->stockItem('RM-005');
-        $bomItem = $this->bomItemForCode('RM-004');
+        $item = $this->stockItem('4855', qty: 10);
+        $this->stockItem('4866');
+        $bomItem = $this->bomItemForCode('4855');
 
-        $this->service->validateScan('BC-RM-005', $bomItem); // wrong barcode
+        $this->service->validateScan('BC-4866', $bomItem);
 
         $item->refresh();
         $this->assertEquals(10, $item->qty, 'Stock must not change on a blocked scan');
     }
 
-    public function test_item_code_scan_matches_without_barcode_prefix(): void
+    public function test_operational_code_scan_matches_without_barcode_prefix(): void
     {
-        $this->stockItem('RM-CODE', qty: 5);
-        $bomItem = $this->bomItemForCode('RM-CODE');
+        $code = '4877';
+        $this->stockItem($code, qty: 5);
+        $bomItem = $this->bomItemForCode($code);
 
-        $this->assertTrue($this->service->validateScan('RM-CODE', $bomItem));
-        $this->assertSame('RM-CODE', $this->service->resolveStockItemCode('RM-CODE'));
-        $this->assertSame('RM-CODE', $this->service->resolveStockItemCode('BC-RM-CODE'));
+        $this->assertTrue($this->service->validateScan($code, $bomItem));
+        $this->assertSame($code, $this->service->resolveStockItemCode($code));
+        $this->assertSame($code, $this->service->resolveStockItemCode('BC-'.$code));
     }
 
-    public function test_alt_codes_column_does_not_match_as_item_code(): void
+    public function test_catalog_code_column_does_not_match_as_operational_code(): void
     {
-        $item = $this->stockItem('RM-PRIMARY', qty: 10);
-        $item->update(['alt_codes' => 'ALT-999']);
+        StockItem::create([
+            'code' => 'RM-PRIMARY',
+            'name' => 'صنف اختبار',
+            'store_class' => 'A',
+            'uom' => 'piece',
+            'alt_codes' => '4888',
+            'barcode' => 'BC-4888',
+            'qty' => 10,
+            'reserved' => 0,
+            'wac' => 50,
+            'status' => 'ok',
+        ]);
 
-        $bomItem = $this->bomItemForCode('RM-PRIMARY');
+        $bomItem = $this->bomItemForCode('4888');
 
-        $this->assertFalse($this->service->validateScan('ALT-999', $bomItem));
-        $this->assertNull($this->service->resolveStockItemCode('ALT-999'));
+        $this->assertFalse($this->service->validateScan('RM-PRIMARY', $bomItem));
+        $this->assertNull($this->service->resolveStockItemCode('RM-PRIMARY'));
+    }
+
+    public function test_alt_codes_is_the_operational_identifier(): void
+    {
+        $item = StockItem::create([
+            'code' => 'RM-PRIMARY',
+            'name' => 'صنف اختبار',
+            'store_class' => 'A',
+            'uom' => 'piece',
+            'alt_codes' => '4999',
+            'barcode' => 'BC-4999',
+            'qty' => 10,
+            'reserved' => 0,
+            'wac' => 50,
+            'status' => 'ok',
+        ]);
+
+        $bomItem = $this->bomItemForCode('4999');
+
+        $this->assertTrue($this->service->validateScan('4999', $bomItem));
+        $this->assertTrue($this->service->validateScan('BC-4999', $bomItem));
+        $this->assertSame('4999', $this->service->resolveStockItemCode('4999'));
     }
 }

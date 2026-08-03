@@ -20,9 +20,15 @@ class MilitaryQueryChainE2eTest extends TestCase
     use DashboardQueueAssertions;
     use ProstheticTestHelper;
 
+    private string $itemCode = '';
+
+    private string $itemBarcode = '';
+
     private function seedStock(): void
     {
         $item = $this->stockItem('RM-001', qty: 30, wac: 80.00);
+        $this->itemCode = $this->testOperationalCode('RM-001');
+        $this->itemBarcode = $item->barcode;
         $sup = $this->makeSupplier();
         app(StockPriceService::class)->addBatch($item, 10, 150.00, $sup, 'INV-MIL-1', now());
     }
@@ -54,7 +60,7 @@ class MilitaryQueryChainE2eTest extends TestCase
             'patient_id' => $patient->id,
             'appointment_id' => $appointmentId,
             'diagnosis' => 'بتر — عسكري E2E',
-            'items' => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1]],
+            'items' => [['stock_item_code' => $this->itemCode, 'name' => 'صنف RM-001', 'qty' => 1]],
             'lock' => true,
         ])->assertCreated();
 
@@ -68,7 +74,7 @@ class MilitaryQueryChainE2eTest extends TestCase
 
         $specRes = $this->postJson('/spec/spec', [
             'case_id' => $case->id,
-            'items' => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1]],
+            'items' => [['stock_item_code' => $this->itemCode, 'name' => 'صنف RM-001', 'qty' => 1]],
         ])->assertCreated();
 
         // المسار العسكري: الإرسال → المعدلات → التكاليف → تأكيد → اعتماد تلقائي → مخزن.
@@ -111,7 +117,7 @@ class MilitaryQueryChainE2eTest extends TestCase
 
         $this->actingAs($tech);
         $bom = Bom::where('case_id', $case->id)->firstOrFail();
-        $this->postJson("/technical/bom/{$bom->id}/dispense", ['scanned_barcodes' => ['BC-RM-001']])->assertOk();
+        $this->postJson("/technical/bom/{$bom->id}/dispense", ['scanned_barcodes' => [$this->itemBarcode]])->assertOk();
 
         $debtBefore = (float) $company->debt()->first()->due;
 

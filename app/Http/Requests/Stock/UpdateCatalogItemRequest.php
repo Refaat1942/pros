@@ -14,7 +14,7 @@ class UpdateCatalogItemRequest extends BaseRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'page_number' => ['nullable', 'string', 'max:50'],
-            'alt_codes' => ['nullable', 'string', 'max:500'],
+            'alt_codes' => ['nullable', 'string', 'regex:/^\d{4}$/'],
             'uom' => ['nullable', 'string', 'max:50'],
             'qty' => ['nullable', 'integer', 'min:0'],
             'opening_qty' => ['nullable', 'integer', 'min:0'],

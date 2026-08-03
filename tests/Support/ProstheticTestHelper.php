@@ -196,22 +196,44 @@ trait ProstheticTestHelper
         ]);
     }
 
-    protected function stockItem(string $code = 'RM-001', int $qty = 20, float $wac = 100.00, bool $quick = false): StockItem
+    protected function stockItem(string $legacyOrOperational = '1001', int $qty = 20, float $wac = 100.00, bool $quick = false): StockItem
     {
+        $operationalCode = $this->resolveTestOperationalCode($legacyOrOperational);
+        $catalogCode = preg_match('/^\d{4}$/', $legacyOrOperational)
+            ? 'ITM-'.$operationalCode
+            : $legacyOrOperational;
+
         return StockItem::create([
-            'code' => $code,
-            'name' => "صنف {$code}",
+            'code' => $catalogCode,
+            'name' => "صنف {$operationalCode}",
             'spec' => 'مواصفات قياسية',
             'store_class' => 'A',
             'is_quick_dispense' => $quick,
             'uom' => 'piece',
-            'barcode' => "BC-{$code}",
+            'alt_codes' => $operationalCode,
+            'barcode' => StockItem::barcodeForOperationalCode($operationalCode),
             'qty' => $qty,
             'reserved' => 0,
+            'price' => $wac,
             'wac' => $wac,
             'status' => $qty > StockItem::LOW_QTY_THRESHOLD ? 'ok' : 'low',
             'last_moved_at' => now()->toDateString(),
         ]);
+    }
+
+    /** يُحوّل أكواد الاختبار القديمة (RM-001) إلى كود تشغيلي 4 أرقام ثابت. */
+    protected function resolveTestOperationalCode(string $code): string
+    {
+        if (preg_match('/^\d{4}$/', $code)) {
+            return $code;
+        }
+
+        return str_pad((string) (1000 + (abs(crc32($code)) % 9000)), 4, '0', STR_PAD_LEFT);
+    }
+
+    protected function testOperationalCode(string $legacyOrCode = 'RM-001'): string
+    {
+        return $this->resolveTestOperationalCode($legacyOrCode);
     }
 
     // ── CaseRecord helpers ────────────────────────────────────────────────────
@@ -248,7 +270,8 @@ trait ProstheticTestHelper
     protected function operationsReadyCase(Patient $patient, array $codes = ['RM-001']): CaseRecord
     {
         foreach ($codes as $code) {
-            if (! StockItem::where('code', $code)->exists()) {
+            $operational = $this->resolveTestOperationalCode($code);
+            if (! StockItem::findByOperationalCode($operational)) {
                 $this->stockItem($code, 20, 100.00);
             }
         }
@@ -258,7 +281,7 @@ trait ProstheticTestHelper
         app(BomService::class)->createSpecRaw(
             $case,
             array_map(fn (string $c) => [
-                'stock_item_code' => $c,
+                'stock_item_code' => $this->resolveTestOperationalCode($c),
                 'name' => "صنف {$c}",
                 'qty' => 1,
             ], $codes),
@@ -290,7 +313,8 @@ trait ProstheticTestHelper
     protected function costCalcReadyCase(Patient $patient, array $codes = ['RM-001']): CaseRecord
     {
         foreach ($codes as $code) {
-            if (! StockItem::where('code', $code)->exists()) {
+            $operational = $this->resolveTestOperationalCode($code);
+            if (! StockItem::findByOperationalCode($operational)) {
                 $this->stockItem($code, 20, 100.00);
             }
         }
@@ -300,7 +324,7 @@ trait ProstheticTestHelper
         app(BomService::class)->createSpecRaw(
             $case,
             array_map(fn (string $c) => [
-                'stock_item_code' => $c,
+                'stock_item_code' => $this->resolveTestOperationalCode($c),
                 'name' => "صنف {$c}",
                 'qty' => 1,
             ], $codes),
@@ -324,7 +348,7 @@ trait ProstheticTestHelper
         foreach ($codes as $code) {
             PricingRequestItem::create([
                 'pricing_request_id' => $req->id,
-                'stock_item_code' => $code,
+                'stock_item_code' => $this->resolveTestOperationalCode($code),
                 'name' => "صنف {$code}",
                 'qty' => 1,
                 'unit_price' => 150.00,

@@ -27,15 +27,13 @@ class AdjustmentEditRequestController extends Controller
             ->map(fn (BomItem $i) => $i->only(['stock_item_code', 'name', 'qty']))
             ->values();
 
-        $stockCatalog = StockItem::query()
-            ->orderBy('name')
-            ->get(['id', 'code', 'name', 'qty', 'reserved'])
-            ->map(fn (StockItem $item) => [
-                'code' => $item->code,
-                'name' => $item->name,
-                'qty' => (int) $item->qty,
-                'reserved' => (int) $item->reserved,
-                'available' => $item->availableQty(),
+        $stockCatalog = collect(StockItem::pickerCatalogRows())
+            ->map(fn (array $row) => [
+                'code' => $row['code'],
+                'name' => $row['name'],
+                'qty' => $row['qty'],
+                'reserved' => $row['reserved'],
+                'available' => $row['available_max'],
             ]);
 
         return response()->json([

@@ -115,7 +115,7 @@ class BomService
                     abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
                 }
 
-                if (! StockItem::where('code', $code)->exists()) {
+                if (! StockItem::findByOperationalCode($code)) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
 
@@ -152,7 +152,7 @@ class BomService
         $bom->loadMissing('items');
 
         foreach ($bom->items as $bomItem) {
-            $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+            $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true);
 
             if (! $stockItem) {
                 abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
@@ -193,7 +193,7 @@ class BomService
         $bom->loadMissing('items');
 
         foreach ($bom->items as $bomItem) {
-            $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+            $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true);
 
             if (! $stockItem) {
                 continue;
@@ -230,7 +230,7 @@ class BomService
             $specItems = $bom->items()->where('source', BomItem::SOURCE_SPEC)->get();
 
             foreach ($specItems as $bomItem) {
-                $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+                $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true);
 
                 if ($stockItem) {
                     $this->reverseReservedDelta($stockItem, $bomItem->qty);
@@ -243,7 +243,7 @@ class BomService
                 $code = $row['stock_item_code'];
                 $qty = (int) $row['qty'];
 
-                if (! StockItem::where('code', $code)->exists()) {
+                if (! StockItem::findByOperationalCode($code)) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
 
@@ -262,7 +262,7 @@ class BomService
             $bom->load('items');
 
             foreach ($bom->items->where('source', BomItem::SOURCE_SPEC) as $bomItem) {
-                $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+                $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true);
 
                 if ($stockItem) {
                     $stockItem->increment('reserved', $bomItem->qty);
@@ -318,7 +318,7 @@ class BomService
                     abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
                 }
 
-                $stockItem = StockItem::where('code', $code)->lockForUpdate()->first();
+                $stockItem = StockItem::findByOperationalCode($code, true);
 
                 if (! $stockItem) {
                     abort(422, "الصنف غير موجود: {$code}");
@@ -382,7 +382,7 @@ class BomService
             $bom->loadMissing('items');
 
             foreach ($bom->items->where('source', BomItem::SOURCE_ADJUSTMENT) as $old) {
-                if ($stockItem = StockItem::where('code', $old->stock_item_code)->lockForUpdate()->first()) {
+                if ($stockItem = StockItem::findByOperationalCode($old->stock_item_code, true)) {
                     $this->reverseReservedDelta($stockItem, $old->qty);
                 }
             }
@@ -397,7 +397,7 @@ class BomService
                     abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
                 }
 
-                $stockItem = StockItem::where('code', $code)->lockForUpdate()->first();
+                $stockItem = StockItem::findByOperationalCode($code, true);
 
                 if (! $stockItem) {
                     abort(422, "الصنف غير موجود: {$code}");
@@ -451,7 +451,7 @@ class BomService
 
             $snapshot = $item->only(['id', 'stock_item_code', 'name', 'qty', 'source']);
 
-            if ($stockItem = StockItem::where('code', $item->stock_item_code)->lockForUpdate()->first()) {
+            if ($stockItem = StockItem::findByOperationalCode($item->stock_item_code, true)) {
                 $this->reverseReservedDelta($stockItem, $item->qty);
             }
 
@@ -500,7 +500,7 @@ class BomService
                 return $bom->fresh()->load('items');
             }
 
-            $stockItem = StockItem::where('code', $item->stock_item_code)->lockForUpdate()->first();
+            $stockItem = StockItem::findByOperationalCode($item->stock_item_code, true);
 
             if (! $stockItem) {
                 abort(422, "الصنف غير موجود: {$item->stock_item_code}");
@@ -544,7 +544,7 @@ class BomService
         }
 
         foreach ($bom->items as $bomItem) {
-            $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+            $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true);
 
             if (! $stockItem) {
                 abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
@@ -627,7 +627,7 @@ class BomService
         $alreadyReserved = (bool) $bom->stock_reserved_at;
 
         foreach ($bom->items as $bomItem) {
-            $stockItem = StockItem::where('code', $bomItem->stock_item_code)->lockForUpdate()->first();
+            $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true);
 
             if (! $stockItem) {
                 abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
@@ -682,7 +682,7 @@ class BomService
         $code = $row['stock_item_code'];
         $qty = (int) $row['qty'];
 
-        $stockItem = StockItem::where('code', $code)->lockForUpdate()->first();
+        $stockItem = StockItem::findByOperationalCode($code, true);
 
         if (! $stockItem) {
             abort(422, "الصنف غير موجود: {$code}");
@@ -778,9 +778,8 @@ class BomService
             $performedById = Auth::id();
 
             foreach ($groups as $code => $rows) {
-                $stockItem = StockItem::where('code', $code)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+                $stockItem = StockItem::findByOperationalCode($code, true)
+                    ?? abort(422, "الصنف غير موجود: {$code}");
 
                 $stockBefore[$stockItem->code] = [
                     'qty' => $stockItem->qty,
@@ -790,9 +789,8 @@ class BomService
 
             foreach ($groups as $code => $rows) {
                 foreach ($rows as $bomItem) {
-                    $stockItem = StockItem::where('code', $bomItem->stock_item_code)
-                        ->lockForUpdate()
-                        ->firstOrFail();
+                    $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true)
+                        ?? abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
 
                     $qty = $bomItem->qty;
                     $balanceAfter = $stockItem->qty - $qty;
@@ -838,7 +836,7 @@ class BomService
             $stockAfter = [];
             foreach ($groups as $code => $rows) {
                 foreach ($rows as $bomItem) {
-                    $stockItem = StockItem::where('code', $bomItem->stock_item_code)->first();
+                    $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code);
                     if ($stockItem) {
                         $stockAfter[$stockItem->code] = [
                             'qty' => $stockItem->qty,

@@ -19,7 +19,7 @@ class StoreTechOrderSpecRequest extends BaseRequest
                 ? ['required', 'string', 'max:5000']
                 : ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.stock_item_code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-_]+$/'],
+            'items.*.stock_item_code' => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
             'items.*.name' => ['required', 'string', 'min:1', 'max:255'],
             'items.*.qty' => $this->positiveQtyRules(),
         ];

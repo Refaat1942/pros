@@ -207,6 +207,6 @@ class ReturnNoteController extends Controller
             return collect();
         }
 
-        return StockItem::query()->whereIn('code', $codes)->pluck('barcode', 'code');
+        return collect(StockItem::mapByOperationalCodes($codes, 'barcode'));
     }
 }

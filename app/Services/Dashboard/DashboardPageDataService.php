@@ -918,8 +918,8 @@ class DashboardPageDataService
             ->get();
 
         $barcodes = StockItem::query()
-            ->whereIn('code', $notes->flatMap(fn ($n) => $n->lines->pluck('stock_item_code'))->unique()->all())
-            ->pluck('barcode', 'code');
+            ->whereIn('alt_codes', $notes->flatMap(fn ($n) => $n->lines->pluck('stock_item_code'))->unique()->all())
+            ->pluck('barcode', 'alt_codes');
 
         $statusLabels = [
             ReturnNote::STATUS_COMPLETED => 'تم الاستلام',

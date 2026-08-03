@@ -4,7 +4,7 @@ namespace App\Support;
 
 use App\Models\StockItem;
 
-/** خريطة كود الصنف → وحدة القياس (uom) لعرضها في BOM والمعدلات والصرف. */
+/** خريطة كود الصنف (alt_codes) → وحدة القياس (uom) لعرضها في BOM والمعدلات والصرف. */
 final class StockItemUomLookup
 {
     /**
@@ -13,15 +13,6 @@ final class StockItemUomLookup
      */
     public static function forCodes(array $codes): array
     {
-        $codes = array_values(array_unique(array_filter($codes)));
-
-        if ($codes === []) {
-            return [];
-        }
-
-        return StockItem::query()
-            ->whereIn('code', $codes)
-            ->pluck('uom', 'code')
-            ->all();
+        return StockItem::mapByOperationalCodes($codes, 'uom');
     }
 }

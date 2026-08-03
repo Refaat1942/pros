@@ -24,16 +24,7 @@ class SpecEditRequestController extends Controller
 
         $spec->load(['items', 'caseRecord', 'pendingEditRequest', 'rejectedSpecEditRequest']);
 
-        $stockCatalog = StockItem::query()
-            ->orderBy('code')
-            ->get(['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom'])
-            ->map(fn ($item) => [
-                'code' => $item->code,
-                'name' => $item->name,
-                'spec' => $item->spec,
-                'uom' => $item->uom,
-                'available_max' => $item->availableQty(),
-            ]);
+        $stockCatalog = StockItem::pickerCatalogRows();
 
         return response()->json([
             'spec' => $spec->only(['id', 'order_ref', 'case_id', 'patient_name', 'tech_notes', 'locked']),

@@ -246,9 +246,11 @@ class BomController extends Controller
     private function formatDetail(Bom $bom): array
     {
         $barcodes = $bom->relationLoaded('items') && $bom->items->isNotEmpty()
-            ? StockItem::whereIn('code', $bom->items->pluck('stock_item_code'))
-                ->pluck('barcode', 'code')
-            : collect();
+            ? StockItem::mapByOperationalCodes(
+                $bom->items->pluck('stock_item_code')->all(),
+                'barcode',
+            )
+            : [];
 
         $uomMap = $bom->relationLoaded('items') && $bom->items->isNotEmpty()
             ? StockItemUomLookup::forCodes($bom->items->pluck('stock_item_code')->all())

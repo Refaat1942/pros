@@ -92,7 +92,6 @@ class CashierPaymentFlowTest extends TestCase
         $this->actingAs($cashier)
             ->postJson('/cashier/payments/'.$case->id.'/confirm', [
                 'method' => 'cash',
-                'amount' => 1500,
                 'reference' => 'IP-12345',
             ])
             ->assertOk()
@@ -119,7 +118,6 @@ class CashierPaymentFlowTest extends TestCase
 
         app(CashierPaymentService::class)->confirmPayment($case, [
             'method' => 'cash',
-            'amount' => 1500,
         ]);
 
         $ops = $this->userWithRole('operations');
@@ -186,7 +184,6 @@ class CashierPaymentFlowTest extends TestCase
         $this->actingAs($cashier)
             ->postJson('/cashier/payments/'.$case->id.'/confirm', [
                 'method' => 'bank_cheque',
-                'amount' => 1000,
                 'reference' => 'CHQ-55123',
             ])
             ->assertOk()
@@ -203,8 +200,7 @@ class CashierPaymentFlowTest extends TestCase
 
         $payment = app(CashierPaymentService::class)->confirmPayment($case, [
             'method' => 'cash',
-            'amount' => 1325,
-        ]);
+        ])['payment'];
 
         $this->actingAs($this->userWithRole('cashier'))
             ->get('/cashier/payments/'.$payment->id.'/receipt')
@@ -220,7 +216,6 @@ class CashierPaymentFlowTest extends TestCase
         $case = $this->cashierAwaitingCase();
         app(CashierPaymentService::class)->confirmPayment($case, [
             'method' => 'cash',
-            'amount' => 800,
         ]);
 
         $report = app(AdminReportsHubService::class)->build(

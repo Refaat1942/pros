@@ -20,9 +20,15 @@ class CivilianQueryChainE2eTest extends TestCase
     use DashboardQueueAssertions;
     use ProstheticTestHelper;
 
+    private string $itemCode = '';
+
+    private string $itemBarcode = '';
+
     private function seedStock(): void
     {
         $item = $this->stockItem('RM-001', qty: 30, wac: 80.00);
+        $this->itemCode = $this->testOperationalCode('RM-001');
+        $this->itemBarcode = $item->barcode;
         $sup = $this->makeSupplier();
         app(StockPriceService::class)->addBatch($item, 10, 150.00, $sup, 'INV-E2E-1', now());
         app(StockPriceService::class)->addBatch($item, 10, 200.00, $sup, 'INV-E2E-2', now());
@@ -77,7 +83,7 @@ class CivilianQueryChainE2eTest extends TestCase
             'patient_id' => $patient->id,
             'appointment_id' => $appointmentId,
             'diagnosis' => 'بتر طرف سفلي — E2E',
-            'items' => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 2]],
+            'items' => [['stock_item_code' => $this->itemCode, 'name' => 'صنف RM-001', 'qty' => 2]],
             'lock' => true,
         ]);
         $lock->assertCreated();
@@ -99,7 +105,7 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $create = $this->postJson('/spec/spec', [
             'case_id' => $case->id,
-            'items' => [['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 2]],
+            'items' => [['stock_item_code' => $this->itemCode, 'name' => 'صنف RM-001', 'qty' => 2]],
         ]);
         $create->assertCreated();
         $specId = $create->json('id');
@@ -208,13 +214,13 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertContains($bom->id, $queues->technicalBomRawIds());
 
         $mismatch = $this->postJson("/technical/bom/{$bom->id}/dispense", [
-            'scanned_barcodes' => ['BC-RM-999', 'BC-RM-999'],
+            'scanned_barcodes' => ['BC-9999', 'BC-9999'],
         ]);
         $mismatch->assertStatus(422)->assertJsonPath('blocked', true);
 
         // qty=2 يتطلب مسحتين لنفس الباركود (مطابقة كود + صنف + كمية).
         $dispense = $this->postJson("/technical/bom/{$bom->id}/dispense", [
-            'scanned_barcodes' => ['BC-RM-001', 'BC-RM-001'],
+            'scanned_barcodes' => [$this->itemBarcode, $this->itemBarcode],
         ]);
         $dispense->assertOk();
         $this->assertEquals(Bom::STAGE_WIP, $bom->fresh()->stage);

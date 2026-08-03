@@ -126,9 +126,8 @@ class ReturnNoteService
                     abort(422, "باركود غير مطابق للصنف {$line->stock_item_code}.");
                 }
 
-                $stockItem = StockItem::where('code', $line->stock_item_code)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+                $stockItem = StockItem::findByOperationalCode($line->stock_item_code, true)
+                    ?? abort(422, "الصنف غير موجود: {$line->stock_item_code}");
 
                 $stockBefore[$stockItem->code] = [
                     'qty' => $stockItem->qty,
@@ -175,7 +174,7 @@ class ReturnNoteService
 
             $stockAfter = [];
             foreach (array_keys($stockBefore) as $code) {
-                $item = StockItem::where('code', $code)->first();
+                $item = StockItem::findByOperationalCode($code);
                 if ($item) {
                     $stockAfter[$code] = ['qty' => $item->qty];
                 }

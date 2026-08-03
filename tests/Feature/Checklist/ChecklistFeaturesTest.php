@@ -62,7 +62,7 @@ class ChecklistFeaturesTest extends TestCase
     {
         $csv = $this->catalogHeaders();
         $contents = implode(',', $csv)."\r\n"
-            ."RM-900,10,خامة اختبار,BC-RM-900,متر,15,5,0,20\r\n";
+            ."RM-900,10,خامة اختبار,9001,متر,15,5,0,20\r\n";
 
         $file = UploadedFile::fake()->createWithContent('items.csv', $contents);
 
@@ -80,7 +80,7 @@ class ChecklistFeaturesTest extends TestCase
             'qty' => 20,
         ]);
 
-        $update = implode(',', $csv)."\r\n"."RM-900,11,خامة محدثة,BC-RM-900,قطعة,40,2,5,37\r\n";
+        $update = implode(',', $csv)."\r\n"."RM-900,11,خامة محدثة,9001,قطعة,40,2,5,37\r\n";
         $summary2 = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('items2.csv', $update),
         );
@@ -196,16 +196,8 @@ class ChecklistFeaturesTest extends TestCase
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
 
-        StockItem::create([
-            'code' => 'RM-MIL',
-            'name' => 'صنف عسكري',
-            'barcode' => 'BC-RM-MIL',
-            'qty' => 20,
-            'reserved' => 0,
-            'price' => 300,
-            'wac' => 100,
-            'status' => 'ok',
-        ]);
+        $item = $this->stockItem('RM-MIL', qty: 20, wac: 100.00);
+        $item->update(['price' => 300]);
 
         $case = $this->operationsReadyCase($patient, ['RM-MIL']);
 

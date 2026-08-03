@@ -7,6 +7,7 @@ use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
 use App\Models\Payment;
 use App\Models\Quote;
+use App\Support\ContractBillingSplit;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -15,8 +16,8 @@ use Illuminate\Support\Facades\DB;
  *
  * عند تأكيد استلام المبلغ:
  *   1) تسجيل سجل دفعة (Payment) بوسيلة الدفع.
- *   2) تحديث المبلغ المدفوع على الحالة ووسم عرض السعر «مدفوع».
- *   3) إعادة الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل (لا حجز/صرف هنا).
+ *   2) تحديث المبلغ المدفوع على الحالة (يدعم الدفع الجزئي).
+ *   3) عند اكتمال المبلغ: وسم عرض السعر «مدفوع» وإعادة الحالة لمكتب التشغيل.
  * الحجز الفوري وأمر الشغل يصدران لاحقاً باعتماد مكتب التشغيل.
  */
 class CashierPaymentService
@@ -28,8 +29,9 @@ class CashierPaymentService
 
     /**
      * @param  array{method: string, amount?: float|int|string|null, reference?: ?string, notes?: ?string}  $data
+     * @return array{payment: Payment, fully_paid: bool, paid_total: float, remaining: float}
      */
-    public function confirmPayment(CaseRecord $case, array $data): Payment
+    public function confirmPayment(CaseRecord $case, array $data): array
     {
         $case = CaseRecord::findOrFail($case->id);
 
@@ -45,18 +47,28 @@ class CashierPaymentService
         $case->loadMissing('patient:id,name');
         $quote = Quote::where('case_id', $case->id)->orderByDesc('id')->first();
 
+        $patientDue = ContractBillingSplit::patientDue(
+            $case,
+            (float) ($quote?->total ?? $case->quote_total ?? 0),
+        );
+        $alreadyPaid = (float) $case->paid;
+        $remainingBefore = max(0, $patientDue - $alreadyPaid);
+
         $amount = isset($data['amount']) && $data['amount'] !== null && $data['amount'] !== ''
             ? round((float) $data['amount'], 2)
-            : (float) ($quote?->total ?? $case->quote_total ?? 0);
+            : $remainingBefore;
 
         if ($amount <= 0) {
             abort(422, 'قيمة المبلغ غير صالحة.');
         }
 
+        if ($amount > $remainingBefore + 0.009) {
+            abort(422, 'المبلغ يتجاوز المتبقي على المريض ('.number_format($remainingBefore, 2).' ج.م).');
+        }
+
         $receivedBy = Auth::user()?->name ?? 'الخزنة';
 
-        return DB::transaction(function () use ($case, $quote, $amount, $method, $data, $receivedBy) {
-            // 1) تسجيل الدفعة.
+        return DB::transaction(function () use ($case, $quote, $amount, $method, $data, $receivedBy, $alreadyPaid, $patientDue) {
             $payment = Payment::create([
                 'payment_no' => $this->nextPaymentNo(),
                 'case_id' => $case->id,
@@ -71,32 +83,46 @@ class CashierPaymentService
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            // 2) تحديث المبلغ المدفوع على الحالة ووسم العرض «مدفوع».
-            CaseRecord::where('id', $case->id)->update(['paid' => $amount]);
+            $newPaidTotal = round($alreadyPaid + $amount, 2);
+            $remaining = max(0, round($patientDue - $newPaidTotal, 2));
+            $fullyPaid = $remaining <= 0.009;
 
-            if ($quote) {
-                $this->quoteService->markPaidAtCashier($quote);
+            CaseRecord::where('id', $case->id)->update(['paid' => $newPaidTotal]);
+
+            if ($fullyPaid) {
+                if ($quote) {
+                    $this->quoteService->markPaidAtCashier($quote);
+                }
+
+                $this->workflowService->advance($case->fresh(), WorkflowEvent::CashierPaid->value);
             }
-
-            // 3) إعادة الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.
-            $this->workflowService->advance($case, WorkflowEvent::CashierPaid->value);
 
             AuditService::log(
                 action: 'payment',
-                description: "تحصيل دفعة نقدية بالخزنة — {$payment->payment_no} — ".PaymentMethod::labelFor($method),
+                description: $fullyPaid
+                    ? "تحصيل دفعة نقدية بالخزنة — {$payment->payment_no} — ".PaymentMethod::labelFor($method)
+                    : "تحصيل دفعة جزئية بالخزنة — {$payment->payment_no} — متبقي {$remaining} ج.م",
                 tag: 'financial',
                 after: [
                     'payment_no' => $payment->payment_no,
                     'case_id' => $case->id,
                     'case_no' => $case->case_no,
                     'amount' => $amount,
+                    'paid_total' => $newPaidTotal,
+                    'remaining' => $remaining,
+                    'fully_paid' => $fullyPaid,
                     'method' => $method,
                     'received_by' => $receivedBy,
-                    'stage_key' => CaseRecord::STAGE_OPERATIONS,
+                    'stage_key' => $fullyPaid ? CaseRecord::STAGE_OPERATIONS : CaseRecord::STAGE_CASHIER,
                 ],
             );
 
-            return $payment->fresh();
+            return [
+                'payment' => $payment->fresh(),
+                'fully_paid' => $fullyPaid,
+                'paid_total' => $newPaidTotal,
+                'remaining' => $remaining,
+            ];
         });
     }
 

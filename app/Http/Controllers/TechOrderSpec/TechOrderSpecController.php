@@ -116,16 +116,7 @@ class TechOrderSpecController extends Controller
             ->with('items')
             ->first();
 
-        $stockCatalog = StockItem::query()
-            ->orderBy('code')
-            ->get(['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom'])
-            ->map(fn ($item) => [
-                'code' => $item->code,
-                'name' => $item->name,
-                'spec' => $item->spec,
-                'uom' => $item->uom,
-                'available_max' => $item->availableQty(),
-            ]);
+        $stockCatalog = StockItem::pickerCatalogRows();
 
         return response()->json([
             'case' => $this->formatCase($case),

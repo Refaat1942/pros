@@ -96,6 +96,10 @@ class StockImportService
                     'qty' => $balance,
                 ];
 
+                if ($payload['alt_codes'] === null) {
+                    $payload['alt_codes'] = $this->catalogService->nextOperationalCode();
+                }
+
                 $existing = $parsed['code'] !== '' ? StockItem::where('code', $parsed['code'])->first() : null;
 
                 try {
@@ -166,7 +170,7 @@ class StockImportService
             '← تعليمات',
             'اختياري',
             'مطلوب',
-            'باركود / أكواد إضافية',
+            'كود الصنف — 4 أرقام (يُولَّد تلقائياً إن تُرك فارغاً)',
             'قطعة / متر ...',
             'رقم',
             'رقم',
@@ -189,9 +193,9 @@ class StockImportService
     private function buildExampleRows(): array
     {
         return [
-            ['RM-100', '12', 'مفصل ركبة هيدروليكي', 'BC-RM-100', 'قطعة', '10', '5', '2', '13'],
-            ['RM-101', '13', 'قماش تغليف', 'BC-RM-101', 'متر', '50', '0', '10', '40'],
-            ['RM-102', '14', 'مسامير تثبيت M8', 'BC-RM-102', 'قطعة', '200', '20', '0', '220'],
+            ['RM-100', '12', 'مفصل ركبة هيدروليكي', '4821', 'قطعة', '10', '5', '2', '13'],
+            ['RM-101', '13', 'قماش تغليف', '7394', 'متر', '50', '0', '10', '40'],
+            ['RM-102', '14', 'مسامير تثبيت M8', '6150', 'قطعة', '200', '20', '0', '220'],
         ];
     }
 

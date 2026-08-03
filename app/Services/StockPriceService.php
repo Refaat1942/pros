@@ -82,7 +82,7 @@ class StockPriceService
      */
     public function highestUnitPrice(string $stockItemCode): float
     {
-        $item = StockItem::where('code', $stockItemCode)->first();
+        $item = StockItem::findByOperationalCode($stockItemCode);
 
         if (! $item) {
             return 0.0;
@@ -100,7 +100,7 @@ class StockPriceService
      */
     public function wacUnitPrice(string $stockItemCode): float
     {
-        $wac = (float) (StockItem::where('code', $stockItemCode)->value('wac') ?? 0.0);
+        $wac = (float) (StockItem::findByOperationalCode($stockItemCode)?->wac ?? 0.0);
 
         // إن لم يُحتسب WAC بعد، نرجع لأعلى سعر شراء كأساس تكلفة آمن.
         return $wac > 0 ? $wac : $this->highestUnitPrice($stockItemCode);

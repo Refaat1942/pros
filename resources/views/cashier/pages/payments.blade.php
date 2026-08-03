@@ -48,6 +48,8 @@
                         <th class="px-4 py-3 text-right font-bold">المريض</th>
                         <th class="px-4 py-3 text-right font-bold">عرض السعر</th>
                         <th class="px-4 py-3 text-right font-bold">المبلغ المطلوب</th>
+                        <th class="px-4 py-3 text-right font-bold">المدفوع</th>
+                        <th class="px-4 py-3 text-right font-bold">المتبقي</th>
                         <th class="px-4 py-3 text-right font-bold">إجراء</th>
                     </tr>
                 </thead>
@@ -55,7 +57,12 @@
                     @forelse ($cases as $case)
                         @php
                             $quote = $case->quotes?->sortByDesc('id')->first();
-                            $amount = (float) ($quote?->total ?? $case->quote_total ?? 0);
+                            $amountDue = (float) \App\Support\ContractBillingSplit::patientDue(
+                                $case,
+                                (float) ($quote?->total ?? $case->quote_total ?? 0),
+                            );
+                            $paid = (float) $case->paid;
+                            $remaining = max(0, $amountDue - $paid);
                         @endphp
                         <tr class="cashier-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
                             data-search="{{ $case->case_no }} {{ $case->quote_no }} {{ $case->patient?->name }}"
@@ -69,7 +76,9 @@
                                 <div class="text-xs text-slate-400">{{ $case->patient?->phone ?? '' }}</div>
                             </td>
                             <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ $quote?->quote_no ?? $case->quote_no ?? '—' }}</td>
-                            <td class="px-4 py-3 font-bold text-emerald-700">{{ number_format($amount, 0) }} ج.م</td>
+                            <td class="px-4 py-3 font-bold text-emerald-700">{{ number_format($amountDue, 0) }} ج.م</td>
+                            <td class="px-4 py-3 font-semibold text-slate-700">{{ number_format($paid, 0) }} ج.م</td>
+                            <td class="px-4 py-3 font-bold {{ $remaining > 0 ? 'text-amber-700' : 'text-emerald-700' }}">{{ number_format($remaining, 0) }} ج.م</td>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if ($quote)
                                     <a href="{{ route('cashier.quote.print', $quote) }}" target="_blank" rel="noopener"
@@ -81,13 +90,15 @@
                                         data-case-id="{{ $case->id }}"
                                         data-case-no="{{ $case->case_no }}"
                                         data-patient="{{ $case->patient?->name ?? '—' }}"
-                                        data-amount="{{ $amount }}">
-                                    ✓ تأكيد استلام المبلغ
+                                        data-amount-due="{{ $amountDue }}"
+                                        data-paid="{{ $paid }}"
+                                        data-remaining="{{ $remaining }}">
+                                    ✓ {{ $paid > 0 ? 'تسجيل دفعة' : 'تأكيد استلام المبلغ' }}
                                 </button>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-4 py-12 text-center text-slate-400">لا توجد حالات بانتظار الدفع حالياً — تظهر بعد إصدار عرض سعر نقدي من مكتب التشغيل.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">لا توجد حالات بانتظار الدفع حالياً — تظهر بعد إصدار عرض سعر نقدي من مكتب التشغيل.</td></tr>
                     @endforelse
                 </tbody>
             </table>

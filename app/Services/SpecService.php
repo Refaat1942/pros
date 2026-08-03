@@ -223,7 +223,7 @@ class SpecService
                 abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
             }
 
-            if (! StockItem::where('code', $code)->exists()) {
+            if (! StockItem::findByOperationalCode($code)) {
                 throw new InvalidSpecItemException($code);
             }
         }

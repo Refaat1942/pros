@@ -58,6 +58,7 @@ class StockCatalogService
         return [
             'id' => $item->id,
             'code' => $item->code,
+            'operational_code' => $item->operationalCode() ?? '',
             'page_number' => $item->page_number ?? '',
             'barcode' => $item->barcode,
             'alt_codes' => $item->alt_codes ?? '',
@@ -101,7 +102,8 @@ class StockCatalogService
     public function create(array $data): StockItem
     {
         return DB::transaction(function () use ($data) {
-            $code = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $this->nextCode();
+            $code = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $this->nextCatalogCode();
+            $operationalCode = $this->resolveOperationalCode($data['alt_codes'] ?? null);
             $category = ! empty($data['category_id']) ? StockCategory::find($data['category_id']) : null;
             $openingQty = (int) ($data['opening_qty'] ?? $data['qty'] ?? 0);
             $addition = (int) ($data['addition'] ?? 0);
@@ -120,8 +122,8 @@ class StockCatalogService
                 'store_class' => $this->deriveStoreClass($category),
                 'is_quick_dispense' => (bool) ($data['is_quick_dispense'] ?? false),
                 'uom' => $this->normalizeUom($data['uom'] ?? null),
-                'barcode' => 'BC-'.$code,
-                'alt_codes' => $this->nullableString($data['alt_codes'] ?? null) ?? ('BC-'.$code),
+                'barcode' => StockItem::barcodeForOperationalCode($operationalCode),
+                'alt_codes' => $operationalCode,
                 'qty' => $qty,
                 'opening_qty' => $openingQty,
                 'addition' => $addition,
@@ -178,6 +180,10 @@ class StockCatalogService
                     ? (int) $data['qty']
                     : ($openingQty + $addition - $discount));
 
+            $operationalCode = array_key_exists('alt_codes', $data)
+                ? $this->resolveOperationalCode($data['alt_codes'], $item)
+                : ($item->operationalCode() ?? $this->nextOperationalCode());
+
             $item->update([
                 'page_number' => array_key_exists('page_number', $data)
                     ? $this->nullableString($data['page_number'])
@@ -187,9 +193,8 @@ class StockCatalogService
                 'uom' => array_key_exists('uom', $data) && trim((string) $data['uom']) !== ''
                     ? $this->normalizeUom($data['uom'])
                     : $item->uom,
-                'alt_codes' => array_key_exists('alt_codes', $data)
-                    ? $this->nullableString($data['alt_codes'])
-                    : $item->alt_codes,
+                'alt_codes' => $operationalCode,
+                'barcode' => StockItem::barcodeForOperationalCode($operationalCode),
                 'qty' => $qty,
                 'opening_qty' => $openingQty,
                 'addition' => $addition,
@@ -259,7 +264,7 @@ class StockCatalogService
             throw new \InvalidArgumentException('لا يمكن حذف الصنف — له حركات مخزنية مسجّلة.');
         }
 
-        if (DB::table('bom_items')->where('stock_item_code', $item->code)->exists()) {
+        if (DB::table('bom_items')->where('stock_item_code', $item->operationalCode())->exists()) {
             throw new \InvalidArgumentException('لا يمكن حذف الصنف — مرتبط بقائمة مواد.');
         }
 
@@ -275,7 +280,8 @@ class StockCatalogService
         $item->delete();
     }
 
-    private function nextCode(): string
+    /** رقم الصنف في الكatalog (ITM-001) — ليس كود الصنف التشغيلي. */
+    private function nextCatalogCode(): string
     {
         $lastNum = StockItem::query()
             ->where('code', 'like', 'ITM-%')
@@ -286,6 +292,52 @@ class StockCatalogService
         $next = ((int) $lastNum) + 1;
 
         return 'ITM-'.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
+    }
+
+    /** كود صنف تشغيلي فريد — 4 أرقام فقط. */
+    public function nextOperationalCode(): string
+    {
+        for ($attempt = 0; $attempt < 500; $attempt++) {
+            $code = (string) random_int(1000, 9999);
+
+            if (! StockItem::where('alt_codes', $code)->exists()) {
+                return $code;
+            }
+        }
+
+        throw new \RuntimeException('تعذّر توليد كود صنف فريد.');
+    }
+
+    /**
+     * يُعيد كوداً تشغيلياً صالحاً (4 أرقام) — يُولَّد تلقائياً إن لم يُمرَّر.
+     */
+    public function resolveOperationalCode(?string $provided, ?StockItem $except = null): string
+    {
+        $provided = trim((string) ($provided ?? ''));
+
+        if ($provided === '') {
+            return $this->nextOperationalCode();
+        }
+
+        if (! preg_match('/^\d{4}$/', $provided)) {
+            throw new \InvalidArgumentException('كود الصنف (الأكواد) يجب أن يكون 4 أرقام.');
+        }
+
+        $exists = StockItem::query()
+            ->where('alt_codes', $provided)
+            ->when($except, fn ($q) => $q->where('id', '!=', $except->id))
+            ->exists();
+
+        if ($exists) {
+            throw new \InvalidArgumentException("كود الصنف {$provided} مستخدم مسبقاً.");
+        }
+
+        return $provided;
+    }
+
+    private function nextCode(): string
+    {
+        return $this->nextCatalogCode();
     }
 
     /**

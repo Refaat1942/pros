@@ -132,4 +132,93 @@ class StockItem extends Model
             $this->update(['status' => $status]);
         }
     }
+
+    /** كود الصنف التشغيلي (عمود الأكواد) — يُستخدم في BOM والمسح والصرف. */
+    public function operationalCode(): ?string
+    {
+        $code = trim((string) ($this->alt_codes ?? ''));
+
+        return $code !== '' ? $code : null;
+    }
+
+    public static function barcodeForOperationalCode(string $code): string
+    {
+        return 'BC-'.trim($code);
+    }
+
+    public static function findByOperationalCode(string $code, bool $lockForUpdate = false): ?self
+    {
+        $code = trim($code);
+        if ($code === '') {
+            return null;
+        }
+
+        $query = static::query()->where('alt_codes', $code);
+
+        if ($lockForUpdate) {
+            $query->lockForUpdate();
+        }
+
+        $item = $query->first();
+        if ($item !== null) {
+            return $item;
+        }
+
+        // توافق خلفي: بيانات/BOM قديمة تُشير برقم الصنف (code) قبل تعبئة alt_codes.
+        $legacyQuery = static::query()->where('code', $code);
+
+        if ($lockForUpdate) {
+            $legacyQuery->lockForUpdate();
+        }
+
+        return $legacyQuery->first();
+    }
+
+    /**
+     * @param  list<string>  $codes
+     * @return array<string, string>
+     */
+    public static function mapByOperationalCodes(array $codes, string $column): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map('trim', $codes))));
+
+        if ($codes === []) {
+            return [];
+        }
+
+        return static::query()
+            ->whereIn('alt_codes', $codes)
+            ->pluck($column, 'alt_codes')
+            ->all();
+    }
+
+    /**
+     * صفوف اختيار الصنف في التوصيف والمعدلات — code = كود الصنف (alt_codes).
+     *
+     * @return list<array{code: string, catalog_code: string, name: string, spec: ?string, uom: string, qty: int, reserved: int, available_max: int}>
+     */
+    public static function pickerCatalogRows(): array
+    {
+        return static::query()
+            ->orderBy('alt_codes')
+            ->get(['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'])
+            ->map(function (self $item) {
+                $operational = $item->operationalCode() ?? '';
+
+                return [
+                    'code' => $operational,
+                    'catalog_code' => $item->code,
+                    'alt_codes' => $operational,
+                    'name' => $item->name,
+                    'spec' => $item->spec,
+                    'uom' => $item->uom,
+                    'qty' => (int) $item->qty,
+                    'reserved' => (int) $item->reserved,
+                    'available_max' => $item->availableQty(),
+                ];
+            })
+            ->filter(fn (array $row) => $row['code'] !== '')
+            ->values()
+            ->all();
+    }
 }

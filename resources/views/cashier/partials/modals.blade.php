@@ -32,8 +32,14 @@
                           class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"></textarea>
             </div>
 
-            <p class="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed">
-                بعد التأكيد تُسجَّل الدفعة ويُطبع الإيصال، وتُعاد الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.
+            <div id="cashierPaymentSummary" class="text-xs text-slate-600 bg-slate-50 rounded-lg p-3 leading-relaxed space-y-1 hidden">
+                <div>المطلوب: <strong id="cashierSummaryDue">—</strong> ج.م</div>
+                <div>المدفوع سابقاً: <strong id="cashierSummaryPaid">—</strong> ج.م</div>
+                <div>المتبقي: <strong id="cashierSummaryRemaining" class="text-amber-700">—</strong> ج.م</div>
+            </div>
+
+            <p class="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed" id="cashierPaymentHint">
+                يمكن تسجيل دفعة جزئية أو كامل المتبقي. عند اكتمال المبلغ تُعاد الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.
             </p>
         </div>
 

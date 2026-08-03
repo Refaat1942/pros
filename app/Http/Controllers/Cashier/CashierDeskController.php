@@ -7,6 +7,7 @@ use App\Http\Requests\Cashier\ConfirmPaymentRequest;
 use App\Models\CaseRecord;
 use App\Models\Payment;
 use App\Services\CashierPaymentService;
+use App\Support\ContractBillingSplit;
 use App\Support\PaymentReceiptPresenter;
 use App\Traits\PaginationTrait;
 use Illuminate\Contracts\View\View;
@@ -56,10 +57,18 @@ class CashierDeskController extends Controller
      */
     public function confirm(ConfirmPaymentRequest $request, CaseRecord $case): JsonResponse
     {
-        $payment = $this->cashierPaymentService->confirmPayment($case, $request->validated());
+        $result = $this->cashierPaymentService->confirmPayment($case, $request->validated());
+        $payment = $result['payment'];
+
+        $message = $result['fully_paid']
+            ? 'تم تأكيد استلام المبلغ بالكامل — أُعيدت الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.'
+            : 'تم تسجيل دفعة جزئية — المتبقي '.number_format($result['remaining'], 2).' ج.م على المريض.';
 
         return response()->json([
-            'message' => 'تم تأكيد استلام المبلغ — أُعيدت الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.',
+            'message' => $message,
+            'fully_paid' => $result['fully_paid'],
+            'paid_total' => $result['paid_total'],
+            'remaining' => $result['remaining'],
             'payment' => [
                 'id' => $payment->id,
                 'payment_no' => $payment->payment_no,
@@ -86,11 +95,20 @@ class CashierDeskController extends Controller
     private function formatCase(CaseRecord $case): array
     {
         $quote = $case->relationLoaded('quotes') ? $case->quotes->sortByDesc('id')->first() : null;
+        $amountDue = ContractBillingSplit::patientDue(
+            $case,
+            (float) ($quote?->total ?? $case->quote_total ?? 0),
+        );
+        $paid = (float) $case->paid;
+        $remaining = max(0, $amountDue - $paid);
 
         return $case->only([
             'id', 'case_no', 'order_ref', 'quote_no',
         ]) + [
-            'amount' => (float) ($quote?->total ?? $case->quote_total ?? 0),
+            'amount' => $amountDue,
+            'amount_due' => $amountDue,
+            'paid' => $paid,
+            'remaining' => $remaining,
             'patient' => $case->relationLoaded('patient') && $case->patient
                 ? $case->patient->only(['id', 'patient_code', 'name', 'phone'])
                 : null,

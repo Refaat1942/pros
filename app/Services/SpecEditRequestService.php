@@ -612,7 +612,7 @@ class SpecEditRequestService
     {
         return collect($items)->map(function (array $item) {
             $code = $item['stock_item_code'] ?? '';
-            $stock = StockItem::where('code', $code)->first();
+            $stock = StockItem::findByOperationalCode($code);
 
             return [
                 'stock_item_code' => $code,
@@ -635,7 +635,7 @@ class SpecEditRequestService
             $code = $item['stock_item_code'] ?? '';
             $qty = (int) ($item['qty'] ?? 0);
 
-            if (! StockItem::where('code', $code)->exists()) {
+            if (! StockItem::findByOperationalCode($code)) {
                 throw new InvalidSpecItemException($code);
             }
 

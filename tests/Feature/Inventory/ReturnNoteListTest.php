@@ -14,6 +14,16 @@ class ReturnNoteListTest extends TestCase
 {
     use ProstheticTestHelper;
 
+    private string $stockBarcode = '';
+
+    private function seedStock(): void
+    {
+        $item = $this->stockItem('RM-001', qty: 20);
+        $this->stockBarcode = $item->barcode;
+        $supplier = $this->makeSupplier();
+        app(StockPriceService::class)->addBatch($item, 20, 200.00, $supplier, 'INV-001', now());
+    }
+
     public function test_workshop_returns_create_lists_single_qty_wip_bom(): void
     {
         $this->seedStock();
@@ -29,7 +39,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), [$this->stockBarcode]);
 
         $this->getJson('/workshop/returns/create')
             ->assertOk()
@@ -52,7 +62,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
 
         $this->getJson('/workshop/returns/create')
             ->assertOk()
@@ -75,7 +85,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
 
         app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -104,7 +114,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
+        app(BomService::class)->releaseToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
 
         $pending = app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -122,7 +132,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $completedBom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($completedBom->fresh(), ['BC-RM-001', 'BC-RM-001']);
+        app(BomService::class)->releaseToWip($completedBom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
 
         $done = app(ReturnNoteService::class)->create(
             $completedBom->fresh(),
@@ -138,13 +148,7 @@ class ReturnNoteListTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.id', $pending->id)
-            ->assertJsonPath('data.0.lines.0.barcode', 'BC-RM-001');
-    }
-
-    private function seedStock(): void
-    {
-        $item = $this->stockItem('RM-001', qty: 20);
-        $supplier = $this->makeSupplier();
-        app(StockPriceService::class)->addBatch($item, 20, 200.00, $supplier, 'INV-001', now());
+            ->assertJsonPath('data.0.lines.0.barcode', $this->stockBarcode);
     }
 }
+

@@ -71,16 +71,15 @@ class AdjustmentsController extends Controller
             'pendingAdjustmentEditRequest',
         ]);
 
-        $stockCatalog = StockItem::query()
-            ->orderBy('name')
-            ->get(['id', 'code', 'name', 'qty', 'reserved', 'uom'])
-            ->map(fn (StockItem $item) => [
-                'code' => $item->code,
-                'name' => $item->name,
-                'qty' => (int) $item->qty,
-                'reserved' => (int) $item->reserved,
-                'available' => $item->availableQty(),
-                'uom' => $item->uom ?? 'قطعة',
+        $stockCatalog = collect(StockItem::pickerCatalogRows())
+            ->map(fn (array $row) => [
+                'code' => $row['code'],
+                'catalog_code' => $row['catalog_code'],
+                'name' => $row['name'],
+                'qty' => $row['qty'],
+                'reserved' => $row['reserved'],
+                'available' => $row['available_max'],
+                'uom' => $row['uom'] ?? 'قطعة',
             ]);
 
         return response()->json([

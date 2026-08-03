@@ -53,12 +53,18 @@
     try { methods = JSON.parse(root.getAttribute('data-methods') || '[]'); } catch (e) { methods = []; }
   }
 
+  var activeRemaining = 0;
+
   function renderRow(c) {
     var quote = c.quote || null;
     var search = [c.case_no, c.quote_no, c.patient && c.patient.name].join(' ');
+    var amountDue = parseFloat(c.amount_due != null ? c.amount_due : c.amount) || 0;
+    var paid = parseFloat(c.paid) || 0;
+    var remaining = parseFloat(c.remaining != null ? c.remaining : Math.max(0, amountDue - paid)) || 0;
     var printBtn = quote && quote.print_url
       ? '<a href="' + esc(quote.print_url) + '" target="_blank" rel="noopener" class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">🖨️ طباعة عرض السعر</a> '
       : '';
+    var btnLabel = paid > 0 ? 'تسجيل دفعة' : 'تأكيد استلام المبلغ';
 
     return '<tr class="cashier-row hover:bg-slate-50" data-case-id="' + c.id + '" data-search="' + esc(search) + '" data-filter-hidden="0">' +
       '<td class="px-4 py-3"><div class="font-mono font-bold text-cyan-700">' + esc(c.case_no) + '</div>' +
@@ -66,11 +72,14 @@
       '<td class="px-4 py-3"><div class="font-semibold text-slate-800">' + esc(c.patient && c.patient.name) + '</div>' +
         '<div class="text-xs text-slate-400">' + esc(c.patient && c.patient.phone) + '</div></td>' +
       '<td class="px-4 py-3 font-mono text-xs text-slate-600">' + esc((quote && quote.quote_no) || c.quote_no || '—') + '</td>' +
-      '<td class="px-4 py-3 font-bold text-emerald-700">' + fmt(c.amount) + ' ج.م</td>' +
+      '<td class="px-4 py-3 font-bold text-emerald-700">' + fmt(amountDue) + ' ج.م</td>' +
+      '<td class="px-4 py-3 font-semibold text-slate-700">' + fmt(paid) + ' ج.م</td>' +
+      '<td class="px-4 py-3 font-bold ' + (remaining > 0 ? 'text-amber-700' : 'text-emerald-700') + '">' + fmt(remaining) + ' ج.م</td>' +
       '<td class="px-4 py-3 whitespace-nowrap">' + printBtn +
         '<button type="button" class="btn-confirm-payment text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" ' +
           'data-case-id="' + c.id + '" data-case-no="' + esc(c.case_no) + '" ' +
-          'data-patient="' + esc(c.patient && c.patient.name) + '" data-amount="' + esc(c.amount) + '">✓ تأكيد استلام المبلغ</button>' +
+          'data-patient="' + esc(c.patient && c.patient.name) + '" data-amount-due="' + esc(amountDue) + '" ' +
+          'data-paid="' + esc(paid) + '" data-remaining="' + esc(remaining) + '">✓ ' + btnLabel + '</button>' +
       '</td></tr>';
   }
 
@@ -81,7 +90,9 @@
           btn.getAttribute('data-case-id'),
           btn.getAttribute('data-case-no'),
           btn.getAttribute('data-patient'),
-          btn.getAttribute('data-amount')
+          parseFloat(btn.getAttribute('data-amount-due') || '0'),
+          parseFloat(btn.getAttribute('data-paid') || '0'),
+          parseFloat(btn.getAttribute('data-remaining') || '0')
         );
       });
     });
@@ -124,12 +135,26 @@
     if (input) input.placeholder = isCash ? 'اختياري' : text;
   }
 
-  function openPaymentModal(caseId, caseNo, patient, amount) {
+  function openPaymentModal(caseId, caseNo, patient, amountDue, paid, remaining) {
     activeCaseId = caseId;
+    activeRemaining = remaining || 0;
     var subtitle = $('cashierPaymentSubtitle');
     if (subtitle) subtitle.textContent = (patient || '—') + ' · ' + (caseNo || '—');
     var amountEl = $('cashierPaymentAmount');
-    if (amountEl) amountEl.value = amount || '';
+    if (amountEl) {
+      amountEl.value = activeRemaining > 0 ? activeRemaining : '';
+      amountEl.max = activeRemaining > 0 ? activeRemaining : '';
+    }
+    var summary = $('cashierPaymentSummary');
+    if (summary) {
+      summary.classList.remove('hidden');
+      var dueEl = $('cashierSummaryDue');
+      var paidEl = $('cashierSummaryPaid');
+      var remEl = $('cashierSummaryRemaining');
+      if (dueEl) dueEl.textContent = fmt(amountDue);
+      if (paidEl) paidEl.textContent = fmt(paid);
+      if (remEl) remEl.textContent = fmt(activeRemaining);
+    }
     var refEl = $('cashierPaymentReference');
     if (refEl) refEl.value = '';
     var notesEl = $('cashierPaymentNotes');
@@ -159,7 +184,15 @@
       return;
     }
 
-    if (!window.confirm('تأكيد استلام مبلغ ' + fmt(amount) + ' ج.م؟\n\nسيُطبع إيصال الدفع وتُعاد الحالة لمكتب التشغيل.')) return;
+    if (amount > activeRemaining + 0.009) {
+      toast('المبلغ يتجاوز المتبقي (' + fmt(activeRemaining) + ' ج.م).', true);
+      return;
+    }
+
+    var confirmMsg = amount >= activeRemaining - 0.009
+      ? 'تأكيد استلام مبلغ ' + fmt(amount) + ' ج.م (اكتمال الدفع)؟\n\nسيُطبع الإيصال وتُعاد الحالة لمكتب التشغيل.'
+      : 'تأكيد تسجيل دفعة ' + fmt(amount) + ' ج.م؟\n\nالمتبقي بعد الدفعة: ' + fmt(activeRemaining - amount) + ' ج.م';
+    if (!window.confirm(confirmMsg)) return;
 
     var btn = $('btnSubmitCashierPayment');
     if (btn) btn.disabled = true;
@@ -209,7 +242,7 @@
         if (!tbody) return;
         tbody.innerHTML = cases.length
           ? cases.map(renderRow).join('')
-          : '<tr><td colspan="5" class="px-4 py-12 text-center text-slate-400">لا توجد حالات بانتظار الدفع حالياً.</td></tr>';
+          : '<tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">لا توجد حالات بانتظار الدفع حالياً.</td></tr>';
         bindTableEvents();
         applyFilters();
       })

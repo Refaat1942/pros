@@ -6,13 +6,13 @@ use App\Models\BomItem;
 use App\Models\StockItem;
 
 /**
- * التحقق من مطابقة المسح مع بنود BOM — الاعتماد على كود الصنف (stock_items.code) فقط.
- * لا يُقبل عمود «الأكواد» (alt_codes) كمعرّف للصنف.
+ * التحقق من مطابقة المسح مع بنود BOM — الاعتماد على كود الصنف (stock_items.alt_codes) فقط.
+ * عمود «رقم الصنف» (code) ليس معرّفاً تشغيلياً.
  */
 class BarcodeValidationService
 {
     /**
-     * يتحقق من أن المسح يطابق stock_item_code للبند (كود الصنف).
+     * يتحقق من أن المسح يطابق stock_item_code للبند (كود الصنف = alt_codes).
      */
     public function validateScan(string $scan, BomItem $bomItem): bool
     {
@@ -57,18 +57,26 @@ class BarcodeValidationService
     }
 
     /**
-     * يُرجع كود الصنف الرسمي (stock_items.code) أو null — لا يستخدم alt_codes.
+     * يُرجع كود الصنف التشغيلي (alt_codes) أو null.
      */
     public function resolveStockItemCode(string $scan): ?string
     {
-        return $this->resolveStockItem($scan)?->code;
+        $item = $this->resolveStockItem($scan);
+
+        return $item?->operationalCode() ?? $item?->code;
     }
 
     private function barcodeMatchesCode(string $scan, string $stockItemCode): bool
     {
         $stockItem = $this->resolveStockItem($scan);
+        $expected = trim($stockItemCode);
 
-        return $stockItem !== null && $stockItem->code === $stockItemCode;
+        if ($stockItem === null || $expected === '') {
+            return false;
+        }
+
+        return $stockItem->operationalCode() === $expected
+            || $stockItem->code === $expected;
     }
 
     private function resolveStockItem(string $scan): ?StockItem
@@ -83,6 +91,15 @@ class BarcodeValidationService
             return $byBarcode;
         }
 
-        return StockItem::query()->where('code', $scan)->first();
+        $byOperational = StockItem::findByOperationalCode($scan);
+        if ($byOperational !== null) {
+            return $byOperational;
+        }
+
+        if (str_starts_with(strtoupper($scan), 'BC-')) {
+            return StockItem::findByOperationalCode(substr($scan, 3));
+        }
+
+        return null;
     }
 }
