@@ -118,22 +118,28 @@
         return step && step.required === false;
     }
 
+    function matrixCellInnerHtml(step, shared) {
+        if (!step) return '—';
+        return esc(step.label)
+            + '<span class="pathway-matrix__btn-sub">' + esc(shared ? 'مشترك — يُحدَّث في الجدول فوراً' : deptLabel(step.owner_department)) + '</span>'
+            + skipBadges(step);
+    }
+
     function patchMatrixCell(pathway, rowIdx) {
         var step = state[pathway] && state[pathway][rowIdx];
-        if (!step) return;
+        if (!step) return false;
 
         var shared = rowIdx < 5 && labelsMatchAcrossRow(rowIdx);
         var btn;
 
         if (shared) {
-            btn = document.querySelector('[data-shared-row="' + rowIdx + '"]');
+            btn = document.querySelector('#pathwayMatrixWrap [data-shared-row="' + rowIdx + '"]');
         } else {
-            btn = document.querySelector('[data-pathway="' + pathway + '"][data-idx="' + rowIdx + '"]');
+            btn = document.querySelector('#pathwayMatrixWrap [data-pathway="' + pathway + '"][data-idx="' + rowIdx + '"]');
         }
 
         if (!btn) {
-            renderMatrix();
-            return;
+            return false;
         }
 
         var selected = pathway === activePathway && activeStepIdx === rowIdx;
@@ -142,19 +148,44 @@
             + (selected ? ' is-selected' : '');
 
         btn.className = cls;
-        btn.innerHTML = esc(step.label)
-            + '<span class="pathway-matrix__btn-sub">' + esc(shared ? 'مشترك — يُحدَّث في الجدول فوراً' : deptLabel(step.owner_department)) + '</span>'
-            + skipBadges(step);
+        btn.innerHTML = matrixCellInnerHtml(step, shared);
+        btn.classList.add('is-live-updated');
+        window.setTimeout(function () {
+            btn.classList.remove('is-live-updated');
+        }, 450);
+        return true;
     }
 
     function patchMatrixRow(rowIdx) {
         if (rowIdx < 5 && labelsMatchAcrossRow(rowIdx)) {
-            patchMatrixCell('civilian', rowIdx);
+            return patchMatrixCell('civilian', rowIdx);
+        }
+        var patched = false;
+        pathwayOrder.forEach(function (pk) {
+            if (patchMatrixCell(pk, rowIdx)) patched = true;
+        });
+        return patched;
+    }
+
+    function syncMatrixAfterEdit(field) {
+        if (activeStepIdx === null) {
+            renderMatrix();
             return;
         }
-        pathwayOrder.forEach(function (pk) {
-            patchMatrixCell(pk, rowIdx);
-        });
+
+        var patchable = ['label', 'owner_department', 'required', 'auto_skip', 'skip_roles'];
+        if (patchable.indexOf(field) >= 0) {
+            var shared = activeStepIdx < 5 && labelsMatchAcrossRow(activeStepIdx);
+            var patched = shared
+                ? patchMatrixRow(activeStepIdx)
+                : patchMatrixCell(activePathway, activeStepIdx);
+            if (!patched) {
+                renderMatrix();
+            }
+            return;
+        }
+
+        renderMatrix();
     }
 
     function updateNextStepSelect() {
@@ -170,7 +201,7 @@
 
     function refreshAfterEdit(field) {
         syncAllPathways();
-        renderMatrix();
+        syncMatrixAfterEdit(field);
         renderFlowMap(state[activePathway]);
         updateHint();
         updateEditorLiveFields();
@@ -186,8 +217,10 @@
         var meta = pathwayMeta[activePathway] || { label: activePathway, icon: '' };
         var title = editor.querySelector('.pf-title');
         var hint = editor.querySelector('.pf-step-hint');
-        if (title) title.textContent = meta.icon + ' ' + meta.label + ' — ' + step.label;
-        if (hint) hint.textContent = '👤 ' + deptLabel(step.owner_department);
+        if (title) title.textContent = step.label || '—';
+        if (hint) hint.textContent = meta.icon + ' ' + meta.label + ' · 👤 ' + deptLabel(step.owner_department);
+        var preview = editor.querySelector('[data-table-preview]');
+        if (preview) preview.textContent = step.label || '—';
     }
 
     function updateSkipControls() {
@@ -227,13 +260,9 @@
 
             if (shared) {
                 var step = state.civilian[row] || state.military[row] || state.entity[row];
-                var label = step ? step.label : '—';
-                var badges = step ? skipBadges(step) : '';
                 body += '<td class="pathway-matrix__cell pathway-matrix__cell--shared" colspan="3">'
                     + '<button type="button" class="pathway-matrix__btn pathway-matrix__btn--shared" data-shared-row="' + row + '">'
-                    + esc(label)
-                    + '<span class="pathway-matrix__btn-sub">مشترك — يُحدَّث في الجدول فوراً</span>'
-                    + badges
+                    + matrixCellInnerHtml(step, true)
                     + '</button></td>';
             } else {
                 pathwayOrder.forEach(function (pk) {
@@ -244,12 +273,9 @@
                         return;
                     }
                     var cls = 'pathway-matrix__btn' + (selected ? ' is-selected' : '') + (st.locked ? ' is-locked' : '');
-                    var badge = skipBadges(st);
                     body += '<td class="pathway-matrix__cell">'
                         + '<button type="button" class="' + cls + '" data-pathway="' + pk + '" data-idx="' + row + '">'
-                        + esc(st.label)
-                        + '<span class="pathway-matrix__btn-sub">' + esc(deptLabel(st.owner_department)) + '</span>'
-                        + badge
+                        + matrixCellInnerHtml(st, false)
                         + '</button></td>';
                 });
             }
@@ -392,12 +418,12 @@
             + '<div class="pf-card-head">'
             + '  <div class="pf-num">' + step.sort + '</div>'
             + '  <div class="pf-head-text">'
-            + '    <h4 class="pf-title">' + esc(meta.icon + ' ' + meta.label + ' — ' + step.label) + '</h4>'
-            + '    <p class="pf-step-hint">👤 ' + esc(deptLabel(step.owner_department)) + '</p>'
+            + '    <h4 class="pf-title">' + esc(step.label) + '</h4>'
+            + '    <p class="pf-step-hint">' + esc(meta.icon + ' ' + meta.label) + ' · 👤 ' + esc(deptLabel(step.owner_department)) + '</p>'
             + '  </div>'
             + '</div>'
             + '<div class="pf-grid">'
-            + '<label class="pf-field pf-field--wide"><span>🏷️ اسم الخطوة (يظهر في الجدول)</span><input type="text" data-f="label" value="' + esc(step.label) + '"></label>'
+            + '<label class="pf-field pf-field--wide"><span>🏷️ اسم الخطوة (يظهر في الجدول)</span><input type="text" data-f="label" value="' + esc(step.label) + '"><span class="pf-table-preview">في الجدول: <strong data-table-preview>' + esc(step.label) + '</strong></span></label>'
             + '<label class="pf-field"><span>👤 القسم المسؤول</span><select data-f="owner_department">' + deptOptions(step.owner_department) + '</select></label>'
             + '<label class="pf-field pf-field--wide"><span>➡️ بعد الإكمال — ينتقل إلى</span><select data-f="next_step_key">' + nextStepOptions(list, idx, step.next_step_key) + '</select></label>'
             + '<label class="pf-field pf-field--wide"><span>📋 ماذا يفعل هنا؟</span><textarea data-f="action_summary" placeholder="اكتب وظيفة هذا القسم في هذه المرحلة…">' + esc(step.action_summary || '') + '</textarea></label>'
@@ -437,36 +463,39 @@
         if (opts.editor === true) renderEditor();
     }
 
+    function onEditorInput(e) {
+        if (!e.target.closest('#pathwayStepEditor')) return;
+        var field = e.target.getAttribute('data-f');
+        if (field) applyField(field, e.target.value);
+    }
+
+    function onEditorChange(e) {
+        var t = e.target;
+        if (!t.closest('#pathwayStepEditor')) return;
+        var field = t.getAttribute('data-f');
+        if (field) {
+            applyField(field, t.value);
+            return;
+        }
+        if (t.hasAttribute('data-h') && activeStepIdx !== null) {
+            state[activePathway][activeStepIdx].handlers = state[activePathway][activeStepIdx].handlers || {};
+            state[activePathway][activeStepIdx].handlers[t.getAttribute('data-h')] = t.value;
+            refreshAfterEdit('owner_department');
+        }
+        if (t.hasAttribute('data-role') && activeStepIdx !== null) {
+            var roles = state[activePathway][activeStepIdx].skip_roles || [];
+            if (t.checked && roles.indexOf(t.getAttribute('data-role')) < 0) roles.push(t.getAttribute('data-role'));
+            if (!t.checked) roles = roles.filter(function (r) { return r !== t.getAttribute('data-role'); });
+            state[activePathway][activeStepIdx].skip_roles = roles;
+            refreshAfterEdit('skip_roles');
+        }
+    }
+
     function bindEditorEvents() {
-        var editor = document.getElementById('pathwayStepEditor');
-        if (!editor || editor.dataset.bound) return;
-        editor.dataset.bound = '1';
-
-        editor.addEventListener('input', function (e) {
-            var field = e.target.getAttribute('data-f');
-            if (field) applyField(field, e.target.value);
-        });
-
-        editor.addEventListener('change', function (e) {
-            var t = e.target;
-            var field = t.getAttribute('data-f');
-            if (field) {
-                applyField(field, t.value);
-                return;
-            }
-            if (t.hasAttribute('data-h') && activeStepIdx !== null) {
-                state[activePathway][activeStepIdx].handlers = state[activePathway][activeStepIdx].handlers || {};
-                state[activePathway][activeStepIdx].handlers[t.getAttribute('data-h')] = t.value;
-                refreshAfterEdit('owner_department');
-            }
-            if (t.hasAttribute('data-role') && activeStepIdx !== null) {
-                var roles = state[activePathway][activeStepIdx].skip_roles || [];
-                if (t.checked && roles.indexOf(t.getAttribute('data-role')) < 0) roles.push(t.getAttribute('data-role'));
-                if (!t.checked) roles = roles.filter(function (r) { return r !== t.getAttribute('data-role'); });
-                state[activePathway][activeStepIdx].skip_roles = roles;
-                refreshAfterEdit('skip_roles');
-            }
-        });
+        if (document.body.dataset.pathwayEditorBound) return;
+        document.body.dataset.pathwayEditorBound = '1';
+        document.addEventListener('input', onEditorInput);
+        document.addEventListener('change', onEditorChange);
     }
 
     bindEditorEvents();
