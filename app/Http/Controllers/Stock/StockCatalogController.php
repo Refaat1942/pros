@@ -188,11 +188,11 @@ class StockCatalogController extends Controller
     }
 
     /**
-     * صفحة طباعة باركود حراري لصنف واحد — ملصقان جنباً إلى جنب (38mm × 25mm).
+     * صفحة طباعة باركود حراري لصنف واحد — ملصق 25mm × 38mm (ملصق واحد لكل طباعة).
      */
     public function labels(StockItem $stockItem, Request $request): Response
     {
-        $copies = max(1, min(200, (int) $request->integer('copies', 2)));
+        $copies = max(1, min(200, (int) $request->integer('copies', 1)));
         $settings = $this->labelSettings($request);
 
         return response()->view('admin.print.barcode-labels', [
@@ -236,10 +236,10 @@ class StockCatalogController extends Controller
             'page_margin' => round((float) $request->query('page_margin', '4'), 2),
             'gap' => round((float) $request->query('gap', '2'), 2),
             'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '1.1'), 2))),
-            'barcode_height' => max(20, min(80, (int) $request->integer('barcode_height', 44))),
+            'barcode_height' => max(20, min(80, (int) $request->integer('barcode_height', 38))),
             'offset_x' => round((float) $request->query('offset_x', '0'), 2),
             'offset_y' => round((float) $request->query('offset_y', '0'), 2),
-            'copies' => max(1, min(200, (int) $request->integer('copies', 2))),
+            'copies' => max(1, min(200, (int) $request->integer('copies', 1))),
         ];
     }
 

@@ -17,6 +17,7 @@
 <body class="labels-body">
     <div class="labels-toolbar">
         <h1>🏷️ إعدادات الطباعة — {{ $heading }}</h1>
+        <p class="labels-toolbar-hint">ملصق أفقي 25×38 مم — ملصق واحد لكل صفحة طباعة (بدون ترتيب متوازٍ).</p>
         <form id="settingsForm" onsubmit="applySettings(event)">
             <div class="fields">
                 <div><label>عدد النسخ لكل صنف</label><input type="number" name="copies" min="1" max="200" value="{{ $settings['copies'] }}"></div>
