@@ -111,7 +111,7 @@ var ExportKit = (function () {
     var date = new Date().toLocaleString('ar-EG');
     var html = '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">';
     html += '<title>' + title + '</title>';
-    html += '<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">';
+    html += '<link href="' + window.location.origin + '/assets/css/fonts-tajawal.css" rel="stylesheet">';
     html += '<style>';
     html += '*{box-sizing:border-box;margin:0;padding:0}';
     html += 'body{font-family:Tajawal,sans-serif;padding:32px;color:#1e293b}';

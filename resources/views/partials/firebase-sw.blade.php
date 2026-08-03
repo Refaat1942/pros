@@ -1,8 +1,13 @@
-@php $enabled = ! empty($cfg['apiKey']) && ! empty($cfg['appId']) && ! empty($cfg['messagingSenderId']); @endphp
+@php
+    $enabled = (bool) config('firebase.enabled')
+        && ! empty($cfg['apiKey'])
+        && ! empty($cfg['appId'])
+        && ! empty($cfg['messagingSenderId']);
+@endphp
 // Firebase Messaging Service Worker — مُولّد من إعدادات .env
 @if ($enabled)
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+importScripts('{{ asset('assets/vendor/firebase-app-compat.js') }}');
+importScripts('{{ asset('assets/vendor/firebase-messaging-compat.js') }}');
 
 firebase.initializeApp({
     apiKey: {!! json_encode($cfg['apiKey']) !!},
