@@ -7,20 +7,37 @@
     <link rel="stylesheet" href="{{ asset('assets/css/print-labels.css') }}">
     <style>
         :root {
+            --label-width: {{ $settings['label_width_in'] }}in;
+            --label-height: {{ $settings['label_height_in'] }}in;
             --page-margin: {{ $settings['page_margin'] }}mm;
             --gap: {{ $settings['gap'] }}mm;
             --offset-x: {{ $settings['offset_x'] }}mm;
             --offset-y: {{ $settings['offset_y'] }}mm;
+        }
+
+        @media print {
+            @page {
+                size: {{ $settings['label_width_in'] }}in {{ $settings['label_height_in'] }}in;
+                margin: 0;
+            }
         }
     </style>
 </head>
 <body class="labels-body">
     <div class="labels-toolbar">
         <h1>🏷️ إعدادات الطباعة — {{ $heading }}</h1>
-        <p class="labels-toolbar-hint">ملصق أفقي 25×38 مم — ملصق واحد لكل صفحة طباعة (بدون ترتيب متوازٍ).</p>
+        <p class="labels-toolbar-hint">
+            ملصق {{ number_format($settings['label_width_in'], 3) }}" × {{ number_format($settings['label_height_in'], 2) }}"
+            (≈ {{ number_format($settings['label_width_in'] * 25.4, 0) }}×{{ number_format($settings['label_height_in'] * 25.4, 0) }} مم)
+            — ملصق واحد لكل صفحة.
+            <br>
+            <span class="labels-toolbar-printer">{{ $settings['printer_hint'] }}</span>
+        </p>
         <form id="settingsForm" onsubmit="applySettings(event)">
             <div class="fields">
                 <div><label>عدد النسخ لكل صنف</label><input type="number" name="copies" min="1" max="200" value="{{ $settings['copies'] }}"></div>
+                <div><label>عرض الملصق (بوصة)</label><input type="number" name="label_width_in" step="0.001" min="0.5" max="8" value="{{ $settings['label_width_in'] }}"></div>
+                <div><label>ارتفاع الملصق (بوصة)</label><input type="number" name="label_height_in" step="0.01" min="0.5" max="8" value="{{ $settings['label_height_in'] }}"></div>
                 <div><label>هامش الصفحة (مم)</label><input type="number" name="page_margin" step="0.5" min="0" value="{{ $settings['page_margin'] }}"></div>
                 <div><label>الفجوة بين الملصقات (مم)</label><input type="number" name="gap" step="0.5" min="0" value="{{ $settings['gap'] }}"></div>
                 <div><label>عرض الوحدة (كثافة الباركود)</label><input type="number" name="module_width" step="0.1" min="0.5" max="3" value="{{ $settings['module_width'] }}"></div>

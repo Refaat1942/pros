@@ -228,18 +228,29 @@ class StockCatalogController extends Controller
     /**
      * إعدادات الطباعة القابلة للضبط (بالمليمتر إلا حيث يُذكر).
      *
-     * @return array{page_margin:float, gap:float, module_width:float, barcode_height:int, offset_x:float, offset_y:float, copies:int}
+     * @return array{page_margin:float, gap:float, module_width:float, barcode_height:int, offset_x:float, offset_y:float, copies:int, label_width_in:float, label_height_in:float}
      */
     private function labelSettings(Request $request): array
     {
+        $defaults = config('label-print', []);
+
         return [
-            'page_margin' => round((float) $request->query('page_margin', '4'), 2),
-            'gap' => round((float) $request->query('gap', '2'), 2),
+            'page_margin' => round((float) $request->query('page_margin', '0'), 2),
+            'gap' => round((float) $request->query('gap', '0'), 2),
             'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '1.1'), 2))),
             'barcode_height' => max(20, min(80, (int) $request->integer('barcode_height', 38))),
             'offset_x' => round((float) $request->query('offset_x', '0'), 2),
             'offset_y' => round((float) $request->query('offset_y', '0'), 2),
             'copies' => max(1, min(200, (int) $request->integer('copies', 1))),
+            'label_width_in' => max(0.5, round((float) $request->query(
+                'label_width_in',
+                (string) ($defaults['label_width_in'] ?? 4.098),
+            ), 3)),
+            'label_height_in' => max(0.5, round((float) $request->query(
+                'label_height_in',
+                (string) ($defaults['label_height_in'] ?? 2.0),
+            ), 3)),
+            'printer_hint' => (string) ($defaults['printer_hint'] ?? ''),
         ];
     }
 

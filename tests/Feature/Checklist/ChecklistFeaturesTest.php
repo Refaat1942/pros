@@ -302,6 +302,8 @@ class ChecklistFeaturesTest extends TestCase
         $response->assertSee('BC-RM-A');
         $response->assertSee('BC-RM-B');
         $response->assertSee('4 ملصق');
+        $response->assertSee('4.098', false);
+        $response->assertSee('ZDesigner ZD220', false);
         $response->assertSee('--offset-x: 3mm', false);
         $response->assertSee('--page-margin: 6mm', false);
     }
