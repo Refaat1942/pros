@@ -25,6 +25,12 @@ class ChecklistFeaturesTest extends TestCase
     use ProstheticTestHelper;
     use RefreshDatabase;
 
+    /** @return list<string> */
+    private function catalogHeaders(): array
+    {
+        return StockImportService::headers();
+    }
+
     public function test_skip_exam_advances_case_to_technical_without_medical_record(): void
     {
         $company = $this->civilianCompany();
@@ -54,9 +60,9 @@ class ChecklistFeaturesTest extends TestCase
 
     public function test_csv_bulk_import_creates_then_updates_items(): void
     {
-        $csv = StockImportService::HEADERS;
+        $csv = $this->catalogHeaders();
         $contents = implode(',', $csv)."\r\n"
-            ."RM-900,خامة اختبار,متر,15,5\r\n";
+            ."RM-900,10,خامة اختبار,BC-RM-900,متر,15,5,0,20\r\n";
 
         $file = UploadedFile::fake()->createWithContent('items.csv', $contents);
 
@@ -66,13 +72,15 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertDatabaseHas('stock_items', [
             'code' => 'RM-900',
             'name' => 'خامة اختبار',
+            'page_number' => '10',
             'uom' => 'متر',
-            'qty' => 15,
-            'min_qty' => 5,
+            'opening_qty' => 15,
+            'addition' => 5,
+            'discount' => 0,
+            'qty' => 20,
         ]);
 
-        // إعادة الرفع بنفس الكود → تحديث (upsert) لا إنشاء.
-        $update = implode(',', $csv)."\r\n"."RM-900,خامة محدثة,قطعة,40,8\r\n";
+        $update = implode(',', $csv)."\r\n"."RM-900,11,خامة محدثة,BC-RM-900,قطعة,40,2,5,37\r\n";
         $summary2 = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('items2.csv', $update),
         );
@@ -80,14 +88,13 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertSame(1, $summary2['updated']);
         $this->assertSame(0, $summary2['created']);
         $this->assertSame(1, StockItem::where('code', 'RM-900')->count());
-        $this->assertSame(40, (int) StockItem::where('code', 'RM-900')->value('qty'));
+        $this->assertSame(37, (int) StockItem::where('code', 'RM-900')->value('qty'));
         $this->assertSame('قطعة', StockItem::where('code', 'RM-900')->value('uom'));
     }
 
     public function test_csv_import_defaults_unit_when_blank(): void
     {
-        $contents = implode(',', StockImportService::HEADERS)."\r\n"
-            ."RM-901,صنف بلا وحدة,,5,2\r\n";
+        $contents = "RM-901,,صنف بلا وحدة,,,5,0,0,5\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('nouom.csv', $contents),
@@ -118,7 +125,7 @@ class ChecklistFeaturesTest extends TestCase
         $arabicName = 'مفصل ركبة ميكانيكي';
         $encodedName = iconv('UTF-8', 'CP1256', $arabicName);
         $this->assertNotFalse($encodedName);
-        $contents = "RM-903,{$encodedName},قطعة,5,2\r\n";
+        $contents = "RM-903,,{$encodedName},,قطعة,5,0,0,5\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('win1256.csv', $contents),
@@ -138,11 +145,11 @@ class ChecklistFeaturesTest extends TestCase
         $encodedName = iconv('UTF-8', 'CP1256', $arabicName);
         $this->assertNotFalse($encodedName);
 
-        $header = iconv('UTF-8', 'CP1256', implode(';', StockImportService::HEADERS));
+        $header = iconv('UTF-8', 'CP1256', implode(';', $this->catalogHeaders()));
         $this->assertNotFalse($header);
 
         $contents = $header."\r\n"
-            .'RM-560;'.$encodedName.';قطعة;3;1'."\r\n";
+            .'RM-560;;'.$encodedName.';;قطعة;3;0;0;3'."\r\n";
 
         $summary = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('excel-ar.csv', $contents),
@@ -156,7 +163,7 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertStringNotContainsString('?', StockItem::where('code', 'RM-560')->value('name'));
     }
 
-    public function test_xlsx_template_has_single_items_sheet_with_five_columns(): void
+    public function test_xlsx_template_has_single_items_sheet_with_nine_columns(): void
     {
         $bytes = app(StockImportService::class)->templateBinary();
 
@@ -178,9 +185,10 @@ class ChecklistFeaturesTest extends TestCase
 
         $this->assertSame([StockImportService::SHEET_ITEMS], $sheetNames);
         $this->assertSame(
-            ['كود الصنف', 'اسم الصنف', 'الوحدة', 'الكمية', 'الحد الأدنى للطلب'],
-            StockImportService::HEADERS,
+            config('catalog.template_headers'),
+            StockImportService::headers(),
         );
+        $this->assertCount(9, StockImportService::headers());
     }
 
     public function test_military_markup_engine_computes_selling_price_and_percentage(): void
@@ -188,7 +196,6 @@ class ChecklistFeaturesTest extends TestCase
         $company = $this->militaryCompany();
         $patient = $this->militaryPatient($company);
 
-        // سعر الصنف 300 مقابل تكلفة WAC = 100 → هامش 200%.
         StockItem::create([
             'code' => 'RM-MIL',
             'name' => 'صنف عسكري',
@@ -204,7 +211,6 @@ class ChecklistFeaturesTest extends TestCase
 
         $this->assertEqualsWithDelta(300.0, (float) $case->military_selling_price, 0.01);
         $this->assertEqualsWithDelta(200.0, (float) $case->military_markup_pct, 0.01);
-        // التكلفة الداخلية (WAC) تبقى أساس المديونية العسكرية.
         $this->assertEqualsWithDelta(100.0, (float) $case->internal_cost, 0.01);
     }
 
@@ -216,7 +222,6 @@ class ChecklistFeaturesTest extends TestCase
         $operations->role->permissions()->sync([$permission->id]);
 
         $spec = $this->userWithRole('spec');
-        // Remove approve-pricing from spec to verify denial
         $spec->role->permissions()->detach([$permission->id]);
 
         $this->assertTrue(Gate::forUser($operations->fresh())->allows('approve-pricing'));
@@ -238,7 +243,10 @@ class ChecklistFeaturesTest extends TestCase
 
         $response = $this->actingAs($admin)->postJson(route('admin.catalog.store'), [
             'name' => 'صنف مبسّط',
-            'qty' => 12,
+            'opening_qty' => 12,
+            'addition' => 0,
+            'discount' => 0,
+            'balance' => 12,
             'price' => 150,
             'supplier_ids' => [$supplier->id],
             'prices' => [
@@ -250,9 +258,9 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertDatabaseHas('stock_items', [
             'name' => 'صنف مبسّط',
             'qty' => 12,
+            'opening_qty' => 12,
             'price' => 150,
         ]);
-        // السعر الإضافي يُحفظ كصف سعر مستقل (صنف بأكثر من سعر).
         $item = StockItem::where('name', 'صنف مبسّط')->firstOrFail();
         $this->assertSame(1, $item->prices()->count());
         $this->assertEqualsWithDelta(175.0, (float) $item->prices()->value('amount'), 0.01);
@@ -293,7 +301,6 @@ class ChecklistFeaturesTest extends TestCase
         $response->assertOk();
         $response->assertSee('BC-RM-A');
         $response->assertSee('BC-RM-B');
-        // نسختان لكل صنف = 4 ملصقات.
         $response->assertSee('4 ملصق');
         $response->assertSee('--offset-x: 3mm', false);
         $response->assertSee('--page-margin: 6mm', false);

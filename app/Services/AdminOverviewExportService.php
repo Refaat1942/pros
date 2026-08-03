@@ -101,7 +101,7 @@ class AdminOverviewExportService
                 ],
                 [
                     'title' => 'الأصناف الأكثر طلباً (BOM)',
-                    'headers' => ['الكود', 'الاسم', 'الكمية'],
+                    'headers' => ['رقم الصنف', 'الاسم', 'الرصيد'],
                     'rows' => $topItemRows ?: [['—', 'لا توجد بيانات', '0']],
                 ],
                 [

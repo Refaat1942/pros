@@ -20,6 +20,7 @@ class StockItem extends Model
 
     protected $fillable = [
         'code',
+        'page_number',
         'name',
         'spec',
         'category_id',
@@ -27,7 +28,11 @@ class StockItem extends Model
         'is_quick_dispense',
         'uom',
         'barcode',
+        'alt_codes',
         'qty',
+        'opening_qty',
+        'addition',
+        'discount',
         'reserved',
         'min_qty',
         'price',
@@ -40,6 +45,9 @@ class StockItem extends Model
 
     protected $casts = [
         'qty' => 'integer',
+        'opening_qty' => 'integer',
+        'addition' => 'integer',
+        'discount' => 'integer',
         'reserved' => 'integer',
         'min_qty' => 'integer',
         'is_quick_dispense' => 'boolean',
@@ -73,6 +81,14 @@ class StockItem extends Model
     {
         return $this->belongsToMany(Supplier::class, 'supplier_stock_item')
             ->withTimestamps();
+    }
+
+    /** الرصيد المحاسبي = رصيد أول المدة + الإضافة − الخصم. */
+    public function catalogBalance(): int
+    {
+        return (int) ($this->opening_qty ?? 0)
+            + (int) ($this->addition ?? 0)
+            - (int) ($this->discount ?? 0);
     }
 
     public function availableQty(): int

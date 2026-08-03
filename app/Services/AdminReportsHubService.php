@@ -248,7 +248,7 @@ class AdminReportsHubService
             'title' => 'تحليلات المخزون',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [],
-            'headers' => ['الكود', 'اسم الصنف', 'الكمية', 'آخر حركة', 'الحالة'],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'الرصيد', 'آخر حركة', 'الحالة'],
             'rows' => $rows,
         ];
     }
@@ -506,7 +506,7 @@ class AdminReportsHubService
             'title' => 'الأصناف والأسعار',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [],
-            'headers' => ['الكود', 'الصنف', 'السعر', 'الكمية', 'تاريخ الاستلام', 'أسعار متعددة'],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'السعر', 'رصيد أول المده', 'تاريخ الاستلام', 'أسعار متعددة'],
             'rows' => $rows,
             'row_actions' => $rowActions,
         ];
@@ -568,7 +568,7 @@ class AdminReportsHubService
             'title' => 'متابعة حركة الأصناف',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [],
-            'headers' => ['التاريخ', 'النوع', 'الكود', 'اسم الصنف', 'الكمية'],
+            'headers' => ['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الرصيد'],
             'rows' => $rows,
         ];
     }

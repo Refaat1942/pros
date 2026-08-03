@@ -453,7 +453,7 @@ class AdminReportsPageTest extends TestCase
         $report = $hub->build('inventory-overview', $dates['from'], $dates['to']);
 
         $this->assertSame('متابعة حركة الأصناف', $report['title']);
-        $this->assertSame(['التاريخ', 'النوع', 'الكود', 'اسم الصنف', 'الكمية'], $report['headers']);
+        $this->assertSame(['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الرصيد'], $report['headers']);
 
         $issueRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'صرف / بيع');
         $returnRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'ارتجاع من الورشة');
@@ -507,7 +507,7 @@ class AdminReportsPageTest extends TestCase
 
         $this->assertSame('تحليلات المخزون', $report['title']);
         $this->assertSame(
-            ['الكود', 'اسم الصنف', 'الكمية', 'آخر حركة', 'الحالة'],
+            ['رقم الصنف', 'اسم الصنف', 'الرصيد', 'آخر حركة', 'الحالة'],
             $report['headers'],
         );
         $this->assertSame([], $report['summary']);

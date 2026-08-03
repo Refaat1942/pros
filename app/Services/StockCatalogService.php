@@ -58,7 +58,9 @@ class StockCatalogService
         return [
             'id' => $item->id,
             'code' => $item->code,
+            'page_number' => $item->page_number ?? '',
             'barcode' => $item->barcode,
+            'alt_codes' => $item->alt_codes ?? '',
             'name' => $item->name,
             'spec' => $item->spec,
             'category_id' => $item->category_id,
@@ -70,6 +72,10 @@ class StockCatalogService
                 ->mapWithKeys(fn (array $row) => [$row['field_key'] => $row['value']])
                 ->all(),
             'qty' => (int) $item->qty,
+            'opening_qty' => (int) ($item->opening_qty ?? 0),
+            'addition' => (int) ($item->addition ?? 0),
+            'discount' => (int) ($item->discount ?? 0),
+            'balance' => $item->catalogBalance(),
             'reserved' => (int) $item->reserved,
             'min_qty' => (int) ($item->min_qty ?? 0),
             'price' => (float) $item->price,
@@ -97,11 +103,17 @@ class StockCatalogService
         return DB::transaction(function () use ($data) {
             $code = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $this->nextCode();
             $category = ! empty($data['category_id']) ? StockCategory::find($data['category_id']) : null;
-            $qty = (int) ($data['qty'] ?? 0);
+            $openingQty = (int) ($data['opening_qty'] ?? $data['qty'] ?? 0);
+            $addition = (int) ($data['addition'] ?? 0);
+            $discount = (int) ($data['discount'] ?? 0);
+            $qty = array_key_exists('balance', $data)
+                ? (int) $data['balance']
+                : (array_key_exists('qty', $data) ? (int) $data['qty'] : ($openingQty + $addition - $discount));
             $price = (float) ($data['price'] ?? 0);
 
             $item = StockItem::create([
                 'code' => $code,
+                'page_number' => $this->nullableString($data['page_number'] ?? null),
                 'name' => $data['name'],
                 'spec' => $data['spec'] ?? null,
                 'category_id' => $data['category_id'] ?? null,
@@ -109,7 +121,11 @@ class StockCatalogService
                 'is_quick_dispense' => (bool) ($data['is_quick_dispense'] ?? false),
                 'uom' => $this->normalizeUom($data['uom'] ?? null),
                 'barcode' => 'BC-'.$code,
+                'alt_codes' => $this->nullableString($data['alt_codes'] ?? null) ?? ('BC-'.$code),
                 'qty' => $qty,
+                'opening_qty' => $openingQty,
+                'addition' => $addition,
+                'discount' => $discount,
                 'reserved' => 0,
                 'min_qty' => max(0, (int) ($data['min_qty'] ?? 0)),
                 'price' => $price,
@@ -151,14 +167,33 @@ class StockCatalogService
         return DB::transaction(function () use ($item, $data) {
             $before = $this->formatItem($item);
             $price = array_key_exists('price', $data) ? (float) $data['price'] : (float) $item->price;
+            $openingQty = array_key_exists('opening_qty', $data)
+                ? (int) $data['opening_qty']
+                : (int) ($item->opening_qty ?? 0);
+            $addition = array_key_exists('addition', $data) ? (int) $data['addition'] : (int) ($item->addition ?? 0);
+            $discount = array_key_exists('discount', $data) ? (int) $data['discount'] : (int) ($item->discount ?? 0);
+            $qty = array_key_exists('balance', $data)
+                ? (int) $data['balance']
+                : (array_key_exists('qty', $data)
+                    ? (int) $data['qty']
+                    : ($openingQty + $addition - $discount));
 
             $item->update([
+                'page_number' => array_key_exists('page_number', $data)
+                    ? $this->nullableString($data['page_number'])
+                    : $item->page_number,
                 'name' => $data['name'],
                 'spec' => $data['spec'] ?? $item->spec,
                 'uom' => array_key_exists('uom', $data) && trim((string) $data['uom']) !== ''
                     ? $this->normalizeUom($data['uom'])
                     : $item->uom,
-                'qty' => (int) ($data['qty'] ?? $item->qty),
+                'alt_codes' => array_key_exists('alt_codes', $data)
+                    ? $this->nullableString($data['alt_codes'])
+                    : $item->alt_codes,
+                'qty' => $qty,
+                'opening_qty' => $openingQty,
+                'addition' => $addition,
+                'discount' => $discount,
                 'min_qty' => array_key_exists('min_qty', $data)
                     ? max(0, (int) $data['min_qty'])
                     : (int) ($item->min_qty ?? 0),
@@ -331,5 +366,12 @@ class StockCatalogService
         }
 
         return $amounts ? max($amounts) : 0.0;
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        $trimmed = trim((string) ($value ?? ''));
+
+        return $trimmed !== '' ? $trimmed : null;
     }
 }

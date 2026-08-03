@@ -3,6 +3,8 @@
     $items = collect($stock_items ?? []);
     $categories = collect($stock_categories ?? []);
     $catalogSuppliers = collect($suppliers ?? []);
+    $catalogColumns = config('catalog.columns', []);
+    $catalogTemplateHeaders = config('catalog.template_headers', []);
     $dateFrom = $date_from ?? request()->query('from');
     $dateTo = $date_to ?? request()->query('to');
     $exportUrl = route('admin.catalog.export', array_filter([
@@ -48,7 +50,7 @@
         </form>
 
         <div class="data-toolbar" style="flex-wrap:wrap;gap:8px;">
-            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث بالصنف أو الكود..." onkeyup="applySlimCatalogFilters()">
+            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث برقم الصنف أو الاسم..." onkeyup="applySlimCatalogFilters()">
             <select id="catalogCategoryFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:160px;">
                 <option value="">🏷️ كل الأقسام</option>
                 @foreach ($categories as $cat)
@@ -64,7 +66,7 @@
                 <form id="catalogImportForm" method="POST" action="{{ route('admin.catalog.import') }}" enctype="multipart/form-data" style="display:inline-flex;">
                     @csrf
                     <input type="file" id="catalogImportFile" name="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" class="catalog-file-input" required>
-                    <label for="catalogImportFile" class="btn-action success catalog-file-label" id="catalogImportBtn" title="القالب: كود الصنف | اسم الصنف | الوحدة | الكمية | الحد الأدنى للطلب">📤 ارفع ملف Excel</label>
+                    <label for="catalogImportFile" class="btn-action success catalog-file-label" id="catalogImportBtn" title="القالب: {{ implode(' | ', $catalogTemplateHeaders) }}">📤 ارفع ملف Excel</label>
                 </form>
             @endcan
 
@@ -76,9 +78,9 @@
         </div>
 
         <p class="catalog-table-hint">
-            💡 قالب الأصناف مبسّط بخمسة أعمدة فقط:
-            <strong>كود الصنف | اسم الصنف | الوحدة | الكمية | الحد الأدنى للطلب</strong>.
-            الأسعار والموردون والأقسام تُدار من شاشة الكاتلوج. لطباعة الباركود، حدّد صنفاً أو أكثر ثم اضغط «طباعة باركود المحدد».
+            💡 قالب الأصناف — {{ count($catalogTemplateHeaders) }} أعمدة:
+            <strong>{{ implode(' | ', $catalogTemplateHeaders) }}</strong>.
+            الأسعار والموردون والأقسام تُدار من نموذج الصنف. لطباعة الباركود، حدّد صنفاً أو أكثر ثم اضغط «طباعة باركود المحدد».
         </p>
 
         <div class="panel-body" style="overflow-x:auto;">
@@ -88,15 +90,15 @@
                         @can('print-barcode')
                             <th style="padding:10px;text-align:center;width:34px;"><input type="checkbox" id="catalogSelectAll" onclick="toggleAllBarcodes(this)" title="تحديد الكل"></th>
                         @endcan
-                        <th style="padding:10px;text-align:right;">الكود</th>
-                        <th style="padding:10px;text-align:right;">الصنف</th>
-                        <th style="padding:10px;text-align:right;">القسم</th>
-                        <th style="padding:10px;text-align:right;">المورد</th>
-                        <th style="padding:10px;text-align:center;">الوحدة</th>
-                        <th style="padding:10px;text-align:center;">الكمية</th>
-                        <th style="padding:10px;text-align:center;">سعر التكلفة</th>
-                        <th style="padding:10px;text-align:center;">أعلى سعر</th>
-                        <th style="padding:10px;text-align:center;">أسعار إضافية</th>
+                        <th style="padding:10px;text-align:right;">{{ $catalogColumns['code']['label'] ?? 'رقم الصنف' }}</th>
+                        <th style="padding:10px;text-align:right;">{{ $catalogColumns['page_number']['label'] ?? 'رقم الصفحة' }}</th>
+                        <th style="padding:10px;text-align:right;">{{ $catalogColumns['name']['label'] ?? 'اسم الصنف' }}</th>
+                        <th style="padding:10px;text-align:right;">{{ $catalogColumns['alt_codes']['label'] ?? 'الأكواد' }}</th>
+                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['uom']['label'] ?? 'الوحدة' }}</th>
+                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['opening_qty']['label'] ?? 'رصيد أول المده' }}</th>
+                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['addition']['label'] ?? 'الاضافة' }}</th>
+                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['discount']['label'] ?? 'الخصم' }}</th>
+                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['balance']['label'] ?? 'الرصيد' }}</th>
                         <th style="padding:10px;text-align:center;min-width:280px;">إجراء</th>
                     </tr>
                 </thead>
@@ -113,26 +115,14 @@
                                 <td style="padding:8px;text-align:center;"><input type="checkbox" class="catalog-barcode-check" value="{{ $item['id'] ?? '' }}" onclick="syncBarcodeSelection()"></td>
                             @endcan
                             <td style="padding:8px;direction:ltr;text-align:right;"><strong>{{ $item['code'] ?? '' }}</strong></td>
+                            <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $item['page_number'] ?? '—' }}</td>
                             <td style="padding:8px;">{{ $item['name'] ?? '' }}</td>
-                            <td style="padding:8px;color:var(--text-muted);">{{ $item['category'] ?? '—' }}</td>
-                            <td style="padding:8px;color:var(--text-muted);font-size:12px;">
-                                @if (!empty($item['suppliers']))
-                                    {{ collect($item['suppliers'])->pluck('name')->join('، ') }}
-                                @else
-                                    —
-                                @endif
-                            </td>
+                            <td style="padding:8px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">{{ $item['alt_codes'] ?? '—' }}</td>
                             <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $item['uom'] ?? 'قطعة' }}</td>
-                            <td style="padding:8px;text-align:center;">{{ (int) ($item['qty'] ?? 0) }}</td>
-                            <td style="padding:10px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['price'] ?? 0), 2) }}</td>
-                            <td style="padding:10px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['highest_price'] ?? $item['price'] ?? 0), 2) }}</td>
-                            <td style="padding:8px;text-align:center;color:var(--text-muted);">
-                                @if (!empty($item['prices']))
-                                    {{ count($item['prices']) }} سعر
-                                @else
-                                    —
-                                @endif
-                            </td>
+                            <td style="padding:8px;text-align:center;">{{ (int) ($item['opening_qty'] ?? $item['qty'] ?? 0) }}</td>
+                            <td style="padding:8px;text-align:center;">{{ (int) ($item['addition'] ?? 0) }}</td>
+                            <td style="padding:8px;text-align:center;">{{ (int) ($item['discount'] ?? 0) }}</td>
+                            <td style="padding:8px;text-align:center;font-weight:600;">{{ (int) ($item['balance'] ?? $item['qty'] ?? 0) }}</td>
                             <td style="padding:10px;text-align:center;white-space:nowrap;">
                                 <button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button>
                                 <button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button>
@@ -167,12 +157,20 @@
                     <h4 class="catalog-form-card__title">📦 بيانات الصنف</h4>
                     <div class="catalog-form-grid catalog-form-grid--basic">
                 <div>
-                    <label class="catalog-form-label">كود الصنف / الباركود</label>
+                    <label class="catalog-form-label">رقم الصنف / الباركود</label>
                     <input type="text" id="slimCode" placeholder="تلقائي إن تُرك فارغاً" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">رقم الصفحة</label>
+                    <input type="text" id="slimPageNumber" placeholder="مثال: 12" class="catalog-form-input">
                 </div>
                 <div>
                     <label class="catalog-form-label">اسم الصنف *</label>
                     <input type="text" id="slimName" placeholder="مثال: ركبة هيدروليكية" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">الأكواد</label>
+                    <input type="text" id="slimAltCodes" placeholder="باركود / أكواد المورد" class="catalog-form-input">
                 </div>
                 <div>
                     <label class="catalog-form-label">الوحدة</label>
@@ -188,8 +186,20 @@
                     </datalist>
                 </div>
                 <div>
-                    <label class="catalog-form-label">الكمية</label>
-                    <input type="number" id="slimQty" min="0" value="0" class="catalog-form-input">
+                    <label class="catalog-form-label">رصيد أول المده</label>
+                    <input type="number" id="slimOpeningQty" min="0" value="0" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">الاضافة</label>
+                    <input type="number" id="slimAddition" min="0" value="0" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">الخصم</label>
+                    <input type="number" id="slimDiscount" min="0" value="0" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">الرصيد</label>
+                    <input type="number" id="slimBalance" min="0" value="0" class="catalog-form-input" readonly>
                 </div>
                 <div>
                     <label class="catalog-form-label">الحد الأدنى للطلب</label>
@@ -839,11 +849,28 @@
         if (e.key === 'Escape') closeSupplierDropdown();
     });
 
+    function recalcCatalogBalance() {
+        var opening = parseInt(document.getElementById('slimOpeningQty').value || '0', 10);
+        var addition = parseInt(document.getElementById('slimAddition').value || '0', 10);
+        var discount = parseInt(document.getElementById('slimDiscount').value || '0', 10);
+        var balance = opening + addition - discount;
+        document.getElementById('slimBalance').value = balance < 0 ? 0 : balance;
+    }
+
+    ['slimOpeningQty', 'slimAddition', 'slimDiscount'].forEach(function (id) {
+        document.getElementById(id)?.addEventListener('input', recalcCatalogBalance);
+    });
+
     function setForm(v) {
         document.getElementById('slimCode').value = v.code || '';
+        document.getElementById('slimPageNumber').value = v.page_number || '';
         document.getElementById('slimName').value = v.name || '';
+        document.getElementById('slimAltCodes').value = v.alt_codes || '';
         document.getElementById('slimUom').value = v.uom || 'قطعة';
-        document.getElementById('slimQty').value = v.qty != null ? v.qty : 0;
+        document.getElementById('slimOpeningQty').value = v.opening_qty != null ? v.opening_qty : (v.qty != null ? v.qty : 0);
+        document.getElementById('slimAddition').value = v.addition != null ? v.addition : 0;
+        document.getElementById('slimDiscount').value = v.discount != null ? v.discount : 0;
+        document.getElementById('slimBalance').value = v.balance != null ? v.balance : (v.qty != null ? v.qty : 0);
         document.getElementById('slimMinQty').value = v.min_qty != null ? v.min_qty : 0;
         document.getElementById('slimPrice').value = v.price != null ? v.price : 0;
         document.getElementById('slimEditId').value = v.id || '';
@@ -1021,10 +1048,14 @@
 
         document.getElementById('catalogViewBody').innerHTML =
             '<div class="catalog-detail-grid">'
-            + detailBox('كود الصنف', item.code || '—')
-            + detailBox('الباركود', item.barcode || '—')
+            + detailBox('رقم الصنف', item.code || '—')
+            + detailBox('رقم الصفحة', item.page_number || '—')
+            + detailBox('الأكواد', item.alt_codes || item.barcode || '—')
             + detailBox('الوحدة', item.uom || 'قطعة')
-            + detailBox('الكمية', String(parseInt(item.qty, 10) || 0))
+            + detailBox('رصيد أول المده', String(parseInt(item.opening_qty, 10) || 0))
+            + detailBox('الاضافة', String(parseInt(item.addition, 10) || 0))
+            + detailBox('الخصم', String(parseInt(item.discount, 10) || 0))
+            + detailBox('الرصيد', String(parseInt(item.balance, 10) || parseInt(item.qty, 10) || 0))
             + detailBox('الحد الأدنى للطلب', String(parseInt(item.min_qty, 10) || 0))
             + detailBox('القسم', item.category || '—')
             + detailBox('المورد', supplierNamesLabel(item))
@@ -1113,8 +1144,13 @@
 
         var payload = {
             name: name,
+            page_number: (document.getElementById('slimPageNumber').value || '').trim() || null,
+            alt_codes: (document.getElementById('slimAltCodes').value || '').trim() || null,
             uom: (document.getElementById('slimUom').value || '').trim() || 'قطعة',
-            qty: parseInt(document.getElementById('slimQty').value || '0', 10),
+            opening_qty: parseInt(document.getElementById('slimOpeningQty').value || '0', 10),
+            addition: parseInt(document.getElementById('slimAddition').value || '0', 10),
+            discount: parseInt(document.getElementById('slimDiscount').value || '0', 10),
+            balance: parseInt(document.getElementById('slimBalance').value || '0', 10),
             min_qty: parseInt(document.getElementById('slimMinQty').value || '0', 10),
             price: parseFloat(document.getElementById('slimPrice').value || '0'),
             prices: collectExtraPrices(),
@@ -1180,22 +1216,19 @@
     }
 
     function catalogRowHtml(item) {
-        var search = escAttr(((item.code || '') + ' ' + (item.name || '') + ' ' + (item.category || '')).toLowerCase());
+        var search = escAttr(((item.code || '') + ' ' + (item.name || '') + ' ' + (item.page_number || '') + ' ' + (item.alt_codes || '')).toLowerCase());
         var dataAttr = escAttr(JSON.stringify(item));
-        var highest = itemHighestPrice(item);
-        var extra = (item.prices && item.prices.length)
-            ? (item.prices.length + ' سعر')
-            : '—';
         var labelsUrl = '/admin/catalog/' + item.id + '/labels';
         return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             '<td style="padding:10px;direction:ltr;text-align:right;"><strong>' + (item.code || '') + '</strong></td>' +
+            '<td style="padding:10px;text-align:center;color:var(--text-muted);">' + (item.page_number || '—') + '</td>' +
             '<td style="padding:10px;">' + (item.name || '') + '</td>' +
-            '<td style="padding:10px;color:var(--text-muted);">' + (item.category || '—') + '</td>' +
-            '<td style="padding:10px;color:var(--text-muted);font-size:12px;">' + supplierNamesLabel(item) + '</td>' +
-            '<td style="padding:10px;text-align:center;">' + (parseInt(item.qty, 10) || 0) + '</td>' +
-            '<td style="padding:10px;text-align:center;" class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</td>' +
-            '<td style="padding:10px;text-align:center;" class="catalog-price-cell">' + formatCatalogPrice(highest) + '</td>' +
-            '<td style="padding:10px;text-align:center;color:var(--text-muted);">' + extra + '</td>' +
+            '<td style="padding:10px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">' + (item.alt_codes || '—') + '</td>' +
+            '<td style="padding:10px;text-align:center;color:var(--text-muted);">' + (item.uom || 'قطعة') + '</td>' +
+            '<td style="padding:10px;text-align:center;">' + (parseInt(item.opening_qty, 10) || 0) + '</td>' +
+            '<td style="padding:10px;text-align:center;">' + (parseInt(item.addition, 10) || 0) + '</td>' +
+            '<td style="padding:10px;text-align:center;">' + (parseInt(item.discount, 10) || 0) + '</td>' +
+            '<td style="padding:10px;text-align:center;font-weight:600;">' + (parseInt(item.balance, 10) || parseInt(item.qty, 10) || 0) + '</td>' +
             '<td style="padding:10px;text-align:center;white-space:nowrap;">' +
             '<button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button> ' +
             '<button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button> ' +
