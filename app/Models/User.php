@@ -158,6 +158,10 @@ class User extends Authenticatable
         }
 
         foreach (array_keys(config("dashboards.{$dashboard}.pages", [])) as $page) {
+            if ($page === 'notifications') {
+                continue;
+            }
+
             if ($this->canViewDashboardPage($dashboard, $page)) {
                 return true;
             }

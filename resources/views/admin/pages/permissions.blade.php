@@ -28,7 +28,7 @@
                 <select id="permRoleSelect" class="perm-role-select">
                     @foreach ($roles as $role)
                         <option value="{{ $role->id }}" data-slug="{{ $role->slug }}">
-                            {{ $role->label_ar }}
+                            {{ $role->label_ar }} ({{ $role->slug }})
                         </option>
                     @endforeach
                 </select>
@@ -45,8 +45,37 @@
         <span class="perm-role-banner-hint">— التغييرات تُطبَّق على هذا الدور فقط عند الحفظ</span>
     </div>
 
-    @if (session('status'))
-        <div class="perm-flash-success">✅ {{ session('status') }}</div>
+    @if (session('success') || session('status'))
+        <div class="perm-flash-success flash-message flash-success" role="alert">
+            ✅ {{ session('success') ?? session('status') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="perm-flash-error flash-message flash-error" role="alert">⚠️ {{ session('error') }}</div>
+    @endif
+
+    <div class="perm-session-info">
+        مسجّل كـ <strong>{{ auth()->user()?->username }}</strong>
+        — دور: <code>{{ auth()->user()?->role?->slug ?? '—' }}</code>
+        @if (auth()->user()?->isSuperAdmin())
+            <span class="perm-session-ok">✓ سوبر أدمن — الحفظ مفعّل</span>
+        @else
+            <span class="perm-session-warn">✗ ليس super_admin — الحفظ معطّل</span>
+        @endif
+    </div>
+
+    @if (auth()->user()?->isSuperAdmin())
+        <div class="perm-test-hint">
+            <strong>لاختبار الصلاحيات:</strong> بعد الحفظ سجّل خروجاً ثم ادخل بحساب الدور نفسه
+            (مثلاً <code>reception</code> / <code>123456</code>).
+            السوبر أدمن يرى <em>كل</em> الصفحات دائماً — شريط «تنقّل بين الأقسام» لا يُ simulates دور الاستقبال.
+        </div>
+    @else
+        <div class="perm-flash-error">
+            ⚠️ أنت تتصفّح كـ «{{ auth()->user()?->role?->label_ar }}» — <strong>الحفظ متاح لـ superadmin فقط</strong>.
+            سجّل دخول بحساب <code>superadmin</code> (دور <code>super_admin</code>) لتعديل الصلاحيات.
+        </div>
     @endif
 
     <form method="POST" action="{{ route('admin.permissions.update') }}" id="permMatrixForm"
@@ -90,6 +119,22 @@
                                     · {{ $dash['actions']->count() }} إجراء
                                 @endif
                             </span>
+                        </div>
+                        <div class="perm-card-actions">
+                            <button type="button"
+                                    class="perm-card-toggle-btn"
+                                    data-dashboard="{{ $dash['key'] }}"
+                                    data-lock="1"
+                                    title="إيقاف كل صلاحيات هذه اللوحة للدور المختار">
+                                🔒 قفل
+                            </button>
+                            <button type="button"
+                                    class="perm-card-toggle-btn"
+                                    data-dashboard="{{ $dash['key'] }}"
+                                    data-lock="0"
+                                    title="تفعيل كل صلاحيات هذه اللوحة للدور المختار">
+                                🔓 فتح
+                            </button>
                         </div>
                     </header>
 
@@ -172,11 +217,28 @@
         </div>
 
         <footer class="perm-page-footer">
-            <button type="submit" class="btn-action success perm-save-btn">💾 حفظ الصلاحيات</button>
+            @if (auth()->user()?->isSuperAdmin())
+                <button type="submit" class="btn-action success perm-save-btn">💾 حفظ الصلاحيات</button>
+            @else
+                <button type="button" class="btn-action perm-save-btn" disabled title="متاح لـ superadmin فقط">
+                    💾 حفظ الصلاحيات (سوبر أدمن فقط)
+                </button>
+            @endif
         </footer>
     </form>
 </div>
 
-@push('scripts')
-    <script src="{{ asset('assets/js/pages/admin-permissions.js') }}?v={{ filemtime(public_path('assets/js/pages/admin-permissions.js')) }}"></script>
-@endpush
+@if (session('success') || session('status'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var msg = @json(session('success') ?? session('status'));
+            if (window.DashboardToast && msg) {
+                window.DashboardToast.show(msg, 'success');
+            }
+            var flash = document.querySelector('.perm-flash-success');
+            if (flash) {
+                flash.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    </script>
+@endif

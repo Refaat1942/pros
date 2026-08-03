@@ -33,6 +33,21 @@ class ReceptionStatisticsPageTest extends TestCase
         $this->get(route('reception.statistics'))->assertStatus(403);
     }
 
+    public function test_statistics_blocked_while_other_reception_pages_remain(): void
+    {
+        $user = $this->userWithRole('reception');
+        $user->role->permissions()->sync(
+            \App\Models\Permission::query()
+                ->where('dashboard', 'reception')
+                ->where('slug', '!=', 'reception.statistics.view')
+                ->pluck('id')
+        );
+        $this->actingAs($user->fresh());
+
+        $this->get(route('reception.appointments'))->assertOk();
+        $this->get(route('reception.statistics'))->assertStatus(403);
+    }
+
     public function test_analytics_service_returns_real_counts(): void
     {
         $company = $this->civilianCompany();

@@ -130,6 +130,30 @@
 
     form.addEventListener('submit', () => {
         flushVisibleToHidden();
+
+        let jsonInput = form.querySelector('input[name="matrix_json"]');
+        if (!jsonInput) {
+            jsonInput = document.createElement('input');
+            jsonInput.type = 'hidden';
+            jsonInput.name = 'matrix_json';
+            form.appendChild(jsonInput);
+        }
+
+        const payload = {};
+        form.querySelectorAll('.perm-hidden-cb').forEach((cb) => {
+            const roleId = cb.dataset.role;
+            if (!payload[roleId]) {
+                payload[roleId] = [];
+            }
+            if (cb.checked) {
+                payload[roleId].push(parseInt(cb.value, 10));
+            }
+        });
+        jsonInput.value = JSON.stringify(payload);
+
+        form.querySelectorAll('.perm-hidden-cb').forEach((cb) => {
+            cb.disabled = true;
+        });
     });
 
     loadRoleToVisible(activeRoleId);

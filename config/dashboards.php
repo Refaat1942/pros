@@ -325,6 +325,7 @@ return [
             'assets/js/shared/operations-desk.js',
             'assets/js/shared/bulk-table-select.js',
             'assets/js/pages/admin-dashboard.js',
+            'assets/js/pages/admin-permissions.js',
             'assets/js/pages/admin-spec-edit-requests.js',
             'assets/js/pages/admin-workshop-sections.js',
             'assets/js/pages/admin-workshop-tracking.js',

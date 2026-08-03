@@ -17,9 +17,18 @@ class HomeController extends Controller
     public function index(): View|RedirectResponse
     {
         if (auth()->check()) {
-            $slug = auth()->user()->dashboardSlug();
+            $user = auth()->user();
+            $slug = $user->dashboardSlug();
 
-            return redirect($slug && $slug !== 'home' ? "/{$slug}" : '/');
+            if ($slug && $slug !== 'home' && $user->canAccessDashboard($slug)) {
+                return redirect("/{$slug}");
+            }
+
+            auth()->logout();
+
+            return redirect('/')->withErrors([
+                'username' => 'لا توجد صلاحيات مفعّلة لهذا الحساب — تواصل مع الإدارة.',
+            ]);
         }
 
         return view('auth.home-login', [

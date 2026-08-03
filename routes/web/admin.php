@@ -145,7 +145,6 @@ Route::prefix('admin')
         // ── مصفوفة الصلاحيات التفصيلية ──────────────────────────────────────
         Route::middleware('dashboard.page:admin,permissions')->group(function () {
             Route::post('permissions', [PermissionMatrixController::class, 'update'])
-                ->middleware('can:manage-permissions')
                 ->name('permissions.update');
         });
 

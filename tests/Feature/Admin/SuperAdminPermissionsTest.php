@@ -108,6 +108,88 @@ class SuperAdminPermissionsTest extends TestCase
             ->assertOk();
     }
 
+    public function test_superadmin_can_save_permissions_matrix(): void
+    {
+        app(PermissionCatalogService::class)->syncToDatabase();
+
+        $superRole = $this->makeRole(Role::SLUG_SUPER_ADMIN);
+        $receptionRole = $this->makeRole(Role::SLUG_RECEPTION);
+        $statsId = Permission::where('slug', 'reception.statistics.view')->value('id');
+        $appointmentsId = Permission::where('slug', 'reception.appointments.view')->value('id');
+
+        $this->assertNotNull($statsId);
+        $this->assertNotNull($appointmentsId);
+
+        $super = User::updateOrCreate(
+            ['username' => 'superadmin-matrix-save'],
+            [
+                'name' => 'سوبر أدمن',
+                'password' => UserFactory::TEST_PASSWORD,
+                'role_id' => $superRole->id,
+                'status' => User::STATUS_ACTIVE,
+            ]
+        );
+
+        $matrixJson = json_encode([
+            (string) $receptionRole->id => [(int) $appointmentsId],
+        ]);
+
+        $this->actingAs($super)
+            ->post(route('admin.permissions.update'), [
+                '_token' => csrf_token(),
+                'matrix_json' => $matrixJson,
+            ])
+            ->assertRedirect(route('admin.permissions'))
+            ->assertSessionHas('status')
+            ->assertSessionHas('success');
+
+        $receptionUser = User::updateOrCreate(
+            ['username' => 'reception-matrix-test'],
+            [
+                'name' => 'استقبال',
+                'password' => UserFactory::TEST_PASSWORD,
+                'role_id' => $receptionRole->id,
+                'status' => User::STATUS_ACTIVE,
+            ]
+        );
+
+        $this->actingAs($receptionUser->fresh())
+            ->get(route('reception.appointments'))
+            ->assertOk();
+
+        $this->actingAs($receptionUser->fresh())
+            ->get(route('reception.statistics'))
+            ->assertStatus(403);
+    }
+
+    public function test_limited_admin_cannot_save_permissions_matrix(): void
+    {
+        app(PermissionCatalogService::class)->syncToDatabase();
+
+        $adminRole = $this->makeRole(Role::SLUG_ADMIN);
+        $adminRole->permissions()->sync(
+            Permission::query()->where('slug', 'admin.permissions.view')->pluck('id')
+        );
+
+        $admin = User::updateOrCreate(
+            ['username' => 'admin-matrix-save-test'],
+            [
+                'name' => 'أدمن محدود',
+                'password' => UserFactory::TEST_PASSWORD,
+                'role_id' => $adminRole->id,
+                'status' => User::STATUS_ACTIVE,
+            ]
+        );
+
+        $this->actingAs($admin)
+            ->post(route('admin.permissions.update'), [
+                '_token' => csrf_token(),
+                'matrix_json' => '{}',
+            ])
+            ->assertRedirect(route('admin.permissions'))
+            ->assertSessionHas('error');
+    }
+
     public function test_superadmin_login_redirects_to_admin_dashboard(): void
     {
         app(PermissionCatalogService::class)->syncToDatabase();
