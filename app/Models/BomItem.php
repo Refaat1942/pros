@@ -61,16 +61,20 @@ class BomItem extends Model
 
     /**
      * أقصى كمية يمكن طلب ارتجاعها الآن.
-     * - بند بكمية واحدة: يُسمح بارتجاعها بالكامل.
-     * - بند بكمية أكبر: يُبقى وحدة واحدة على الأقل في الورشة.
+     * - بعد التسليم (BOM تام): يُسمح بارتجاع كل الكمية المُصرفة المتبقية.
+     * - أثناء التشغيل: بند بكمية واحدة يُرتجع بالكامل؛ بند بكمية أكبر يُبقى وحدة في الورشة.
      */
-    public function returnRequestMaxQty(?int $pendingReturnQty = null): int
+    public function returnRequestMaxQty(?int $pendingReturnQty = null, ?string $bomStage = null): int
     {
         $pending = $pendingReturnQty ?? $this->pendingReturnQty();
         $net = max(0, $this->returnableQty() - $pending);
 
         if ($net <= 0) {
             return 0;
+        }
+
+        if ($bomStage === Bom::STAGE_FINISHED) {
+            return $net;
         }
 
         if ($this->issued_qty <= 1) {

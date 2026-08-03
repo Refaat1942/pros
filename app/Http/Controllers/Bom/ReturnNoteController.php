@@ -7,6 +7,7 @@ use App\Http\Requests\Bom\CompleteReturnNoteRequest;
 use App\Http\Requests\Bom\StoreReturnNoteRequest;
 use App\Models\Bom;
 use App\Models\BomItem;
+use App\Models\CaseRecord;
 use App\Models\ReturnNote;
 use App\Models\StockItem;
 use App\Models\User;
@@ -54,12 +55,19 @@ class ReturnNoteController extends Controller
     }
 
     /**
-     * BOMs المتاحة لإنشاء إذن ارتجاع (wip فقط + بنود قابلة للارتجاع).
+     * BOMs المتاحة لإنشاء إذن ارتجاع.
+     * - افتراضي (ورشة): wip فقط.
+     * - post_delivery=1 (استقبال): BOM تام + حالة مُسلَّمة.
      */
     public function create(Request $request): JsonResponse
     {
-        $boms = Bom::with(['items', 'caseRecord:id,work_order_no'])
-            ->where('stage', Bom::STAGE_WIP)
+        $postDelivery = $request->boolean('post_delivery');
+
+        $boms = Bom::with(['items', 'caseRecord:id,work_order_no,stage_key'])
+            ->when($postDelivery, function ($q) {
+                $q->where('stage', Bom::STAGE_FINISHED)
+                    ->whereHas('caseRecord', fn ($c) => $c->where('stage_key', CaseRecord::STAGE_DELIVERED));
+            }, fn ($q) => $q->where('stage', Bom::STAGE_WIP))
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('bom_no', 'like', "%{$s}%")
                     ->orWhere('patient_name', 'like', "%{$s}%")
@@ -73,40 +81,41 @@ class ReturnNoteController extends Controller
 
         $boms = $boms
             ->filter(function (Bom $b) use ($pendingByItem) {
-                return $b->items->contains(function ($i) use ($pendingByItem) {
+                return $b->items->contains(function ($i) use ($pendingByItem, $b) {
                     $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
 
-                    return $i->returnRequestMaxQty($pending) > 0;
+                    return $i->returnRequestMaxQty($pending, $b->stage) > 0;
                 });
             })
             ->values();
 
-        $barcodes = StockItem::whereIn(
-            'code',
-            $boms->flatMap(fn (Bom $b) => $b->items->pluck('stock_item_code'))->unique()->all()
-        )->pluck('barcode', 'code');
+        $codes = $boms->flatMap(fn (Bom $b) => $b->items->pluck('stock_item_code'))->unique()->filter()->values()->all();
+        $barcodes = collect(StockItem::mapByOperationalCodes($codes, 'barcode'));
 
         return response()->json([
-            'boms' => $boms->map(function (Bom $b) use ($pendingByItem, $barcodes) {
+            'context' => $postDelivery ? 'post_delivery' : 'wip',
+            'boms' => $boms->map(function (Bom $b) use ($pendingByItem, $barcodes, $postDelivery) {
                 return [
                     'id' => $b->id,
                     'bom_no' => $b->bom_no,
                     'patient_name' => $b->patient_name,
                     'order_ref' => $b->order_ref,
                     'work_order_no' => $b->caseRecord?->work_order_no,
+                    'stage' => $b->stage,
+                    'post_delivery' => $postDelivery,
                     'items' => $b->items
-                        ->filter(function ($i) use ($pendingByItem) {
+                        ->filter(function ($i) use ($pendingByItem, $b) {
                             $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
 
-                            return $i->returnRequestMaxQty($pending) > 0;
+                            return $i->returnRequestMaxQty($pending, $b->stage) > 0;
                         })
-                        ->map(function ($i) use ($pendingByItem, $barcodes) {
+                        ->map(function ($i) use ($pendingByItem, $barcodes, $b) {
                             $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
 
                             return [
                                 'stock_item_code' => $i->stock_item_code,
                                 'name' => $i->name,
-                                'returnable_qty' => $i->returnRequestMaxQty($pending),
+                                'returnable_qty' => $i->returnRequestMaxQty($pending, $b->stage),
                                 'issued_qty' => $i->returnableQty(),
                                 'barcode' => $barcodes[$i->stock_item_code] ?? null,
                             ];
@@ -160,9 +169,10 @@ class ReturnNoteController extends Controller
         $lines = $note->relationLoaded('lines') ? $note->lines : collect();
 
         if ($barcodes === null && $lines->isNotEmpty()) {
-            $barcodes = StockItem::query()
-                ->whereIn('code', $lines->pluck('stock_item_code')->unique()->all())
-                ->pluck('barcode', 'code');
+            $barcodes = collect(StockItem::mapByOperationalCodes(
+                $lines->pluck('stock_item_code')->unique()->filter()->values()->all(),
+                'barcode'
+            ));
         }
 
         return $note->only([

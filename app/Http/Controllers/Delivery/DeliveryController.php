@@ -3,12 +3,9 @@
 namespace App\Http\Controllers\Delivery;
 
 use App\Exceptions\DeliveryNotReadyException;
-use App\Exceptions\InvalidPatientQrException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Delivery\ScanDeliveryRequest;
 use App\Models\Bom;
 use App\Models\CaseRecord;
-use App\Models\Patient;
 use App\Services\DeliveryService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -51,45 +48,14 @@ class DeliveryController extends Controller
     }
 
     /**
-     * مسح بطاقة المريض — إغلاق الحالة.
+     * تأكيد التسليم — إغلاق الحالة.
      */
-    public function scan(ScanDeliveryRequest $request): JsonResponse
+    public function confirm(CaseRecord $case): JsonResponse
     {
-        $scannedQr = $request->validated('scanned_qr');
-
-        if (! preg_match('/^QR-\d{6}$/', $scannedQr)) {
-            return response()->json([
-                'message' => 'رمز QR مُعدَّل أو غير صالح — تم رفض التسليم.',
-                'blocked' => true,
-                'security' => true,
-            ], 422);
-        }
-
-        $patient = Patient::where('patient_qr', $scannedQr)->first();
-
-        if (! $patient) {
-            return response()->json(['message' => 'بطاقة المريض غير موجودة.'], 422);
-        }
-
-        $case = CaseRecord::where('patient_id', $patient->id)
-            ->where('stage_key', CaseRecord::STAGE_READY_DELIVERY)
-            ->orderByDesc('id')
-            ->first();
-
-        if (! $case) {
-            return response()->json(['message' => 'لا توجد حالة جاهزة للتسليم لهذا المريض.'], 422);
-        }
-
         try {
-            $case = $this->deliveryService->close($case, $request->validated('scanned_qr'));
+            $case = $this->deliveryService->close($case);
         } catch (DeliveryNotReadyException $e) {
             return response()->json(['message' => $e->getMessage(), 'blocked' => true], 422);
-        } catch (InvalidPatientQrException $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-                'blocked' => true,
-                'security' => true,
-            ], 422);
         }
 
         return response()->json([
@@ -128,7 +94,7 @@ class DeliveryController extends Controller
             'work_order_no', 'patient_type', 'company_name', 'delivered_at',
         ]) + [
             'patient' => $case->relationLoaded('patient') && $case->patient
-                ? $case->patient->only(['id', 'patient_code', 'name', 'patient_qr'])
+                ? $case->patient->only(['id', 'patient_code', 'name'])
                 : null,
             'bom' => $case->relationLoaded('bom') && $case->bom
                 ? $case->bom->only(['id', 'bom_no', 'stage', 'finished_at'])

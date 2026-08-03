@@ -82,11 +82,11 @@
                 <p class="text-sm text-emerald-900 leading-relaxed">
                     هذه الشاشة <strong>الخطوة الأخيرة</strong> في مسار المريض.
                     بعد اكتمال التصنيع (<strong>BOM تام</strong>) تظهر الحالة هنا.
-                    <strong>امسح QR بطاقة المريض</strong> (لا تُقبل نسخة يدوية بدون مسح) لتأكيد التسليم وإغلاق الملف.
+                    اختر المريض واضغط <strong>تأكيد التسليم</strong> لإغلاق الملف.
                 </p>
                 <ol class="mt-3 text-xs text-emerald-800 space-y-1 list-decimal list-inside">
                     <li>اختر المريض من قائمة «جاهز للتسليم»</li>
-                    <li>امسح QR بطاقة المريض بالقارئ</li>
+                    <li>راجع تفاصيل الحالة وأمر الشغل</li>
                     <li>اضغط «تأكيد التسليم» — يُغلق الملف ويُصدر مرجع الفاتورة (مدني)</li>
                 </ol>
             </div>
@@ -108,7 +108,6 @@
                 @forelse ($cases as $case)
                     <li class="delivery-item cursor-pointer px-5 py-4 hover:bg-emerald-50 transition-colors"
                         data-case-id="{{ $case->id }}"
-                        data-patient-qr="{{ $case->patient?->patient_qr }}"
                         data-search="{{ $case->patient?->name }} {{ $case->work_order_no }} {{ $case->case_no }}">
                         <div class="flex items-start justify-between gap-2">
                             <div>
@@ -130,22 +129,22 @@
             </ul>
         </div>
 
-        {{-- مسح QR --}}
+        {{-- تأكيد التسليم --}}
         <div class="xl:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[520px] flex flex-col">
             <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white shrink-0">
-                <h3 class="font-bold text-lg">📱 مسح QR — التسليم الختامي</h3>
+                <h3 class="font-bold text-lg">📦 تأكيد التسليم</h3>
                 <p class="text-sm opacity-90 mt-1">يُغلق الملف الطبي ويُصدر مرجع الفاتورة (مدني)</p>
             </div>
 
             <div id="deliveryEmpty" class="flex-1 flex flex-col items-center justify-center p-10 text-center text-slate-400">
                 <div class="text-5xl mb-3">📋</div>
                 <p class="font-bold text-slate-600 mb-1">بانتظار اختيار حالة للتسليم</p>
-                <p class="text-sm">اختر مريضاً من القائمة على اليسار، ثم امسح QR بطاقته</p>
+                <p class="text-sm">اختر مريضاً من القائمة على اليسار ثم أكّد التسليم</p>
             </div>
 
             <div id="deliveryWorkspace" class="hidden flex-1 p-6 space-y-5 overflow-y-auto">
                 <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-3 text-sm text-emerald-900 font-bold text-center">
-                    الخطوة 2 — امسح QR بطاقة المريض للتأكيد
+                    راجع البيانات ثم أكّد التسليم
                 </div>
                 <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
                     <div class="flex items-start justify-between gap-2">
@@ -161,22 +160,64 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">رمز QR لبطاقة المريض <span class="text-red-600">*</span></label>
-                    <p class="text-xs text-slate-500 mb-2">يجب مسح البطاقة فعلياً — لا تُقبل الحالة بدون تطابق QR</p>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="deliveryQrInput" placeholder="امسح QR بالقارئ..."
-                               autocomplete="off"
-                               data-v-rules="required,qr" maxlength="100"
-                               class="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-recv/50">
-                        <button type="button" id="btnConfirmDelivery"
-                                class="rounded-xl bg-recv text-white px-6 py-3 text-sm font-bold hover:bg-recv-dark shadow-sm disabled:opacity-40 shrink-0">
-                            ✓ تأكيد التسليم
-                        </button>
-                    </div>
+                <div class="flex justify-end">
+                    <button type="button" id="btnConfirmDelivery"
+                            class="rounded-xl bg-recv text-white px-8 py-3 text-sm font-bold hover:bg-recv-dark shadow-sm disabled:opacity-40">
+                        ✓ تأكيد التسليم
+                    </button>
                 </div>
 
                 <div id="deliveryError" class="hidden rounded-xl border-2 border-red-400 bg-red-50 p-4 text-red-800 text-sm font-bold"></div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ارتجاع بعد التسليم --}}
+    <div class="rounded-2xl border border-amber-200 bg-gradient-to-l from-amber-50 to-orange-50 p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex gap-4 items-start">
+                <div class="text-3xl shrink-0">↩️</div>
+                <div>
+                    <h2 class="font-bold text-amber-900 text-lg mb-1">ارتجاع مواد بعد التسليم</h2>
+                    <p class="text-sm text-amber-900/90 leading-relaxed max-w-2xl">
+                        إذا أعاد المريض مواداً أو أُرجِعت قطع بعد إغلاق الحالة، سجّل طلب ارتجاع هنا.
+                        يصل الطلب للمخزن ليؤكد الاستلام بالباركود.
+                    </p>
+                </div>
+            </div>
+            <button type="button" id="btnPostDeliveryReturn"
+                    class="shrink-0 rounded-xl bg-amber-600 text-white px-6 py-3 text-sm font-bold hover:bg-amber-700 shadow-sm">
+                ↩️ طلب ارتجاع بعد التسليم
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- Post-delivery return modal --}}
+<div id="postDeliveryReturnModal" class="fixed inset-0 z-[200] hidden">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" id="postDeliveryReturnBackdrop"></div>
+    <div class="relative flex min-h-full items-center justify-center p-4">
+        <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-amber-200 overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-l from-amber-600 to-orange-600 text-white shrink-0">
+                <h3 class="font-bold text-lg">↩️ طلب ارتجاع بعد التسليم</h3>
+                <p class="text-sm opacity-90 mt-1">حالات مُسلَّمة فقط — يُرسل الطلب للمخزن</p>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2" for="postReturnBomSelect">قائمة المواد (حالة مُسلَّمة)</label>
+                    <select id="postReturnBomSelect" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50"></select>
+                </div>
+                <div id="postReturnLines" class="space-y-2"></div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2" for="postReturnReason">سبب الارتجاع <span class="text-red-600">*</span></label>
+                    <textarea id="postReturnReason" rows="2" maxlength="500" placeholder="مثال: إرجاع من المريض بعد التسليم"
+                              class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50"></textarea>
+                </div>
+                <div id="postReturnError" class="hidden rounded-xl border-2 border-red-400 bg-red-50 p-3 text-red-800 text-sm font-bold"></div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 shrink-0">
+                <button type="button" id="btnCancelPostReturn" class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600">إلغاء</button>
+                <button type="button" id="btnSubmitPostReturn" class="rounded-xl bg-amber-600 text-white px-6 py-2.5 text-sm font-bold hover:bg-amber-700">📤 إرسال للمخزن</button>
             </div>
         </div>
     </div>

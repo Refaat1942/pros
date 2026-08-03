@@ -10,13 +10,12 @@ use App\Support\CaseFinancialSummary;
 use Illuminate\Support\Facades\DB;
 
 /**
- * إغلاق الحالة بالتسليم — مسح QR + فاتورة + أرشفة + ترحيل مالي.
+ * إغلاق الحالة بالتسليم — فاتورة + أرشفة + ترحيل مالي.
  */
 class DeliveryService
 {
     public function __construct(
         private readonly BomService $bomService,
-        private readonly PatientQrService $patientQrService,
         private readonly WorkflowService $workflowService,
         private readonly FinancialPostingService $financialPostingService,
         private readonly InvoiceService $invoiceService,
@@ -29,11 +28,11 @@ class DeliveryService
     }
 
     /**
-     * إغلاق الحالة بعد مسح بطاقة المريض — حالة مغلقة (delivered).
+     * إغلاق الحالة بعد تأكيد التسليم من الاستقبال — حالة مغلقة (delivered).
      */
-    public function close(CaseRecord $case, string $scannedQr): CaseRecord
+    public function close(CaseRecord $case): CaseRecord
     {
-        return DB::transaction(function () use ($case, $scannedQr) {
+        return DB::transaction(function () use ($case) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             if (! $this->canDeliver($case)) {
@@ -41,8 +40,6 @@ class DeliveryService
             }
 
             $case->load('patient');
-
-            $this->patientQrService->assertValidForDelivery($scannedQr, $case, $case->patient);
 
             $before = [
                 'stage_key' => $case->stage_key,

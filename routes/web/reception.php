@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\MilitaryRankController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Appointment\AppointmentController;
+use App\Http\Controllers\Bom\ReturnNoteController;
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Dashboard\ReceptionDashboardController;
 use App\Http\Controllers\Delivery\DeliveryController;
@@ -126,11 +127,20 @@ Route::prefix('reception')
             Route::get('delivery/list', [DeliveryController::class, 'index'])
                 ->name('delivery.list');
 
-            Route::post('delivery/scan', [DeliveryController::class, 'scan'])
-                ->name('delivery.scan');
+            Route::post('delivery/{case}/confirm', [DeliveryController::class, 'confirm'])
+                ->name('delivery.confirm');
 
             Route::get('delivery/{case}', [DeliveryController::class, 'show'])
                 ->name('delivery.show');
+        });
+
+        // ── Post-delivery material returns (ارتجاع بعد التسليم) ─────────────
+        Route::middleware('dashboard.page:reception,delivery')->group(function () {
+            Route::get('returns/create', [ReturnNoteController::class, 'create'])
+                ->name('returns.create');
+
+            Route::post('returns', [ReturnNoteController::class, 'store'])
+                ->name('returns.store');
         });
 
         // ── Self-service lookup ────────────────────────────────────────────

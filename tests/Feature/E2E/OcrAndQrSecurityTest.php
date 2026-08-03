@@ -46,32 +46,7 @@ class OcrAndQrSecurityTest extends TestCase
         $this->assertNull($case->work_order_no);
     }
 
-    public function test_delivery_rejects_tampered_qr_payload(): void
-    {
-        $company = $this->civilianCompany();
-        $patient = $this->civilianPatient($company);
-        $case = $this->caseAtStage($patient, CaseRecord::STAGE_READY_DELIVERY);
-        Bom::create([
-            'bom_no' => 'BOM-SEC-01',
-            'case_id' => $case->id,
-            'order_ref' => $case->order_ref,
-            'patient_name' => $patient->name,
-            'stage' => Bom::STAGE_FINISHED,
-            'finished_at' => now(),
-        ]);
-
-        $user = $this->userWithRole('reception');
-        $this->actingAs($user);
-
-        $this->postJson('/reception/delivery/scan', [
-            'scanned_qr' => 'QR-TAMPERED-NOT-VALID',
-        ])->assertStatus(422)->assertJsonPath('security', true);
-
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_READY_DELIVERY, $case->stage_key);
-    }
-
-    public function test_delivery_rejects_qr_when_bom_not_finished(): void
+    public function test_delivery_confirm_blocked_when_bom_not_finished(): void
     {
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
@@ -86,8 +61,10 @@ class OcrAndQrSecurityTest extends TestCase
 
         $this->actingAs($this->userWithRole('reception'));
 
-        $this->postJson('/reception/delivery/scan', [
-            'scanned_qr' => $patient->patient_qr,
-        ])->assertStatus(422);
+        $this->postJson('/reception/delivery/'.$case->id.'/confirm')
+            ->assertStatus(422);
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_READY_DELIVERY, $case->stage_key);
     }
 }

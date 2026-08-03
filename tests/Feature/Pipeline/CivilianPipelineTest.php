@@ -391,7 +391,7 @@ class CivilianPipelineTest extends TestCase
 
         $debtBeforeDelivery = (float) $company->debt()->first()->fresh()->due;
 
-        app(DeliveryService::class)->close($case->fresh(), $patient->patient_qr);
+        app(DeliveryService::class)->close($case->fresh());
 
         $case->refresh();
         $patient->refresh();
@@ -432,6 +432,6 @@ class CivilianPipelineTest extends TestCase
 
         $this->expectException(DeliveryNotReadyException::class);
 
-        app(DeliveryService::class)->close($case, $patient->patient_qr);
+        app(DeliveryService::class)->close($case);
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Reception — final QR delivery & case closure (Axios + Tailwind).
+ * Reception — final delivery & case closure (Axios + Tailwind).
  */
 (function () {
   if (document.body.dataset.activePage !== 'delivery') return;
@@ -11,9 +11,149 @@
     axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
   }
 
-  var state = { caseId: null, patientQr: null };
+  var state = { caseId: null };
+  var postReturnBoms = [];
+
+  var POST_RETURN_CREATE_URL = '/reception/returns/create?post_delivery=1';
+  var POST_RETURN_STORE_URL = '/reception/returns';
 
   function $(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
+
+  function showPostReturnError(msg) {
+    var el = $('postReturnError');
+    if (!el) { toast(msg, true); return; }
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  function clearPostReturnError() {
+    var el = $('postReturnError');
+    if (el) el.classList.add('hidden');
+  }
+
+  function renderPostReturnLines() {
+    var sel = $('postReturnBomSelect');
+    var container = $('postReturnLines');
+    if (!sel || !container) return;
+
+    var bom = postReturnBoms.find(function (b) { return String(b.id) === String(sel.value); });
+    if (!bom || !(bom.items || []).length) {
+      container.innerHTML = '<p class="text-sm text-slate-500">لا بنود قابلة للارتجاع.</p>';
+      return;
+    }
+
+    container.innerHTML = bom.items.map(function (it) {
+      var max = it.returnable_qty || 0;
+      return '<label class="flex items-start gap-3 rounded-xl border border-slate-200 p-3 cursor-pointer hover:bg-amber-50/50">' +
+        '<input type="checkbox" class="post-return-line-chk mt-1" data-code="' + esc(it.stock_item_code) + '" data-name="' + esc(it.name || it.stock_item_code) + '" checked>' +
+        '<span class="flex-1 text-sm">' +
+          '<span class="font-bold text-slate-800">' + esc(it.name || it.stock_item_code) + '</span>' +
+          '<span class="block text-xs text-slate-500 mt-1">كود: ' + esc(it.stock_item_code) + ' · الحد: ' + max + '</span>' +
+        '</span>' +
+        '<input type="number" min="1" max="' + max + '" value="' + max + '" class="post-return-line-qty w-16 rounded-lg border border-slate-200 px-2 py-1 text-sm text-center">' +
+      '</label>';
+    }).join('');
+  }
+
+  function loadPostReturnBoms() {
+    if (!window.axios) return Promise.reject(new Error('axios'));
+    return axios.get(POST_RETURN_CREATE_URL).then(function (res) {
+      postReturnBoms = (res.data.boms || []).filter(function (b) { return (b.items || []).length > 0; });
+      return postReturnBoms;
+    });
+  }
+
+  function openPostDeliveryReturnModal() {
+    if (!window.axios) {
+      toast('تعذّر الاتصال — أعد تحميل الصفحة.', true);
+      return;
+    }
+
+    clearPostReturnError();
+    loadPostReturnBoms()
+      .then(function (boms) {
+        if (!boms.length) {
+          toast('لا توجد حالات مُسلَّمة بمواد قابلة للارتجاع.', true);
+          return;
+        }
+
+        var sel = $('postReturnBomSelect');
+        if (!sel) return;
+
+        sel.innerHTML = boms.map(function (b) {
+          var label = b.bom_no + ' — ' + (b.patient_name || '—') + ' (' + (b.work_order_no || '—') + ')';
+          return '<option value="' + b.id + '">' + esc(label) + '</option>';
+        }).join('');
+
+        if ($('postReturnReason')) $('postReturnReason').value = '';
+        renderPostReturnLines();
+        $('postDeliveryReturnModal') && $('postDeliveryReturnModal').classList.remove('hidden');
+      })
+      .catch(function (err) {
+        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل الحالات المُسلَّمة';
+        toast(msg, true);
+      });
+  }
+
+  function closePostDeliveryReturnModal() {
+    $('postDeliveryReturnModal') && $('postDeliveryReturnModal').classList.add('hidden');
+    clearPostReturnError();
+  }
+
+  function submitPostDeliveryReturn() {
+    if (!window.axios) return;
+
+    var bomId = $('postReturnBomSelect') && $('postReturnBomSelect').value;
+    var reason = ($('postReturnReason') && $('postReturnReason').value || '').trim();
+    if (!bomId) {
+      showPostReturnError('اختر قائمة مواد.');
+      return;
+    }
+    if (reason.length < 3) {
+      showPostReturnError('سبب الارتجاع مطلوب (3 أحرف على الأقل).');
+      return;
+    }
+
+    var lines = [];
+    document.querySelectorAll('.post-return-line-chk:checked').forEach(function (chk) {
+      var card = chk.closest('label');
+      var qtyEl = card && card.querySelector('.post-return-line-qty');
+      var qty = parseInt(qtyEl && qtyEl.value, 10) || 0;
+      if (qty > 0) {
+        lines.push({
+          stock_item_code: chk.getAttribute('data-code'),
+          name: chk.getAttribute('data-name'),
+          qty: qty,
+        });
+      }
+    });
+
+    if (!lines.length) {
+      showPostReturnError('اختر بنداً واحداً على الأقل.');
+      return;
+    }
+
+    clearPostReturnError();
+    var btn = $('btnSubmitPostReturn');
+    if (btn) btn.disabled = true;
+
+    axios.post(POST_RETURN_STORE_URL, { bom_id: bomId, reason: reason, lines: lines })
+      .then(function (res) {
+        closePostDeliveryReturnModal();
+        toast(res.data.message || 'تم إرسال طلب الارتجاع للمخزن.');
+      })
+      .catch(function (err) {
+        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر إرسال طلب الارتجاع';
+        showPostReturnError(msg);
+      })
+      .finally(function () {
+        if (btn) btn.disabled = false;
+      });
+  }
 
   function toast(msg, isError) {
     if (window.DashboardToast) {
@@ -46,17 +186,11 @@
     if (el) el.classList.add('hidden');
   }
 
-  function selectCase(caseId, patientQr, label) {
+  function selectCase(caseId, label) {
     state.caseId = caseId;
-    state.patientQr = patientQr;
     $('deliveryEmpty') && $('deliveryEmpty').classList.add('hidden');
     $('deliveryWorkspace') && $('deliveryWorkspace').classList.remove('hidden');
     clearError();
-
-    if ($('deliveryQrInput')) {
-      $('deliveryQrInput').value = '';
-      $('deliveryQrInput').focus();
-    }
 
     if (!window.axios || !caseId) return;
 
@@ -95,23 +229,18 @@
       showError('تعذّر الاتصال — أعد تحميل الصفحة.');
       return;
     }
-    var qrInput = $('deliveryQrInput');
-    if (window.DashboardValidation && qrInput) {
-      var qrErr = DashboardValidation.validateField(qrInput);
-      if (qrErr) {
-        showError(qrErr);
-        qrInput.focus();
-        return;
-      }
+    if (!state.caseId) {
+      showError('اختر حالة للتسليم أولاً.');
+      return;
     }
-    var qr = (qrInput && qrInput.value || '').trim();
-    if (!qr) { showError('يجب مسح بطاقة المريض.'); return; }
+
+    if (!window.confirm('تأكيد تسليم الطرف وإغلاق الحالة؟')) return;
 
     clearError();
     var btn = $('btnConfirmDelivery');
     if (btn) btn.disabled = true;
 
-    axios.post('/reception/delivery/scan', { scanned_qr: qr })
+    axios.post('/reception/delivery/' + state.caseId + '/confirm')
       .then(function (res) {
         var data = res.data;
         var modal = $('deliverySuccessModal');
@@ -135,7 +264,7 @@
         refreshList();
       })
       .catch(function (err) {
-        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر التسليم — تحقق من QR وحالة BOM.';
+        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر التسليم — تحقق من حالة BOM.';
         showError(msg);
         if (btn) btn.disabled = false;
       });
@@ -182,13 +311,12 @@
         }
 
         list.innerHTML = cases.map(function (c) {
-          var qr = c.patient && c.patient.patient_qr ? c.patient.patient_qr : '';
           var search = [c.patient && c.patient.name, c.work_order_no, c.case_no].join(' ');
           var typeBadge = c.patient_type === 'military'
             ? '<span class="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">🪖 عسكري</span>'
             : '<span class="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-100 text-cyan-700">🌐 مدني</span>';
           return '<li class="delivery-item cursor-pointer px-5 py-4 hover:bg-emerald-50 transition-colors" data-case-id="' + c.id +
-            '" data-patient-qr="' + qr + '" data-search="' + search + '">' +
+            '" data-search="' + search + '">' +
             '<div class="flex items-start justify-between gap-2"><div>' +
             '<p class="font-bold text-slate-800">' + (c.patient && c.patient.name || '—') + '</p>' +
             '<p class="text-xs text-slate-500 mt-1">' + c.case_no + ' · ' + (c.work_order_no || '—') + '</p>' +
@@ -209,7 +337,7 @@
           x.classList.remove('bg-emerald-50', 'ring-2', 'ring-recv/30');
         });
         li.classList.add('bg-emerald-50', 'ring-2', 'ring-recv/30');
-        selectCase(li.getAttribute('data-case-id'), li.getAttribute('data-patient-qr'));
+        selectCase(li.getAttribute('data-case-id'));
       });
     });
   }
@@ -237,16 +365,18 @@
 
     $('deliverySearch') && $('deliverySearch').addEventListener('input', filterSearch);
     $('btnConfirmDelivery') && $('btnConfirmDelivery').addEventListener('click', confirmDelivery);
-    $('deliveryQrInput') && $('deliveryQrInput').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); confirmDelivery(); }
-    });
+
+    $('btnPostDeliveryReturn') && $('btnPostDeliveryReturn').addEventListener('click', openPostDeliveryReturnModal);
+    $('postReturnBomSelect') && $('postReturnBomSelect').addEventListener('change', renderPostReturnLines);
+    $('btnCancelPostReturn') && $('btnCancelPostReturn').addEventListener('click', closePostDeliveryReturnModal);
+    $('btnSubmitPostReturn') && $('btnSubmitPostReturn').addEventListener('click', submitPostDeliveryReturn);
+    $('postDeliveryReturnBackdrop') && $('postDeliveryReturnBackdrop').addEventListener('click', closePostDeliveryReturnModal);
 
     $('btnCloseDeliverySuccess') && $('btnCloseDeliverySuccess').addEventListener('click', function () {
       $('deliverySuccessModal') && $('deliverySuccessModal').classList.add('hidden');
       $('deliveryWorkspace') && $('deliveryWorkspace').classList.add('hidden');
       $('deliveryEmpty') && $('deliveryEmpty').classList.remove('hidden');
-      if ($('deliveryQrInput')) $('deliveryQrInput').value = '';
-      state = { caseId: null, patientQr: null };
+      state = { caseId: null };
       var btn = $('btnConfirmDelivery');
       if (btn) btn.disabled = false;
     });

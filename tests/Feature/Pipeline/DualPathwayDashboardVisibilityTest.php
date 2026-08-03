@@ -202,11 +202,11 @@ class DualPathwayDashboardVisibilityTest extends TestCase
     {
         $reception = $this->userWithRole('reception');
 
-        // الصفحة لم تعد مخفية — شاشة تسليم سريعة بمسح QR.
+        // الصفحة لم تعد مخفية — شاشة تسليم سريعة بتأكيد من الاستقبال.
         $this->actingAs($reception)
             ->get('/reception/delivery')
             ->assertOk()
-            ->assertSee('deliveryQrInput', false);
+            ->assertSee('btnConfirmDelivery', false);
     }
 
     public function test_reception_delivery_page_has_no_approval_pending_section(): void

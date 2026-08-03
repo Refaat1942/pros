@@ -249,7 +249,7 @@ class CivilianQueryChainE2eTest extends TestCase
 
         // ── Step 8: Reception final delivery — closed + invoice + archive ─
         $this->actingAs($this->userWithRole('reception'));
-        $close = $this->postJson('/reception/delivery/scan', ['scanned_qr' => $patient->patient_qr]);
+        $close = $this->postJson('/reception/delivery/'.$case->id.'/confirm');
         $close->assertOk()->assertJsonPath('closed', true);
 
         $case->refresh();

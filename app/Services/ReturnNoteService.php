@@ -57,8 +57,8 @@ class ReturnNoteService
                     abort(422, "الصنف {$code} غير موجود في BOM.");
                 }
 
-                if ($qty > $bomItem->returnRequestMaxQty()) {
-                    $max = $bomItem->returnRequestMaxQty();
+                if ($qty > $bomItem->returnRequestMaxQty(null, $bom->stage)) {
+                    $max = $bomItem->returnRequestMaxQty(null, $bom->stage);
                     abort(422, $max === 0
                         ? "لا يمكن ارتجاع المزيد من الصنف {$code} — الكمية محجوزة في طلب ارتجاع أو يجب الإبقاء على وحدة في الورشة."
                         : "لا يمكن ارتجاع كامل الكمية للصنف {$code} — الحد الأقصى {$max}.");

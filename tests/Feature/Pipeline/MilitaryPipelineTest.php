@@ -184,7 +184,7 @@ class MilitaryPipelineTest extends TestCase
         $recepUser = $this->userWithRole('reception');
         $this->actingAs($recepUser);
 
-        app(DeliveryService::class)->close($case->fresh(), $patient->patient_qr);
+        app(DeliveryService::class)->close($case->fresh());
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);

@@ -16,7 +16,7 @@ class OperationsListRefreshTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_reception_delivery_page_includes_scan_ui(): void
+    public function test_reception_delivery_page_includes_confirm_ui(): void
     {
         $user = $this->userWithRole('reception');
 
@@ -24,8 +24,8 @@ class OperationsListRefreshTest extends TestCase
             ->get('/reception/delivery')
             ->assertOk()
             ->assertSee('id="deliveryList"', false)
-            ->assertSee('id="deliveryQrInput"', false)
-            ->assertSee('id="btnConfirmDelivery"', false);
+            ->assertSee('id="btnConfirmDelivery"', false)
+            ->assertDontSee('id="deliveryQrInput"', false);
     }
 
     public function test_reception_delivery_list_returns_only_ready_delivery_cases(): void
@@ -60,7 +60,7 @@ class OperationsListRefreshTest extends TestCase
             ->assertJsonPath('data.0.patient.name', $patient->name);
     }
 
-    public function test_reception_delivery_scan_closes_ready_case(): void
+    public function test_reception_delivery_confirm_closes_ready_case(): void
     {
         $this->seedStockWithPriceBatch();
 
@@ -80,7 +80,7 @@ class OperationsListRefreshTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->postJson('/reception/delivery/scan', ['scanned_qr' => $patient->patient_qr])
+            ->postJson('/reception/delivery/'.$case->id.'/confirm')
             ->assertOk()
             ->assertJsonPath('closed', true);
 

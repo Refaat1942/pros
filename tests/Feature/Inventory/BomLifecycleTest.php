@@ -6,6 +6,7 @@ use App\Exceptions\BarcodeDispenseMismatchException;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
+use App\Services\DeliveryService;
 use App\Services\ReturnNoteService;
 use App\Services\StockPriceService;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -336,5 +337,39 @@ class BomLifecycleTest extends TestCase
         } catch (HttpException $e) {
             $this->assertSame(422, $e->getStatusCode());
         }
+    }
+
+    public function test_post_delivery_return_allows_full_issued_qty(): void
+    {
+        ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
+        $this->actingAs($user);
+
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 4],
+        ]);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
+        $this->advanceCaseToFinishing($case);
+        app(BomService::class)->finish($bom->fresh());
+
+        $reception = $this->userWithRole('reception');
+        $this->actingAs($reception);
+        app(DeliveryService::class)->close($case->fresh());
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);
+
+        $note = app(ReturnNoteService::class)->create($bom->fresh(), [
+            ['stock_item_code' => 'RM-001', 'qty' => 4, 'name' => 'صنف RM-001'],
+        ], 'إرجاع من المريض بعد التسليم', $reception);
+
+        $this->assertSame(4, $note->lines->first()->qty_requested);
+
+        $qtyBeforeReturn = $item->fresh()->qty;
+        $lineId = $note->lines()->first()->id;
+        app(ReturnNoteService::class)->complete($note, [
+            ['line_id' => $lineId, 'barcode' => 'BC-RM-001', 'qty_returned' => 4],
+        ]);
+
+        $this->assertEquals($qtyBeforeReturn + 4, $item->fresh()->qty);
     }
 }
