@@ -1,5 +1,5 @@
 @push('styles')
-@include('partials.vendor-tailwind')
+<script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
     theme: {

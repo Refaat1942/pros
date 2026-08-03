@@ -93,7 +93,7 @@ return [
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
-            'assets/vendor/axios.min.js',
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
             'assets/js/pages/spec-dashboard.js',
@@ -115,7 +115,7 @@ return [
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
-            'assets/vendor/axios.min.js',
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/shared/export-kit.js',
             'assets/js/pages/adjustments-dashboard.js',
             'assets/js/pages/adjustments-history.js',
@@ -135,7 +135,7 @@ return [
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
-            'assets/vendor/axios.min.js',
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/pages/costing-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
@@ -154,7 +154,7 @@ return [
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
-            'assets/vendor/axios.min.js',
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/pages/operations-pending-dashboard.js',
             'assets/js/pages/operations-quotes-awaiting-dashboard.js',
             'assets/js/shared/dashboard-mobile.js',
@@ -174,7 +174,7 @@ return [
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
-            'assets/vendor/axios.min.js',
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
             'assets/js/pages/cashier-dashboard.js',
@@ -196,7 +196,7 @@ return [
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
-            'assets/vendor/axios.min.js',
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
             'assets/js/pages/workshop-dashboard.js',
@@ -220,7 +220,7 @@ return [
         ],
         'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
         'scripts' => [
-            'assets/vendor/axios.min.js',
+            'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js',
             'assets/js/shared/export-kit.js',
             'assets/js/shared/charts-kit.js',
             'assets/js/shared/stock-catalog.js',
