@@ -180,6 +180,36 @@ class DashboardGuardTest extends TestCase
         $response->assertStatus(403);
     }
 
+    /** Reception user with all reception permissions revoked is fully blocked */
+    public function test_reception_user_without_permissions_blocked_from_own_dashboard(): void
+    {
+        $user = $this->userWithRole('reception');
+        $user->role->permissions()->detach(
+            Permission::where('dashboard', 'reception')->pluck('id')
+        );
+        $this->actingAs($user->fresh());
+
+        $this->get(route('reception.dashboard'))->assertStatus(403);
+        $this->get(route('reception.appointments'))->assertStatus(403);
+    }
+
+    public function test_reception_user_without_permissions_cannot_login(): void
+    {
+        $user = $this->userWithRole('reception');
+        $user->role->permissions()->detach(
+            Permission::where('dashboard', 'reception')->pluck('id')
+        );
+
+        $response = $this->post('/login', [
+            'username' => $user->username,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors('username');
+        $this->assertGuest();
+    }
+
     /** Unauthenticated request redirects to login */
     public function test_unauthenticated_request_redirected(): void
     {

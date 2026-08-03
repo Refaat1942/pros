@@ -90,6 +90,14 @@ class AuthController extends Controller
             $dashboard = $requestedDashboard;
         }
 
+        if (! $user->canAccessDashboard($dashboard)) {
+            Auth::logout();
+
+            return back()
+                ->withInput($request->only('username'))
+                ->withErrors(['username' => 'لا توجد صلاحيات مفعّلة لهذا الحساب — تواصل مع الإدارة.']);
+        }
+
         $request->session()->regenerate();
 
         User::where('id', Auth::id())->update(['last_login_at' => now()]);

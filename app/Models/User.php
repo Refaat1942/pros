@@ -124,10 +124,6 @@ class User extends Authenticatable
                 return true;
             }
 
-            if ($this->role?->slug === $dashboard) {
-                return true;
-            }
-
             $prefix = "{$dashboard}.";
 
             return $this->role?->loadMissing('permissions')->permissions
@@ -158,10 +154,6 @@ class User extends Authenticatable
         }
 
         if ($this->isSuperAdmin() && $dashboard === Role::SLUG_ADMIN) {
-            return true;
-        }
-
-        if ($this->role?->slug === $dashboard) {
             return true;
         }
 
