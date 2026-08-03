@@ -577,11 +577,78 @@
         refreshViews({ editor: activeStepIdx !== null });
     }
 
+    function preparePathwayForSave(pathwayKey) {
+        syncNextStepMeta(pathwayKey);
+        reorderPathwayByFlow(pathwayKey);
+    }
+
+    function buildStepsPayload(pathwayKey) {
+        return (state[pathwayKey] || []).map(function (step, idx) {
+            var row = Object.assign({}, step);
+            row.sort = idx + 1;
+            if (row.active === undefined) row.active = true;
+            return row;
+        });
+    }
+
+    function flushEditorToState() {
+        var editor = document.getElementById('pathwayStepEditor');
+        if (!editor || editor.hidden || activeStepIdx === null || !state[activePathway][activeStepIdx]) return;
+
+        var pending = [];
+        editor.querySelectorAll('[data-f]').forEach(function (el) {
+            pending.push({ field: el.getAttribute('data-f'), value: el.value });
+        });
+        pending.sort(function (a, b) {
+            if (a.field === 'next_step_key') return 1;
+            if (b.field === 'next_step_key') return -1;
+            return 0;
+        });
+        pending.forEach(function (item) {
+            if (item.field) applyField(item.field, item.value);
+        });
+
+        editor.querySelectorAll('[data-h]').forEach(function (el) {
+            var key = el.getAttribute('data-h');
+            if (!key) return;
+            state[activePathway][activeStepIdx].handlers = state[activePathway][activeStepIdx].handlers || {};
+            state[activePathway][activeStepIdx].handlers[key] = el.value;
+        });
+
+        if (editor.querySelector('[data-role]')) {
+            var roles = [];
+            editor.querySelectorAll('[data-role]').forEach(function (el) {
+                if (el.checked) roles.push(el.getAttribute('data-role'));
+            });
+            state[activePathway][activeStepIdx].skip_roles = roles;
+        }
+    }
+
+    function prepareAllPathwaysForSave() {
+        flushEditorToState();
+        pathwayOrder.forEach(preparePathwayForSave);
+    }
+
     function savePathway(pathway) {
+        prepareAllPathwaysForSave();
         return fetch('/admin/pathway-settings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-            body: JSON.stringify({ pathway: pathway, steps: state[pathway] }),
+            body: JSON.stringify({ pathway: pathway, steps: buildStepsPayload(pathway) }),
+        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+    }
+
+    function saveAllPathways() {
+        prepareAllPathwaysForSave();
+        var payload = {};
+        pathwayOrder.forEach(function (pk) {
+            payload[pk] = buildStepsPayload(pk);
+        });
+
+        return fetch('/admin/pathway-settings/bulk', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+            body: JSON.stringify({ pathways: payload }),
         }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
     }
 
@@ -610,18 +677,20 @@
     document.getElementById('btnSaveAllPathways')?.addEventListener('click', function () {
         var err = document.getElementById('pathwayDesignerError');
         if (err) err.style.display = 'none';
-        var chain = Promise.resolve();
-        pathwayOrder.forEach(function (pk) {
-            chain = chain.then(function () {
-                return savePathway(pk).then(function (res) {
-                    if (!res.ok) throw new Error(res.data.message || 'تعذّر حفظ ' + pk);
-                    state[pk] = res.data.steps || state[pk];
-                });
+        saveAllPathways().then(function (res) {
+            if (!res.ok) {
+                if (err) {
+                    err.style.display = 'block';
+                    err.textContent = res.data.message || (res.data.errors ? 'تعذّر حفظ أحد المسارات — راجع البيانات' : 'تعذّر الحفظ');
+                }
+                return;
+            }
+            var pathways = res.data.pathways || {};
+            pathwayOrder.forEach(function (pk) {
+                if (pathways[pk]) state[pk] = pathways[pk];
             });
-        });
-        chain.then(function () {
             render();
-            alert('تم حفظ المسارات الثلاثة.');
+            alert(res.data.message || 'تم حفظ المسارات الثلاثة.');
         }).catch(function (e) {
             if (err) { err.style.display = 'block'; err.textContent = e.message || 'تعذّر الحفظ'; }
         });

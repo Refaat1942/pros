@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Admin\FormFieldSettingsController;
 use App\Http\Controllers\Admin\BrandingSettingsController;
 use App\Http\Controllers\Admin\CostingSettingsController;
-use App\Http\Controllers\Admin\NotificationSettingsController;
+use App\Http\Controllers\Admin\FormFieldSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
+use App\Http\Controllers\Admin\NotificationSettingsController;
 use App\Http\Controllers\Admin\PathwaySettingsController;
 use App\Http\Controllers\Admin\PermissionMatrixController;
 use App\Http\Controllers\Admin\ServicesApprovalController;
@@ -222,6 +222,9 @@ Route::prefix('admin')
         });
 
         Route::middleware('dashboard.page:admin,pathway-settings')->group(function () {
+            Route::put('pathway-settings/bulk', [PathwaySettingsController::class, 'updateAll'])
+                ->name('pathway-settings.update-all');
+
             Route::put('pathway-settings', [PathwaySettingsController::class, 'update'])
                 ->name('pathway-settings.update');
 

@@ -715,6 +715,23 @@ class AdminReportsPageTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_other_group_report_sections_render_without_server_error(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $from = now()->startOfMonth()->toDateString();
+        $to = now()->endOfMonth()->toDateString();
+
+        foreach (['services-approvals', 'workshop-sections', 'workshop-tracking', 'dispense-approvals'] as $section) {
+            $this->actingAs($admin)
+                ->get('/admin/reports/'.$section.'?from='.$from.'&to='.$to)
+                ->assertOk()
+                ->assertSee('reports-date-filter', false);
+        }
+
+        $groups = collect(app(AdminReportsHubService::class)->sections())->pluck('group');
+        $this->assertFalse($groups->contains('أخرى'));
+    }
+
     public function test_dashboard_page_data_includes_general_view_and_reports_hub(): void
     {
         $general = app(DashboardPageDataService::class)->resolve('admin', 'general-view');
@@ -796,8 +813,8 @@ class AdminReportsPageTest extends TestCase
         $item = $this->stockItem('RM-VAL-01', qty: 15, wac: 120.50);
         $item->update(['name' => 'ركبة تقييم']);
         $supplier = $this->makeSupplier();
-        app(\App\Services\StockPriceService::class)->addBatch($item, 10, 115.00, $supplier, 'INV-V1', now());
-        app(\App\Services\StockPriceService::class)->addBatch($item->fresh(), 5, 125.00, $supplier, 'INV-V2', now());
+        app(StockPriceService::class)->addBatch($item, 10, 115.00, $supplier, 'INV-V1', now());
+        app(StockPriceService::class)->addBatch($item->fresh(), 5, 125.00, $supplier, 'INV-V2', now());
 
         $item->refresh();
         $expectedValue = number_format(round((int) $item->qty * (float) StockItem::find($item->id)->wac, 2), 2);

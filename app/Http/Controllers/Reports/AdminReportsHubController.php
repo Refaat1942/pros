@@ -37,10 +37,20 @@ class AdminReportsHubController extends Controller
         return $this->adminPage('reports-section', [
             'report_section' => $section,
             'section_meta' => $this->hub->sectionMeta($section),
-            'report_data' => $this->hub->build($section, $dates['from'], $dates['to']),
+            'report_data' => $this->buildReportOrAbort($section, $dates['from'], $dates['to']),
             'date_from' => $dates['from']?->toDateString() ?? '',
             'date_to' => $dates['to']?->toDateString() ?? '',
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function buildReportOrAbort(string $section, ?Carbon $from, ?Carbon $to): array
+    {
+        try {
+            return $this->hub->build($section, $from, $to);
+        } catch (InvalidArgumentException) {
+            abort(404);
+        }
     }
 
     public function export(Request $request, string $section): StreamedResponse

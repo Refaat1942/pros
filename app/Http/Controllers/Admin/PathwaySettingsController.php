@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateAllPathwaySettingsRequest;
 use App\Http\Requests\Admin\UpdatePathwaySettingsRequest;
 use App\Models\PathwayStep;
 use App\Services\AuditService;
 use App\Services\PathwayConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PathwaySettingsController extends Controller
 {
@@ -39,6 +41,38 @@ class PathwaySettingsController extends Controller
             'message' => 'تم حفظ إعدادات المسار.',
             'pathway' => $pathway,
             'steps' => $after,
+        ]);
+    }
+
+    public function updateAll(UpdateAllPathwaySettingsRequest $request): JsonResponse
+    {
+        $pathways = $request->validated('pathways');
+        $before = [];
+        $after = [];
+
+        DB::transaction(function () use ($pathways, &$before, &$after) {
+            foreach ([
+                PathwayStep::PATHWAY_CIVILIAN,
+                PathwayStep::PATHWAY_MILITARY,
+                PathwayStep::PATHWAY_ENTITY,
+            ] as $pathway) {
+                $before[$pathway] = $this->pathwayConfig->steps($pathway);
+                $this->pathwayConfig->saveSteps($pathway, $pathways[$pathway]);
+                $after[$pathway] = $this->pathwayConfig->steps($pathway);
+            }
+        });
+
+        AuditService::log(
+            action: 'update',
+            description: 'تحديث المسارات الثلاثة (مدني / عسكري / جهات)',
+            tag: 'admin',
+            before: $before,
+            after: $after,
+        );
+
+        return response()->json([
+            'message' => 'تم حفظ المسارات الثلاثة.',
+            'pathways' => $after,
         ]);
     }
 

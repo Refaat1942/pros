@@ -129,6 +129,63 @@ class PathwaySettingsTest extends TestCase
             ->assertJsonPath('steps.5.key', 'quote');
     }
 
+    public function test_admin_can_save_all_pathways_in_one_request(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $service = app(PathwayConfigService::class);
+        $service->resetToDefaults(PathwayStep::PATHWAY_CIVILIAN);
+        $service->resetToDefaults(PathwayStep::PATHWAY_MILITARY);
+        $service->resetToDefaults(PathwayStep::PATHWAY_ENTITY);
+
+        $civilian = $service->steps(PathwayStep::PATHWAY_CIVILIAN);
+        $military = $service->steps(PathwayStep::PATHWAY_MILITARY);
+        $entity = $service->steps(PathwayStep::PATHWAY_ENTITY);
+
+        foreach ($civilian as &$step) {
+            if ($step['key'] === 'cost_calc') {
+                $step['next_step_key'] = 'cashier';
+            }
+        }
+        unset($step);
+
+        foreach ($military as &$step) {
+            if ($step['key'] === 'cost_calc') {
+                $step['next_step_key'] = 'cashier';
+            }
+        }
+        unset($step);
+
+        foreach ($entity as &$step) {
+            if ($step['key'] === 'cost_calc') {
+                $step['next_step_key'] = 'cashier';
+            }
+        }
+        unset($step);
+
+        $this->actingAs($admin)
+            ->putJson(route('admin.pathway-settings.update-all'), [
+                'pathways' => [
+                    'civilian' => $civilian,
+                    'military' => $military,
+                    'entity' => $entity,
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('pathways.military.4.next_step_key', 'cashier')
+            ->assertJsonPath('pathways.entity.4.next_step_key', 'cashier');
+
+        $this->assertDatabaseHas('pathway_steps', [
+            'pathway' => PathwayStep::PATHWAY_MILITARY,
+            'key' => 'cost_calc',
+            'next_step_key' => 'cashier',
+        ]);
+        $this->assertDatabaseHas('pathway_steps', [
+            'pathway' => PathwayStep::PATHWAY_ENTITY,
+            'key' => 'cost_calc',
+            'next_step_key' => 'cashier',
+        ]);
+    }
+
     public function test_pathway_update_rejects_invalid_key(): void
     {
         $admin = $this->userWithRole('admin');
