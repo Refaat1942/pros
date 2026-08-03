@@ -8,6 +8,7 @@ use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
+use App\Services\Notifications\NotificationService;
 use App\Services\OperationsService;
 use App\Services\PathwayTransitionMessageService;
 use App\Services\QuoteService;
@@ -32,6 +33,7 @@ class OperationsDeskController extends Controller
         private readonly QuoteService $quoteService,
         private readonly PathwayTransitionMessageService $transitions,
         private readonly WorkshopSectionService $workshopSections,
+        private readonly NotificationService $notifications,
     ) {}
 
     /**
@@ -132,10 +134,24 @@ class OperationsDeskController extends Controller
         }
 
         $quote = $this->quoteService->releaseToReception($quote);
-        $case = $case->fresh();
+        $case = $case->fresh()->load('patient', 'quotes');
+
+        $payload = $this->transitions->entityQuoteReleasedPayload($case);
+        try {
+            $this->notifications->push(
+                roleSlug: $payload['role'],
+                title: $payload['title'],
+                body: $payload['body'],
+                case: $case,
+                event: 'quote_released_to_reception',
+                data: ['url' => $payload['url']],
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
-            'message' => 'تم إصدار عرض السعر للاستقبال — بانتظار رجوع العميل بخطاب الموافقة.',
+            'message' => $payload['body'],
             'quote' => [
                 'id' => $quote->id,
                 'quote_no' => $quote->quote_no,

@@ -85,15 +85,30 @@
   }
 
   function expectedBarcodeFor(it) {
-    return (it.expected_barcode || ('BC-' + String(it.stock_item_code).replace(/\D/g, ''))).toUpperCase();
+    return String(it.expected_barcode || ('BC-' + it.stock_item_code)).toUpperCase();
   }
 
-  // خريطة الباركود ← الكمية المطلوبة (مطابقة كود + صنف + كمية).
+  function normalizeScan(raw) {
+    var scan = String(raw || '').trim().toUpperCase();
+    if (!scan) return '';
+    var match = null;
+    state.items.forEach(function (it) {
+      if (match) return;
+      var code = String(it.stock_item_code || '').toUpperCase();
+      var bc = expectedBarcodeFor(it);
+      if (scan === code || scan === bc) {
+        match = code;
+      }
+    });
+    return match || scan;
+  }
+
+  // خريطة كود الصنف ← الكمية المطلوبة.
   function expectedCounts() {
     var counts = {};
     state.items.forEach(function (it) {
-      var bc = expectedBarcodeFor(it);
-      counts[bc] = (counts[bc] || 0) + (parseInt(it.qty, 10) || 0);
+      var code = String(it.stock_item_code || '').toUpperCase();
+      counts[code] = (counts[code] || 0) + (parseInt(it.qty, 10) || 0);
     });
     return counts;
   }
@@ -116,9 +131,10 @@
     var scanned = scanCounts();
     el.innerHTML = '<p class="font-bold text-slate-800 mb-3 text-base">أكواد مطلوبة (' + state.items.length + ' صنف · ' + expectedTotal() + ' وحدة):</p>' +
       state.items.map(function (it) {
+        var code = String(it.stock_item_code || '').toUpperCase();
         var bc = expectedBarcodeFor(it);
         var required = parseInt(it.qty, 10) || 0;
-        var done = scanned[bc] || 0;
+        var done = scanned[code] || 0;
         var complete = done >= required && required > 0;
         var statusLabel = complete
           ? '✓ تم'
@@ -134,7 +150,8 @@
           '<span class="truncate">' + esc(it.name || it.stock_item_code) + ' ×' + it.qty + ' ' + esc(it.uom || 'قطعة') + '</span>' +
           '</div>' +
           '<div class="text-left shrink-0">' +
-          '<code class="font-mono text-sm bg-white px-2 py-1 rounded border block">' + esc(bc) + '</code>' +
+          '<code class="font-mono text-sm bg-white px-2 py-1 rounded border block">' + esc(code) + '</code>' +
+          '<span class="text-[10px] text-slate-400 block text-center mt-0.5">' + esc(bc) + '</span>' +
           '<span class="text-xs font-bold mt-1 block text-center ' + (complete ? 'text-emerald-700' : 'text-slate-500') + '">' + statusLabel + '</span>' +
           '</div></div>';
       }).join('');
@@ -166,9 +183,9 @@
       if (seen[code] > counts[code]) { over = code; break; }
     }
     if (bad) {
-      showAlarm('باركود غير مطابق لأمر التشغيل: ' + bad + ' — تم إيقاف الصرف!');
+      showAlarm('كود الصنف غير مطابق لأمر التشغيل: ' + bad + ' — تم إيقاف الصرف!');
     } else if (over) {
-      showAlarm('عدد مسحات الباركود ' + over + ' يتجاوز الكمية المطلوبة — تم إيقاف الصرف!');
+      showAlarm('عدد مسحات كود الصنف ' + over + ' يتجاوز الكمية المطلوبة — تم إيقاف الصرف!');
     } else {
       hideAlarm();
     }
@@ -288,7 +305,7 @@
       return;
     }
     clearBarcodeInputError();
-    state.scanned.push(code);
+    state.scanned.push(normalizeScan(code));
     revalidateAlarm();
     renderScanned();
     renderScanProgress();

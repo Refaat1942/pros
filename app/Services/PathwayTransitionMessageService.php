@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
+use App\Models\PathwayStep;
 use App\Models\Role;
 
 /**
@@ -99,6 +100,13 @@ class PathwayTransitionMessageService
             return "تم التحويل من {$from} إلى {$to} — جاهز للورشة.";
         }
 
+        if ($event === WorkflowEvent::OperationsApproved->value) {
+            $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
+            $to = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_MANUFACTURING);
+
+            return "تم التحويل من {$from} إلى {$to} — جاهز للصرف من المخزن.";
+        }
+
         $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
         $to = $this->pathwayConfig->stepLabelForStage($case, $targetStage);
 
@@ -110,6 +118,10 @@ class PathwayTransitionMessageService
      */
     public function notificationPayload(CaseRecord $case, string $event, string $fromStageKey): ?array
     {
+        if ($this->shouldSuppressNotification($case, $event)) {
+            return null;
+        }
+
         $targetStage = $this->resolveTargetStage($case, $event);
 
         if ($targetStage === null) {
@@ -127,6 +139,7 @@ class PathwayTransitionMessageService
         $title = match ($event) {
             WorkflowEvent::BomFinished->value => "{$prefix} طرف جاهز للتسليم",
             WorkflowEvent::Delivered->value => "{$prefix} تم تسليم وإغلاق حالة",
+            WorkflowEvent::ServicesApprovalRequired->value => "{$prefix} بانتظار تصديق إدارة الخدمات",
             default => "{$prefix} حالة جديدة — {$toLabel}",
         };
 
@@ -141,9 +154,30 @@ class PathwayTransitionMessageService
         ];
     }
 
+    /**
+     * إصدار عرض سعر جهة للاستقبال — لا يمر بمحرك workflow.
+     *
+     * @return array{role: string, title: string, body: string, url: string}
+     */
+    public function entityQuoteReleasedPayload(CaseRecord $case): array
+    {
+        $case->loadMissing('patient:id,name');
+        $patient = $case->patient?->name ?? 'غير معروف';
+        $caseNo = $case->case_no ?? ('#'.$case->id);
+        $from = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_OPERATIONS);
+        $to = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_OPERATIONS);
+
+        return [
+            'role' => Role::SLUG_RECEPTION,
+            'title' => '📄 عرض سعر بانتظار خطاب الموافقة',
+            'body' => "المريض {$patient} (حالة {$caseNo}) — تم التحويل من {$from} إلى {$to}.",
+            'url' => '/reception/quote',
+        ];
+    }
+
     public function resolveTargetStage(CaseRecord $case, string $event): ?string
     {
-        $case->loadMissing('patient');
+        $case->loadMissing(['patient', 'quotes']);
 
         if ($event === WorkflowEvent::CostingCompleted->value) {
             if ($case->needsServicesApproval()) {
@@ -154,7 +188,15 @@ class PathwayTransitionMessageService
                 return CaseRecord::STAGE_OPERATIONS;
             }
 
-            return CaseRecord::STAGE_QUOTE;
+            if ($this->pathwayConfig->resolvePathway($case->patient, $case) === PathwayStep::PATHWAY_ENTITY) {
+                return CaseRecord::STAGE_QUOTE;
+            }
+
+            return CaseRecord::STAGE_OPERATIONS;
+        }
+
+        if ($event === WorkflowEvent::QuoteIssued->value) {
+            return CaseRecord::STAGE_OPERATIONS;
         }
 
         return self::TARGET_STAGE[$event] ?? null;
@@ -165,13 +207,38 @@ class PathwayTransitionMessageService
         return match ($event) {
             WorkflowEvent::BomFinished->value => '/reception/delivery',
             WorkflowEvent::SentToCashier->value => '/cashier/cashier',
+            WorkflowEvent::CashierPaid->value => '/operations/pending',
             WorkflowEvent::OperationsApproved->value => '/technical/bom',
             WorkflowEvent::BomDispensed->value => '/workshop/workshop',
+            WorkflowEvent::ServicesApprovalRequired->value => '/admin/dashboard',
+            WorkflowEvent::ServicesApproved->value => '/operations/pending',
             WorkflowEvent::QuoteIssued->value => $role === Role::SLUG_RECEPTION
                 ? '/reception/quote'
                 : '/operations/pending',
+            WorkflowEvent::CostingCompleted->value => match ($role) {
+                Role::SLUG_ADMIN => '/admin/dashboard',
+                Role::SLUG_OPERATIONS => '/operations/pending',
+                default => self::ROLE_ACTION_URL[$role] ?? '/operations/pending',
+            },
             default => self::ROLE_ACTION_URL[$role] ?? '/',
         };
+    }
+
+    private function shouldSuppressNotification(CaseRecord $case, string $event): bool
+    {
+        $pathway = $this->pathwayConfig->resolvePathway($case->patient, $case);
+
+        if ($event === WorkflowEvent::QuoteIssued->value && $case->isMilitary()) {
+            return true;
+        }
+
+        if ($event === WorkflowEvent::CostingCompleted->value
+            && $pathway === PathwayStep::PATHWAY_CIVILIAN
+            && ! $case->needsServicesApproval()) {
+            return true;
+        }
+
+        return false;
     }
 
     private function targetRoleForStage(CaseRecord $case, string $stageKey, string $event): string
@@ -182,7 +249,20 @@ class PathwayTransitionMessageService
         $preferredKey = match ($event) {
             WorkflowEvent::BomDispensed->value => 'workshop',
             WorkflowEvent::BomFinished->value => 'delivery',
-            WorkflowEvent::CostingCompleted->value => $case->isMilitary() ? 'operations' : null,
+            WorkflowEvent::CostingCompleted->value => match (true) {
+                $case->needsServicesApproval() => 'services_approval',
+                $case->isMilitary(), $pathway === PathwayStep::PATHWAY_CIVILIAN => 'operations_wo',
+                $pathway === PathwayStep::PATHWAY_ENTITY => 'quote',
+                default => null,
+            },
+            WorkflowEvent::QuoteIssued->value => $pathway === PathwayStep::PATHWAY_ENTITY
+                ? $this->pathwayConfig->entityOperationsStepKey($case)
+                : 'operations_wo',
+            WorkflowEvent::OperationsApproved->value => 'warehouse',
+            WorkflowEvent::SentToCashier->value => 'cashier',
+            WorkflowEvent::CashierPaid->value => 'operations_wo',
+            WorkflowEvent::ServicesApprovalRequired->value => 'services_approval',
+            WorkflowEvent::ServicesApproved->value => 'operations_wo',
             default => null,
         };
 
@@ -196,7 +276,7 @@ class PathwayTransitionMessageService
             }
         }
 
-        if ($pathway === \App\Models\PathwayStep::PATHWAY_ENTITY && $stageKey === CaseRecord::STAGE_OPERATIONS) {
+        if ($pathway === PathwayStep::PATHWAY_ENTITY && $stageKey === CaseRecord::STAGE_OPERATIONS) {
             $quoteStep = $this->pathwayConfig->entityOperationsStepKey($case);
             foreach ($steps as $step) {
                 if (($step['key'] ?? '') === $quoteStep) {
@@ -216,7 +296,7 @@ class PathwayTransitionMessageService
                 continue;
             }
 
-            if ($pathway === \App\Models\PathwayStep::PATHWAY_ENTITY
+            if ($pathway === PathwayStep::PATHWAY_ENTITY
                 && $stageKey === CaseRecord::STAGE_OPERATIONS
                 && ($step['key'] ?? '') !== $this->pathwayConfig->entityOperationsStepKey($case)) {
                 continue;

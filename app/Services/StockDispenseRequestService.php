@@ -14,6 +14,7 @@ class StockDispenseRequestService
 {
     public function __construct(
         private readonly BomService $bomService,
+        private readonly BarcodeValidationService $barcodeValidation,
         private readonly NotificationService $notifications,
     ) {}
 
@@ -44,14 +45,19 @@ class StockDispenseRequestService
 
         $this->bomService->validateDispenseBarcodes($bom, $scannedBarcodes);
 
-        return DB::transaction(function () use ($bom, $case, $scannedBarcodes, $requester) {
+        $normalizedLines = array_map(
+            fn (string $scan) => $this->barcodeValidation->resolveStockItemCode($scan) ?? trim($scan),
+            $scannedBarcodes,
+        );
+
+        return DB::transaction(function () use ($bom, $case, $scannedBarcodes, $normalizedLines, $requester) {
             $request = StockDispenseRequest::create([
                 'case_id' => $case->id,
                 'bom_id' => $bom->id,
                 'work_order_no' => $case->work_order_no,
                 'status' => StockDispenseRequest::STATUS_PENDING,
                 'requested_by_user_id' => $requester->id,
-                'lines' => array_values($scannedBarcodes),
+                'lines' => array_values($normalizedLines),
             ]);
 
             AuditService::log(

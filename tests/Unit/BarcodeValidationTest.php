@@ -117,5 +117,18 @@ class BarcodeValidationTest extends TestCase
         $bomItem = $this->bomItemForCode('RM-CODE');
 
         $this->assertTrue($this->service->validateScan('RM-CODE', $bomItem));
+        $this->assertSame('RM-CODE', $this->service->resolveStockItemCode('RM-CODE'));
+        $this->assertSame('RM-CODE', $this->service->resolveStockItemCode('BC-RM-CODE'));
+    }
+
+    public function test_alt_codes_column_does_not_match_as_item_code(): void
+    {
+        $item = $this->stockItem('RM-PRIMARY', qty: 10);
+        $item->update(['alt_codes' => 'ALT-999']);
+
+        $bomItem = $this->bomItemForCode('RM-PRIMARY');
+
+        $this->assertFalse($this->service->validateScan('ALT-999', $bomItem));
+        $this->assertNull($this->service->resolveStockItemCode('ALT-999'));
     }
 }

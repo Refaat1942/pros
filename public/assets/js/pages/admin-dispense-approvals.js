@@ -13,9 +13,7 @@
     });
     return (bomItems || []).map(function (item) {
       var code = String(item.stock_item_code || '').toUpperCase();
-      var bc = 'BC-' + code;
-      var scanned = (counts[code] || 0) + (counts[bc] || 0);
-      return { item: item, scanned: scanned };
+      return { item: item, scanned: counts[code] || 0 };
     });
   }
 
@@ -34,7 +32,7 @@
             '<div><strong>WO:</strong> ' + esc(req.work_order_no) + '</div>' +
             '<div><strong>المريض:</strong> ' + esc(req.patient && req.patient.name) + '</div>' +
             '<div><strong>BOM:</strong> ' + esc(req.bom && req.bom.bom_no) + '</div>' +
-            '<div><strong>عدد المسح:</strong> ' + lines.length + '</div>';
+            '<div><strong>عدد المسح (كود الصنف):</strong> ' + lines.length + '</div>';
         }
         if (tbody) {
           tbody.innerHTML = items.length

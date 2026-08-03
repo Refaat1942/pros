@@ -11,6 +11,6 @@ class BarcodeDispenseMismatchException extends RuntimeException
 {
     public static function forItem(string $stockItemCode): self
     {
-        return new self("باركود غير مطابق للصنف المتوقع: {$stockItemCode}");
+        return new self("كود الصنف غير مطابق للمطلوب: {$stockItemCode}");
     }
 }
