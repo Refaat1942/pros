@@ -23,7 +23,16 @@
     var skipRoles = boot.skip_roles || [];
     var handlerDefs = boot.handlers || [];
     var csrf = boot.csrf || '';
-    var maxRows = 13;
+
+    function computeMaxRows() {
+        var max = 1;
+        pathwayOrder.forEach(function (pk) {
+            if (state[pk].length > max) max = state[pk].length;
+        });
+        return Math.max(max, 13);
+    }
+
+    var maxRows = computeMaxRows();
 
     var handlerKeysByStep = {
         operations_wo: ['work_order'],
@@ -81,6 +90,62 @@
         pathwayOrder.forEach(syncNextStepMeta);
     }
 
+    /** ترتيب الخطوات في المصفوفة = ترتيب المسار الفعلي (next_step_key). */
+    function buildFlowChain(list) {
+        if (!list || !list.length) return [];
+
+        var byKey = {};
+        list.forEach(function (s) { byKey[s.key] = s; });
+
+        var chain = [];
+        var current = list[0];
+        var seen = {};
+
+        while (current && !seen[current.key] && chain.length <= list.length) {
+            seen[current.key] = true;
+            chain.push(current);
+            if (!current.next_step_key || current.next_step_key === '_completed') break;
+            current = byKey[current.next_step_key];
+            if (!current) break;
+        }
+
+        return chain;
+    }
+
+    function activePathKeySet(list) {
+        var keys = {};
+        buildFlowChain(list).forEach(function (s) { keys[s.key] = true; });
+        return keys;
+    }
+
+    function reorderPathwayByFlow(pathwayKey) {
+        var list = state[pathwayKey];
+        if (!list || !list.length) return;
+
+        var chain = buildFlowChain(list);
+        var onPath = {};
+        chain.forEach(function (s) { onPath[s.key] = true; });
+
+        list.forEach(function (s) {
+            if (!onPath[s.key]) chain.push(s);
+        });
+
+        chain.forEach(function (step, idx) {
+            step.sort = idx + 1;
+        });
+
+        state[pathwayKey] = chain;
+        maxRows = computeMaxRows();
+    }
+
+    function indexOfStepKey(pathway, key) {
+        var list = state[pathway] || [];
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].key === key) return i;
+        }
+        return null;
+    }
+
     function nextStepOptions(list, currentIdx, selectedKey) {
         var html = '';
         list.forEach(function (s, i) {
@@ -118,11 +183,15 @@
         return step && step.required === false;
     }
 
-    function matrixCellInnerHtml(step, shared) {
+    function matrixCellInnerHtml(step, shared, onPath) {
         if (!step) return '—';
-        return esc(step.label)
+        var html = esc(step.label)
             + '<span class="pathway-matrix__btn-sub">' + esc(shared ? 'مشترك — يُحدَّث في الجدول فوراً' : deptLabel(step.owner_department)) + '</span>'
             + skipBadges(step);
+        if (onPath === false) {
+            html += '<span class="pathway-matrix__badge pathway-matrix__badge--offpath">↪ خارج المسار</span>';
+        }
+        return html;
     }
 
     function patchMatrixCell(pathway, rowIdx) {
@@ -148,7 +217,8 @@
             + (selected ? ' is-selected' : '');
 
         btn.className = cls;
-        btn.innerHTML = matrixCellInnerHtml(step, shared);
+        var onPath = activePathKeySet(state[pathway])[step.key];
+        btn.innerHTML = matrixCellInnerHtml(step, shared, onPath);
         btn.classList.add('is-live-updated');
         window.setTimeout(function () {
             btn.classList.remove('is-live-updated');
@@ -207,6 +277,7 @@
         updateEditorLiveFields();
         if (field === 'next_step_key') updateNextStepSelect();
         if (field === 'required' || field === 'auto_skip') updateSkipControls();
+        if (field === 'next_step_key') renderEditor();
     }
 
     function updateEditorLiveFields() {
@@ -268,14 +339,19 @@
                 pathwayOrder.forEach(function (pk) {
                     var st = state[pk][row];
                     var selected = pk === activePathway && activeStepIdx === row;
+                    var pathKeys = activePathKeySet(state[pk]);
                     if (!st) {
                         body += '<td class="pathway-matrix__cell"><span class="pathway-matrix__btn is-empty">—</span></td>';
                         return;
                     }
-                    var cls = 'pathway-matrix__btn' + (selected ? ' is-selected' : '') + (st.locked ? ' is-locked' : '');
+                    var offPath = !pathKeys[st.key];
+                    var cls = 'pathway-matrix__btn'
+                        + (selected ? ' is-selected' : '')
+                        + (st.locked ? ' is-locked' : '')
+                        + (offPath ? ' is-offpath' : '');
                     body += '<td class="pathway-matrix__cell">'
                         + '<button type="button" class="' + cls + '" data-pathway="' + pk + '" data-idx="' + row + '">'
-                        + matrixCellInnerHtml(st, false)
+                        + matrixCellInnerHtml(st, false, !offPath)
                         + '</button></td>';
                 });
             }
@@ -321,7 +397,7 @@
         }
         var meta = pathwayMeta[activePathway] || { label: activePathway, icon: '' };
         var step = state[activePathway][activeStepIdx];
-        hint.textContent = 'تعديل: ' + meta.icon + ' ' + meta.label + ' — خطوة ' + (activeStepIdx + 1) + ': ' + (step ? step.label : '');
+        hint.textContent = 'تعديل: ' + meta.icon + ' ' + meta.label + ' — صف ' + (step ? step.sort : activeStepIdx + 1) + ': ' + (step ? step.label : '');
     }
 
     function renderFlowMap(list) {
@@ -331,20 +407,7 @@
             return;
         }
 
-        var byKey = {};
-        list.forEach(function (s) { byKey[s.key] = s; });
-
-        var chain = [];
-        var current = list[0];
-        var seen = {};
-        while (current && !seen[current.key] && chain.length <= list.length) {
-            seen[current.key] = true;
-            chain.push(current);
-            if (!current.next_step_key || current.next_step_key === '_completed') break;
-            current = byKey[current.next_step_key];
-            if (!current) break;
-        }
-
+        var chain = buildFlowChain(list);
         var meta = pathwayMeta[activePathway] || { label: activePathway };
         var chips = chain.map(function (s, i) {
             var arrow = (i < chain.length - 1 && s.next_step_key !== '_completed')
@@ -352,7 +415,7 @@
             return '<span class="pf-flow-chip"><b>' + s.sort + '</b> ' + esc(s.label) + '</span>' + arrow;
         }).join('');
 
-        el.innerHTML = '<p class="pf-flow-title">📍 معاينة مسار ' + esc(meta.label) + '</p><div class="pf-flow-strip">' + chips + '</div>';
+        el.innerHTML = '<p class="pf-flow-title">📍 معاينة مسار ' + esc(meta.label) + ' — الصفوف في الجدول تتبع هذا الترتيب</p><div class="pf-flow-strip">' + chips + '</div>';
     }
 
     function relevantHandlers(step) {
@@ -450,6 +513,13 @@
 
         if (field === 'label' || field === 'owner_department') {
             syncSharedRowField(activeStepIdx, field, value);
+        }
+
+        if (field === 'next_step_key') {
+            var activeKey = step.key;
+            reorderPathwayByFlow(activePathway);
+            var newIdx = indexOfStepKey(activePathway, activeKey);
+            if (newIdx !== null) activeStepIdx = newIdx;
         }
 
         refreshAfterEdit(field);
@@ -580,6 +650,7 @@
     });
 
     if (state.civilian.length) {
+        pathwayOrder.forEach(reorderPathwayByFlow);
         selectCell('civilian', 0);
     } else {
         render();

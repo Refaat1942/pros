@@ -139,6 +139,20 @@
     color: #92400e;
 }
 
+.pathway-matrix__badge--offpath {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.pathway-matrix__btn.is-offpath {
+    opacity: 0.72;
+    background: #f8fafc;
+}
+
+.pathway-matrix__btn.is-offpath:hover {
+    background: #f1f5f9;
+}
+
 .pathway-flow-map {
     margin: 0 16px 16px;
     padding: 12px 14px;
