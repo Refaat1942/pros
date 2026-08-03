@@ -24,6 +24,10 @@
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   }
 
+  function fmtMoney(n) {
+    return Number(n || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function toast(msg, isError) {
     if (window.DashboardToast) {
       window.DashboardToast.show(msg, { id: 'toast', prefix: '', isError: isError });
@@ -262,6 +266,8 @@
     if ($('returnScanAlarm')) $('returnScanAlarm').style.display = 'none';
     if ($('returnBarcodeInput')) $('returnBarcodeInput').value = '';
     if ($('returnQtyInput')) $('returnQtyInput').value = '1';
+    var resultEl = $('returnScanResult');
+    if (resultEl) { resultEl.style.display = 'none'; resultEl.innerHTML = ''; }
     $('returnScanModal').classList.add('visible');
   }
 
@@ -319,7 +325,37 @@
       .then(function (res) {
         if ($('returnScanAlarm')) $('returnScanAlarm').style.display = 'none';
         var completed = res.data.note && res.data.note.status === 'completed';
-        toast(completed ? '✅ تم تأكيد استلام جميع المواد' : '✅ تم استلام ' + qty + ' — متبقي في الطلب');
+        var updates = (res.data && res.data.stock_updates) || [];
+        var totalValue = res.data && res.data.total_value;
+        var stockMsg = '';
+        if (updates.length) {
+          stockMsg = updates.map(function (u) {
+            return esc(u.name || u.stock_item_code) + ': +' + u.qty_returned +
+              ' (رصيد ' + u.qty_before + ' → ' + u.qty_after + ') · ' +
+              fmtMoney(u.line_value) + ' ج.م';
+          }).join('\n');
+        }
+        var resultEl = $('returnScanResult');
+        if (resultEl && updates.length) {
+          resultEl.style.display = 'block';
+          resultEl.innerHTML =
+            '<div class="return-scan-result-head">✅ أُعيد للمخزون</div>' +
+            updates.map(function (u) {
+              return '<div class="return-scan-result-line">' +
+                '<strong>' + esc(u.name || u.stock_item_code) + '</strong> · +' + u.qty_returned +
+                ' · رصيد ' + u.qty_before + ' → <strong>' + u.qty_after + '</strong>' +
+                ' · WAC ' + fmtMoney(u.unit_cost) + ' · قيمة ' + fmtMoney(u.line_value) + ' ج.م</div>';
+            }).join('') +
+            (totalValue ? '<div class="return-scan-result-total">إجمالي القيمة: ' + fmtMoney(totalValue) + ' ج.م</div>' : '');
+        }
+        toast(
+          (res.data && res.data.message) ||
+          (completed ? '✅ تم تأكيد استلام جميع المواد' : '✅ تم استلام ' + qty + ' — متبقي في الطلب'),
+          false
+        );
+        if (stockMsg && window.DashboardToast) {
+          window.DashboardToast.show(stockMsg.replace(/\n/g, ' · '), { id: 'toast-stock', duration: 7000 });
+        }
         refreshList();
         if (completed) {
           closeReturnScanModal();

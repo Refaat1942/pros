@@ -33,6 +33,9 @@ Route::prefix('cashier')
             Route::get('quote/{quote}/print', [QuoteController::class, 'print'])
                 ->name('quote.print');
 
+            Route::get('payments/{case}/history', [CashierDeskController::class, 'casePayments'])
+                ->name('payments.history');
+
             Route::get('payments/{payment}/receipt', [CashierDeskController::class, 'printReceipt'])
                 ->name('payments.receipt');
         });

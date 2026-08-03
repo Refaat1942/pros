@@ -38,6 +38,11 @@
                 <div>المتبقي: <strong id="cashierSummaryRemaining" class="text-amber-700">—</strong> ج.م</div>
             </div>
 
+            <div id="cashierPaymentHistory" class="hidden">
+                <label class="block text-sm font-bold text-slate-700 mb-1">📋 الدفعات السابقة</label>
+                <div id="cashierPaymentHistoryList" class="text-xs bg-emerald-50 border border-emerald-100 rounded-lg p-3 space-y-2 max-h-36 overflow-y-auto"></div>
+            </div>
+
             <p class="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed" id="cashierPaymentHint">
                 يمكن تسجيل دفعة جزئية أو كامل المتبقي. عند اكتمال المبلغ تُعاد الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.
             </p>

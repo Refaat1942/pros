@@ -76,6 +76,8 @@ class StockCatalogService
             'opening_qty' => (int) ($item->opening_qty ?? 0),
             'addition' => (int) ($item->addition ?? 0),
             'discount' => (int) ($item->discount ?? 0),
+            'catalog_balance' => $item->catalogBalance(),
+            'warehouse_qty' => (int) $item->qty,
             'balance' => $item->catalogBalance(),
             'reserved' => (int) $item->reserved,
             'min_qty' => (int) ($item->min_qty ?? 0),
@@ -425,5 +427,46 @@ class StockCatalogService
         $trimmed = trim((string) ($value ?? ''));
 
         return $trimmed !== '' ? $trimmed : null;
+    }
+
+    /**
+     * يُوحّد حقول الكتالوج (أول/إضافة/خصم) مع رصيد المخزن للأصناف بلا حركات مخزنية.
+     * مفيد بعد استيراد Excel حيث رصيد الكتالوج ≠ qty.
+     *
+     * @return array{synced: int, skipped: int}
+     */
+    public function reconcileCatalogLedgerFromWarehouse(): array
+    {
+        $synced = 0;
+        $skipped = 0;
+
+        StockItem::query()
+            ->withCount('movements')
+            ->orderBy('id')
+            ->chunkById(200, function ($items) use (&$synced, &$skipped) {
+                foreach ($items as $item) {
+                    if ($item->movements_count > 0) {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    if ($item->catalogBalance() === (int) $item->qty) {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    $qty = max(0, (int) $item->qty);
+                    $item->update([
+                        'opening_qty' => $qty,
+                        'addition' => 0,
+                        'discount' => 0,
+                    ]);
+                    $synced++;
+                }
+            });
+
+        return compact('synced', 'skipped');
     }
 }

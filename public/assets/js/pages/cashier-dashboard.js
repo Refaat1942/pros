@@ -14,6 +14,7 @@
 
   var LIST_URL = '/cashier/payments/list';
   var CONFIRM_URL = function (id) { return '/cashier/payments/' + id + '/confirm'; };
+  var HISTORY_URL = function (id) { return '/cashier/payments/' + id + '/history'; };
 
   var methods = [];
   var selectedMethod = null;
@@ -155,6 +156,7 @@
       if (paidEl) paidEl.textContent = fmt(paid);
       if (remEl) remEl.textContent = fmt(activeRemaining);
     }
+    loadPaymentHistory(caseId, paid);
     var refEl = $('cashierPaymentReference');
     if (refEl) refEl.value = '';
     var notesEl = $('cashierPaymentNotes');
@@ -163,6 +165,32 @@
     if (methods.length) selectMethod(methods[0].value);
     var modal = $('cashierPaymentModal');
     if (modal) modal.classList.remove('hidden');
+  }
+
+  function loadPaymentHistory(caseId, paid) {
+    var wrap = $('cashierPaymentHistory');
+    var list = $('cashierPaymentHistoryList');
+    if (!wrap || !list || !window.axios) return;
+    if (!paid || paid <= 0) {
+      wrap.classList.add('hidden');
+      list.innerHTML = '';
+      return;
+    }
+    axios.get(HISTORY_URL(caseId))
+      .then(function (res) {
+        var rows = (res.data && res.data.data) || [];
+        if (!rows.length) {
+          wrap.classList.add('hidden');
+          return;
+        }
+        wrap.classList.remove('hidden');
+        list.innerHTML = rows.map(function (p) {
+          return '<div class="flex items-center justify-between gap-2 border-b border-emerald-100 pb-1">' +
+            '<span><strong>#' + esc(p.installment_no) + '</strong> · ' + esc(p.payment_no) + ' · ' + fmt(p.amount) + ' ج.م</span>' +
+            '<a href="' + esc(p.receipt_url) + '" target="_blank" rel="noopener" class="text-emerald-800 font-bold whitespace-nowrap">🖨️ إيصال</a></div>';
+        }).join('');
+      })
+      .catch(function () { wrap.classList.add('hidden'); });
   }
 
   function closePaymentModal() {
@@ -205,6 +233,10 @@
     })
       .then(function (res) {
         toast((res.data && res.data.message) || 'تم تأكيد استلام المبلغ.', false, { title: 'تم التحصيل', type: 'success', duration: 7000 });
+        var installment = res.data && res.data.payment && res.data.payment.installment_no;
+        if (installment) {
+          toast('إيصال دفعة #' + installment + ' — سيريال ' + (res.data.payment.payment_no || ''), false, { duration: 5000 });
+        }
         closePaymentModal();
         refreshList();
         // فتح إيصال الدفع للطباعة تلقائياً.

@@ -2106,6 +2106,37 @@
 
           _ocrLetterDate = extracted.letter_date || null;
 
+          var meta = res.meta || {};
+          var warnEl = document.getElementById('ocrMetaWarning');
+          if (warnEl) {
+            var warnings = [];
+            if (meta.ocr_engine === 'none' || (meta.raw_text_length || 0) < 8) {
+              warnings.push('⚠️ لم تُقرأ بيانات من الملف تلقائياً — راجع المبلغ يدوياً قبل التأكيد.');
+            } else if (meta.used_quote_defaults && !meta.amount_from_ocr) {
+              warnings.push('⚠️ لم يُستخرج المبلغ من الخطاب — تم عرض مبلغ عرض السعر. طابق الرقم مع الخطاب الورقي.');
+            } else if (meta.has_contract_discount) {
+              warnings.push('ℹ️ الجهة لها خصم تعاقدي — المبلغ في الخطاب قد يكون صافياً (' +
+                (meta.expected_net != null ? meta.expected_net : '') + ' ج.م) أو إجمالياً (' +
+                (meta.expected_gross != null ? meta.expected_gross : '') + ' ج.م).');
+            }
+            if (extracted.approved_amount != null && meta.expected_net != null) {
+              var ocrAmt = parseFloat(extracted.approved_amount);
+              var netDiff = Math.abs(ocrAmt - parseFloat(meta.expected_net));
+              var grossDiff = meta.expected_gross != null ? Math.abs(ocrAmt - parseFloat(meta.expected_gross)) : Infinity;
+              if (netDiff > 1 && grossDiff > 1) {
+                warnings.push('⚠️ المبلغ المستخرج (' + ocrAmt + ') لا يطابق صافي العرض (' +
+                  meta.expected_net + ') ولا الإجمالي (' + (meta.expected_gross || '—') + ').');
+              }
+            }
+            if (warnings.length) {
+              warnEl.innerHTML = warnings.join('<br>');
+              warnEl.style.display = 'block';
+            } else {
+              warnEl.style.display = 'none';
+              warnEl.innerHTML = '';
+            }
+          }
+
           var errEl = document.getElementById('ocrError');
           if (errEl) errEl.style.display = 'none';
 

@@ -88,6 +88,11 @@ class OcrExtractController extends Controller
             'meta' => [
                 'ocr_engine' => $extracted['ocr_engine'],
                 'raw_text_length' => $extracted['raw_text_length'],
+                'amount_from_ocr' => $extracted['amount_from_ocr'],
+                'used_quote_defaults' => $extracted['used_quote_defaults'],
+                'expected_net' => $extracted['expected_net'],
+                'expected_gross' => $extracted['expected_gross'],
+                'has_contract_discount' => $extracted['has_contract_discount'],
             ],
             'quote' => [
                 'quote_no' => $quote->quote_no,

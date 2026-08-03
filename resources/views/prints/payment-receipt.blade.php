@@ -75,12 +75,20 @@
     </header>
 
     <div class="receipt-title">إيصال دفع</div>
-    <div class="receipt-sub">سيريال الإيصال: {{ $receipt['payment_no'] }}</div>
+    <div class="receipt-sub">سيريال الإيصال: {{ $receipt['payment_no'] }} · {{ $receipt['installment_label'] ?? 'دفعة 1' }}</div>
 
     <div class="amount-box">
         {{ number_format($receipt['amount'], 2) }} ج.م
-        <small>المبلغ المستلم</small>
+        <small>مبلغ هذه الدفعة</small>
     </div>
+
+    @if(!($receipt['fully_paid'] ?? true))
+    <div class="words-line" style="background:#fffbeb;border-color:#fcd34d;">
+        المطلوب: {{ number_format($receipt['amount_due'] ?? 0, 2) }} ج.م ·
+        المحصّل: {{ number_format($receipt['paid_total'] ?? 0, 2) }} ج.م ·
+        <strong style="color:#b45309;">المتبقي: {{ number_format($receipt['remaining'] ?? 0, 2) }} ج.م</strong>
+    </div>
+    @endif
 
     <div class="words-line">
         وقدره: {{ $receipt['amount_words'] }}

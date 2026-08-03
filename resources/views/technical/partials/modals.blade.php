@@ -58,6 +58,7 @@
         <div class="barcode-alarm" id="returnScanAlarm" style="display:none;">
           ⛔ <span id="returnScanAlarmText">باركود غير مطابق!</span>
         </div>
+        <div id="returnScanResult" class="return-scan-result" style="display:none;margin-top:12px;padding:12px 14px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;font-size:13px;line-height:1.6;"></div>
       </div>
       <div class="modal-footer return-modal-footer">
         <button type="button" class="btn-view" id="btnCloseReturnScan">إغلاق</button>

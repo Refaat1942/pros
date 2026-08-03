@@ -153,14 +153,22 @@ class ReturnNoteController extends Controller
      */
     public function complete(CompleteReturnNoteRequest $request, ReturnNote $returnNote): JsonResponse
     {
-        $note = $this->returnNoteService->complete(
+        $result = $this->returnNoteService->complete(
             $returnNote,
             $request->validated('scanned_lines'),
         );
 
+        $note = $result['note'];
+        $stockUpdates = $result['stock_updates'];
+        $totalValue = round(collect($stockUpdates)->sum('line_value'), 2);
+
         return response()->json([
-            'message' => 'تم تأكيد استلام المواد المرتجعة.',
+            'message' => $totalValue > 0
+                ? 'تم تأكيد استلام المواد المرتجعة — أُعيدت للمخزون بقيمة '.number_format($totalValue, 2).' ج.م.'
+                : 'تم تأكيد استلام المواد المرتجعة.',
             'note' => $this->formatNote($note),
+            'stock_updates' => $stockUpdates,
+            'total_value' => $totalValue,
         ]);
     }
 

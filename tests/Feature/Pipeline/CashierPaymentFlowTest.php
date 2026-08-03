@@ -229,6 +229,42 @@ class CashierPaymentFlowTest extends TestCase
         $this->assertSame([], $report['summary']);
     }
 
+    public function test_partial_cashier_payment_keeps_case_at_cashier_with_installment_no(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $case = $this->cashierAwaitingCase();
+        $quote = \App\Models\Quote::where('case_id', $case->id)->firstOrFail();
+        $due = (float) $quote->total;
+        $partial = round($due / 2, 2);
+
+        $cashier = $this->userWithRole('cashier');
+
+        $this->actingAs($cashier)
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', [
+                'method' => 'cash',
+                'amount' => $partial,
+            ])
+            ->assertOk()
+            ->assertJsonPath('fully_paid', false)
+            ->assertJsonPath('payment.installment_no', 1);
+
+        $fresh = $case->fresh();
+        $this->assertSame(CaseRecord::STAGE_CASHIER, $fresh->stage_key);
+        $this->assertEqualsWithDelta($partial, (float) $fresh->paid, 0.01);
+
+        $this->actingAs($cashier)
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', [
+                'method' => 'cash',
+                'amount' => round($due - $partial, 2),
+            ])
+            ->assertOk()
+            ->assertJsonPath('fully_paid', true)
+            ->assertJsonPath('payment.installment_no', 2);
+
+        $this->assertSame(CaseRecord::STAGE_OPERATIONS, $case->fresh()->stage_key);
+        $this->assertCount(2, Payment::where('case_id', $case->id)->get());
+    }
+
     /** يقود مريض كاش حتى مرحلة الخزنة (بانتظار الدفع). */
     private function cashierAwaitingCase(): CaseRecord
     {

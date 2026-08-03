@@ -122,12 +122,22 @@ class OcrApprovalService
 
         if (isset($extracted['approved_amount'])) {
             $ocrAmount = round((float) $extracted['approved_amount'], 2);
-            $expectedAmount = round(QuotePrintPresenter::approvedAmount($quote), 2);
+            $totals = QuotePrintPresenter::fromQuote($quote);
+            $expectedNet = round((float) $totals['display_total'], 2);
+            $expectedGross = round((float) $totals['gross_total'], 2);
+            $tolerance = max(1.0, $expectedNet * 0.01);
 
-            if (abs($ocrAmount - $expectedAmount) >= 0.01) {
+            $matchesNet = abs($ocrAmount - $expectedNet) < $tolerance;
+            $matchesGross = abs($ocrAmount - $expectedGross) < $tolerance;
+
+            if (! $matchesNet && ! $matchesGross) {
+                $expectedLabel = $totals['has_discount']
+                    ? "صافٍ {$expectedNet} أو إجمالي {$expectedGross}"
+                    : (string) $expectedNet;
+
                 throw OcrMismatchException::forField(
                     'القيمة المالية',
-                    "المستخرج {$ocrAmount} ≠ المبلغ المعتمد {$expectedAmount}"
+                    "المستخرج {$ocrAmount} ≠ المبلغ المعتمد ({$expectedLabel})"
                 );
             }
         }

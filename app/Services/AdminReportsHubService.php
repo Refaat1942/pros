@@ -91,6 +91,7 @@ class AdminReportsHubService
             ['id' => 'cash-income', 'label' => 'التحصيل النقدي — الخزنة', 'icon' => '💵', 'group' => 'التعاقد والمالية', 'description' => 'المبالغ النقدية المُحصّلة من الخزنة (كاش / إنستاباي / فودافون كاش)'],
             ['id' => 'financial', 'label' => 'الإيرادات والمالية', 'icon' => '💰', 'group' => 'رؤية عامة', 'description' => 'إيرادات التسليم وأوامر التشغيل'],
             ['id' => 'inventory', 'label' => 'تحليلات المخزون', 'icon' => '📦', 'group' => 'رؤية عامة', 'description' => 'الأصناف الراكدة والشغالة ومنخفضة المخزون'],
+            ['id' => 'inventory-valuation', 'label' => 'تقييم المخزون', 'icon' => '💎', 'group' => 'المخزون والتوريد', 'description' => 'رصيد كل صنف وكمياته وأسعاره وقيمته بالمخزن'],
             ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير والورشة'],
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
         ] as $extra) {
@@ -138,6 +139,7 @@ class AdminReportsHubService
             'stock-categories' => $this->buildStockCategories($from, $to),
             'catalog' => $this->buildCatalog($from, $to),
             'inventory-overview' => $this->buildInventoryMovements($from, $to),
+            'inventory-valuation' => $this->buildInventoryValuation($from, $to),
             'suppliers' => $this->buildSuppliers($from, $to),
             'returns' => $this->buildReturns($from, $to),
             'companies' => $this->buildCompanies($from, $to),
@@ -541,6 +543,56 @@ class AdminReportsHubService
                 }
             });
         });
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildInventoryValuation(?Carbon $from, ?Carbon $to): array
+    {
+        $items = StockItem::query()
+            ->with(['prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id')])
+            ->orderBy('code')
+            ->get();
+
+        $totalQty = 0;
+        $totalValue = 0.0;
+        $rows = [];
+
+        foreach ($items as $item) {
+            $qty = (int) ($item->qty ?? 0);
+            $wac = round((float) ($item->wac ?? 0), 4);
+            $lineValue = round($qty * $wac, 2);
+            $totalQty += $qty;
+            $totalValue += $lineValue;
+
+            $priceLabels = $item->prices
+                ->map(fn (StockItemPrice $p) => number_format((float) $p->amount, 2).' ج.م'
+                    .($p->qty ? ' ×'.$p->qty : '')
+                    .($p->received_at ? ' ('.ClinicTime::format($p->received_at, 'd/m/Y').')' : ''))
+                ->values()
+                ->all();
+
+            $rows[] = [
+                $item->code ?? '—',
+                $item->name ?? '—',
+                (string) $qty,
+                (string) $item->catalogBalance(),
+                number_format($wac, 4).' ج.م',
+                $priceLabels !== [] ? implode(' · ', $priceLabels) : '—',
+                number_format($lineValue, 2).' ج.م',
+            ];
+        }
+
+        return [
+            'title' => 'تقييم المخزون',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [
+                ['label' => 'عدد الأصناف', 'value' => (string) $items->count()],
+                ['label' => 'إجمالي الكميات', 'value' => (string) $totalQty],
+                ['label' => 'قيمة المخزون (WAC)', 'value' => number_format($totalValue, 2).' ج.م'],
+            ],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'رصيد المخزن', 'رصيد كتالوج', 'WAC', 'أسعار الشراء', 'قيمة الصنف'],
+            'rows' => $rows,
+        ];
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */

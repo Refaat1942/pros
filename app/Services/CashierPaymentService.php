@@ -69,8 +69,13 @@ class CashierPaymentService
         $receivedBy = Auth::user()?->name ?? 'الخزنة';
 
         return DB::transaction(function () use ($case, $quote, $amount, $method, $data, $receivedBy, $alreadyPaid, $patientDue) {
+            $installmentNo = Payment::query()
+                ->where('case_id', $case->id)
+                ->count() + 1;
+
             $payment = Payment::create([
                 'payment_no' => $this->nextPaymentNo(),
+                'installment_no' => $installmentNo,
                 'case_id' => $case->id,
                 'quote_id' => $quote?->id,
                 'patient_id' => $case->patient_id,
@@ -105,6 +110,7 @@ class CashierPaymentService
                 tag: 'financial',
                 after: [
                     'payment_no' => $payment->payment_no,
+                    'installment_no' => $installmentNo,
                     'case_id' => $case->id,
                     'case_no' => $case->case_no,
                     'amount' => $amount,

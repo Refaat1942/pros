@@ -72,10 +72,36 @@ class CashierDeskController extends Controller
             'payment' => [
                 'id' => $payment->id,
                 'payment_no' => $payment->payment_no,
+                'installment_no' => (int) $payment->installment_no,
                 'amount' => (float) $payment->amount,
                 'method' => $payment->method,
                 'receipt_url' => route('cashier.payments.receipt', $payment),
             ],
+        ]);
+    }
+
+    /**
+     * سجل دفعات حالة — للعرض في نافذة التحصيل.
+     */
+    public function casePayments(CaseRecord $case): JsonResponse
+    {
+        $payments = Payment::query()
+            ->where('case_id', $case->id)
+            ->orderBy('installment_no')
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'data' => $payments->map(fn (Payment $p) => [
+                'id' => $p->id,
+                'payment_no' => $p->payment_no,
+                'installment_no' => (int) $p->installment_no,
+                'amount' => (float) $p->amount,
+                'method' => $p->method,
+                'method_label' => $p->methodLabel(),
+                'received_at' => $p->received_at?->format('d/m/Y H:i'),
+                'receipt_url' => route('cashier.payments.receipt', $p),
+            ])->values(),
         ]);
     }
 

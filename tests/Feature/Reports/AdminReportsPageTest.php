@@ -790,6 +790,46 @@ class AdminReportsPageTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $reports['inventory']['issues_this_month']);
     }
 
+    public function test_inventory_valuation_report_lists_qty_prices_and_wac_value(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $item = $this->stockItem('RM-VAL-01', qty: 15, wac: 120.50);
+        $item->update(['name' => 'ركبة تقييم']);
+        $supplier = $this->makeSupplier();
+        app(\App\Services\StockPriceService::class)->addBatch($item, 10, 115.00, $supplier, 'INV-V1', now());
+        app(\App\Services\StockPriceService::class)->addBatch($item->fresh(), 5, 125.00, $supplier, 'INV-V2', now());
+
+        $item->refresh();
+        $expectedValue = number_format(round((int) $item->qty * (float) StockItem::find($item->id)->wac, 2), 2);
+
+        $from = now()->startOfMonth()->toDateString();
+        $to = now()->toDateString();
+
+        $hub = app(AdminReportsHubService::class);
+        $dates = $hub->parseDateRange($from, $to);
+        $report = $hub->build('inventory-valuation', $dates['from'], $dates['to']);
+
+        $this->assertSame('تقييم المخزون', $report['title']);
+        $this->assertSame('15', $report['summary'][1]['value'] ?? null);
+        $this->assertStringContainsString($expectedValue, $report['summary'][2]['value'] ?? '');
+
+        $row = collect($report['rows'])->first(fn ($r) => ($r[0] ?? '') === 'RM-VAL-01');
+        $this->assertNotNull($row);
+        $this->assertSame('ركبة تقييم', $row[1]);
+        $this->assertSame('15', $row[2]);
+        $this->assertStringContainsString('ج.م', $row[4]);
+        $this->assertStringContainsString('115.00', $row[5]);
+        $this->assertStringContainsString('ج.م', $row[6]);
+        $this->assertSame($expectedValue.' ج.م', $row[6]);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/inventory-valuation?from='.$from.'&to='.$to)
+            ->assertOk()
+            ->assertSee('تقييم المخزون', false)
+            ->assertSee('RM-VAL-01', false)
+            ->assertSee('قيمة المخزون (WAC)', false);
+    }
+
     private function seedStockForReturnsReport(): void
     {
         $item = $this->stockItem('RM-001', qty: 20);

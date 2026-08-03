@@ -126,6 +126,9 @@
             </div>
           </div>
 
+          <div id="ocrMetaWarning"
+               style="display:none;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:12px 14px;margin-bottom:16px;color:#9a3412;font-size:13px;line-height:1.6;"></div>
+
           <div id="ocrError"
                style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px;margin-bottom:16px;color:#dc2626;font-size:13px;font-weight:600;"></div>
 

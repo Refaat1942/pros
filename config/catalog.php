@@ -29,6 +29,8 @@ return [
         'opening_qty' => ['label' => 'رصيد أول المده', 'field' => 'opening_qty'],
         'addition' => ['label' => 'الاضافة', 'field' => 'addition'],
         'discount' => ['label' => 'الخصم', 'field' => 'discount'],
+        'catalog_balance' => ['label' => 'رصيد كتالوج', 'field' => 'catalog_balance'],
+        'warehouse_qty' => ['label' => 'رصيد المخزن', 'field' => 'warehouse_qty'],
         'balance' => ['label' => 'الرصيد', 'field' => 'balance'],
     ],
 

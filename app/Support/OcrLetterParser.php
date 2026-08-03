@@ -100,13 +100,14 @@ class OcrLetterParser
 
     private static function extractAmount(string $text, ?float $hint): ?float
     {
-        $candidates = [];
+        $labeled = [];
+        $withCurrency = [];
 
-        if (preg_match_all('/(?:المبلغ|القيمة|يعتمد|إجمالي|مبلغ|amount)\s*[:\-]?\s*([\d][\d\s,\.]{2,15})/ui', $text, $matches)) {
+        if (preg_match_all('/(?:المبلغ|القيمة|يعتمد|إجمالي|مبلغ|amount|approved)\s*[:\-]?\s*([\d][\d\s,\.]{2,15})/ui', $text, $matches)) {
             foreach ($matches[1] as $raw) {
                 $val = self::parseNumber($raw);
                 if ($val !== null && $val > 0) {
-                    $candidates[] = $val;
+                    $labeled[] = $val;
                 }
             }
         }
@@ -115,31 +116,48 @@ class OcrLetterParser
             foreach ($matches[1] as $raw) {
                 $val = self::parseNumber($raw);
                 if ($val !== null && $val > 0) {
-                    $candidates[] = $val;
+                    $withCurrency[] = $val;
                 }
             }
         }
 
-        if (preg_match_all('/\b([\d]{4,9})(?:\.[\d]{2})?\b/u', $text, $matches)) {
+        $candidates = array_values(array_unique(array_merge($labeled, $withCurrency)));
+
+        if ($candidates === [] && preg_match_all('/\b([\d]{4,9})(?:\.[\d]{2})?\b/u', $text, $matches)) {
             foreach ($matches[1] as $raw) {
                 $val = self::parseNumber($raw);
                 if ($val !== null && $val >= 100 && ! self::looksLikeYear($val)) {
                     $candidates[] = $val;
                 }
             }
+            $candidates = array_values(array_unique($candidates));
         }
 
-        $candidates = array_values(array_unique($candidates));
+        if ($candidates === []) {
+            return null;
+        }
 
-        if ($hint !== null && $candidates) {
+        if ($hint !== null) {
+            $closest = null;
+            $closestDiff = PHP_FLOAT_MAX;
             foreach ($candidates as $candidate) {
-                if (abs($candidate - $hint) < 0.01) {
-                    return round($candidate, 2);
+                $diff = abs($candidate - $hint);
+                if ($diff < $closestDiff) {
+                    $closestDiff = $diff;
+                    $closest = $candidate;
                 }
+            }
+
+            if ($closest !== null) {
+                $tolerance = max(1.0, $hint * 0.02);
+
+                return round($closest, 2);
             }
         }
 
-        return $candidates ? round(max($candidates), 2) : null;
+        $preferred = $labeled !== [] ? $labeled : ($withCurrency !== [] ? $withCurrency : $candidates);
+
+        return round(max($preferred), 2);
     }
 
     private static function extractCompany(string $text, ?string $hint): ?string

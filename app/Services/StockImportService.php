@@ -81,7 +81,12 @@ class StockImportService
                 $balanceRaw = trim($parsed['balance_raw']);
                 $balance = $balanceRaw !== ''
                     ? (int) $this->num($balanceRaw)
-                    : ($openingQty + $addition - $discount);
+                    : max(0, $openingQty + $addition - $discount);
+
+                // عند الاستيراد: لو رصيد أول المدة فارغ لكن الرصيد معروف، ابدأ من الرصيد.
+                if ($openingQty === 0 && $addition === 0 && $discount === 0 && $balance > 0) {
+                    $openingQty = $balance;
+                }
 
                 $payload = [
                     'code' => $parsed['code'] !== '' ? $parsed['code'] : null,
@@ -142,7 +147,7 @@ class StockImportService
             (string) ((int) ($item['opening_qty'] ?? $item['qty'] ?? 0)),
             (string) ((int) ($item['addition'] ?? 0)),
             (string) ((int) ($item['discount'] ?? 0)),
-            (string) ((int) ($item['balance'] ?? $item['qty'] ?? 0)),
+            (string) ((int) ($item['catalog_balance'] ?? $item['balance'] ?? 0)),
         ];
     }
 

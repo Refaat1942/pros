@@ -78,7 +78,12 @@
         </div>
 
         <p class="catalog-table-hint">
-            💡 قالب الأصناف — {{ count($catalogTemplateHeaders) }} أعمدة:
+            💡 <strong>رصيد كتالوج</strong> = رصيد أول المدة + الإضافة − الخصم.
+            <strong>رصيد المخزن</strong> = الكمية الفعلية (توريد / صرف / ارتجاع).
+            لو مختلفين يظهر رصيد المخزن بالبرتقالي.
+        </p>
+        <p class="catalog-table-hint" style="margin-top:6px;">
+            قالب الأصناف — {{ count($catalogTemplateHeaders) }} أعمدة:
             <strong>{{ implode(' | ', $catalogTemplateHeaders) }}</strong>.
             الأسعار والموردون والأقسام تُدار من نموذج الصنف. لطباعة الباركود، حدّد صنفاً أو أكثر ثم اضغط «طباعة باركود المحدد».
         </p>
@@ -98,7 +103,8 @@
                         <th style="padding:10px;text-align:center;">{{ $catalogColumns['opening_qty']['label'] ?? 'رصيد أول المده' }}</th>
                         <th style="padding:10px;text-align:center;">{{ $catalogColumns['addition']['label'] ?? 'الاضافة' }}</th>
                         <th style="padding:10px;text-align:center;">{{ $catalogColumns['discount']['label'] ?? 'الخصم' }}</th>
-                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['balance']['label'] ?? 'الرصيد' }}</th>
+                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['catalog_balance']['label'] ?? 'رصيد كتالوج' }}</th>
+                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['warehouse_qty']['label'] ?? 'رصيد المخزن' }}</th>
                         <th style="padding:10px;text-align:center;min-width:280px;">إجراء</th>
                     </tr>
                 </thead>
@@ -119,10 +125,16 @@
                             <td style="padding:8px;">{{ $item['name'] ?? '' }}</td>
                             <td style="padding:8px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">{{ $item['alt_codes'] ?? '—' }}</td>
                             <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $item['uom'] ?? 'قطعة' }}</td>
-                            <td style="padding:8px;text-align:center;">{{ (int) ($item['opening_qty'] ?? $item['qty'] ?? 0) }}</td>
+                            <td style="padding:8px;text-align:center;">{{ (int) ($item['opening_qty'] ?? 0) }}</td>
                             <td style="padding:8px;text-align:center;">{{ (int) ($item['addition'] ?? 0) }}</td>
                             <td style="padding:8px;text-align:center;">{{ (int) ($item['discount'] ?? 0) }}</td>
-                            <td style="padding:8px;text-align:center;font-weight:600;">{{ (int) ($item['balance'] ?? $item['qty'] ?? 0) }}</td>
+                            @php
+                                $catalogBal = (int) ($item['catalog_balance'] ?? $item['balance'] ?? 0);
+                                $warehouseQty = (int) ($item['warehouse_qty'] ?? $item['qty'] ?? 0);
+                                $qtyMismatch = $catalogBal !== $warehouseQty;
+                            @endphp
+                            <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $catalogBal }}</td>
+                            <td style="padding:8px;text-align:center;font-weight:700;{{ $qtyMismatch ? 'color:#b45309;' : 'color:#059669;' }}" title="{{ $qtyMismatch ? 'رصيد الكتالوج ≠ رصيد المخزن — راجع الحركات أو عدّل بيانات الاستيراد' : 'رصيد المخزن الفعلي' }}">{{ $warehouseQty }}</td>
                             <td style="padding:10px;text-align:center;white-space:nowrap;">
                                 <button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button>
                                 <button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button>
@@ -133,7 +145,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
+                        <tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -867,10 +879,10 @@
         document.getElementById('slimName').value = v.name || '';
         document.getElementById('slimAltCodes').value = v.alt_codes || '';
         document.getElementById('slimUom').value = v.uom || 'قطعة';
-        document.getElementById('slimOpeningQty').value = v.opening_qty != null ? v.opening_qty : (v.qty != null ? v.qty : 0);
+        document.getElementById('slimOpeningQty').value = v.opening_qty != null ? v.opening_qty : 0;
         document.getElementById('slimAddition').value = v.addition != null ? v.addition : 0;
         document.getElementById('slimDiscount').value = v.discount != null ? v.discount : 0;
-        document.getElementById('slimBalance').value = v.balance != null ? v.balance : (v.qty != null ? v.qty : 0);
+        document.getElementById('slimBalance').value = v.catalog_balance != null ? v.catalog_balance : (v.balance != null ? v.balance : 0);
         document.getElementById('slimMinQty').value = v.min_qty != null ? v.min_qty : 0;
         document.getElementById('slimPrice').value = v.price != null ? v.price : 0;
         document.getElementById('slimEditId').value = v.id || '';
@@ -1055,7 +1067,9 @@
             + detailBox('رصيد أول المده', String(parseInt(item.opening_qty, 10) || 0))
             + detailBox('الاضافة', String(parseInt(item.addition, 10) || 0))
             + detailBox('الخصم', String(parseInt(item.discount, 10) || 0))
-            + detailBox('الرصيد', String(parseInt(item.balance, 10) || parseInt(item.qty, 10) || 0))
+            + detailBox('رصيد كتالوج', String(parseInt(item.catalog_balance, 10) || parseInt(item.balance, 10) || 0))
+            + detailBox('رصيد المخزن', '<strong style="color:#059669;">' + String(parseInt(item.warehouse_qty, 10) || parseInt(item.qty, 10) || 0) + '</strong>')
+            + detailBox('WAC', formatCatalogPrice(item.wac) + ' ج.م')
             + detailBox('الحد الأدنى للطلب', String(parseInt(item.min_qty, 10) || 0))
             + detailBox('القسم', item.category || '—')
             + detailBox('المورد', supplierNamesLabel(item))
@@ -1219,17 +1233,28 @@
         var search = escAttr(((item.code || '') + ' ' + (item.name || '') + ' ' + (item.page_number || '') + ' ' + (item.alt_codes || '')).toLowerCase());
         var dataAttr = escAttr(JSON.stringify(item));
         var labelsUrl = '/admin/catalog/' + item.id + '/labels';
+        var catalogBal = parseInt(item.catalog_balance, 10);
+        if (isNaN(catalogBal)) catalogBal = parseInt(item.balance, 10) || 0;
+        var warehouseQty = parseInt(item.warehouse_qty, 10);
+        if (isNaN(warehouseQty)) warehouseQty = parseInt(item.qty, 10) || 0;
+        var qtyMismatch = catalogBal !== warehouseQty;
+        var warehouseStyle = qtyMismatch ? 'color:#b45309;font-weight:700;' : 'color:#059669;font-weight:700;';
+        var checkboxCol = document.getElementById('catalogSelectAll')
+            ? '<td style="padding:8px;text-align:center;"><input type="checkbox" class="catalog-barcode-check" value="' + (item.id || '') + '" onclick="syncBarcodeSelection()"></td>'
+            : '';
         return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
-            '<td style="padding:10px;direction:ltr;text-align:right;"><strong>' + (item.code || '') + '</strong></td>' +
-            '<td style="padding:10px;text-align:center;color:var(--text-muted);">' + (item.page_number || '—') + '</td>' +
-            '<td style="padding:10px;">' + (item.name || '') + '</td>' +
-            '<td style="padding:10px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">' + (item.alt_codes || '—') + '</td>' +
-            '<td style="padding:10px;text-align:center;color:var(--text-muted);">' + (item.uom || 'قطعة') + '</td>' +
-            '<td style="padding:10px;text-align:center;">' + (parseInt(item.opening_qty, 10) || 0) + '</td>' +
-            '<td style="padding:10px;text-align:center;">' + (parseInt(item.addition, 10) || 0) + '</td>' +
-            '<td style="padding:10px;text-align:center;">' + (parseInt(item.discount, 10) || 0) + '</td>' +
-            '<td style="padding:10px;text-align:center;font-weight:600;">' + (parseInt(item.balance, 10) || parseInt(item.qty, 10) || 0) + '</td>' +
-            '<td style="padding:10px;text-align:center;white-space:nowrap;">' +
+            checkboxCol +
+            '<td style="padding:8px;direction:ltr;text-align:right;"><strong>' + (item.code || '') + '</strong></td>' +
+            '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + (item.page_number || '—') + '</td>' +
+            '<td style="padding:8px;">' + (item.name || '') + '</td>' +
+            '<td style="padding:8px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">' + (item.alt_codes || '—') + '</td>' +
+            '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + (item.uom || 'قطعة') + '</td>' +
+            '<td style="padding:8px;text-align:center;">' + (parseInt(item.opening_qty, 10) || 0) + '</td>' +
+            '<td style="padding:8px;text-align:center;">' + (parseInt(item.addition, 10) || 0) + '</td>' +
+            '<td style="padding:8px;text-align:center;">' + (parseInt(item.discount, 10) || 0) + '</td>' +
+            '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + catalogBal + '</td>' +
+            '<td style="padding:8px;text-align:center;' + warehouseStyle + '">' + warehouseQty + '</td>' +
+            '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
             '<button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button> ' +
             '<button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button> ' +
             '<a class="btn-action" target="_blank" href="' + labelsUrl + '">🏷️ باركود</a> ' +
@@ -1246,7 +1271,7 @@
         if (!tbody) return;
 
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>';
         } else {
             tbody.innerHTML = list.map(catalogRowHtml).join('');
         }

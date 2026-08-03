@@ -47,6 +47,8 @@ class OcrLetterExtractionService
         [$rawText, $engine] = $this->readTextFromUpload($file);
 
         $parsed = OcrLetterParser::parse($rawText, $hints);
+        $printTotals = QuotePrintPresenter::fromQuote($quote);
+        $amountFromOcr = array_key_exists('approved_amount', $parsed);
 
         return [
             'patient_name' => $parsed['patient_name'] ?? $defaults['patient_name'],
@@ -56,6 +58,11 @@ class OcrLetterExtractionService
             'letter_date' => $parsed['letter_date'] ?? null,
             'ocr_engine' => $engine,
             'raw_text_length' => mb_strlen(OcrLetterParser::normalizeText($rawText)),
+            'amount_from_ocr' => $amountFromOcr,
+            'used_quote_defaults' => ! $amountFromOcr || trim($rawText) === '',
+            'expected_net' => (float) $printTotals['display_total'],
+            'expected_gross' => (float) $printTotals['gross_total'],
+            'has_contract_discount' => (bool) $printTotals['has_discount'],
         ];
     }
 

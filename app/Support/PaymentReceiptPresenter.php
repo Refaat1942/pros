@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\PaymentMethod;
 use App\Models\Payment;
+use App\Support\ContractBillingSplit;
 
 /**
  * يجهّز بيانات إيصال الدفع للطباعة — رقم الإيصال (السيريال)، المبلغ رقماً وكتابةً،
@@ -31,20 +32,37 @@ class PaymentReceiptPresenter
      */
     public static function fromPayment(Payment $payment): array
     {
-        $payment->loadMissing(['caseRecord', 'patient']);
+        $payment->loadMissing(['caseRecord', 'patient', 'caseRecord.quotes']);
 
         $case = $payment->caseRecord;
         $method = PaymentMethod::tryFrom((string) $payment->method);
         $amount = round((float) $payment->amount, 2);
 
+        $quote = $case?->quotes?->sortByDesc('id')->first();
+        $amountDue = $case
+            ? ContractBillingSplit::patientDue($case, (float) ($quote?->total ?? $case->quote_total ?? 0))
+            : $amount;
+        $paidTotal = $case ? (float) $case->paid : $amount;
+        $remaining = max(0, round($amountDue - $paidTotal, 2));
+        $installmentNo = (int) ($payment->installment_no ?: 1);
+        $installmentCount = $case
+            ? Payment::query()->where('case_id', $case->id)->count()
+            : $installmentNo;
+
         return [
             'payment_no' => $payment->payment_no,
+            'installment_no' => $installmentNo,
+            'installment_label' => "دفعة {$installmentNo} من {$installmentCount}",
             'case_no' => $case?->case_no,
             'order_ref' => $case?->order_ref,
             'patient_serial' => $payment->patient?->patient_serial,
             'patient_name' => $payment->patient_name ?: ($payment->patient?->name ?? '—'),
             'entity' => $case?->displayEntity() ?? '—',
             'amount' => $amount,
+            'amount_due' => round($amountDue, 2),
+            'paid_total' => round($paidTotal, 2),
+            'remaining' => $remaining,
+            'fully_paid' => $remaining <= 0.009,
             'amount_words' => self::amountInWords($amount),
             'method_label' => $method?->label() ?? ($payment->method ?: '—'),
             'reference' => $payment->reference,

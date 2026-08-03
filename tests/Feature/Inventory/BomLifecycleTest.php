@@ -263,9 +263,16 @@ class BomLifecycleTest extends TestCase
 
         // complete() expects scanned lines: [{line_id, barcode, qty_returned}]
         $lineId = $returnNote->lines()->first()->id;
-        app(ReturnNoteService::class)->complete($returnNote, [
+        $result = app(ReturnNoteService::class)->complete($returnNote, [
             ['line_id' => $lineId, 'barcode' => 'BC-RM-001', 'qty_returned' => 1],
         ]);
+
+        $this->assertCount(1, $result['stock_updates']);
+        $update = $result['stock_updates'][0];
+        $this->assertSame('RM-001', $update['stock_item_code']);
+        $this->assertSame($qtyAfterDispense, $update['qty_before']);
+        $this->assertSame($qtyAfterDispense + 1, $update['qty_after']);
+        $this->assertGreaterThan(0, $update['line_value']);
 
         $item->refresh();
         $this->assertEquals($qtyAfterDispense + 1, $item->qty,

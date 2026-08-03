@@ -89,8 +89,9 @@ class ReturnNoteService
      * إتمام الارتجاع — مسح باركود وإرجاع الكميات للمخزون.
      *
      * @param  list<array{line_id: int, barcode: string, qty_returned: int}>  $scannedLines
+     * @return array{note: ReturnNote, stock_updates: list<array{stock_item_code: string, name: string, qty_returned: int, qty_before: int, qty_after: int, unit_cost: float, line_value: float}>}
      */
-    public function complete(ReturnNote $note, array $scannedLines): ReturnNote
+    public function complete(ReturnNote $note, array $scannedLines): array
     {
         return DB::transaction(function () use ($note, $scannedLines) {
             $note = ReturnNote::lockForUpdate()
@@ -106,6 +107,7 @@ class ReturnNoteService
             }
 
             $stockBefore = [];
+            $stockUpdates = [];
             $performedById = Auth::id();
 
             foreach ($scannedLines as $scan) {
@@ -129,17 +131,21 @@ class ReturnNoteService
                 $stockItem = StockItem::findByOperationalCode($line->stock_item_code, true)
                     ?? abort(422, "الصنف غير موجود: {$line->stock_item_code}");
 
-                $stockBefore[$stockItem->code] = [
-                    'qty' => $stockItem->qty,
-                ];
+                if (! isset($stockBefore[$stockItem->code])) {
+                    $stockBefore[$stockItem->code] = [
+                        'qty' => $stockItem->qty,
+                    ];
+                }
 
-                $balanceAfter = $stockItem->qty + $qtyReturned;
+                $qtyBefore = (int) $stockItem->qty;
+                $unitCost = round((float) $stockItem->wac, 4);
+                $balanceAfter = $qtyBefore + $qtyReturned;
 
                 StockMovement::create([
                     'stock_item_id' => $stockItem->id,
                     'movement_type' => StockMovement::TYPE_RETURN,
                     'quantity' => $qtyReturned,
-                    'unit_cost' => $stockItem->wac,
+                    'unit_cost' => $unitCost,
                     'balance_after' => $balanceAfter,
                     'reference_type' => 'return_note',
                     'reference_id' => $note->id,
@@ -154,6 +160,16 @@ class ReturnNoteService
                 $stockItem->recalculateAndSaveStatus();
 
                 $line->increment('qty_returned', $qtyReturned);
+
+                $stockUpdates[] = [
+                    'stock_item_code' => $line->stock_item_code,
+                    'name' => $line->name,
+                    'qty_returned' => $qtyReturned,
+                    'qty_before' => $qtyBefore,
+                    'qty_after' => $balanceAfter,
+                    'unit_cost' => $unitCost,
+                    'line_value' => round($qtyReturned * $unitCost, 2),
+                ];
 
                 $bomItem = $note->bom?->items->firstWhere('stock_item_code', $line->stock_item_code);
                 if ($bomItem) {
@@ -188,7 +204,10 @@ class ReturnNoteService
                 after: $stockAfter,
             );
 
-            return $note->fresh()->load('lines');
+            return [
+                'note' => $note->fresh()->load('lines'),
+                'stock_updates' => $stockUpdates,
+            ];
         });
     }
 
