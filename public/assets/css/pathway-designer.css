@@ -129,6 +129,16 @@
     color: #92400e;
 }
 
+.pathway-matrix__badge--optional {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.pathway-matrix__badge--auto {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .pathway-flow-map {
     margin: 0 16px 16px;
     padding: 12px 14px;
@@ -333,6 +343,21 @@
     font-size: 13px;
     font-weight: 800;
     color: #334155;
+}
+
+.pf-skip-desc {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+.pf-skip-roles-label {
+    width: 100%;
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
 }
 
 .pathway-designer-error {

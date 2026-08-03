@@ -93,6 +93,64 @@
         return html;
     }
 
+    function skipBadges(st) {
+        if (!st || st.locked) return '';
+        var html = '';
+        if (st.required === false) {
+            html += '<span class="pathway-matrix__badge pathway-matrix__badge--optional">⏭️ قابل للتخطي</span>';
+        }
+        if (st.auto_skip) {
+            html += '<span class="pathway-matrix__badge pathway-matrix__badge--auto">⚡ تخطي تلقائي</span>';
+        }
+        return html;
+    }
+
+    function isSharedRow(rowIdx) {
+        return rowIdx < 5 && labelsMatchAcrossRow(rowIdx);
+    }
+
+    function syncSharedRowField(rowIdx, field, value) {
+        if (!isSharedRow(rowIdx)) return;
+        pathwayOrder.forEach(function (pk) {
+            if (state[pk][rowIdx]) {
+                state[pk][rowIdx][field] = value;
+            }
+        });
+    }
+
+    function refreshViews(opts) {
+        opts = opts || {};
+        if (opts.matrix !== false) renderMatrix();
+        if (opts.flow !== false) renderFlowMap(state[activePathway]);
+        if (opts.hint !== false) updateHint();
+        if (opts.editor === true) renderEditor();
+    }
+
+    function updateEditorLiveFields() {
+        if (activeStepIdx === null) return;
+        var step = state[activePathway][activeStepIdx];
+        var editor = document.getElementById('pathwayStepEditor');
+        if (!editor || editor.hidden || !step) return;
+        var meta = pathwayMeta[activePathway] || { label: activePathway, icon: '' };
+        var title = editor.querySelector('.pf-title');
+        var hint = editor.querySelector('.pf-step-hint');
+        if (title) title.textContent = meta.icon + ' ' + meta.label + ' — ' + step.label;
+        if (hint) hint.textContent = '👤 ' + deptLabel(step.owner_department);
+    }
+
+    function updateSkipControls() {
+        if (activeStepIdx === null) return;
+        var step = state[activePathway][activeStepIdx];
+        var editor = document.getElementById('pathwayStepEditor');
+        if (!editor || editor.hidden || !step) return;
+        var reqSel = editor.querySelector('[data-f="required"]');
+        var autoSel = editor.querySelector('[data-f="auto_skip"]');
+        if (reqSel) reqSel.value = step.required !== false ? '1' : '0';
+        if (autoSel) {
+            autoSel.disabled = step.required !== false;
+            autoSel.value = step.auto_skip ? '1' : '0';
+        }
+    }
     function labelsMatchAcrossRow(rowIdx) {
         var labels = [];
         pathwayOrder.forEach(function (pk) {
@@ -118,10 +176,12 @@
             if (shared) {
                 var step = state.civilian[row] || state.military[row] || state.entity[row];
                 var label = step ? step.label : '—';
+                var badges = step ? skipBadges(step) : '';
                 body += '<td class="pathway-matrix__cell pathway-matrix__cell--shared" colspan="3">'
                     + '<button type="button" class="pathway-matrix__btn pathway-matrix__btn--shared" data-shared-row="' + row + '">'
                     + esc(label)
-                    + '<span class="pathway-matrix__btn-sub">مشترك — اضغط للتعديل (مدني)</span>'
+                    + '<span class="pathway-matrix__btn-sub">مشترك — يُحدَّث في الجدول فوراً</span>'
+                    + badges
                     + '</button></td>';
             } else {
                 pathwayOrder.forEach(function (pk) {
@@ -132,7 +192,7 @@
                         return;
                     }
                     var cls = 'pathway-matrix__btn' + (selected ? ' is-selected' : '') + (st.locked ? ' is-locked' : '');
-                    var badge = st.auto_skip ? '<span class="pathway-matrix__badge">تخطي تلقائي</span>' : '';
+                    var badge = skipBadges(st);
                     body += '<td class="pathway-matrix__cell">'
                         + '<button type="button" class="' + cls + '" data-pathway="' + pk + '" data-idx="' + row + '">'
                         + esc(st.label)
@@ -171,8 +231,7 @@
         if (!state[pathway] || !state[pathway][idx]) return;
         activePathway = pathway;
         activeStepIdx = idx;
-        updateHint();
-        render();
+        refreshViews({ editor: true });
     }
 
     function updateHint() {
@@ -264,16 +323,17 @@
         var skipBlock = '';
         if (step.can_skip !== false && !locked) {
             skipBlock = '<div class="pf-skip-row">'
-                + '<p class="pf-skip-title">⏭️ تخطي هذه الخطوة (اختياري)</p>'
-                + '<label class="pf-field"><span>هل يمكن تخطيها؟</span><select data-f="required">'
-                + '<option value="1"' + (step.required !== false ? ' selected' : '') + '>لا — إلزامية</option>'
-                + '<option value="0"' + (step.required === false ? ' selected' : '') + '>نعم — يمكن تخطيها</option>'
+                + '<p class="pf-skip-title">⏭️ تخطي هذه الخطوة — للحالات الخاصة</p>'
+                + '<p class="pf-skip-desc">فعّل التخطي عندما تختلف الحالة (مثلاً: بدون كشف، بدون معدلات، تخطي الخزنة للعسكري).</p>'
+                + '<label class="pf-field"><span>هل الخطوة إلزامية؟</span><select data-f="required">'
+                + '<option value="1"' + (step.required !== false ? ' selected' : '') + '>نعم — إلزامية (لا تُتخطى)</option>'
+                + '<option value="0"' + (step.required === false ? ' selected' : '') + '>لا — اختيارية (يمكن تخطيها)</option>'
                 + '</select></label>'
-                + '<label class="pf-field"><span>تخطي تلقائي؟</span><select data-f="auto_skip"' + (step.required !== false ? ' disabled' : '') + '>'
-                + '<option value="0"' + (!step.auto_skip ? ' selected' : '') + '>لا</option>'
-                + '<option value="1"' + (step.auto_skip ? ' selected' : '') + '>نعم — تخطي فوري</option>'
+                + '<label class="pf-field"><span>تخطي تلقائي عند الوصول؟</span><select data-f="auto_skip"' + (step.required !== false ? ' disabled' : '') + '>'
+                + '<option value="0"' + (!step.auto_skip ? ' selected' : '') + '>لا — يحتاج قرار يدوي</option>'
+                + '<option value="1"' + (step.auto_skip ? ' selected' : '') + '>نعم — تخطي فوري تلقائياً</option>'
                 + '</select></label>'
-                + '<div class="pf-skip-roles">' + roleChecks + '</div>'
+                + '<div class="pf-skip-roles"><p class="pf-skip-roles-label">من يستطيع التخطي يدوياً؟</p>' + roleChecks + '</div>'
                 + '</div>';
         } else if (locked && step.lock_reason) {
             skipBlock = '<p class="pf-lock-note">🔒 ' + esc(step.lock_reason) + '</p>';
@@ -303,30 +363,48 @@
         bindEditorEvents();
     }
 
+    function applyField(field, value) {
+        if (activeStepIdx === null) return;
+        var step = state[activePathway][activeStepIdx];
+        if (!step) return;
+
+        if (field === 'required' || field === 'auto_skip') {
+            step[field] = value === '1' || value === true;
+        } else {
+            step[field] = value;
+        }
+
+        if (field === 'required' && step.required) {
+            step.auto_skip = false;
+        }
+
+        if (field === 'label' || field === 'owner_department') {
+            syncSharedRowField(activeStepIdx, field, value);
+        }
+
+        if (field === 'label' || field === 'action_summary') {
+            refreshViews({ editor: false });
+            updateEditorLiveFields();
+            return;
+        }
+
+        if (field === 'required' || field === 'auto_skip') {
+            refreshViews({ editor: false });
+            updateSkipControls();
+            return;
+        }
+
+        refreshViews({ editor: field === 'next_step_key' });
+    }
+
     function bindEditorEvents() {
         var editor = document.getElementById('pathwayStepEditor');
         if (!editor || editor.dataset.bound) return;
         editor.dataset.bound = '1';
 
-        function applyField(field, value) {
-            if (activeStepIdx === null) return;
-            var step = state[activePathway][activeStepIdx];
-            if (!step) return;
-            if (field === 'required' || field === 'auto_skip') {
-                step[field] = value === '1' || value === true;
-            } else {
-                step[field] = value;
-            }
-            if (field === 'required' && step.required) {
-                step.auto_skip = false;
-            }
-            render();
-        }
-
         editor.addEventListener('input', function (e) {
-            var t = e.target;
-            var field = t.getAttribute('data-f');
-            if (field) applyField(field, t.value);
+            var field = e.target.getAttribute('data-f');
+            if (field) applyField(field, e.target.value);
         });
 
         editor.addEventListener('change', function (e) {
@@ -339,20 +417,21 @@
             if (t.hasAttribute('data-h') && activeStepIdx !== null) {
                 state[activePathway][activeStepIdx].handlers = state[activePathway][activeStepIdx].handlers || {};
                 state[activePathway][activeStepIdx].handlers[t.getAttribute('data-h')] = t.value;
+                refreshViews({ editor: false });
+                updateEditorLiveFields();
             }
             if (t.hasAttribute('data-role') && activeStepIdx !== null) {
                 var roles = state[activePathway][activeStepIdx].skip_roles || [];
                 if (t.checked && roles.indexOf(t.getAttribute('data-role')) < 0) roles.push(t.getAttribute('data-role'));
                 if (!t.checked) roles = roles.filter(function (r) { return r !== t.getAttribute('data-role'); });
                 state[activePathway][activeStepIdx].skip_roles = roles;
+                refreshViews({ editor: false });
             }
         });
     }
 
     function render() {
-        renderMatrix();
-        renderFlowMap(state[activePathway]);
-        renderEditor();
+        refreshViews({ editor: activeStepIdx !== null });
     }
 
     function savePathway(pathway) {
