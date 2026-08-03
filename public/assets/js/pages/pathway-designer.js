@@ -170,8 +170,11 @@
         return html;
     }
 
+    /** صفوف مشتركة: استقبال → كشف → توصيف → معدلات فقط. التكاليف وما بعدها لكل مسار على حدة. */
+    var SHARED_ROW_LIMIT = 4;
+
     function syncSharedRowField(rowIdx, field, value) {
-        if (rowIdx >= 5) return;
+        if (rowIdx >= SHARED_ROW_LIMIT) return;
         pathwayOrder.forEach(function (pk) {
             if (state[pk][rowIdx]) {
                 state[pk][rowIdx][field] = value;
@@ -198,7 +201,7 @@
         var step = state[pathway] && state[pathway][rowIdx];
         if (!step) return false;
 
-        var shared = rowIdx < 5 && labelsMatchAcrossRow(rowIdx);
+        var shared = rowIdx < SHARED_ROW_LIMIT && labelsMatchAcrossRow(rowIdx);
         var btn;
 
         if (shared) {
@@ -227,7 +230,7 @@
     }
 
     function patchMatrixRow(rowIdx) {
-        if (rowIdx < 5 && labelsMatchAcrossRow(rowIdx)) {
+        if (rowIdx < SHARED_ROW_LIMIT && labelsMatchAcrossRow(rowIdx)) {
             return patchMatrixCell('civilian', rowIdx);
         }
         var patched = false;
@@ -245,7 +248,7 @@
 
         var patchable = ['label', 'owner_department', 'required', 'auto_skip', 'skip_roles'];
         if (patchable.indexOf(field) >= 0) {
-            var shared = activeStepIdx < 5 && labelsMatchAcrossRow(activeStepIdx);
+            var shared = activeStepIdx < SHARED_ROW_LIMIT && labelsMatchAcrossRow(activeStepIdx);
             var patched = shared
                 ? patchMatrixRow(activeStepIdx)
                 : patchMatrixCell(activePathway, activeStepIdx);
@@ -326,7 +329,7 @@
 
         var body = '';
         for (var row = 0; row < maxRows; row++) {
-            var shared = row < 5 && labelsMatchAcrossRow(row);
+            var shared = row < SHARED_ROW_LIMIT && labelsMatchAcrossRow(row);
             body += '<tr><td class="pathway-matrix__num">' + (row + 1) + '</td>';
 
             if (shared) {
