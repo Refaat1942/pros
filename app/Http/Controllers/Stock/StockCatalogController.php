@@ -247,7 +247,7 @@ class StockCatalogController extends Controller
      * يبني قائمة الملصقات (اسم + باركود + SVG) مع تكرار النسخ.
      *
      * @param  list<StockItem>  $items
-     * @return list<array{name:string, barcode:string, svg:string}>
+     * @return list<array{name:string, barcode:string, svg:string, svg_data_uri:string}>
      */
     private function buildLabels(array $items, int $copies, float $moduleWidth, int $height): array
     {
@@ -255,11 +255,13 @@ class StockCatalogController extends Controller
 
         foreach ($items as $item) {
             $svg = Code128::svg((string) $item->barcode, height: $height, moduleWidth: $moduleWidth);
+            $dataUri = 'data:image/svg+xml;base64,'.base64_encode($svg);
             for ($i = 0; $i < $copies; $i++) {
                 $labels[] = [
                     'name' => (string) $item->name,
                     'barcode' => (string) $item->barcode,
                     'svg' => $svg,
+                    'svg_data_uri' => $dataUri,
                 ];
             }
         }

@@ -284,7 +284,7 @@ class ChecklistFeaturesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('BC-RM-LBL');
-        $response->assertSee('<svg', false);
+        $response->assertSee('data:image/svg+xml;base64,', false);
     }
 
     public function test_bulk_barcode_labels_render_multiple_items_with_settings(): void

@@ -30,7 +30,7 @@
             </div>
             <div class="actions">
                 <button type="button" class="secondary" onclick="applySettings()">↻ تطبيق</button>
-                <button type="button" onclick="window.print()">🖨️ طباعة</button>
+                <button type="button" onclick="printLabels()">🖨️ طباعة</button>
                 <span class="count">{{ count($labels) }} ملصق</span>
             </div>
         </form>
@@ -40,7 +40,12 @@
         @foreach ($labels as $label)
             <div class="label">
                 <div class="name">{{ $label['name'] }}</div>
-                <div class="barcode">{!! $label['svg'] !!}</div>
+                <div class="barcode">
+                    <img class="barcode-img"
+                         src="{{ $label['svg_data_uri'] }}"
+                         alt="{{ $label['barcode'] }}"
+                         decoding="sync">
+                </div>
                 <div class="code">{{ $label['barcode'] }}</div>
             </div>
         @endforeach
@@ -53,6 +58,24 @@
             var params = new URLSearchParams(window.location.search);
             new FormData(form).forEach(function (value, key) { params.set(key, value); });
             window.location.search = params.toString();
+        }
+
+        function printLabels() {
+            var imgs = document.querySelectorAll('.barcode-img');
+            var waits = Array.prototype.map.call(imgs, function (img) {
+                if (img.complete) {
+                    return Promise.resolve();
+                }
+
+                return new Promise(function (resolve) {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                });
+            });
+
+            Promise.all(waits).then(function () {
+                window.print();
+            });
         }
     </script>
 </body>

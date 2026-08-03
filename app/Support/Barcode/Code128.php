@@ -60,8 +60,9 @@ final class Code128
         }
 
         return '<svg xmlns="http://www.w3.org/2000/svg" width="'.$svgWidth.'" height="'.$height
-            .'" viewBox="0 0 '.$svgWidth.' '.$height.'" preserveAspectRatio="none">'
-            .'<rect width="100%" height="100%" fill="#fff"/>'.$rects.'</svg>';
+            .'" viewBox="0 0 '.$svgWidth.' '.$height.'" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">'
+            .'<rect width="100%" height="100%" fill="#ffffff"/>'
+            .$rects.'</svg>';
     }
 
     /**
