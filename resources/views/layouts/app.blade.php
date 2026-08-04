@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="@yield('viewport', 'width=device-width, initial-scale=1.0')">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="prosthetics-assets" content="{{ config('assets.use_local') ? 'local' : 'cdn' }}">
     <title>@yield('title', config('app.name'))</title>
 
     @include('partials.web-fonts')

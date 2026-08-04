@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="prosthetics-assets" content="{{ config('assets.use_local') ? 'local' : 'cdn' }}">
     <title>تسجيل الدخول — {{ $dashboardConfig['sidebar']['title'] ?? $dashboardConfig['title'] }}</title>
     @include('partials.web-fonts')
     <link rel="stylesheet" href="{{ asset('assets/css/auth.css') }}">
