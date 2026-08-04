@@ -1,5 +1,8 @@
 @push('styles')
-<script src="https://cdn.tailwindcss.com"></script>
+@include('partials.dashboard-tailwind')
+@endpush
+
+@push('tailwind-theme')
 <script>
   tailwind.config = {
     theme: {
@@ -217,5 +220,5 @@
 </div>
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="{{ asset('assets/vendor/axios.min.js') }}?v={{ filemtime(public_path('assets/vendor/axios.min.js')) }}"></script>
 @endpush

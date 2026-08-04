@@ -4,10 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>متابعة الطلب — مركز الأطراف الصناعية</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    @if (config('assets.use_local'))
+        <link rel="stylesheet" href="{{ asset(config('assets.tailwind_css')) }}?v={{ filemtime(public_path(config('assets.tailwind_css'))) }}">
+        <link rel="stylesheet" href="{{ asset('assets/css/fonts-tajawal.css') }}?v={{ filemtime(public_path('assets/css/fonts-tajawal.css')) }}">
+    @else
+        <script src="{{ config('assets.tailwind_cdn') }}"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    @endif
     <style>
         body { font-family: 'Tajawal', sans-serif; }
     </style>

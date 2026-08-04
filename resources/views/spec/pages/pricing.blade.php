@@ -1,5 +1,11 @@
 @push('styles')
-<script src="https://cdn.tailwindcss.com"></script>
+@include('partials.dashboard-tailwind')
+@endpush
+
+@push('tailwind-theme')
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: { sans: ['Tajawal', 'sans-serif'] } } } }
+</script>
 @endpush
 
 @php

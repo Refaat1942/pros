@@ -1,5 +1,8 @@
 @push('styles')
-<script src="https://cdn.tailwindcss.com"></script>
+@include('partials.dashboard-tailwind')
+@endpush
+
+@push('tailwind-theme')
 <script>
   tailwind.config = {
     theme: {
