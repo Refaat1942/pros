@@ -8,6 +8,8 @@ use App\Models\StockKit;
 use App\Services\StockKitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class StockKitController extends Controller
 {
@@ -25,24 +27,37 @@ class StockKitController extends Controller
     public function searchItems(Request $request): JsonResponse
     {
         $q = trim((string) $request->input('q', ''));
-        $limit = min(50, max(5, (int) $request->input('limit', 30)));
+        $limit = min(60, max(10, (int) $request->input('limit', 40)));
 
-        $query = StockItem::query()
-            ->orderBy('name')
-            ->limit($limit);
+        $query = StockItem::query();
 
         if ($q !== '') {
             $like = '%'.$q.'%';
-            $query->where(function ($builder) use ($like) {
+            $prefix = $q.'%';
+            $query->where(function ($builder) use ($like, $prefix) {
                 $builder->where('name', 'like', $like)
-                    ->orWhere('catalog_number', 'like', $like)
-                    ->orWhere('alt_codes', 'like', $like)
+                    ->orWhere('name', 'like', $prefix)
                     ->orWhere('code', 'like', $like)
+                    ->orWhere('alt_codes', 'like', $like)
                     ->orWhere('page_number', 'like', $like);
+
+                if (Schema::hasColumn('stock_items', 'catalog_number')) {
+                    $builder->orWhere('catalog_number', 'like', $like);
+                }
             });
+
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                $query->orderByRaw('CASE WHEN name ILIKE ? THEN 0 WHEN name ILIKE ? THEN 1 ELSE 2 END', [$prefix, $like]);
+            } else {
+                $query->orderBy('name');
+            }
+        } else {
+            $query->orderBy('name');
         }
 
-        $items = $query->get(['id', 'code', 'catalog_number', 'name', 'alt_codes', 'page_number', 'uom'])
+        $items = $query
+            ->limit($limit)
+            ->get(['id', 'code', 'catalog_number', 'name', 'alt_codes', 'page_number', 'uom'])
             ->map(fn (StockItem $item) => [
                 'id' => $item->id,
                 'code' => $item->operationalCode() ?: ($item->catalog_number ?? $item->code),

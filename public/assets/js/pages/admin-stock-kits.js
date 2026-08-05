@@ -11,6 +11,7 @@
   var selectedComponents = [];
   var searchTimer = null;
   var lastSearchResults = [];
+  var searchRequestId = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -93,7 +94,6 @@
 
   function renderComponentsTable() {
     var tbody = $('stockKitComponentsBody');
-    var empty = $('stockKitComponentsEmpty');
     var countEl = $('stockKitComponentsCount');
     if (!tbody) return;
 
@@ -102,16 +102,15 @@
     }
 
     if (!selectedComponents.length) {
-      tbody.innerHTML = '<tr id="stockKitComponentsEmpty"><td colspan="5" class="stock-kit-empty-cell">ابحث عن الأصناف وأضفها من القائمة أعلاه</td></tr>';
+      tbody.innerHTML = '<tr id="stockKitComponentsEmpty"><td colspan="6" class="stock-kit-empty-cell">ابحث أعلاه وأضف الأصناف — يمكنك إضافة أكثر من صنف</td></tr>';
       return;
     }
 
     tbody.innerHTML = selectedComponents.map(function (c) {
       return '<tr data-item-id="' + c.stock_item_id + '">' +
-        '<td dir="ltr" style="font-family:monospace;font-size:12px;">' + esc(c.code) + '</td>' +
-        '<td><strong>' + esc(c.name) + '</strong>' +
-          (c.page_number ? '<div style="font-size:11px;color:#94a3b8;">صفحة: ' + esc(c.page_number) + '</div>' : '') +
-        '</td>' +
+        '<td dir="ltr" style="font-family:monospace;font-size:13px;">' + esc(c.code) + '</td>' +
+        '<td><strong>' + esc(c.name) + '</strong></td>' +
+        '<td style="color:#64748b;">' + esc(c.page_number || '—') + '</td>' +
         '<td style="text-align:center;color:#64748b;">' + esc(c.uom) + '</td>' +
         '<td><input type="number" class="stock-kit-qty-input kit-comp-qty" min="1" value="' + (c.qty || 1) + '" data-id="' + c.stock_item_id + '"></td>' +
         '<td><button type="button" class="btn-action danger kit-comp-remove" data-id="' + c.stock_item_id + '" title="إزالة">✕</button></td>' +
@@ -133,19 +132,36 @@
     });
   }
 
+  function showSearchLoading() {
+    var wrap = $('stockKitItemResults');
+    if (wrap) {
+      wrap.innerHTML = '<div class="stock-kit-results-loading">⏳ جاري البحث في الكتالوج...</div>';
+    }
+  }
+
+  function showSearchError(message) {
+    var wrap = $('stockKitItemResults');
+    if (wrap) {
+      wrap.innerHTML = '<div class="stock-kit-results-error">' + esc(message) + '</div>';
+    }
+  }
+
   function renderSearchResults(items, query) {
     var wrap = $('stockKitItemResults');
     if (!wrap) return;
 
     lastSearchResults = items || [];
+    var q = String(query || '').trim();
 
-    if (!query || !String(query).trim()) {
-      wrap.innerHTML = '<div class="stock-kit-results-empty">اكتب اسم الصنف للبحث — مثال: ركبة، كف، مفصل...</div>';
-      return;
+    if (!q) {
+      if (!items.length) {
+        wrap.innerHTML = '<div class="stock-kit-results-empty">اكتب حرفاً أو أكثر — مثال: <strong>رك</strong> لإظهار كل الأصناف التي تحتوي «رك» في الاسم</div>';
+        return;
+      }
     }
 
-    if (!items.length) {
-      wrap.innerHTML = '<div class="stock-kit-results-empty">لا توجد أصناف مطابقة لـ «' + esc(query) + '»</div>';
+    if (q && !items.length) {
+      wrap.innerHTML = '<div class="stock-kit-results-empty">لا توجد أصناف مطابقة لـ «' + esc(q) + '» — جرّب جزءاً من الاسم أو الكود</div>';
       return;
     }
 
@@ -153,7 +169,7 @@
       var added = isComponentAdded(item.id);
       return '<button type="button" class="stock-kit-item-result' + (added ? ' is-added' : '') + '" data-id="' + item.id + '">' +
         '<span class="stock-kit-item-result__meta">' +
-          '<span class="stock-kit-item-result__code">' + esc(itemDisplayCode(item)) + '</span> ' +
+          '<span class="stock-kit-item-result__code">' + esc(itemDisplayCode(item)) + '</span>' +
           '<span class="stock-kit-item-result__name">' + esc(item.name) + '</span>' +
           (item.page_number ? '<span class="stock-kit-item-result__page">صفحة ' + esc(item.page_number) + '</span>' : '') +
         '</span>' +
@@ -170,25 +186,41 @@
     });
   }
 
-  function searchItems(query) {
+  function searchItems(query, options) {
+    options = options || {};
     var q = (query || '').trim();
-    if (!q) {
-      renderSearchResults([], '');
-      return;
+    var requestId = ++searchRequestId;
+
+    if (!options.silent) {
+      showSearchLoading();
     }
 
-    axios.get('/admin/stock-kits/search-items', { params: { q: q, limit: 40 } })
+    axios.get('/admin/stock-kits/search-items', { params: { q: q, limit: 50 } })
       .then(function (res) {
+        if (requestId !== searchRequestId) return;
         renderSearchResults(res.data.data || [], q);
       })
-      .catch(function () {
-        renderSearchResults([], q);
+      .catch(function (err) {
+        if (requestId !== searchRequestId) return;
+        var msg = 'تعذّر البحث في الأصناف';
+        if (err.response) {
+          if (err.response.status === 403) msg = 'لا تملك صلاحية البحث في الكتالوج';
+          else if (err.response.status === 404) msg = 'مسار البحث غير موجود — حدّث النظام (git pull)';
+          else if (err.response.data && err.response.data.message) msg = err.response.data.message;
+        }
+        showSearchError(msg);
+        lastSearchResults = [];
       });
   }
 
   function scheduleSearch(query) {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(function () { searchItems(query); }, 220);
+    var q = (query || '').trim();
+    if (!q) {
+      searchItems('', { silent: true });
+      return;
+    }
+    searchTimer = setTimeout(function () { searchItems(q); }, 180);
   }
 
   function openModal(kit) {
@@ -196,7 +228,7 @@
     $('stockKitModalTitle').textContent = kit ? '✏️ تعديل طقم' : '➕ طقم جديد';
     $('stockKitModalSubtitle').textContent = kit
       ? ('كود الطقم: ' + (kit.code || '—'))
-      : 'ابحث عن الأصناف وأضفها للطقم — مثل شاشة التوصيف';
+      : 'ابحث في المربع أدناه (مثال: رك) — ليس في اسم الطقم';
     $('stockKitName').value = kit ? kit.name : '';
     $('stockKitType').value = kit ? kit.type : 'assembly';
     $('stockKitDescription').value = kit ? (kit.description || '') : '';
@@ -221,8 +253,12 @@
     $('stockKitModal').removeAttribute('hidden');
 
     setTimeout(function () {
-      if ($('stockKitName') && !kit) $('stockKitName').focus();
-    }, 50);
+      var searchEl = $('stockKitItemSearch');
+      if (searchEl) {
+        searchEl.focus();
+        searchItems('', { silent: true });
+      }
+    }, 80);
   }
 
   function closeModal() {
@@ -230,6 +266,7 @@
     $('stockKitModal').setAttribute('hidden', '');
     selectedComponents = [];
     clearTimeout(searchTimer);
+    searchRequestId++;
   }
 
   function collectComponents() {
@@ -245,11 +282,13 @@
     if (!$('stockKitName').value.trim()) {
       err.textContent = 'اسم الطقم مطلوب.';
       err.style.display = 'block';
+      $('stockKitName').focus();
       return;
     }
     if (!items.length) {
-      err.textContent = 'أضف مكوّناً واحداً على الأقل من البحث.';
+      err.textContent = 'أضف مكوّناً واحداً على الأقل من البحث أعلاه.';
       err.style.display = 'block';
+      $('stockKitItemSearch').focus();
       return;
     }
     var payload = {
@@ -280,6 +319,12 @@
 
   $('stockKitItemSearch') && $('stockKitItemSearch').addEventListener('input', function () {
     scheduleSearch(this.value);
+  });
+
+  $('stockKitItemSearch') && $('stockKitItemSearch').addEventListener('focus', function () {
+    if (!lastSearchResults.length && !this.value.trim()) {
+      searchItems('', { silent: true });
+    }
   });
 
   $('stockKitItemSearch') && $('stockKitItemSearch').addEventListener('keydown', function (e) {
