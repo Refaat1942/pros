@@ -133,6 +133,10 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,stock-kits')->group(function () {
             Route::get('stock-kits/templates', [\App\Http\Controllers\Admin\StockKitController::class, 'templates'])
                 ->name('stock-kits.templates');
+            Route::post('stock-kits/groups', [\App\Http\Controllers\Admin\StockKitController::class, 'storeGroup'])
+                ->name('stock-kits.groups.store');
+            Route::delete('stock-kits/groups/{groupKey}', [\App\Http\Controllers\Admin\StockKitController::class, 'destroyGroup'])
+                ->name('stock-kits.groups.destroy');
             Route::get('stock-kits/search-items', [\App\Http\Controllers\Admin\StockKitController::class, 'searchItems'])
                 ->name('stock-kits.search-items');
             Route::get('stock-kits/list', [\App\Http\Controllers\Admin\StockKitController::class, 'index'])

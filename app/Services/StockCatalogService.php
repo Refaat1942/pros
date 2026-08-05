@@ -96,6 +96,7 @@ class StockCatalogService
             'code' => $item->code,
             'catalog_number' => $item->catalog_number ?? $item->code,
             'operational_code' => $item->operationalCode() ?? '',
+            'picker_code' => $item->pickerCode(),
             'page_number' => $item->page_number ?? '',
             'barcode' => $item->barcode,
             'alt_codes' => $item->alt_codes ?? '',

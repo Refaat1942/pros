@@ -4,7 +4,7 @@ namespace App\Support;
 
 use App\Models\StockItem;
 
-/** خريطة كود الصنف (alt_codes) → وحدة القياس (uom) لعرضها في BOM والمعدلات والصرف. */
+/** خريطة كود الصنف (pickerCode) → وحدة القياس (uom) لعرضها في BOM والمعدلات والصرف. */
 final class StockItemUomLookup
 {
     /**

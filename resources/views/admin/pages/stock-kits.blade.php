@@ -28,6 +28,72 @@
     </div>
 </div>
 
+<div class="panel" id="stockKitGroupsPanel" style="margin-top:16px;">
+    <div class="panel-header">
+        <h3>🏷️ مجموعات التوصيف (قوالب الجروبينج)</h3>
+        <button type="button" class="btn-add-rank" id="btnAddSpecGroup">➕ مجموعة جديدة</button>
+    </div>
+    <p class="catalog-table-hint" style="margin:12px 16px 0;">
+        المجموعات تربط التشخيص (مثل ركبة) بالأطقم والمخصصات في التوصيف والمعدلات. لا تحذف مجموعة مرتبطة بأطقم.
+    </p>
+    <div class="panel-body">
+        <table>
+            <thead>
+                <tr>
+                    <th>المفتاح</th>
+                    <th>الاسم</th>
+                    <th>النوع الافتراضي</th>
+                    <th>كلمات التعرف</th>
+                    <th style="width:140px">إجراء</th>
+                </tr>
+            </thead>
+            <tbody id="stockKitGroupsTable"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="catalog-modal-overlay" id="stockKitGroupModal" role="dialog" aria-modal="true" hidden>
+    <div class="catalog-modal catalog-form-modal" style="width:min(520px,96vw);" onclick="event.stopPropagation()">
+        <div class="catalog-modal-header">
+            <div>
+                <h3 id="stockKitGroupModalTitle">➕ مجموعة توصيف</h3>
+            </div>
+            <button type="button" class="catalog-modal-close" id="closeStockKitGroupModal" aria-label="إغلاق">&times;</button>
+        </div>
+        <div class="catalog-modal-body" style="padding:20px;">
+            <input type="hidden" id="stockKitGroupPreviousKey">
+            <div style="margin-bottom:14px;">
+                <label class="stock-kit-label" for="stockKitGroupKey">المفتاح (إنجليزي)</label>
+                <input type="text" id="stockKitGroupKey" class="stock-kit-input" placeholder="knee" dir="ltr">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label class="stock-kit-label" for="stockKitGroupLabel">اسم المجموعة *</label>
+                <input type="text" id="stockKitGroupLabel" class="stock-kit-input" placeholder="ركبة">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label class="stock-kit-label" for="stockKitGroupIcon">أيقونة</label>
+                <input type="text" id="stockKitGroupIcon" class="stock-kit-input" maxlength="4" placeholder="🦵">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label class="stock-kit-label" for="stockKitGroupDefaultType">النوع الافتراضي للطقم</label>
+                <select id="stockKitGroupDefaultType" class="stock-kit-input">
+                    <option value="assembly">طقم جاهز</option>
+                    <option value="accessory">مخصصات</option>
+                </select>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label class="stock-kit-label" for="stockKitGroupKeywords">كلمات التعرف (مفصولة بفاصلة)</label>
+                <input type="text" id="stockKitGroupKeywords" class="stock-kit-input" placeholder="ركبة, ركبه, knee">
+            </div>
+            <div id="stockKitGroupError" class="catalog-form-error" style="display:none;"></div>
+        </div>
+        <div class="catalog-modal-footer">
+            <button type="button" class="btn-action" id="cancelStockKitGroupModal">إلغاء</button>
+            <button type="button" class="btn-action success" id="saveStockKitGroupBtn">💾 حفظ</button>
+        </div>
+    </div>
+</div>
+
 <div class="catalog-modal-overlay" id="stockKitModal" role="dialog" aria-modal="true" hidden>
     <div class="catalog-modal catalog-form-modal stock-kit-modal" onclick="event.stopPropagation()">
         <div class="catalog-modal-header">
@@ -130,6 +196,13 @@
         padding: 12px;
     }
     #stockKitModal.catalog-modal-overlay.open {
+        display: flex;
+    }
+    #stockKitGroupModal.catalog-modal-overlay {
+        z-index: 1260;
+        padding: 12px;
+    }
+    #stockKitGroupModal.catalog-modal-overlay.open {
         display: flex;
     }
     #stockKitModal .catalog-modal.stock-kit-modal {

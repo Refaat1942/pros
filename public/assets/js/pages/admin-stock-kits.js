@@ -373,7 +373,115 @@
       });
   }
 
+  function refreshGroupSelect() {
+    var sel = $('stockKitSpecGroup');
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '<option value="">— اختر المجموعة —</option>' +
+      kitGroups.map(function (g) {
+        return '<option value="' + esc(g.key) + '">' + esc((g.icon || '📦') + ' ' + g.label) + '</option>';
+      }).join('');
+    if (current) sel.value = current;
+  }
+
+  function renderGroupsTable() {
+    var tbody = $('stockKitGroupsTable');
+    if (!tbody) return;
+    tbody.innerHTML = kitGroups.map(function (g) {
+      return '<tr data-key="' + esc(g.key) + '">' +
+        '<td dir="ltr"><code>' + esc(g.key) + '</code></td>' +
+        '<td><strong>' + esc((g.icon || '') + ' ' + g.label) + '</strong></td>' +
+        '<td>' + esc(g.default_type === 'accessory' ? 'مخصصات' : 'طقم جاهز') + '</td>' +
+        '<td style="font-size:13px;color:#64748b;">' + esc((g.keywords || []).join('، ')) + '</td>' +
+        '<td><button type="button" class="btn-action group-edit">✏️</button> ' +
+        '<button type="button" class="btn-action danger group-del">🗑️</button></td></tr>';
+    }).join('') || '<tr><td colspan="5" class="empty-cell">لا توجد مجموعات</td></tr>';
+
+    tbody.querySelectorAll('.group-edit').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.closest('tr').getAttribute('data-key');
+        var g = kitGroups.find(function (x) { return x.key === key; });
+        if (g) openGroupModal(g);
+      });
+    });
+    tbody.querySelectorAll('.group-del').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.closest('tr').getAttribute('data-key');
+        if (!confirm('حذف مجموعة «' + key + '»؟')) return;
+        jsonFetch('/admin/stock-kits/groups/' + encodeURIComponent(key), { method: 'DELETE' })
+          .then(function (res) {
+            kitGroups = res.groups || [];
+            window.__STOCK_KIT_GROUPS__ = kitGroups;
+            renderGroupsTable();
+            refreshGroupSelect();
+            renderTemplateChips($('stockKitSpecGroup') ? $('stockKitSpecGroup').value : '');
+          })
+          .catch(function (e) {
+            alert((e.response && e.response.data && e.response.data.message) || e.message || 'تعذّر الحذف');
+          });
+      });
+    });
+  }
+
+  function openGroupModal(group) {
+    $('stockKitGroupPreviousKey').value = group ? group.key : '';
+    $('stockKitGroupKey').value = group ? group.key : '';
+    $('stockKitGroupKey').disabled = !!group;
+    $('stockKitGroupLabel').value = group ? group.label : '';
+    $('stockKitGroupIcon').value = group ? (group.icon || '📦') : '📦';
+    $('stockKitGroupDefaultType').value = group ? (group.default_type || 'assembly') : 'assembly';
+    $('stockKitGroupKeywords').value = group ? (group.keywords || []).join(', ') : '';
+    $('stockKitGroupModalTitle').textContent = group ? '✏️ تعديل مجموعة' : '➕ مجموعة جديدة';
+    $('stockKitGroupError').style.display = 'none';
+    $('stockKitGroupModal').classList.add('open');
+    $('stockKitGroupModal').removeAttribute('hidden');
+  }
+
+  function closeGroupModal() {
+    $('stockKitGroupModal').classList.remove('open');
+    $('stockKitGroupModal').setAttribute('hidden', '');
+  }
+
+  function saveGroup() {
+    var err = $('stockKitGroupError');
+    var payload = {
+      key: $('stockKitGroupKey').value.trim(),
+      previous_key: $('stockKitGroupPreviousKey').value || null,
+      label: $('stockKitGroupLabel').value.trim(),
+      icon: $('stockKitGroupIcon').value.trim() || '📦',
+      default_type: $('stockKitGroupDefaultType').value,
+      keywords: ($('stockKitGroupKeywords').value || '').split(/[,،]/).map(function (s) { return s.trim(); }).filter(Boolean),
+    };
+    if (!payload.key || !payload.label) {
+      err.textContent = 'المفتاح واسم المجموعة مطلوبان.';
+      err.style.display = 'block';
+      return;
+    }
+    jsonFetch('/admin/stock-kits/groups', { method: 'POST', body: payload })
+      .then(function (res) {
+        kitGroups = res.groups || [];
+        window.__STOCK_KIT_GROUPS__ = kitGroups;
+        closeGroupModal();
+        renderGroupsTable();
+        refreshGroupSelect();
+        renderTemplateChips(payload.key);
+      })
+      .catch(function (e) {
+        err.textContent = (e.response && e.response.data && e.response.data.message) || e.message || 'تعذّر الحفظ';
+        err.style.display = 'block';
+      });
+  }
+
   renderTemplateChips('');
+  renderGroupsTable();
+
+  $('btnAddSpecGroup') && $('btnAddSpecGroup').addEventListener('click', function () { openGroupModal(null); });
+  $('saveStockKitGroupBtn') && $('saveStockKitGroupBtn').addEventListener('click', saveGroup);
+  $('cancelStockKitGroupModal') && $('cancelStockKitGroupModal').addEventListener('click', closeGroupModal);
+  $('closeStockKitGroupModal') && $('closeStockKitGroupModal').addEventListener('click', closeGroupModal);
+  $('stockKitGroupModal') && $('stockKitGroupModal').addEventListener('click', function (e) {
+    if (e.target === $('stockKitGroupModal')) closeGroupModal();
+  });
 
   $('btnAddStockKit') && $('btnAddStockKit').addEventListener('click', function () { openModal(null); });
   $('saveStockKitBtn') && $('saveStockKitBtn').addEventListener('click', saveKit);

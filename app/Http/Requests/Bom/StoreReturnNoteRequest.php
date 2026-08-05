@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Bom;
 
 use App\Http\Requests\BaseRequest;
+use App\Rules\StockItemPickerCodeExists;
 
 class StoreReturnNoteRequest extends BaseRequest
 {
@@ -12,7 +13,7 @@ class StoreReturnNoteRequest extends BaseRequest
             'bom_id' => ['required', 'integer', 'exists:boms,id'],
             'reason' => ['required', 'string', 'max:500'],
             'lines' => ['required', 'array', 'min:1'],
-            'lines.*.stock_item_code' => ['required', 'string', 'max:500', 'exists:stock_items,alt_codes'],
+            'lines.*.stock_item_code' => ['required', 'string', 'max:500', new StockItemPickerCodeExists],
             'lines.*.qty' => ['required', 'integer', 'min:1'],
             'lines.*.name' => ['nullable', 'string', 'max:255'],
         ];

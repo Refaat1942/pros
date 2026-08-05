@@ -16,6 +16,10 @@
     specId: null,
     patientType: 'civilian',
     catalog: [],
+    specGroupMatcher: [],
+    catalogSearchResults: null,
+    catalogSearching: false,
+    catalogSearchTimer: null,
     items: [],
     locked: false,
     submitting: false,
@@ -134,8 +138,163 @@
     if (notes) notes.disabled = locked;
   }
 
+  function renderMedicalSummary(med) {
+    var medBox = $('medicalSummary');
+    if (!medBox) return;
+
+    var hasContent = med && (
+      med.transfer_message ||
+      med.diagnosis ||
+      med.prescription ||
+      (med.recommendations && med.recommendations.length) ||
+      (med.items && med.items.length)
+    );
+
+    if (!hasContent) {
+      medBox.classList.add('hidden');
+      return;
+    }
+
+    medBox.classList.remove('hidden');
+
+    var transferEl = $('medTransferMessage');
+    if (transferEl) {
+      if (med.transfer_message) {
+        transferEl.textContent = med.transfer_message;
+        transferEl.classList.remove('hidden');
+      } else {
+        transferEl.textContent = '';
+        transferEl.classList.add('hidden');
+      }
+    }
+
+    if ($('medDiagnosis')) $('medDiagnosis').textContent = med.diagnosis || '—';
+    if ($('medPrescription')) $('medPrescription').textContent = med.prescription || '—';
+
+    var recs = (med.recommendations && med.recommendations.length)
+      ? med.recommendations
+      : (med.items || []);
+    var recWrap = $('medRecommendationsWrap');
+    var recList = $('medRecommendations');
+    if (recWrap && recList) {
+      if (recs.length) {
+        recWrap.classList.remove('hidden');
+        recList.innerHTML = recs.map(function (r) {
+          var code = r.code || r.stock_item_code || '';
+          var qty = r.qty || 1;
+          return '<li>' + (code ? ('<span class="font-mono text-xs">' + code + '</span> — ') : '') +
+            (r.name || '—') + ' × ' + qty + '</li>';
+        }).join('');
+      } else {
+        recWrap.classList.add('hidden');
+        recList.innerHTML = '';
+      }
+    }
+  }
+
+  function findCatalogItem(code) {
+    if (state.catalogSearchResults) {
+      var fromSearch = state.catalogSearchResults.find(function (c) { return c.code === code; });
+      if (fromSearch) return fromSearch;
+    }
+    return state.catalog.find(function (c) { return c.code === code; });
+  }
+
+  function mergeCatalogEntries(rows) {
+    (rows || []).forEach(function (row) {
+      if (!row || !row.code) return;
+      var exists = state.catalog.some(function (c) { return c.code === row.code; });
+      if (!exists) state.catalog.push(row);
+    });
+  }
+
+  function catalogRowsForPicker(filter) {
+    var q = (filter || '').trim();
+    if (q.length >= 1 && state.catalogSearchResults !== null) {
+      return state.catalogSearchResults;
+    }
+    return state.catalog;
+  }
+
+  function searchCatalogFromServer(q) {
+    if (!window.axios) {
+      renderCatalogList(q);
+      return;
+    }
+    state.catalogSearching = true;
+    renderCatalogList(q);
+    axios.get('/spec/catalog/search', { params: { q: q, limit: 40 } })
+      .then(function (res) {
+        state.catalogSearchResults = res.data.data || [];
+        mergeCatalogEntries(state.catalogSearchResults);
+      })
+      .catch(function () {
+        state.catalogSearchResults = [];
+      })
+      .finally(function () {
+        state.catalogSearching = false;
+        renderCatalogList(q);
+      });
+  }
+
+  function onCatalogSearchInput(value) {
+    var q = (value || '').trim();
+    if (state.catalogSearchTimer) clearTimeout(state.catalogSearchTimer);
+
+    if (q.length < 1) {
+      state.catalogSearchResults = null;
+      renderCatalogList('');
+      return;
+    }
+
+    state.catalogSearchTimer = setTimeout(function () {
+      searchCatalogFromServer(q);
+    }, 280);
+  }
+
   function catalogEntry(code) {
-    return state.catalog.find(function (s) { return s.code === code; });
+    return state.catalog.find(function (s) {
+      return s.code === code || s.catalog_code === code;
+    });
+  }
+
+  function activeSpecGroupLabels() {
+    var labels = {};
+    var diagnosis = $('medDiagnosis') ? $('medDiagnosis').textContent : '';
+    var prescription = $('medPrescription') ? $('medPrescription').textContent : '';
+    var written = $('writtenItems') ? $('writtenItems').value : '';
+    var hay = [diagnosis, prescription, written].join(' ');
+
+    if (state.specGroupMatcher.length && hay.trim()) {
+      var lower = hay.toLowerCase();
+      state.specGroupMatcher.forEach(function (g) {
+        (g.keywords || []).forEach(function (kw) {
+          if (kw && lower.indexOf(String(kw).toLowerCase()) !== -1) {
+            labels[g.label] = true;
+          }
+        });
+        if (g.label && lower.indexOf(String(g.label).toLowerCase()) !== -1) {
+          labels[g.label] = true;
+        }
+      });
+    }
+
+    return Object.keys(labels);
+  }
+
+  function itemMatchesActiveSpecGroups(item) {
+    var active = activeSpecGroupLabels();
+    if (!active.length) return true;
+
+    if (item.type === 'kit') {
+      var gl = item.spec_group_label || item.group_label;
+      return gl ? active.indexOf(gl) !== -1 : false;
+    }
+
+    var hay = (item.name + ' ' + (item.spec || '')).toLowerCase();
+    return active.some(function (label) {
+      return hay.indexOf(String(label).toLowerCase()) !== -1;
+    });
   }
 
   function parseItemQty(value, fallback) {
@@ -196,6 +355,7 @@
         name: item.name,
         qty: qty,
         uom: item.uom,
+        group_label: item.group_label || null,
       };
     }).filter(function (item) {
       return item && item.stock_item_code && item.name;
@@ -467,6 +627,7 @@
         }
         updateSubmitLabels(state.patientType);
         state.catalog = data.stock_catalog || [];
+        state.specGroupMatcher = data.spec_group_matcher || [];
 
         $('bannerName').textContent = c.patient?.name || data.medical_record?.patient_name || '—';
         $('bannerCaseNo').textContent = c.case_no || '—';
@@ -478,15 +639,7 @@
             : (c.company_name || '—'));
 
         renderReworkBanner(c.rework || null);
-
-        var medBox = $('medicalSummary');
-        if (data.medical_record) {
-          medBox.classList.remove('hidden');
-          $('medDiagnosis').textContent = data.medical_record.diagnosis || '—';
-          $('medPrescription').textContent = data.medical_record.prescription || '—';
-        } else {
-          medBox.classList.add('hidden');
-        }
+        renderMedicalSummary(data.medical_record || null);
 
         if (data.submitted_spec && c.stage_key !== 'technical') {
           state.specId = data.submitted_spec.id;
@@ -624,29 +777,59 @@
   function renderCatalogList(filter) {
     var list = $('catalogList');
     if (!list) return;
-    var q = (filter || '').trim().toLowerCase();
-    var items = state.catalog.filter(function (item) {
+    var qRaw = (filter || '').trim();
+    var q = qRaw.toLowerCase();
+    var activeGroups = qRaw ? [] : activeSpecGroupLabels();
+    var source = catalogRowsForPicker(filter);
+    var items = source.filter(function (item) {
+      if (!qRaw && !itemMatchesActiveSpecGroups(item)) return false;
       if (!q) return true;
-      return (item.code + ' ' + item.name + ' ' + (item.spec || '')).toLowerCase().indexOf(q) !== -1;
+      return (item.code + ' ' + item.name + ' ' + (item.spec || '') + ' ' + (item.spec_group_label || '')).toLowerCase().indexOf(q) !== -1;
     });
-    list.innerHTML = items.map(function (item) {
+
+    if (state.catalogSearching) {
+      list.innerHTML = '<p class="text-center text-slate-400 py-6">جاري البحث في الأصناف...</p>';
+      return;
+    }
+
+    if (!qRaw && !state.catalog.length) {
+      list.innerHTML = '<p class="text-center text-slate-500 py-6 leading-relaxed">اكتب في خانة البحث للعثور على الأصناف من قاعدة البيانات.<br><span class="text-xs">مثال: رك ، كف ، مفصل</span></p>';
+      return;
+    }
+
+    if (!items.length) {
+      var hint = activeGroups.length
+        ? ('لا توجد أصناف/أطقم لمجموعة: ' + activeGroups.join('، ') + ' — جرّب البحث بالاسم أو الكود')
+        : (qRaw ? 'لا توجد نتائج — جرّب كلمات أخرى' : 'اكتب للبحث في الأصناف');
+      list.innerHTML = '<p class="text-center text-slate-400 py-6">' + hint + '</p>';
+      return;
+    }
+
+    var groupHint = activeGroups.length
+      ? '<p class="text-xs text-violet-700 bg-violet-50 rounded-lg px-3 py-2 mb-2">📦 فلترة حسب التشخيص: ' + activeGroups.join('، ') + '</p>'
+      : (qRaw ? '<p class="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 mb-2">نتائج البحث من قاعدة البيانات (' + items.length + ')</p>' : '');
+
+    list.innerHTML = groupHint + items.map(function (item) {
       var isKit = item.type === 'kit';
       var already = !isKit && state.items.some(function (i) { return i.stock_item_code === item.code; });
       var kitBadge = isKit ? '<span class="text-xs font-bold text-violet-600">[' + (item.kit_type_label || 'طقم') + ']</span> ' : '';
+      var groupBadge = item.spec_group_label
+        ? '<span class="text-xs font-bold text-indigo-600">{' + item.spec_group_label + '}</span> '
+        : '';
       return '<button type="button" data-pick-code="' + item.code + '" ' +
         (already ? 'disabled' : '') +
         ' class="w-full text-right px-4 py-3 rounded-xl hover:bg-amber-50 border border-transparent hover:border-amber-200 mb-1 disabled:opacity-40">' +
-        kitBadge +
+        kitBadge + groupBadge +
         '<span class="font-mono text-xs text-slate-500">' + item.code + '</span> ' +
         '<span class="font-bold text-slate-800">' + item.name + '</span>' +
         (item.spec ? '<span class="block text-xs text-slate-400 mt-1">' + item.spec + '</span>' : '') +
         '</button>';
-    }).join('') || '<p class="text-center text-slate-400 py-6">لا توجد أصناف</p>';
+    }).join('');
 
     list.querySelectorAll('[data-pick-code]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var code = btn.getAttribute('data-pick-code');
-        var item = state.catalog.find(function (c) { return c.code === code; });
+        var item = findCatalogItem(code);
         if (!item) return;
         expandKitToLines(item, 1).forEach(function (line) {
           state.items.push(line);
@@ -666,14 +849,30 @@
 
     if (openBtn) openBtn.addEventListener('click', function () {
       if (state.locked) return;
+      if (!state.caseId) {
+        showError('اختر حالة من القائمة أولاً');
+        return;
+      }
+      state.catalogSearchResults = null;
       renderCatalogList('');
       modal.classList.remove('hidden');
+      var searchInput = $('catalogSearch');
+      if (searchInput) {
+        searchInput.value = '';
+        setTimeout(function () { searchInput.focus(); }, 50);
+      }
     });
-    if (closeBtn) closeBtn.addEventListener('click', function () { modal.classList.add('hidden'); });
+    if (closeBtn) closeBtn.addEventListener('click', function () {
+      state.catalogSearchResults = null;
+      modal.classList.add('hidden');
+    });
     if (modal) modal.addEventListener('click', function (e) {
-      if (e.target === modal) modal.classList.add('hidden');
+      if (e.target === modal) {
+        state.catalogSearchResults = null;
+        modal.classList.add('hidden');
+      }
     });
-    if (search) search.addEventListener('input', function () { renderCatalogList(search.value); });
+    if (search) search.addEventListener('input', function () { onCatalogSearchInput(search.value); });
   }
 
   function bindActions() {

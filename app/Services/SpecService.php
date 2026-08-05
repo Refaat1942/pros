@@ -194,9 +194,10 @@ class SpecService
         $spec->items()->delete();
 
         foreach ($items as $item) {
+            $stock = StockItem::findByOperationalCode($item['stock_item_code']);
             TechOrderSpecItem::create([
                 'tech_order_spec_id' => $spec->id,
-                'stock_item_code' => $item['stock_item_code'],
+                'stock_item_code' => $stock?->pickerCode() ?? $item['stock_item_code'],
                 'name' => $item['name'],
                 'qty' => $item['qty'],
                 'group_label' => $item['group_label'] ?? null,

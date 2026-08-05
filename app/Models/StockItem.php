@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * بطاقة الصنف الرئيسية — clinic_stock_catalog
@@ -142,6 +143,40 @@ class StockItem extends Model
         return $code !== '' ? $code : null;
     }
 
+    /** كود الظهور في التوصيف/المعدلات — alt_codes أو رقم الصنف أو الكود الداخلي. */
+    public function pickerCode(): string
+    {
+        $operational = $this->operationalCode();
+        if ($operational !== null) {
+            return $operational;
+        }
+
+        $internal = trim((string) ($this->code ?? ''));
+        if ($internal !== '') {
+            return $internal;
+        }
+
+        return trim((string) ($this->catalog_number ?? ''));
+    }
+
+    public function matchesPickerCode(string $code): bool
+    {
+        $code = trim($code);
+        if ($code === '') {
+            return false;
+        }
+
+        if ($code === $this->pickerCode()) {
+            return true;
+        }
+
+        return in_array($code, array_filter([
+            trim((string) ($this->alt_codes ?? '')),
+            trim((string) ($this->code ?? '')),
+            trim((string) ($this->catalog_number ?? '')),
+        ]), true);
+    }
+
     public static function barcodeForOperationalCode(string $code): string
     {
         return 'BC-'.trim($code);
@@ -172,7 +207,17 @@ class StockItem extends Model
             $legacyQuery->lockForUpdate();
         }
 
-        return $legacyQuery->first();
+        $item = $legacyQuery->first();
+        if ($item !== null) {
+            return $item;
+        }
+
+        $catalogQuery = static::query()->where('catalog_number', $code);
+        if ($lockForUpdate) {
+            $catalogQuery->lockForUpdate();
+        }
+
+        return $catalogQuery->first();
     }
 
     /**
@@ -187,10 +232,26 @@ class StockItem extends Model
             return [];
         }
 
-        return static::query()
-            ->whereIn('alt_codes', $codes)
-            ->pluck($column, 'alt_codes')
-            ->all();
+        $query = static::query()->where(function ($builder) use ($codes) {
+            $builder->whereIn('alt_codes', $codes)
+                ->orWhereIn('code', $codes);
+
+            if (Schema::hasColumn('stock_items', 'catalog_number')) {
+                $builder->orWhereIn('catalog_number', $codes);
+            }
+        });
+
+        $map = [];
+        foreach ($query->get() as $item) {
+            $value = $item->{$column};
+            foreach ($codes as $requested) {
+                if ($item->matchesPickerCode($requested)) {
+                    $map[$requested] = $value;
+                }
+            }
+        }
+
+        return $map;
     }
 
     /**
@@ -200,25 +261,84 @@ class StockItem extends Model
      */
     public static function pickerCatalogRows(): array
     {
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        if (Schema::hasColumn('stock_items', 'catalog_number')) {
+            $columns[] = 'catalog_number';
+        }
+
         return static::query()
-            ->orderBy('alt_codes')
-            ->get(['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'])
+            ->orderBy('name')
+            ->get($columns)
             ->map(function (self $item) {
-                $operational = $item->operationalCode() ?? '';
+                $pickerCode = $item->pickerCode();
 
                 return [
-                    'code' => $operational,
+                    'code' => $pickerCode,
                     'catalog_code' => $item->code,
-                    'alt_codes' => $operational,
+                    'catalog_number' => $item->catalog_number ?? '',
+                    'alt_codes' => $item->operationalCode() ?? '',
                     'name' => $item->name,
                     'spec' => $item->spec,
-                    'uom' => $item->uom,
+                    'uom' => $item->uom ?? 'قطعة',
                     'qty' => (int) $item->qty,
                     'reserved' => (int) $item->reserved,
                     'available_max' => $item->availableQty(),
                 ];
             })
-            ->filter(fn (array $row) => $row['code'] !== '')
+            ->filter(fn (array $row) => $row['code'] !== '' && $row['name'] !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * بحث الأصناف للتوصيف/المعدلات — يطابق الاسم والكود وalt_codes ورقم الصفحة.
+     *
+     * @return list<array{code: string, catalog_code: string, name: string, spec: ?string, uom: string, qty: int, reserved: int, available_max: int}>
+     */
+    public static function searchPickerRows(string $q, int $limit = 50): array
+    {
+        $q = trim($q);
+        if ($q === '') {
+            return [];
+        }
+
+        $like = '%'.$q.'%';
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        if (Schema::hasColumn('stock_items', 'catalog_number')) {
+            $columns[] = 'catalog_number';
+        }
+
+        return static::query()
+            ->where(function ($builder) use ($like) {
+                $builder->where('name', 'like', $like)
+                    ->orWhere('code', 'like', $like)
+                    ->orWhere('alt_codes', 'like', $like)
+                    ->orWhere('page_number', 'like', $like);
+
+                if (Schema::hasColumn('stock_items', 'catalog_number')) {
+                    $builder->orWhere('catalog_number', 'like', $like);
+                }
+            })
+            ->orderBy('name')
+            ->limit(max(10, min(60, $limit)))
+            ->get($columns)
+            ->map(function (self $item) {
+                $pickerCode = $item->pickerCode();
+
+                return [
+                    'code' => $pickerCode,
+                    'catalog_code' => $item->code,
+                    'catalog_number' => $item->catalog_number ?? '',
+                    'alt_codes' => $item->operationalCode() ?? '',
+                    'name' => $item->name,
+                    'spec' => $item->spec,
+                    'uom' => $item->uom ?? 'قطعة',
+                    'qty' => (int) $item->qty,
+                    'reserved' => (int) $item->reserved,
+                    'available_max' => $item->availableQty(),
+                ];
+            })
+            ->filter(fn (array $row) => $row['code'] !== '' && $row['name'] !== '')
             ->values()
             ->all();
     }

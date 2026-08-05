@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Bom;
 
 use App\Http\Requests\BaseRequest;
+use App\Rules\StockItemPickerCodeExists;
 
 class StoreBomRequest extends BaseRequest
 {
@@ -11,7 +12,7 @@ class StoreBomRequest extends BaseRequest
         return [
             'case_id' => ['required', 'integer', 'exists:cases,id'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.stock_item_code' => ['required', 'string', 'max:500', 'exists:stock_items,alt_codes'],
+            'items.*.stock_item_code' => ['required', 'string', 'max:500', new StockItemPickerCodeExists],
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'items.*.name' => ['nullable', 'string', 'max:255'],
         ];

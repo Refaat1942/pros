@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Adjustments;
 
 use App\Http\Requests\BaseRequest;
+use App\Rules\StockItemPickerCodeExists;
 
 class StoreAdjustmentItemsRequest extends BaseRequest
 {
@@ -10,7 +11,7 @@ class StoreAdjustmentItemsRequest extends BaseRequest
     {
         return [
             'items' => ['required', 'array', 'min:1'],
-            'items.*.stock_item_code' => ['required', 'string', 'max:500', 'exists:stock_items,alt_codes'],
+            'items.*.stock_item_code' => ['required', 'string', 'max:500', new StockItemPickerCodeExists],
             'items.*.name' => ['nullable', 'string', 'min:1', 'max:255'],
             'items.*.qty' => $this->positiveQtyRules(),
             'items.*.group_label' => ['nullable', 'string', 'max:255'],
@@ -22,7 +23,7 @@ class StoreAdjustmentItemsRequest extends BaseRequest
         return [
             'items.required' => 'يجب إضافة بند واحد على الأقل.',
             'items.min' => 'يجب إضافة بند واحد على الأقل.',
-            'items.*.stock_item_code.exists' => 'الصنف المختار غير موجود في المخزون.',
+            'items.*.stock_item_code.exists' => 'الصنف المختار غير موجود في الكتالوج.',
         ];
     }
 }

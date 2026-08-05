@@ -61,7 +61,7 @@ class StockKitController extends Controller
             ->get($this->searchItemColumns())
             ->map(fn (StockItem $item) => [
                 'id' => $item->id,
-                'code' => $item->operationalCode() ?: ($item->catalog_number ?? $item->code),
+                'code' => $item->pickerCode(),
                 'catalog_number' => $item->catalog_number ?? $item->code,
                 'alt_codes' => $item->alt_codes ?? '',
                 'name' => $item->name,
@@ -75,6 +75,45 @@ class StockKitController extends Controller
     public function templates(): JsonResponse
     {
         return response()->json([
+            'groups' => StockKitGroups::forSelect(),
+        ]);
+    }
+
+    public function storeGroup(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'key' => ['required', 'string', 'max:32'],
+            'previous_key' => ['nullable', 'string', 'max:32'],
+            'label' => ['required', 'string', 'max:64'],
+            'icon' => ['nullable', 'string', 'max:8'],
+            'default_type' => ['nullable', 'string', 'in:assembly,accessory'],
+            'keywords' => ['nullable', 'array'],
+            'keywords.*' => ['string', 'max:64'],
+        ]);
+
+        StockKitGroups::upsertGroup(
+            $validated['key'],
+            [
+                'label' => $validated['label'],
+                'icon' => $validated['icon'] ?? '📦',
+                'default_type' => $validated['default_type'] ?? 'assembly',
+                'keywords' => $validated['keywords'] ?? [],
+            ],
+            $validated['previous_key'] ?? null,
+        );
+
+        return response()->json([
+            'message' => 'تم حفظ المجموعة.',
+            'groups' => StockKitGroups::forSelect(),
+        ]);
+    }
+
+    public function destroyGroup(string $groupKey): JsonResponse
+    {
+        StockKitGroups::deleteGroup($groupKey);
+
+        return response()->json([
+            'message' => 'تم حذف المجموعة.',
             'groups' => StockKitGroups::forSelect(),
         ]);
     }

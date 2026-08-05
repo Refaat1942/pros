@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\TechOrderSpec;
 
+use App\Enums\WorkflowEvent;
 use App\Exceptions\InvalidSpecItemException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TechOrderSpec\StoreTechOrderSpecRequest;
@@ -11,6 +12,8 @@ use App\Models\MedicalRecord;
 use App\Models\PricingRequest;
 use App\Support\StockCatalogPicker;
 use App\Models\TechOrderSpec;
+use App\Services\DoctorTransferService;
+use App\Services\PathwayTransitionMessageService;
 use App\Services\SpecOrdersService;
 use App\Services\SpecService;
 use App\Support\CaseDisplayStatus;
@@ -28,6 +31,8 @@ class TechOrderSpecController extends Controller
     public function __construct(
         private readonly SpecService $specService,
         private readonly SpecOrdersService $ordersService,
+        private readonly PathwayTransitionMessageService $transitions,
+        private readonly DoctorTransferService $doctorTransfer,
     ) {}
 
     /**
@@ -100,11 +105,7 @@ class TechOrderSpecController extends Controller
 
         $case->load('patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank');
 
-        $medicalRecord = MedicalRecord::where('case_id', $case->id)
-            ->where('locked', true)
-            ->with('items')
-            ->latest()
-            ->first();
+        $medicalRecord = $this->resolveMedicalRecord($case);
 
         $draft = TechOrderSpec::where('case_id', $case->id)
             ->where('locked', false)
@@ -120,15 +121,26 @@ class TechOrderSpecController extends Controller
 
         return response()->json([
             'case' => $this->formatCase($case),
-            'medical_record' => $medicalRecord ? [
-                'diagnosis' => $medicalRecord->diagnosis,
-                'prescription' => $medicalRecord->prescription,
-                'doctor_name' => $medicalRecord->doctor_name,
-                'items' => $medicalRecord->items->map->only(['stock_item_code', 'name', 'qty']),
-            ] : null,
+            'medical_record' => $this->formatMedicalContext($case, $medicalRecord),
             'draft' => $draft ? $this->formatSpec($draft) : null,
             'submitted_spec' => $submittedSpec ? $this->formatSpec($submittedSpec) : null,
             'stock_catalog' => $stockCatalog,
+            'spec_group_matcher' => \App\Support\StockKitGroups::forClientMatcher(),
+        ]);
+    }
+
+    /**
+     * بحث الأصناف والأطقم من قاعدة البيانات — للنافذة المنبثقة في التوصيف.
+     */
+    public function searchCatalog(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+        abort_if($q === '', 422, 'أدخل نص البحث.');
+
+        $limit = min(60, max(10, (int) $request->input('limit', 40)));
+
+        return response()->json([
+            'data' => StockCatalogPicker::search($q, $limit),
         ]);
     }
 
@@ -258,6 +270,57 @@ class TechOrderSpecController extends Controller
             'print_url' => $spec->locked
                 ? route('spec.spec.print', ['spec' => $spec->id])
                 : null,
+        ];
+    }
+
+    private function resolveMedicalRecord(CaseRecord $case): ?MedicalRecord
+    {
+        $record = MedicalRecord::where('case_id', $case->id)
+            ->with('items')
+            ->orderByDesc('locked')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($record) {
+            return $record;
+        }
+
+        if (! $case->patient_id) {
+            return null;
+        }
+
+        return MedicalRecord::where('patient_id', $case->patient_id)
+            ->where('locked', true)
+            ->with('items')
+            ->latest()
+            ->first();
+    }
+
+    /** @return array<string, mixed>|null */
+    private function formatMedicalContext(CaseRecord $case, ?MedicalRecord $record): ?array
+    {
+        $case->loadMissing(['patient', 'recommendations']);
+
+        $recommendations = $this->doctorTransfer->resolveRecommendations($case, $record);
+        $transferMessage = $this->transitions->transferMessage(
+            $case,
+            WorkflowEvent::ExamApproved->value,
+            CaseRecord::STAGE_EXAM,
+        );
+
+        if (! $record && $recommendations === [] && trim($transferMessage) === '') {
+            return null;
+        }
+
+        $items = $record?->items?->map->only(['stock_item_code', 'name', 'qty']) ?? collect();
+
+        return [
+            'diagnosis' => $record?->diagnosis,
+            'prescription' => $record?->prescription,
+            'doctor_name' => $record?->doctor_name,
+            'transfer_message' => $transferMessage,
+            'items' => $items->values()->all(),
+            'recommendations' => $recommendations,
         ];
     }
 

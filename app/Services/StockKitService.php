@@ -19,9 +19,37 @@ class StockKitService
     {
         return StockKit::query()
             ->where('is_active', true)
-            ->with(['items.stockItem:id,code,name,uom,alt_codes'])
+            ->with(['items.stockItem:id,code,catalog_number,name,uom,alt_codes'])
             ->orderBy('type')
             ->orderBy('name')
+            ->get()
+            ->map(fn (StockKit $kit) => $this->formatPickerRow($kit))
+            ->filter(fn (array $row) => $row['components'] !== [])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function searchPickerRows(string $q, int $limit = 20): array
+    {
+        $q = trim($q);
+        if ($q === '') {
+            return [];
+        }
+
+        $like = '%'.$q.'%';
+
+        return StockKit::query()
+            ->where('is_active', true)
+            ->where(function ($builder) use ($like) {
+                $builder->where('name', 'like', $like)
+                    ->orWhere('code', 'like', $like);
+            })
+            ->with(['items.stockItem:id,code,catalog_number,name,uom,alt_codes'])
+            ->orderBy('name')
+            ->limit(max(5, min(20, $limit)))
             ->get()
             ->map(fn (StockKit $kit) => $this->formatPickerRow($kit))
             ->filter(fn (array $row) => $row['components'] !== [])
@@ -217,7 +245,7 @@ class StockKitService
 
         return $kit->items->map(function (StockKitItem $line) use ($label) {
             $item = $line->stockItem;
-            $code = $item?->operationalCode() ?? '';
+            $code = $item?->pickerCode() ?? '';
 
             if ($code === '') {
                 return null;
@@ -240,7 +268,7 @@ class StockKitService
     {
         $components = $kit->items->map(function (StockKitItem $line) {
             $item = $line->stockItem;
-            $code = $item?->operationalCode() ?? '';
+            $code = $item?->pickerCode() ?? '';
             if ($code === '') {
                 return null;
             }
@@ -290,8 +318,8 @@ class StockKitService
             'items' => $kit->items->map(fn (StockKitItem $line) => [
                 'id' => $line->id,
                 'stock_item_id' => $line->stock_item_id,
-                'stock_item_code' => $line->stockItem?->operationalCode() ?? '',
-                'code' => $line->stockItem?->operationalCode()
+                'stock_item_code' => $line->stockItem?->pickerCode() ?? '',
+                'code' => $line->stockItem?->pickerCode()
                     ?: ($line->stockItem?->catalog_number ?? $line->stockItem?->code ?? ''),
                 'name' => $line->stockItem?->name ?? '—',
                 'page_number' => $line->stockItem?->page_number ?? '',

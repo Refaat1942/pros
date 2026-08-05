@@ -63,7 +63,7 @@ class BarcodeValidationService
     {
         $item = $this->resolveStockItem($scan);
 
-        return $item?->operationalCode() ?? $item?->code;
+        return $item?->pickerCode() ?: $item?->code;
     }
 
     private function barcodeMatchesCode(string $scan, string $stockItemCode): bool

@@ -33,6 +33,9 @@ Route::prefix('spec')
 
         // ── Spec (معاينة التوصيف) ──────────────────────────────────────────
         Route::middleware('dashboard.page:spec,spec')->group(function () {
+            Route::get('catalog/search', [TechOrderSpecController::class, 'searchCatalog'])
+                ->name('catalog.search');
+
             Route::get('spec/{case}', [TechOrderSpecController::class, 'create'])
                 ->name('spec.create');
 

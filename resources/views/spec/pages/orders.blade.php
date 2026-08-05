@@ -132,10 +132,15 @@
                 </div>
             </div>
 
-            <div id="medicalSummary" class="hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-                <p class="font-bold text-slate-700 mb-2">🩺 ملخص الكشف الطبي</p>
+            <div id="medicalSummary" class="hidden rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-sm space-y-2">
+                <p class="font-bold text-emerald-900">📋 رسالة التحويل من الطبيب</p>
+                <p id="medTransferMessage" class="text-emerald-800 text-xs leading-relaxed hidden"></p>
                 <p class="text-slate-600"><span class="font-semibold">التشخيص:</span> <span id="medDiagnosis">—</span></p>
-                <p class="text-slate-600 mt-1"><span class="font-semibold">الروشتة:</span> <span id="medPrescription">—</span></p>
+                <p class="text-slate-600"><span class="font-semibold">الروشتة:</span> <span id="medPrescription">—</span></p>
+                <div id="medRecommendationsWrap" class="hidden">
+                    <p class="font-semibold text-slate-700 mt-2 mb-1">توصيات الطبيب (أصناف):</p>
+                    <ul id="medRecommendations" class="list-disc list-inside text-slate-600 space-y-0.5"></ul>
+                </div>
             </div>
 
             <div id="specReworkBanner" class="hidden rounded-xl border border-red-200 bg-red-50 p-4 text-sm">
@@ -205,7 +210,7 @@
             <button type="button" id="closeCatalogModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
         </div>
         <div class="p-4 border-b border-slate-100">
-            <input type="search" id="catalogSearch" placeholder="بحث بالكود أو الاسم..."
+            <input type="search" id="catalogSearch" placeholder="ابحث في الأصناف — مثال: رك ، كف ، مفصل..."
                    class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-spec/40">
         </div>
         <div class="overflow-y-auto flex-1 p-2" id="catalogList"></div>
