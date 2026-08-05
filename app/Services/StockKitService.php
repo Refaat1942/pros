@@ -44,7 +44,7 @@ class StockKitService
     public function listForAdmin(): Collection
     {
         return StockKit::query()
-            ->with(['items.stockItem:id,code,name,alt_codes,uom'])
+            ->with(['items.stockItem:id,code,catalog_number,name,alt_codes,uom,page_number'])
             ->orderByDesc('id')
             ->get()
             ->map(fn (StockKit $kit) => $this->formatAdminRow($kit));
@@ -281,7 +281,11 @@ class StockKitService
                 'id' => $line->id,
                 'stock_item_id' => $line->stock_item_id,
                 'stock_item_code' => $line->stockItem?->operationalCode() ?? '',
+                'code' => $line->stockItem?->operationalCode()
+                    ?: ($line->stockItem?->catalog_number ?? $line->stockItem?->code ?? ''),
                 'name' => $line->stockItem?->name ?? '—',
+                'page_number' => $line->stockItem?->page_number ?? '',
+                'uom' => $line->stockItem?->uom ?? 'قطعة',
                 'qty' => (int) $line->qty,
             ])->values()->all(),
         ];

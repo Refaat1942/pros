@@ -19,19 +19,41 @@ class StockKitController extends Controller
     {
         return response()->json([
             'data' => $this->kits->listForAdmin()->values(),
-            'stock_items' => StockItem::query()
-                ->whereNotNull('alt_codes')
-                ->where('alt_codes', '!=', '')
-                ->orderBy('name')
-                ->get(['id', 'code', 'name', 'alt_codes', 'uom'])
-                ->map(fn (StockItem $item) => [
-                    'id' => $item->id,
-                    'code' => $item->operationalCode(),
-                    'catalog_code' => $item->code,
-                    'name' => $item->name,
-                    'uom' => $item->uom,
-                ]),
         ]);
+    }
+
+    public function searchItems(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+        $limit = min(50, max(5, (int) $request->input('limit', 30)));
+
+        $query = StockItem::query()
+            ->orderBy('name')
+            ->limit($limit);
+
+        if ($q !== '') {
+            $like = '%'.$q.'%';
+            $query->where(function ($builder) use ($like) {
+                $builder->where('name', 'like', $like)
+                    ->orWhere('catalog_number', 'like', $like)
+                    ->orWhere('alt_codes', 'like', $like)
+                    ->orWhere('code', 'like', $like)
+                    ->orWhere('page_number', 'like', $like);
+            });
+        }
+
+        $items = $query->get(['id', 'code', 'catalog_number', 'name', 'alt_codes', 'page_number', 'uom'])
+            ->map(fn (StockItem $item) => [
+                'id' => $item->id,
+                'code' => $item->operationalCode() ?: ($item->catalog_number ?? $item->code),
+                'catalog_number' => $item->catalog_number ?? $item->code,
+                'alt_codes' => $item->alt_codes ?? '',
+                'name' => $item->name,
+                'page_number' => $item->page_number ?? '',
+                'uom' => $item->uom ?? 'قطعة',
+            ]);
+
+        return response()->json(['data' => $items->values()]);
     }
 
     public function store(Request $request): JsonResponse
