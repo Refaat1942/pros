@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Adjustments\StoreAdjustmentEditRequestRequest;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
-use App\Models\StockItem;
+use App\Support\StockCatalogPicker;
 use App\Services\SpecEditRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -27,13 +27,15 @@ class AdjustmentEditRequestController extends Controller
             ->map(fn (BomItem $i) => $i->only(['stock_item_code', 'name', 'qty']))
             ->values();
 
-        $stockCatalog = collect(StockItem::pickerCatalogRows())
+        $stockCatalog = collect(StockCatalogPicker::rows())
             ->map(fn (array $row) => [
                 'code' => $row['code'],
                 'name' => $row['name'],
-                'qty' => $row['qty'],
-                'reserved' => $row['reserved'],
-                'available' => $row['available_max'],
+                'type' => $row['type'] ?? 'item',
+                'components' => $row['components'] ?? null,
+                'qty' => $row['qty'] ?? 0,
+                'reserved' => $row['reserved'] ?? 0,
+                'available' => $row['available_max'] ?? 0,
             ]);
 
         return response()->json([

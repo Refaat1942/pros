@@ -145,13 +145,15 @@ class StockCatalogController extends Controller
      */
     public function export(Request $request, StockImportService $importService): StreamedResponse
     {
+        $from = $request->query('from');
+        $to = $request->query('to');
+
         $contents = $importService->exportBinary(
-            $this->catalogService->listForDashboard(
-                $request->query('from'),
-                $request->query('to'),
-            )
+            $this->catalogService->listForExport($from, $to),
+            includeInstructions: false,
         );
-        $filename = 'الأصناف_والأسعار-'.now()->format('Y-m-d').'.xlsx';
+        $total = $this->catalogService->countAll($from, $to);
+        $filename = 'الأصناف_والأسعار-'.now()->format('Y-m-d')."-{$total}.xlsx";
 
         return response()->streamDownload(function () use ($contents) {
             echo $contents;

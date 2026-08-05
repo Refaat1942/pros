@@ -79,6 +79,7 @@ class DashboardPageDataService
             'admin.pathway-settings' => $this->adminPathwaySettings(),
             'admin.stock-categories' => $this->adminStockCategories(),
             'admin.catalog' => $this->adminCatalog(),
+            'admin.stock-kits' => $this->adminStockKits(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
             'admin.general-view' => $this->adminGeneralView(),
             'admin.reports' => $this->adminReportsHub(),
@@ -249,6 +250,7 @@ class DashboardPageDataService
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'stock_items' => $catalogService->listForDashboard($from, $to),
+            'stock_items_total' => $catalogService->countAll($from, $to),
             'date_from' => $from,
             'date_to' => $to,
         ];
@@ -636,6 +638,11 @@ class DashboardPageDataService
             ],
             'rejection_reasons' => config('spec_edit.rejection_reasons', []),
         ];
+    }
+
+    private function adminStockKits(): array
+    {
+        return [];
     }
 
     private function adminWorkshopSections(): array

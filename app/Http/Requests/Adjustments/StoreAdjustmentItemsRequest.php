@@ -10,9 +10,10 @@ class StoreAdjustmentItemsRequest extends BaseRequest
     {
         return [
             'items' => ['required', 'array', 'min:1'],
-            'items.*.stock_item_code' => ['required', 'string', 'size:4', 'regex:/^\d{4}$/', 'exists:stock_items,alt_codes'],
+            'items.*.stock_item_code' => ['required', 'string', 'max:500', 'exists:stock_items,alt_codes'],
             'items.*.name' => ['nullable', 'string', 'min:1', 'max:255'],
             'items.*.qty' => $this->positiveQtyRules(),
+            'items.*.group_label' => ['nullable', 'string', 'max:255'],
         ];
     }
 

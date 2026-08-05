@@ -130,6 +130,19 @@ Route::prefix('admin')
                 ->name('catalog.sales-stats');
         });
 
+        Route::middleware('dashboard.page:admin,stock-kits')->group(function () {
+            Route::get('stock-kits/list', [\App\Http\Controllers\Admin\StockKitController::class, 'index'])
+                ->name('stock-kits.list');
+            Route::get('stock-kits/expand/{code}', [\App\Http\Controllers\Admin\StockKitController::class, 'expand'])
+                ->name('stock-kits.expand');
+            Route::post('stock-kits', [\App\Http\Controllers\Admin\StockKitController::class, 'store'])
+                ->name('stock-kits.store');
+            Route::put('stock-kits/{stockKit}', [\App\Http\Controllers\Admin\StockKitController::class, 'update'])
+                ->name('stock-kits.update');
+            Route::delete('stock-kits/{stockKit}', [\App\Http\Controllers\Admin\StockKitController::class, 'destroy'])
+                ->name('stock-kits.destroy');
+        });
+
         // ── طلبات تعديل التوصيف ─────────────────────────────────────────────
         Route::middleware('dashboard.page:admin,spec-edit-requests')->group(function () {
             Route::get('spec-edit-requests/list', [AdminSpecEditRequestController::class, 'index'])

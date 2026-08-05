@@ -261,7 +261,7 @@ return [
             [
                 'label' => 'المخزون والتوريد',
                 'icon' => '📦',
-                'pages' => ['stock-categories', 'catalog', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns'],
+                'pages' => ['stock-categories', 'catalog', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns'],
             ],
             [
                 'label' => 'التعاقد والمالية',
@@ -292,6 +292,7 @@ return [
             // ── المخزون والتوريد ───────────────────────────────────────────────
             'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'الأقسام'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
+            'stock-kits' => ['title' => 'أطقم جاهزة ومخصصات', 'icon' => '🧩', 'label' => 'أطقم / مخصصات'],
             'inventory-overview' => ['title' => 'متابعة حركة الأصناف', 'icon' => '🔬', 'label' => 'متابعة حركة الأصناف'],
             'dispense-approvals' => ['title' => 'اعتمادات صرف المخزن — BOM', 'icon' => '✅', 'label' => 'اعتماد الصرف'],
             'suppliers' => ['title' => 'الموردون', 'icon' => '🏭', 'label' => 'الموردون'],
@@ -328,6 +329,7 @@ return [
             'assets/js/pages/admin-permissions.js',
             'assets/js/pages/admin-spec-edit-requests.js',
             'assets/js/pages/admin-workshop-sections.js',
+            'assets/js/pages/admin-stock-kits.js',
             'assets/js/pages/admin-workshop-tracking.js',
             'assets/js/pages/admin-dispense-approvals.js',
             'assets/js/pages/admin-services-approvals.js',

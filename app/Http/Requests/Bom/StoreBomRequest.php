@@ -11,7 +11,7 @@ class StoreBomRequest extends BaseRequest
         return [
             'case_id' => ['required', 'integer', 'exists:cases,id'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.stock_item_code' => ['required', 'string', 'size:4', 'regex:/^\d{4}$/', 'exists:stock_items,alt_codes'],
+            'items.*.stock_item_code' => ['required', 'string', 'max:500', 'exists:stock_items,alt_codes'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'items.*.name' => ['nullable', 'string', 'max:255'],
         ];

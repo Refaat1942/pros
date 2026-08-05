@@ -8,9 +8,7 @@ use App\Http\Requests\Adjustments\StoreAdjustmentItemsRequest;
 use App\Http\Requests\Adjustments\UpdateAdjustmentItemQtyRequest;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
-use App\Models\StockItem;
-use App\Services\AdjustmentsService;
-use App\Services\PathwayTransitionMessageService;
+use App\Support\StockCatalogPicker;
 use App\Support\StockItemUomLookup;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -40,7 +38,7 @@ class AdjustmentsController extends Controller
                     'patient:id,patient_code,name,patient_type',
                     'techOrderSpec:id,case_id,tech_notes,written_items',
                     'bom:id,case_id,bom_no,stage',
-                    'bom.items:id,bom_id,stock_item_code,name,source,qty',
+                    'bom.items:id,bom_id,stock_item_code,name,source,qty,group_label',
                     'pendingAdjustmentEditRequest:id,case_id,status,source',
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
@@ -71,14 +69,18 @@ class AdjustmentsController extends Controller
             'pendingAdjustmentEditRequest',
         ]);
 
-        $stockCatalog = collect(StockItem::pickerCatalogRows())
+        $stockCatalog = collect(StockCatalogPicker::rows())
             ->map(fn (array $row) => [
                 'code' => $row['code'],
-                'catalog_code' => $row['catalog_code'],
+                'catalog_code' => $row['catalog_code'] ?? $row['code'],
                 'name' => $row['name'],
-                'qty' => $row['qty'],
-                'reserved' => $row['reserved'],
-                'available' => $row['available_max'],
+                'type' => $row['type'] ?? 'item',
+                'kit_type' => $row['kit_type'] ?? null,
+                'kit_type_label' => $row['kit_type_label'] ?? null,
+                'components' => $row['components'] ?? null,
+                'qty' => $row['qty'] ?? 0,
+                'reserved' => $row['reserved'] ?? 0,
+                'available' => $row['available_max'] ?? 0,
                 'uom' => $row['uom'] ?? 'قطعة',
             ]);
 
@@ -193,6 +195,7 @@ class AdjustmentsController extends Controller
             'qty' => $item->qty,
             'uom' => $uomMap[$item->stock_item_code] ?? 'قطعة',
             'source' => $item->source,
+            'group_label' => $item->group_label,
             'read_only' => $item->source === BomItem::SOURCE_SPEC,
         ];
     }

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Spec;
 use App\Exceptions\InvalidSpecItemException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Spec\StoreSpecEditRequestRequest;
-use App\Models\StockItem;
+use App\Support\StockCatalogPicker;
 use App\Models\TechOrderSpec;
 use App\Services\SpecEditRequestService;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +24,7 @@ class SpecEditRequestController extends Controller
 
         $spec->load(['items', 'caseRecord', 'pendingEditRequest', 'rejectedSpecEditRequest']);
 
-        $stockCatalog = StockItem::pickerCatalogRows();
+        $stockCatalog = StockCatalogPicker::rows();
 
         return response()->json([
             'spec' => $spec->only(['id', 'order_ref', 'case_id', 'patient_name', 'tech_notes', 'locked']),

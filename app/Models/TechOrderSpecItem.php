@@ -15,6 +15,7 @@ class TechOrderSpecItem extends Model
         'stock_item_code',
         'name',
         'qty',
+        'group_label',
     ];
 
     protected $casts = [

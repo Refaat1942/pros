@@ -324,6 +324,26 @@
     body.textContent = text;
   }
 
+  function expandKitToLines(catalogItem, qtyMultiplier) {
+    var mult = qtyMultiplier > 0 ? qtyMultiplier : 1;
+    if (catalogItem.type !== 'kit' || !catalogItem.components || !catalogItem.components.length) {
+      return [{
+        stock_item_code: catalogItem.code,
+        name: catalogItem.name,
+        qty: mult,
+        group_label: null,
+      }];
+    }
+    return catalogItem.components.map(function (c) {
+      return {
+        stock_item_code: c.code,
+        name: c.name,
+        qty: (parseInt(c.qty, 10) || 1) * mult,
+        group_label: catalogItem.name,
+      };
+    });
+  }
+
   function renderSpecBlock() {
     var tbody = $('adjSpecItems');
     if (!tbody) return;
@@ -332,13 +352,30 @@
       tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">لا توجد بنود توصيف فني.</td></tr>';
       return;
     }
-    tbody.innerHTML = specs.map(function (it) {
-      return '<tr>' +
-        '<td>' + esc(it.stock_item_code) + '</td>' +
-        '<td>' + esc(it.name) + '</td>' +
-        '<td>' + esc(it.qty) + '</td>' +
-        '<td>' + esc(it.uom || 'قطعة') + '</td></tr>';
-    }).join('');
+    var groups = {};
+    var order = [];
+    specs.forEach(function (it) {
+      var key = it.group_label || '';
+      if (!groups[key]) {
+        groups[key] = [];
+        order.push(key);
+      }
+      groups[key].push(it);
+    });
+    var html = '';
+    order.forEach(function (key) {
+      if (key) {
+        html += '<tr class="adj-spec-group"><td colspan="4" style="background:#f5f3ff;font-weight:700;padding:8px 10px;">📦 ' + esc(key) + '</td></tr>';
+      }
+      groups[key].forEach(function (it) {
+        html += '<tr>' +
+          '<td>' + esc(it.stock_item_code) + '</td>' +
+          '<td>' + esc(it.name) + '</td>' +
+          '<td>' + esc(it.qty) + '</td>' +
+          '<td>' + esc(it.uom || 'قطعة') + '</td></tr>';
+      });
+    });
+    tbody.innerHTML = html;
   }
 
   function renderEditModeBom() {
@@ -383,14 +420,16 @@
   }
 
   function addToEditRequestItems(catalogItem, qty) {
-    var existing = editRequestItems.filter(function (i) { return i.stock_item_code === catalogItem.code; })[0];
+    var code = catalogItem.stock_item_code || catalogItem.code;
+    var existing = editRequestItems.filter(function (i) { return i.stock_item_code === code; })[0];
     if (existing) {
       existing.qty = (parseInt(existing.qty, 10) || 0) + qty;
     } else {
       editRequestItems.push({
-        stock_item_code: catalogItem.code,
+        stock_item_code: code,
         name: catalogItem.name,
         qty: qty,
+        group_label: catalogItem.group_label || null,
       });
     }
     renderEditModeBom();
@@ -684,7 +723,9 @@
       for (var j = 0; j < codes.length; j++) {
         var catItem = findCatalogItem(codes[j]);
         if (!catItem) continue;
-        addToEditRequestItems(catItem, qty);
+        expandKitToLines(catItem, qty).forEach(function (line) {
+          addToEditRequestItems(line, line.qty);
+        });
       }
       clearPickerSelection();
       refreshItemPicker();
@@ -697,12 +738,15 @@
     for (var i = 0; i < codes.length; i++) {
       var catalogItem = findCatalogItem(codes[i]);
       if (!catalogItem) continue;
-      // يُسمح بتجاوز المتاح (backorder) — لا حظر، فقط تنبيه.
-      if (qty > maxAddableQty(catalogItem)) backorder = true;
-      items.push({
-        stock_item_code: catalogItem.code,
-        name: catalogItem.name,
-        qty: qty,
+      expandKitToLines(catalogItem, qty).forEach(function (line) {
+        var catRow = findCatalogItem(line.stock_item_code) || catalogItem;
+        if (line.qty > maxAddableQty(catRow)) backorder = true;
+        items.push({
+          stock_item_code: line.stock_item_code,
+          name: line.name,
+          qty: line.qty,
+          group_label: line.group_label || null,
+        });
       });
     }
 

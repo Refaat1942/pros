@@ -9,7 +9,7 @@ use App\Http\Requests\TechOrderSpec\UpdateTechOrderSpecRequest;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\PricingRequest;
-use App\Models\StockItem;
+use App\Support\StockCatalogPicker;
 use App\Models\TechOrderSpec;
 use App\Services\SpecOrdersService;
 use App\Services\SpecService;
@@ -116,7 +116,7 @@ class TechOrderSpecController extends Controller
             ->with('items')
             ->first();
 
-        $stockCatalog = StockItem::pickerCatalogRows();
+        $stockCatalog = StockCatalogPicker::rows();
 
         return response()->json([
             'case' => $this->formatCase($case),
@@ -253,7 +253,7 @@ class TechOrderSpecController extends Controller
             'locked',
         ]) + [
             'items' => $spec->relationLoaded('items')
-                ? $spec->items->map->only(['stock_item_code', 'name', 'qty'])
+                ? $spec->items->map->only(['stock_item_code', 'name', 'qty', 'group_label'])
                 : [],
             'print_url' => $spec->locked
                 ? route('spec.spec.print', ['spec' => $spec->id])

@@ -33,9 +33,45 @@ class StockCatalogService
             ->when($range['from'], fn ($q, Carbon $start) => $q->where('created_at', '>=', $start))
             ->when($range['to'], fn ($q, Carbon $end) => $q->where('created_at', '<=', $end))
             ->orderByDesc('id')
-            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->when(
+                ($limit = (int) config('catalog.list_limit', 10000)) > 0,
+                fn ($q) => $q->limit($limit),
+            )
             ->get()
             ->map(fn (StockItem $item) => $this->formatItem($item));
+    }
+
+    /** كل الأصناف للتصدير — بدون حد افتراضي. */
+    public function listForExport(?string $from = null, ?string $to = null): Collection
+    {
+        $range = $this->parseDateRange($from, $to);
+
+        return StockItem::query()
+            ->when($range['from'], fn ($q, Carbon $start) => $q->where('created_at', '>=', $start))
+            ->when($range['to'], fn ($q, Carbon $end) => $q->where('created_at', '<=', $end))
+            ->orderBy('id')
+            ->get()
+            ->map(fn (StockItem $item) => $this->formatItem($item));
+    }
+
+    public function countAll(?string $from = null, ?string $to = null): int
+    {
+        $range = $this->parseDateRange($from, $to);
+
+        return StockItem::query()
+            ->when($range['from'], fn ($q, Carbon $start) => $q->where('created_at', '>=', $start))
+            ->when($range['to'], fn ($q, Carbon $end) => $q->where('created_at', '<=', $end))
+            ->count();
+    }
+
+    /** عدد الأصناف بلا كود تشغيلي — الأكواد تُرفع يدوياً من Excel فقط. */
+    public function countMissingOperationalCodes(): int
+    {
+        return StockItem::query()
+            ->where(function ($q) {
+                $q->whereNull('alt_codes')->orWhere('alt_codes', '');
+            })
+            ->count();
     }
 
     /** @return array{from: Carbon|null, to: Carbon|null} */
@@ -124,7 +160,7 @@ class StockCatalogService
                 'store_class' => $this->deriveStoreClass($category),
                 'is_quick_dispense' => (bool) ($data['is_quick_dispense'] ?? false),
                 'uom' => $this->normalizeUom($data['uom'] ?? null),
-                'barcode' => StockItem::barcodeForOperationalCode($operationalCode),
+                'barcode' => $this->barcodeForOperational($operationalCode),
                 'alt_codes' => $operationalCode,
                 'qty' => $qty,
                 'opening_qty' => $openingQty,
@@ -184,7 +220,7 @@ class StockCatalogService
 
             $operationalCode = array_key_exists('alt_codes', $data)
                 ? $this->resolveOperationalCode($data['alt_codes'], $item)
-                : ($item->operationalCode() ?? $this->nextOperationalCode());
+                : $item->operationalCode();
 
             $item->update([
                 'page_number' => array_key_exists('page_number', $data)
@@ -196,7 +232,7 @@ class StockCatalogService
                     ? $this->normalizeUom($data['uom'])
                     : $item->uom,
                 'alt_codes' => $operationalCode,
-                'barcode' => StockItem::barcodeForOperationalCode($operationalCode),
+                'barcode' => $this->barcodeForOperational($operationalCode),
                 'qty' => $qty,
                 'opening_qty' => $openingQty,
                 'addition' => $addition,
@@ -296,33 +332,19 @@ class StockCatalogService
         return 'ITM-'.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
     }
 
-    /** كود صنف تشغيلي فريد — 4 أرقام فقط. */
-    public function nextOperationalCode(): string
-    {
-        for ($attempt = 0; $attempt < 500; $attempt++) {
-            $code = (string) random_int(1000, 9999);
-
-            if (! StockItem::where('alt_codes', $code)->exists()) {
-                return $code;
-            }
-        }
-
-        throw new \RuntimeException('تعذّر توليد كود صنف فريد.');
-    }
-
     /**
-     * يُعيد كوداً تشغيلياً صالحاً (4 أرقام) — يُولَّد تلقائياً إن لم يُمرَّر.
+     * يُعيد كوداً تشغيلياً صالحاً — بدون توليد تلقائي؛ يُمرَّر من الرفع الجماعي أو النموذج.
      */
-    public function resolveOperationalCode(?string $provided, ?StockItem $except = null): string
+    public function resolveOperationalCode(?string $provided, ?StockItem $except = null): ?string
     {
         $provided = trim((string) ($provided ?? ''));
 
         if ($provided === '') {
-            return $this->nextOperationalCode();
+            return null;
         }
 
-        if (! preg_match('/^\d{4}$/', $provided)) {
-            throw new \InvalidArgumentException('كود الصنف (الأكواد) يجب أن يكون 4 أرقام.');
+        if (strlen($provided) > 500) {
+            throw new \InvalidArgumentException('كود الصنف (الأكواد) طويل جداً (الحد الأقصى 500 حرف).');
         }
 
         $exists = StockItem::query()
@@ -335,6 +357,13 @@ class StockCatalogService
         }
 
         return $provided;
+    }
+
+    private function barcodeForOperational(?string $operationalCode): ?string
+    {
+        return $operationalCode !== null && $operationalCode !== ''
+            ? StockItem::barcodeForOperationalCode($operationalCode)
+            : null;
     }
 
     private function nextCode(): string

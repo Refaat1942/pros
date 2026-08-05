@@ -20,6 +20,7 @@ class BomItem extends Model
         'name',
         'source',
         'qty',
+        'group_label',
         'unit_cost',
         'issued_qty',
         'returned_qty',

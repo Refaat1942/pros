@@ -159,6 +159,7 @@
         name: i.name,
         qty: normalizeItemQty(i.qty, 1),
         uom: cat ? cat.uom : '',
+        group_label: i.group_label || null,
       };
     });
   }
@@ -175,6 +176,7 @@
         name: i.name,
         qty: normalizeItemQty(i.qty, 1),
         uom: cat ? cat.uom : '',
+        group_label: i.group_label || null,
       };
     });
   }
@@ -207,6 +209,7 @@
         name: item.name,
         qty: normalizeItemQty(item.qty, 1),
         uom: item.uom,
+        group_label: item.group_label || null,
       };
     });
   }
@@ -221,7 +224,9 @@
     tbody.innerHTML = state.items.map(function (item, idx) {
       return '<tr data-idx="' + idx + '">' +
         '<td class="px-4 py-3 font-mono text-xs">' + item.stock_item_code + '</td>' +
-        '<td class="px-4 py-3 font-semibold text-slate-800">' + item.name + '</td>' +
+        '<td class="px-4 py-3 font-semibold text-slate-800">' + item.name +
+          (item.group_label ? '<span class="block text-xs text-violet-600">📦 ' + item.group_label + '</span>' : '') +
+        '</td>' +
         '<td class="px-4 py-3 text-slate-500">' + (item.uom || '—') + '</td>' +
         '<td class="px-4 py-3"><input type="number" step="1" min="1" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
           (state.locked ? 'disabled' : '') +
@@ -536,7 +541,12 @@
 
   function payloadItems() {
     return resolveItemsForSubmit().map(function (i) {
-      return { stock_item_code: i.stock_item_code, name: i.name, qty: i.qty };
+      return {
+        stock_item_code: i.stock_item_code,
+        name: i.name,
+        qty: i.qty,
+        group_label: i.group_label || null,
+      };
     });
   }
 
@@ -589,6 +599,28 @@
     }
   }
 
+  function expandKitToLines(catalogItem, qtyMultiplier) {
+    var mult = qtyMultiplier > 0 ? qtyMultiplier : 1;
+    if (catalogItem.type !== 'kit' || !catalogItem.components || !catalogItem.components.length) {
+      return [{
+        stock_item_code: catalogItem.code,
+        name: catalogItem.name,
+        qty: normalizeItemQty(mult, 1),
+        uom: catalogItem.uom,
+        group_label: null,
+      }];
+    }
+    return catalogItem.components.map(function (c) {
+      return {
+        stock_item_code: c.code,
+        name: c.name,
+        qty: normalizeItemQty((parseInt(c.qty, 10) || 1) * mult, 1),
+        uom: c.uom || catalogItem.uom,
+        group_label: catalogItem.name,
+      };
+    });
+  }
+
   function renderCatalogList(filter) {
     var list = $('catalogList');
     if (!list) return;
@@ -598,10 +630,13 @@
       return (item.code + ' ' + item.name + ' ' + (item.spec || '')).toLowerCase().indexOf(q) !== -1;
     });
     list.innerHTML = items.map(function (item) {
-      var already = state.items.some(function (i) { return i.stock_item_code === item.code; });
+      var isKit = item.type === 'kit';
+      var already = !isKit && state.items.some(function (i) { return i.stock_item_code === item.code; });
+      var kitBadge = isKit ? '<span class="text-xs font-bold text-violet-600">[' + (item.kit_type_label || 'طقم') + ']</span> ' : '';
       return '<button type="button" data-pick-code="' + item.code + '" ' +
         (already ? 'disabled' : '') +
         ' class="w-full text-right px-4 py-3 rounded-xl hover:bg-amber-50 border border-transparent hover:border-amber-200 mb-1 disabled:opacity-40">' +
+        kitBadge +
         '<span class="font-mono text-xs text-slate-500">' + item.code + '</span> ' +
         '<span class="font-bold text-slate-800">' + item.name + '</span>' +
         (item.spec ? '<span class="block text-xs text-slate-400 mt-1">' + item.spec + '</span>' : '') +
@@ -613,11 +648,8 @@
         var code = btn.getAttribute('data-pick-code');
         var item = state.catalog.find(function (c) { return c.code === code; });
         if (!item) return;
-        state.items.push({
-          stock_item_code: item.code,
-          name: item.name,
-          qty: normalizeItemQty(1, 1),
-          uom: item.uom,
+        expandKitToLines(item, 1).forEach(function (line) {
+          state.items.push(line);
         });
         renderItemsTable();
         clearError();

@@ -30,7 +30,7 @@ class StockImportService
      */
     public function templateBinary(): string
     {
-        return $this->buildWorkbookBinary($this->buildExampleRows());
+        return $this->buildWorkbookBinary($this->buildExampleRows(), true);
     }
 
     /**
@@ -38,7 +38,7 @@ class StockImportService
      *
      * @param  iterable<int, array<string, mixed>>  $items
      */
-    public function exportBinary(iterable $items): string
+    public function exportBinary(iterable $items, bool $includeInstructions = false): string
     {
         $rows = [];
 
@@ -46,7 +46,7 @@ class StockImportService
             $rows[] = $this->rowFromItem($item);
         }
 
-        return $this->buildWorkbookBinary($rows);
+        return $this->buildWorkbookBinary($rows, $includeInstructions);
     }
 
     /**
@@ -88,6 +88,21 @@ class StockImportService
                     $openingQty = $balance;
                 }
 
+                if ($parsed['alt_codes'] === '') {
+                    $skipped++;
+                    $errors[] = "السطر {$lineNo}: عمود الأكواد مطلوب — ضعه في ملف Excel.";
+
+                    continue;
+                }
+
+                [$parsed['uom'], $uomQty] = $this->parseUomField($parsed['uom']);
+                if ($uomQty !== null && $openingQty === 0 && $addition === 0 && $discount === 0) {
+                    $openingQty = $uomQty;
+                    if ($balance === 0) {
+                        $balance = $uomQty;
+                    }
+                }
+
                 $payload = [
                     'code' => $parsed['code'] !== '' ? $parsed['code'] : null,
                     'page_number' => $parsed['page_number'] !== '' ? $parsed['page_number'] : null,
@@ -101,11 +116,13 @@ class StockImportService
                     'qty' => $balance,
                 ];
 
-                if ($payload['alt_codes'] === null) {
-                    $payload['alt_codes'] = $this->catalogService->nextOperationalCode();
+                $existing = null;
+                if ($parsed['code'] !== '') {
+                    $existing = StockItem::where('code', $parsed['code'])->first();
                 }
-
-                $existing = $parsed['code'] !== '' ? StockItem::where('code', $parsed['code'])->first() : null;
+                if (! $existing && $parsed['alt_codes'] !== '') {
+                    $existing = StockItem::where('alt_codes', $parsed['alt_codes'])->first();
+                }
 
                 try {
                     if ($existing) {
@@ -138,23 +155,30 @@ class StockImportService
      */
     private function rowFromItem(array $item): array
     {
+        $operational = trim((string) ($item['alt_codes'] ?? $item['operational_code'] ?? ''));
+        if ($operational === '' && ! empty($item['barcode'])) {
+            $operational = preg_replace('/^BC-/i', '', (string) $item['barcode']) ?: '';
+        }
+
+        $uom = $this->cleanUomForExport((string) ($item['uom'] ?? ''));
+
         return [
             (string) ($item['code'] ?? ''),
             (string) ($item['page_number'] ?? ''),
             (string) ($item['name'] ?? ''),
-            (string) ($item['alt_codes'] ?? ''),
-            (string) ($item['uom'] ?? ''),
-            (string) ((int) ($item['opening_qty'] ?? $item['qty'] ?? 0)),
+            $operational,
+            $uom,
+            (string) ((int) ($item['opening_qty'] ?? 0)),
             (string) ((int) ($item['addition'] ?? 0)),
             (string) ((int) ($item['discount'] ?? 0)),
-            (string) ((int) ($item['catalog_balance'] ?? $item['balance'] ?? 0)),
+            (string) ((int) ($item['catalog_balance'] ?? $item['balance'] ?? $item['qty'] ?? 0)),
         ];
     }
 
     /**
      * @param  list<list<string>>  $itemRows
      */
-    private function buildWorkbookBinary(array $itemRows): string
+    private function buildWorkbookBinary(array $itemRows, bool $includeInstructions = false): string
     {
         $path = tempnam(sys_get_temp_dir(), 'stock_tpl_');
         if ($path === false) {
@@ -171,17 +195,19 @@ class StockImportService
         $itemsSheet = $writer->getCurrentSheet();
         $itemsSheet->setName(self::SHEET_ITEMS);
         $writer->addRow(Row::fromValues($headers));
-        $writer->addRow(Row::fromValues([
-            '← تعليمات',
-            'اختياري',
-            'مطلوب',
-            'كود الصنف — 4 أرقام (يُولَّد تلقائياً إن تُرك فارغاً)',
-            'قطعة / متر ...',
-            'رقم',
-            'رقم',
-            'رقم',
-            'رصيد = أول + إضافة − خصم',
-        ]));
+        if ($includeInstructions) {
+            $writer->addRow(Row::fromValues([
+                '← تعليمات',
+                'اختياري',
+                'مطلوب',
+                'كود الصنف (مطلوب في الرفع الجماعي)',
+                'قطعة / متر ...',
+                'رقم',
+                'رقم',
+                'رقم',
+                'رصيد = أول + إضافة − خصم',
+            ]));
+        }
         foreach ($itemRows as $row) {
             $writer->addRow(Row::fromValues($row));
         }
@@ -319,10 +345,34 @@ class StockImportService
     /** @param  list<string>  $cols */
     private function looksLikeLegacyFiveColumnRow(array $cols): bool
     {
-        return count(array_filter($cols, fn ($c) => trim((string) $c) !== '')) <= 5
-            && count($cols) <= 6;
+        $nonEmpty = count(array_filter($cols, fn ($c) => trim((string) $c) !== ''));
+
+        return $nonEmpty <= 5 && count($cols) <= 6;
     }
 
+    /** @return array{0: string, 1: ?int} [uom, embeddedQty] */
+    private function parseUomField(string $raw): array
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return ['', null];
+        }
+
+        if (preg_match('/^(\d+)\s+(.+)$/u', $raw, $m)) {
+            return [trim($m[2]), (int) $m[1]];
+        }
+
+        return [$raw, null];
+    }
+
+    private function cleanUomForExport(string $uom): string
+    {
+        [$clean] = $this->parseUomField($uom);
+
+        return $clean !== '' ? $clean : $uom;
+    }
+
+    /** @param  list<string>  $cols */
     private function normalizeToUtf8(string $content): string
     {
         if ($content === '') {

@@ -17,9 +17,10 @@ class UpdateTechOrderSpecRequest extends BaseRequest
                 ? ['required', 'string', 'max:5000']
                 : ['nullable', 'string', 'max:5000'],
             'items' => ['sometimes', 'array', 'min:1'],
-            'items.*.stock_item_code' => ['required_with:items', 'string', 'size:4', 'regex:/^\d{4}$/'],
+            'items.*.stock_item_code' => ['required_with:items', 'string', 'max:500'],
             'items.*.name' => ['required_with:items', 'string', 'min:1', 'max:255'],
             'items.*.qty' => ['required_with:items', ...$this->positiveQtyRules()],
+            'items.*.group_label' => ['nullable', 'string', 'max:255'],
         ];
     }
 

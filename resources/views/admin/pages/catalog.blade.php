@@ -11,13 +11,15 @@
         'from' => $dateFrom,
         'to'   => $dateTo,
     ]));
+    $exportAllUrl = route('admin.catalog.export');
+    $stockItemsTotal = (int) ($stock_items_total ?? $items->count());
     // $categories = collect($stock_categories ?? []);
 @endphp
 <div class="section-view" id="section-catalog">
     <div class="panel">
         <div class="panel-header">
             <h3>📦 الأصناف والأسعار</h3>
-            <span class="badge">{{ $items->count() }} صنف</span>
+            <span class="badge">{{ $stockItemsTotal }} صنف{{ ($dateFrom || $dateTo) && $items->count() !== $stockItemsTotal ? ' (معروض ' . $items->count() . ')' : '' }}</span>
         </div>
 
         <div id="catalogImportStatus" style="display:none;margin:12px 16px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
@@ -59,7 +61,10 @@
             </select>
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
-            <a class="btn-action" href="{{ $exportUrl }}">📊 تصدير Excel</a>
+            <a class="btn-action" href="{{ $exportAllUrl }}">📊 تصدير الكل</a>
+            @if ($dateFrom || $dateTo)
+                <a class="btn-action" href="{{ $exportUrl }}">📊 تصدير الفترة</a>
+            @endif
 
             @can('import-inventory')
                 <a class="btn-action" href="{{ route('admin.catalog.template') }}">⬇️ تنزيل القالب</a>
@@ -85,7 +90,7 @@
         <p class="catalog-table-hint" style="margin-top:6px;">
             قالب الأصناف — {{ count($catalogTemplateHeaders) }} أعمدة:
             <strong>{{ implode(' | ', $catalogTemplateHeaders) }}</strong>.
-            الأسعار والموردون والأقسام تُدار من نموذج الصنف. لطباعة الباركود، حدّد صنفاً أو أكثر ثم اضغط «طباعة باركود المحدد».
+            أسعار والموردون والأقسام تُدار من نموذج الصنف. <strong>الأكواد والباركود</strong> تُرفع من Excel فقط — لا توليد تلقائي.
         </p>
 
         <div class="panel-body" style="overflow-x:auto;">
@@ -169,8 +174,8 @@
                     <h4 class="catalog-form-card__title">📦 بيانات الصنف</h4>
                     <div class="catalog-form-grid catalog-form-grid--basic">
                 <div>
-                    <label class="catalog-form-label">رقم الصنف / الباركود</label>
-                    <input type="text" id="slimCode" placeholder="تلقائي إن تُرك فارغاً" class="catalog-form-input">
+                    <label class="catalog-form-label">رقم الصنف</label>
+                    <input type="text" id="slimCode" placeholder="تلقائي (ITM-xxx) إن تُرك فارغاً" class="catalog-form-input">
                 </div>
                 <div>
                     <label class="catalog-form-label">رقم الصفحة</label>
@@ -180,9 +185,10 @@
                     <label class="catalog-form-label">اسم الصنف *</label>
                     <input type="text" id="slimName" placeholder="مثال: ركبة هيدروليكية" class="catalog-form-input">
                 </div>
-                <div>
-                    <label class="catalog-form-label">الأكواد</label>
-                    <input type="text" id="slimAltCodes" placeholder="باركود / أكواد المورد" class="catalog-form-input">
+                <div id="slimBarcodeWrap" style="display:none;">
+                    <label class="catalog-form-label">الباركود (تلقائي)</label>
+                    <input type="text" id="slimBarcodeDisplay" class="catalog-form-input" readonly dir="ltr">
+                    <input type="hidden" id="slimAltCodes">
                 </div>
                 <div>
                     <label class="catalog-form-label">الوحدة</label>
@@ -873,11 +879,27 @@
         document.getElementById(id)?.addEventListener('input', recalcCatalogBalance);
     });
 
+    function toggleBarcodeFields(isEdit, item) {
+        var wrap = document.getElementById('slimBarcodeWrap');
+        var display = document.getElementById('slimBarcodeDisplay');
+        var hidden = document.getElementById('slimAltCodes');
+        if (!wrap) return;
+        if (isEdit && item) {
+            wrap.style.display = '';
+            var bc = item.barcode || (item.alt_codes ? ('BC-' + item.alt_codes) : '—');
+            if (display) display.value = bc;
+            if (hidden) hidden.value = item.alt_codes || '';
+        } else {
+            wrap.style.display = 'none';
+            if (display) display.value = '';
+            if (hidden) hidden.value = '';
+        }
+    }
+
     function setForm(v) {
         document.getElementById('slimCode').value = v.code || '';
         document.getElementById('slimPageNumber').value = v.page_number || '';
         document.getElementById('slimName').value = v.name || '';
-        document.getElementById('slimAltCodes').value = v.alt_codes || '';
         document.getElementById('slimUom').value = v.uom || 'قطعة';
         document.getElementById('slimOpeningQty').value = v.opening_qty != null ? v.opening_qty : 0;
         document.getElementById('slimAddition').value = v.addition != null ? v.addition : 0;
@@ -897,6 +919,7 @@
         if (window.CatalogSections) {
             window.CatalogSections.prepareItemForm(v);
         }
+        toggleBarcodeFields(!!v.id, v);
     }
 
     function collectSupplierIds() {
@@ -1159,7 +1182,6 @@
         var payload = {
             name: name,
             page_number: (document.getElementById('slimPageNumber').value || '').trim() || null,
-            alt_codes: (document.getElementById('slimAltCodes').value || '').trim() || null,
             uom: (document.getElementById('slimUom').value || '').trim() || 'قطعة',
             opening_qty: parseInt(document.getElementById('slimOpeningQty').value || '0', 10),
             addition: parseInt(document.getElementById('slimAddition').value || '0', 10),

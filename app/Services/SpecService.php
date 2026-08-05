@@ -158,6 +158,7 @@ class SpecService
                 'stock_item_code' => $i->stock_item_code,
                 'name' => $i->name,
                 'qty' => $i->qty,
+                'group_label' => $i->group_label,
             ])->all());
 
             $spec->update([
@@ -198,6 +199,7 @@ class SpecService
                 'stock_item_code' => $item['stock_item_code'],
                 'name' => $item['name'],
                 'qty' => $item['qty'],
+                'group_label' => $item['group_label'] ?? null,
             ]);
         }
     }
