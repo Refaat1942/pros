@@ -117,7 +117,9 @@ class TechOrderSpecController extends Controller
             ->with('items')
             ->first();
 
-        $stockCatalog = StockCatalogPicker::rows();
+        $case->loadMissing('recommendations');
+        $bootstrapCodes = $this->collectSpecCatalogCodes($medicalRecord, $draft, $submittedSpec, $case);
+        $stockCatalog = StockCatalogPicker::specBootstrapRows($bootstrapCodes);
 
         return response()->json([
             'case' => $this->formatCase($case),
@@ -271,6 +273,33 @@ class TechOrderSpecController extends Controller
                 ? route('spec.spec.print', ['spec' => $spec->id])
                 : null,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function collectSpecCatalogCodes(
+        ?MedicalRecord $medicalRecord,
+        ?TechOrderSpec $draft,
+        ?TechOrderSpec $submittedSpec,
+        CaseRecord $case,
+    ): array {
+        $codes = [];
+
+        foreach ([$medicalRecord?->items, $draft?->items, $submittedSpec?->items, $case->recommendations] as $items) {
+            if (! $items) {
+                continue;
+            }
+
+            foreach ($items as $item) {
+                $code = trim((string) ($item->stock_item_code ?? ''));
+                if ($code !== '') {
+                    $codes[] = $code;
+                }
+            }
+        }
+
+        return array_values(array_unique($codes));
     }
 
     private function resolveMedicalRecord(CaseRecord $case): ?MedicalRecord

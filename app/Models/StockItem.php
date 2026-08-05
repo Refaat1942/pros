@@ -291,6 +291,60 @@ class StockItem extends Model
     }
 
     /**
+     * صفوف محددة بالأكواد — للبنود المعروضة دون تحميل الكتالوج كاملاً.
+     *
+     * @param  list<string>  $codes
+     * @return list<array{code: string, catalog_code: string, name: string, spec: ?string, uom: string, qty: int, reserved: int, available_max: int}>
+     */
+    public static function pickerRowsForCodes(array $codes): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map(
+            static fn ($code) => trim((string) $code),
+            $codes,
+        ))));
+
+        if ($codes === []) {
+            return [];
+        }
+
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        if (Schema::hasColumn('stock_items', 'catalog_number')) {
+            $columns[] = 'catalog_number';
+        }
+
+        return static::query()
+            ->where(function ($builder) use ($codes) {
+                $builder->whereIn('alt_codes', $codes)
+                    ->orWhereIn('code', $codes);
+
+                if (Schema::hasColumn('stock_items', 'catalog_number')) {
+                    $builder->orWhereIn('catalog_number', $codes);
+                }
+            })
+            ->orderBy('name')
+            ->get($columns)
+            ->map(function (self $item) {
+                $pickerCode = $item->pickerCode();
+
+                return [
+                    'code' => $pickerCode,
+                    'catalog_code' => $item->code,
+                    'catalog_number' => $item->catalog_number ?? '',
+                    'alt_codes' => $item->operationalCode() ?? '',
+                    'name' => $item->name,
+                    'spec' => $item->spec,
+                    'uom' => $item->uom ?? 'قطعة',
+                    'qty' => (int) $item->qty,
+                    'reserved' => (int) $item->reserved,
+                    'available_max' => $item->availableQty(),
+                ];
+            })
+            ->filter(fn (array $row) => $row['code'] !== '' && $row['name'] !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
      * بحث الأصناف للتوصيف/المعدلات — يطابق الاسم والكود وalt_codes ورقم الصفحة.
      *
      * @return list<array{code: string, catalog_code: string, name: string, spec: ?string, uom: string, qty: int, reserved: int, available_max: int}>

@@ -73,23 +73,23 @@ class SpecPipelineTest extends TestCase
         $this->assertEquals(2, $stock->reserved, 'Spec submit must reserve items (backorder allowed)');
     }
 
-    public function test_spec_api_create_endpoint_returns_catalog_without_qty(): void
+    public function test_spec_api_create_endpoint_returns_lite_catalog(): void
     {
-        $this->stockItem('RM-002', qty: 15);
+        $item = $this->stockItem('RM-002', qty: 15);
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
         $specUser = $this->userWithRole('spec');
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
-        $response = $this->actingAs($specUser)
-            ->getJson("/spec/spec/{$case->id}");
+        $this->actingAs($specUser)
+            ->getJson("/spec/spec/{$case->id}")
+            ->assertOk()
+            ->assertJsonStructure(['stock_catalog', 'medical_record', 'case']);
 
-        $response->assertOk();
-        $catalog = $response->json('stock_catalog');
-        $this->assertNotEmpty($catalog);
-        $this->assertArrayNotHasKey('qty', $catalog[0]);
-        $this->assertArrayNotHasKey('wac', $catalog[0]);
-        $this->assertArrayNotHasKey('reserved', $catalog[0]);
+        $this->actingAs($specUser)
+            ->getJson('/spec/catalog/search?q=RM')
+            ->assertOk()
+            ->assertJsonFragment(['name' => $item->name]);
     }
 }

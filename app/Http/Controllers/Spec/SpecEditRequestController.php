@@ -24,7 +24,8 @@ class SpecEditRequestController extends Controller
 
         $spec->load(['items', 'caseRecord', 'pendingEditRequest', 'rejectedSpecEditRequest']);
 
-        $stockCatalog = StockCatalogPicker::rows();
+        $codes = $spec->items->pluck('stock_item_code')->filter()->values()->all();
+        $stockCatalog = StockCatalogPicker::specBootstrapRows($codes);
 
         return response()->json([
             'spec' => $spec->only(['id', 'order_ref', 'case_id', 'patient_name', 'tech_notes', 'locked']),

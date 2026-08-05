@@ -7,8 +7,7 @@ use App\Enums\StockUom;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
-use App\Models\Supplier;
-use Carbon\Carbon;
+use App\Support\StockCatalogPicker;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -207,6 +206,8 @@ class StockCatalogService
                 after: $this->formatItem($item->fresh(['category', 'prices', 'attributeValues.field'])),
             );
 
+            StockCatalogPicker::forgetCachedRows();
+
             return $item->fresh(['category', 'prices', 'attributeValues.field', 'suppliers']);
         });
     }
@@ -292,6 +293,8 @@ class StockCatalogService
                 before: $before,
                 after: $this->formatItem($item->fresh(['category', 'prices', 'attributeValues.field'])),
             );
+
+            StockCatalogPicker::forgetCachedRows();
 
             return $item->fresh(['category', 'prices', 'attributeValues.field', 'suppliers']);
         });
