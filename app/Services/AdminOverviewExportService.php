@@ -11,6 +11,7 @@ class AdminOverviewExportService
 {
     public function __construct(
         private readonly AdminOverviewService $overview,
+        private readonly AdminReportsService $reports,
     ) {}
 
     /**
@@ -23,7 +24,7 @@ class AdminOverviewExportService
     public function build(Carbon $from, Carbon $to): array
     {
         $data = $this->overview->pageData($from, $to);
-        $reports = $data['admin_reports'] ?? [];
+        $reports = $this->reports->build($from, $to);
         $financial = $reports['financial'] ?? [];
         $inventory = $reports['inventory'] ?? [];
         $bom = $reports['bom'] ?? [];

@@ -15,7 +15,6 @@ class AdminOverviewService
 {
     public function __construct(
         private readonly AdminReportsHubService $hub,
-        private readonly AdminReportsService $reports,
         private readonly AdminCycleDashboardService $cycle,
         private readonly BiReportService $biReports,
     ) {}
@@ -34,21 +33,26 @@ class AdminOverviewService
     /** @return array<string, mixed> */
     public function pageData(Carbon $from, Carbon $to): array
     {
-        $adminReports = $this->reports->build($from, $to);
+        $boards = \Illuminate\Support\Facades\Cache::remember(
+            'admin_overview_bi_boards_v1',
+            300,
+            fn () => [
+                'board1' => $this->biReports->boardPatients(),
+                'board2' => $this->biReports->boardInventory(),
+                'board3' => $this->biReports->boardOperations(),
+                'board4' => $this->biReports->boardEntitiesAndCosts(),
+                'board5' => $this->biReports->boardPurchasing(),
+            ],
+        );
 
         return [
             'date_from' => $from->toDateString(),
             'date_to' => $to->toDateString(),
             'period_label' => $this->periodLabel($from, $to),
-            'admin_reports' => $adminReports,
             'cycle_cards' => $this->cycle->build($from, $to),
             'cycle_total_active' => $this->cycle->totalActive($from, $to),
             'case_strip' => $this->caseStripCounts($from, $to),
-            'board1' => $this->biReports->boardPatients(),
-            'board2' => $this->biReports->boardInventory(),
-            'board3' => $this->biReports->boardOperations(),
-            'board4' => $this->biReports->boardEntitiesAndCosts(),
-            'board5' => $this->biReports->boardPurchasing(),
+            ...$boards,
         ];
     }
 

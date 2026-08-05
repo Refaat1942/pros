@@ -348,6 +348,7 @@
     }
 
     function renderCasesSection() {
+      if (!document.getElementById('casesTableBody')) return;
       var waiting = getAdminCaseBucket('waiting_return');
       var cashier = getAdminCaseBucket('awaiting_cashier');
       var progress = getAdminCaseBucket('in_progress');
@@ -808,6 +809,7 @@
     }
 
     function loadCatalogItems() {
+      if (!document.getElementById('catalogTable')) return;
       if (Array.isArray(window.__CATALOG_ITEMS)) {
         setCatalogItems(window.__CATALOG_ITEMS);
         return;
@@ -1487,12 +1489,15 @@
     }
 
     function renderDebts() {
+      var debtsTable = document.getElementById('debtsTable');
+      if (!debtsTable) return;
       debts = reloadDebts();
       var filtered = getFilteredDebts();
       var htmlAll = debts.map(debtRow).join('');
       var htmlFiltered = filtered.map(debtRow).join('');
-      document.getElementById('debtsTable').innerHTML = htmlAll;
-      document.getElementById('debtsTableFull').innerHTML = htmlFiltered;
+      debtsTable.innerHTML = htmlAll;
+      var debtsTableFull = document.getElementById('debtsTableFull');
+      if (debtsTableFull) debtsTableFull.innerHTML = htmlFiltered;
       var dc = document.getElementById('debtCount');
       if (dc) dc.textContent = filtered.length + ' جهة';
       refreshPaginated('debtsTable', 'debtsTableFull');

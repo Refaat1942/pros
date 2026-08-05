@@ -53,37 +53,43 @@
 </div>
 
 <div class="catalog-modal-overlay" id="stockKitGroupModal" role="dialog" aria-modal="true" hidden>
-    <div class="catalog-modal catalog-form-modal" style="width:min(520px,96vw);" onclick="event.stopPropagation()">
+    <div class="catalog-modal catalog-form-modal stock-kit-group-modal" onclick="event.stopPropagation()">
         <div class="catalog-modal-header">
             <div>
                 <h3 id="stockKitGroupModalTitle">➕ مجموعة توصيف</h3>
+                <div class="modal-code">ربط التشخيص (مثل ركبة) بالأطقم في التوصيف والمعدلات</div>
             </div>
             <button type="button" class="catalog-modal-close" id="closeStockKitGroupModal" aria-label="إغلاق">&times;</button>
         </div>
-        <div class="catalog-modal-body" style="padding:20px;">
+        <div class="catalog-modal-body stock-kit-group-modal__body">
             <input type="hidden" id="stockKitGroupPreviousKey">
-            <div style="margin-bottom:14px;">
-                <label class="stock-kit-label" for="stockKitGroupKey">المفتاح (إنجليزي)</label>
-                <input type="text" id="stockKitGroupKey" class="stock-kit-input" placeholder="knee" dir="ltr">
-            </div>
-            <div style="margin-bottom:14px;">
-                <label class="stock-kit-label" for="stockKitGroupLabel">اسم المجموعة *</label>
-                <input type="text" id="stockKitGroupLabel" class="stock-kit-input" placeholder="ركبة">
-            </div>
-            <div style="margin-bottom:14px;">
-                <label class="stock-kit-label" for="stockKitGroupIcon">أيقونة</label>
-                <input type="text" id="stockKitGroupIcon" class="stock-kit-input" maxlength="4" placeholder="🦵">
-            </div>
-            <div style="margin-bottom:14px;">
-                <label class="stock-kit-label" for="stockKitGroupDefaultType">النوع الافتراضي للطقم</label>
-                <select id="stockKitGroupDefaultType" class="stock-kit-input">
-                    <option value="assembly">طقم جاهز</option>
-                    <option value="accessory">مخصصات</option>
-                </select>
-            </div>
-            <div style="margin-bottom:14px;">
-                <label class="stock-kit-label" for="stockKitGroupKeywords">كلمات التعرف (مفصولة بفاصلة)</label>
-                <input type="text" id="stockKitGroupKeywords" class="stock-kit-input" placeholder="ركبة, ركبه, knee">
+            <div class="stock-kit-group-form">
+                <div class="stock-kit-group-row stock-kit-group-row--split">
+                    <div class="stock-kit-group-field stock-kit-group-field--icon">
+                        <label class="stock-kit-group-label" for="stockKitGroupIcon">أيقونة</label>
+                        <input type="text" id="stockKitGroupIcon" class="stock-kit-group-input stock-kit-group-input--icon" maxlength="4" placeholder="🦵">
+                    </div>
+                    <div class="stock-kit-group-field stock-kit-group-field--key">
+                        <label class="stock-kit-group-label" for="stockKitGroupKey">المفتاح (إنجليزي)</label>
+                        <input type="text" id="stockKitGroupKey" class="stock-kit-group-input" placeholder="knee" dir="ltr" spellcheck="false">
+                    </div>
+                </div>
+                <div class="stock-kit-group-field">
+                    <label class="stock-kit-group-label" for="stockKitGroupLabel">اسم المجموعة *</label>
+                    <input type="text" id="stockKitGroupLabel" class="stock-kit-group-input" placeholder="ركبة">
+                </div>
+                <div class="stock-kit-group-field">
+                    <label class="stock-kit-group-label" for="stockKitGroupDefaultType">النوع الافتراضي للطقم</label>
+                    <select id="stockKitGroupDefaultType" class="stock-kit-group-input">
+                        <option value="assembly">طقم جاهز</option>
+                        <option value="accessory">مخصصات</option>
+                    </select>
+                </div>
+                <div class="stock-kit-group-field">
+                    <label class="stock-kit-group-label" for="stockKitGroupKeywords">كلمات التعرف (مفصولة بفاصلة)</label>
+                    <input type="text" id="stockKitGroupKeywords" class="stock-kit-group-input" placeholder="ركبة, ركبه, knee, فخذ">
+                    <p class="stock-kit-group-hint">تُستخدم لمطابقة التشخيص تلقائياً مع المجموعة في التوصيف.</p>
+                </div>
             </div>
             <div id="stockKitGroupError" class="catalog-form-error" style="display:none;"></div>
         </div>
@@ -204,6 +210,87 @@
     }
     #stockKitGroupModal.catalog-modal-overlay.open {
         display: flex;
+    }
+    #stockKitGroupModal .catalog-modal.stock-kit-group-modal {
+        width: min(560px, 96vw);
+        max-width: none;
+        font-family: inherit;
+    }
+    #stockKitGroupModal .catalog-modal-body.stock-kit-group-modal__body {
+        padding: 20px 24px 24px;
+        background: #f8fafc;
+    }
+    #stockKitGroupModal .stock-kit-group-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    #stockKitGroupModal .stock-kit-group-row--split {
+        display: grid;
+        grid-template-columns: 96px 1fr;
+        gap: 12px;
+        align-items: end;
+    }
+    #stockKitGroupModal .stock-kit-group-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+    }
+    #stockKitGroupModal .stock-kit-group-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+        color: #334155;
+        line-height: 1.3;
+    }
+    #stockKitGroupModal .stock-kit-group-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        font-size: 15px;
+        line-height: 1.4;
+        font-family: inherit;
+        color: #0f172a;
+        background: #fff;
+    }
+    #stockKitGroupModal .stock-kit-group-input--icon {
+        text-align: center;
+        font-size: 22px;
+        padding: 8px 10px;
+    }
+    #stockKitGroupModal .stock-kit-group-input:focus {
+        outline: none;
+        border-color: #7c3aed;
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+    }
+    #stockKitGroupModal .stock-kit-group-input:disabled {
+        background: #f1f5f9;
+        color: #64748b;
+        cursor: not-allowed;
+    }
+    #stockKitGroupModal .stock-kit-group-hint {
+        margin: 0;
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.5;
+    }
+    #stockKitGroupModal .catalog-form-error {
+        margin-top: 14px;
+        padding: 12px 14px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 10px;
+        color: #b91c1c;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    @media (max-width: 480px) {
+        #stockKitGroupModal .stock-kit-group-row--split {
+            grid-template-columns: 1fr;
+        }
     }
     #stockKitModal .catalog-modal.stock-kit-modal {
         width: min(1240px, 98vw);
