@@ -642,7 +642,9 @@ class DashboardPageDataService
 
     private function adminStockKits(): array
     {
-        return [];
+        return [
+            'stock_kit_groups' => \App\Support\StockKitGroups::forSelect(),
+        ];
     }
 
     private function adminWorkshopSections(): array

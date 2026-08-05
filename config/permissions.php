@@ -59,6 +59,10 @@ return [
             'label_ar' => 'إدارة كتالوج الأصناف (إضافة/تعديل/حذف)',
             'dashboard' => 'admin',
         ],
+        'manage-stock-kits' => [
+            'label_ar' => 'إدارة الأطقم الجاهزة والمخصصات',
+            'dashboard' => 'admin',
+        ],
         'import-inventory' => [
             'label_ar' => 'الرفع الجماعي للأصناف (Excel/CSV)',
             'dashboard' => 'admin',
@@ -106,6 +110,7 @@ return [
         'manage-permissions' => ['admin', 'permissions'],
         'view-inventory-overview' => ['admin', 'inventory-overview'],
         'manage-inventory' => ['admin', 'catalog'],
+        'manage-stock-kits' => ['admin', 'stock-kits'],
     ],
 
     /**

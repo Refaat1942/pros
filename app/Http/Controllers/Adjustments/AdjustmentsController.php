@@ -77,6 +77,9 @@ class AdjustmentsController extends Controller
                 'type' => $row['type'] ?? 'item',
                 'kit_type' => $row['kit_type'] ?? null,
                 'kit_type_label' => $row['kit_type_label'] ?? null,
+                'spec_group' => $row['spec_group'] ?? null,
+                'spec_group_label' => $row['spec_group_label'] ?? null,
+                'group_label' => $row['group_label'] ?? null,
                 'components' => $row['components'] ?? null,
                 'qty' => $row['qty'] ?? 0,
                 'reserved' => $row['reserved'] ?? 0,
@@ -87,6 +90,7 @@ class AdjustmentsController extends Controller
         return response()->json([
             'case' => $this->formatCase($case),
             'stock_catalog' => $stockCatalog,
+            'spec_group_matcher' => \App\Support\StockKitGroups::forClientMatcher(),
         ]);
     }
 

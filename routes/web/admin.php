@@ -131,6 +131,8 @@ Route::prefix('admin')
         });
 
         Route::middleware('dashboard.page:admin,stock-kits')->group(function () {
+            Route::get('stock-kits/templates', [\App\Http\Controllers\Admin\StockKitController::class, 'templates'])
+                ->name('stock-kits.templates');
             Route::get('stock-kits/search-items', [\App\Http\Controllers\Admin\StockKitController::class, 'searchItems'])
                 ->name('stock-kits.search-items');
             Route::get('stock-kits/list', [\App\Http\Controllers\Admin\StockKitController::class, 'index'])

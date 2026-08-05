@@ -616,7 +616,7 @@
         name: c.name,
         qty: normalizeItemQty((parseInt(c.qty, 10) || 1) * mult, 1),
         uom: c.uom || catalogItem.uom,
-        group_label: catalogItem.name,
+        group_label: catalogItem.group_label || catalogItem.spec_group_label || null,
       };
     });
   }

@@ -18,6 +18,7 @@ class StockKit extends Model
         'code',
         'name',
         'type',
+        'spec_group',
         'description',
         'is_active',
     ];

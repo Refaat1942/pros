@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\StockItem;
 use App\Models\StockKit;
 use App\Services\StockKitService;
+use App\Support\StockKitGroups;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +58,7 @@ class StockKitController extends Controller
 
         $items = $query
             ->limit($limit)
-            ->get(['id', 'code', 'catalog_number', 'name', 'alt_codes', 'page_number', 'uom'])
+            ->get($this->searchItemColumns())
             ->map(fn (StockItem $item) => [
                 'id' => $item->id,
                 'code' => $item->operationalCode() ?: ($item->catalog_number ?? $item->code),
@@ -71,12 +72,20 @@ class StockKitController extends Controller
         return response()->json(['data' => $items->values()]);
     }
 
+    public function templates(): JsonResponse
+    {
+        return response()->json([
+            'groups' => StockKitGroups::forSelect(),
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:255'],
             'code' => ['nullable', 'string', 'max:32'],
             'type' => ['nullable', 'string', 'in:assembly,accessory'],
+            'spec_group' => ['nullable', 'string', 'max:32'],
             'description' => ['nullable', 'string', 'max:1000'],
             'is_active' => ['nullable', 'boolean'],
             'items' => ['required', 'array', 'min:1'],
@@ -97,6 +106,7 @@ class StockKitController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'min:2', 'max:255'],
             'type' => ['nullable', 'string', 'in:assembly,accessory'],
+            'spec_group' => ['nullable', 'string', 'max:32'],
             'description' => ['nullable', 'string', 'max:1000'],
             'is_active' => ['nullable', 'boolean'],
             'items' => ['sometimes', 'array', 'min:1'],
@@ -124,5 +134,18 @@ class StockKitController extends Controller
         return response()->json([
             'items' => $this->kits->expandForSpec($code),
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function searchItemColumns(): array
+    {
+        $columns = ['id', 'code', 'name', 'alt_codes', 'page_number', 'uom'];
+        if (Schema::hasColumn('stock_items', 'catalog_number')) {
+            $columns[] = 'catalog_number';
+        }
+
+        return $columns;
     }
 }

@@ -22,6 +22,7 @@
 
   var casesCache = [];
   var catalogCache = [];
+  var specGroupMatcher = [];
   var activeCase = null;
   var modalMode = 'direct';
   var editRequestItems = [];
@@ -172,12 +173,17 @@
 
     var q = pickerSearchQuery.trim().toLowerCase();
     var items = catalogCache.filter(function (item) {
+      if (!itemMatchesActiveSpecGroups(item)) return false;
       if (!q) return true;
       return (item.code + ' ' + item.name).toLowerCase().indexOf(q) !== -1;
     });
 
     if (!items.length) {
-      list.innerHTML = '<li class="adj-picker-empty">لا توجد نتائج</li>';
+      var activeGroups = activeSpecGroupLabels();
+      var hint = activeGroups.length
+        ? ('لا توجد أصناف لمجموعة: ' + activeGroups.join('، '))
+        : 'لا توجد نتائج';
+      list.innerHTML = '<li class="adj-picker-empty">' + esc(hint) + '</li>';
       updateCatalogFooter();
       return;
     }
@@ -290,6 +296,41 @@
     });
   }
 
+  function activeSpecGroupLabels() {
+    var labels = {};
+    specBomItems().forEach(function (it) {
+      if (it.group_label) labels[it.group_label] = true;
+    });
+    var written = activeCase && String(activeCase.written_items || '');
+    if (written && specGroupMatcher.length) {
+      var hay = written.toLowerCase();
+      specGroupMatcher.forEach(function (g) {
+        (g.keywords || []).forEach(function (kw) {
+          if (kw && hay.indexOf(String(kw).toLowerCase()) !== -1) {
+            labels[g.label] = true;
+          }
+        });
+      });
+    }
+    return Object.keys(labels);
+  }
+
+  function itemMatchesActiveSpecGroups(item) {
+    var active = activeSpecGroupLabels();
+    if (!active.length) return true;
+
+    if (item.type === 'kit') {
+      var groupLabel = item.spec_group_label || item.group_label;
+      if (!groupLabel) return false;
+      return active.indexOf(groupLabel) !== -1;
+    }
+
+    var hay = (item.name + ' ' + (item.spec || '')).toLowerCase();
+    return active.some(function (label) {
+      return hay.indexOf(String(label).toLowerCase()) !== -1;
+    });
+  }
+
   function applyModalMode() {
     var isDirect = modalMode === 'direct';
     var hasPending = !!(activeCase && activeCase.has_pending_edit_request);
@@ -339,7 +380,7 @@
         stock_item_code: c.code,
         name: c.name,
         qty: (parseInt(c.qty, 10) || 1) * mult,
-        group_label: catalogItem.name,
+        group_label: catalogItem.group_label || catalogItem.spec_group_label || null,
       };
     });
   }
@@ -638,6 +679,7 @@
       .then(function (res) {
         activeCase = res.data.case;
         catalogCache = res.data.stock_catalog || [];
+        specGroupMatcher = res.data.spec_group_matcher || [];
         modalMode = activeCase.can_modify_directly ? 'direct' : 'edit_request';
         editRequestItems = [];
 

@@ -4,7 +4,7 @@
         <button type="button" class="btn-add-rank" id="btnAddStockKit">➕ إضافة طقم</button>
     </div>
     <p class="catalog-table-hint" style="margin:12px 16px 0;">
-        الطقم الجاهز يُختار في التوصيف أو المعدلات فيُفكّك تلقائياً إلى مكوّناته. «مخصصات» = مجموعة إكسسوارات جاهزة بكمياتها.
+        حدّد <strong>مجموعة التوصيف</strong> (مثل ركبة) — عند اختيارها في التوصيف تظهر مخصصاتها فقط في المعدلات تحت نفس المجموعة.
     </p>
     <div class="data-toolbar">
         <input type="text" id="stockKitSearch" placeholder="🔍 بحث في الأطقم...">
@@ -15,6 +15,7 @@
             <thead>
                 <tr>
                     <th>الاسم</th>
+                    <th>المجموعة</th>
                     <th>الكود</th>
                     <th>النوع</th>
                     <th>المكوّنات</th>
@@ -32,7 +33,7 @@
         <div class="catalog-modal-header">
             <div>
                 <h3 id="stockKitModalTitle">➕ طقم جديد</h3>
-                <div class="modal-code" id="stockKitModalSubtitle">ابحث في المربع أدناه (مثال: رك) — ليس في اسم الطقم</div>
+                <div class="modal-code" id="stockKitModalSubtitle">اختر مجموعة التوصيف ثم ابحث عن المكوّنات في المربع البنفسجي</div>
             </div>
             <button type="button" class="catalog-modal-close" id="closeStockKitModal" aria-label="إغلاق">&times;</button>
         </div>
@@ -40,10 +41,23 @@
             <input type="hidden" id="stockKitId">
 
             <section class="stock-kit-meta-card">
+                <div class="stock-kit-templates-head">
+                    <span class="stock-kit-label">قالب سريع — مجموعة التوصيف</span>
+                    <div class="stock-kit-template-chips" id="stockKitTemplateChips"></div>
+                </div>
                 <div class="stock-kit-meta-grid">
+                    <div class="stock-kit-field">
+                        <label class="stock-kit-label" for="stockKitSpecGroup">مجموعة التوصيف *</label>
+                        <select id="stockKitSpecGroup" class="stock-kit-input" required>
+                            <option value="">— اختر المجموعة —</option>
+                            @foreach ($stock_kit_groups ?? [] as $group)
+                                <option value="{{ $group['key'] }}">{{ $group['icon'] ?? '📦' }} {{ $group['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="stock-kit-field stock-kit-field--wide">
                         <label class="stock-kit-label" for="stockKitName">اسم الطقم *</label>
-                        <input type="text" id="stockKitName" class="stock-kit-input" maxlength="255" placeholder="مثال: طقم ركبة كاملة">
+                        <input type="text" id="stockKitName" class="stock-kit-input" maxlength="255" placeholder="مثال: طقم ركبة — ميكانيكي">
                     </div>
                     <div class="stock-kit-field">
                         <label class="stock-kit-label" for="stockKitType">النوع</label>
@@ -144,9 +158,37 @@
     }
     #stockKitModal .stock-kit-meta-grid {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr;
+        grid-template-columns: 1fr 2fr 1fr;
         gap: 14px 16px;
         align-items: end;
+    }
+    #stockKitModal .stock-kit-templates-head {
+        margin-bottom: 14px;
+        padding-bottom: 14px;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+    #stockKitModal .stock-kit-template-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    #stockKitModal .stock-kit-template-chip {
+        border: 1px solid #c4b5fd;
+        background: #faf5ff;
+        color: #6d28d9;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    #stockKitModal .stock-kit-template-chip:hover,
+    #stockKitModal .stock-kit-template-chip.is-active {
+        background: #7c3aed;
+        color: #fff;
+        border-color: #7c3aed;
     }
     #stockKitModal .stock-kit-field--wide {
         grid-column: span 1;
@@ -366,3 +408,7 @@
         font-weight: 600;
     }
 </style>
+
+<script>
+    window.__STOCK_KIT_GROUPS__ = @json($stock_kit_groups ?? []);
+</script>

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\StockItem;
 use App\Models\StockKit;
 use App\Models\StockKitItem;
+use App\Support\StockKitGroups;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -62,6 +63,7 @@ class StockKitService
                 'code' => $code,
                 'name' => trim($data['name']),
                 'type' => $this->normalizeType($data['type'] ?? StockKit::TYPE_ASSEMBLY),
+                'spec_group' => StockKitGroups::normalizeKey($data['spec_group'] ?? null),
                 'description' => $this->nullableString($data['description'] ?? null),
                 'is_active' => (bool) ($data['is_active'] ?? true),
             ]);
@@ -92,6 +94,9 @@ class StockKitService
                 'type' => array_key_exists('type', $data)
                     ? $this->normalizeType($data['type'])
                     : $kit->type,
+                'spec_group' => array_key_exists('spec_group', $data)
+                    ? StockKitGroups::normalizeKey($data['spec_group'])
+                    : $kit->spec_group,
                 'description' => array_key_exists('description', $data)
                     ? $this->nullableString($data['description'])
                     : $kit->description,
@@ -208,7 +213,7 @@ class StockKitService
     private function expandedLines(StockKit $kit): array
     {
         $kit->loadMissing('items.stockItem');
-        $label = $kit->name;
+        $label = StockKitGroups::label($kit->spec_group) ?? $kit->name;
 
         return $kit->items->map(function (StockKitItem $line) use ($label) {
             $item = $line->stockItem;
@@ -255,6 +260,9 @@ class StockKitService
             'type' => 'kit',
             'kit_type' => $kit->type,
             'kit_type_label' => $kit->type === StockKit::TYPE_ACCESSORY ? 'مخصصات' : 'طقم جاهز',
+            'spec_group' => $kit->spec_group,
+            'spec_group_label' => StockKitGroups::label($kit->spec_group),
+            'group_label' => StockKitGroups::label($kit->spec_group),
             'spec' => count($components).' مكوّن',
             'uom' => 'طقم',
             'qty' => 0,
@@ -275,6 +283,8 @@ class StockKitService
             'name' => $kit->name,
             'type' => $kit->type,
             'type_label' => $kit->type === StockKit::TYPE_ACCESSORY ? 'مخصصات' : 'طقم جاهز',
+            'spec_group' => $kit->spec_group,
+            'spec_group_label' => StockKitGroups::label($kit->spec_group),
             'description' => $kit->description,
             'is_active' => (bool) $kit->is_active,
             'items' => $kit->items->map(fn (StockKitItem $line) => [
