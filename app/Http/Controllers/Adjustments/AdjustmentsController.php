@@ -8,6 +8,8 @@ use App\Http\Requests\Adjustments\StoreAdjustmentItemsRequest;
 use App\Http\Requests\Adjustments\UpdateAdjustmentItemQtyRequest;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
+use App\Services\AdjustmentsService;
+use App\Services\PathwayTransitionMessageService;
 use App\Support\StockCatalogPicker;
 use App\Support\StockItemUomLookup;
 use App\Traits\PaginationTrait;
