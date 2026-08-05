@@ -94,6 +94,7 @@ class StockCatalogService
         return [
             'id' => $item->id,
             'code' => $item->code,
+            'catalog_number' => $item->catalog_number ?? $item->code,
             'operational_code' => $item->operationalCode() ?? '',
             'page_number' => $item->page_number ?? '',
             'barcode' => $item->barcode,
@@ -140,7 +141,13 @@ class StockCatalogService
     public function create(array $data): StockItem
     {
         return DB::transaction(function () use ($data) {
-            $code = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $this->nextCatalogCode();
+            $catalogNumber = $this->nullableString($data['catalog_number'] ?? null);
+            $requestedCode = trim((string) ($data['code'] ?? ''));
+            if ($catalogNumber === null && $requestedCode !== '') {
+                $catalogNumber = $requestedCode;
+            }
+
+            $code = $this->resolveInternalItemCode($requestedCode, $catalogNumber, $data['page_number'] ?? null);
             $operationalCode = $this->resolveOperationalCode($data['alt_codes'] ?? null);
             $category = ! empty($data['category_id']) ? StockCategory::find($data['category_id']) : null;
             $openingQty = (int) ($data['opening_qty'] ?? $data['qty'] ?? 0);
@@ -153,6 +160,7 @@ class StockCatalogService
 
             $item = StockItem::create([
                 'code' => $code,
+                'catalog_number' => $catalogNumber,
                 'page_number' => $this->nullableString($data['page_number'] ?? null),
                 'name' => $data['name'],
                 'spec' => $data['spec'] ?? null,
@@ -226,6 +234,9 @@ class StockCatalogService
                 'page_number' => array_key_exists('page_number', $data)
                     ? $this->nullableString($data['page_number'])
                     : $item->page_number,
+                'catalog_number' => array_key_exists('catalog_number', $data)
+                    ? $this->nullableString($data['catalog_number'])
+                    : $item->catalog_number,
                 'name' => $data['name'],
                 'spec' => $data['spec'] ?? $item->spec,
                 'uom' => array_key_exists('uom', $data) && trim((string) $data['uom']) !== ''
@@ -357,6 +368,28 @@ class StockCatalogService
         }
 
         return $provided;
+    }
+
+    /** كود داخلي فريد — يُستخدم عند تكرار رقم الصنف في Excel. */
+    private function resolveInternalItemCode(string $requestedCode, ?string $catalogNumber, mixed $pageNumber): string
+    {
+        $requestedCode = trim($requestedCode);
+        $catalogNumber = trim((string) ($catalogNumber ?? ''));
+        $pageNumber = trim((string) ($pageNumber ?? ''));
+
+        if ($requestedCode !== '' && ! StockItem::where('code', $requestedCode)->exists()) {
+            return $requestedCode;
+        }
+
+        if ($catalogNumber !== '' && ! StockItem::where('code', $catalogNumber)->exists()) {
+            return $catalogNumber;
+        }
+
+        if ($pageNumber !== '' && ! StockItem::where('code', $pageNumber)->exists()) {
+            return $pageNumber;
+        }
+
+        return $this->nextCatalogCode();
     }
 
     private function barcodeForOperational(?string $operationalCode): ?string

@@ -71,6 +71,7 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertSame(1, $summary['created']);
         $this->assertDatabaseHas('stock_items', [
             'code' => 'RM-900',
+            'catalog_number' => 'RM-900',
             'name' => 'خامة اختبار',
             'page_number' => '10',
             'uom' => 'متر',
@@ -90,6 +91,33 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertSame(1, StockItem::where('code', 'RM-900')->count());
         $this->assertSame(37, (int) StockItem::where('code', 'RM-900')->value('qty'));
         $this->assertSame('قطعة', StockItem::where('code', 'RM-900')->value('uom'));
+    }
+
+    public function test_csv_import_keeps_duplicate_catalog_numbers_as_separate_items(): void
+    {
+        $csv = $this->catalogHeaders();
+        $contents = implode(',', $csv)."\r\n"
+            ."198,1/198,كف متحرك ستيبير,9001,عدد,0,0,0,0\r\n"
+            ."198,3/198,كرنفال 3 مم الوان,9002,عدد,0,0,104850,0\r\n";
+
+        $file = UploadedFile::fake()->createWithContent('dup.csv', $contents);
+
+        $summary = app(StockImportService::class)->import($file);
+
+        $this->assertSame(2, $summary['created']);
+        $this->assertSame(0, $summary['skipped']);
+        $this->assertSame(2, StockItem::query()->where('catalog_number', '198')->count());
+        $this->assertDatabaseHas('stock_items', [
+            'catalog_number' => '198',
+            'page_number' => '1/198',
+            'name' => 'كف متحرك ستيبير',
+        ]);
+        $this->assertDatabaseHas('stock_items', [
+            'catalog_number' => '198',
+            'page_number' => '3/198',
+            'name' => 'كرنفال 3 مم الوان',
+            'discount' => 104850,
+        ]);
     }
 
     public function test_csv_import_defaults_unit_when_blank(): void

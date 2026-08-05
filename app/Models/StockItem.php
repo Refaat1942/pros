@@ -20,6 +20,7 @@ class StockItem extends Model
 
     protected $fillable = [
         'code',
+        'catalog_number',
         'page_number',
         'name',
         'spec',

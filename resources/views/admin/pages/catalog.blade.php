@@ -90,7 +90,7 @@
         <p class="catalog-table-hint" style="margin-top:6px;">
             قالب الأصناف — {{ count($catalogTemplateHeaders) }} أعمدة:
             <strong>{{ implode(' | ', $catalogTemplateHeaders) }}</strong>.
-            أسعار والموردون والأقسام تُدار من نموذج الصنف. <strong>الأكواد والباركود</strong> تُرفع من Excel فقط — لا توليد تلقائي.
+            أسعار والموردون والأقسام تُدار من نموذج الصنف. <strong>رقم الصنف قد يتكرر</strong> — التمييز برقم الصفحة. الأكواد والباركود من Excel. لا توليد تلقائي للأكواد.
         </p>
 
         <div class="panel-body" style="overflow-x:auto;">
@@ -125,7 +125,7 @@
                             @can('print-barcode')
                                 <td style="padding:8px;text-align:center;"><input type="checkbox" class="catalog-barcode-check" value="{{ $item['id'] ?? '' }}" onclick="syncBarcodeSelection()"></td>
                             @endcan
-                            <td style="padding:8px;direction:ltr;text-align:right;"><strong>{{ $item['code'] ?? '' }}</strong></td>
+                            <td style="padding:8px;direction:ltr;text-align:right;"><strong>{{ $item['catalog_number'] ?? $item['code'] ?? '' }}</strong></td>
                             <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $item['page_number'] ?? '—' }}</td>
                             <td style="padding:8px;">{{ $item['name'] ?? '' }}</td>
                             <td style="padding:8px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">{{ $item['alt_codes'] ?? '—' }}</td>
@@ -1083,7 +1083,7 @@
 
         document.getElementById('catalogViewBody').innerHTML =
             '<div class="catalog-detail-grid">'
-            + detailBox('رقم الصنف', item.code || '—')
+            + detailBox('رقم الصنف', item.catalog_number || item.code || '—')
             + detailBox('رقم الصفحة', item.page_number || '—')
             + detailBox('الأكواد', item.alt_codes || item.barcode || '—')
             + detailBox('الوحدة', item.uom || 'قطعة')
@@ -1252,7 +1252,7 @@
     }
 
     function catalogRowHtml(item) {
-        var search = escAttr(((item.code || '') + ' ' + (item.name || '') + ' ' + (item.page_number || '') + ' ' + (item.alt_codes || '')).toLowerCase());
+        var search = escAttr(((item.catalog_number || item.code || '') + ' ' + (item.name || '') + ' ' + (item.page_number || '') + ' ' + (item.alt_codes || '')).toLowerCase());
         var dataAttr = escAttr(JSON.stringify(item));
         var labelsUrl = '/admin/catalog/' + item.id + '/labels';
         var catalogBal = parseInt(item.catalog_balance, 10);
@@ -1266,7 +1266,7 @@
             : '';
         return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
-            '<td style="padding:8px;direction:ltr;text-align:right;"><strong>' + (item.code || '') + '</strong></td>' +
+            '<td style="padding:8px;direction:ltr;text-align:right;"><strong>' + (item.catalog_number || item.code || '') + '</strong></td>' +
             '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + (item.page_number || '—') + '</td>' +
             '<td style="padding:8px;">' + (item.name || '') + '</td>' +
             '<td style="padding:8px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">' + (item.alt_codes || '—') + '</td>' +

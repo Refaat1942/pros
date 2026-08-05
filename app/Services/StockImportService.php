@@ -59,13 +59,13 @@ class StockImportService
         $skipped = 0;
         $errors = [];
 
-        $rows = $this->readRows($file);
+        ['map' => $columnMap, 'rows' => $rows] = $this->readRowsWithColumnMap($file);
 
-        DB::transaction(function () use ($rows, &$created, &$updated, &$skipped, &$errors) {
+        DB::transaction(function () use ($rows, $columnMap, &$created, &$updated, &$skipped, &$errors) {
             foreach ($rows as $lineNo => $cols) {
-                $parsed = $this->parseRowColumns($cols);
+                $parsed = $this->parseRowColumns($cols, $columnMap);
 
-                if ($parsed['code'] === '' && $parsed['name'] === '') {
+                if ($parsed['catalog_number'] === '' && $parsed['name'] === '') {
                     continue;
                 }
                 if ($parsed['name'] === '') {
@@ -88,13 +88,6 @@ class StockImportService
                     $openingQty = $balance;
                 }
 
-                if ($parsed['alt_codes'] === '') {
-                    $skipped++;
-                    $errors[] = "السطر {$lineNo}: عمود الأكواد مطلوب — ضعه في ملف Excel.";
-
-                    continue;
-                }
-
                 [$parsed['uom'], $uomQty] = $this->parseUomField($parsed['uom']);
                 if ($uomQty !== null && $openingQty === 0 && $addition === 0 && $discount === 0) {
                     $openingQty = $uomQty;
@@ -104,7 +97,7 @@ class StockImportService
                 }
 
                 $payload = [
-                    'code' => $parsed['code'] !== '' ? $parsed['code'] : null,
+                    'catalog_number' => $parsed['catalog_number'] !== '' ? $parsed['catalog_number'] : null,
                     'page_number' => $parsed['page_number'] !== '' ? $parsed['page_number'] : null,
                     'name' => $parsed['name'],
                     'alt_codes' => $parsed['alt_codes'] !== '' ? $parsed['alt_codes'] : null,
@@ -116,13 +109,7 @@ class StockImportService
                     'qty' => $balance,
                 ];
 
-                $existing = null;
-                if ($parsed['code'] !== '') {
-                    $existing = StockItem::where('code', $parsed['code'])->first();
-                }
-                if (! $existing && $parsed['alt_codes'] !== '') {
-                    $existing = StockItem::where('alt_codes', $parsed['alt_codes'])->first();
-                }
+                $existing = $this->findExistingForImport($parsed);
 
                 try {
                     if ($existing) {
@@ -132,6 +119,9 @@ class StockImportService
                         $this->catalogService->create($payload);
                         $created++;
                     }
+                } catch (\InvalidArgumentException $e) {
+                    $skipped++;
+                    $errors[] = "السطر {$lineNo}: ".$e->getMessage();
                 } catch (ValidationException $e) {
                     $skipped++;
                     $errors[] = "السطر {$lineNo}: ".implode(' ', $e->validator->errors()->all());
@@ -163,7 +153,7 @@ class StockImportService
         $uom = $this->cleanUomForExport((string) ($item['uom'] ?? ''));
 
         return [
-            (string) ($item['code'] ?? ''),
+            (string) ($item['catalog_number'] ?? $item['code'] ?? ''),
             (string) ($item['page_number'] ?? ''),
             (string) ($item['name'] ?? ''),
             $operational,
@@ -231,23 +221,159 @@ class StockImportService
     }
 
     /**
-     * @return array<int, list<string>>
+     * @return array{map: array<string, int>|null, rows: array<int, list<string>>}
      */
-    private function readRows(UploadedFile $file): array
+    private function readRowsWithColumnMap(UploadedFile $file): array
     {
         $extension = strtolower($file->getClientOriginalExtension());
+        $rawRows = $extension === 'xlsx'
+            ? $this->readXlsxRowsRaw($file)
+            : $this->readCsvRowsRaw($file);
 
-        if ($extension === 'xlsx') {
-            return $this->readXlsxRows($file);
+        $columnMap = null;
+        $rows = [];
+
+        foreach ($rawRows as $lineNo => $cols) {
+            if ($this->isInstructionRow($cols)) {
+                continue;
+            }
+
+            if ($this->rowIsEmpty($cols)) {
+                continue;
+            }
+
+            if ($columnMap === null && $this->isHeaderRow($cols)) {
+                $columnMap = $this->buildColumnMap($cols);
+
+                continue;
+            }
+
+            $rows[$lineNo] = $cols;
         }
 
-        return $this->readCsvRows($file);
+        return ['map' => $columnMap, 'rows' => $rows];
+    }
+
+    /**
+     * @param  list<string>  $headerCells
+     * @return array<string, int>
+     */
+    private function buildColumnMap(array $headerCells): array
+    {
+        $aliases = [
+            'catalog_number' => ['رقم الصنف', 'كود الصنف'],
+            'page_number' => ['رقم الصفحة'],
+            'name' => ['اسم الصنف'],
+            'alt_codes' => ['الأكواد'],
+            'uom' => ['الوحدة'],
+            'opening_qty_raw' => ['رصيد أول المده', 'رصيد أول المدة', 'الكمية'],
+            'addition_raw' => ['الاضافة', 'الإضافة'],
+            'discount_raw' => ['الخصم'],
+            'balance_raw' => ['الرصيد', 'الكمية'],
+        ];
+
+        $map = [];
+
+        foreach ($headerCells as $index => $cell) {
+            $normalized = mb_strtolower(trim((string) $cell));
+            if ($normalized === '') {
+                continue;
+            }
+
+            foreach ($aliases as $field => $labels) {
+                if (array_key_exists($field, $map)) {
+                    continue;
+                }
+
+                foreach ($labels as $label) {
+                    if ($normalized === mb_strtolower($label) || str_contains($normalized, mb_strtolower($label))) {
+                        $map[$field] = $index;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    private function findExistingForImport(array $parsed): ?StockItem
+    {
+        $pageNumber = trim((string) ($parsed['page_number'] ?? ''));
+        $altCodes = trim((string) ($parsed['alt_codes'] ?? ''));
+        $catalogNumber = trim((string) ($parsed['catalog_number'] ?? ''));
+        $name = trim((string) ($parsed['name'] ?? ''));
+
+        if ($pageNumber !== '') {
+            $byPage = StockItem::query()->where('page_number', $pageNumber)->first();
+            if ($byPage !== null) {
+                return $byPage;
+            }
+        }
+
+        if ($altCodes !== '') {
+            $byAlt = StockItem::query()->where('alt_codes', $altCodes)->first();
+            if ($byAlt !== null) {
+                return $byAlt;
+            }
+        }
+
+        if ($catalogNumber !== '') {
+            if ($pageNumber !== '') {
+                $byCatalogPage = StockItem::query()
+                    ->where('catalog_number', $catalogNumber)
+                    ->where('page_number', $pageNumber)
+                    ->first();
+                if ($byCatalogPage !== null) {
+                    return $byCatalogPage;
+                }
+            }
+
+            if ($name !== '') {
+                $byName = StockItem::query()
+                    ->where('catalog_number', $catalogNumber)
+                    ->where('name', $name)
+                    ->first();
+                if ($byName !== null) {
+                    return $byName;
+                }
+            }
+
+            $catalogMatches = StockItem::query()->where('catalog_number', $catalogNumber)->count();
+            if ($catalogMatches === 1 && $pageNumber === '') {
+                return StockItem::query()->where('catalog_number', $catalogNumber)->first();
+            }
+
+            // توافق خلفي: صنف قديم مُعرَّف برقم الصنف في code فقط.
+            $legacy = StockItem::query()
+                ->where('code', $catalogNumber)
+                ->where(function ($q) {
+                    $q->whereNull('catalog_number')->orWhere('catalog_number', '');
+                })
+                ->first();
+            if ($legacy !== null) {
+                return $legacy;
+            }
+        }
+
+        return null;
     }
 
     /**
      * @return array<int, list<string>>
      */
-    private function readXlsxRows(UploadedFile $file): array
+    private function readRows(UploadedFile $file): array
+    {
+        return $this->readRowsWithColumnMap($file)['rows'];
+    }
+
+    /**
+     * @return array<int, list<string>>
+     */
+    private function readXlsxRowsRaw(UploadedFile $file): array
     {
         $reader = new XlsxReader;
         $reader->open($file->getRealPath());
@@ -266,14 +392,6 @@ class StockImportService
                 $row->toArray(),
             );
 
-            if ($this->isHeaderRow($cells) || $this->isInstructionRow($cells)) {
-                continue;
-            }
-
-            if ($this->rowIsEmpty($cells)) {
-                continue;
-            }
-
             $rows[$lineNo] = $cells;
         }
 
@@ -285,7 +403,7 @@ class StockImportService
     /**
      * @return array<int, list<string>>
      */
-    private function readCsvRows(UploadedFile $file): array
+    private function readCsvRowsRaw(UploadedFile $file): array
     {
         $content = $this->normalizeToUtf8((string) file_get_contents($file->getRealPath()));
 
@@ -297,27 +415,52 @@ class StockImportService
                 continue;
             }
 
-            $cols = $this->parseCsvLine($line);
-
-            if ($this->isHeaderRow($cols) || $this->isInstructionRow($cols)) {
-                continue;
-            }
-
-            $rows[$i + 1] = $cols;
+            $rows[$i + 1] = $this->parseCsvLine($line);
         }
 
         return $rows;
     }
 
     /**
-     * @param  list<string>  $cols
-     * @return array{code:string, page_number:string, name:string, alt_codes:string, uom:string, opening_qty_raw:string, addition_raw:string, discount_raw:string, balance_raw:string}
+     * @return array<int, list<string>>
      */
-    private function parseRowColumns(array $cols): array
+    private function readXlsxRows(UploadedFile $file): array
     {
+        return $this->readRowsWithColumnMap($file)['rows'];
+    }
+
+    /**
+     * @return array<int, list<string>>
+     */
+    private function readCsvRows(UploadedFile $file): array
+    {
+        return $this->readRowsWithColumnMap($file)['rows'];
+    }
+
+    /**
+     * @param  list<string>  $cols
+     * @param  array<string, int>|null  $columnMap
+     * @return array{catalog_number:string, page_number:string, name:string, alt_codes:string, uom:string, opening_qty_raw:string, addition_raw:string, discount_raw:string, balance_raw:string}
+     */
+    private function parseRowColumns(array $cols, ?array $columnMap = null): array
+    {
+        if ($columnMap !== null && $columnMap !== []) {
+            return [
+                'catalog_number' => $this->cellValue($cols, $columnMap, 'catalog_number'),
+                'page_number' => $this->cellValue($cols, $columnMap, 'page_number'),
+                'name' => $this->cellValue($cols, $columnMap, 'name'),
+                'alt_codes' => $this->cellValue($cols, $columnMap, 'alt_codes'),
+                'uom' => $this->cellValue($cols, $columnMap, 'uom'),
+                'opening_qty_raw' => $this->cellValue($cols, $columnMap, 'opening_qty_raw'),
+                'addition_raw' => $this->cellValue($cols, $columnMap, 'addition_raw', '0'),
+                'discount_raw' => $this->cellValue($cols, $columnMap, 'discount_raw', '0'),
+                'balance_raw' => $this->cellValue($cols, $columnMap, 'balance_raw'),
+            ];
+        }
+
         if ($this->looksLikeLegacyFiveColumnRow($cols)) {
             return [
-                'code' => trim((string) ($cols[0] ?? '')),
+                'catalog_number' => trim((string) ($cols[0] ?? '')),
                 'page_number' => '',
                 'name' => trim((string) ($cols[1] ?? '')),
                 'alt_codes' => '',
@@ -330,7 +473,7 @@ class StockImportService
         }
 
         return [
-            'code' => trim((string) ($cols[0] ?? '')),
+            'catalog_number' => trim((string) ($cols[0] ?? '')),
             'page_number' => trim((string) ($cols[1] ?? '')),
             'name' => trim((string) ($cols[2] ?? '')),
             'alt_codes' => trim((string) ($cols[3] ?? '')),
@@ -340,6 +483,19 @@ class StockImportService
             'discount_raw' => trim((string) ($cols[7] ?? '0')),
             'balance_raw' => trim((string) ($cols[8] ?? '')),
         ];
+    }
+
+    /**
+     * @param  list<string>  $cols
+     * @param  array<string, int>  $columnMap
+     */
+    private function cellValue(array $cols, array $columnMap, string $field, string $default = ''): string
+    {
+        if (! array_key_exists($field, $columnMap)) {
+            return $default;
+        }
+
+        return trim((string) ($cols[$columnMap[$field]] ?? $default));
     }
 
     /** @param  list<string>  $cols */
