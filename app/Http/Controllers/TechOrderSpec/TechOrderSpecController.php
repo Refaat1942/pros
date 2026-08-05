@@ -7,6 +7,7 @@ use App\Exceptions\InvalidSpecItemException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TechOrderSpec\StoreTechOrderSpecRequest;
 use App\Http\Requests\TechOrderSpec\UpdateTechOrderSpecRequest;
+use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\PricingRequest;
@@ -304,29 +305,70 @@ class TechOrderSpecController extends Controller
 
     private function resolveMedicalRecord(CaseRecord $case): ?MedicalRecord
     {
-        $record = MedicalRecord::where('case_id', $case->id)
+        $byCase = MedicalRecord::where('case_id', $case->id)
             ->with('items')
             ->orderByDesc('locked')
             ->orderByDesc('id')
-            ->first();
+            ->get();
 
-        if ($record) {
-            return $record;
+        $locked = $byCase->firstWhere('locked', true);
+        if ($locked) {
+            return $locked;
         }
 
-        if (! $case->patient_id) {
-            return null;
+        $withDiagnosis = $byCase->first(
+            fn (MedicalRecord $record) => filled(trim((string) $record->diagnosis))
+        );
+        if ($withDiagnosis) {
+            return $withDiagnosis;
         }
 
-        return MedicalRecord::where('patient_id', $case->patient_id)
-            ->where('locked', true)
-            ->with('items')
-            ->latest()
-            ->first();
+        if ($byCase->isNotEmpty()) {
+            return $byCase->first();
+        }
+
+        if ($case->patient_id) {
+            $appointmentIds = Appointment::query()
+                ->where('patient_id', $case->patient_id)
+                ->orderByDesc('updated_at')
+                ->limit(8)
+                ->pluck('id');
+
+            if ($appointmentIds->isNotEmpty()) {
+                $byAppointment = MedicalRecord::query()
+                    ->whereIn('appointment_id', $appointmentIds)
+                    ->with('items')
+                    ->orderByDesc('locked')
+                    ->orderByDesc('id')
+                    ->get()
+                    ->sortBy(fn (MedicalRecord $record) => $appointmentIds->search($record->appointment_id))
+                    ->values();
+
+                $lockedAppt = $byAppointment->firstWhere('locked', true);
+                if ($lockedAppt) {
+                    return $lockedAppt;
+                }
+
+                $diagnosisAppt = $byAppointment->first(
+                    fn (MedicalRecord $record) => filled(trim((string) $record->diagnosis))
+                );
+                if ($diagnosisAppt) {
+                    return $diagnosisAppt;
+                }
+            }
+
+            return MedicalRecord::where('patient_id', $case->patient_id)
+                ->where('locked', true)
+                ->with('items')
+                ->latest('id')
+                ->first();
+        }
+
+        return null;
     }
 
-    /** @return array<string, mixed>|null */
-    private function formatMedicalContext(CaseRecord $case, ?MedicalRecord $record): ?array
+    /** @return array<string, mixed> */
+    private function formatMedicalContext(CaseRecord $case, ?MedicalRecord $record): array
     {
         $case->loadMissing(['patient', 'recommendations']);
 
@@ -337,20 +379,33 @@ class TechOrderSpecController extends Controller
             CaseRecord::STAGE_EXAM,
         );
 
-        if (! $record && $recommendations === [] && trim($transferMessage) === '') {
-            return null;
-        }
-
         $items = $record?->items?->map->only(['stock_item_code', 'name', 'qty']) ?? collect();
+        $doctorMessage = $this->buildDoctorMessage($record);
 
         return [
             'diagnosis' => $record?->diagnosis,
             'prescription' => $record?->prescription,
             'doctor_name' => $record?->doctor_name,
+            'doctor_message' => $doctorMessage,
             'transfer_message' => $transferMessage,
+            'has_clinical_notes' => $doctorMessage !== null,
             'items' => $items->values()->all(),
             'recommendations' => $recommendations,
         ];
+    }
+
+    private function buildDoctorMessage(?MedicalRecord $record): ?string
+    {
+        if (! $record) {
+            return null;
+        }
+
+        $parts = array_values(array_filter([
+            filled(trim((string) $record->diagnosis)) ? trim((string) $record->diagnosis) : null,
+            filled(trim((string) $record->prescription)) ? trim((string) $record->prescription) : null,
+        ]));
+
+        return $parts === [] ? null : implode("\n\n", $parts);
     }
 
     private function formatPricingRequest(PricingRequest $request, bool $forSpec = false): array

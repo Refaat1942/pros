@@ -142,15 +142,7 @@
     var medBox = $('medicalSummary');
     if (!medBox) return;
 
-    var hasContent = med && (
-      med.transfer_message ||
-      med.diagnosis ||
-      med.prescription ||
-      (med.recommendations && med.recommendations.length) ||
-      (med.items && med.items.length)
-    );
-
-    if (!hasContent) {
+    if (!med) {
       medBox.classList.add('hidden');
       return;
     }
@@ -165,6 +157,22 @@
       } else {
         transferEl.textContent = '';
         transferEl.classList.add('hidden');
+      }
+    }
+
+    var doctorMsg = med.doctor_message || '';
+    var doctorWrap = $('medDoctorMessageWrap');
+    var doctorEl = $('medDoctorMessage');
+    var noDoctorEl = $('medNoDoctorMessage');
+    if (doctorWrap && doctorEl) {
+      if (doctorMsg) {
+        doctorWrap.classList.remove('hidden');
+        doctorEl.textContent = doctorMsg;
+        if (noDoctorEl) noDoctorEl.classList.add('hidden');
+      } else {
+        doctorWrap.classList.add('hidden');
+        doctorEl.textContent = '';
+        if (noDoctorEl) noDoctorEl.classList.remove('hidden');
       }
     }
 
@@ -439,6 +447,7 @@
     var empty = $('emptyState');
     if (workspace) workspace.classList.add('hidden');
     if (empty) empty.classList.remove('hidden');
+    renderMedicalSummary(null);
     setLockedUI(false);
     renderReworkBanner(null);
     clearError();

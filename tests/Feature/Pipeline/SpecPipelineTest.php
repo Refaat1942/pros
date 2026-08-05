@@ -92,4 +92,37 @@ class SpecPipelineTest extends TestCase
             ->assertOk()
             ->assertJsonFragment(['name' => $item->name]);
     }
+
+    public function test_spec_create_returns_doctor_message_from_locked_medical_record(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $doctor = $this->userWithRole('doctor');
+        $spec = $this->userWithRole('spec');
+
+        $this->actingAs($doctor);
+
+        $record = MedicalRecord::create([
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'patient_type' => $patient->patient_type,
+            'diagnosis' => 'بتر فوق الركبة — يحتاج طرف',
+            'prescription' => 'متابعة دورية',
+            'doctor_name' => $doctor->name,
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_DRAFT,
+            'locked' => false,
+        ]);
+
+        app(MedicalRecordService::class)->lock($record);
+
+        $case = CaseRecord::where('patient_id', $patient->id)->firstOrFail();
+
+        $this->actingAs($spec)
+            ->getJson("/spec/spec/{$case->id}")
+            ->assertOk()
+            ->assertJsonPath('medical_record.diagnosis', 'بتر فوق الركبة — يحتاج طرف')
+            ->assertJsonPath('medical_record.doctor_message', "بتر فوق الركبة — يحتاج طرف\n\nمتابعة دورية")
+            ->assertJsonPath('medical_record.has_clinical_notes', true);
+    }
 }

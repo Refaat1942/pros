@@ -132,11 +132,19 @@
                 </div>
             </div>
 
-            <div id="medicalSummary" class="hidden rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-sm space-y-2">
+            <div id="medicalSummary" class="hidden rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-sm space-y-3">
                 <p class="font-bold text-emerald-900">📋 رسالة التحويل من الطبيب</p>
-                <p id="medTransferMessage" class="text-emerald-800 text-xs leading-relaxed hidden"></p>
-                <p class="text-slate-600"><span class="font-semibold">التشخيص:</span> <span id="medDiagnosis">—</span></p>
-                <p class="text-slate-600"><span class="font-semibold">الروشتة:</span> <span id="medPrescription">—</span></p>
+                <p id="medTransferMessage" class="text-emerald-700 text-xs leading-relaxed hidden"></p>
+                <div id="medDoctorMessageWrap" class="hidden rounded-lg bg-white/80 border border-emerald-100 px-3 py-2">
+                    <p id="medDoctorMessage" class="text-slate-800 whitespace-pre-wrap leading-relaxed text-sm"></p>
+                </div>
+                <p id="medNoDoctorMessage" class="hidden text-amber-800 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    لا يوجد تقرير طبي مرتبط بهذه الحالة — تأكد من اعتماد الكشف في العيادة.
+                </p>
+                <div id="medClinicalDetails" class="space-y-1">
+                    <p class="text-slate-600"><span class="font-semibold">التشخيص:</span> <span id="medDiagnosis">—</span></p>
+                    <p class="text-slate-600"><span class="font-semibold">الروشتة:</span> <span id="medPrescription">—</span></p>
+                </div>
                 <div id="medRecommendationsWrap" class="hidden">
                     <p class="font-semibold text-slate-700 mt-2 mb-1">توصيات الطبيب (أصناف):</p>
                     <ul id="medRecommendations" class="list-disc list-inside text-slate-600 space-y-0.5"></ul>
