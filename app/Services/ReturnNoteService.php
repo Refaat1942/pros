@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bom;
 use App\Models\BomItem;
+use App\Models\CaseRecord;
 use App\Models\ReturnNote;
 use App\Models\ReturnNoteLine;
 use App\Models\StockItem;
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ReturnNoteService
 {
-    public function __construct(private readonly BarcodeValidationService $barcodeValidation) {}
+    public function __construct(
+        private readonly BarcodeValidationService $barcodeValidation,
+        private readonly StockPriceService $stockPriceService,
+    ) {}
 
     /**
      * إنشاء إذن ارتجاع مع بنوده.
@@ -137,8 +141,10 @@ class ReturnNoteService
                     ];
                 }
 
+                $bomItem = $note->bom?->items->firstWhere('stock_item_code', $line->stock_item_code);
+
                 $qtyBefore = (int) $stockItem->qty;
-                $unitCost = round((float) $stockItem->wac, 4);
+                $unitCost = $this->returnUnitCost($bomItem, $line->stock_item_code);
                 $balanceAfter = $qtyBefore + $qtyReturned;
 
                 StockMovement::create([
@@ -171,11 +177,12 @@ class ReturnNoteService
                     'line_value' => round($qtyReturned * $unitCost, 2),
                 ];
 
-                $bomItem = $note->bom?->items->firstWhere('stock_item_code', $line->stock_item_code);
                 if ($bomItem) {
                     BomItem::where('id', $bomItem->id)->increment('returned_qty', $qtyReturned);
                 }
             }
+
+            $this->syncCaseIssueCostAfterReturn($note);
 
             $note->refresh()->load('lines');
 
@@ -209,6 +216,37 @@ class ReturnNoteService
                 'stock_updates' => $stockUpdates,
             ];
         });
+    }
+
+    /** تكلفة الارتجاع = WAC وقت الصرف (نفس مصدر حركة issue) — لا أعلى سعر شراء. */
+    private function returnUnitCost(?BomItem $bomItem, string $stockItemCode): float
+    {
+        $dispenseCost = (float) ($bomItem?->unit_cost ?? 0);
+
+        if ($dispenseCost > 0) {
+            return round($dispenseCost, 4);
+        }
+
+        return round($this->stockPriceService->wacUnitPrice($stockItemCode), 4);
+    }
+
+    /** يُحدّث تكلفة الصرف على الحالة بعد إرجاع مواد للمخزون. */
+    private function syncCaseIssueCostAfterReturn(ReturnNote $note): void
+    {
+        if (! $note->case_id || ! $note->bom_id) {
+            return;
+        }
+
+        $bom = Bom::with('items')->find($note->bom_id);
+        if (! $bom) {
+            return;
+        }
+
+        $netIssueCost = round($bom->items->sum(
+            fn (BomItem $item) => max(0, $item->issued_qty - $item->returned_qty) * (float) $item->unit_cost
+        ), 2);
+
+        CaseRecord::whereKey($note->case_id)->update(['issue_cost' => $netIssueCost]);
     }
 
     private function nextReturnNo(): string

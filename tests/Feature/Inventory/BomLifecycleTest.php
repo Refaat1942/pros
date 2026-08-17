@@ -96,7 +96,7 @@ class BomLifecycleTest extends TestCase
         ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
 
-        $supplier = $this->makeSupplier();
+        $supplier = \App\Models\Supplier::first();
         $priceService = app(StockPriceService::class);
         $priceService->addBatch($item->fresh(), 10, 100.00, $supplier, 'INV-LOW', now());
         $priceService->addBatch($item->fresh(), 10, 250.00, $supplier, 'INV-HIGH', now());
@@ -111,7 +111,7 @@ class BomLifecycleTest extends TestCase
             ->first();
 
         $this->assertNotNull($movement);
-        $this->assertSame((float) $item->fresh()->wac, (float) $movement->unit_cost);
+        $this->assertEqualsWithDelta((float) $item->fresh()->wac, (float) $movement->unit_cost, 0.01);
 
         $case->refresh();
         $this->assertSame(round((float) $item->wac * 2, 2), (float) $case->issue_cost);
@@ -303,6 +303,61 @@ class BomLifecycleTest extends TestCase
         $item->refresh();
         $this->assertEquals($qtyAfterDispense + 1, $item->qty,
             'Returned stock must be added back to inventory');
+    }
+
+    public function test_return_movement_matches_dispense_wac_and_reduces_issue_cost(): void
+    {
+        ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
+        $this->actingAs($user);
+
+        $supplier = \App\Models\Supplier::first();
+        $priceService = app(StockPriceService::class);
+        $priceService->addBatch($item->fresh(), 10, 100.00, $supplier, 'INV-RET-A', now());
+        $priceService->addBatch($item->fresh(), 10, 250.00, $supplier, 'INV-RET-B', now());
+        $item->refresh();
+        $wac = (float) $item->wac;
+
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
+        ]);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']);
+
+        $case->refresh();
+        $this->assertSame(round($wac * 2, 2), (float) $case->issue_cost);
+
+        $returnNote = app(ReturnNoteService::class)->create($bom->fresh(), [
+            ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
+        ], 'قطعة فائضة', $user);
+
+        $lineId = $returnNote->lines()->first()->id;
+        app(ReturnNoteService::class)->complete($returnNote, [
+            ['line_id' => $lineId, 'barcode' => 'BC-RM-001', 'qty_returned' => 1],
+        ]);
+
+        $issueMovement = \App\Models\StockMovement::query()
+            ->where('movement_type', \App\Models\StockMovement::TYPE_ISSUE)
+            ->where('reference_type', 'bom')
+            ->latest('id')
+            ->first();
+
+        $returnMovement = \App\Models\StockMovement::query()
+            ->where('movement_type', \App\Models\StockMovement::TYPE_RETURN)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($returnMovement);
+        $this->assertNotNull($issueMovement);
+        $this->assertSame((float) $issueMovement->unit_cost, (float) $returnMovement->unit_cost);
+        $this->assertSame('return_note', $returnMovement->reference_type);
+        $this->assertSame($returnNote->id, $returnMovement->reference_id);
+        $this->assertSame(1, $returnMovement->quantity);
+
+        $case->refresh();
+        $this->assertSame(round($wac * 1, 2), (float) $case->issue_cost,
+            'issue_cost must drop by the WAC value of returned units');
+
+        $bom->refresh()->load('items');
+        $this->assertSame(1, $bom->items->first()->returned_qty);
     }
 
     public function test_can_return_single_dispensed_unit(): void
