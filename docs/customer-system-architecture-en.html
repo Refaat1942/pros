@@ -40,7 +40,7 @@
     <div class="header">
         <div>
             <h1>Smart Prosthetics ERP<br>System Architecture</h1>
-            <div class="sub">Technical reference for IT, deployment, and integration · Version 1.0 · August 2026</div>
+            <div class="sub">Technical reference for IT, deployment, and integration · Version 1.1 · August 2026</div>
         </div>
         <div class="badge">Architecture<br>1 / 8</div>
     </div>
@@ -81,7 +81,7 @@
         <tr><td>Staff workstations</td><td>Browser clients only</td><td>No software install; bookmark server URL</td></tr>
         <tr><td>Application server</td><td>Hosts web app + database</td><td>Dedicated PC; UPS recommended; static LAN IP</td></tr>
         <tr><td>Apache</td><td>HTTP web server</td><td>Serves <code>public/</code> as document root</td></tr>
-        <tr><td>PHP 8.x</td><td>Application runtime</td><td>Requires <code>pdo_mysql</code> or <code>pdo_pgsql</code></td></tr>
+        <tr><td>PHP 8.x</td><td>Application runtime</td><td>Requires <code>pdo_mysql</code> or <code>pdo_pgsql</code> and <code>ext-zip</code> (Excel import/export via OpenSpout)</td></tr>
         <tr><td>Database</td><td>Persistent storage</td><td>MySQL/MariaDB (Laragon default) or PostgreSQL</td></tr>
         <tr><td>Internet</td><td>Not required for daily ops</td><td>Optional for Git updates or remote support only</td></tr>
     </table>
@@ -387,7 +387,7 @@ ItemPricingAnalyticsService (catalog):
         <tr><td>CostingCompleted</td><td>CostingService</td><td>→ quote (civilian) or operations (military)</td></tr>
         <tr><td>QuoteIssued</td><td>QuoteService</td><td>→ awaiting approval</td></tr>
         <tr><td>OperationsApproved</td><td>OperationsService</td><td>→ manufacturing</td></tr>
-        <tr><td>BomDispensed</td><td>BomService</td><td>warehouse complete → workshop WIP</td></tr>
+        <tr><td>BomDispensed</td><td>BomService</td><td>warehouse complete → production department WIP</td></tr>
         <tr><td>BomFinished</td><td>BomService</td><td>→ ready_delivery</td></tr>
         <tr><td>Delivered</td><td>DeliveryService</td><td>→ closed + financial posting</td></tr>
     </table>
@@ -396,7 +396,9 @@ ItemPricingAnalyticsService (catalog):
     <table>
         <tr><th>Service</th><th>Responsibility</th></tr>
         <tr><td>PatientService / CaseService</td><td>Registration, case creation, path assignment</td></tr>
-        <tr><td>SpecService / CostingService</td><td>Technical spec, adjustments, cost confirmation</td></tr>
+        <tr><td>SpecService / CostingService</td><td>Technical spec, adjustments &amp; costs, approval (cost confirmation)</td></tr>
+        <tr><td>WorkshopAssignmentService / WorkshopTrackingService</td><td>Technician &amp; section assignment, per-technician progress board (production department)</td></tr>
+        <tr><td>ReturnNoteService</td><td>Material returns — stock restored at WAC matching dispense; <code>issue_cost</code> sync</td></tr>
         <tr><td>PricingService / QuoteService</td><td>Background pricing, quote PDF + QR</td></tr>
         <tr><td>StockReceiveService</td><td>Inward stock, WAC recalculation</td></tr>
         <tr><td>BomService + BarcodeValidationService</td><td>BOM dispense, scan validation, block on mismatch</td></tr>
@@ -459,7 +461,7 @@ SESSION_IDLE_TIMEOUT=5</div>
     <ol>
         <li>Run backup: <code>php artisan prosthetics:backup</code></li>
         <li>Pull code: <code>git pull</code> (or copy from USB if no internet)</li>
-        <li>Dependencies: <code>composer install --no-dev --optimize-autoloader</code></li>
+        <li>Dependencies: <code>composer install --no-dev --optimize-autoloader</code> (enable PHP <code>ext-zip</code> first on Laragon)</li>
         <li>Schema: <code>php artisan migrate --force</code></li>
         <li>Cache: <code>php artisan config:cache && route:cache && view:cache</code></li>
         <li>Staff refresh browser: Ctrl+F5</li>
@@ -526,6 +528,8 @@ Staff PC requirements:
     <table>
         <tr><th>Document</th><th>Audience</th></tr>
         <tr><td>System Blueprint (English)</td><td>Management, department heads — business workflows</td></tr>
+        <tr><td>System Architecture (English)</td><td>IT — deployment, layers, security</td></tr>
+        <tr><td>docs/downloads.html</td><td>Printable PDF pack — blueprint, architecture, deploy guide</td></tr>
         <tr><td>Deploy Manual (PostgreSQL / Windows)</td><td>IT installer — step-by-step setup</td></tr>
         <tr><td>Deployment Checklist (printable)</td><td>On-site installation sign-off</td></tr>
     </table>

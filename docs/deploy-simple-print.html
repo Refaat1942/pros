@@ -147,6 +147,9 @@ cd prosthetics
 git pull origin master
 composer install --no-dev --optimize-autoloader</div>
     <div class="warn">
+        <strong>PHP ext-zip required:</strong> In Laragon → PHP → php.ini, enable <code>extension=zip</code>, then restart Laragon before running Composer. Excel catalog import/export needs this extension.
+    </div>
+    <div class="warn">
         <strong>Important:</strong> Copy the whole folder <code>C:\laragon\www\prosthetics</code> to USB.
         It must include the <strong>vendor</strong> folder. Without it, the system will not work offline.
     </div>
