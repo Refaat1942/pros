@@ -110,6 +110,7 @@
                         <th style="padding:10px;text-align:center;">{{ $catalogColumns['discount']['label'] ?? 'الخصم' }}</th>
                         <th style="padding:10px;text-align:center;">{{ $catalogColumns['catalog_balance']['label'] ?? 'رصيد كتالوج' }}</th>
                         <th style="padding:10px;text-align:center;">{{ $catalogColumns['warehouse_qty']['label'] ?? 'رصيد المخزن' }}</th>
+                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['price']['label'] ?? 'السعر الأساسي' }}</th>
                         <th style="padding:10px;text-align:center;min-width:280px;">إجراء</th>
                     </tr>
                 </thead>
@@ -140,6 +141,7 @@
                             @endphp
                             <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $catalogBal }}</td>
                             <td style="padding:8px;text-align:center;font-weight:700;{{ $qtyMismatch ? 'color:#b45309;' : 'color:#059669;' }}" title="{{ $qtyMismatch ? 'رصيد الكتالوج ≠ رصيد المخزن — راجع الحركات أو عدّل بيانات الاستيراد' : 'رصيد المخزن الفعلي' }}">{{ $warehouseQty }}</td>
+                            <td style="padding:8px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['price'] ?? 0), 2) }}</td>
                             <td style="padding:10px;text-align:center;white-space:nowrap;">
                                 <button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button>
                                 <button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button>
@@ -150,7 +152,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
+                        <tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -1276,6 +1278,7 @@
             '<td style="padding:8px;text-align:center;">' + (parseInt(item.discount, 10) || 0) + '</td>' +
             '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + catalogBal + '</td>' +
             '<td style="padding:8px;text-align:center;' + warehouseStyle + '">' + warehouseQty + '</td>' +
+            '<td style="padding:8px;text-align:center;" class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</td>' +
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
             '<button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button> ' +
             '<button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button> ' +
@@ -1293,7 +1296,7 @@
         if (!tbody) return;
 
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>';
         } else {
             tbody.innerHTML = list.map(catalogRowHtml).join('');
         }
