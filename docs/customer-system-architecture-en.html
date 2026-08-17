@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Prosthetics ERP — System Architecture</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Georgia, 'Times New Roman', serif; font-size: 10.5pt; line-height: 1.55; color: #0f172a; background: #f1f5f9; }
+        .page { width: 210mm; min-height: 297mm; margin: 12px auto; padding: 14mm 16mm; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.08); page-break-after: always; }
+        .page:last-child { page-break-after: auto; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 3px solid #0f766e; padding-bottom: 10px; margin-bottom: 14px; }
+        .header h1 { font-family: Arial, Helvetica, sans-serif; font-size: 17pt; font-weight: 800; color: #115e59; line-height: 1.25; }
+        .header .sub { font-size: 9.5pt; color: #64748b; margin-top: 4px; font-family: Arial, sans-serif; }
+        .badge { background: #0f766e; color: #fff; font-size: 8.5pt; font-weight: 700; padding: 6px 10px; border-radius: 8px; text-align: center; font-family: Arial, sans-serif; white-space: nowrap; }
+        h2 { font-family: Arial, Helvetica, sans-serif; font-size: 11.5pt; font-weight: 800; color: #0f766e; margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1; }
+        h3 { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; font-weight: 700; color: #334155; margin: 10px 0 5px; }
+        p, li { font-size: 10pt; }
+        ul, ol { margin: 6px 0 6px 18px; }
+        li { margin: 3px 0; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+        .box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; background: #f8fafc; font-size: 9.5pt; }
+        .box strong { color: #115e59; font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9pt; font-family: Arial, sans-serif; }
+        th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #ecfdf5; font-weight: 700; color: #115e59; }
+        .diagram { background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 6px; padding: 12px; margin: 8px 0; font-family: Consolas, monospace; font-size: 8.5pt; line-height: 1.65; white-space: pre-wrap; }
+        .layer { background: #f0fdfa; border-left: 4px solid #0f766e; padding: 8px 10px; margin: 6px 0; font-size: 9.5pt; font-family: Arial, sans-serif; }
+        .ok { background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 9.5pt; }
+        .warn { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 9.5pt; }
+        .footer { margin-top: 14px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-size: 8.5pt; color: #64748b; display: flex; justify-content: space-between; font-family: Arial, sans-serif; }
+        .fill-line { border-bottom: 1px solid #94a3b8; min-width: 120px; display: inline-block; height: 14px; }
+        code { background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; font-family: Consolas, monospace; }
+        @media print { body { background: #fff; } .page { margin: 0; box-shadow: none; width: 100%; } @page { size: A4; margin: 10mm; } }
+    </style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Smart Prosthetics ERP<br>System Architecture</h1>
+            <div class="sub">Technical reference for IT, deployment, and integration · Version 1.0 · August 2026</div>
+        </div>
+        <div class="badge">Architecture<br>1 / 6</div>
+    </div>
+
+    <div class="grid-2">
+        <div class="box">
+            <strong>Client / Center:</strong> <span class="fill-line"></span><br>
+            <strong>Server IP (LAN):</strong> <span class="fill-line"></span><br>
+            <strong>Document date:</strong> <span class="fill-line"></span>
+        </div>
+        <div class="box">
+            <strong>Stack:</strong> Laravel 10 · PHP 8.x · MySQL/PostgreSQL<br>
+            <strong>Model:</strong> Monolithic offline LAN deployment<br>
+            <strong>Prepared by:</strong> Fratelanza
+        </div>
+    </div>
+
+    <h2>1. Purpose of This Document</h2>
+    <p>This architecture document describes <strong>how the system is built and deployed</strong>: server topology, software layers, database design, security controls, and operational procedures. It complements the <em>System Blueprint</em> (business view) and is intended for IT staff, vendors, and technical auditors.</p>
+
+    <h2>2. Deployment Topology (Offline LAN)</h2>
+    <div class="diagram">  [ Staff PC ]     [ Staff PC ]     [ Staff PC ]
+   Chrome browser   Chrome browser   Chrome browser
+         \               |               /
+          \              |              /
+           ========  Local LAN  ========
+                         |
+              [ Windows Server — one machine ]
+                 ├── Laragon (Apache + PHP)
+                 ├── MySQL or PostgreSQL
+                 └── Laravel application
+                         |
+              Daily backup (mysqldump / pg_dump)
+              → storage/backups (7-day retention)</div>
+
+    <table>
+        <tr><th>Component</th><th>Role</th><th>Notes</th></tr>
+        <tr><td>Staff workstations</td><td>Browser clients only</td><td>No software install; bookmark server URL</td></tr>
+        <tr><td>Application server</td><td>Hosts web app + database</td><td>Dedicated PC; UPS recommended; static LAN IP</td></tr>
+        <tr><td>Apache</td><td>HTTP web server</td><td>Serves <code>public/</code> as document root</td></tr>
+        <tr><td>PHP 8.x</td><td>Application runtime</td><td>Requires <code>pdo_mysql</code> or <code>pdo_pgsql</code></td></tr>
+        <tr><td>Database</td><td>Persistent storage</td><td>MySQL/MariaDB (Laragon default) or PostgreSQL</td></tr>
+        <tr><td>Internet</td><td>Not required for daily ops</td><td>Optional for Git updates or remote support only</td></tr>
+    </table>
+
+    <div class="ok">
+        <strong>Zero cloud dependency:</strong> Telegram, Firebase push, and external OCR are disabled in production <code>.env</code>. All patient data remains on-premises.
+    </div>
+
+    <h2>3. Technology Stack</h2>
+    <table>
+        <tr><th>Layer</th><th>Technology</th></tr>
+        <tr><td>Backend framework</td><td>Laravel 10 (PHP 8.1+)</td></tr>
+        <tr><td>Database</td><td>PostgreSQL (documented default) or MySQL/MariaDB</td></tr>
+        <tr><td>Authentication</td><td>Session-based (web guard) + CSRF protection</td></tr>
+        <tr><td>Frontend</td><td>Server-rendered Blade templates + vanilla JavaScript</td></tr>
+        <tr><td>CSS</td><td>Tailwind (pre-built offline assets in production)</td></tr>
+        <tr><td>QR generation</td><td>simplesoftwareio/simple-qrcode</td></tr>
+        <tr><td>Excel export</td><td>OpenSpout</td></tr>
+        <tr><td>Queue</td><td><code>sync</code> driver (inline — no Redis required offline)</td></tr>
+        <tr><td>Cache / sessions</td><td>File driver (default offline configuration)</td></tr>
+    </table>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Architecture</span><span>Confidential — Client use</span></div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Software Layers</h1>
+            <div class="sub">Monolithic Laravel — strict separation of concerns</div>
+        </div>
+        <div class="badge">Architecture<br>2 / 6</div>
+    </div>
+
+    <h2>4. Layered Architecture</h2>
+    <div class="diagram">┌─────────────────────────────────────────────────────────┐
+│  PRESENTATION — Blade views + role dashboards (Chrome)  │
+├─────────────────────────────────────────────────────────┤
+│  HTTP — Routes → Controllers (thin — views/JSON only)   │
+├─────────────────────────────────────────────────────────┤
+│  DOMAIN — Services (~90 classes) — ALL business logic   │
+├─────────────────────────────────────────────────────────┤
+│  DATA — Eloquent Models + PostgreSQL/MySQL              │
+├─────────────────────────────────────────────────────────┤
+│  CROSS-CUTTING — AuditService, WorkflowService, Events  │
+└─────────────────────────────────────────────────────────┘</div>
+
+    <h3>Non-negotiable rule</h3>
+    <p>Controllers return views or JSON. <strong>All business rules live in Services.</strong> Workflow stage changes happen only through <code>WorkflowService</code> triggered by domain events — never by ad-hoc controller updates.</p>
+
+    <h2>5. Request Flow Example</h2>
+    <div class="diagram">Browser POST /technical/bom/scan-dispense
+    → Route (routes/web/technical.php)
+    → BomController::scanDispense()
+    → BomService + BarcodeValidationService
+    → WorkflowService (BomDispensed event)
+    → AuditService::log()
+    → StockMovement + CaseRecord updated in DB
+    → JSON response to browser</div>
+
+    <h2>6. Directory Structure (Simplified)</h2>
+    <table>
+        <tr><th>Path</th><th>Contents</th></tr>
+        <tr><td><code>app/Services/</code></td><td>Domain business logic (Patient, Case, Stock, Pricing, Workflow…)</td></tr>
+        <tr><td><code>app/Models/</code></td><td>52 Eloquent models (Patient, CaseRecord, Bom, StockItem…)</td></tr>
+        <tr><td><code>app/Http/Controllers/</code></td><td>Thin controllers grouped by department</td></tr>
+        <tr><td><code>routes/web/</code></td><td>Per-role route files (reception, doctor, admin…)</td></tr>
+        <tr><td><code>config/dashboards.php</code></td><td>Role pages, navigation, guards</td></tr>
+        <tr><td><code>resources/views/</code></td><td>Blade templates per role dashboard</td></tr>
+        <tr><td><code>database/migrations/</code></td><td>Schema version history</td></tr>
+        <tr><td><code>storage/backups/</code></td><td>Automated DB dumps (7-day retention)</td></tr>
+        <tr><td><code>public/</code></td><td>Web root — Apache document root must point here</td></tr>
+    </table>
+
+    <h2>7. Role-Based Routing</h2>
+    <p>After login, user is redirected to <code>/{role_slug}</code> (e.g. <code>/reception</code>, <code>/admin</code>). Middleware enforces dashboard access. Each role has isolated routes defined in <code>config/dashboards.php</code>.</p>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Architecture</span><span>Page 2</span></div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Data Model &amp; Core Aggregates</h1>
+            <div class="sub">Primary entities and relationships</div>
+        </div>
+        <div class="badge">Architecture<br>3 / 6</div>
+    </div>
+
+    <h2>8. Entity Relationship Overview</h2>
+    <div class="diagram">Patient (EMR file, QR card)
+  ├── Appointments
+  ├── MedicalRecords
+  └── CaseRecord (cases) — workflow root
+        ├── TechOrderSpec (technical specification)
+        ├── PricingRequest → Quote → ApprovalContract
+        ├── Bom → BomItems → StockMovements (barcode)
+        ├── Payments, CreditNotes, ReturnNotes
+        └── ContractCompany / MilitaryDebt (financial path)
+
+StockItem (catalog, WAC, barcode)
+  ├── StockMovements (in/out)
+  ├── StockItemPrice (purchase history)
+  └── StockCategory, Supplier
+
+ContractCompany → Patients, Cases, ContractCompanyDebt
+User → Role → Permission defaults
+AuditLog → append-only (all modules)</div>
+
+    <h2>9. Key Tables by Domain</h2>
+    <table>
+        <tr><th>Domain</th><th>Primary tables</th></tr>
+        <tr><td>Patients & clinical</td><td><code>patients</code>, <code>appointments</code>, <code>medical_records</code></td></tr>
+        <tr><td>Operations</td><td><code>cases</code>, <code>tech_order_specs</code>, <code>case_recommendations</code></td></tr>
+        <tr><td>Pricing & quotes</td><td><code>pricing_requests</code>, <code>quotes</code>, <code>quote_items</code>, <code>approval_contracts</code></td></tr>
+        <tr><td>Inventory</td><td><code>stock_items</code>, <code>stock_movements</code>, <code>boms</code>, <code>bom_items</code></td></tr>
+        <tr><td>Finance</td><td><code>payments</code>, <code>contract_company_debts</code>, <code>military_debts</code>, <code>credit_notes</code></td></tr>
+        <tr><td>Master data</td><td><code>contract_companies</code>, <code>suppliers</code>, <code>roles</code>, <code>users</code></td></tr>
+        <tr><td>Governance</td><td><code>audit_logs</code> (append-only)</td></tr>
+    </table>
+
+    <h2>10. Path Isolation Fields</h2>
+    <table>
+        <tr><th>Field</th><th>Model</th><th>Values</th></tr>
+        <tr><td><code>patient_type</code></td><td>Patient</td><td><code>civilian</code> · <code>military</code></td></tr>
+        <tr><td><code>path</code></td><td>CaseRecord</td><td><code>standard</code> (civilian) · <code>military</code></td></tr>
+    </table>
+    <p>All BI queries, financial posting, and report filters scope by these fields. Mixing paths in a single query without explicit filter is prohibited.</p>
+
+    <h2>11. Database Configuration</h2>
+    <p>Connection is defined in <code>.env</code> (never committed to Git):</p>
+    <div class="diagram">DB_CONNECTION=mysql | pgsql
+DB_HOST=127.0.0.1
+DB_PORT=3306 | 5432
+DB_DATABASE=prosthetics
+DB_USERNAME=prosthetics_user (recommended — not root in production)
+DB_PASSWORD=***</div>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Architecture</span><span>Page 3</span></div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Workflow Engine &amp; Domain Services</h1>
+            <div class="sub">Event-driven state machine</div>
+        </div>
+        <div class="badge">Architecture<br>4 / 6</div>
+    </div>
+
+    <h2>12. WorkflowService — Single Authority</h2>
+    <p>All case stage transitions (<code>stage_key</code>, <code>manufacturing_stage</code>) are owned by <code>WorkflowService</code>. Domain services emit workflow events; the engine applies transitions inside a database transaction with audit logging.</p>
+
+    <h2>13. Workflow Events</h2>
+    <table>
+        <tr><th>Event</th><th>Triggered by service</th><th>Typical transition</th></tr>
+        <tr><td>ExamApproved</td><td>MedicalRecordService</td><td>exam → technical</td></tr>
+        <tr><td>SpecSaved</td><td>SpecService</td><td>technical → adjustments / pricing</td></tr>
+        <tr><td>AdjustmentsCompleted</td><td>AdjustmentsService</td><td>→ cost_calc</td></tr>
+        <tr><td>CostingCompleted</td><td>CostingService</td><td>→ quote (civilian) or operations (military)</td></tr>
+        <tr><td>QuoteIssued</td><td>QuoteService</td><td>→ awaiting approval</td></tr>
+        <tr><td>OperationsApproved</td><td>OperationsService</td><td>→ manufacturing</td></tr>
+        <tr><td>BomDispensed</td><td>BomService</td><td>warehouse complete → workshop WIP</td></tr>
+        <tr><td>BomFinished</td><td>BomService</td><td>→ ready_delivery</td></tr>
+        <tr><td>Delivered</td><td>DeliveryService</td><td>→ closed + financial posting</td></tr>
+    </table>
+
+    <h2>14. Key Domain Services</h2>
+    <table>
+        <tr><th>Service</th><th>Responsibility</th></tr>
+        <tr><td>PatientService / CaseService</td><td>Registration, case creation, path assignment</td></tr>
+        <tr><td>SpecService / CostingService</td><td>Technical spec, adjustments, cost confirmation</td></tr>
+        <tr><td>PricingService / QuoteService</td><td>Background pricing, quote PDF + QR</td></tr>
+        <tr><td>StockReceiveService</td><td>Inward stock, WAC recalculation</td></tr>
+        <tr><td>BomService + BarcodeValidationService</td><td>BOM dispense, scan validation, block on mismatch</td></tr>
+        <tr><td>FinancialPostingService</td><td>Contract debt (civilian) / military debt posting</td></tr>
+        <tr><td>BiReportService</td><td>Five read-only BI command boards</td></tr>
+        <tr><td>AuditService</td><td>Append-only audit log writer</td></tr>
+        <tr><td>PatientDataPurgeService</td><td>Safe purge of patient data (keeps master data)</td></tr>
+    </table>
+
+    <h2>15. Pathway Configuration</h2>
+    <p>Admin can configure optional stage skips (e.g. skip exam, auto-skip cashier) via <code>PathwayConfigService</code>, <code>PathwayStep</code>, and <code>WorkflowStagePolicy</code> — without changing core event definitions.</p>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Architecture</span><span>Page 4</span></div>
+</div>
+
+<!-- PAGE 5 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Security, Backup &amp; Operations</h1>
+            <div class="sub">Production hardening and maintenance</div>
+        </div>
+        <div class="badge">Architecture<br>5 / 6</div>
+    </div>
+
+    <h2>16. Security Controls</h2>
+    <table>
+        <tr><th>Control</th><th>Implementation</th></tr>
+        <tr><td>Authentication</td><td>Session login; idle timeout (default 5 min); per-user accounts</td></tr>
+        <tr><td>Authorization</td><td>Role-based dashboard routing; service-layer visibility rules</td></tr>
+        <tr><td>CSRF</td><td>Laravel CSRF tokens on all POST requests</td></tr>
+        <tr><td>Production debug</td><td><code>APP_DEBUG=false</code> — no stack traces to users</td></tr>
+        <tr><td>HTTPS cookie</td><td><code>SESSION_SECURE_COOKIE=false</code> on HTTP LAN; true only with HTTPS</td></tr>
+        <tr><td>External notifications</td><td><code>TELEGRAM_ERROR_NOTIFY=false</code>, <code>FIREBASE_ENABLED=false</code></td></tr>
+        <tr><td>Firewall</td><td>Apache allowed on Private network only; port 80 not exposed to internet</td></tr>
+        <tr><td>Audit integrity</td><td><code>AuditLog</code> model blocks update/delete at ORM level</td></tr>
+    </table>
+
+    <h2>17. Environment File (.env)</h2>
+    <p>The <code>.env</code> file holds server-specific secrets and is <strong>never</strong> stored in Git. Critical production values:</p>
+    <div class="diagram">APP_ENV=production
+APP_DEBUG=false
+APP_URL=http://&lt;server-lan-ip&gt;
+DB_* = database credentials
+SESSION_LIFETIME=5
+SESSION_IDLE_TIMEOUT=5</div>
+
+    <h2>18. Backup Strategy</h2>
+    <table>
+        <tr><th>Item</th><th>Detail</th></tr>
+        <tr><td>Command</td><td><code>php artisan prosthetics:backup</code></td></tr>
+        <tr><td>Engine</td><td><code>mysqldump</code> or <code>pg_dump</code> (auto-detected from DB driver)</td></tr>
+        <tr><td>Location</td><td><code>storage/backups/db-YYYY-MM-DD_HHMMSS.sql.gz</code></td></tr>
+        <tr><td>Retention</td><td>7 days (configurable via <code>--keep=N</code>)</td></tr>
+        <tr><td>Schedule</td><td>Windows Task Scheduler — daily at 02:00 AM recommended</td></tr>
+        <tr><td>Off-site copy</td><td>Weekly USB / secondary disk copy of <code>storage/backups</code></td></tr>
+    </table>
+
+    <h2>19. Update Procedure (Offline)</h2>
+    <ol>
+        <li>Run backup: <code>php artisan prosthetics:backup</code></li>
+        <li>Pull code: <code>git pull</code> (or copy from USB if no internet)</li>
+        <li>Dependencies: <code>composer install --no-dev --optimize-autoloader</code></li>
+        <li>Schema: <code>php artisan migrate --force</code></li>
+        <li>Cache: <code>php artisan config:cache && route:cache && view:cache</code></li>
+        <li>Staff refresh browser: Ctrl+F5</li>
+    </ol>
+    <p><strong>Never overwrite</strong> <code>.env</code> or <code>storage/</code> during updates.</p>
+
+    <h2>20. Useful Maintenance Commands</h2>
+    <table>
+        <tr><th>Command</th><th>Purpose</th></tr>
+        <tr><td><code>prosthetics:backup</code></td><td>Database backup</td></tr>
+        <tr><td><code>prosthetics:purge-patient-data --force</code></td><td>Remove all patient/case data; keep users & master data</td></tr>
+        <tr><td><code>prosthetics:purge-logs</code></td><td>Clear application log files</td></tr>
+        <tr><td><code>config:clear</code></td><td>After <code>.env</code> changes before re-caching</td></tr>
+    </table>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Architecture</span><span>Page 5</span></div>
+</div>
+
+<!-- PAGE 6 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Network Access &amp; Integration Summary</h1>
+            <div class="sub">How staff connect and what stays local</div>
+        </div>
+        <div class="badge">Architecture<br>6 / 6</div>
+    </div>
+
+    <h2>21. Staff Access Pattern</h2>
+    <div class="diagram">Server static IP:  http://192.168.x.x
+Local test:        http://127.0.0.1
+Laragon alias:     http://prosthetics.test (server only — hosts file)
+
+Staff PC requirements:
+  • Google Chrome (recommended)
+  • Connected to center LAN
+  • Bookmark / desktop shortcut to server IP
+  • No application installation</div>
+
+    <h2>22. Apache Document Root</h2>
+    <p>For correct routing, Apache must serve the Laravel <code>public/</code> folder:</p>
+    <div class="diagram">DocumentRoot → C:/laragon/www/prosthetics/public</div>
+    <p>After IP change, update <code>APP_URL</code> in <code>.env</code> and run <code>php artisan config:cache</code>.</p>
+
+    <h2>23. Optional / Disabled Integrations</h2>
+    <table>
+        <tr><th>Integration</th><th>Status in offline production</th></tr>
+        <tr><td>Firebase push notifications</td><td>Disabled — local polling fallback</td></tr>
+        <tr><td>Telegram error alerts</td><td>Disabled — prevents data leaving LAN</td></tr>
+        <tr><td>Cloud OCR / external APIs</td><td>Not used — local OCR where implemented</td></tr>
+        <tr><td>Redis / Memcached</td><td>Not required — file drivers suffice</td></tr>
+        <tr><td>Email (SMTP)</td><td>Optional — not required for core workflow</td></tr>
+    </table>
+
+    <h2>24. Scalability & Limits</h2>
+    <ul>
+        <li><strong>Designed for:</strong> Single center, one LAN, tens of concurrent browser sessions</li>
+        <li><strong>Not designed for:</strong> Multi-site cloud SaaS, public internet exposure, mobile native apps</li>
+        <li><strong>Horizontal scaling:</strong> Not applicable — single-server offline model</li>
+        <li><strong>Performance:</strong> Route/config/view caching enabled in production; OPcache recommended on PHP</li>
+    </ul>
+
+    <h2>25. Related Documents</h2>
+    <table>
+        <tr><th>Document</th><th>Audience</th></tr>
+        <tr><td>System Blueprint (English)</td><td>Management, department heads — business workflows</td></tr>
+        <tr><td>Deploy Manual (PostgreSQL / Windows)</td><td>IT installer — step-by-step setup</td></tr>
+        <tr><td>Deployment Checklist (printable)</td><td>On-site installation sign-off</td></tr>
+    </table>
+
+    <div class="grid-2" style="margin-top:16px;">
+        <div class="box">
+            <strong>IT contact:</strong> <span class="fill-line"></span><br>
+            <strong>Support vendor:</strong> Fratelanza
+        </div>
+        <div class="box">
+            <strong>Approved by:</strong> <span class="fill-line"></span><br>
+            <strong>Signature / date:</strong> <span class="fill-line"></span>
+        </div>
+    </div>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Architecture · Fratelanza</span><span>End of document</span></div>
+</div>
+
+</body>
+</html>

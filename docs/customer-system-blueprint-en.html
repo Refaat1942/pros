@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Prosthetics ERP — System Blueprint</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Georgia, 'Times New Roman', serif; font-size: 10.5pt; line-height: 1.55; color: #0f172a; background: #f1f5f9; }
+        .page { width: 210mm; min-height: 297mm; margin: 12px auto; padding: 14mm 16mm; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.08); page-break-after: always; }
+        .page:last-child { page-break-after: auto; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 3px solid #1e40af; padding-bottom: 10px; margin-bottom: 14px; }
+        .header h1 { font-family: Arial, Helvetica, sans-serif; font-size: 17pt; font-weight: 800; color: #1e3a8a; line-height: 1.25; }
+        .header .sub { font-size: 9.5pt; color: #64748b; margin-top: 4px; font-family: Arial, sans-serif; }
+        .badge { background: #1e40af; color: #fff; font-size: 8.5pt; font-weight: 700; padding: 6px 10px; border-radius: 8px; text-align: center; font-family: Arial, sans-serif; white-space: nowrap; }
+        h2 { font-family: Arial, Helvetica, sans-serif; font-size: 11.5pt; font-weight: 800; color: #1e40af; margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1; }
+        h3 { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; font-weight: 700; color: #334155; margin: 10px 0 5px; }
+        p, li { font-size: 10pt; }
+        ul, ol { margin: 6px 0 6px 18px; }
+        li { margin: 3px 0; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+        .box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; background: #f8fafc; font-size: 9.5pt; }
+        .box strong { color: #1e3a8a; font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9pt; font-family: Arial, sans-serif; }
+        th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #eff6ff; font-weight: 700; color: #1e3a8a; }
+        .diagram { background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 6px; padding: 12px; margin: 8px 0; font-family: Consolas, monospace; font-size: 8.5pt; line-height: 1.6; white-space: pre-wrap; }
+        .ok { background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 9.5pt; }
+        .warn { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 9.5pt; }
+        .footer { margin-top: 14px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-size: 8.5pt; color: #64748b; display: flex; justify-content: space-between; font-family: Arial, sans-serif; }
+        .fill-line { border-bottom: 1px solid #94a3b8; min-width: 120px; display: inline-block; height: 14px; }
+        code { background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; font-family: Consolas, monospace; }
+        @media print { body { background: #fff; } .page { margin: 0; box-shadow: none; width: 100%; } @page { size: A4; margin: 10mm; } }
+    </style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Smart Prosthetics ERP<br>System Blueprint</h1>
+            <div class="sub">Business overview for management, IT, and operations staff · Version 1.0 · August 2026</div>
+        </div>
+        <div class="badge">Blueprint<br>1 / 5</div>
+    </div>
+
+    <div class="grid-2">
+        <div class="box">
+            <strong>Client / Center:</strong> <span class="fill-line"></span><br>
+            <strong>Document date:</strong> <span class="fill-line"></span><br>
+            <strong>Prepared by:</strong> Fratelanza
+        </div>
+        <div class="box">
+            <strong>System type:</strong> Offline medical ERP<br>
+            <strong>Deployment:</strong> Local LAN server<br>
+            <strong>Audience:</strong> Non-technical stakeholders
+        </div>
+    </div>
+
+    <h2>1. Purpose of This Document</h2>
+    <p>This blueprint explains <strong>what the system does</strong>, <strong>who uses it</strong>, and <strong>how a patient case moves</strong> from reception to delivery. It is written for center management, department heads, auditors, and IT staff who need a clear picture without reading source code.</p>
+
+    <h2>2. System Purpose & Scope</h2>
+    <p>Smart Prosthetics ERP is an integrated enterprise system for a prosthetics manufacturing center. It manages:</p>
+    <ul>
+        <li><strong>Clinical records</strong> — patient registration, appointments, medical exams, measurements</li>
+        <li><strong>Operational cases</strong> — one case per prosthetic order, tracked through all departments</li>
+        <li><strong>Inventory</strong> — stock receiving, barcode dispense, bill of materials (BOM)</li>
+        <li><strong>Finance</strong> — quotes, contract approvals, payments, contract debts, military sovereign debt</li>
+        <li><strong>Governance</strong> — immutable audit trail and five BI command boards</li>
+    </ul>
+
+    <div class="ok">
+        <strong>Offline-first design:</strong> The system runs 100% on a local server inside the center. Daily work does <strong>not</strong> require internet. Patient data never leaves the local network. Staff PCs need only a web browser (Chrome recommended).
+    </div>
+
+    <h2>3. Core Design Principles</h2>
+    <table>
+        <tr><th>Principle</th><th>Meaning for the center</th></tr>
+        <tr><td>Path separation</td><td>Civilian and military patients follow different financial rules. Data and reports stay isolated by patient type.</td></tr>
+        <tr><td>Event-driven workflow</td><td>Cases move automatically when a department completes its work. No manual “send to next department” buttons.</td></tr>
+        <tr><td>QR for people & documents</td><td>Patient cards, quotes, and delivery use QR codes for fast, accurate tracking.</td></tr>
+        <tr><td>Barcode for stock</td><td>Every dispense must match the approved BOM. Wrong scans are blocked and logged.</td></tr>
+        <tr><td>Role-based dashboards</td><td>Each employee sees one department screen. Prices and stock balances are hidden where not needed.</td></tr>
+        <tr><td>Immutable audit log</td><td>Every change is recorded permanently. No user can edit or delete audit history.</td></tr>
+    </table>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Confidential — Client use</span></div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Patient Pathways</h1>
+            <div class="sub">Civilian vs military — two isolated business tracks</div>
+        </div>
+        <div class="badge">Blueprint<br>2 / 5</div>
+    </div>
+
+    <h2>4. Registration & Classification</h2>
+    <p>At reception, every patient receives:</p>
+    <ol>
+        <li>A permanent <strong>Patient ID</strong> stored in the database</li>
+        <li>A printed <strong>patient card with QR code</strong> for queue and status tracking</li>
+        <li>A classification: <strong>Civilian</strong> or <strong>Military</strong></li>
+    </ol>
+    <p>For civilians, the receptionist also links the patient to a <strong>contract company</strong> (insurer, union, employer) with coverage rules. For military patients, rank and sovereign entity are recorded instead.</p>
+
+    <h2>5. Shared Clinical Path (Both Types)</h2>
+    <div class="diagram">Reception → Medical exam → Technical specification → Adjustments → Cost calculation
+         ↓              ↓                    ↓                  ↓              ↓
+    Patient file   Doctor diagnosis    Spec engineer picks   Fitting items   Pricing engine
+    + QR card      + prescription      components (codes     confirmed       runs in background
+                                       only — no prices)</div>
+
+    <h3>Blind specification rule</h3>
+    <p>During technical specification, the specialist sees <strong>item codes and quantities only</strong>. Purchase prices and warehouse balances are hidden so clinical decisions stay independent of finance and stock pressure.</p>
+
+    <h2>6. Civilian Path — Full Financial Gate</h2>
+    <table>
+        <tr><th>Step</th><th>What happens</th></tr>
+        <tr><td>1. Quote issued</td><td>PDF quote with amount in words + QR code. Case is financially frozen until approval.</td></tr>
+        <tr><td>2. Contract approval</td><td>Patient obtains official approval letter from contract entity. Reception scans/uploads it (OCR-assisted validation).</td></tr>
+        <tr><td>3. Operations release</td><td>On successful validation, case unfreezes and receives a central <strong>work order number</strong>.</td></tr>
+        <tr><td>4. Cash patients (optional)</td><td>Patients without a contract company pass through the <strong>cashier</strong> for payment before manufacturing.</td></tr>
+        <tr><td>5. Warehouse dispense</td><td>Storekeeper scans barcodes against the approved BOM. Mismatch = blocked + audit alert.</td></tr>
+        <tr><td>6. Manufacturing</td><td>Workshop completes production stages (generation → assembly → casting → finishing).</td></tr>
+        <tr><td>7. Delivery</td><td>Reception scans patient QR at delivery. Case closes. Invoice/debt posts to contract entity.</td></tr>
+    </table>
+
+    <h2>7. Military Path — Financial Bypass</h2>
+    <table>
+        <tr><th>Step</th><th>What happens</th></tr>
+        <tr><td>After cost calculation</td><td><strong>No quote</strong> and <strong>no payment wait</strong>. Cost is calculated silently for reporting only.</td></tr>
+        <tr><td>Services approval (optional)</td><td>Certain beneficiary categories may require an internal services approval step before operations.</td></tr>
+        <tr><td>Operations</td><td>Case auto-advances to operations and is auto-approved for manufacturing.</td></tr>
+        <tr><td>Manufacturing & delivery</td><td>Same warehouse barcode rules and workshop stages as civilian path.</td></tr>
+        <tr><td>Financial close</td><td>Cost rolls to <strong>sovereign military debt</strong> reports — not patient billing.</td></tr>
+    </table>
+
+    <div class="warn">
+        <strong>Important:</strong> Civilian and military data must never be mixed in reports, queries, or UI filters without explicit path scoping. This is a non-negotiable security and compliance requirement.
+    </div>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Page 2</span></div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Workflow Stages &amp; Automation</h1>
+            <div class="sub">How cases move without manual routing</div>
+        </div>
+        <div class="badge">Blueprint<br>3 / 5</div>
+    </div>
+
+    <h2>8. Main Case Pipeline</h2>
+    <div class="diagram">reception → exam → technical → adjustments → cost_calc
+    → [services_approval] → quote → operations → [cashier]
+    → manufacturing → ready_delivery → delivered → closed</div>
+    <p>Stages in brackets are conditional (pathway configuration or patient type).</p>
+
+    <h2>9. Event-Driven Transitions</h2>
+    <p>The system does not rely on staff clicking “move to next department.” Instead, completing a domain action triggers the next stage automatically:</p>
+    <table>
+        <tr><th>Staff action</th><th>Automatic result</th></tr>
+        <tr><td>Doctor approves exam</td><td>Case appears in technical specification queue</td></tr>
+        <tr><td>Spec engineer saves BOM items</td><td>Pricing engine runs in background</td></tr>
+        <tr><td>Costing confirmed (civilian)</td><td>Quote generated; case frozen pending approval</td></tr>
+        <tr><td>Costing confirmed (military)</td><td>Case jumps to operations — no quote step</td></tr>
+        <tr><td>Approval QR scanned (civilian)</td><td>Work order released; warehouse can dispense</td></tr>
+        <tr><td>Barcode dispense completed</td><td>Stock updated; workshop notified; WIP started</td></tr>
+        <tr><td>Workshop marks finished</td><td>Case moves to “ready for delivery”</td></tr>
+        <tr><td>Delivery QR scanned</td><td>Case closed; financial posting executed</td></tr>
+    </table>
+
+    <h2>10. Manufacturing Sub-Stages</h2>
+    <table>
+        <tr><th>Stage</th><th>Meaning</th><th>BOM status</th></tr>
+        <tr><td>Warehouse / issue</td><td>Materials scanned out of stock</td><td>Raw → dispensed</td></tr>
+        <tr><td>Generation</td><td>Initial fabrication</td><td>Work in progress (WIP)</td></tr>
+        <tr><td>Assembly</td><td>Component assembly</td><td>WIP</td></tr>
+        <tr><td>Casting</td><td>Casting / molding</td><td>WIP</td></tr>
+        <tr><td>Finishing</td><td>Final fit, polish, quality check</td><td>Finished product</td></tr>
+        <tr><td>Delivery scan</td><td>Patient receives prosthetic</td><td>Case financially closed</td></tr>
+    </table>
+    <p><strong>Note:</strong> “Finished product” (BOM complete) and “closed case” (delivered + billed) are two separate steps.</p>
+
+    <h2>11. SLA Monitoring</h2>
+    <p>Each case tracks time in stage. Admin BI board #1 flags cases that exceed configured SLA days per department, helping management identify bottlenecks.</p>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Page 3</span></div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>User Roles &amp; Department Dashboards</h1>
+            <div class="sub">Who sees what — operational access model</div>
+        </div>
+        <div class="badge">Blueprint<br>4 / 5</div>
+    </div>
+
+    <h2>12. Login & Routing</h2>
+    <p>Each employee has a personal login. After authentication, the system opens <strong>one dashboard</strong> based on role. There is no shared password per department.</p>
+
+    <h2>13. Role Summary</h2>
+    <table>
+        <tr><th>Role</th><th>Primary responsibilities</th><th>Financial / stock visibility</th></tr>
+        <tr><td>Super Admin / Admin</td><td>System settings, users, master data, all reports, audit log, pathway config</td><td>Full access</td></tr>
+        <tr><td>Reception</td><td>Patient registration, appointments, quote handover, approval scan, delivery QR</td><td>Quote totals only — no purchase costs</td></tr>
+        <tr><td>Doctor</td><td>Clinic queue, medical records, exam approval, transfer to spec</td><td>Blocked — no prices</td></tr>
+        <tr><td>Spec engineer</td><td>Technical specification — component codes & quantities</td><td>Blocked — no prices, no stock qty</td></tr>
+        <tr><td>Adjustments desk</td><td>Fitting / adjustment items before costing</td><td>Blocked</td></tr>
+        <tr><td>Costing desk</td><td>Confirm costs, trigger quote (civilian)</td><td>Cost view for pricing role</td></tr>
+        <tr><td>Operations office</td><td>Approve/reject cases, release work orders</td><td>Operational view</td></tr>
+        <tr><td>Cashier</td><td>Cash payment collection (cash civilians)</td><td>Payment amounts</td></tr>
+        <tr><td>Warehouse (Technical)</td><td>Stock receive, BOM barcode dispense, returns</td><td>Quantities & specs — no purchase profit view</td></tr>
+        <tr><td>Workshop</td><td>Manufacturing queue, material returns, production stages</td><td>Production status</td></tr>
+    </table>
+
+    <h2>14. Admin — Five BI Command Boards</h2>
+    <table>
+        <tr><th>#</th><th>Board</th><th>Key indicators</th></tr>
+        <tr><td>1</td><td>Patients & SLA</td><td>Total/open cases, civilian/military split, average turnaround, SLA breaches</td></tr>
+        <tr><td>2</td><td>Inventory</td><td>Stock value (WAC), low stock alerts, stagnant items (&gt;180 days)</td></tr>
+        <tr><td>3</td><td>Operations</td><td>Open work orders, awaiting dispense, in workshop, ready for delivery</td></tr>
+        <tr><td>4</td><td>Entities & costs</td><td>Civilian contract debts, military sovereign debt, cash collected — paths separated</td></tr>
+        <tr><td>5</td><td>Purchasing</td><td>WAC vs highest purchase price, supplier price trends</td></tr>
+    </table>
+
+    <h2>15. Tracking Technologies</h2>
+    <table>
+        <tr><th>Technology</th><th>Used for</th><th>Rule</th></tr>
+        <tr><td>QR code</td><td>Patient card, quote document, approval scan, delivery close, public status lookup</td><td>Human / document workflow</td></tr>
+        <tr><td>Barcode</td><td>Serialized stock movements — receive and dispense</td><td>No dispense without validated work order + scan match</td></tr>
+    </table>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Page 4</span></div>
+</div>
+
+<!-- PAGE 5 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Finance, Inventory &amp; Governance</h1>
+            <div class="sub">Pricing rules, audit trail, and master data</div>
+        </div>
+        <div class="badge">Blueprint<br>5 / 5</div>
+    </div>
+
+    <h2>16. Dual Pricing Policy</h2>
+    <table>
+        <tr><th>Purpose</th><th>Method</th><th>Used when</th></tr>
+        <tr><td>Inventory valuation & accounting reports</td><td><strong>WAC</strong> — Weighted Average Cost</td><td>Stock receipts, inventory BI board</td></tr>
+        <tr><td>Civilian quotes & case pricing</td><td><strong>Highest Purchase Price</strong> among batches with qty &gt; 0</td><td>Quote generation — protects against inflation / repurchase risk</td></tr>
+        <tr><td>Military cases</td><td>Silent background cost</td><td>Posted to sovereign debt — never shown as patient invoice</td></tr>
+    </table>
+
+    <h2>17. Bill of Materials (BOM) Lifecycle</h2>
+    <table>
+        <tr><th>BOM state</th><th>Meaning</th><th>Stock impact</th></tr>
+        <tr><td>Raw</td><td>Approved material list — awaiting dispense</td><td>Not yet deducted</td></tr>
+        <tr><td>WIP</td><td>Materials dispensed to workshop</td><td>Deducted from stock via barcode scan</td></tr>
+        <tr><td>Finished</td><td>Prosthetic manufacturing complete</td><td>Ready for patient delivery</td></tr>
+    </table>
+
+    <h2>18. Immutable Audit Log</h2>
+    <p>Every create, update, workflow transition, blocked barcode scan, and financial posting is logged automatically with:</p>
+    <ul>
+        <li>User identity and timestamp (to the second)</li>
+        <li>Device identifiers (IP / MAC where available)</li>
+        <li>Action type and module tag</li>
+        <li>Full before/after data snapshot</li>
+    </ul>
+    <div class="warn">
+        <strong>Legal-grade trail:</strong> Audit records are append-only. No user — including system administrator or IT — can modify or delete entries through the application.
+    </div>
+
+    <h2>19. Master Data (Configured Once)</h2>
+    <ul>
+        <li>Contract companies and coverage rules</li>
+        <li>Military ranks and beneficiary categories</li>
+        <li>Stock catalog, categories, suppliers, kits</li>
+        <li>Visit types, pathway steps, costing modes</li>
+        <li>Users, roles, and permission defaults</li>
+    </ul>
+
+    <h2>20. Document Summary</h2>
+    <p>Smart Prosthetics ERP connects clinical care, manufacturing, inventory, and finance in one offline system. Civilian patients follow quote → approval → payment → production → delivery. Military patients skip financial gates but share the same clinical and warehouse controls. QR codes track people and documents; barcodes track stock. Management monitors performance through five BI boards and a permanent audit trail.</p>
+
+    <div class="grid-2" style="margin-top:16px;">
+        <div class="box">
+            <strong>Related document:</strong><br>
+            System Architecture (technical deployment &amp; software layers)
+        </div>
+        <div class="box">
+            <strong>Approved by:</strong> <span class="fill-line"></span><br>
+            <strong>Signature / date:</strong> <span class="fill-line"></span>
+        </div>
+    </div>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint · Fratelanza</span><span>End of document</span></div>
+</div>
+
+</body>
+</html>
