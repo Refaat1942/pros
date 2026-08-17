@@ -7,7 +7,7 @@
         'doctor'      => '🩺',
         'spec'        => '📐',
         'adjustments' => '📏',
-        'costing'     => '💰',
+        'costing'     => '✅',
         'operations'  => '🎯',
         'cashier'     => '💵',
         'workshop'    => '🏭',
