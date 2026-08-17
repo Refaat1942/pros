@@ -288,12 +288,13 @@ NOT used for civilian quote line pricing — only for inventory value & profit c
     <h2>15. Stock Deduction on Sale / Dispense</h2>
     <p>There is no separate “sales module” that manually adjusts stock. <strong>Dispense IS the stock deduction</strong> — tied to a validated work order:</p>
     <ol>
+        <li><code>BomService.refreshUnitCostsAtDispense()</code> — current WAC stamped on every BOM line</li>
         <li><code>BomService</code> validates scan against <code>BomItem</code> line</li>
         <li><code>stock_items.qty</code> decremented; <code>reserved</code> released if applicable</li>
-        <li><code>StockMovement</code> created with type <code>issue</code>, morph reference to BOM, <code>balance_after</code> snapshot</li>
+        <li><code>StockMovement</code> created (type <code>issue</code>, unit_cost = WAC, BOM reference, <code>balance_after</code>)</li>
+        <li><code>cases.issue_cost</code> snapshot stored (Σ qty × WAC)</li>
         <li><code>WorkflowService</code> fires <code>BomDispensed</code> event</li>
-        <li><code>BomService.refreshUnitCostsAtDispense()</code> — WAC stamped on every line before stock deduction</li>
-        <li><code>cases.issue_cost</code> — immutable WAC snapshot at dispense for profitability reports</li>
+        <li><code>FinancialPostingService.postOnDispense()</code> — civilian contract debt (atomic <code>ledger_posted_at</code>)</li>
     </ol>
     <div class="warn">
         Mismatch scan → <code>BarcodeDispenseMismatchException</code> → transaction blocked → audit entry. Stock and finance stay aligned.
