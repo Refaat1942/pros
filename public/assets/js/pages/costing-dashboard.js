@@ -91,7 +91,7 @@
         if (!tbody) return;
         if ($('costingBadge')) $('costingBadge').textContent = cases.length;
         if (!cases.length) {
-          tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد حالات بانتظار التكاليف.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد حالات بانتظار الاعتماد.</td></tr>';
         } else {
           tbody.innerHTML = cases.map(renderRow).join('');
           bindTableEvents();
@@ -190,10 +190,49 @@
         currentInternalTotal = pricing.internal_total || 0;
 
         if ($('costingModalTitle')) {
-          $('costingModalTitle').textContent = '💰 ' + (c.case_no || '') + ' — ' + (c.patient && c.patient.name || '');
+          $('costingModalTitle').textContent = '✅ ' + (c.case_no || '') + ' — ' + (c.patient && c.patient.name || '');
         }
+
+        var banner = $('costingPatientBanner');
+        if (banner) {
+          banner.classList.remove('hidden');
+          if ($('costingPatientName')) {
+            $('costingPatientName').textContent = (c.patient && c.patient.name) || '—';
+          }
+          if ($('costingPatientMeta')) {
+            $('costingPatientMeta').textContent = [
+              c.case_no || '—',
+              c.order_ref || '',
+              c.pathway_label || '',
+              c.display_entity || '',
+              c.patient && c.patient.patient_code ? ('كود: ' + c.patient.patient_code) : '',
+            ].filter(Boolean).join(' · ');
+          }
+          var spec = res.data.spec;
+          var specList = $('costingSpecItems');
+          if (specList) {
+            var specItems = (spec && spec.items) || [];
+            specList.innerHTML = specItems.length
+              ? specItems.map(function (it) {
+                  return '<li><span><code>' + esc(it.stock_item_code) + '</code> ' + esc(it.name) + '</span><strong>× ' + esc(it.qty) + '</strong></li>';
+                }).join('')
+              : '<li class="text-slate-400">لا توجد بنود توصيف</li>';
+          }
+          var notesEl = $('costingSpecNotes');
+          if (notesEl) {
+            var notes = [(spec && spec.tech_notes) || c.tech_notes || '', (spec && spec.written_items) || ''].filter(function (x) { return x && String(x).trim(); }).join('\n\n');
+            if (notes.trim()) {
+              notesEl.textContent = notes;
+              notesEl.classList.remove('hidden');
+            } else {
+              notesEl.textContent = '';
+              notesEl.classList.add('hidden');
+            }
+          }
+        }
+
         if ($('costingMeta')) {
-          $('costingMeta').textContent = 'طلب: ' + (pricing.request_no || '—') + ' · ' + (c.pathway_label || '');
+          $('costingMeta').textContent = 'طلب: ' + (pricing.request_no || '—');
         }
 
         var body = $('costingItemsBody');

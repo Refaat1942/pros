@@ -11,7 +11,7 @@ use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 
 /**
- * الرفع الجماعي للأصناف — قالب Excel بـ 9 أعمدة (config/catalog.php).
+ * الرفع الجماعي للأصناف — قالب Excel (config/catalog.php).
  */
 class StockImportService
 {
@@ -107,6 +107,7 @@ class StockImportService
                     'discount' => $discount,
                     'balance' => $balance,
                     'qty' => $balance,
+                    'price' => round((float) $this->num($parsed['price_raw'] ?? '0'), 2),
                 ];
 
                 $existing = $this->findExistingForImport($parsed);
@@ -162,6 +163,7 @@ class StockImportService
             (string) ((int) ($item['addition'] ?? 0)),
             (string) ((int) ($item['discount'] ?? 0)),
             (string) ((int) ($item['catalog_balance'] ?? $item['balance'] ?? $item['qty'] ?? 0)),
+            (string) round((float) ($item['price'] ?? 0), 2),
         ];
     }
 
@@ -196,6 +198,7 @@ class StockImportService
                 'رقم',
                 'رقم',
                 'رصيد = أول + إضافة − خصم',
+                'سعر التكلفة الأساسي (ج.م)',
             ]));
         }
         foreach ($itemRows as $row) {
@@ -270,6 +273,7 @@ class StockImportService
             'addition_raw' => ['الاضافة', 'الإضافة'],
             'discount_raw' => ['الخصم'],
             'balance_raw' => ['الرصيد', 'الكمية'],
+            'price_raw' => ['السعر الأساسي', 'السعر', 'سعر التكلفة', 'أعلى سعر'],
         ];
 
         $map = [];
@@ -440,7 +444,7 @@ class StockImportService
     /**
      * @param  list<string>  $cols
      * @param  array<string, int>|null  $columnMap
-     * @return array{catalog_number:string, page_number:string, name:string, alt_codes:string, uom:string, opening_qty_raw:string, addition_raw:string, discount_raw:string, balance_raw:string}
+     * @return array{catalog_number:string, page_number:string, name:string, alt_codes:string, uom:string, opening_qty_raw:string, addition_raw:string, discount_raw:string, balance_raw:string, price_raw:string}
      */
     private function parseRowColumns(array $cols, ?array $columnMap = null): array
     {
@@ -455,6 +459,7 @@ class StockImportService
                 'addition_raw' => $this->cellValue($cols, $columnMap, 'addition_raw', '0'),
                 'discount_raw' => $this->cellValue($cols, $columnMap, 'discount_raw', '0'),
                 'balance_raw' => $this->cellValue($cols, $columnMap, 'balance_raw'),
+                'price_raw' => $this->cellValue($cols, $columnMap, 'price_raw', '0'),
             ];
         }
 
@@ -469,6 +474,7 @@ class StockImportService
                 'addition_raw' => '0',
                 'discount_raw' => '0',
                 'balance_raw' => trim((string) ($cols[3] ?? '')),
+                'price_raw' => '0',
             ];
         }
 
@@ -482,6 +488,7 @@ class StockImportService
             'addition_raw' => trim((string) ($cols[6] ?? '0')),
             'discount_raw' => trim((string) ($cols[7] ?? '0')),
             'balance_raw' => trim((string) ($cols[8] ?? '')),
+            'price_raw' => trim((string) ($cols[9] ?? '0')),
         ];
     }
 

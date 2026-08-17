@@ -176,7 +176,7 @@ class ReceptionSelfServiceService
                 ['key' => 'registered', 'label' => 'تسجيل واستقبال', 'status' => 'current'],
                 ['key' => 'exam', 'label' => 'الكشف الطبي', 'status' => 'pending'],
                 ['key' => 'technical', 'label' => 'التوصيف الفني', 'status' => 'pending'],
-                ['key' => 'manufacturing', 'label' => 'التصنيع بالورشة', 'status' => 'pending'],
+                ['key' => 'manufacturing', 'label' => 'التصنيع بقسم الإنتاج', 'status' => 'pending'],
                 ['key' => 'ready', 'label' => 'جاهز للتسليم', 'status' => 'pending'],
                 ['key' => 'delivered', 'label' => 'تم التسليم', 'status' => 'pending'],
             ]
@@ -185,7 +185,7 @@ class ReceptionSelfServiceService
                 ['key' => 'exam', 'label' => 'الكشف الطبي', 'status' => 'pending'],
                 ['key' => 'technical', 'label' => 'التوصيف الفني', 'status' => 'pending'],
                 ['key' => 'approval', 'label' => 'اعتماد عروض الأسعار والموافقات', 'status' => 'pending'],
-                ['key' => 'manufacturing', 'label' => 'التصنيع بالورشة', 'status' => 'pending'],
+                ['key' => 'manufacturing', 'label' => 'التصنيع بقسم الإنتاج', 'status' => 'pending'],
                 ['key' => 'ready', 'label' => 'جاهز للتسليم', 'status' => 'pending'],
                 ['key' => 'delivered', 'label' => 'تم التسليم', 'status' => 'pending'],
             ];

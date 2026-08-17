@@ -1,6 +1,6 @@
 <div class="panel inventory-wrap">
     <div class="panel-header">
-        <h3>↩️ استلام ارتجاع المواد — من الورشة</h3>
+        <h3>↩️ استلام ارتجاع المواد — من قسم الإنتاج</h3>
         <div style="display:flex;align-items:center;gap:10px;">
             <button type="button" class="btn-view" id="btnRefreshReturns">↻ تحديث</button>
             <span class="badge" id="returnsBadge">0</span>
@@ -8,7 +8,7 @@
     </div>
     <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;line-height:1.7;">
         طلبات الارتجاع الواردة من مكتب التشغيل — أكّد الاستلام بمسح الباركود ومطابقة الأصناف.
-        لا يُنشأ الارتجاع من المخزن؛ الورشة هي التي تُرسل الطلب.
+        لا يُنشأ الارتجاع من المخزن؛ قسم الإنتاج هي التي تُرسل الطلب.
     </p>
     <div class="bom-summary" id="returnsSummary"></div>
     <div class="bom-table-wrap">

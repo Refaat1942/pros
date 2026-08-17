@@ -26,9 +26,39 @@
 </div>
 
 <div class="space-y-6" id="workshopDeskRoot" data-cases-count="{{ $cases->count() }}">
+    <div class="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-violet-100 bg-violet-50">
+            <h3 class="font-bold text-violet-900 text-base">👤 تخصيص الفني وقسم الإنتاج</h3>
+            <p class="text-xs text-violet-700 mt-1">اختر أمر الشغل من الجدول ثم حدّد القسم والفني — التخصيص يتم من قسم الإنتاج وليس من مكتب التشغيل.</p>
+        </div>
+        <div class="p-4 flex flex-wrap gap-4 items-end">
+            <div class="min-w-[200px]">
+                <label class="block text-xs font-bold text-slate-600 mb-1">أمر الشغل المحدد</label>
+                <input type="text" id="workshopSelectedOrder" readonly placeholder="— اختر من الجدول —"
+                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono">
+            </div>
+            <div class="min-w-[200px]">
+                <label class="block text-xs font-bold text-slate-600 mb-1">قسم الإنتاج</label>
+                <select id="workshopAssignSection" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <option value="">— بدون —</option>
+                </select>
+            </div>
+            <div class="min-w-[200px]">
+                <label class="block text-xs font-bold text-slate-600 mb-1">الفني</label>
+                <select id="workshopAssignTechnician" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <option value="">— بدون —</option>
+                </select>
+            </div>
+            <button type="button" id="btnSaveWorkshopAssignment"
+                    class="rounded-xl bg-violet-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-violet-700 transition-colors">
+                حفظ التخصيص
+            </button>
+        </div>
+    </div>
+
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
-            <h3 class="font-bold text-slate-800">🏭 طابور ورشة التصنيع</h3>
+            <h3 class="font-bold text-slate-800">🏭 طابور قسم الإنتاج</h3>
             <button type="button" id="btnRefreshWorkshop"
                     class="rounded-xl bg-workshop text-white px-4 py-2 text-sm font-bold hover:bg-workshop-dark transition-colors">
                 ↻ تحديث
@@ -53,6 +83,7 @@
                         <th class="px-4 py-3 text-right font-bold">المريض</th>
                         <th class="px-4 py-3 text-right font-bold">المسار</th>
                         <th class="px-4 py-3 text-right font-bold">مرحلة التصنيع</th>
+                        <th class="px-4 py-3 text-right font-bold">القسم / الفني</th>
                         <th class="px-4 py-3 text-right font-bold">عدد الأصناف</th>
                         <th class="px-4 py-3 text-right font-bold">إجراء</th>
                     </tr>
@@ -83,6 +114,10 @@
                             <td class="px-4 py-3">
                                 <span class="text-xs font-bold px-2 py-1 rounded-lg bg-cyan-100 text-cyan-800">{{ $mfgLabel }}</span>
                             </td>
+                            <td class="px-4 py-3 text-xs">
+                                <div class="font-semibold text-slate-700">{{ $case->workshopSection?->name ?? '—' }}</div>
+                                <div class="text-slate-400 mt-0.5">{{ $case->assignedTechnician?->name ?? '—' }}</div>
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 @if ($itemsCount > 0)
                                     <button type="button"
@@ -110,7 +145,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في الورشة حالياً — تظهر بعد صرف المواد من المخزن.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في قسم الإنتاج حالياً — تظهر بعد صرف المواد من المخزن.</td></tr>
                     @endforelse
                 </tbody>
             </table>

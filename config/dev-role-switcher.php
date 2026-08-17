@@ -14,7 +14,7 @@ return [
         'costing' => ['label' => 'التكاليف', 'route' => 'costing.dashboard'],
         'operations' => ['label' => 'التشغيل', 'route' => 'operations.dashboard'],
         'cashier' => ['label' => 'الخزنة', 'route' => 'cashier.dashboard'],
-        'workshop' => ['label' => 'ورشة التصنيع', 'route' => 'workshop.dashboard'],
+        'workshop' => ['label' => 'قسم الإنتاج', 'route' => 'workshop.dashboard'],
         'technical' => ['label' => 'المخزن', 'route' => 'technical.dashboard'],
     ],
 ];

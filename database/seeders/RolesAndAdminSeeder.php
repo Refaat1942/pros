@@ -26,7 +26,7 @@ class RolesAndAdminSeeder extends Seeder
             ['slug' => Role::SLUG_COSTING,     'label_ar' => 'فني تكاليف'],
             ['slug' => Role::SLUG_OPERATIONS,  'label_ar' => 'مكتب عمليات'],
             ['slug' => Role::SLUG_CASHIER,     'label_ar' => 'موظف الخزنة'],
-            ['slug' => Role::SLUG_WORKSHOP,    'label_ar' => 'ورشة التصنيع'],
+            ['slug' => Role::SLUG_WORKSHOP,    'label_ar' => 'قسم الإنتاج'],
             ['slug' => Role::SLUG_TECHNICAL,   'label_ar' => 'مسؤول مخزن'],
         ];
 

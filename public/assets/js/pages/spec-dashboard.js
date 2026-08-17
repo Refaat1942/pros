@@ -382,23 +382,43 @@
     });
   }
 
+  function catalogItemAvailable(item) {
+    if (!item) return 0;
+    if (item.available != null) return parseInt(item.available, 10) || 0;
+    if (item.available_max != null) return parseInt(item.available_max, 10) || 0;
+    return (parseInt(item.qty, 10) || 0) - (parseInt(item.reserved, 10) || 0);
+  }
+
+  function stockBadgeHtml(available) {
+    if (available < 1) {
+      return '<span class="text-xs font-bold text-amber-700">0 (طلب توريد)</span>';
+    }
+    return '<span class="text-xs font-bold text-emerald-700">' + available + '</span>';
+  }
+
   function renderItemsTable() {
     var tbody = $('specItemsBody');
     if (!tbody) return;
     if (!state.items.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">أضف أصنافاً من الكاتلوج</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">أضف أصنافاً من الكاتلوج</td></tr>';
       return;
     }
     tbody.innerHTML = state.items.map(function (item, idx) {
+      var cat = catalogEntry(item.stock_item_code);
+      var available = cat ? catalogItemAvailable(cat) : null;
+      var stockCell = available != null ? stockBadgeHtml(available) : '<span class="text-xs text-slate-400">—</span>';
+      var warnQty = available != null && item.qty > available;
       return '<tr data-idx="' + idx + '">' +
         '<td class="px-4 py-3 font-mono text-xs">' + item.stock_item_code + '</td>' +
         '<td class="px-4 py-3 font-semibold text-slate-800">' + item.name +
           (item.group_label ? '<span class="block text-xs text-violet-600">📦 ' + item.group_label + '</span>' : '') +
         '</td>' +
         '<td class="px-4 py-3 text-slate-500">' + (item.uom || '—') + '</td>' +
+        '<td class="px-4 py-3">' + stockCell + '</td>' +
         '<td class="px-4 py-3"><input type="number" step="1" min="1" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
           (state.locked ? 'disabled' : '') +
-          ' class="spec-qty-input w-20 rounded-lg border border-slate-200 px-2 py-1 text-center text-sm"></td>' +
+          ' class="spec-qty-input w-20 rounded-lg border px-2 py-1 text-center text-sm ' +
+          (warnQty ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-200') + '"></td>' +
         '<td class="px-4 py-3 text-center">' +
           (state.locked ? '—' : '<button type="button" data-remove-idx="' + idx + '" class="text-red-500 hover:text-red-700 font-bold">✕</button>') +
         '</td></tr>';
@@ -825,12 +845,17 @@
       var groupBadge = item.spec_group_label
         ? '<span class="text-xs font-bold text-indigo-600">{' + item.spec_group_label + '}</span> '
         : '';
+      var available = catalogItemAvailable(item);
+      var stockLine = item.type === 'kit'
+        ? ''
+        : '<span class="block text-xs mt-1">متوفر: ' + stockBadgeHtml(available) + '</span>';
       return '<button type="button" data-pick-code="' + item.code + '" ' +
         (already ? 'disabled' : '') +
         ' class="w-full text-right px-4 py-3 rounded-xl hover:bg-amber-50 border border-transparent hover:border-amber-200 mb-1 disabled:opacity-40">' +
         kitBadge + groupBadge +
         '<span class="font-mono text-xs text-slate-500">' + item.code + '</span> ' +
         '<span class="font-bold text-slate-800">' + item.name + '</span>' +
+        stockLine +
         (item.spec ? '<span class="block text-xs text-slate-400 mt-1">' + item.spec + '</span>' : '') +
         '</button>';
     }).join('');

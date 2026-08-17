@@ -90,7 +90,7 @@
         <p class="catalog-table-hint" style="margin-top:6px;">
             قالب الأصناف — {{ count($catalogTemplateHeaders) }} أعمدة:
             <strong>{{ implode(' | ', $catalogTemplateHeaders) }}</strong>.
-            أسعار والموردون والأقسام تُدار من نموذج الصنف. <strong>رقم الصنف قد يتكرر</strong> — التمييز برقم الصفحة. الأكواد والباركود من Excel. لا توليد تلقائي للأكواد.
+            يشمل <strong>السعر الأساسي</strong> — الموردون والأقسام تُدار من نموذج الصنف. <strong>رقم الصنف قد يتكرر</strong> — التمييز برقم الصفحة. الأكواد والباركود من Excel. لا توليد تلقائي للأكواد.
         </p>
 
         <div class="panel-body" style="overflow-x:auto;">

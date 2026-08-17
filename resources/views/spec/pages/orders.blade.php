@@ -113,7 +113,7 @@
     <div class="xl:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 bg-slate-50">
             <h3 class="font-bold text-slate-800 text-base">📐 التوصيف الفني — أكواد وكميات</h3>
-            <p class="text-xs text-slate-500 mt-1">🔒 عمى مالي ومخزني — لا تظهر الأسعار ولا أرصدة المخزون</p>
+            <p class="text-xs text-slate-500 mt-1">🔒 عمى مالي — تظهر أرصدة المخزن المتاحة دون الأسعار</p>
         </div>
 
         <div id="emptyState" class="p-10 text-center text-slate-400">
@@ -172,6 +172,7 @@
                             <th class="px-4 py-3 text-right font-bold">الكود</th>
                             <th class="px-4 py-3 text-right font-bold">الصنف</th>
                             <th class="px-4 py-3 text-right font-bold">الوحدة</th>
+                            <th class="px-4 py-3 text-right font-bold w-24">المتوفر</th>
                             <th class="px-4 py-3 text-right font-bold w-28">الكمية</th>
                             <th class="px-4 py-3 text-center font-bold w-20">حذف</th>
                         </tr>

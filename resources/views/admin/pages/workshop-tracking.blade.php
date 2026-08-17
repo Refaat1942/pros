@@ -1,6 +1,6 @@
 <div class="panel">
     <div class="panel-header">
-        <h3>📍 تتبع أوامر الشغل — الورشة</h3>
+        <h3>📍 تتبع أوامر الشغل — قسم الإنتاج</h3>
         <button type="button" class="btn-action" id="btnRefreshWorkshopTracking">↻ تحديث</button>
     </div>
     <div class="data-toolbar">

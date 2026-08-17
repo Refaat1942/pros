@@ -14,7 +14,7 @@ registerDashboardPages('workshop', 'workshop.', WorkshopDashboardController::cla
 
 /*
 |--------------------------------------------------------------------------
-| ورشة التصنيع — طابور الإنتاج وإتمام التصنيع
+| قسم الإنتاج — طابور الإنتاج وإتمام التصنيع
 |--------------------------------------------------------------------------
 */
 Route::prefix('workshop')
@@ -24,6 +24,12 @@ Route::prefix('workshop')
         Route::middleware('dashboard.page:workshop,workshop')->group(function () {
             Route::get('workshop/list', [WorkshopQueueController::class, 'index'])
                 ->name('workshop.list');
+
+            Route::get('workshop-assignment/options', [WorkshopQueueController::class, 'assignmentOptions'])
+                ->name('workshop-assignment.options');
+
+            Route::post('workshop/{case}/assign', [WorkshopQueueController::class, 'assign'])
+                ->name('workshop.assign');
 
             Route::post('workshop/{case}/advance', [WorkshopQueueController::class, 'advance'])
                 ->name('workshop.advance');

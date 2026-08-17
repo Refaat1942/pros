@@ -265,7 +265,7 @@ final class PathwayDefaultSteps
                 'sort' => $sort++,
                 'owner_department' => 'warehouse',
                 'action_summary' => 'صرف خامات BOM بالباركود — إذن صرف',
-                'on_complete' => 'ينتقل للورشة',
+                'on_complete' => 'ينتقل لقسم الإنتاج',
                 'next_step_key' => 'workshop',
                 'stage_keys' => [CaseRecord::STAGE_MANUFACTURING],
                 'required' => true,
@@ -275,7 +275,7 @@ final class PathwayDefaultSteps
             ],
             [
                 'key' => 'workshop',
-                'label' => 'الورشة — تصنيع',
+                'label' => 'قسم الإنتاج — تصنيع',
                 'sort' => $sort++,
                 'owner_department' => 'workshop',
                 'action_summary' => 'تصنيع الطرف — إغلاق الجودة',

@@ -9,11 +9,11 @@ return [
         'reception' => ['label_ar' => 'لوحة الاستقبال', 'icon' => '📋'],
         'doctor' => ['label_ar' => 'لوحة الطبيب', 'icon' => '🩺'],
         'spec' => ['label_ar' => 'لوحة التوصيف', 'icon' => '📐'],
-        'adjustments' => ['label_ar' => 'لوحة المعدلات', 'icon' => '📏'],
-        'costing' => ['label_ar' => 'لوحة التكاليف', 'icon' => '💰'],
+        'adjustments' => ['label_ar' => 'لوحة المعدلات والتكاليف', 'icon' => '📏'],
+        'costing' => ['label_ar' => 'لوحة الاعتماد', 'icon' => '✅'],
         'operations' => ['label_ar' => 'مكتب التشغيل', 'icon' => '🎯'],
         'cashier' => ['label_ar' => 'الخزنة', 'icon' => '💵'],
-        'workshop' => ['label_ar' => 'ورشة التصنيع', 'icon' => '🏭'],
+        'workshop' => ['label_ar' => 'قسم الإنتاج', 'icon' => '🏭'],
         'technical' => ['label_ar' => 'لوحة المخزن', 'icon' => '📦'],
         'admin' => ['label_ar' => 'لوحة الإدارة', 'icon' => '⚙️'],
     ],
@@ -80,11 +80,11 @@ return [
             'dashboard' => 'admin',
         ],
         'manage-workshop-sections' => [
-            'label_ar' => 'إدارة أقسام الورشة وربط الفنيين',
+            'label_ar' => 'إدارة أقسام الإنتاج وربط الفنيين',
             'dashboard' => 'admin',
         ],
         'view-workshop-tracking' => [
-            'label_ar' => 'لوحة تتبع أوامر الشغل في الورشة',
+            'label_ar' => 'لوحة تتبع أوامر الشغل في قسم الإنتاج',
             'dashboard' => 'admin',
         ],
         'approve-dispense' => [

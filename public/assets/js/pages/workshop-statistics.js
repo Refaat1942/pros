@@ -1,5 +1,5 @@
 /**
- * صفحة إحصائيات الورشة — ChartKit + ExportKit من بيانات السيرفر فقط.
+ * صفحة إحصائيات قسم الإنتاج — ChartKit + ExportKit من بيانات السيرفر فقط.
  */
 (function () {
   'use strict';

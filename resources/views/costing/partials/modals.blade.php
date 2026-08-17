@@ -1,15 +1,27 @@
 <div class="modal-overlay" id="costingModal">
-  <div class="modal costing-modal-lg" style="max-width:min(1180px,98vw);width:100%;">
+  <div class="modal costing-modal-lg" style="max-width:min(1280px,98vw);width:100%;">
     <div class="modal-header">
-      <h3 id="costingModalTitle">💰 مراجعة التكلفة</h3>
+      <h3 id="costingModalTitle">✅ مراجعة الاعتماد</h3>
       <button type="button" class="modal-close" id="closeCostingModal">&times;</button>
     </div>
     <div class="modal-body">
+      <div id="costingPatientBanner" class="costing-patient-banner hidden">
+        <div class="costing-patient-banner__main">
+          <h4 id="costingPatientName">—</h4>
+          <p id="costingPatientMeta" class="costing-patient-banner__meta">—</p>
+        </div>
+        <div class="costing-patient-banner__spec">
+          <p class="costing-patient-banner__label">📐 التوصيف الفني</p>
+          <ul id="costingSpecItems" class="costing-patient-banner__items"></ul>
+          <p id="costingSpecNotes" class="costing-patient-banner__notes hidden"></p>
+        </div>
+      </div>
+
       <div id="costingMeta" style="margin-bottom:12px;font-size:13px;color:var(--text-muted);"></div>
 
       <div class="costing-grid">
         <div class="costing-grid__items">
-          <div class="bom-table-wrap" style="max-height:min(52vh,540px);">
+          <div class="bom-table-wrap" style="max-height:min(58vh,620px);">
             <table class="bom-table">
               <thead>
                 <tr>
@@ -141,6 +153,59 @@
     line-height: 1.6;
     color: var(--text-muted, #64748b);
     white-space: normal;
+  }
+  .costing-patient-banner {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f5f3ff 0%, #ecfeff 100%);
+    border: 1px solid #ddd6fe;
+  }
+  @media (max-width: 860px) {
+    .costing-patient-banner { grid-template-columns: 1fr; }
+  }
+  .costing-patient-banner__main h4 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 800;
+    color: #312e81;
+  }
+  .costing-patient-banner__meta {
+    margin: 0;
+    font-size: 13px;
+    color: #475569;
+  }
+  .costing-patient-banner__label {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+  }
+  .costing-patient-banner__items {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 4px;
+    max-height: 120px;
+    overflow-y: auto;
+    font-size: 12px;
+  }
+  .costing-patient-banner__items li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px dashed #e2e8f0;
+  }
+  .costing-patient-banner__notes {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #64748b;
+    white-space: pre-wrap;
   }
 </style>
 

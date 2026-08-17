@@ -216,7 +216,7 @@ class ChecklistFeaturesTest extends TestCase
             config('catalog.template_headers'),
             StockImportService::headers(),
         );
-        $this->assertCount(9, StockImportService::headers());
+        $this->assertCount(10, StockImportService::headers());
     }
 
     public function test_military_markup_engine_computes_selling_price_and_percentage(): void

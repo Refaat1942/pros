@@ -13,10 +13,13 @@
   }
 
   var MFG_LABELS = {
-    warehouse: 'المخزن', issue: 'قيد التصنيع', workshop: 'الورشة', fitting: 'تجربة تركيب',
+    warehouse: 'المخزن', issue: 'قيد التصنيع', workshop: 'قسم الإنتاج', fitting: 'تجربة تركيب',
     quality: 'مراقبة جودة', generation: 'توليد', assembly: 'تم التصنيع', casting: 'صب',
     finishing: 'تشطيب', closed: 'مغلق'
   };
+
+  var assignmentSections = [];
+  var selectedCaseId = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -37,7 +40,16 @@
       ? '<a href="' + esc(c.work_order_print_url) + '" target="_blank" rel="noopener" ' +
         'class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ طباعة إذن شغل</a> '
       : '';
-    return printBtn + '<button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" data-case-id="' + c.id + '">✓ تم التصنيع</button>';
+    return printBtn +
+      '<button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1" data-case-id="' + c.id + '" data-work-order="' + esc(c.work_order_no || '') + '">👤 تخصيص</button> ' +
+      '<button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" data-case-id="' + c.id + '">✓ تم التصنيع</button>';
+  }
+
+  function renderAssignmentCell(c) {
+    var section = (c.workshop_section && c.workshop_section.name) || '—';
+    var tech = (c.assigned_technician && c.assigned_technician.name) || '—';
+    return '<div class="text-xs"><span class="font-semibold text-slate-700">' + esc(section) + '</span>' +
+      '<div class="text-slate-400 mt-0.5">' + esc(tech) + '</div></div>';
   }
 
   function renderRow(c) {
@@ -53,6 +65,7 @@
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg ' +
         (isMil ? 'bg-indigo-100 text-indigo-700">🪖 عسكري' : 'bg-emerald-100 text-emerald-700">🌐 مدني') + '</span></td>' +
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg bg-cyan-100 text-cyan-800">' + esc(mfgLabel) + '</span></td>' +
+      '<td class="px-4 py-3">' + renderAssignmentCell(c) + '</td>' +
       '<td class="px-4 py-3 text-center">' + renderItemsCell(c) + '</td>' +
       '<td class="px-4 py-3">' + renderActionCell(c) + '</td></tr>';
   }
@@ -77,6 +90,22 @@
   function bindTableEvents() {
     document.querySelectorAll('.btn-complete-manufacturing').forEach(function (btn) {
       btn.addEventListener('click', completeManufacturing);
+    });
+    document.querySelectorAll('.btn-select-workshop-case').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectedCaseId = btn.getAttribute('data-case-id');
+        var wo = btn.getAttribute('data-work-order') || selectedCaseId;
+        var input = $('workshopSelectedOrder');
+        if (input) input.value = wo;
+        var cached = casesCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
+        if (cached) {
+          var sectionSel = $('workshopAssignSection');
+          var techSel = $('workshopAssignTechnician');
+          if (sectionSel && cached.workshop_section_id) sectionSel.value = String(cached.workshop_section_id);
+          if (sectionSel) sectionSel.dispatchEvent(new Event('change'));
+          if (techSel && cached.assigned_technician_id) techSel.value = String(cached.assigned_technician_id);
+        }
+      });
     });
     document.querySelectorAll('.btn-view-bom-items').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -208,7 +237,52 @@
     }
   }
 
+  function saveWorkshopAssignment() {
+    if (!selectedCaseId || !window.axios) {
+      toast('اختر أمر شغل من الجدول أولاً', true);
+      return;
+    }
+    var sectionEl = $('workshopAssignSection');
+    var techEl = $('workshopAssignTechnician');
+    var payload = {};
+    if (sectionEl && sectionEl.value) payload.workshop_section_id = parseInt(sectionEl.value, 10);
+    if (techEl && techEl.value) payload.assigned_technician_id = parseInt(techEl.value, 10);
+
+    var btn = $('btnSaveWorkshopAssignment');
+    if (btn) btn.disabled = true;
+    axios.post('/workshop/workshop/' + selectedCaseId + '/assign', payload)
+      .then(function (res) {
+        toast(res.data.message || 'تم حفظ التخصيص');
+        refreshList();
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر حفظ التخصيص', true);
+      })
+      .finally(function () { if (btn) btn.disabled = false; });
+  }
+
+  function loadAssignmentOptions() {
+    if (!window.axios) return;
+    axios.get('/workshop/workshop-assignment/options').then(function (res) {
+      assignmentSections = (res.data && res.data.sections) || [];
+      var sectionSel = $('workshopAssignSection');
+      var techSel = $('workshopAssignTechnician');
+      if (!sectionSel || !techSel) return;
+      sectionSel.innerHTML = '<option value="">— بدون —</option>' + assignmentSections.map(function (s) {
+        return '<option value="' + s.id + '">' + esc(s.name) + (s.code ? ' (' + esc(s.code) + ')' : '') + '</option>';
+      }).join('');
+      sectionSel.addEventListener('change', function () {
+        var sec = assignmentSections.find(function (s) { return String(s.id) === String(sectionSel.value); });
+        var techs = sec ? (sec.technicians || []) : [];
+        techSel.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
+          return '<option value="' + t.id + '">' + esc(t.name) + '</option>';
+        }).join('');
+      });
+    }).catch(function () {});
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    loadAssignmentOptions();
     bindTableEvents();
     var search = $('workshopSearch');
     if (search) search.addEventListener('input', applyFilters);
@@ -227,6 +301,8 @@
     }
     var refresh = $('btnRefreshWorkshop');
     if (refresh) refresh.addEventListener('click', refreshList);
+    var assignBtn = $('btnSaveWorkshopAssignment');
+    if (assignBtn) assignBtn.addEventListener('click', saveWorkshopAssignment);
     var closeBtn = $('closeWorkshopBomItemsModal');
     var modal = $('workshopBomItemsModal');
     if (closeBtn) closeBtn.addEventListener('click', closeBomItemsModal);

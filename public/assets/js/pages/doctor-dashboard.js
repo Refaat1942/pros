@@ -118,8 +118,8 @@
 
     function formatTransferStatusMeta(status, statusGroup) {
       if (statusGroup === 'مكتمل' || status === 'مكتمل') return '<span class="record-status-done">✅ مكتمل</span>';
-      if (statusGroup === 'في الورشة' || (status && status.indexOf('التصنيع') !== -1)) {
-        return '<span class="record-status-transfer" style="color:var(--primary)">🏭 في الورشة</span>';
+      if (statusGroup === 'في قسم الإنتاج' || (status && status.indexOf('التصنيع') !== -1)) {
+        return '<span class="record-status-transfer" style="color:var(--primary)">🏭 في قسم الإنتاج</span>';
       }
       return '<span class="record-status-transfer">⚙️ قيد التوصيف</span>';
     }
@@ -553,7 +553,7 @@
       var values = root.querySelectorAll('.ck-stat-value');
       var total = transferred.length;
       var spec = transferred.filter(function(t) { return t.statusGroup === 'قيد التوصيف'; }).length;
-      var workshop = transferred.filter(function(t) { return t.statusGroup === 'في الورشة'; }).length;
+      var workshop = transferred.filter(function(t) { return t.statusGroup === 'في قسم الإنتاج'; }).length;
       var done = transferred.filter(function(t) { return t.statusGroup === 'مكتمل'; }).length;
       if (values[0]) values[0].textContent = String(total);
       if (values[1]) values[1].textContent = String(spec);

@@ -25,7 +25,7 @@ class WorkshopAssignmentService
         if ($sectionId !== null) {
             $section = WorkshopSection::query()->where('active', true)->find($sectionId);
             if (! $section) {
-                abort(422, 'قسم الورشة غير صالح.');
+                abort(422, 'قسم الإنتاج غير صالح.');
             }
         }
 

@@ -7,6 +7,8 @@ use App\Http\Requests\Manufacturing\AdvanceManufacturingStageRequest;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Services\BomService;
+use App\Services\WorkshopAssignmentService;
+use App\Services\WorkshopSectionService;
 use App\Support\ManufacturingDeskCaseFormatter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +22,8 @@ class WorkshopQueueController extends Controller
 
     public function __construct(
         private readonly BomService $bomService,
+        private readonly WorkshopAssignmentService $workshopAssignment,
+        private readonly WorkshopSectionService $workshopSections,
     ) {}
 
     /**
@@ -60,7 +64,49 @@ class WorkshopQueueController extends Controller
     }
 
     /**
-     * تقدم مرحلة التصنيع الفرعية داخل الورشة.
+     * تخصيص قسم الإنتاج والفني — من لوحة قسم الإنتاج (وليس مكتب التشغيل).
+     */
+    public function assign(Request $request, CaseRecord $case): JsonResponse
+    {
+        $validated = $request->validate([
+            'workshop_section_id' => ['nullable', 'integer', 'exists:workshop_sections,id'],
+            'assigned_technician_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        $case = $this->workshopAssignment->assignOnApprove(
+            $case,
+            $validated['workshop_section_id'] ?? null,
+            $validated['assigned_technician_id'] ?? null,
+        );
+
+        return response()->json([
+            'message' => 'تم تخصيص أمر الشغل.',
+            'case' => ManufacturingDeskCaseFormatter::format(
+                $case->load(['patient:id,patient_code,name', 'workshopSection:id,name', 'assignedTechnician:id,name', 'bom.items']),
+                'workshop.work-order.print',
+            ),
+        ]);
+    }
+
+    /** أقسام الإنتاج + فنيين — لتخصيص أوامر الشغل. */
+    public function assignmentOptions(): JsonResponse
+    {
+        if (! config('workshop.enabled', true)) {
+            return response()->json(['sections' => []]);
+        }
+
+        return response()->json([
+            'sections' => collect($this->workshopSections->listActive())->map(fn ($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'code' => $s->code,
+                'technicians' => $s->technicians->map(fn ($u) => $u->only(['id', 'name']))->values(),
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * تقدم مرحلة التصنيع الفرعية داخل قسم الإنتاج.
      */
     public function advance(AdvanceManufacturingStageRequest $request, CaseRecord $case): JsonResponse
     {

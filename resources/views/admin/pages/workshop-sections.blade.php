@@ -1,6 +1,6 @@
 <div class="panel">
     <div class="panel-header">
-        <h3>🏭 أقسام الورشة</h3>
+        <h3>🏭 أقسام قسم الإنتاج</h3>
         <button type="button" class="btn-add-rank" id="btnAddWorkshopSection">➕ إضافة قسم</button>
     </div>
     <div class="data-toolbar">
