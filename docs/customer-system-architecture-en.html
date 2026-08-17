@@ -42,7 +42,7 @@
             <h1>Smart Prosthetics ERP<br>System Architecture</h1>
             <div class="sub">Technical reference for IT, deployment, and integration · Version 1.0 · August 2026</div>
         </div>
-        <div class="badge">Architecture<br>1 / 6</div>
+        <div class="badge">Architecture<br>1 / 8</div>
     </div>
 
     <div class="grid-2">
@@ -114,7 +114,7 @@
             <h1>Software Layers</h1>
             <div class="sub">Monolithic Laravel — strict separation of concerns</div>
         </div>
-        <div class="badge">Architecture<br>2 / 6</div>
+        <div class="badge">Architecture<br>2 / 8</div>
     </div>
 
     <h2>4. Layered Architecture</h2>
@@ -170,7 +170,7 @@
             <h1>Data Model &amp; Core Aggregates</h1>
             <div class="sub">Primary entities and relationships</div>
         </div>
-        <div class="badge">Architecture<br>3 / 6</div>
+        <div class="badge">Architecture<br>3 / 8</div>
     </div>
 
     <h2>8. Entity Relationship Overview</h2>
@@ -225,7 +225,146 @@ DB_PASSWORD=***</div>
     <div class="footer"><span>Smart Prosthetics ERP · System Architecture</span><span>Page 3</span></div>
 </div>
 
-<!-- PAGE 4 -->
+<!-- PAGE 4 — INVENTORY-FINANCE INTEGRATION -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Inventory ↔ Finance Integration</h1>
+            <div class="sub">How stock movements drive accounting entries</div>
+        </div>
+        <div class="badge">Architecture<br>4 / 8</div>
+    </div>
+
+    <h2>12. End-to-End Data Flow</h2>
+    <div class="diagram">StockReceiveService                PricingService
+  │ scan barcode inward                │ after spec saved
+  │ create StockMovement (receive)       │ per line item:
+  │ create StockItemPrice batch          │   unit_price = highestUnitPrice()
+  │ StockPriceService.recalcWac()        │   wac_unit   = wacUnitPrice()
+  ▼                                      ▼
+stock_items.qty ↑                  pricing_requests
+stock_items.wac updated            computed_total (sales basis)
+                                   internal_total (WAC basis)
+                                          │
+                                   CostingService → selling_price
+                                          │
+                                   QuoteService → quotes.total
+                                          │
+BomService.scanDispense() ◄──────── OperationsService (work order)
+  │ validate barcode vs BOM line
+  │ decrement stock_items.qty
+  │ create StockMovement (issue, balance_after)
+  │ FinancialPostingService.postOnDispense()  [civilian]
+  ▼
+contract_company_debts.due ↑
+audit_logs (tag: financial, warehouse)
+
+DeliveryService → FinancialPostingService.postMilitary()  [military]
+  ▼
+military_debts row created</div>
+
+    <h2>13. Multiple Price Storage Model</h2>
+    <table>
+        <tr><th>Table / field</th><th>Role</th></tr>
+        <tr><td><code>stock_items.price</code></td><td>Base catalog reference price</td></tr>
+        <tr><td><code>stock_items.wac</code></td><td>Current weighted average — updated on every receipt</td></tr>
+        <tr><td><code>stock_item_prices</code></td><td>One row per purchase batch: supplier, invoice, amount, qty, received_at</td></tr>
+        <tr><td><code>pricing_request_items.unit_price</code></td><td>Snapshotted highest price at calculation time</td></tr>
+        <tr><td><code>pricing_request_items</code> (internal)</td><td>WAC unit stored in calculation payload / internal_total on request</td></tr>
+        <tr><td><code>cases.internal_cost</code></td><td>Sum of WAC-based cost — used in profitability report</td></tr>
+        <tr><td><code>cases.quote_total</code></td><td>Revenue basis for civilian profitability</td></tr>
+    </table>
+
+    <h2>14. WAC Recalculation (Moving Average)</h2>
+    <div class="diagram">StockPriceService.recalcWac()
+  new_wac = (prior_qty × prior_wac + in_qty × in_price) / (prior_qty + in_qty)
+
+Triggered by:
+  • StockReceiveService (physical inward)
+  • StockPriceService.addBatch() (price batch registration)
+
+NOT used for civilian quote line pricing — only for inventory value & profit cost.</div>
+
+    <h2>15. Stock Deduction on Sale / Dispense</h2>
+    <p>There is no separate “sales module” that manually adjusts stock. <strong>Dispense IS the stock deduction</strong> — tied to a validated work order:</p>
+    <ol>
+        <li><code>BomService</code> validates scan against <code>BomItem</code> line</li>
+        <li><code>stock_items.qty</code> decremented; <code>reserved</code> released if applicable</li>
+        <li><code>StockMovement</code> created with type <code>issue</code>, morph reference to BOM, <code>balance_after</code> snapshot</li>
+        <li><code>WorkflowService</code> fires <code>BomDispensed</code> event</li>
+        <li><code>BomService.refreshUnitCostsAtDispense()</code> — WAC stamped on every line before stock deduction</li>
+        <li><code>cases.issue_cost</code> — immutable WAC snapshot at dispense for profitability reports</li>
+    </ol>
+    <div class="warn">
+        Mismatch scan → <code>BarcodeDispenseMismatchException</code> → transaction blocked → audit entry. Stock and finance stay aligned.
+    </div>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Architecture</span><span>Page 4</span></div>
+</div>
+
+<!-- PAGE 5 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Financial Services &amp; Reporting Layer</h1>
+            <div class="sub">Accounting profile implementation</div>
+        </div>
+        <div class="badge">Architecture<br>5 / 8</div>
+    </div>
+
+    <h2>16. Financial Services Map</h2>
+    <table>
+        <tr><th>Service</th><th>Responsibility</th></tr>
+        <tr><td><code>StockPriceService</code></td><td>WAC recalc, highestUnitPrice(), wacUnitPrice(), price batches</td></tr>
+        <tr><td><code>PricingService</code></td><td>Dual calculation: computed_total + internal_total per pricing request</td></tr>
+        <tr><td><code>CostingService</code> + <code>CostingEngine</code></td><td>Overhead components + profit rate → selling_price</td></tr>
+        <tr><td><code>FinancialPostingService</code></td><td>Civilian debt on dispense; military debt on delivery</td></tr>
+        <tr><td><code>ContractDebtService</code></td><td>Increase/decrease contract entity due balances</td></tr>
+        <tr><td><code>FinancialBalanceService</code></td><td>Opening / movement / closing for cash, civilian, military, inventory domains</td></tr>
+        <tr><td><code>ProfitabilityReportService</code></td><td>Revenue − issue_cost (WAC at dispense) = margin per case</td></tr>
+        <tr><td><code>InventoryFinancialReconciliationService</code></td><td>Period bridge: stock issue WAC vs delivered revenue &amp; margin</td></tr>
+        <tr><td><code>ItemPricingAnalyticsService</code></td><td>Per-item WAC, highest/lowest batch price, unit margin %</td></tr>
+        <tr><td><code>BiReportService</code></td><td>Five BI boards + WAC/highest inventory valuation spread</td></tr>
+        <tr><td><code>AdminReportsHubService</code></td><td>Profitability, reconciliation, item margins, inventory valuation, movements</td></tr>
+    </table>
+
+    <h2>17. Admin Reports (Finance Department)</h2>
+    <table>
+        <tr><th>Report section</th><th>Route</th><th>Key output</th></tr>
+        <tr><td>Opening balance</td><td><code>/admin/reports/opening-balance</code></td><td>Cash, civilian AR, military AR, inventory WAC — start of period</td></tr>
+        <tr><td>Closing balance</td><td><code>/admin/reports/closing-balance</code></td><td>Same four domains — end of period after movements</td></tr>
+        <tr><td>Profitability review</td><td><code>/admin/reports/profitability</code></td><td>Per case: revenue, issue_cost (WAC), margin, margin %</td></tr>
+        <tr><td>Inventory ↔ Finance reconciliation</td><td><code>/admin/reports/inventory-reconciliation</code></td><td>Receive/issue WAC values vs delivered revenue &amp; gross margin</td></tr>
+        <tr><td>Item profit margins</td><td><code>/admin/reports/item-margins</code></td><td>WAC, highest/lowest price, unit margin % per SKU</td></tr>
+        <tr><td>Inventory valuation</td><td><code>/admin/reports/inventory-valuation</code></td><td>Per item: WAC value + highest-price value + purchase batches</td></tr>
+        <tr><td>Stock movements</td><td><code>/admin/reports/inventory-overview</code></td><td>Qty, WAC unit cost, line value, BOM reference</td></tr>
+        <tr><td>Civilian debts</td><td><code>/admin/reports/civilian-debts</code></td><td>Due, collected, remaining per entity</td></tr>
+        <tr><td>BI Board 5</td><td><code>/admin/overview</code></td><td>WAC vs highest purchase price — margin erosion flag</td></tr>
+    </table>
+
+    <h2>18. Profit Margin Calculation</h2>
+    <div class="diagram">At barcode dispense (BomService.releaseToWip):
+  • refreshUnitCostsAtDispense() → all BOM lines use current WAC
+  • StockMovement.unit_cost = WAC
+  • cases.issue_cost = Σ(qty × WAC)  ← snapshot for finance
+
+ProfitabilityReportService (delivered cases):
+  revenue = quote_total (civilian) | military_selling_price (military)
+  cost    = issue_cost if set, else internal_cost (WAC estimate at costing)
+  margin  = revenue − cost
+  margin_pct = margin / revenue × 100
+
+ItemPricingAnalyticsService (catalog):
+  unit_margin = highest_purchase_price − WAC
+  margin_pct  = unit_margin / WAC × 100</div>
+
+    <h2>19. Accounting Period Model</h2>
+    <p><code>AccountingPeriod</code> + <code>PeriodOpeningOverride</code> allow finance to set manual opening balances at period start (e.g. fiscal year alignment). <code>FinancialBalanceService.balancesForPeriod()</code> applies overrides when generating opening/closing reports.</p>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Architecture</span><span>Page 5</span></div>
+</div>
+
+<!-- PAGE 6 -->
 <div class="page">
     <div class="header">
         <div>

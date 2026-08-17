@@ -45,6 +45,8 @@ class AdminReportsHubService
         private readonly AdminPatientTrackService $patientTracks,
         private readonly FinancialBalanceService $balanceService,
         private readonly ProfitabilityReportService $profitabilityService,
+        private readonly InventoryFinancialReconciliationService $reconciliationService,
+        private readonly ItemPricingAnalyticsService $itemPricingAnalytics,
     ) {}
 
     /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
@@ -101,6 +103,8 @@ class AdminReportsHubService
             ['id' => 'financial', 'label' => 'الإيرادات والمالية', 'icon' => '💰', 'group' => 'رؤية عامة', 'description' => 'إيرادات التسليم وأوامر التشغيل'],
             ['id' => 'inventory', 'label' => 'تحليلات المخزون', 'icon' => '📦', 'group' => 'رؤية عامة', 'description' => 'الأصناف الراكدة والشغالة ومنخفضة المخزون'],
             ['id' => 'inventory-valuation', 'label' => 'تقييم المخزون', 'icon' => '💎', 'group' => 'المخزون والتوريد', 'description' => 'رصيد كل صنف وكمياته وأسعاره وقيمته بالمخزن'],
+            ['id' => 'item-margins', 'label' => 'هامش الربح بالأصناف', 'icon' => '📊', 'group' => 'المخزون والتوريد', 'description' => 'WAC مقابل أعلى سعر شراء — هامش الوحدة ونسبته لكل صنف'],
+            ['id' => 'inventory-reconciliation', 'label' => 'تسوية مخزون ↔ مالية', 'icon' => '🔗', 'group' => 'التعاقد والمالية', 'description' => 'ربط صرف المخزن (WAC) بالإيرادات والتكلفة المُسلَّمة'],
             ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير والورشة'],
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
         ] as $extra) {
@@ -149,6 +153,8 @@ class AdminReportsHubService
             'catalog' => $this->buildCatalog($from, $to),
             'inventory-overview' => $this->buildInventoryMovements($from, $to),
             'inventory-valuation' => $this->buildInventoryValuation($from, $to),
+            'item-margins' => $this->buildItemMargins($from, $to),
+            'inventory-reconciliation' => $this->buildInventoryReconciliation($from, $to),
             'suppliers' => $this->buildSuppliers($from, $to),
             'returns' => $this->buildReturns($from, $to),
             'companies' => $this->buildCompanies($from, $to),
@@ -226,13 +232,14 @@ class AdminReportsHubService
             $c->work_order_no ?? '—',
             $c->invoice_no ?? '—',
             number_format(CaseFinancialSummary::totalCost($c), 2).' ج.م',
+            number_format((float) ($c->issue_cost ?? $c->internal_cost ?? 0), 2).' ج.م',
         ])->values()->all();
 
         return [
             'title' => 'الإيرادات والمالية',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [],
-            'headers' => ['رقم الحالة', 'المريض', 'أمر التشغيل', 'الفاتورة', 'الإجمالي'],
+            'headers' => ['رقم الحالة', 'المريض', 'أمر التشغيل', 'الفاتورة', 'الإيراد', 'تكلفة WAC (صرف)'],
             'rows' => $rows,
         ];
     }
@@ -568,14 +575,18 @@ class AdminReportsHubService
 
         $totalQty = 0;
         $totalValue = 0.0;
+        $totalHighestValue = 0.0;
         $rows = [];
 
         foreach ($items as $item) {
-            $qty = (int) ($item->qty ?? 0);
-            $wac = round((float) ($item->wac ?? 0), 4);
-            $lineValue = round($qty * $wac, 2);
+            $analytics = $this->itemPricingAnalytics->rowForItem($item);
+            $qty = (int) ($analytics['qty'] ?? 0);
+            $wac = (float) ($analytics['wac'] ?? 0);
+            $lineValue = (float) ($analytics['wac_inventory_value'] ?? 0);
+            $highestLineValue = (float) ($analytics['highest_inventory_value'] ?? 0);
             $totalQty += $qty;
             $totalValue += $lineValue;
+            $totalHighestValue += $highestLineValue;
 
             $priceLabels = $item->prices
                 ->map(fn (StockItemPrice $p) => number_format((float) $p->amount, 2).' ج.م'
@@ -590,8 +601,11 @@ class AdminReportsHubService
                 (string) $qty,
                 (string) $item->catalogBalance(),
                 number_format($wac, 4).' ج.م',
+                number_format((float) ($analytics['highest_purchase_price'] ?? 0), 4).' ج.م',
+                number_format((float) ($analytics['unit_margin'] ?? 0), 4).' ج.م',
                 $priceLabels !== [] ? implode(' · ', $priceLabels) : '—',
                 number_format($lineValue, 2).' ج.م',
+                number_format($highestLineValue, 2).' ج.م',
             ];
         }
 
@@ -602,8 +616,9 @@ class AdminReportsHubService
                 ['label' => 'عدد الأصناف', 'value' => (string) $items->count()],
                 ['label' => 'إجمالي الكميات', 'value' => (string) $totalQty],
                 ['label' => 'قيمة المخزون (WAC)', 'value' => number_format($totalValue, 2).' ج.م'],
+                ['label' => 'قيمة المخزون (أعلى سعر)', 'value' => number_format($totalHighestValue, 2).' ج.م'],
             ],
-            'headers' => ['رقم الصنف', 'اسم الصنف', 'رصيد المخزن', 'رصيد كتالوج', 'WAC', 'أسعار الشراء', 'قيمة الصنف'],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'رصيد المخزن', 'رصيد كتالوج', 'WAC', 'أعلى سعر', 'هامش الوحدة', 'أسعار الشراء', 'قيمة WAC', 'قيمة أعلى سعر'],
             'rows' => $rows,
         ];
     }
@@ -627,13 +642,16 @@ class AdminReportsHubService
             $m->stockItem?->code ?? '—',
             $m->stockItem?->name ?? '—',
             (string) $this->signedMovementQuantity($m),
+            number_format((float) ($m->unit_cost ?? 0), 4).' ج.م',
+            number_format(abs((int) $m->quantity) * (float) ($m->unit_cost ?? 0), 2).' ج.م',
+            $this->movementReferenceLabel($m),
         ])->values()->all();
 
         return [
             'title' => 'متابعة حركة الأصناف',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [],
-            'headers' => ['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الرصيد'],
+            'headers' => ['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الكمية', 'WAC/تكلفة', 'قيمة الحركة', 'المرجع'],
             'rows' => $rows,
         ];
     }
@@ -1284,6 +1302,79 @@ class AdminReportsHubService
         }
 
         return $company->is_contracted ? 'مدني' : 'جهات';
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildItemMargins(?Carbon $from, ?Carbon $to): array
+    {
+        $rows = collect($this->itemPricingAnalytics->catalogMargins())
+            ->map(fn (array $row) => [
+                $row['code'] ?? '—',
+                $row['name'] ?? '—',
+                (string) ($row['qty'] ?? 0),
+                number_format((float) ($row['wac'] ?? 0), 4).' ج.م',
+                number_format((float) ($row['highest_purchase_price'] ?? 0), 4).' ج.م',
+                number_format((float) ($row['lowest_purchase_price'] ?? 0), 4).' ج.م',
+                (string) ($row['price_batch_count'] ?? 0),
+                number_format((float) ($row['unit_margin'] ?? 0), 4).' ج.م',
+                number_format((float) ($row['margin_pct'] ?? 0), 2).'%',
+                number_format((float) ($row['wac_inventory_value'] ?? 0), 2).' ج.م',
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'title' => 'هامش الربح بالأصناف',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [
+                ['label' => 'عدد الأصناف', 'value' => (string) count($rows)],
+            ],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'الرصيد', 'WAC', 'أعلى سعر', 'أدنى سعر', 'دفعات', 'هامش الوحدة', 'نسبة الهامش', 'قيمة WAC'],
+            'rows' => $rows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildInventoryReconciliation(?Carbon $from, ?Carbon $to): array
+    {
+        $range = $this->resolveFinanceRange($from, $to);
+        $summary = $this->reconciliationService->periodSummary($range['from'], $range['to']);
+        $inv = $summary['inventory'];
+        $rev = $summary['revenue'];
+
+        return [
+            'title' => 'تسوية مخزون ↔ مالية',
+            'period_label' => $this->periodLabel($range['from'], $range['to']),
+            'summary' => [
+                ['label' => 'قيمة التوريد (WAC)', 'value' => $this->money((float) ($inv['received_value'] ?? 0))],
+                ['label' => 'قيمة الصرف (WAC)', 'value' => $this->money((float) ($inv['issued_value'] ?? 0))],
+                ['label' => 'إيراد التسليم', 'value' => $this->money((float) ($rev['delivered_revenue'] ?? 0))],
+                ['label' => 'تكلفة WAC للتسليم', 'value' => $this->money((float) ($rev['delivered_wac_cost'] ?? 0))],
+                ['label' => 'مجمل الربح', 'value' => $this->money((float) ($rev['gross_margin'] ?? 0))],
+                ['label' => 'نسبة الربح', 'value' => number_format((float) ($rev['margin_pct'] ?? 0), 2).'%'],
+            ],
+            'headers' => ['البند', 'القيمة'],
+            'rows' => [
+                ['توريد مخزني (قيمة WAC)', $this->money((float) ($inv['received_value'] ?? 0))],
+                ['صرف مخزني (قيمة WAC)', $this->money((float) ($inv['issued_value'] ?? 0))],
+                ['مرتجعات للمخزن', $this->money((float) ($inv['returned_value'] ?? 0))],
+                ['صافي خروج مخزني', $this->money((float) ($inv['net_outflow'] ?? 0))],
+                ['حالات مُسلَّمة', (string) ($rev['delivered_count'] ?? 0)],
+                ['إيراد التسليم', $this->money((float) ($rev['delivered_revenue'] ?? 0))],
+                ['تكلفة WAC (صرف فعلي)', $this->money((float) ($rev['delivered_wac_cost'] ?? 0))],
+                ['مجمل الربح', $this->money((float) ($rev['gross_margin'] ?? 0))],
+                ['مديونية مدنية عند الصرف', $this->money((float) ($rev['civilian_ar_posted_at_dispense'] ?? 0))],
+            ],
+        ];
+    }
+
+    private function movementReferenceLabel(StockMovement $movement): string
+    {
+        if ($movement->reference_type === 'bom' && $movement->reference_id) {
+            return 'BOM #'.$movement->reference_id;
+        }
+
+        return $movement->reference_type ?? '—';
     }
 
     private function stockActivityStatus(StockItem $item, Carbon $stagnantCutoff): string

@@ -41,7 +41,7 @@
             <h1>Smart Prosthetics ERP<br>System Blueprint</h1>
             <div class="sub">Business overview for management, IT, and operations staff · Version 1.0 · August 2026</div>
         </div>
-        <div class="badge">Blueprint<br>1 / 5</div>
+        <div class="badge">Blueprint<br>1 / 7</div>
     </div>
 
     <div class="grid-2">
@@ -95,7 +95,7 @@
             <h1>Patient Pathways</h1>
             <div class="sub">Civilian vs military — two isolated business tracks</div>
         </div>
-        <div class="badge">Blueprint<br>2 / 5</div>
+        <div class="badge">Blueprint<br>2 / 7</div>
     </div>
 
     <h2>4. Registration & Classification</h2>
@@ -153,7 +153,7 @@
             <h1>Workflow Stages &amp; Automation</h1>
             <div class="sub">How cases move without manual routing</div>
         </div>
-        <div class="badge">Blueprint<br>3 / 5</div>
+        <div class="badge">Blueprint<br>3 / 7</div>
     </div>
 
     <h2>8. Main Case Pipeline</h2>
@@ -194,20 +194,88 @@
     <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Page 3</span></div>
 </div>
 
-<!-- PAGE 4 -->
+<!-- PAGE 4 — INTEGRATED CYCLE -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Integrated End-to-End Cycle</h1>
+            <div class="sub">How clinical, inventory, sales, and finance connect as one chain</div>
+        </div>
+        <div class="badge">Blueprint<br>4 / 7</div>
+    </div>
+
+    <div class="ok">
+        <strong>Single connected chain:</strong> Every department action updates the same case record. Nothing is isolated — stock, sales price, and ledger entries all trace back to one patient case and one work order.
+    </div>
+
+    <h2>11. Full Business Cycle (Connected)</h2>
+    <div class="diagram">① RECEPTION     Register patient → create Case → print QR card
+       ↓
+② CLINICAL      Exam → Spec (codes/qty) → Adjustments
+       ↓
+③ PRICING       Background engine calculates TWO totals per line:
+                  • Quote price  = qty × Highest Purchase Price (sales basis)
+                  • Internal cost = qty × WAC (true inventory cost)
+       ↓
+④ COSTING       Add overhead components + profit margin → selling price → Quote (civilian)
+       ↓
+⑤ APPROVAL      Contract entity approves quote (civilian) OR auto-release (military)
+       ↓
+⑥ OPERATIONS    Work order issued → BOM created (raw) → qty reserved on stock
+       ↓
+⑦ WAREHOUSE     Barcode scan each item → StockMovement (issue) → qty DEDUCTED from stock
+                  → WIP stage → Civilian: contract debt POSTED on dispense
+       ↓
+⑧ WORKSHOP      Manufacturing sub-stages → BOM finished
+       ↓
+⑨ DELIVERY      Patient QR scan → case closed
+                  → Military: sovereign debt posted
+                  → Civilian cash: payment recorded at cashier (if applicable)
+       ↓
+⑩ FINANCE       Debt collection reduces contract balance · Profit report compares
+                  revenue (quote/selling price) vs internal cost (WAC)</div>
+
+    <h2>12. Sales ↔ Stock Link (Critical for Finance)</h2>
+    <table>
+        <tr><th>Event</th><th>Stock effect</th><th>Financial effect</th></tr>
+        <tr><td>Goods received (warehouse inward scan)</td><td>Qty increases; WAC recalculated; price batch stored</td><td>Inventory asset value rises (WAC × qty)</td></tr>
+        <tr><td>BOM created at operations</td><td>Required qty reserved against catalog</td><td>No ledger yet — planning only</td></tr>
+        <tr><td>Barcode dispense (per BOM line)</td><td>Qty decremented; <code>StockMovement</code> logged at <strong>current WAC</strong>; case <code>issue_cost</code> snapshot stored</td><td>Civilian: contract entity debt increased (quote total); cost side = WAC at dispense</td></tr>
+        <tr><td>Material return (authorized)</td><td>Qty restored at WAC unit cost</td><td>Reversal / adjustment audited</td></tr>
+        <tr><td>Delivery closed</td><td>No further stock change</td><td>Military: sovereign debt entry; civilian: final account closure</td></tr>
+        <tr><td>Debt collection (finance)</td><td>No stock change</td><td>ContractCompanyDebt.collected increases; remaining balance drops</td></tr>
+    </table>
+
+    <h2>13. Multiple Prices Per Item — Why Three Numbers Exist</h2>
+    <table>
+        <tr><th>Price type</th><th>Source</th><th>Used for</th></tr>
+        <tr><td><strong>Purchase batches</strong></td><td>Each inward receipt creates a <code>StockItemPrice</code> row (supplier, invoice, unit price, qty)</td><td>Price history; highest-price lookup</td></tr>
+        <tr><td><strong>Highest Purchase Price</strong></td><td>Max of all batches with qty &gt; 0 (and base catalog price)</td><td><strong>Civilian quote / selling price</strong> — protects center from repurchase inflation</td></tr>
+        <tr><td><strong>WAC (Moving Average)</strong></td><td>(prior_qty × prior_WAC + in_qty × in_price) ÷ (prior_qty + in_qty)</td><td><strong>Inventory valuation</strong>, internal cost, profit margin calculation</td></tr>
+        <tr><td><strong>Selling price</strong></td><td>Materials (highest price) + overhead components + profit %</td><td>Patient/entity invoice; revenue in profitability report</td></tr>
+    </table>
+
+    <div class="ok">
+        <strong>Finance clarity:</strong> WAC is never mixed into civilian quotes. Quotes use highest purchase price. Profit is measured as <em>revenue (selling price) minus issue cost (WAC at barcode dispense)</em>. Admin reports include <strong>Inventory ↔ Finance Reconciliation</strong> and <strong>Item Profit Margins</strong> (WAC vs highest price per SKU).
+    </div>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Page 4</span></div>
+</div>
+
+<!-- PAGE 5 -->
 <div class="page">
     <div class="header">
         <div>
             <h1>User Roles &amp; Department Dashboards</h1>
             <div class="sub">Who sees what — operational access model</div>
         </div>
-        <div class="badge">Blueprint<br>4 / 5</div>
+        <div class="badge">Blueprint<br>5 / 7</div>
     </div>
 
-    <h2>12. Login & Routing</h2>
+    <h2>14. Login & Routing</h2>
     <p>Each employee has a personal login. After authentication, the system opens <strong>one dashboard</strong> based on role. There is no shared password per department.</p>
 
-    <h2>13. Role Summary</h2>
+    <h2>15. Role Summary</h2>
     <table>
         <tr><th>Role</th><th>Primary responsibilities</th><th>Financial / stock visibility</th></tr>
         <tr><td>Super Admin / Admin</td><td>System settings, users, master data, all reports, audit log, pathway config</td><td>Full access</td></tr>
@@ -222,7 +290,7 @@
         <tr><td>Workshop</td><td>Manufacturing queue, material returns, production stages</td><td>Production status</td></tr>
     </table>
 
-    <h2>14. Admin — Five BI Command Boards</h2>
+    <h2>16. Admin — Five BI Command Boards</h2>
     <table>
         <tr><th>#</th><th>Board</th><th>Key indicators</th></tr>
         <tr><td>1</td><td>Patients & SLA</td><td>Total/open cases, civilian/military split, average turnaround, SLA breaches</td></tr>
@@ -232,43 +300,97 @@
         <tr><td>5</td><td>Purchasing</td><td>WAC vs highest purchase price, supplier price trends</td></tr>
     </table>
 
-    <h2>15. Tracking Technologies</h2>
+    <h2>17. Tracking Technologies</h2>
     <table>
         <tr><th>Technology</th><th>Used for</th><th>Rule</th></tr>
         <tr><td>QR code</td><td>Patient card, quote document, approval scan, delivery close, public status lookup</td><td>Human / document workflow</td></tr>
         <tr><td>Barcode</td><td>Serialized stock movements — receive and dispense</td><td>No dispense without validated work order + scan match</td></tr>
     </table>
 
-    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Page 4</span></div>
+    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Page 5</span></div>
 </div>
 
-<!-- PAGE 5 -->
+<!-- PAGE 6 -->
+<div class="page">
+    <div class="header">
+        <div>
+            <h1>Accounting Profile &amp; Financial Reports</h1>
+            <div class="sub">For the finance department — inventory ↔ ledger alignment</div>
+        </div>
+        <div class="badge">Blueprint<br>6 / 7</div>
+    </div>
+
+    <h2>18. Four Financial Domains (Period Balances)</h2>
+    <p>The system tracks opening balance, movement, and closing balance for each accounting domain within any date range:</p>
+    <table>
+        <tr><th>Domain</th><th>What it measures</th><th>Movement sources</th></tr>
+        <tr><td><strong>Cash treasury</strong></td><td>Cash collected at cashier + debt collections</td><td>Payment records, DebtCollectionEntry</td></tr>
+        <tr><td><strong>Civilian receivables</strong></td><td>Amount owed by contract entities</td><td>Posted on BOM dispense; reduced on collection</td></tr>
+        <tr><td><strong>Military sovereign debt</strong></td><td>Aggregated military case costs</td><td>Posted on delivery; collected separately</td></tr>
+        <tr><td><strong>Inventory (WAC)</strong></td><td>Total stock asset value</td><td>Receipts increase value; dispense/returns change qty × WAC</td></tr>
+    </table>
+    <p>Reports: <strong>Opening Balance</strong> and <strong>Closing Balance</strong> (Admin → Reports). Accounting periods support manual opening overrides for year-start alignment.</p>
+
+    <h2>19. Profit &amp; Margin Reports</h2>
+    <table>
+        <tr><th>Report</th><th>Formula / logic</th><th>Audience</th></tr>
+        <tr><td><strong>Profitability review</strong></td><td>Per delivered case: Revenue − <strong>issue_cost</strong> (WAC at dispense, else internal_cost) = Margin &amp; Margin %</td><td>Finance / admin with cost permission</td></tr>
+        <tr><td><strong>Inventory ↔ Finance reconciliation</strong></td><td>Period: receive value, issue value (WAC), delivered revenue, delivered WAC cost, gross margin</td><td>Finance — bridges warehouse and P&amp;L</td></tr>
+        <tr><td><strong>Item profit margins</strong></td><td>Per SKU: WAC, highest/lowest purchase price, unit margin, margin %, WAC inventory value</td><td>Finance / procurement</td></tr>
+        <tr><td><strong>Inventory valuation</strong></td><td>Each item: qty × WAC and qty × highest price side-by-side</td><td>Finance / warehouse</td></tr>
+        <tr><td><strong>Stock movements</strong></td><td>Each movement: qty, unit cost (WAC), line value, BOM reference</td><td>Warehouse audit</td></tr>
+        <tr><td><strong>BI Board 5 — Purchasing</strong></td><td>Per item: WAC vs highest price; unit margin % and erosion flag</td><td>Procurement</td></tr>
+    </table>
+
+    <h2>20. Costing Engine → Quote (Civilian Sales Price)</h2>
+    <div class="diagram">materials_total  = Σ (qty × highest purchase price)     ← from pricing engine
++ overhead         = configurable % components (labour, etc.)
+= total_cost
+× (1 + profit_rate%) 
+= selling_price    → becomes Quote.total → contract debt basis</div>
+    <p>Military path: same internal WAC cost stored on case; no quote document; sovereign debt uses WAC-based total_cost.</p>
+
+    <h2>21. Finance Department Controls</h2>
+    <ul>
+        <li>Every stock movement is immutable (<code>StockMovement</code>) with WAC unit cost and <code>balance_after</code> snapshot</li>
+        <li>At dispense, all BOM lines refresh to current WAC — same basis for stock deduction and <code>issue_cost</code></li>
+        <li>Every financial posting writes to audit log (tag: financial)</li>
+        <li>Duplicate posting prevented (<code>ledger_posted_at</code> atomic claim on case)</li>
+        <li>Credit notes for post-delivery civilian adjustments (admin approved)</li>
+        <li>Civilian and military figures never combined in one report row without explicit label</li>
+    </ul>
+
+    <div class="footer"><span>Smart Prosthetics ERP · System Blueprint</span><span>Page 6</span></div>
+</div>
+
+<!-- PAGE 7 -->
 <div class="page">
     <div class="header">
         <div>
             <h1>Finance, Inventory &amp; Governance</h1>
             <div class="sub">Pricing rules, audit trail, and master data</div>
         </div>
-        <div class="badge">Blueprint<br>5 / 5</div>
+        <div class="badge">Blueprint<br>7 / 7</div>
     </div>
 
-    <h2>16. Dual Pricing Policy</h2>
+    <h2>22. Dual Pricing Policy (Summary)</h2>
     <table>
         <tr><th>Purpose</th><th>Method</th><th>Used when</th></tr>
-        <tr><td>Inventory valuation & accounting reports</td><td><strong>WAC</strong> — Weighted Average Cost</td><td>Stock receipts, inventory BI board</td></tr>
+        <tr><td>Inventory valuation & accounting reports</td><td><strong>WAC</strong> — Weighted Average Cost (moving average)</td><td>Stock receipts, inventory reports, profit cost basis</td></tr>
         <tr><td>Civilian quotes & case pricing</td><td><strong>Highest Purchase Price</strong> among batches with qty &gt; 0</td><td>Quote generation — protects against inflation / repurchase risk</td></tr>
-        <tr><td>Military cases</td><td>Silent background cost</td><td>Posted to sovereign debt — never shown as patient invoice</td></tr>
+        <tr><td>Profit margin</td><td>Selling price − WAC internal cost</td><td>Profitability report per delivered case</td></tr>
+        <tr><td>Military cases</td><td>Silent WAC-based background cost</td><td>Posted to sovereign debt — never patient invoice</td></tr>
     </table>
 
-    <h2>17. Bill of Materials (BOM) Lifecycle</h2>
+    <h2>23. Bill of Materials (BOM) Lifecycle</h2>
     <table>
         <tr><th>BOM state</th><th>Meaning</th><th>Stock impact</th></tr>
-        <tr><td>Raw</td><td>Approved material list — awaiting dispense</td><td>Not yet deducted</td></tr>
-        <tr><td>WIP</td><td>Materials dispensed to workshop</td><td>Deducted from stock via barcode scan</td></tr>
+        <tr><td>Raw</td><td>Approved material list — awaiting dispense</td><td>Qty reserved; not yet deducted</td></tr>
+        <tr><td>WIP</td><td>Materials dispensed to workshop</td><td>Qty deducted via barcode; StockMovement issued</td></tr>
         <tr><td>Finished</td><td>Prosthetic manufacturing complete</td><td>Ready for patient delivery</td></tr>
     </table>
 
-    <h2>18. Immutable Audit Log</h2>
+    <h2>24. Immutable Audit Log</h2>
     <p>Every create, update, workflow transition, blocked barcode scan, and financial posting is logged automatically with:</p>
     <ul>
         <li>User identity and timestamp (to the second)</li>
@@ -280,7 +402,7 @@
         <strong>Legal-grade trail:</strong> Audit records are append-only. No user — including system administrator or IT — can modify or delete entries through the application.
     </div>
 
-    <h2>19. Master Data (Configured Once)</h2>
+    <h2>25. Master Data (Configured Once)</h2>
     <ul>
         <li>Contract companies and coverage rules</li>
         <li>Military ranks and beneficiary categories</li>
@@ -289,8 +411,8 @@
         <li>Users, roles, and permission defaults</li>
     </ul>
 
-    <h2>20. Document Summary</h2>
-    <p>Smart Prosthetics ERP connects clinical care, manufacturing, inventory, and finance in one offline system. Civilian patients follow quote → approval → payment → production → delivery. Military patients skip financial gates but share the same clinical and warehouse controls. QR codes track people and documents; barcodes track stock. Management monitors performance through five BI boards and a permanent audit trail.</p>
+    <h2>26. Document Summary</h2>
+    <p>Smart Prosthetics ERP connects clinical care, manufacturing, inventory, and finance in one offline system. Sales (quotes) deduct from stock only through validated barcode dispense. Multiple purchase prices per item feed both quote pricing (highest) and inventory valuation (WAC moving average). Finance receives opening/closing balances, profitability margins, and purchasing erosion alerts. Civilian and military paths remain fully separated in data and reports.</p>
 
     <div class="grid-2" style="margin-top:16px;">
         <div class="box">

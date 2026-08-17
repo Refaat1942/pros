@@ -57,7 +57,7 @@ class ProfitabilityReportService
             ? (float) $case->military_selling_price
             : CaseFinancialSummary::totalCost($case);
 
-        $cost = (float) $case->internal_cost;
+        $cost = $this->resolvedCost($case);
         $margin = round($revenue - $cost, 2);
 
         return [
@@ -135,5 +135,16 @@ class ProfitabilityReportService
         }
 
         return round(($margin / $revenue) * 100, 2);
+    }
+
+    private function resolvedCost(CaseRecord $case): float
+    {
+        $issueCost = (float) ($case->issue_cost ?? 0);
+
+        if ($issueCost > 0) {
+            return $issueCost;
+        }
+
+        return (float) ($case->internal_cost ?? 0);
     }
 }

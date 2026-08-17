@@ -636,7 +636,7 @@ class BomService
             }
 
             $bomItem->update([
-                'unit_cost' => $this->stockPriceService->highestUnitPrice($bomItem->stock_item_code),
+                'unit_cost' => $this->stockPriceService->wacUnitPrice($bomItem->stock_item_code),
             ]);
 
             if (! $alreadyReserved) {
@@ -677,6 +677,20 @@ class BomService
     }
 
     /**
+     * عند الصرف: تثبيت WAC الحالي على كل بند — مصدر واحد للتكلفة والحركة المخزنية.
+     */
+    private function refreshUnitCostsAtDispense(Bom $bom): void
+    {
+        $bom->loadMissing('items');
+
+        foreach ($bom->items as $bomItem) {
+            $bomItem->update([
+                'unit_cost' => $this->stockPriceService->wacUnitPrice($bomItem->stock_item_code),
+            ]);
+        }
+    }
+
+    /**
      * @param  array{stock_item_code: string, name?: string, qty: int}  $row
      */
     private function appendBomItemWithReservation(Bom $bom, array $row, CaseRecord $case): void
@@ -691,7 +705,8 @@ class BomService
         }
 
         // يُسمح بتجاوز الرصيد — متاح سالب (backorder) بدل رفض الإنشاء.
-        $unitCost = $this->stockPriceService->highestUnitPrice($code);
+        // تكلفة BOM = WAC (تقييم مخزني) — أعلى سعر شراء يُستخدم في التسعير فقط.
+        $unitCost = $this->stockPriceService->wacUnitPrice($code);
 
         BomItem::create([
             'bom_id' => $bom->id,
@@ -770,10 +785,8 @@ class BomService
 
             $case = $bom->caseRecord;
 
-            if ($bom->items->contains(fn ($i) => (float) $i->unit_cost <= 0)) {
-                $this->ensureUnitCosts($bom);
-                $bom->refresh()->load('items');
-            }
+            $this->refreshUnitCostsAtDispense($bom);
+            $bom->refresh()->load('items');
 
             $groups = BomItemAggregator::groupModels($bom->items);
             $stockBefore = [];
@@ -857,6 +870,11 @@ class BomService
             );
 
             if ($case) {
+                $issueCost = round($bom->items->sum(
+                    fn ($item) => (int) $item->qty * (float) $item->unit_cost
+                ), 2);
+                $case->update(['issue_cost' => $issueCost]);
+
                 $this->financialPostingService->postOnDispense($case->fresh(), $bom->fresh(['items']));
             }
 

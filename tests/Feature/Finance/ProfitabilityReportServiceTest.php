@@ -54,4 +54,26 @@ class ProfitabilityReportServiceTest extends TestCase
 
         $this->assertCount(2, $report['by_company']);
     }
+
+    public function test_profitability_prefers_issue_cost_over_internal_cost(): void
+    {
+        $from = Carbon::parse('2026-06-01');
+        $to = Carbon::parse('2026-06-30');
+
+        $case = $this->caseAtStage(
+            $this->civilianPatient($this->civilianCompany()),
+            CaseRecord::STAGE_DELIVERED
+        );
+        $case->update([
+            'delivered_at' => '2026-06-15 10:00:00',
+            'quote_total' => 1000,
+            'internal_cost' => 400,
+            'issue_cost' => 450,
+        ]);
+
+        $report = app(ProfitabilityReportService::class)->report($from, $to);
+
+        $this->assertSame(450.0, $report['cases'][0]['cost']);
+        $this->assertSame(550.0, $report['cases'][0]['margin']);
+    }
 }

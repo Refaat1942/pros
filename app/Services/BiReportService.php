@@ -16,7 +16,10 @@ use App\Models\Supplier;
  */
 class BiReportService
 {
-    public function __construct(private readonly StockPriceService $stockPriceService) {}
+    public function __construct(
+        private readonly StockPriceService $stockPriceService,
+        private readonly ItemPricingAnalyticsService $itemPricingAnalytics,
+    ) {}
 
     /**
      * Board 1 — إدارة المرضى و SLA.
@@ -74,6 +77,10 @@ class BiReportService
             ->get(['code', 'qty', 'wac'])
             ->sum(fn (StockItem $i) => (int) $i->qty * $this->stockPriceService->wacUnitPrice($i->code));
 
+        $highestValue = StockItem::query()
+            ->get(['code', 'name', 'qty', 'wac'])
+            ->sum(fn (StockItem $i) => (int) $i->qty * $this->stockPriceService->highestUnitPrice($i->code));
+
         $stagnantItems = StockItem::query()
             ->whereNotNull('last_moved_at')
             ->where('last_moved_at', '<', $stagnantCutoff)
@@ -90,6 +97,8 @@ class BiReportService
 
         return [
             'total_value' => round($totalValue, 2),
+            'highest_price_value' => round($highestValue, 2),
+            'valuation_spread' => round($highestValue - $totalValue, 2),
             'item_count' => StockItem::count(),
             'low_stock' => StockItem::where('status', StockItem::STATUS_LOW)->count(),
             'stagnant_items' => $stagnantItems,
@@ -155,12 +164,26 @@ class BiReportService
 
         $netDebts = collect($companyDebts)->sum('remaining');
 
+        $civilianWacCost = (float) CaseRecord::query()
+            ->where('patient_type', Patient::TYPE_CIVILIAN)
+            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
+            ->get(['issue_cost', 'internal_cost'])
+            ->sum(fn (CaseRecord $c) => (float) ($c->issue_cost ?? $c->internal_cost ?? 0));
+
+        $militaryWacCost = (float) CaseRecord::query()
+            ->where('patient_type', Patient::TYPE_MILITARY)
+            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
+            ->get(['issue_cost', 'internal_cost', 'total_cost'])
+            ->sum(fn (CaseRecord $c) => (float) ($c->issue_cost ?? $c->internal_cost ?? $c->total_cost ?? 0));
+
         $cashCollected = (float) Payment::query()->sum('amount');
         $cashAwaiting = CaseRecord::query()->awaitingCashier()->count();
 
         return [
             'civilian_cumulative_cost' => round($civilianCumulative, 2),
+            'civilian_delivered_wac_cost' => round($civilianWacCost, 2),
             'military_aggregated_cost' => round($militaryAggregated, 2),
+            'military_delivered_wac_cost' => round($militaryWacCost, 2),
             'military_debt_pending' => round($militaryDebtPending, 2),
             'military_debt_collected' => round($militaryDebtCollected, 2),
             'net_debts' => round($netDebts, 2),
@@ -179,22 +202,9 @@ class BiReportService
 
         $comparison = StockItem::query()
             ->orderBy('code')
-            ->get(['code', 'name', 'wac'])
-            ->map(function (StockItem $item) {
-                $wac = (float) ($item->wac ?? 0);
-                $highest = $this->stockPriceService->highestUnitPrice($item->code);
-                $diff = round($highest - $wac, 2);
-
-                return [
-                    'code' => $item->code,
-                    'name' => $item->name,
-                    'wac' => $wac,
-                    'highest_purchase_price' => $highest,
-                    'diff' => $diff,
-                    'margin_erosion' => $diff > 0,
-                ];
-            })
-            ->sortByDesc('diff')
+            ->get(['code', 'name', 'wac', 'qty'])
+            ->map(fn (StockItem $item) => $this->itemPricingAnalytics->rowForItem($item))
+            ->sortByDesc('unit_margin')
             ->take($topN)
             ->values()
             ->all();

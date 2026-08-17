@@ -91,6 +91,32 @@ class BomLifecycleTest extends TestCase
         $this->assertEquals(0, $item->reserved);
     }
 
+    public function test_dispense_stamps_wac_on_movements_and_issue_cost_on_case(): void
+    {
+        ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
+        $this->actingAs($user);
+
+        $supplier = $this->makeSupplier();
+        $priceService = app(StockPriceService::class);
+        $priceService->addBatch($item->fresh(), 10, 100.00, $supplier, 'INV-LOW', now());
+        $priceService->addBatch($item->fresh(), 10, 250.00, $supplier, 'INV-HIGH', now());
+        $item->refresh();
+
+        $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 2]]);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']);
+
+        $movement = \App\Models\StockMovement::query()
+            ->where('movement_type', \App\Models\StockMovement::TYPE_ISSUE)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($movement);
+        $this->assertSame((float) $item->fresh()->wac, (float) $movement->unit_cost);
+
+        $case->refresh();
+        $this->assertSame(round((float) $item->wac * 2, 2), (float) $case->issue_cost);
+    }
+
     /** المشهد الدرامي: الإنذار الحاد */
     public function test_wrong_barcode_throws_and_no_stock_changes(): void
     {
