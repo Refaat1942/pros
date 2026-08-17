@@ -9,6 +9,7 @@ use App\Models\CaseRecord;
 use App\Services\BomService;
 use App\Services\WorkshopAssignmentService;
 use App\Services\WorkshopSectionService;
+use App\Services\WorkshopTrackingService;
 use App\Support\ManufacturingDeskCaseFormatter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,7 @@ class WorkshopQueueController extends Controller
         private readonly BomService $bomService,
         private readonly WorkshopAssignmentService $workshopAssignment,
         private readonly WorkshopSectionService $workshopSections,
+        private readonly WorkshopTrackingService $workshopTracking,
     ) {}
 
     /**
@@ -102,6 +104,32 @@ class WorkshopQueueController extends Controller
                 'code' => $s->code,
                 'technicians' => $s->technicians->map(fn ($u) => $u->only(['id', 'name']))->values(),
             ])->values(),
+        ]);
+    }
+
+    /** لوحة تتبع الفنيين — أوامر كل فني ونسب الإنجاز. */
+    public function technicianBoard(): JsonResponse
+    {
+        $this->bomService->repairOrphanWipCases();
+
+        return response()->json($this->workshopTracking->technicianBoard());
+    }
+
+    /** تحديث نسبة إنجاز أمر الشغل لدى الفني. */
+    public function updateProgress(Request $request, CaseRecord $case): JsonResponse
+    {
+        $validated = $request->validate([
+            'progress_pct' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $case = $this->workshopAssignment->updateProgress($case, (int) $validated['progress_pct']);
+
+        return response()->json([
+            'message' => 'تم تحديث نسبة الإنجاز.',
+            'case' => ManufacturingDeskCaseFormatter::format(
+                $case->load(['patient:id,patient_code,name', 'workshopSection:id,name', 'assignedTechnician:id,name', 'bom.items']),
+                'workshop.work-order.print',
+            ),
         ]);
     }
 

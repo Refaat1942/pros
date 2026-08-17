@@ -31,6 +31,12 @@ Route::prefix('workshop')
             Route::post('workshop/{case}/assign', [WorkshopQueueController::class, 'assign'])
                 ->name('workshop.assign');
 
+            Route::get('technicians/board', [WorkshopQueueController::class, 'technicianBoard'])
+                ->name('technicians.board');
+
+            Route::post('workshop/{case}/progress', [WorkshopQueueController::class, 'updateProgress'])
+                ->name('workshop.progress');
+
             Route::post('workshop/{case}/advance', [WorkshopQueueController::class, 'advance'])
                 ->name('workshop.advance');
 

@@ -72,13 +72,155 @@
 
   function updateSummary(summary) {
     summary = summary || {};
+    if (summary.total_wip != null && summary.wip == null) summary.wip = summary.total_wip;
 
     var analytics = document.getElementById('analytics-workshop');
     if (!analytics) return;
+
+    var statMap = {
+      wip: summary.wip,
+      assigned: summary.assigned,
+      unassigned: summary.unassigned,
+      avg_progress: summary.avg_progress != null ? summary.avg_progress + '%' : null,
+    };
+
+    analytics.querySelectorAll('[data-stat-key]').forEach(function (el) {
+      var key = el.getAttribute('data-stat-key');
+      if (statMap[key] != null) el.textContent = statMap[key];
+    });
+
     var values = analytics.querySelectorAll('.ck-stat-value');
-    if (values.length < 2) return;
-    values[0].textContent = summary.wip != null ? summary.wip : 0;
-    values[1].textContent = summary.total_active != null ? summary.total_active : 0;
+    if (values.length >= 4) {
+      if (summary.wip != null) values[0].textContent = summary.wip;
+      if (summary.assigned != null) values[1].textContent = summary.assigned;
+      if (summary.unassigned != null) values[2].textContent = summary.unassigned;
+      if (summary.avg_progress != null) values[3].textContent = summary.avg_progress + '%';
+    } else if (values.length >= 2) {
+      values[0].textContent = summary.wip != null ? summary.wip : 0;
+      values[1].textContent = summary.total_active != null ? summary.total_active : 0;
+    }
+  }
+
+  function renderTechOrderCard(order) {
+    var doneClass = order.is_done ? ' border-emerald-200 bg-emerald-50/40' : ' border-slate-200';
+    var pct = order.progress_pct || 0;
+    return '<div class="rounded-xl border p-3' + doneClass + '" data-case-id="' + order.id + '">' +
+      '<div class="flex items-start justify-between gap-2 mb-2">' +
+        '<div class="min-w-0">' +
+          '<div class="font-mono text-sm font-bold text-violet-800">' + esc(order.work_order_no || '—') + '</div>' +
+          '<div class="text-xs text-slate-600 truncate">' + esc(order.patient && order.patient.name) + '</div>' +
+          '<div class="text-[11px] text-slate-400">' + esc(order.case_no) + ' · ' + esc(order.pathway_label) + '</div>' +
+        '</div>' +
+        '<span class="text-xs font-bold px-2 py-1 rounded-lg ' + (order.is_done ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-100 text-cyan-800') + '">' +
+          esc(order.manufacturing_stage_label || '—') + '</span>' +
+      '</div>' +
+      '<label class="block text-[11px] font-bold text-slate-500 mb-1">نسبة الإنجاز: <span class="tech-progress-val">' + pct + '</span>%</label>' +
+      '<input type="range" min="0" max="100" step="5" value="' + pct + '" class="tech-progress-slider w-full accent-violet-600" data-case-id="' + order.id + '">' +
+    '</div>';
+  }
+
+  function renderTechnicianBoard(payload) {
+    payload = payload || {};
+    var cardsRoot = $('workshopTechBoardCards');
+    var unassignedPanel = $('workshopUnassignedPanel');
+    var unassignedList = $('workshopUnassignedList');
+    if (!cardsRoot) return;
+
+    var technicians = payload.technicians || [];
+    if (!technicians.length) {
+      cardsRoot.innerHTML = '<p class="text-sm text-slate-400 col-span-full text-center py-8">لا يوجد فنيون لديهم أوامر حالياً — خصّص الفنيين من الأعلى.</p>';
+    } else {
+      cardsRoot.innerHTML = technicians.map(function (group) {
+        var tech = group.technician || {};
+        var section = (group.section && group.section.name) || '—';
+        var orders = group.orders || [];
+        return '<div class="rounded-2xl border border-indigo-100 bg-white shadow-sm overflow-hidden">' +
+          '<div class="px-4 py-3 bg-indigo-50 border-b border-indigo-100">' +
+            '<div class="font-bold text-indigo-900">' + esc(tech.name || '—') + '</div>' +
+            '<div class="text-xs text-indigo-700 mt-0.5">' + esc(section) + ' · ' + (group.active_count || 0) + ' نشط · ' + (group.done_count || 0) + ' مكتمل · متوسط ' + (group.avg_progress || 0) + '%</div>' +
+          '</div>' +
+          '<div class="p-3 space-y-2 max-h-80 overflow-y-auto">' +
+            (orders.length
+              ? orders.map(renderTechOrderCard).join('')
+              : '<p class="text-xs text-slate-400 text-center py-4">لا توجد أوامر.</p>') +
+          '</div></div>';
+      }).join('');
+    }
+
+    var unassigned = payload.unassigned || [];
+    if (unassignedPanel && unassignedList) {
+      if (unassigned.length) {
+        unassignedPanel.classList.remove('hidden');
+        unassignedList.innerHTML = unassigned.map(function (order) {
+          return '<div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm">' +
+            '<div><span class="font-mono font-bold text-amber-900">' + esc(order.work_order_no || '—') + '</span> · ' +
+            esc(order.patient && order.patient.name) + ' <span class="text-xs text-amber-700">(' + esc(order.case_no) + ')</span></div>' +
+            '<button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1 hover:bg-violet-50" data-case-id="' + order.id + '" data-work-order="' + esc(order.work_order_no || '') + '">👤 تخصيص</button>' +
+          '</div>';
+        }).join('');
+      } else {
+        unassignedPanel.classList.add('hidden');
+        unassignedList.innerHTML = '';
+      }
+    }
+
+    bindTechBoardEvents();
+    if (payload.summary) updateSummary(payload.summary);
+  }
+
+  var techBoardInFlight = false;
+
+  function refreshTechBoard() {
+    if (!window.axios || techBoardInFlight) return;
+    techBoardInFlight = true;
+    var btn = $('btnRefreshTechBoard');
+    if (btn) { btn.disabled = true; btn.textContent = '↻ جاري التحديث...'; }
+
+    axios.get('/workshop/technicians/board')
+      .then(function (res) { renderTechnicianBoard(res.data || {}); })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل تتبع الفنيين', true);
+      })
+      .finally(function () {
+        techBoardInFlight = false;
+        if (btn) { btn.disabled = false; btn.textContent = '↻ تحديث التتبع'; }
+      });
+  }
+
+  function saveProgress(caseId, percent, slider) {
+    if (!window.axios || !caseId) return;
+    if (slider) slider.disabled = true;
+    axios.post('/workshop/workshop/' + caseId + '/progress', { progress_pct: percent })
+      .then(function () {
+        refreshList();
+        refreshTechBoard();
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحديث الإنجاز', true);
+      })
+      .finally(function () { if (slider) slider.disabled = false; });
+  }
+
+  function bindTechBoardEvents() {
+    document.querySelectorAll('.tech-progress-slider').forEach(function (slider) {
+      slider.addEventListener('input', function () {
+        var card = slider.closest('[data-case-id]');
+        var valEl = card && card.querySelector('.tech-progress-val');
+        if (valEl) valEl.textContent = slider.value;
+      });
+      slider.addEventListener('change', function () {
+        saveProgress(slider.getAttribute('data-case-id'), parseInt(slider.value, 10), slider);
+      });
+    });
+    document.querySelectorAll('#workshopUnassignedPanel .btn-select-workshop-case').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectedCaseId = btn.getAttribute('data-case-id');
+        var wo = btn.getAttribute('data-work-order') || selectedCaseId;
+        var input = $('workshopSelectedOrder');
+        if (input) input.value = wo;
+        document.getElementById('workshopDeskRoot')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
   }
 
   function renderItemsCell(c) {
@@ -132,6 +274,7 @@
           duration: 8000,
         });
         refreshList();
+        refreshTechBoard();
       })
       .catch(function (err) {
         toast((err.response && err.response.data && err.response.data.message) || 'تعذّر إتمام التصنيع', true);
@@ -210,7 +353,7 @@
         if (!tbody) return;
         tbody.innerHTML = casesCache.length
           ? casesCache.map(renderRow).join('')
-          : '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في الورشة حالياً.</td></tr>';
+          : '<tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في قسم الإنتاج حالياً.</td></tr>';
         bindTableEvents();
         updateSummary(res.data.summary || {});
         applyFilters();
@@ -254,6 +397,7 @@
       .then(function (res) {
         toast(res.data.message || 'تم حفظ التخصيص');
         refreshList();
+        refreshTechBoard();
       })
       .catch(function (err) {
         toast((err.response && err.response.data && err.response.data.message) || 'تعذّر حفظ التخصيص', true);
@@ -284,6 +428,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     loadAssignmentOptions();
     bindTableEvents();
+    refreshTechBoard();
     var search = $('workshopSearch');
     if (search) search.addEventListener('input', applyFilters);
     var filtersRoot = $('workshopFilters');
@@ -300,7 +445,9 @@
       });
     }
     var refresh = $('btnRefreshWorkshop');
-    if (refresh) refresh.addEventListener('click', refreshList);
+    if (refresh) refresh.addEventListener('click', function () { refreshList(); refreshTechBoard(); });
+    var techRefresh = $('btnRefreshTechBoard');
+    if (techRefresh) techRefresh.addEventListener('click', refreshTechBoard);
     var assignBtn = $('btnSaveWorkshopAssignment');
     if (assignBtn) assignBtn.addEventListener('click', saveWorkshopAssignment);
     var closeBtn = $('closeWorkshopBomItemsModal');

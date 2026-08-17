@@ -2,6 +2,7 @@
     'dashboardKey' => $dashboardKey,
     'activePage' => $activePage,
     'pageTitle' => $pageTitle,
+    'pageLabel' => $pageLabel ?? $pageTitle,
 ])
 
 @section('page-content')

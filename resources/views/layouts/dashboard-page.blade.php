@@ -5,7 +5,7 @@
 @extends('layouts.app')
 
 @section('viewport', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
-@section('title', ($pageTitle ?? $dashboardConfig['title']) . ' — مركز الأطراف الصناعية')
+@section('title', ($pageLabel ?? $pageTitle ?? $dashboardConfig['sidebar']['title'] ?? $dashboardConfig['title']) . ' — مركز الأطراف الصناعية')
 @section('body-attributes'){!! $dashboardConfig['body_attributes'] ?? '' !!} data-dashboard="{{ $dashboardKey }}" data-active-page="{{ $activePage ?? '' }}"@endsection
 
 @push('styles')
@@ -37,7 +37,7 @@
     <main class="main">
         <div class="page-header">
             <div>
-                <h1>{{ $pageTitle ?? $dashboardConfig['title'] }}</h1>
+                <h1>{{ $pageLabel ?? $pageTitle ?? $dashboardConfig['sidebar']['title'] ?? $dashboardConfig['title'] }}</h1>
                 <p>{{ $dashboardConfig['sidebar']['subtitle'] ?? '' }}</p>
             </div>
             @include('partials.dashboard-header-actions', [

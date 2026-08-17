@@ -58,16 +58,24 @@ class ManufacturingDeskCaseFormatter
         return $payload;
     }
 
-    /** @return array{wip: int, military: int, civilian: int, total_active: int} */
+    /** @return array{wip: int, military: int, civilian: int, total_active: int, assigned: int, unassigned: int, technicians: int, avg_progress: int} */
     public static function workshopSummary(Collection $cases): array
     {
         $mil = $cases->filter(fn ($c) => $c->isMilitary())->count();
+        $assigned = $cases->whereNotNull('assigned_technician_id')->count();
+        $technicians = $cases->pluck('assigned_technician_id')->filter()->unique()->count();
 
         return [
             'wip' => $cases->count(),
             'military' => $mil,
             'civilian' => $cases->count() - $mil,
             'total_active' => $cases->count(),
+            'assigned' => $assigned,
+            'unassigned' => $cases->count() - $assigned,
+            'technicians' => $technicians,
+            'avg_progress' => $cases->isEmpty()
+                ? 0
+                : (int) round($cases->avg(fn ($c) => (int) ($c->workshop_progress_pct ?? 0))),
         ];
     }
 

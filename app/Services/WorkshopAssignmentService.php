@@ -82,8 +82,21 @@ class WorkshopAssignmentService
     {
         $percent = max(0, min(100, $percent));
 
-        $case->update(['workshop_progress_pct' => $percent]);
+        return DB::transaction(function () use ($case, $percent) {
+            $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
+            $before = ['workshop_progress_pct' => $case->workshop_progress_pct];
 
-        return $case->fresh();
+            $case->update(['workshop_progress_pct' => $percent]);
+
+            AuditService::log(
+                action: 'update',
+                description: "تحديث إنجاز {$case->work_order_no} — {$case->case_no} إلى {$percent}%",
+                tag: 'workshop',
+                before: $before,
+                after: ['workshop_progress_pct' => $percent],
+            );
+
+            return $case->fresh();
+        });
     }
 }

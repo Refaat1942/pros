@@ -55,6 +55,7 @@ use App\Services\WorkshopAnalyticsService;
 use App\Services\WorkshopSectionService;
 use App\Services\WorkshopTrackingService;
 use App\Support\ClinicTime;
+use App\Support\ManufacturingDeskCaseFormatter;
 use Carbon\Carbon;
 
 /**
@@ -783,19 +784,17 @@ class DashboardPageDataService
         $wipCount = $cases->count();
         $milCount = $cases->filter(fn ($c) => $c->isMilitary())->count();
         $civCount = $cases->count() - $milCount;
+        $summary = ManufacturingDeskCaseFormatter::workshopSummary($cases);
 
         return [
             'workshop_cases' => $cases,
             'workshop_stats' => [
-                ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-                ['icon' => '📦', 'label' => 'إجمالي الأوامر', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)', 'key' => 'wip'],
+                ['icon' => '👤', 'label' => 'مُخصَّص لفني', 'value' => (string) $summary['assigned'], 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)', 'key' => 'assigned'],
+                ['icon' => '⏳', 'label' => 'بدون فني', 'value' => (string) $summary['unassigned'], 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)', 'key' => 'unassigned'],
+                ['icon' => '📈', 'label' => 'متوسط الإنجاز', 'value' => $summary['avg_progress'].'%', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)', 'key' => 'avg_progress'],
             ],
-            'workshop_summary' => [
-                'wip' => $wipCount,
-                'military' => $milCount,
-                'civilian' => $civCount,
-                'total_active' => $cases->count(),
-            ],
+            'workshop_summary' => $summary,
         ];
     }
 

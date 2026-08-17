@@ -56,6 +56,28 @@
         </div>
     </div>
 
+    <div class="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden" id="workshopTechnicianBoard">
+        <div class="px-5 py-4 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-3 bg-indigo-50">
+            <div>
+                <h3 class="font-bold text-indigo-900 text-base">👷 تتبع الفنيين — أوامر وإنجاز</h3>
+                <p class="text-xs text-indigo-700 mt-1">كل فني معه إيه، ونسبة الإنجاز لكل أمر — تتحدّث تلقائياً عند التخصيص أو تحديث الإنجاز.</p>
+            </div>
+            <button type="button" id="btnRefreshTechBoard"
+                    class="rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-bold hover:bg-indigo-700 transition-colors">
+                ↻ تحديث التتبع
+            </button>
+        </div>
+        <div class="p-4">
+            <div id="workshopTechBoardCards" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <p class="text-sm text-slate-400 col-span-full text-center py-8">جاري تحميل تتبع الفنيين...</p>
+            </div>
+            <div id="workshopUnassignedPanel" class="mt-4 hidden">
+                <h4 class="text-sm font-bold text-amber-800 mb-2">⏳ أوامر بدون فني</h4>
+                <div id="workshopUnassignedList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
             <h3 class="font-bold text-slate-800">🏭 طابور قسم الإنتاج</h3>

@@ -997,7 +997,10 @@ class BomService
             abort(422, 'BOM ليست تحت التشغيل — لا يمكن إتمام التصنيع.');
         }
 
-        $case->update(['manufacturing_stage' => CaseRecord::MFG_CLOSED]);
+        $case->update([
+            'manufacturing_stage' => CaseRecord::MFG_CLOSED,
+            'workshop_progress_pct' => 100,
+        ]);
 
         return $this->closeFinished($bom);
     }

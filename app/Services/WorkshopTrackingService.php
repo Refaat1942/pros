@@ -10,6 +10,106 @@ use Illuminate\Support\Collection;
 class WorkshopTrackingService
 {
     /** @return array{data: list<array<string, mixed>>, summary: array<string, int>} */
+    public function technicianBoard(): array
+    {
+        $cases = CaseRecord::query()
+            ->workshopDeskQueue()
+            ->with([
+                'patient:id,patient_code,name',
+                'workshopSection:id,name,code',
+                'assignedTechnician:id,name',
+                'bom:id,case_id,bom_no,stage,released_at',
+            ])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $groups = [];
+        $unassigned = [];
+
+        foreach ($cases as $case) {
+            $order = $this->formatTrackingOrder($case);
+            $techId = $case->assigned_technician_id;
+
+            if (! $techId) {
+                $unassigned[] = $order;
+
+                continue;
+            }
+
+            if (! isset($groups[$techId])) {
+                $groups[$techId] = [
+                    'technician' => $case->assignedTechnician?->only(['id', 'name']) ?? ['id' => $techId, 'name' => '—'],
+                    'section' => $case->workshopSection?->only(['id', 'name', 'code']),
+                    'orders' => [],
+                    'active_count' => 0,
+                    'done_count' => 0,
+                    'avg_progress' => 0,
+                ];
+            }
+
+            $groups[$techId]['orders'][] = $order;
+            if ($order['is_done']) {
+                $groups[$techId]['done_count']++;
+            } else {
+                $groups[$techId]['active_count']++;
+            }
+        }
+
+        $technicians = collect($groups)->map(function (array $group) {
+            $progressValues = collect($group['orders'])->pluck('progress_pct');
+            $group['avg_progress'] = $progressValues->isEmpty()
+                ? 0
+                : (int) round($progressValues->avg());
+            $group['orders'] = collect($group['orders'])
+                ->sortByDesc('updated_at')
+                ->values()
+                ->all();
+
+            return $group;
+        })->sortBy(fn ($g) => $g['technician']['name'] ?? '')->values()->all();
+
+        $assignedCount = $cases->whereNotNull('assigned_technician_id')->count();
+
+        return [
+            'technicians' => $technicians,
+            'unassigned' => collect($unassigned)->sortByDesc('updated_at')->values()->all(),
+            'summary' => [
+                'total_wip' => $cases->count(),
+                'assigned' => $assignedCount,
+                'unassigned' => $cases->count() - $assignedCount,
+                'technicians_active' => count($technicians),
+                'avg_progress' => $cases->isEmpty()
+                    ? 0
+                    : (int) round($cases->avg(fn (CaseRecord $c) => (int) ($c->workshop_progress_pct ?? 0))),
+            ],
+        ];
+    }
+
+    private function formatTrackingOrder(CaseRecord $case): array
+    {
+        $progress = (int) ($case->workshop_progress_pct ?? 0);
+        $stageLabel = ManufacturingStage::workshopDeskLabelFor($case->manufacturing_stage);
+        $isDone = $progress >= 100
+            || $case->manufacturing_stage === ManufacturingStage::Assembly->value;
+
+        return [
+            'id' => $case->id,
+            'case_no' => $case->case_no,
+            'work_order_no' => $case->work_order_no,
+            'manufacturing_stage' => $case->manufacturing_stage,
+            'manufacturing_stage_label' => $stageLabel,
+            'progress_pct' => $progress,
+            'is_done' => $isDone,
+            'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
+            'patient' => $case->patient?->only(['id', 'patient_code', 'name']),
+            'workshop_section' => $case->workshopSection?->only(['id', 'name', 'code']),
+            'assigned_technician' => $case->assignedTechnician?->only(['id', 'name']),
+            'workshop_assigned_at' => $case->workshop_assigned_at?->toIso8601String(),
+            'updated_at' => $case->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /** @return array{data: list<array<string, mixed>>, summary: array<string, int>} */
     public function trackingList(?int $sectionId = null, ?int $technicianId = null): array
     {
         $query = CaseRecord::query()
