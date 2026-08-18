@@ -48,6 +48,7 @@ class StockCatalogController extends Controller
             ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
             ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('brand', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('barcode', 'like', "%{$search}%");
             }))

@@ -1,10 +1,14 @@
 @php
+    use App\Support\CatalogColumns;
+
     /** قائمة مُنسّقة من StockCatalogService::formatItem (مصفوفات). */
     $items = collect($stock_items ?? []);
     $categories = collect($stock_categories ?? []);
     $catalogSuppliers = collect($suppliers ?? []);
-    $catalogColumns = config('catalog.columns', []);
-    $catalogTemplateHeaders = config('catalog.template_headers', []);
+    $catalogColumnDefs = CatalogColumns::definitions();
+    $catalogTableOrder = CatalogColumns::tableOrder();
+    $catalogTemplateHeaders = CatalogColumns::templateHeaders();
+    $catalogTableColspan = CatalogColumns::tableColspan(auth()->user()?->can('print-barcode') ?? false);
     $dateFrom = $date_from ?? request()->query('from');
     $dateTo = $date_to ?? request()->query('to');
     $exportUrl = route('admin.catalog.export', array_filter([
@@ -52,7 +56,7 @@
         </form>
 
         <div class="data-toolbar" style="flex-wrap:wrap;gap:8px;">
-            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث برقم الصنف أو الاسم..." onkeyup="applySlimCatalogFilters()">
+            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث برقم الصنف أو الاسم أو الماركة..." onkeyup="applySlimCatalogFilters()">
             <select id="catalogCategoryFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:160px;">
                 <option value="">🏷️ كل الأقسام</option>
                 @foreach ($categories as $cat)
@@ -90,7 +94,7 @@
         <p class="catalog-table-hint" style="margin-top:6px;">
             قالب الأصناف — {{ count($catalogTemplateHeaders) }} أعمدة:
             <strong>{{ implode(' | ', $catalogTemplateHeaders) }}</strong>.
-            يشمل <strong>السعر الأساسي</strong> — الموردون والأقسام تُدار من نموذج الصنف. <strong>رقم الصنف قد يتكرر</strong> — التمييز برقم الصفحة. الأكواد والباركود من Excel. لا توليد تلقائي للأكواد.
+            يشمل <strong>الماركة</strong> بعد اسم الصنف، و<strong>السعر الأساسي</strong> — الموردون والأقسام تُدار من نموذج الصنف. <strong>رقم الصنف قد يتكرر</strong> — التمييز برقم الصفحة. الأكواد والباركود من Excel. لا توليد تلقائي للأكواد. لترتيب الأعمدة عدّل <code>config/catalog.php</code>.
         </p>
 
         <div class="panel-body" style="overflow-x:auto;">
@@ -100,17 +104,13 @@
                         @can('print-barcode')
                             <th style="padding:10px;text-align:center;width:34px;"><input type="checkbox" id="catalogSelectAll" onclick="toggleAllBarcodes(this)" title="تحديد الكل"></th>
                         @endcan
-                        <th style="padding:10px;text-align:right;">{{ $catalogColumns['code']['label'] ?? 'رقم الصنف' }}</th>
-                        <th style="padding:10px;text-align:right;">{{ $catalogColumns['page_number']['label'] ?? 'رقم الصفحة' }}</th>
-                        <th style="padding:10px;text-align:right;">{{ $catalogColumns['name']['label'] ?? 'اسم الصنف' }}</th>
-                        <th style="padding:10px;text-align:right;">{{ $catalogColumns['alt_codes']['label'] ?? 'الأكواد' }}</th>
-                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['uom']['label'] ?? 'الوحدة' }}</th>
-                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['opening_qty']['label'] ?? 'رصيد أول المده' }}</th>
-                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['addition']['label'] ?? 'الاضافة' }}</th>
-                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['discount']['label'] ?? 'الخصم' }}</th>
-                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['catalog_balance']['label'] ?? 'رصيد كتالوج' }}</th>
-                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['warehouse_qty']['label'] ?? 'رصيد المخزن' }}</th>
-                        <th style="padding:10px;text-align:center;">{{ $catalogColumns['price']['label'] ?? 'السعر الأساسي' }}</th>
+                        @foreach ($catalogTableOrder as $colKey)
+                            @php
+                                $colDef = $catalogColumnDefs[$colKey] ?? [];
+                                $align = ($colDef['align'] ?? 'right') === 'center' ? 'center' : 'right';
+                            @endphp
+                            <th style="padding:10px;text-align:{{ $align }};">{{ $colDef['label'] ?? $colKey }}</th>
+                        @endforeach
                         <th style="padding:10px;text-align:center;min-width:280px;">إجراء</th>
                     </tr>
                 </thead>
@@ -118,7 +118,7 @@
                     @forelse ($items as $item)
                         <tr class="catalog-slim-row"
                             data-item-id="{{ $item['id'] ?? '' }}"
-                            data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['category'] ?? '')) }}"
+                            data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['brand'] ?? '') . ' ' . ($item['category'] ?? '')) }}"
                             data-category-id="{{ $item['category_id'] ?? '' }}"
                             data-filter-hidden="0"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
@@ -126,22 +126,12 @@
                             @can('print-barcode')
                                 <td style="padding:8px;text-align:center;"><input type="checkbox" class="catalog-barcode-check" value="{{ $item['id'] ?? '' }}" onclick="syncBarcodeSelection()"></td>
                             @endcan
-                            <td style="padding:8px;direction:ltr;text-align:right;"><strong>{{ $item['catalog_number'] ?? $item['code'] ?? '' }}</strong></td>
-                            <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $item['page_number'] ?? '—' }}</td>
-                            <td style="padding:8px;">{{ $item['name'] ?? '' }}</td>
-                            <td style="padding:8px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">{{ $item['alt_codes'] ?? '—' }}</td>
-                            <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $item['uom'] ?? 'قطعة' }}</td>
-                            <td style="padding:8px;text-align:center;">{{ (int) ($item['opening_qty'] ?? 0) }}</td>
-                            <td style="padding:8px;text-align:center;">{{ (int) ($item['addition'] ?? 0) }}</td>
-                            <td style="padding:8px;text-align:center;">{{ (int) ($item['discount'] ?? 0) }}</td>
-                            @php
-                                $catalogBal = (int) ($item['catalog_balance'] ?? $item['balance'] ?? 0);
-                                $warehouseQty = (int) ($item['warehouse_qty'] ?? $item['qty'] ?? 0);
-                                $qtyMismatch = $catalogBal !== $warehouseQty;
-                            @endphp
-                            <td style="padding:8px;text-align:center;color:var(--text-muted);">{{ $catalogBal }}</td>
-                            <td style="padding:8px;text-align:center;font-weight:700;{{ $qtyMismatch ? 'color:#b45309;' : 'color:#059669;' }}" title="{{ $qtyMismatch ? 'رصيد الكتالوج ≠ رصيد المخزن — راجع الحركات أو عدّل بيانات الاستيراد' : 'رصيد المخزن الفعلي' }}">{{ $warehouseQty }}</td>
-                            <td style="padding:8px;text-align:center;" class="catalog-price-cell">{{ number_format((float) ($item['price'] ?? 0), 2) }}</td>
+                            @foreach ($catalogTableOrder as $colKey)
+                                @php $cell = CatalogColumns::tableCell($item, $colKey); @endphp
+                                <td style="padding:8px;{{ $cell['class'] ?? '' }}"
+                                    @if(!empty($cell['title'])) title="{{ $cell['title'] }}" @endif
+                                    @if(!empty($cell['cell_class'])) class="{{ $cell['cell_class'] }}" @endif>{!! $cell['html'] !!}</td>
+                            @endforeach
                             <td style="padding:10px;text-align:center;white-space:nowrap;">
                                 <button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button>
                                 <button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button>
@@ -152,7 +142,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
+                        <tr><td colspan="{{ $catalogTableColspan }}" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -186,6 +176,10 @@
                 <div>
                     <label class="catalog-form-label">اسم الصنف *</label>
                     <input type="text" id="slimName" placeholder="مثال: ركبة هيدروليكية" class="catalog-form-input">
+                </div>
+                <div>
+                    <label class="catalog-form-label">الماركة</label>
+                    <input type="text" id="slimBrand" placeholder="مثال: Ottobock" class="catalog-form-input">
                 </div>
                 <div id="slimBarcodeWrap" style="display:none;">
                     <label class="catalog-form-label">الباركود (تلقائي)</label>
@@ -722,6 +716,9 @@
 
 <script>
 (function () {
+    var catalogTableOrder = @json($catalogTableOrder);
+    var catalogTableColspan = {{ (int) $catalogTableColspan }};
+
     function csrf() {
         var m = document.querySelector('meta[name="csrf-token"]');
         return m ? m.getAttribute('content') : '';
@@ -902,6 +899,7 @@
         document.getElementById('slimCode').value = v.code || '';
         document.getElementById('slimPageNumber').value = v.page_number || '';
         document.getElementById('slimName').value = v.name || '';
+        document.getElementById('slimBrand').value = v.brand || '';
         document.getElementById('slimUom').value = v.uom || 'قطعة';
         document.getElementById('slimOpeningQty').value = v.opening_qty != null ? v.opening_qty : 0;
         document.getElementById('slimAddition').value = v.addition != null ? v.addition : 0;
@@ -1087,6 +1085,7 @@
             '<div class="catalog-detail-grid">'
             + detailBox('رقم الصنف', item.catalog_number || item.code || '—')
             + detailBox('رقم الصفحة', item.page_number || '—')
+            + detailBox('الماركة', item.brand || '—')
             + detailBox('الأكواد', item.alt_codes || item.barcode || '—')
             + detailBox('الوحدة', item.uom || 'قطعة')
             + detailBox('رصيد أول المده', String(parseInt(item.opening_qty, 10) || 0))
@@ -1183,6 +1182,7 @@
 
         var payload = {
             name: name,
+            brand: (document.getElementById('slimBrand').value || '').trim() || null,
             page_number: (document.getElementById('slimPageNumber').value || '').trim() || null,
             uom: (document.getElementById('slimUom').value || '').trim() || 'قطعة',
             opening_qty: parseInt(document.getElementById('slimOpeningQty').value || '0', 10),
@@ -1253,32 +1253,60 @@
             .replace(/</g, '&lt;');
     }
 
-    function catalogRowHtml(item) {
-        var search = escAttr(((item.catalog_number || item.code || '') + ' ' + (item.name || '') + ' ' + (item.page_number || '') + ' ' + (item.alt_codes || '')).toLowerCase());
-        var dataAttr = escAttr(JSON.stringify(item));
-        var labelsUrl = '/admin/catalog/' + item.id + '/labels';
+    function renderCatalogDataCell(item, key) {
         var catalogBal = parseInt(item.catalog_balance, 10);
         if (isNaN(catalogBal)) catalogBal = parseInt(item.balance, 10) || 0;
         var warehouseQty = parseInt(item.warehouse_qty, 10);
         if (isNaN(warehouseQty)) warehouseQty = parseInt(item.qty, 10) || 0;
         var qtyMismatch = catalogBal !== warehouseQty;
         var warehouseStyle = qtyMismatch ? 'color:#b45309;font-weight:700;' : 'color:#059669;font-weight:700;';
+        var warehouseTitle = qtyMismatch
+            ? 'رصيد الكتالوج ≠ رصيد المخزن — راجع الحركات أو عدّل بيانات الاستيراد'
+            : 'رصيد المخزن الفعلي';
+
+        switch (key) {
+            case 'code':
+                return '<td style="padding:8px;direction:ltr;text-align:right;"><strong>' + (item.catalog_number || item.code || '') + '</strong></td>';
+            case 'page_number':
+                return '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + (item.page_number || '—') + '</td>';
+            case 'name':
+                return '<td style="padding:8px;">' + (item.name || '') + '</td>';
+            case 'brand':
+                return '<td style="padding:8px;color:var(--text-muted);">' + (item.brand || '—') + '</td>';
+            case 'alt_codes':
+                return '<td style="padding:8px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">' + (item.alt_codes || '—') + '</td>';
+            case 'uom':
+                return '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + (item.uom || 'قطعة') + '</td>';
+            case 'opening_qty':
+                return '<td style="padding:8px;text-align:center;">' + (parseInt(item.opening_qty, 10) || 0) + '</td>';
+            case 'addition':
+                return '<td style="padding:8px;text-align:center;">' + (parseInt(item.addition, 10) || 0) + '</td>';
+            case 'discount':
+                return '<td style="padding:8px;text-align:center;">' + (parseInt(item.discount, 10) || 0) + '</td>';
+            case 'catalog_balance':
+                return '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + catalogBal + '</td>';
+            case 'warehouse_qty':
+                return '<td style="padding:8px;text-align:center;' + warehouseStyle + '" title="' + warehouseTitle + '">' + warehouseQty + '</td>';
+            case 'price':
+                return '<td style="padding:8px;text-align:center;" class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</td>';
+            default:
+                return '<td style="padding:8px;">' + (item[key] || '—') + '</td>';
+        }
+    }
+
+    function catalogRowHtml(item) {
+        var search = escAttr(((item.catalog_number || item.code || '') + ' ' + (item.name || '') + ' ' + (item.brand || '') + ' ' + (item.page_number || '') + ' ' + (item.alt_codes || '')).toLowerCase());
+        var dataAttr = escAttr(JSON.stringify(item));
+        var labelsUrl = '/admin/catalog/' + item.id + '/labels';
         var checkboxCol = document.getElementById('catalogSelectAll')
             ? '<td style="padding:8px;text-align:center;"><input type="checkbox" class="catalog-barcode-check" value="' + (item.id || '') + '" onclick="syncBarcodeSelection()"></td>'
             : '';
+        var dataCols = (catalogTableOrder || []).map(function (key) {
+            return renderCatalogDataCell(item, key);
+        }).join('');
         return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
-            '<td style="padding:8px;direction:ltr;text-align:right;"><strong>' + (item.catalog_number || item.code || '') + '</strong></td>' +
-            '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + (item.page_number || '—') + '</td>' +
-            '<td style="padding:8px;">' + (item.name || '') + '</td>' +
-            '<td style="padding:8px;color:var(--text-muted);font-size:12px;direction:ltr;text-align:right;">' + (item.alt_codes || '—') + '</td>' +
-            '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + (item.uom || 'قطعة') + '</td>' +
-            '<td style="padding:8px;text-align:center;">' + (parseInt(item.opening_qty, 10) || 0) + '</td>' +
-            '<td style="padding:8px;text-align:center;">' + (parseInt(item.addition, 10) || 0) + '</td>' +
-            '<td style="padding:8px;text-align:center;">' + (parseInt(item.discount, 10) || 0) + '</td>' +
-            '<td style="padding:8px;text-align:center;color:var(--text-muted);">' + catalogBal + '</td>' +
-            '<td style="padding:8px;text-align:center;' + warehouseStyle + '">' + warehouseQty + '</td>' +
-            '<td style="padding:8px;text-align:center;" class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</td>' +
+            dataCols +
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
             '<button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button> ' +
             '<button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button> ' +
@@ -1296,7 +1324,7 @@
         if (!tbody) return;
 
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="' + catalogTableColspan + '" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف — أضف صنفاً أو ارفع ملف Excel.</td></tr>';
         } else {
             tbody.innerHTML = list.map(catalogRowHtml).join('');
         }

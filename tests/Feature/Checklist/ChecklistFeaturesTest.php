@@ -9,6 +9,7 @@ use App\Models\StockItem;
 use App\Services\AppointmentService;
 use App\Services\MedicalRecordService;
 use App\Services\StockImportService;
+use App\Support\CatalogColumns;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
@@ -62,7 +63,7 @@ class ChecklistFeaturesTest extends TestCase
     {
         $csv = $this->catalogHeaders();
         $contents = implode(',', $csv)."\r\n"
-            ."RM-900,10,خامة اختبار,9001,متر,15,5,0,20\r\n";
+            ."RM-900,10,خامة اختبار,,9001,متر,15,5,0,20\r\n";
 
         $file = UploadedFile::fake()->createWithContent('items.csv', $contents);
 
@@ -81,7 +82,7 @@ class ChecklistFeaturesTest extends TestCase
             'qty' => 20,
         ]);
 
-        $update = implode(',', $csv)."\r\n"."RM-900,11,خامة محدثة,9001,قطعة,40,2,5,37\r\n";
+        $update = implode(',', $csv)."\r\n"."RM-900,11,خامة محدثة,,9001,قطعة,40,2,5,37\r\n";
         $summary2 = app(StockImportService::class)->import(
             UploadedFile::fake()->createWithContent('items2.csv', $update),
         );
@@ -97,8 +98,8 @@ class ChecklistFeaturesTest extends TestCase
     {
         $csv = $this->catalogHeaders();
         $contents = implode(',', $csv)."\r\n"
-            ."198,1/198,كف متحرك ستيبير,9001,عدد,0,0,0,0\r\n"
-            ."198,3/198,كرنفال 3 مم الوان,9002,عدد,0,0,104850,0\r\n";
+            ."198,1/198,كف متحرك ستيبير,,9001,عدد,0,0,0,0\r\n"
+            ."198,3/198,كرنفال 3 مم الوان,,9002,عدد,0,0,104850,0\r\n";
 
         $file = UploadedFile::fake()->createWithContent('dup.csv', $contents);
 
@@ -191,7 +192,7 @@ class ChecklistFeaturesTest extends TestCase
         $this->assertStringNotContainsString('?', StockItem::where('code', 'RM-560')->value('name'));
     }
 
-    public function test_xlsx_template_has_single_items_sheet_with_nine_columns(): void
+    public function test_xlsx_template_has_single_items_sheet_with_eleven_columns_including_brand(): void
     {
         $bytes = app(StockImportService::class)->templateBinary();
 
@@ -213,10 +214,29 @@ class ChecklistFeaturesTest extends TestCase
 
         $this->assertSame([StockImportService::SHEET_ITEMS], $sheetNames);
         $this->assertSame(
-            config('catalog.template_headers'),
+            CatalogColumns::templateHeaders(),
             StockImportService::headers(),
         );
-        $this->assertCount(10, StockImportService::headers());
+        $this->assertContains('الماركة', StockImportService::headers());
+        $this->assertCount(11, StockImportService::headers());
+    }
+
+    public function test_csv_import_stores_brand_column(): void
+    {
+        $csv = $this->catalogHeaders();
+        $contents = implode(',', $csv)."\r\n"
+            ."RM-BRD,20,مفصل ركبة,Ottobock,4821,قطعة,5,0,0,5,120\r\n";
+
+        $summary = app(StockImportService::class)->import(
+            UploadedFile::fake()->createWithContent('brand.csv', $contents),
+        );
+
+        $this->assertSame(1, $summary['created']);
+        $this->assertDatabaseHas('stock_items', [
+            'code' => 'RM-BRD',
+            'name' => 'مفصل ركبة',
+            'brand' => 'Ottobock',
+        ]);
     }
 
     public function test_military_markup_engine_computes_selling_price_and_percentage(): void

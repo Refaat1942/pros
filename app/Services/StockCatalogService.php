@@ -7,6 +7,7 @@ use App\Enums\StockUom;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
+use App\Models\Supplier;
 use App\Support\StockCatalogPicker;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -100,6 +101,7 @@ class StockCatalogService
             'barcode' => $item->barcode,
             'alt_codes' => $item->alt_codes ?? '',
             'name' => $item->name,
+            'brand' => $item->brand ?? '',
             'spec' => $item->spec,
             'category_id' => $item->category_id,
             'category' => $item->category?->name ?? '',
@@ -163,6 +165,7 @@ class StockCatalogService
                 'catalog_number' => $catalogNumber,
                 'page_number' => $this->nullableString($data['page_number'] ?? null),
                 'name' => $data['name'],
+                'brand' => $this->nullableString($data['brand'] ?? null),
                 'spec' => $data['spec'] ?? null,
                 'category_id' => $data['category_id'] ?? null,
                 'store_class' => $this->deriveStoreClass($category),
@@ -240,6 +243,9 @@ class StockCatalogService
                     ? $this->nullableString($data['catalog_number'])
                     : $item->catalog_number,
                 'name' => $data['name'],
+                'brand' => array_key_exists('brand', $data)
+                    ? $this->nullableString($data['brand'])
+                    : $item->brand,
                 'spec' => $data['spec'] ?? $item->spec,
                 'uom' => array_key_exists('uom', $data) && trim((string) $data['uom']) !== ''
                     ? $this->normalizeUom($data['uom'])

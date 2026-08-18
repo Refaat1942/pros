@@ -24,6 +24,7 @@ class StockItem extends Model
         'catalog_number',
         'page_number',
         'name',
+        'brand',
         'spec',
         'category_id',
         'store_class',

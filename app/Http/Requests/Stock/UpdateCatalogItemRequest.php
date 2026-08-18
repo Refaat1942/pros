@@ -13,6 +13,7 @@ class UpdateCatalogItemRequest extends BaseRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:120'],
             'page_number' => ['nullable', 'string', 'max:50'],
             'alt_codes' => ['nullable', 'string', 'max:500'],
             'uom' => ['nullable', 'string', 'max:50'],

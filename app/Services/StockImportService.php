@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\StockItem;
+use App\Support\CatalogColumns;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +21,7 @@ class StockImportService
     /** @return list<string> */
     public static function headers(): array
     {
-        return config('catalog.template_headers', []);
+        return CatalogColumns::templateHeaders();
     }
 
     public function __construct(private readonly StockCatalogService $catalogService) {}
@@ -100,6 +101,7 @@ class StockImportService
                     'catalog_number' => $parsed['catalog_number'] !== '' ? $parsed['catalog_number'] : null,
                     'page_number' => $parsed['page_number'] !== '' ? $parsed['page_number'] : null,
                     'name' => $parsed['name'],
+                    'brand' => $parsed['brand'] !== '' ? $parsed['brand'] : null,
                     'alt_codes' => $parsed['alt_codes'] !== '' ? $parsed['alt_codes'] : null,
                     'uom' => $parsed['uom'] !== '' ? $parsed['uom'] : null,
                     'opening_qty' => $openingQty,
@@ -146,25 +148,12 @@ class StockImportService
      */
     private function rowFromItem(array $item): array
     {
-        $operational = trim((string) ($item['alt_codes'] ?? $item['operational_code'] ?? ''));
-        if ($operational === '' && ! empty($item['barcode'])) {
-            $operational = preg_replace('/^BC-/i', '', (string) $item['barcode']) ?: '';
-        }
+        $item['uom'] = $this->cleanUomForExport((string) ($item['uom'] ?? ''));
 
-        $uom = $this->cleanUomForExport((string) ($item['uom'] ?? ''));
-
-        return [
-            (string) ($item['catalog_number'] ?? $item['code'] ?? ''),
-            (string) ($item['page_number'] ?? ''),
-            (string) ($item['name'] ?? ''),
-            $operational,
-            $uom,
-            (string) ((int) ($item['opening_qty'] ?? 0)),
-            (string) ((int) ($item['addition'] ?? 0)),
-            (string) ((int) ($item['discount'] ?? 0)),
-            (string) ((int) ($item['catalog_balance'] ?? $item['balance'] ?? $item['qty'] ?? 0)),
-            (string) round((float) ($item['price'] ?? 0), 2),
-        ];
+        return array_map(
+            fn (string $key) => CatalogColumns::templateValue($item, $key),
+            CatalogColumns::templateOrder(),
+        );
     }
 
     /**
@@ -188,18 +177,23 @@ class StockImportService
         $itemsSheet->setName(self::SHEET_ITEMS);
         $writer->addRow(Row::fromValues($headers));
         if ($includeInstructions) {
-            $writer->addRow(Row::fromValues([
-                '← تعليمات',
-                'اختياري',
-                'مطلوب',
-                'كود الصنف (مطلوب في الرفع الجماعي)',
-                'قطعة / متر ...',
-                'رقم',
-                'رقم',
-                'رقم',
-                'رصيد = أول + إضافة − خصم',
-                'سعر التكلفة الأساسي (ج.م)',
-            ]));
+            $hints = [
+                'code' => '← تعليمات',
+                'page_number' => 'اختياري',
+                'name' => 'مطلوب',
+                'brand' => 'اختياري',
+                'alt_codes' => 'كود الصنف (مطلوب في الرفع الجماعي)',
+                'uom' => 'قطعة / متر ...',
+                'opening_qty' => 'رقم',
+                'addition' => 'رقم',
+                'discount' => 'رقم',
+                'balance' => 'رصيد = أول + إضافة − خصم',
+                'price' => 'سعر التكلفة الأساسي (ج.م)',
+            ];
+            $writer->addRow(Row::fromValues(array_map(
+                fn (string $key) => $hints[$key] ?? '',
+                CatalogColumns::templateOrder(),
+            )));
         }
         foreach ($itemRows as $row) {
             $writer->addRow(Row::fromValues($row));
@@ -217,9 +211,9 @@ class StockImportService
     private function buildExampleRows(): array
     {
         return [
-            ['RM-100', '12', 'مفصل ركبة هيدروليكي', '4821', 'قطعة', '10', '5', '2', '13'],
-            ['RM-101', '13', 'قماش تغليف', '7394', 'متر', '50', '0', '10', '40'],
-            ['RM-102', '14', 'مسامير تثبيت M8', '6150', 'قطعة', '200', '20', '0', '220'],
+            ['RM-100', '12', 'مفصل ركبة هيدروليكي', 'Ottobock', '4821', 'قطعة', '10', '5', '2', '13', '0'],
+            ['RM-101', '13', 'قماش تغليف', 'Generic', '7394', 'متر', '50', '0', '10', '40', '0'],
+            ['RM-102', '14', 'مسامير تثبيت M8', '', '6150', 'قطعة', '200', '20', '0', '220', '0'],
         ];
     }
 
@@ -263,18 +257,7 @@ class StockImportService
      */
     private function buildColumnMap(array $headerCells): array
     {
-        $aliases = [
-            'catalog_number' => ['رقم الصنف', 'كود الصنف'],
-            'page_number' => ['رقم الصفحة'],
-            'name' => ['اسم الصنف'],
-            'alt_codes' => ['الأكواد'],
-            'uom' => ['الوحدة'],
-            'opening_qty_raw' => ['رصيد أول المده', 'رصيد أول المدة', 'الكمية'],
-            'addition_raw' => ['الاضافة', 'الإضافة'],
-            'discount_raw' => ['الخصم'],
-            'balance_raw' => ['الرصيد', 'الكمية'],
-            'price_raw' => ['السعر الأساسي', 'السعر', 'سعر التكلفة', 'أعلى سعر'],
-        ];
+        $aliases = CatalogColumns::importAliases();
 
         $map = [];
 
@@ -444,7 +427,7 @@ class StockImportService
     /**
      * @param  list<string>  $cols
      * @param  array<string, int>|null  $columnMap
-     * @return array{catalog_number:string, page_number:string, name:string, alt_codes:string, uom:string, opening_qty_raw:string, addition_raw:string, discount_raw:string, balance_raw:string, price_raw:string}
+     * @return array{catalog_number:string, page_number:string, name:string, brand:string, alt_codes:string, uom:string, opening_qty_raw:string, addition_raw:string, discount_raw:string, balance_raw:string, price_raw:string}
      */
     private function parseRowColumns(array $cols, ?array $columnMap = null): array
     {
@@ -453,6 +436,7 @@ class StockImportService
                 'catalog_number' => $this->cellValue($cols, $columnMap, 'catalog_number'),
                 'page_number' => $this->cellValue($cols, $columnMap, 'page_number'),
                 'name' => $this->cellValue($cols, $columnMap, 'name'),
+                'brand' => $this->cellValue($cols, $columnMap, 'brand'),
                 'alt_codes' => $this->cellValue($cols, $columnMap, 'alt_codes'),
                 'uom' => $this->cellValue($cols, $columnMap, 'uom'),
                 'opening_qty_raw' => $this->cellValue($cols, $columnMap, 'opening_qty_raw'),
@@ -468,6 +452,7 @@ class StockImportService
                 'catalog_number' => trim((string) ($cols[0] ?? '')),
                 'page_number' => '',
                 'name' => trim((string) ($cols[1] ?? '')),
+                'brand' => '',
                 'alt_codes' => '',
                 'uom' => trim((string) ($cols[2] ?? '')),
                 'opening_qty_raw' => trim((string) ($cols[3] ?? '')),
@@ -478,18 +463,47 @@ class StockImportService
             ];
         }
 
+        if ($this->looksLikeLegacyTenColumnRow($cols)) {
+            return [
+                'catalog_number' => trim((string) ($cols[0] ?? '')),
+                'page_number' => trim((string) ($cols[1] ?? '')),
+                'name' => trim((string) ($cols[2] ?? '')),
+                'brand' => '',
+                'alt_codes' => trim((string) ($cols[3] ?? '')),
+                'uom' => trim((string) ($cols[4] ?? '')),
+                'opening_qty_raw' => trim((string) ($cols[5] ?? '')),
+                'addition_raw' => trim((string) ($cols[6] ?? '0')),
+                'discount_raw' => trim((string) ($cols[7] ?? '0')),
+                'balance_raw' => trim((string) ($cols[8] ?? '')),
+                'price_raw' => trim((string) ($cols[9] ?? '0')),
+            ];
+        }
+
         return [
             'catalog_number' => trim((string) ($cols[0] ?? '')),
             'page_number' => trim((string) ($cols[1] ?? '')),
             'name' => trim((string) ($cols[2] ?? '')),
-            'alt_codes' => trim((string) ($cols[3] ?? '')),
-            'uom' => trim((string) ($cols[4] ?? '')),
-            'opening_qty_raw' => trim((string) ($cols[5] ?? '')),
-            'addition_raw' => trim((string) ($cols[6] ?? '0')),
-            'discount_raw' => trim((string) ($cols[7] ?? '0')),
-            'balance_raw' => trim((string) ($cols[8] ?? '')),
-            'price_raw' => trim((string) ($cols[9] ?? '0')),
+            'brand' => trim((string) ($cols[3] ?? '')),
+            'alt_codes' => trim((string) ($cols[4] ?? '')),
+            'uom' => trim((string) ($cols[5] ?? '')),
+            'opening_qty_raw' => trim((string) ($cols[6] ?? '')),
+            'addition_raw' => trim((string) ($cols[7] ?? '0')),
+            'discount_raw' => trim((string) ($cols[8] ?? '0')),
+            'balance_raw' => trim((string) ($cols[9] ?? '')),
+            'price_raw' => trim((string) ($cols[10] ?? '0')),
         ];
+    }
+
+    /** @param  list<string>  $cols */
+    private function looksLikeLegacyTenColumnRow(array $cols): bool
+    {
+        $count = count($cols);
+
+        if ($count <= 10) {
+            return true;
+        }
+
+        return $count === 11 && trim((string) ($cols[10] ?? '')) === '';
     }
 
     /**
