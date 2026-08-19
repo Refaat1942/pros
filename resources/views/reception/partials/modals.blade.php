@@ -104,10 +104,9 @@
               <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">
                 💰 المبلغ المعتمد (ج.م)
               </label>
-              <input type="number" id="ocrConfirmAmount" step="0.01" min="0" readonly
-                     style="width:100%;padding:10px 12px;border:2px solid #10b981;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box;background:#f8fafc;"
+              <input type="number" id="ocrConfirmAmount" step="0.01" min="0"
+                     style="width:100%;padding:10px 12px;border:2px solid #10b981;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box;"
                      placeholder="المبلغ المالي">
-              <small style="display:block;margin-top:4px;color:#64748b;font-size:11px;">يُملأ تلقائياً من خطاب الموافقة أو عرض السعر — لا يُعدَّل يدوياً.</small>
             </div>
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">
