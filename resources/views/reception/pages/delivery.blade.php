@@ -136,10 +136,18 @@
         </div>
 
         {{-- تأكيد التسليم --}}
-        <div class="xl:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[520px] flex flex-col">
+        <div class="xl:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[520px] flex flex-col relative">
             <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white shrink-0">
-                <h3 class="font-bold text-lg">📦 تأكيد التسليم</h3>
-                <p class="text-sm opacity-90 mt-1">يُغلق الملف الطبي ويُصدر مرجع الفاتورة (مدني)</p>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-bold text-lg">📦 تأكيد التسليم</h3>
+                        <p class="text-sm opacity-90 mt-1">يُغلق الملف الطبي ويُصدر مرجع الفاتورة (مدني)</p>
+                    </div>
+                    <button type="button" id="btnConfirmDeliveryHeader"
+                            class="hidden rounded-xl bg-white text-emerald-700 px-6 py-2.5 text-sm font-extrabold hover:bg-emerald-50 shadow-md ring-2 ring-white/40">
+                        ✓ تأكيد التسليم
+                    </button>
+                </div>
             </div>
 
             <div id="deliveryEmpty" class="flex-1 flex flex-col items-center justify-center p-10 text-center text-slate-400">
@@ -148,32 +156,32 @@
                 <p class="text-sm">اختر مريضاً من القائمة على اليسار ثم أكّد التسليم</p>
             </div>
 
-            <div id="deliveryWorkspace" class="hidden flex-1 p-6 space-y-5 overflow-y-auto">
-                <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-3 text-sm text-emerald-900 font-bold text-center">
-                    راجع البيانات ثم أكّد التسليم
-                </div>
-                <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
-                    <div class="flex items-start justify-between gap-2">
-                        <h4 class="font-bold text-slate-800 text-lg" id="delPatientName">—</h4>
-                        <span id="delPatientType" class="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0"></span>
+            <div id="deliveryWorkspace" class="hidden flex-1 flex flex-col min-h-0">
+                <div class="flex-1 p-6 space-y-5 overflow-y-auto">
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <div class="flex items-start justify-between gap-2">
+                            <h4 class="font-bold text-slate-800 text-lg" id="delPatientName">—</h4>
+                            <span id="delPatientType" class="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0"></span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 mt-3 text-sm text-slate-600">
+                            <div>الحالة: <strong id="delCaseNo" class="text-slate-800">—</strong></div>
+                            <div>WO: <strong id="delWorkOrder" class="font-mono text-emerald-700">—</strong></div>
+                            <div>الجهة: <strong id="delCompany">—</strong></div>
+                            <div>BOM: <strong id="delBomStage" class="text-emerald-700">—</strong></div>
+                            <div class="col-span-2">اكتمال التصنيع: <strong id="delFinishedAt" class="text-slate-700">—</strong></div>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 mt-3 text-sm text-slate-600">
-                        <div>الحالة: <strong id="delCaseNo" class="text-slate-800">—</strong></div>
-                        <div>WO: <strong id="delWorkOrder" class="font-mono text-emerald-700">—</strong></div>
-                        <div>الجهة: <strong id="delCompany">—</strong></div>
-                        <div>BOM: <strong id="delBomStage" class="text-emerald-700">—</strong></div>
-                        <div class="col-span-2">اكتمال التصنيع: <strong id="delFinishedAt" class="text-slate-700">—</strong></div>
-                    </div>
+
+                    <div id="deliveryError" class="hidden rounded-xl border-2 border-red-400 bg-red-50 p-4 text-red-800 text-sm font-bold"></div>
                 </div>
 
-                <div class="flex justify-end">
+                <div class="shrink-0 border-t border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <p class="text-sm text-emerald-900 font-bold">راجع البيانات أعلاه ثم اضغط الزر لتسليم الطرف وإغلاق الحالة</p>
                     <button type="button" id="btnConfirmDelivery"
-                            class="rounded-xl bg-recv text-white px-8 py-3 text-sm font-bold hover:bg-recv-dark shadow-sm disabled:opacity-40">
+                            class="w-full sm:w-auto shrink-0 rounded-xl bg-emerald-600 text-white px-10 py-3.5 text-base font-extrabold hover:bg-emerald-700 shadow-lg disabled:opacity-40">
                         ✓ تأكيد التسليم
                     </button>
                 </div>
-
-                <div id="deliveryError" class="hidden rounded-xl border-2 border-red-400 bg-red-50 p-4 text-red-800 text-sm font-bold"></div>
             </div>
         </div>
     </div>
