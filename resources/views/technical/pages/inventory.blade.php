@@ -5,6 +5,8 @@
         ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
         ['icon' => '⚠️', 'label' => 'كمية منخفضة', 'value' => '0', 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
     ];
+    $inventoryListColumns = $inventory_list_columns ?? ['code', 'name', 'available', 'status'];
+    $inventoryListColumnLabels = $inventory_list_column_labels ?? [];
 @endphp
 <div class="section-view" id="section-inventory">
       <div id="analytics-inventory-charts">@include('partials.dashboard-analytics-empty', ['stats' => $invStats, 'hide_charts' => true])</div>
@@ -39,9 +41,9 @@
           <table data-paginate="10" class="stock-table">
             <thead>
               <tr id="inventoryTableHead">
-                @foreach ($inventory_list_columns ?? ['code', 'name', 'available', 'status'] as $colKey)
+                @foreach ($inventoryListColumns as $colKey)
                   <th class="{{ in_array($colKey, ['available', 'status', 'qty', 'reserved'], true) ? 'col-qty' : '' }}">
-                    {{ ($inventory_list_column_labels ?? [])[$colKey]['label'] ?? $colKey }}
+                    {{ $inventoryListColumnLabels[$colKey]['label'] ?? $colKey }}
                   </th>
                 @endforeach
               </tr>
@@ -49,7 +51,7 @@
             <tbody id="inventoryTable" data-server-inventory="1"></tbody>
             <tfoot>
               <tr>
-                <td colspan="{{ max(1, count($inventory_list_columns ?? ['code', 'name', 'available', 'status'])) }}" id="inventoryFooter"></td>
+                <td colspan="{{ max(1, count($inventoryListColumns)) }}" id="inventoryFooter"></td>
               </tr>
             </tfoot>
           </table>
@@ -112,7 +114,7 @@
 <script>
 window.__INVENTORY_ITEMS = @json($inventory_items ?? []);
 window.__INBOUND_RECEIVE_ENABLED = @json($inbound_document_upload ?? true);
-window.__INVENTORY_LIST_COLUMNS = @json($inventory_list_columns ?? ['code', 'name', 'available', 'status']);
+window.__INVENTORY_LIST_COLUMNS = @json($inventoryListColumns);
 </script>
 <script>
 (function () {
