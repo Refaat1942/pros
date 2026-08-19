@@ -39,16 +39,27 @@
     var filtered = rows.filter(function (r) {
       return !q || String(r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.code || '').toLowerCase().indexOf(q) !== -1;
     });
-    document.getElementById('workshopSectionCount').textContent = filtered.length + ' قسم';
+    var countEl = document.getElementById('workshopSectionCount');
+    if (countEl) countEl.textContent = filtered.length + ' قسم';
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#64748b;">لا توجد أقسام.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-12 text-center text-slate-400">لا توجد أقسام — اضغط «➕ إضافة قسم» أعلاه.</td></tr>';
       return;
     }
     tbody.innerHTML = filtered.map(function (r) {
-      var techs = (r.technicians || []).map(function (t) { return esc(t.name); }).join('، ') || '—';
-      return '<tr><td><strong>' + esc(r.name) + '</strong></td><td>' + esc(r.code) + '</td><td>' + techs + '</td><td>' +
-        (r.active ? '✅ نشط' : '⏸️ متوقف') + '</td><td><button type="button" class="btn-action btn-edit-section" data-id="' + r.id + '">✏️</button> ' +
-        '<button type="button" class="btn-action danger btn-del-section" data-id="' + r.id + '">🗑️</button></td></tr>';
+      var techList = (r.technicians || []);
+      var techs = techList.map(function (t) { return esc(t.name); }).join('، ');
+      var techCell = techList.length
+        ? '<span class="text-slate-800">' + techs + '</span>'
+        : '<span class="text-amber-700 font-bold text-xs">— لم يُربَط فني — اضغط تعديل</span>';
+      return '<tr class="hover:bg-slate-50">' +
+        '<td class="px-4 py-3"><strong class="text-slate-800">' + esc(r.name) + '</strong></td>' +
+        '<td class="px-4 py-3 font-mono text-xs text-slate-500">' + esc(r.code) + '</td>' +
+        '<td class="px-4 py-3">' + techCell + '</td>' +
+        '<td class="px-4 py-3">' + (r.active ? '<span class="text-emerald-700 font-bold">✅ نشط</span>' : '<span class="text-slate-500">⏸️ متوقف</span>') + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap space-x-1 space-x-reverse">' +
+          '<button type="button" class="btn-edit-section inline-flex items-center rounded-lg border border-violet-300 bg-violet-50 text-violet-900 px-3 py-1.5 text-xs font-bold hover:bg-violet-100" data-id="' + r.id + '">✏️ تعديل / ربط فنيين</button> ' +
+          '<button type="button" class="btn-del-section inline-flex items-center rounded-lg border border-red-200 bg-red-50 text-red-700 px-2 py-1.5 text-xs font-bold hover:bg-red-100" data-id="' + r.id + '" title="حذف">🗑️</button>' +
+        '</td></tr>';
     }).join('');
     tbody.querySelectorAll('.btn-edit-section').forEach(function (btn) {
       btn.addEventListener('click', function () { openModal(parseInt(btn.getAttribute('data-id'), 10)); });
@@ -62,7 +73,13 @@
     var modal = document.getElementById('workshopSectionModal');
     var row = id ? rows.find(function (r) { return r.id === id; }) : null;
     document.getElementById('workshopSectionId').value = row ? row.id : '';
-    document.getElementById('workshopSectionModalTitle').textContent = row ? '✏️ تعديل قسم' : '➕ قسم ورشة';
+    document.getElementById('workshopSectionModalTitle').textContent = row ? '✏️ تعديل القسم وربط الفنيين' : '➕ قسم إنتاج جديد';
+    var hint = document.getElementById('workshopSectionModalHint');
+    if (hint) {
+      hint.textContent = row
+        ? 'عدّل بيانات القسم أو غيّر الفنيين المربوطين به.'
+        : 'أدخل بيانات القسم واختر الفنيين المسؤولين عنه.';
+    }
     document.getElementById('workshopSectionName').value = row ? row.name : '';
     document.getElementById('workshopSectionCode').value = row ? (row.code || '') : '';
     document.getElementById('workshopSectionDescription').value = row ? (row.description || '') : '';

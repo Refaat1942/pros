@@ -142,6 +142,28 @@
   background: #fafafa;
 }
 
+.catalog-modal-footer .btn-action {
+  padding: 8px 16px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: #fff;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--secondary, #334155);
+}
+
+.catalog-modal-footer .btn-action.success {
+  background: #059669;
+  border-color: #059669;
+  color: #fff;
+}
+
+.catalog-modal-footer .btn-action:hover {
+  filter: brightness(0.97);
+}
+
 @media (max-width: 768px) {
   .catalog-modal {
     max-height: 95vh;
