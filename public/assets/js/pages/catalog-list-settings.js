@@ -17,6 +17,7 @@
         inventory_overview: ['code', 'name'],
         stock_kits_picker: ['code', 'name'],
         technical_inventory: ['code', 'name'],
+        technical_bom_items: ['code', 'name'],
         spec_picker: ['code', 'name'],
         adjustments_picker: ['code', 'name'],
         doctor_picker: ['code', 'name'],

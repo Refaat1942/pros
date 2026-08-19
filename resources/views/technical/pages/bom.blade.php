@@ -19,8 +19,17 @@
 
 @php
     use App\Enums\StockWarehouseType;
+    use App\Services\CatalogListVisibilityService;
+    use App\Support\BomItemAggregator;
 
     $boms = $warehouse_boms ?? collect();
+    $bomVisibility = app(CatalogListVisibilityService::class);
+    $bomUser = auth()->user();
+    $bomListEnabled = $bomUser
+        ? $bomVisibility->isListEnabledForUser($bomUser, 'technical_bom_items')
+        : true;
+    $bomListColumns = $bomVisibility->tableOrderForUser($bomUser, 'technical_bom_items');
+    $bomListColumnLabels = $bomVisibility->columnDefinitions('technical_bom_items');
     $stageMeta = [
         'raw'      => ['label' => StockWarehouseType::Raw->icon() . ' ' . StockWarehouseType::Raw->label(), 'cls' => 'bg-amber-100 text-amber-800 border-amber-200'],
         'wip'      => ['label' => '🏭 قيد التصنيع', 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
@@ -94,20 +103,42 @@
                         <td class="px-4 py-3">
                             <span class="text-xs font-bold px-2 py-1 rounded-lg border {{ $meta['cls'] }}">{{ $meta['label'] }}</span>
                         </td>
-                        <td class="px-4 py-3 text-center">
-                            @if ($bom->items->isNotEmpty())
+                        <td class="px-4 py-3 text-center align-top">
+                            @if (! $bomListEnabled)
+                                <span class="text-xs text-slate-400">غير متاح</span>
+                            @elseif ($bom->items->isNotEmpty())
                                 @php
-                                    $bomItemsJson = \App\Support\BomItemAggregator::byStockCode($bom->items);
+                                    $bomItemsRaw = BomItemAggregator::enrichWithStockMeta(
+                                        BomItemAggregator::byStockCode($bom->items),
+                                    );
+                                    $bomItemsJson = collect($bomItemsRaw)
+                                        ->map(fn (array $item) => $bomVisibility->filterItemFields($item, $bomUser, 'technical_bom_items'))
+                                        ->filter(fn (array $row) => $row !== [])
+                                        ->values()
+                                        ->all();
+                                    $bomPreview = collect($bomItemsJson)->take(3);
                                 @endphp
-                                <button type="button"
-                                        class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50"
-                                        data-bom-id="{{ $bom->id }}"
-                                        data-bom-no="{{ $bom->bom_no }}"
-                                        data-patient="{{ $bom->patient_name }}"
-                                        data-work-order="{{ $bom->caseRecord?->work_order_no ?? '—' }}"
-                                        data-items='@json($bomItemsJson)'>
-                                    عرض
-                                </button>
+                                @if ($bomItemsJson !== [])
+                                    <div class="text-xs text-slate-600 text-right space-y-0.5 mb-1.5 max-w-[220px] ml-auto">
+                                        @foreach ($bomPreview as $previewItem)
+                                            <div class="truncate">{{ ($previewItem['stock_item_code'] ?? $previewItem['code'] ?? '—') }} — {{ $previewItem['name'] ?? '—' }}</div>
+                                        @endforeach
+                                        @if (count($bomItemsJson) > 3)
+                                            <div class="text-slate-400">+{{ count($bomItemsJson) - 3 }} أصناف</div>
+                                        @endif
+                                    </div>
+                                    <button type="button"
+                                            class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50"
+                                            data-bom-id="{{ $bom->id }}"
+                                            data-bom-no="{{ $bom->bom_no }}"
+                                            data-patient="{{ $bom->patient_name }}"
+                                            data-work-order="{{ $bom->caseRecord?->work_order_no ?? '—' }}"
+                                            data-items='@json($bomItemsJson)'>
+                                        عرض ({{ count($bomItemsJson) }})
+                                    </button>
+                                @else
+                                    <span class="text-xs text-slate-400">—</span>
+                                @endif
                             @else
                                 <span class="text-xs text-slate-400">—</span>
                             @endif
@@ -204,13 +235,12 @@
         <div class="overflow-y-auto flex-1 p-4">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-600">
-                    <tr>
-                        <th class="px-3 py-2 text-right font-bold">الكود</th>
-                        <th class="px-3 py-2 text-right font-bold">الصنف</th>
-                        <th class="px-3 py-2 text-right font-bold w-16">المطلوب</th>
-                        <th class="px-3 py-2 text-right font-bold w-16">الوحدة</th>
-                        <th class="px-3 py-2 text-right font-bold w-16">المصروف</th>
-                        <th class="px-3 py-2 text-right font-bold w-16">المرتجع</th>
+                    <tr id="bomItemsHeadRow">
+                        @foreach ($bomListColumns as $colKey)
+                            <th class="px-3 py-2 text-right font-bold {{ in_array($colKey, ['qty', 'issued_qty', 'returned_qty', 'unit_cost'], true) ? 'w-20' : '' }}">
+                                {{ $bomListColumnLabels[$colKey]['label'] ?? $colKey }}
+                            </th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody id="bomItemsBody" class="divide-y divide-slate-100"></tbody>
@@ -220,5 +250,10 @@
 </div>
 
 @push('scripts')
+<script>
+window.__BOM_LIST_ENABLED = @json($bomListEnabled);
+window.__BOM_LIST_COLUMNS = @json($bomListColumns);
+window.__BOM_LIST_COLUMN_LABELS = @json(collect($bomListColumnLabels)->mapWithKeys(fn ($def, $key) => [$key => $def['label'] ?? $key]));
+</script>
 <script src="{{ asset('assets/vendor/axios.min.js') }}?v={{ filemtime(public_path('assets/vendor/axios.min.js')) }}"></script>
 @endpush

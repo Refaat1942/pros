@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\BomItem;
+use App\Models\StockItem;
 use Illuminate\Support\Collection;
 
 /**
@@ -51,6 +52,31 @@ final class BomItemAggregator
         }
 
         return array_values($grouped);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array<string, mixed>>
+     */
+    public static function enrichWithStockMeta(array $items): array
+    {
+        if ($items === []) {
+            return [];
+        }
+
+        $codes = array_values(array_filter(array_column($items, 'stock_item_code')));
+        $brands = StockItem::mapByOperationalCodes($codes, 'brand');
+        $uoms = StockItemUomLookup::forCodes($codes);
+
+        return array_map(function (array $item) use ($brands, $uoms) {
+            $code = $item['stock_item_code'] ?? '';
+
+            return $item + [
+                'code' => $code,
+                'brand' => trim((string) ($brands[$code] ?? '')),
+                'uom' => $uoms[$code] ?? 'قطعة',
+            ];
+        }, $items);
     }
 
     /**

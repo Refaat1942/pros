@@ -217,6 +217,55 @@ class CatalogListVisibilityTest extends TestCase
         $this->assertSame(['code', 'name'], $columns);
     }
 
+    public function test_technical_bom_items_respect_user_visibility(): void
+    {
+        $technical = $this->userWithRole('technical');
+
+        app(CatalogListVisibilityService::class)->update([
+            'roles' => [
+                'technical' => [
+                    'technical_bom_items' => [
+                        'enabled' => true,
+                        'columns' => ['code', 'name', 'qty'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $user = app(UserService::class)->create([
+            'name' => 'فني BOM',
+            'username' => 'tech-bom-1',
+            'password' => 'secret123',
+            'role_id' => $technical->role_id,
+            'status' => User::STATUS_ACTIVE,
+            'catalog_list_visibility' => [
+                'profiles' => [
+                    'technical_bom_items' => [
+                        'enabled' => true,
+                        'columns' => ['code', 'name'],
+                    ],
+                ],
+            ],
+        ])->fresh(['role']);
+
+        $visibility = app(CatalogListVisibilityService::class);
+        $filtered = $visibility->filterItemFields([
+            'stock_item_code' => '1001',
+            'code' => '1001',
+            'name' => 'صنف BOM',
+            'brand' => 'Ottobock',
+            'qty' => 2,
+            'uom' => 'قطعة',
+            'issued_qty' => 0,
+            'returned_qty' => 0,
+        ], $user, 'technical_bom_items');
+
+        $this->assertSame('1001', $filtered['stock_item_code']);
+        $this->assertSame('صنف BOM', $filtered['name']);
+        $this->assertArrayNotHasKey('qty', $filtered);
+        $this->assertArrayNotHasKey('brand', $filtered);
+    }
+
     public function test_catalog_list_settings_page_loads_for_admin(): void
     {
         $admin = $this->userWithRole('admin');

@@ -15,11 +15,12 @@ use App\Models\PricingRequestItem;
 use App\Models\Quote;
 use App\Models\StockItem;
 use App\Models\TechOrderSpecItem;
+use App\Models\User;
 use App\Services\BomService;
+use App\Services\CatalogListVisibilityService;
 use App\Services\PathwayTransitionMessageService;
 use App\Support\BomItemAggregator;
 use App\Support\IssueVoucherPresenter;
-use App\Support\StockItemUomLookup;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -237,14 +238,37 @@ class BomController extends Controller
             'items_count' => $bom->relationLoaded('items')
                 ? BomItemAggregator::uniqueCodeCount($bom->items)
                 : 0,
+            'items_preview' => $this->bomItemsPreview($bom),
+            'items_embedded' => $this->bomItemsForUser($bom, auth()->user()),
             'case' => $bom->relationLoaded('caseRecord') && $bom->caseRecord
                 ? $this->formatCase($bom->caseRecord)
                 : null,
         ];
     }
 
+    /** @return list<string> */
+    private function bomItemsPreview(Bom $bom): array
+    {
+        $items = $this->bomItemsForUser($bom, auth()->user());
+        if ($items === []) {
+            return [];
+        }
+
+        return collect($items)->take(3)->map(function (array $item) {
+            $code = $item['stock_item_code'] ?? $item['code'] ?? '—';
+            $name = $item['name'] ?? $code;
+
+            return $code.' — '.$name;
+        })->values()->all();
+    }
+
     private function formatDetail(Bom $bom): array
     {
+        $user = auth()->user();
+        $visibility = app(CatalogListVisibilityService::class);
+        $listEnabled = $user instanceof User
+            && $visibility->isListEnabledForUser($user, 'technical_bom_items');
+
         $barcodes = $bom->relationLoaded('items') && $bom->items->isNotEmpty()
             ? StockItem::mapByOperationalCodes(
                 $bom->items->pluck('stock_item_code')->all(),
@@ -252,21 +276,43 @@ class BomController extends Controller
             )
             : [];
 
-        $uomMap = $bom->relationLoaded('items') && $bom->items->isNotEmpty()
-            ? StockItemUomLookup::forCodes($bom->items->pluck('stock_item_code')->all())
-            : [];
+        $items = [];
+        if ($listEnabled && $bom->relationLoaded('items')) {
+            $items = collect(BomItemAggregator::enrichWithStockMeta(BomItemAggregator::byStockCode($bom->items)))
+                ->map(function (array $item) use ($barcodes, $user, $visibility) {
+                    $row = $item + [
+                        'expected_barcode' => $barcodes[$item['stock_item_code']] ?? null,
+                    ];
+
+                    return $visibility->filterItemFields($row, $user, 'technical_bom_items');
+                })
+                ->filter(fn (array $row) => $row !== [])
+                ->values()
+                ->all();
+        }
 
         return $this->formatSummary($bom) + [
-            'items' => $bom->relationLoaded('items')
-                ? collect(BomItemAggregator::byStockCode($bom->items))
-                    ->map(function (array $item) use ($barcodes, $uomMap) {
-                        return $item + [
-                            'expected_barcode' => $barcodes[$item['stock_item_code']] ?? null,
-                            'uom' => $uomMap[$item['stock_item_code']] ?? 'قطعة',
-                        ];
-                    })
-                    ->values()
-                : [],
+            'items' => $items,
+            'items_list_enabled' => $listEnabled,
         ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function bomItemsForUser(Bom $bom, ?User $user): array
+    {
+        if ($user === null || ! $bom->relationLoaded('items') || $bom->items->isEmpty()) {
+            return [];
+        }
+
+        $visibility = app(CatalogListVisibilityService::class);
+        if (! $visibility->isListEnabledForUser($user, 'technical_bom_items')) {
+            return [];
+        }
+
+        return collect(BomItemAggregator::enrichWithStockMeta(BomItemAggregator::byStockCode($bom->items)))
+            ->map(fn (array $item) => $visibility->filterItemFields($item, $user, 'technical_bom_items'))
+            ->filter(fn (array $row) => $row !== [])
+            ->values()
+            ->all();
     }
 }

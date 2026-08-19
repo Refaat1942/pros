@@ -887,10 +887,13 @@ class DashboardPageDataService
 
     private function technicalBom(): array
     {
+        $user = auth()->user();
+        $visibility = app(CatalogListVisibilityService::class);
+
         $boms = Bom::query()
             ->with([
                 'caseRecord:id,case_no,work_order_no,patient_type,manufacturing_stage',
-                'items:id,bom_id,stock_item_code,name,qty,issued_qty',
+                'items:id,bom_id,stock_item_code,name,qty,issued_qty,returned_qty,unit_cost',
             ])
             ->whereHas('caseRecord', fn ($q) => $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING))
             ->orderByDesc('created_at')
@@ -909,6 +912,11 @@ class DashboardPageDataService
                 ['icon' => StockWarehouseType::Delivery->icon(), 'label' => StockWarehouseType::Delivery->label(), 'value' => (string) $finCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📋', 'label' => 'إجمالي القوائم', 'value' => (string) $boms->count(), 'bg' => 'rgba(124,58,237,0.1)'],
             ],
+            'bom_list_columns' => $visibility->tableOrderForUser($user, 'technical_bom_items'),
+            'bom_list_column_labels' => $visibility->columnDefinitions('technical_bom_items'),
+            'bom_list_enabled' => $user
+                ? $visibility->isListEnabledForUser($user, 'technical_bom_items')
+                : true,
         ];
     }
 
