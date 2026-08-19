@@ -17,6 +17,10 @@
   function fillTechnicians(selected) {
     var sel = document.getElementById('workshopSectionTechnicians');
     if (!sel) return;
+    if (!technicians.length) {
+      sel.innerHTML = '<option value="" disabled selected>لا يوجد فنيون — أضف موظفين بدور «قسم الإنتاج» من صفحة الموظفين</option>';
+      return;
+    }
     sel.innerHTML = technicians.map(function (t) {
       var on = (selected || []).indexOf(t.id) !== -1 ? ' selected' : '';
       return '<option value="' + t.id + '"' + on + '>' + esc(t.name) + '</option>';

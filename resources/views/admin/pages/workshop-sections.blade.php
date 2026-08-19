@@ -1,3 +1,16 @@
+@if (empty($workshop_technicians ?? []))
+    <div class="panel" style="margin-bottom:16px;border:1px solid #fdba74;background:#fff7ed;">
+        <div class="panel-body" style="padding:16px 20px;font-size:13px;line-height:1.7;color:#9a3412;">
+            <strong>⚠️ لا يوجد فنيون إنتاج مسجّلون بعد.</strong>
+            <p style="margin:8px 0 0;">
+                أضف الموظفين أولاً من
+                <a href="{{ route('admin.employees') }}" style="color:#c2410c;font-weight:700;text-decoration:underline;">الإدارة → الموظفون</a>
+                واختر لهم دور <strong>«قسم الإنتاج»</strong>، ثم ارجع هنا لربطهم بالأقسام من قائمة «الفنيون».
+            </p>
+        </div>
+    </div>
+@endif
+
 <div class="panel">
     <div class="panel-header">
         <h3>🏭 أقسام قسم الإنتاج</h3>
@@ -48,7 +61,12 @@
             <div class="form-group" style="margin-bottom:14px;">
                 <label for="workshopSectionTechnicians">الفنيون</label>
                 <select id="workshopSectionTechnicians" class="form-control" multiple size="5"></select>
-                <small style="display:block;margin-top:6px;color:var(--text-muted);font-size:12px;">اضغط Ctrl (أو Cmd) لاختيار أكثر من فني</small>
+                <small style="display:block;margin-top:6px;color:var(--text-muted);font-size:12px;">
+                    اضغط Ctrl (أو Cmd) لاختيار أكثر من فني.
+                    @if (empty($workshop_technicians ?? []))
+                        القائمة فارغة — <a href="{{ route('admin.employees') }}">أضف موظفاً بدور قسم الإنتاج</a> أولاً.
+                    @endif
+                </small>
             </div>
             <label class="form-check-row" for="workshopSectionActive">
                 <input type="checkbox" id="workshopSectionActive" checked>

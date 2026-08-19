@@ -110,7 +110,7 @@
             </div>
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">
-                🏢 جهة التعاقد
+                🏢 جهة التعاقد <span style="color:#dc2626">*</span>
               </label>
               <input type="text" id="ocrConfirmCompany"
                      style="width:100%;padding:10px 12px;border:2px solid #10b981;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box;"

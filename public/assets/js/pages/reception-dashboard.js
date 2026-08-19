@@ -1998,6 +1998,35 @@
     var _ocrStoredPath   = null;
     var _ocrLetterDate   = null;
 
+    function ocrApiErrorMessage(err) {
+      if (!err) return 'تعذّر إتمام الاعتماد المالي.';
+      if (typeof err.message === 'string' && err.message.trim()) return err.message.trim();
+      if (err.errors && typeof err.errors === 'object') {
+        var keys = Object.keys(err.errors);
+        for (var i = 0; i < keys.length; i++) {
+          var msgs = err.errors[keys[i]];
+          if (Array.isArray(msgs) && msgs[0]) return String(msgs[0]);
+        }
+      }
+      return 'تعذّر إتمام الاعتماد المالي.';
+    }
+
+    function ocrShowError(msg) {
+      var errEl = document.getElementById('ocrError');
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+        if (errEl.scrollIntoView) errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      if (window.DashboardToast) {
+        window.DashboardToast.show(msg, { isError: true });
+      } else if (typeof showToast === 'function') {
+        showToast('⚠️ ' + msg);
+      } else {
+        alert(msg);
+      }
+    }
+
     function ocrShowStep(step) {
       ['ocrStep1','ocrStep2','ocrStep3','ocrStep4'].forEach(function(id) {
         var el = document.getElementById(id);
@@ -2154,7 +2183,10 @@
     }
 
     function confirmOcrApproval() {
-      if (!_ocrCurrentQuote) return;
+      if (!_ocrCurrentQuote) {
+        ocrShowError('لم يُحدَّد عرض السعر — أغلق النافذة وافتح «رفع خطاب الموافقة» من جدول العروض.');
+        return;
+      }
 
       var nameEl    = document.getElementById('ocrConfirmName');
       var amountEl  = document.getElementById('ocrConfirmAmount');
@@ -2168,8 +2200,13 @@
       var company = companyEl ? companyEl.value.trim() : '';
       var ref     = refEl     ? refEl.value.trim()     : '';
 
-      if (!name || !amount || isNaN(parseFloat(amount))) {
-        if (errEl) { errEl.textContent = 'يرجى التحقق من اسم المريض والمبلغ المالي.'; errEl.style.display = 'block'; }
+      if (!name || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        ocrShowError('يرجى التحقق من اسم المريض والمبلغ المعتمد (رقم أكبر من صفر).');
+        return;
+      }
+
+      if (!company || company === '—' || company.toLowerCase() === 'null') {
+        ocrShowError('يرجى إدخال جهة التعاقد — الحقل مطلوب لاعتماد المبلغ.');
         return;
       }
 
@@ -2199,7 +2236,18 @@
         })
       })
         .then(function (r) {
-          return r.ok ? r.json() : r.json().then(function (j) { throw j; });
+          return r.text().then(function (text) {
+            var data = null;
+            try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+            if (r.ok) {
+              if (!data) throw { message: 'استجابة غير متوقعة من الخادم.' };
+              return data;
+            }
+            if (data) throw data;
+            if (r.status === 419) throw { message: 'انتهت الجلسة — حدّث الصفحة وسجّل الدخول مجدداً.' };
+            if (r.status === 403) throw { message: 'ليس لديك صلاحية تنفيذ هذا الاعتماد.' };
+            throw { message: 'تعذّر إتمام الاعتماد المالي (خطأ ' + r.status + ').' };
+          });
         })
         .then(function (res) {
           var woText    = document.getElementById('ocrSuccessWO');
@@ -2220,8 +2268,7 @@
           ocrShowStep('ocrStep4');
         })
         .catch(function (err) {
-          var msg = (err && err.message) ? err.message : 'تعذّر إتمام الاعتماد المالي.';
-          if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+          ocrShowError(ocrApiErrorMessage(err));
           if (btn) { btn.disabled = false; btn.textContent = '✅ تأكيد واعتماد مالي — والتحويل للمخزن'; }
         });
     }
