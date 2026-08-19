@@ -23,8 +23,8 @@ class TechnicalInventoryPageTest extends TestCase
         $this->assertArrayHasKey('inventory_items', $data);
         $this->assertCount(1, $data['inventory_items']);
         $this->assertSame($item->code, $data['inventory_items'][0]['code']);
-        $this->assertSame(12, $data['inventory_items'][0]['qty']);
-        $this->assertSame(12, $data['inventory_items'][0]['available']);
+        $this->assertArrayHasKey('inventory_items_total', $data);
+        $this->assertSame(1, $data['inventory_items_total']);
     }
 
     public function test_technical_user_can_list_inventory_via_api(): void

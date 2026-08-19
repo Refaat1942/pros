@@ -14,7 +14,7 @@
         <div class="panel-header">
           <h3>📦 توفر المخزون — الكميات المتاحة</h3>
           <div style="display:flex;align-items:center;gap:10px;">
-            <span class="badge" id="inventoryBadge">0 صنف</span>
+            <span class="badge" id="inventoryBadge">{{ ($inventory_items_total ?? count($inventory_items ?? [])) }} صنف</span>
           </div>
         </div>
 

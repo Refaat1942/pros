@@ -200,7 +200,7 @@ return [
             'expiry' => ['expiry'],
         ],
         'technical_inventory' => [
-            'code' => ['code'],
+            'code' => ['code', 'catalog_number', 'internal_code'],
             'name' => ['name'],
             'brand' => ['brand'],
             'uom' => ['uom'],
@@ -211,7 +211,7 @@ return [
             'category' => ['category'],
         ],
         'technical_bom_items' => [
-            'code' => ['stock_item_code', 'code'],
+            'code' => ['stock_item_code', 'code', 'catalog_number'],
             'name' => ['name'],
             'brand' => ['brand'],
             'qty' => ['qty'],

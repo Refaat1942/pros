@@ -278,27 +278,22 @@ class DashboardPageDataService
     private function adminInventoryOverview(): array
     {
         $priceService = app(StockPriceService::class);
+        $catalogService = app(StockCatalogService::class);
 
-        $items = StockItem::query()
-            ->with([
-                'category:id,name',
-                'prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id'),
-                'attributeValues.field',
-            ])
-            ->orderBy('code')
-            ->limit((int) config('dashboards.table_fetch_limit', 1000))
-            ->get();
+        $items = $catalogService->allItemsForInventoryOverview();
 
         $totalValue = $items->sum(
             fn (StockItem $i) => max(0, (int) $i->qty) * $priceService->wacUnitPrice($i->code)
         );
 
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
+        $totalCount = $catalogService->countAll();
 
         return [
             'inventory_items' => $items,
+            'inventory_items_total' => $totalCount,
             'inventory_overview_stats' => [
-                ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $items->count(), 'bg' => 'rgba(37,99,235,0.1)'],
+                ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $totalCount, 'bg' => 'rgba(37,99,235,0.1)'],
                 ['icon' => '🔻', 'label' => 'أصناف منخفضة', 'value' => (string) $items->where('status', StockItem::STATUS_LOW)->count(), 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
                 ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
                 ['icon' => '💰', 'label' => 'قيمة المخزون', 'value' => number_format($totalValue, 2), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
@@ -818,45 +813,19 @@ class DashboardPageDataService
 
     private function technicalInventory(): array
     {
-        $items = StockItem::query()
-            ->with('category:id,name')
-            ->orderBy('code')
-            ->limit((int) config('dashboards.table_fetch_limit', 1000))
-            ->get();
+        $catalogService = app(StockCatalogService::class);
+        $visibility = app(CatalogListVisibilityService::class);
+        $user = auth()->user();
+        $items = $catalogService->allItemsForUnifiedLists();
+        $totalCount = $catalogService->countAll();
 
         $okCount = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_OK)->count();
         $lowCount = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_LOW)->count();
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
-        $totalCount = $items->count();
-
-        $visibility = app(CatalogListVisibilityService::class);
-        $user = auth()->user();
 
         return [
-            'inventory_items' => $items->map(function (StockItem $item) use ($visibility, $user) {
-                $row = [
-                    'id' => $item->id,
-                    'code' => $item->code,
-                    'name' => $item->name,
-                    'brand' => $item->brand ?? '',
-                    'spec' => $item->spec ?? '',
-                    'uom' => $item->uom ?? '',
-                    'category' => $item->category?->name ?? '',
-                    'category_id' => $item->category_id,
-                    'qty' => (int) $item->qty,
-                    'reserved' => (int) $item->reserved,
-                    'min_qty' => (int) ($item->min_qty ?? 0),
-                    'available' => $item->availableQty(),
-                    'backorder' => $item->backorderQty(),
-                    'status' => $item->isBackorder() ? 'backorder' : $item->status,
-                    'barcode' => $item->barcode,
-                    'last_moved_at' => $item->last_moved_at?->format('d/m/Y'),
-                ];
-
-                return $user
-                    ? $visibility->filterItemFields($row, $user, 'technical_inventory')
-                    : $row;
-            })->values()->all(),
+            'inventory_items' => $catalogService->listForTechnicalInventory($user),
+            'inventory_items_total' => $totalCount,
             'inventory_list_columns' => $visibility->tableOrderForUser($user, 'technical_inventory'),
             'inventory_list_column_labels' => $visibility->columnDefinitions('technical_inventory'),
             'inventory_list_enabled' => $user

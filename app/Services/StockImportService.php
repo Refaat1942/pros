@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\StockItem;
 use App\Support\CatalogColumns;
+use App\Support\StockCatalogPicker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -138,6 +139,8 @@ class StockImportService
             tag: 'admin',
             after: ['created' => $created, 'updated' => $updated, 'skipped' => $skipped],
         );
+
+        StockCatalogPicker::forgetCachedRows();
 
         return compact('created', 'updated', 'skipped', 'errors');
     }

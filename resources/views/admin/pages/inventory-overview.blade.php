@@ -43,7 +43,7 @@
     <div class="data-toolbar">
         <input type="text" id="invOverviewSearch" placeholder="🔍 بحث بالكود أو الاسم..."
                onkeyup="filterInventoryOverview(this.value)">
-        <span class="toolbar-count">{{ $items->count() }} صنف</span>
+        <span class="toolbar-count">{{ $inventory_items_total ?? $items->count() }} صنف</span>
     </div>
 
     <div class="panel-body" style="overflow-x:auto;">

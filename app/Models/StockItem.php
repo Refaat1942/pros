@@ -266,19 +266,31 @@ class StockItem extends Model
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
+        if (Schema::hasColumn('stock_items', 'brand')) {
+            $columns[] = 'brand';
+        }
 
-        return static::query()
-            ->orderBy('name')
+        $query = static::query()->orderBy('name');
+        $limit = (int) config('catalog.list_limit', 10000);
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query
             ->get($columns)
             ->map(function (self $item) {
                 $pickerCode = $item->pickerCode();
+                $catalogCode = trim((string) ($item->catalog_number ?? '')) !== ''
+                    ? (string) $item->catalog_number
+                    : $item->code;
 
                 return [
                     'code' => $pickerCode,
-                    'catalog_code' => $item->code,
+                    'catalog_code' => $catalogCode,
                     'catalog_number' => $item->catalog_number ?? '',
                     'alt_codes' => $item->operationalCode() ?? '',
                     'name' => $item->name,
+                    'brand' => trim((string) ($item->brand ?? '')),
                     'spec' => $item->spec,
                     'uom' => $item->uom ?? 'قطعة',
                     'qty' => (int) $item->qty,

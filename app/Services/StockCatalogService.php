@@ -8,7 +8,9 @@ use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
 use App\Models\Supplier;
+use App\Models\User;
 use App\Support\StockCatalogPicker;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +20,108 @@ use Illuminate\Support\Facades\DB;
 class StockCatalogService
 {
     public function __construct(private readonly StockCategorySchemaService $categorySchema) {}
+
+    /** حد موحّد لقوائم الأصناف في كل اللوحات (رفع السوبر أدمن → نفس القائمة everywhere). */
+    public function catalogListLimit(): int
+    {
+        return (int) config('catalog.list_limit', 10000);
+    }
+
+    /** @return Builder<StockItem> */
+    public function unifiedListQuery(): Builder
+    {
+        return StockItem::query()
+            ->with('category:id,name')
+            ->orderBy('code');
+    }
+
+    /** @return Collection<int, StockItem> */
+    public function allItemsForInventoryOverview(): Collection
+    {
+        $query = StockItem::query()
+            ->with([
+                'category:id,name',
+                'prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id'),
+                'attributeValues.field',
+            ])
+            ->orderBy('code');
+
+        $limit = $this->catalogListLimit();
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
+    }
+
+    /** @return Collection<int, StockItem> */
+    public function allItemsForUnifiedLists(): Collection
+    {
+        $query = $this->unifiedListQuery();
+        $limit = $this->catalogListLimit();
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
+    }
+
+    public function displayCatalogCode(StockItem $item): string
+    {
+        $catalog = trim((string) ($item->catalog_number ?? ''));
+
+        return $catalog !== '' ? $catalog : $item->code;
+    }
+
+    /** @return array<string, mixed> */
+    public function formatOperationalListRow(StockItem $item): array
+    {
+        return [
+            'id' => $item->id,
+            'code' => $this->displayCatalogCode($item),
+            'catalog_number' => $item->catalog_number ?? $item->code,
+            'internal_code' => $item->code,
+            'operational_code' => $item->operationalCode() ?? '',
+            'picker_code' => $item->pickerCode(),
+            'name' => $item->name,
+            'brand' => $item->brand ?? '',
+            'spec' => $item->spec ?? '',
+            'uom' => $item->uom ?? '',
+            'category' => $item->category?->name ?? '',
+            'category_id' => $item->category_id,
+            'qty' => (int) $item->qty,
+            'reserved' => (int) $item->reserved,
+            'min_qty' => (int) ($item->min_qty ?? 0),
+            'available' => $item->availableQty(),
+            'backorder' => $item->backorderQty(),
+            'status' => $item->isBackorder() ? 'backorder' : $item->status,
+            'barcode' => $item->barcode,
+            'page_number' => $item->page_number ?? '',
+            'alt_codes' => $item->alt_codes ?? '',
+            'last_moved_at' => $item->last_moved_at?->format('d/m/Y'),
+        ];
+    }
+
+    /**
+     * قائمة المخزن/الإنتاج — نفس أصناف كتالوج السوبر أدمن بدون أسعار.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listForTechnicalInventory(?User $user = null, string $profile = 'technical_inventory'): array
+    {
+        $visibility = app(CatalogListVisibilityService::class);
+
+        return $this->allItemsForUnifiedLists()
+            ->map(function (StockItem $item) use ($visibility, $user, $profile) {
+                $row = $this->formatOperationalListRow($item);
+
+                return $user instanceof User
+                    ? $visibility->filterItemFields($row, $user, $profile)
+                    : $row;
+            })
+            ->values()
+            ->all();
+    }
 
     public function listForDashboard(?string $from = null, ?string $to = null): Collection
     {

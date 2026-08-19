@@ -9,6 +9,7 @@ use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Services\CatalogListVisibilityService;
+use App\Services\StockCatalogService;
 use App\Services\StockReceiveService;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
@@ -30,34 +31,15 @@ class StockReceiveController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $items = $this->fetchForDashboard(
-            StockItem::query()
-                ->with('category:id,name')
-                ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
-                ->when($request->category, fn ($q, $c) => $q->whereHas('category', fn ($q) => $q->where('name', $c)))
-                ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
-                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-                ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('brand', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%")
-                        ->orWhere('barcode', 'like', "%{$search}%");
-                }))
-                ->orderBy('code')
-        );
-
+        $catalogService = app(StockCatalogService::class);
         $user = $request->user();
         $visibility = app(CatalogListVisibilityService::class);
 
-        return response()->json([
-            'data' => collect($items)->map(function ($item) use ($user, $visibility) {
-                $formatted = $this->formatItem($item);
+        $items = $catalogService->allItemsForUnifiedLists();
 
-                return $user
-                    ? $visibility->filterItemFields($formatted, $user, 'technical_inventory')
-                    : $formatted;
-            })->values(),
-            'total' => $items->count(),
+        return response()->json([
+            'data' => collect($catalogService->listForTechnicalInventory($user))->values(),
+            'total' => $catalogService->countAll(),
             'columns' => $visibility->tableOrderForUser($user, 'technical_inventory'),
         ]);
     }
@@ -115,21 +97,23 @@ class StockReceiveController extends Controller
 
     private function formatItem(StockItem $item): array
     {
-        return $item->only([
-            'id',
-            'code',
-            'name',
-            'brand',
-            'spec',
-            'category_id',
-            'store_class',
-            'uom',
-            'barcode',
-            'qty',
-            'reserved',
-            'min_qty',
-            'last_moved_at',
-        ]) + [
+        $catalogService = app(StockCatalogService::class);
+
+        return [
+            'id' => $item->id,
+            'code' => $catalogService->displayCatalogCode($item),
+            'internal_code' => $item->code,
+            'name' => $item->name,
+            'brand' => $item->brand,
+            'spec' => $item->spec,
+            'category_id' => $item->category_id,
+            'store_class' => $item->store_class,
+            'uom' => $item->uom,
+            'barcode' => $item->barcode,
+            'qty' => $item->qty,
+            'reserved' => $item->reserved,
+            'min_qty' => $item->min_qty,
+            'last_moved_at' => $item->last_moved_at,
             'category' => $item->category?->name,
             'available' => $item->availableQty(),
             'backorder' => $item->backorderQty(),
