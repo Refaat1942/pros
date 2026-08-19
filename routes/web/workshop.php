@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Bom\ReturnNoteController;
 use App\Http\Controllers\Admin\WorkshopSectionController;
+use App\Http\Controllers\Admin\WorkshopTechnicianController;
 use App\Http\Controllers\Dashboard\WorkshopDashboardController;
 use App\Http\Controllers\Manufacturing\WorkshopQueueController;
 use App\Http\Controllers\Stock\OperationalCatalogController;
@@ -38,6 +39,15 @@ Route::prefix('workshop')
                 ->name('sections.update');
             Route::delete('sections/{workshopSection}', [WorkshopSectionController::class, 'destroy'])
                 ->name('sections.destroy');
+
+            Route::get('technicians/list', [WorkshopTechnicianController::class, 'index'])
+                ->name('technicians.list');
+            Route::post('technicians', [WorkshopTechnicianController::class, 'store'])
+                ->name('technicians.store');
+            Route::put('technicians/{user}', [WorkshopTechnicianController::class, 'update'])
+                ->name('technicians.update');
+            Route::delete('technicians/{user}', [WorkshopTechnicianController::class, 'destroy'])
+                ->name('technicians.destroy');
         });
 
         Route::middleware('dashboard.page:workshop,workshop')->group(function () {
