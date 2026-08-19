@@ -14,6 +14,7 @@ use App\Services\CostingService;
 use App\Services\StockDispenseRequestService;
 use App\Services\WorkOrderService;
 use App\Services\WorkshopSectionService;
+use App\Services\WorkshopTechnicianService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -38,6 +39,61 @@ class WorkshopInventoryPathwaysTest extends TestCase
             ->getJson('/admin/workshop-sections/list')
             ->assertOk()
             ->assertJsonFragment(['name' => 'قسم الصب']);
+    }
+
+    public function test_workshop_technician_crud_via_api(): void
+    {
+        $admin = $this->userWithRole(Role::SLUG_ADMIN);
+        $this->userWithRole(Role::SLUG_WORKSHOP);
+        $section = WorkshopSection::create(['name' => 'تجميع', 'code' => 'assembly', 'sort' => 10, 'active' => true]);
+
+        $this->actingAs($admin)
+            ->postJson('/admin/workshop-technicians', [
+                'name' => 'فني تجريبي',
+                'username' => 'tech_test_01',
+                'password' => 'secret123',
+                'status' => User::STATUS_ACTIVE,
+                'section_ids' => [$section->id],
+            ])
+            ->assertCreated()
+            ->assertJsonFragment(['message' => 'تم إضافة الفني.']);
+
+        $tech = User::query()->where('username', 'tech_test_01')->first();
+        $this->assertNotNull($tech);
+        $this->assertTrue($tech->workshopSections()->whereKey($section->id)->exists());
+
+        $this->actingAs($admin)
+            ->putJson("/admin/workshop-technicians/{$tech->id}", [
+                'name' => 'فني معدّل',
+                'section_ids' => [],
+            ])
+            ->assertOk()
+            ->assertJsonFragment(['message' => 'تم تحديث بيانات الفني.']);
+
+        $tech->refresh();
+        $this->assertSame('فني معدّل', $tech->name);
+        $this->assertFalse($tech->workshopSections()->exists());
+
+        $this->actingAs($admin)
+            ->deleteJson("/admin/workshop-technicians/{$tech->id}")
+            ->assertOk()
+            ->assertJsonFragment(['message' => 'تم حذف الفني.']);
+
+        $this->assertDatabaseMissing('users', ['id' => $tech->id]);
+    }
+
+    public function test_workshop_technician_delete_blocked_when_assigned_to_case(): void
+    {
+        $admin = $this->userWithRole(Role::SLUG_ADMIN);
+        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
+        $case->update(['assigned_technician_id' => $tech->id]);
+
+        $this->actingAs($admin)
+            ->deleteJson("/admin/workshop-technicians/{$tech->id}")
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'لا يمكن حذف الفني — مرتبط بحالات إنتاج.']);
     }
 
     public function test_operations_approve_assigns_workshop_section_and_technician(): void

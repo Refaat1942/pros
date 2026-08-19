@@ -54,6 +54,7 @@ use App\Services\StockPriceService;
 use App\Services\SupplierService;
 use App\Services\WorkshopAnalyticsService;
 use App\Services\WorkshopSectionService;
+use App\Services\WorkshopTechnicianService;
 use App\Services\WorkshopTrackingService;
 use App\Support\ClinicTime;
 use App\Support\ManufacturingDeskCaseFormatter;
@@ -667,11 +668,9 @@ class DashboardPageDataService
 
     private function adminWorkshopSections(): array
     {
-        $service = app(WorkshopSectionService::class);
-
         return [
-            'workshop_sections' => $service->listForAdmin(),
-            'workshop_technicians' => $service->workshopTechnicians(),
+            'workshop_sections' => app(WorkshopSectionService::class)->listForAdmin(),
+            'workshop_technicians' => app(WorkshopTechnicianService::class)->listForAdmin(),
         ];
     }
 

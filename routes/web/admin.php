@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\WorkflowSettingsController;
 use App\Http\Controllers\Admin\WorkshopSectionController;
+use App\Http\Controllers\Admin\WorkshopTechnicianController;
 use App\Http\Controllers\Admin\WorkshopTrackingController;
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
@@ -303,6 +304,22 @@ Route::prefix('admin')
             Route::delete('workshop-sections/{workshopSection}', [WorkshopSectionController::class, 'destroy'])
                 ->middleware('can:manage-workshop-sections')
                 ->name('workshop-sections.destroy');
+
+            Route::get('workshop-technicians/list', [WorkshopTechnicianController::class, 'index'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-technicians.list');
+
+            Route::post('workshop-technicians', [WorkshopTechnicianController::class, 'store'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-technicians.store');
+
+            Route::put('workshop-technicians/{user}', [WorkshopTechnicianController::class, 'update'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-technicians.update');
+
+            Route::delete('workshop-technicians/{user}', [WorkshopTechnicianController::class, 'destroy'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-technicians.destroy');
         });
 
         Route::get('workshop-sections/options', [WorkshopSectionController::class, 'options'])
