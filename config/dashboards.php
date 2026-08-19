@@ -261,7 +261,7 @@ return [
             [
                 'label' => 'المخزون والتوريد',
                 'icon' => '📦',
-                'pages' => ['stock-categories', 'catalog', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns'],
+                'pages' => ['stock-categories', 'catalog', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings'],
             ],
             [
                 'label' => 'التعاقد والمالية',
@@ -271,7 +271,7 @@ return [
             [
                 'label' => 'الرقابة والنظام',
                 'icon' => '⚙️',
-                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'branding-settings', 'costing-settings', 'pathway-settings', 'catalog-list-settings', 'notification-settings'],
+                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'branding-settings', 'costing-settings', 'pathway-settings', 'notification-settings'],
             ],
         ],
         'pages' => [

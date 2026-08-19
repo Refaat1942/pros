@@ -3,15 +3,29 @@
 /**
  * قوائم الأصناف حسب اللوحة — الأعمدة المتاحة وافتراضيات كل دور.
  *
- * يُتحكَّم في الإظهار الفعلي من لوحة «عرض قوائم الأصناف» (CatalogListVisibilityService).
+ * يُتحكَّم في الإظهار الفعلي من لوحة «صلاحيات قوائم الأصناف» (CatalogListVisibilityService).
  */
 return [
-    /** @var array<string, array{label_ar: string, dashboard: string, page: string, default_roles: list<string>, default_columns: list<string>}> */
+    /**
+     * أقسام الإدارة — مفتاح رئيسي يفعّل/يوقف كل قوائم القسم لكل دور.
+     *
+     * @var array<string, array{label_ar: string, default_roles: list<string>, profiles: list<string>}>
+     */
+    'sections' => [
+        'inventory_supply' => [
+            'label_ar' => 'المخزون والتوريد — قوائم الأصناف',
+            'default_roles' => ['super_admin', 'admin'],
+            'profiles' => ['admin_catalog', 'inventory_overview', 'stock_kits_picker'],
+        ],
+    ],
+
+    /** @var array<string, array{label_ar: string, dashboard: string, page: string, section?: string, default_roles: list<string>, default_columns: list<string>}> */
     'profiles' => [
         'admin_catalog' => [
-            'label_ar' => 'جدول الأصناف والأسعار — الإدارة',
+            'label_ar' => 'جدول الأصناف والأسعار',
             'dashboard' => 'admin',
             'page' => 'catalog',
+            'section' => 'inventory_supply',
             'default_roles' => ['super_admin', 'admin'],
             'default_columns' => [
                 'code', 'page_number', 'name', 'brand', 'alt_codes', 'uom',
@@ -19,14 +33,23 @@ return [
             ],
         ],
         'inventory_overview' => [
-            'label_ar' => 'متابعة حركة الأصناف — الإدارة',
+            'label_ar' => 'متابعة حركة الأصناف',
             'dashboard' => 'admin',
             'page' => 'inventory-overview',
+            'section' => 'inventory_supply',
             'default_roles' => ['super_admin', 'admin'],
             'default_columns' => [
                 'code', 'name', 'brand', 'category', 'qty', 'reserved', 'available',
                 'backorder', 'price', 'wac', 'expiry', 'price_history', 'print',
             ],
+        ],
+        'stock_kits_picker' => [
+            'label_ar' => 'بحث الأصناف — الأطقم الجاهزة',
+            'dashboard' => 'admin',
+            'page' => 'stock-kits',
+            'section' => 'inventory_supply',
+            'default_roles' => ['super_admin', 'admin'],
+            'default_columns' => ['code', 'name', 'brand', 'page_number', 'alt_codes', 'uom'],
         ],
         'technical_inventory' => [
             'label_ar' => 'جدول توفر المخزن — المخزن',
@@ -34,6 +57,13 @@ return [
             'page' => 'inventory',
             'default_roles' => ['technical'],
             'default_columns' => ['code', 'name', 'brand', 'uom', 'available', 'status'],
+        ],
+        'technical_bom_items' => [
+            'label_ar' => 'بنود قائمة الصرف — قسم الإنتاج',
+            'dashboard' => 'technical',
+            'page' => 'bom',
+            'default_roles' => ['technical'],
+            'default_columns' => ['code', 'name', 'brand', 'qty', 'uom', 'issued_qty', 'returned_qty'],
         ],
         'spec_picker' => [
             'label_ar' => 'قائمة اختيار الأصناف — التوصيف',
@@ -90,6 +120,16 @@ return [
             'reserved' => ['label' => 'محجوز'],
             'category' => ['label' => 'القسم'],
         ],
+        'technical_bom_items' => [
+            'code' => ['label' => 'الكود'],
+            'name' => ['label' => 'الصنف'],
+            'brand' => ['label' => 'الماركة'],
+            'qty' => ['label' => 'المطلوب'],
+            'uom' => ['label' => 'الوحدة'],
+            'issued_qty' => ['label' => 'المصروف'],
+            'returned_qty' => ['label' => 'المرتجع'],
+            'unit_cost' => ['label' => 'تكلفة الوحدة', 'gate' => 'view-costs'],
+        ],
         'spec_picker' => [
             'code' => ['label' => 'كود الصنف'],
             'name' => ['label' => 'اسم الصنف'],
@@ -112,6 +152,14 @@ return [
             'brand' => ['label' => 'الماركة'],
             'uom' => ['label' => 'الوحدة'],
         ],
+        'stock_kits_picker' => [
+            'code' => ['label' => 'كود الصنف'],
+            'name' => ['label' => 'اسم الصنف'],
+            'brand' => ['label' => 'الماركة'],
+            'page_number' => ['label' => 'رقم الصفحة'],
+            'alt_codes' => ['label' => 'أكواد بديلة'],
+            'uom' => ['label' => 'الوحدة'],
+        ],
     ],
 
     /** أعمدة admin_catalog — بوابات إضافية فوق تعريف catalog.php */
@@ -128,7 +176,9 @@ return [
     'required_columns' => [
         'admin_catalog' => ['code', 'name'],
         'inventory_overview' => ['code', 'name'],
+        'stock_kits_picker' => ['code', 'name'],
         'technical_inventory' => ['code', 'name'],
+        'technical_bom_items' => ['code', 'name'],
         'spec_picker' => ['code', 'name'],
         'adjustments_picker' => ['code', 'name'],
         'doctor_picker' => ['code', 'name'],
@@ -136,6 +186,19 @@ return [
 
     /** @var array<string, array<string, list<string>>> */
     'item_field_map' => [
+        'inventory_overview' => [
+            'code' => ['code'],
+            'name' => ['name'],
+            'brand' => ['brand'],
+            'category' => ['category'],
+            'qty' => ['qty'],
+            'reserved' => ['reserved'],
+            'available' => ['available'],
+            'backorder' => ['backorder'],
+            'price' => ['price'],
+            'wac' => ['wac'],
+            'expiry' => ['expiry'],
+        ],
         'technical_inventory' => [
             'code' => ['code'],
             'name' => ['name'],
@@ -146,6 +209,24 @@ return [
             'qty' => ['qty'],
             'reserved' => ['reserved'],
             'category' => ['category'],
+        ],
+        'technical_bom_items' => [
+            'code' => ['stock_item_code', 'code'],
+            'name' => ['name'],
+            'brand' => ['brand'],
+            'qty' => ['qty'],
+            'uom' => ['uom'],
+            'issued_qty' => ['issued_qty'],
+            'returned_qty' => ['returned_qty'],
+            'unit_cost' => ['unit_cost'],
+        ],
+        'stock_kits_picker' => [
+            'code' => ['code', 'catalog_number'],
+            'name' => ['name'],
+            'brand' => ['brand'],
+            'page_number' => ['page_number'],
+            'alt_codes' => ['alt_codes'],
+            'uom' => ['uom'],
         ],
     ],
 ];

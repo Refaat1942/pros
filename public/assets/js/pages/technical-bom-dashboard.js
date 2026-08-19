@@ -356,27 +356,75 @@
   }
 
   function renderItemsCell(b) {
+    var cfg = bomListConfig();
+    if (!cfg.enabled) {
+      return '<span class="text-xs text-slate-400">غير متاح</span>';
+    }
     var count = b.items_count || 0;
     if (!count) return '<span class="text-xs text-slate-400">—</span>';
-    return '<button type="button" class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50" data-bom-id="' + b.id + '">عرض</button>';
+
+    var previewHtml = '';
+    var preview = b.items_preview || [];
+    if (preview.length) {
+      previewHtml = '<div class="text-xs text-slate-600 text-right space-y-0.5 mb-1.5 max-w-[220px] ml-auto">' +
+        preview.map(function (line) { return '<div class="truncate">' + esc(line) + '</div>'; }).join('') +
+        (count > preview.length ? '<div class="text-slate-400">+' + (count - preview.length) + ' أصناف</div>' : '') +
+        '</div>';
+    }
+
+    return previewHtml +
+      '<button type="button" class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50"' +
+      ' data-bom-id="' + b.id + '">عرض (' + count + ')</button>';
+  }
+
+  function bomListConfig() {
+    return {
+      enabled: window.__BOM_LIST_ENABLED !== false,
+      columns: window.__BOM_LIST_COLUMNS || ['code', 'name', 'qty', 'uom', 'issued_qty', 'returned_qty'],
+      labels: window.__BOM_LIST_COLUMN_LABELS || {},
+    };
+  }
+
+  function bomCellValue(item, col) {
+    if (col === 'code') return item.stock_item_code || item.code || '—';
+    if (col === 'unit_cost' && item.unit_cost != null) {
+      return Number(item.unit_cost).toLocaleString('ar-EG');
+    }
+    var val = item[col];
+    if (val === null || val === undefined || val === '') {
+      if (col === 'uom') return 'قطعة';
+      if (col === 'issued_qty' || col === 'returned_qty' || col === 'qty') return '0';
+      return '—';
+    }
+    return val;
+  }
+
+  function bomCellClass(col) {
+    if (col === 'code') return 'px-3 py-2 font-mono text-xs text-slate-500';
+    if (col === 'name') return 'px-3 py-2 font-semibold text-slate-800';
+    if (col === 'issued_qty') return 'px-3 py-2 text-center font-bold text-emerald-700';
+    if (col === 'returned_qty') return 'px-3 py-2 text-center font-bold text-amber-700';
+    if (col === 'qty' || col === 'unit_cost') return 'px-3 py-2 text-center font-bold';
+    return 'px-3 py-2 text-center text-slate-600';
   }
 
   function renderBomItemsTable(items) {
+    var cfg = bomListConfig();
     var tbody = $('bomItemsBody');
     if (!tbody) return;
+    var cols = cfg.columns;
+    if (!cfg.enabled) {
+      tbody.innerHTML = '<tr><td colspan="' + Math.max(1, cols.length) + '" class="px-3 py-8 text-center text-slate-400">قائمة البنود غير مفعّلة لدورك.</td></tr>';
+      return;
+    }
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-slate-400">لا توجد بنود.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="' + Math.max(1, cols.length) + '" class="px-3 py-8 text-center text-slate-400">لا توجد بنود.</td></tr>';
       return;
     }
     tbody.innerHTML = items.map(function (item) {
-      return '<tr>' +
-        '<td class="px-3 py-2 font-mono text-xs text-slate-500">' + esc(item.stock_item_code) + '</td>' +
-        '<td class="px-3 py-2 font-semibold text-slate-800">' + esc(item.name || item.stock_item_code) + '</td>' +
-        '<td class="px-3 py-2 text-center font-bold">' + esc(item.qty) + '</td>' +
-        '<td class="px-3 py-2 text-center text-slate-600">' + esc(item.uom || 'قطعة') + '</td>' +
-        '<td class="px-3 py-2 text-center font-bold text-emerald-700">' + esc(item.issued_qty != null ? item.issued_qty : 0) + '</td>' +
-        '<td class="px-3 py-2 text-center font-bold text-amber-700">' + esc(item.returned_qty != null ? item.returned_qty : 0) + '</td>' +
-        '</tr>';
+      return '<tr>' + cols.map(function (col) {
+        return '<td class="' + bomCellClass(col) + '">' + esc(bomCellValue(item, col)) + '</td>';
+      }).join('') + '</tr>';
     }).join('');
   }
 
@@ -409,14 +457,12 @@
             ((data.case && data.case.work_order_no) || wo);
         }
         var items = (data.items || []).map(function (it) {
-          return {
-            stock_item_code: it.stock_item_code,
-            name: it.name,
-            qty: it.qty,
-            issued_qty: it.issued_qty,
-            returned_qty: it.returned_qty,
-          };
+          return it;
         });
+        if (data.items_list_enabled === false) {
+          toast('قائمة البنود غير مفعّلة لدورك', true);
+          return;
+        }
         renderBomItemsTable(items);
         modal.classList.remove('hidden');
       })

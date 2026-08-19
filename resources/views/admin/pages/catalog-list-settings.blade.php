@@ -9,7 +9,8 @@
         </div>
 
         <p class="catalog-list-settings-hint">
-            حدّد لكل <strong>دور</strong> أي قوائم أصناف يراها في النظام، وأي أعمدة تظهر في كل قائمة.
+            حدّد لكل <strong>دور</strong> ما إذا كان يرى قوائم <strong>المخزون والتوريد</strong> (مفتاح رئيسي)،
+            ثم فعّل كل قائمة على حدة وأعمدة كل قائمة.
             الأعمدة المرتبطة بصلاحية (مثل السعر أو WAC) تُخفى تلقائياً لو المستخدم لا يملك الصلاحية —
             حتى لو مفعّلة هنا.
         </p>
@@ -47,6 +48,30 @@
         border-bottom: 1px solid var(--border, #e2e8f0);
         font-weight: 800;
         font-size: 15px;
+    }
+    .catalog-list-settings-section {
+        border-top: 1px solid var(--border, #e2e8f0);
+        background: #fafbff;
+    }
+    .catalog-list-settings-section__head {
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        border-bottom: 1px dashed var(--border, #e2e8f0);
+    }
+    .catalog-list-settings-section__title {
+        font-weight: 800;
+        font-size: 14px;
+        flex: 1;
+    }
+    .catalog-list-settings-section__hint {
+        font-size: 11px;
+        color: var(--text-muted, #94a3b8);
+    }
+    .catalog-list-settings-profile.is-section-off {
+        opacity: 0.55;
     }
     .catalog-list-settings-profile {
         padding: 14px 16px;

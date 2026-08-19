@@ -27,6 +27,7 @@ class User extends Authenticatable
         'password',
         'role_id',
         'status',
+        'catalog_list_visibility',
         'last_login_at',
     ];
 
@@ -38,6 +39,7 @@ class User extends Authenticatable
     protected $casts = [
         'last_login_at' => 'datetime',
         'password' => 'hashed',
+        'catalog_list_visibility' => 'array',
     ];
 
     public function role(): BelongsTo

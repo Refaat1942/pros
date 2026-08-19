@@ -37,7 +37,7 @@
 
     @unless ($overviewEnabled)
         <p style="text-align:center;color:var(--text-muted);padding:24px;">
-            قائمة متابعة حركة الأصناف غير مفعّلة لدورك — راجع «عرض قوائم الأصناف» في الإعدادات.
+            قائمة متابعة حركة الأصناف غير مفعّلة لدورك — راجع «عرض قوائم الأصناف» في المخزون والتوريد.
         </p>
     @else
     <div class="data-toolbar">

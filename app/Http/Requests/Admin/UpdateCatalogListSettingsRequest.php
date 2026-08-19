@@ -10,10 +10,22 @@ class UpdateCatalogListSettingsRequest extends BaseRequest
 {
     public function rules(): array
     {
-        $profiles = array_keys(app(CatalogListVisibilityService::class)->profiles());
+        $visibility = app(CatalogListVisibilityService::class);
+        $profiles = array_keys($visibility->profiles());
+        $sections = array_keys($visibility->sections());
         $rules = [
             'roles' => ['required', 'array'],
+            'sections' => ['nullable', 'array'],
         ];
+
+        foreach ($sections as $section) {
+            $rules["sections.{$section}"] = ['array'];
+            $rules["sections.{$section}.roles"] = ['array'];
+            foreach (Role::query()->pluck('slug') as $slug) {
+                $rules["sections.{$section}.roles.{$slug}"] = ['array'];
+                $rules["sections.{$section}.roles.{$slug}.enabled"] = ['nullable', 'boolean'];
+            }
+        }
 
         foreach (Role::query()->pluck('slug') as $slug) {
             $rules["roles.{$slug}"] = ['array'];
