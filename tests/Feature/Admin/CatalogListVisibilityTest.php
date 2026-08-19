@@ -258,12 +258,28 @@ class CatalogListVisibilityTest extends TestCase
             'uom' => 'قطعة',
             'issued_qty' => 0,
             'returned_qty' => 0,
+            'unit_cost' => 500.00,
         ], $user, 'technical_bom_items');
 
         $this->assertSame('1001', $filtered['stock_item_code']);
         $this->assertSame('صنف BOM', $filtered['name']);
         $this->assertArrayNotHasKey('qty', $filtered);
         $this->assertArrayNotHasKey('brand', $filtered);
+        $this->assertArrayNotHasKey('unit_cost', $filtered);
+    }
+
+    public function test_technical_roles_default_columns_exclude_prices(): void
+    {
+        $technical = $this->userWithRole('technical');
+        $visibility = app(CatalogListVisibilityService::class);
+
+        $inventoryColumns = $visibility->visibleColumnsForUser($technical, 'technical_inventory');
+        $bomColumns = $visibility->visibleColumnsForUser($technical, 'technical_bom_items');
+
+        foreach (['price', 'wac', 'unit_cost', 'highest_price'] as $priceField) {
+            $this->assertNotContains($priceField, $inventoryColumns, 'technical_inventory must not expose '.$priceField);
+            $this->assertNotContains($priceField, $bomColumns, 'technical_bom_items must not expose '.$priceField);
+        }
     }
 
     public function test_catalog_list_settings_page_loads_for_admin(): void

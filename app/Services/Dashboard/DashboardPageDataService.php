@@ -829,31 +829,38 @@ class DashboardPageDataService
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
         $totalCount = $items->count();
 
+        $visibility = app(CatalogListVisibilityService::class);
+        $user = auth()->user();
+
         return [
-            'inventory_items' => $items->map(fn (StockItem $item) => [
-                'id' => $item->id,
-                'code' => $item->code,
-                'name' => $item->name,
-                'brand' => $item->brand ?? '',
-                'spec' => $item->spec ?? '',
-                'uom' => $item->uom ?? '',
-                'category' => $item->category?->name ?? '',
-                'category_id' => $item->category_id,
-                'qty' => (int) $item->qty,
-                'reserved' => (int) $item->reserved,
-                'min_qty' => (int) ($item->min_qty ?? 0),
-                'available' => $item->availableQty(),
-                'backorder' => $item->backorderQty(),
-                'status' => $item->isBackorder() ? 'backorder' : $item->status,
-                'barcode' => $item->barcode,
-                'last_moved_at' => $item->last_moved_at?->format('d/m/Y'),
-            ])->values()->all(),
-            'inventory_list_columns' => app(CatalogListVisibilityService::class)
-                ->tableOrderForUser(auth()->user(), 'technical_inventory'),
-            'inventory_list_column_labels' => app(CatalogListVisibilityService::class)
-                ->columnDefinitions('technical_inventory'),
-            'inventory_list_enabled' => auth()->user()
-                ? app(CatalogListVisibilityService::class)->isListEnabledForUser(auth()->user(), 'technical_inventory')
+            'inventory_items' => $items->map(function (StockItem $item) use ($visibility, $user) {
+                $row = [
+                    'id' => $item->id,
+                    'code' => $item->code,
+                    'name' => $item->name,
+                    'brand' => $item->brand ?? '',
+                    'spec' => $item->spec ?? '',
+                    'uom' => $item->uom ?? '',
+                    'category' => $item->category?->name ?? '',
+                    'category_id' => $item->category_id,
+                    'qty' => (int) $item->qty,
+                    'reserved' => (int) $item->reserved,
+                    'min_qty' => (int) ($item->min_qty ?? 0),
+                    'available' => $item->availableQty(),
+                    'backorder' => $item->backorderQty(),
+                    'status' => $item->isBackorder() ? 'backorder' : $item->status,
+                    'barcode' => $item->barcode,
+                    'last_moved_at' => $item->last_moved_at?->format('d/m/Y'),
+                ];
+
+                return $user
+                    ? $visibility->filterItemFields($row, $user, 'technical_inventory')
+                    : $row;
+            })->values()->all(),
+            'inventory_list_columns' => $visibility->tableOrderForUser($user, 'technical_inventory'),
+            'inventory_list_column_labels' => $visibility->columnDefinitions('technical_inventory'),
+            'inventory_list_enabled' => $user
+                ? $visibility->isListEnabledForUser($user, 'technical_inventory')
                 : true,
             'inventory_suppliers' => Supplier::query()
                 ->orderBy('name')
