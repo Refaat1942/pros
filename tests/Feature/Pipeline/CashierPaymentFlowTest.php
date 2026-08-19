@@ -265,6 +265,31 @@ class CashierPaymentFlowTest extends TestCase
         $this->assertCount(2, Payment::where('case_id', $case->id)->get());
     }
 
+    public function test_cashier_accepts_manual_amount_when_quote_total_is_zero(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $case = $this->cashierAwaitingCase();
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        $quote->update(['total' => 0]);
+        $case->update(['quote_total' => 0, 'total_cost' => 0]);
+
+        $cashier = $this->userWithRole('cashier');
+
+        $this->actingAs($cashier)
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', [
+                'method' => 'cash',
+                'amount' => 1500,
+            ])
+            ->assertOk()
+            ->assertJsonPath('fully_paid', true)
+            ->assertJsonPath('payment.amount', 1500);
+
+        $fresh = $case->fresh();
+        $this->assertSame(CaseRecord::STAGE_OPERATIONS, $fresh->stage_key);
+        $this->assertEqualsWithDelta(1500.0, (float) $fresh->paid, 0.01);
+        $this->assertEqualsWithDelta(1500.0, (float) $fresh->quote_total, 0.01);
+    }
+
     /** يقود مريض كاش حتى مرحلة الخزنة (بانتظار الدفع). */
     private function cashierAwaitingCase(): CaseRecord
     {

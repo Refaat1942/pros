@@ -47,28 +47,29 @@ class CashierPaymentService
         $case->loadMissing('patient:id,name');
         $quote = Quote::where('case_id', $case->id)->orderByDesc('id')->first();
 
-        $patientDue = ContractBillingSplit::patientDue(
-            $case,
-            (float) ($quote?->total ?? $case->quote_total ?? 0),
-        );
+        $quoteTotal = round((float) ($quote?->total ?? $case->quote_total ?? 0), 2);
+        $patientDue = ContractBillingSplit::patientDue($case, $quoteTotal);
         $alreadyPaid = (float) $case->paid;
-        $remainingBefore = max(0, $patientDue - $alreadyPaid);
+        $manualDue = $quoteTotal <= 0.009 && $patientDue <= 0.009;
+        $remainingBefore = $manualDue
+            ? 0.0
+            : max(0, round($patientDue - $alreadyPaid, 2));
 
         $amount = isset($data['amount']) && $data['amount'] !== null && $data['amount'] !== ''
             ? round((float) $data['amount'], 2)
-            : $remainingBefore;
+            : ($manualDue ? 0.0 : $remainingBefore);
 
         if ($amount <= 0) {
             abort(422, 'قيمة المبلغ غير صالحة.');
         }
 
-        if ($amount > $remainingBefore + 0.009) {
+        if (! $manualDue && $amount > $remainingBefore + 0.009) {
             abort(422, 'المبلغ يتجاوز المتبقي على المريض ('.number_format($remainingBefore, 2).' ج.م).');
         }
 
         $receivedBy = Auth::user()?->name ?? 'الخزنة';
 
-        return DB::transaction(function () use ($case, $quote, $amount, $method, $data, $receivedBy, $alreadyPaid, $patientDue) {
+        return DB::transaction(function () use ($case, $quote, $amount, $method, $data, $receivedBy, $alreadyPaid, $patientDue, $manualDue) {
             $installmentNo = Payment::query()
                 ->where('case_id', $case->id)
                 ->count() + 1;
@@ -89,10 +90,21 @@ class CashierPaymentService
             ]);
 
             $newPaidTotal = round($alreadyPaid + $amount, 2);
-            $remaining = max(0, round($patientDue - $newPaidTotal, 2));
-            $fullyPaid = $remaining <= 0.009;
+            $effectiveDue = $manualDue ? $newPaidTotal : $patientDue;
+            $remaining = max(0, round($effectiveDue - $newPaidTotal, 2));
+            $fullyPaid = $manualDue || $remaining <= 0.009;
 
-            CaseRecord::where('id', $case->id)->update(['paid' => $newPaidTotal]);
+            $caseUpdates = ['paid' => $newPaidTotal];
+            if ($manualDue) {
+                $caseUpdates['quote_total'] = $newPaidTotal;
+                $caseUpdates['total_cost'] = $newPaidTotal;
+            }
+
+            CaseRecord::where('id', $case->id)->update($caseUpdates);
+
+            if ($manualDue && $quote) {
+                Quote::where('id', $quote->id)->update(['total' => $newPaidTotal]);
+            }
 
             if ($fullyPaid) {
                 if ($quote) {
