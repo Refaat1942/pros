@@ -15,6 +15,7 @@
     var requiredByProfile = {
         admin_catalog: ['code', 'name'],
         inventory_overview: ['code', 'name'],
+        stock_kits_picker: ['code', 'name'],
         technical_inventory: ['code', 'name'],
         spec_picker: ['code', 'name'],
         adjustments_picker: ['code', 'name'],
@@ -27,54 +28,121 @@
         return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
     }
 
+    function renderProfile(role, profile, sectionDisabled) {
+        var enableId = 'cls-en-' + role.slug + '-' + profile.key;
+        var disabledAttr = sectionDisabled ? ' disabled' : '';
+        var html = '<div class="catalog-list-settings-profile' +
+            (sectionDisabled ? ' is-section-off' : '') +
+            '" data-role="' + esc(role.slug) + '" data-profile="' + esc(profile.key) + '">' +
+            '<div class="catalog-list-settings-profile__head">' +
+            '<label class="catalog-list-settings-profile__title" for="' + esc(enableId) + '">' +
+            '<input type="checkbox" id="' + esc(enableId) + '" class="cls-enable"' +
+            (profile.enabled ? ' checked' : '') + disabledAttr + '> ' +
+            esc(profile.label_ar || profile.key) +
+            '</label>' +
+            '<span class="catalog-list-settings-profile__meta">' +
+            esc(profile.dashboard || '') + ' / ' + esc(profile.page || '') +
+            '</span></div>' +
+            '<div class="catalog-list-settings-columns">';
+
+        (profile.columns || []).forEach(function (col) {
+            var colId = 'cls-col-' + role.slug + '-' + profile.key + '-' + col.key;
+            var required = (requiredByProfile[profile.key] || []).indexOf(col.key) !== -1;
+            var gated = !!col.gate;
+            html += '<label class="catalog-list-settings-col' +
+                (required ? ' is-required' : '') +
+                (gated ? ' is-gated' : '') +
+                '" for="' + esc(colId) + '">' +
+                '<input type="checkbox" id="' + esc(colId) + '" class="cls-column"' +
+                ' data-col="' + esc(col.key) + '"' +
+                (col.visible || required ? ' checked' : '') +
+                (required || sectionDisabled ? ' disabled' : '') + '>' +
+                '<span>' + esc(col.label || col.key) +
+                (gated ? ' <small>(صلاحية)</small>' : '') +
+                '</span></label>';
+        });
+
+        html += '</div></div>';
+        return html;
+    }
+
+    function renderSection(role, section) {
+        var sectionId = 'cls-sec-' + role.slug + '-' + section.key;
+        var html = '<div class="catalog-list-settings-section" data-role="' + esc(role.slug) +
+            '" data-section="' + esc(section.key) + '">' +
+            '<div class="catalog-list-settings-section__head">' +
+            '<label class="catalog-list-settings-section__title" for="' + esc(sectionId) + '">' +
+            '<input type="checkbox" id="' + esc(sectionId) + '" class="cls-section-enable"' +
+            (section.enabled ? ' checked' : '') + '> ' +
+            esc(section.label_ar || section.key) +
+            '</label>' +
+            '<span class="catalog-list-settings-section__hint">مفتاح رئيسي — يوقف كل قوائم القسم عند الإغلاق</span>' +
+            '</div><div class="catalog-list-settings-section__profiles">';
+
+        (section.profiles || []).forEach(function (profile) {
+            html += renderProfile(role, profile, !section.enabled);
+        });
+
+        html += '</div></div>';
+        return html;
+    }
+
+    function bindSectionToggles() {
+        wrap.querySelectorAll('.cls-section-enable').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var block = input.closest('.catalog-list-settings-section');
+                if (!block) return;
+                var off = !input.checked;
+                block.querySelectorAll('.catalog-list-settings-profile').forEach(function (profileEl) {
+                    profileEl.classList.toggle('is-section-off', off);
+                    var profileKey = profileEl.getAttribute('data-profile');
+                    var required = requiredByProfile[profileKey] || [];
+                    profileEl.querySelectorAll('.cls-enable').forEach(function (el) {
+                        el.disabled = off;
+                    });
+                    profileEl.querySelectorAll('.cls-column').forEach(function (el) {
+                        var col = el.getAttribute('data-col');
+                        el.disabled = off || required.indexOf(col) !== -1;
+                    });
+                });
+            });
+        });
+    }
+
     function render() {
         var html = '';
         roles.forEach(function (role) {
             html += '<section class="catalog-list-settings-role">' +
                 '<div class="catalog-list-settings-role__head">' + esc(role.label_ar || role.slug) + '</div>';
 
+            (role.sections || []).forEach(function (section) {
+                html += renderSection(role, section);
+            });
+
             (role.profiles || []).forEach(function (profile) {
-                var enableId = 'cls-en-' + role.slug + '-' + profile.key;
-                html += '<div class="catalog-list-settings-profile" data-role="' + esc(role.slug) + '" data-profile="' + esc(profile.key) + '">' +
-                    '<div class="catalog-list-settings-profile__head">' +
-                    '<label class="catalog-list-settings-profile__title" for="' + esc(enableId) + '">' +
-                    '<input type="checkbox" id="' + esc(enableId) + '" class="cls-enable"' +
-                    (profile.enabled ? ' checked' : '') + '> ' +
-                    esc(profile.label_ar || profile.key) +
-                    '</label>' +
-                    '<span class="catalog-list-settings-profile__meta">' +
-                    esc(profile.dashboard || '') + ' / ' + esc(profile.page || '') +
-                    '</span></div>' +
-                    '<div class="catalog-list-settings-columns">';
-
-                (profile.columns || []).forEach(function (col) {
-                    var colId = 'cls-col-' + role.slug + '-' + profile.key + '-' + col.key;
-                    var required = (requiredByProfile[profile.key] || []).indexOf(col.key) !== -1;
-                    var gated = !!col.gate;
-                    html += '<label class="catalog-list-settings-col' +
-                        (required ? ' is-required' : '') +
-                        (gated ? ' is-gated' : '') +
-                        '" for="' + esc(colId) + '">' +
-                        '<input type="checkbox" id="' + esc(colId) + '" class="cls-column"' +
-                        ' data-col="' + esc(col.key) + '"' +
-                        (col.visible || required ? ' checked' : '') +
-                        (required ? ' disabled' : '') + '>' +
-                        '<span>' + esc(col.label || col.key) +
-                        (gated ? ' <small>(صلاحية)</small>' : '') +
-                        '</span></label>';
-                });
-
-                html += '</div></div>';
+                html += renderProfile(role, profile, false);
             });
 
             html += '</section>';
         });
 
         wrap.innerHTML = html || '<p class="text-muted">لا توجد أدوار.</p>';
+        bindSectionToggles();
     }
 
     function collectPayload() {
-        var out = { roles: {} };
+        var out = { sections: {}, roles: {} };
+
+        wrap.querySelectorAll('.catalog-list-settings-section').forEach(function (block) {
+            var roleSlug = block.getAttribute('data-role');
+            var sectionKey = block.getAttribute('data-section');
+            if (!out.sections[sectionKey]) out.sections[sectionKey] = { roles: {} };
+            var enabledEl = block.querySelector('.cls-section-enable');
+            out.sections[sectionKey].roles[roleSlug] = {
+                enabled: !!(enabledEl && enabledEl.checked),
+            };
+        });
+
         wrap.querySelectorAll('.catalog-list-settings-profile').forEach(function (block) {
             var roleSlug = block.getAttribute('data-role');
             var profileKey = block.getAttribute('data-profile');
@@ -92,6 +160,7 @@
                 columns: columns,
             };
         });
+
         return out;
     }
 

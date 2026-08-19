@@ -110,7 +110,7 @@
         <div class="panel-body" style="overflow-x:auto;">
             @unless ($catalogListEnabled)
                 <p style="text-align:center;color:var(--text-muted);padding:24px;">
-                    قائمة الأصناف غير مفعّلة لدورك — راجع مدير النظام في «عرض قوائم الأصناف».
+                    قائمة الأصناف غير مفعّلة لدورك — راجع «عرض قوائم الأصناف» في المخزون والتوريد.
                 </p>
             @else
             <table class="catalog-slim-table" id="catalogItemsTable" data-paginate="10" style="width:100%;border-collapse:collapse;">
