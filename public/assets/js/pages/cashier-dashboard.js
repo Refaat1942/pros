@@ -41,11 +41,27 @@
   }
 
   function toast(msg, isError, extra) {
-    if (window.DashboardToast) {
-      window.DashboardToast.show(msg, Object.assign({ id: 'toast', isError: !!isError }, extra || {}));
+    var toastEl = document.getElementById('toast') || document.getElementById('notifToast');
+    if (window.DashboardToast && toastEl) {
+      window.DashboardToast.show(msg, Object.assign({ id: toastEl.id, isError: !!isError }, extra || {}));
       return;
     }
-    if (isError) window.alert(msg);
+    window.alert(msg);
+  }
+
+  function showPaymentError(msg) {
+    var el = $('cashierPaymentError');
+    if (!el) {
+      toast(msg, true);
+      return;
+    }
+    if (!msg) {
+      el.textContent = '';
+      el.classList.add('hidden');
+      return;
+    }
+    el.textContent = msg;
+    el.classList.remove('hidden');
   }
 
   function loadMethods() {
@@ -55,6 +71,7 @@
   }
 
   var activeRemaining = 0;
+  var activeManualDue = false;
 
   function renderRow(c) {
     var quote = c.quote || null;
@@ -139,12 +156,21 @@
   function openPaymentModal(caseId, caseNo, patient, amountDue, paid, remaining) {
     activeCaseId = caseId;
     activeRemaining = remaining || 0;
+    activeManualDue = activeRemaining <= 0.009 && amountDue <= 0.009;
+    showPaymentError('');
     var subtitle = $('cashierPaymentSubtitle');
     if (subtitle) subtitle.textContent = (patient || '—') + ' · ' + (caseNo || '—');
     var amountEl = $('cashierPaymentAmount');
     if (amountEl) {
       amountEl.value = activeRemaining > 0 ? activeRemaining : '';
-      amountEl.max = activeRemaining > 0 ? activeRemaining : '';
+      amountEl.removeAttribute('max');
+      if (activeRemaining > 0) amountEl.max = activeRemaining;
+    }
+    var hint = $('cashierPaymentHint');
+    if (hint) {
+      hint.textContent = activeManualDue
+        ? 'لم يُحسب مستحق من عرض السعر — أدخل المبلغ المستلم فعلياً ثم أكّد.'
+        : 'يمكن تسجيل دفعة جزئية أو كامل المتبقي. عند اكتمال المبلغ تُعاد الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.';
     }
     var summary = $('cashierPaymentSummary');
     if (summary) {
@@ -200,26 +226,31 @@
   }
 
   function submitPayment() {
-    if (!activeCaseId || !window.axios) return;
-    if (!selectedMethod) { toast('اختر وسيلة الدفع أولاً.', true); return; }
+    if (!activeCaseId) { showPaymentError('تعذّر تحديد الحالة.'); return; }
+    if (!window.axios) { showPaymentError('تعذّر الاتصال بالخادم — حدّث الصفحة.'); return; }
+    if (!selectedMethod) { showPaymentError('اختر وسيلة الدفع أولاً.'); return; }
 
     var amount = parseFloat(($('cashierPaymentAmount') && $('cashierPaymentAmount').value) || '0');
-    if (!amount || amount <= 0) { toast('أدخل مبلغاً صحيحاً.', true); return; }
+    if (!amount || amount <= 0) { showPaymentError('أدخل مبلغاً صحيحاً.'); return; }
 
     var reference = ($('cashierPaymentReference') && $('cashierPaymentReference').value) || null;
     if (selectedMethod !== 'cash' && !reference) {
-      toast('يرجى إدخال رقم الشيك أو مرجع التحويل.', true);
+      showPaymentError('يرجى إدخال رقم الشيك أو مرجع التحويل.');
       return;
     }
 
-    if (amount > activeRemaining + 0.009) {
-      toast('المبلغ يتجاوز المتبقي (' + fmt(activeRemaining) + ' ج.م).', true);
+    if (!activeManualDue && amount > activeRemaining + 0.009) {
+      showPaymentError('المبلغ يتجاوز المتبقي (' + fmt(activeRemaining) + ' ج.م).');
       return;
     }
 
-    var confirmMsg = amount >= activeRemaining - 0.009
-      ? 'تأكيد استلام مبلغ ' + fmt(amount) + ' ج.م (اكتمال الدفع)؟\n\nسيُطبع الإيصال وتُعاد الحالة لمكتب التشغيل.'
-      : 'تأكيد تسجيل دفعة ' + fmt(amount) + ' ج.م؟\n\nالمتبقي بعد الدفعة: ' + fmt(activeRemaining - amount) + ' ج.م';
+    showPaymentError('');
+
+    var confirmMsg = activeManualDue
+      ? 'تأكيد استلام مبلغ ' + fmt(amount) + ' ج.م؟\n\n(تحصيل يدوي — لم يُسجَّل مستحق من عرض السعر)'
+      : (amount >= activeRemaining - 0.009
+        ? 'تأكيد استلام مبلغ ' + fmt(amount) + ' ج.م (اكتمال الدفع)؟\n\nسيُطبع الإيصال وتُعاد الحالة لمكتب التشغيل.'
+        : 'تأكيد تسجيل دفعة ' + fmt(amount) + ' ج.م؟\n\nالمتبقي بعد الدفعة: ' + fmt(activeRemaining - amount) + ' ج.م');
     if (!window.confirm(confirmMsg)) return;
 
     var btn = $('btnSubmitCashierPayment');
@@ -243,7 +274,7 @@
         var receiptUrl = res.data && res.data.payment && res.data.payment.receipt_url;
         if (receiptUrl) { window.open(receiptUrl, '_blank', 'noopener'); }
       })
-      .catch(function (err) { toast(apiMessage(err, 'تعذّر تأكيد الدفع'), true); })
+      .catch(function (err) { showPaymentError(apiMessage(err, 'تعذّر تأكيد الدفع')); })
       .finally(function () { if (btn) btn.disabled = false; });
   }
 
