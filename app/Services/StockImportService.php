@@ -294,13 +294,6 @@ class StockImportService
         $catalogNumber = trim((string) ($parsed['catalog_number'] ?? ''));
         $name = trim((string) ($parsed['name'] ?? ''));
 
-        if ($pageNumber !== '') {
-            $byPage = StockItem::query()->where('page_number', $pageNumber)->first();
-            if ($byPage !== null) {
-                return $byPage;
-            }
-        }
-
         if ($altCodes !== '') {
             $byAlt = StockItem::query()->where('alt_codes', $altCodes)->first();
             if ($byAlt !== null) {
@@ -327,11 +320,6 @@ class StockImportService
                 if ($byName !== null) {
                     return $byName;
                 }
-            }
-
-            $catalogMatches = StockItem::query()->where('catalog_number', $catalogNumber)->count();
-            if ($catalogMatches === 1 && $pageNumber === '') {
-                return StockItem::query()->where('catalog_number', $catalogNumber)->first();
             }
 
             // توافق خلفي: صنف قديم مُعرَّف برقم الصنف في code فقط.
@@ -365,9 +353,27 @@ class StockImportService
         $reader = new XlsxReader;
         $reader->open($file->getRealPath());
 
-        $sheetIterator = $reader->getSheetIterator();
-        $sheetIterator->rewind();
-        $sheet = $sheetIterator->current();
+        $sheet = null;
+        $fallbackSheet = null;
+
+        foreach ($reader->getSheetIterator() as $candidate) {
+            if ($fallbackSheet === null) {
+                $fallbackSheet = $candidate;
+            }
+
+            if ($candidate->getName() === self::SHEET_ITEMS) {
+                $sheet = $candidate;
+                break;
+            }
+        }
+
+        $sheet ??= $fallbackSheet;
+
+        if ($sheet === null) {
+            $reader->close();
+
+            return [];
+        }
 
         $rows = [];
         $lineNo = 0;

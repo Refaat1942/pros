@@ -121,6 +121,23 @@ class ChecklistFeaturesTest extends TestCase
         ]);
     }
 
+    public function test_csv_import_does_not_collapse_items_that_share_page_number(): void
+    {
+        $csv = $this->catalogHeaders();
+        $contents = implode(',', $csv)."\r\n"
+            ."101,12,صنف أ,,8001,قطعة,1,0,0,1\r\n"
+            ."102,12,صنف ب,,8002,قطعة,2,0,0,2\r\n"
+            ."103,12,صنف ج,,8003,قطعة,3,0,0,3\r\n";
+
+        $summary = app(StockImportService::class)->import(
+            UploadedFile::fake()->createWithContent('shared-page.csv', $contents),
+        );
+
+        $this->assertSame(3, $summary['created']);
+        $this->assertSame(0, $summary['updated']);
+        $this->assertSame(3, StockItem::query()->where('page_number', '12')->count());
+    }
+
     public function test_csv_import_defaults_unit_when_blank(): void
     {
         $contents = "RM-901,,صنف بلا وحدة,,,5,0,0,5\r\n";
