@@ -127,7 +127,7 @@ class DashboardPageDataService
         $employees = User::query()
             ->with('role:id,slug,label_ar')
             ->orderByDesc('id')
-            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at']);
+            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at', 'catalog_list_visibility']);
 
         $roles = Role::query()
             ->orderBy('label_ar')
@@ -144,7 +144,7 @@ class DashboardPageDataService
         return [
             'employees' => $employees,
             'roles' => $roles,
-            'edit_user' => $editUser,
+            'edit_user' => $editUser?->loadMissing('role:id,slug,label_ar'),
             'employee_stats' => [
                 ['icon' => '👥', 'label' => 'الموظفون', 'value' => (string) $employees->count(), 'bg' => 'rgba(124,58,237,0.1)'],
                 ['icon' => '✅', 'label' => 'نشط', 'value' => (string) $activeCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],

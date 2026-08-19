@@ -414,6 +414,8 @@ Route::prefix('admin')
 
         // ── Employees (Blade form POST) ───────────────────────────────────
         Route::middleware('dashboard.page:admin,employees')->group(function () {
+            Route::get('employees/catalog-list-visibility', [UserController::class, 'catalogListVisibilityDefaults'])
+                ->name('employees.catalog-list-visibility');
             Route::post('employees', [UserController::class, 'store'])
                 ->name('employees.store');
 

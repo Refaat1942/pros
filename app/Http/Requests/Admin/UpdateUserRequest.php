@@ -27,6 +27,13 @@ class UpdateUserRequest extends BaseRequest
                 'username' => strtolower(trim((string) $this->input('username'))),
             ]);
         }
+
+        if ($this->has('catalog_list_visibility') && is_string($this->input('catalog_list_visibility'))) {
+            $decoded = json_decode($this->input('catalog_list_visibility'), true);
+            $this->merge([
+                'catalog_list_visibility' => is_array($decoded) ? $decoded : null,
+            ]);
+        }
     }
 
     public function rules(): array
@@ -58,6 +65,7 @@ class UpdateUserRequest extends BaseRequest
             'password' => ['nullable', 'string', 'min:6', 'confirmed'],
             'role_id' => $roleRules,
             'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
+            'catalog_list_visibility' => ['nullable', 'array'],
         ];
     }
 

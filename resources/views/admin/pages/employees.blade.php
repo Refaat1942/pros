@@ -48,7 +48,7 @@
 </div>
 
 <div class="catalog-modal-overlay {{ $openModal ? 'open' : '' }}" id="employeeModal" role="dialog" aria-modal="true">
-    <div class="catalog-modal" style="max-width:480px;" onclick="event.stopPropagation()">
+    <div class="catalog-modal employee-modal" style="max-width:760px;" onclick="event.stopPropagation()">
         <div class="catalog-modal-header">
             <div>
                 <h3 id="employeeModalTitle">{{ $editUser ? '✏️ تعديل موظف' : '➕ إضافة موظف' }}</h3>
@@ -59,6 +59,8 @@
               id="employeeForm"
               data-validate-form
               data-store-url="{{ route('admin.employees.store') }}"
+              data-catalog-url="{{ route('admin.employees.catalog-list-visibility') }}"
+              data-edit-user-id="{{ $editUser?->id }}"
               data-add-title="➕ إضافة موظف"
               data-edit-title="✏️ تعديل موظف"
               action="{{ $editUser ? route('admin.employees.update', $editUser) : route('admin.employees.store') }}">
@@ -134,6 +136,22 @@
                         <div id="employeeRoleLockedWrap" style="display:none;"></div>
                     @endif
                 </div>
+                @unless ($isAdminEdit)
+                <div class="form-group employee-catalog-visibility-block" id="employeeCatalogVisibilityBlock" style="margin-bottom:14px;display:none;">
+                    <label style="display:block;font-size:13px;font-weight:800;margin-bottom:8px;">
+                        📋 قوائم الأصناف — ماذا يرى هذا الموظف؟
+                    </label>
+                    <p class="employee-catalog-visibility-hint">
+                        اختر الدور أولاً، ثم فعّل القوائم والأعمدة قبل الحفظ. هذه الإعدادات خاصة بهذا الموظف —
+                        مستقلة عن باقي نفس الدور.
+                    </p>
+                    <input type="hidden" name="catalog_list_visibility" id="employeeCatalogVisibilityInput" value="">
+                    <div id="employeeCatalogVisibilityWrap" class="employee-catalog-visibility-wrap"></div>
+                    <div id="employeeCatalogVisibilityLoading" class="employee-catalog-visibility-loading" style="display:none;">
+                        جاري تحميل القوائم...
+                    </div>
+                </div>
+                @endunless
                 <div class="form-group" style="margin-bottom:14px;">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">الحالة</label>
                     @if ($isAdminEdit)
@@ -158,3 +176,41 @@
         </form>
     </div>
 </div>
+
+<style>
+    .employee-catalog-visibility-hint {
+        margin: 0 0 10px;
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--text-muted, #64748b);
+    }
+    .employee-catalog-visibility-wrap {
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fafbff;
+        max-height: 320px;
+        overflow-y: auto;
+    }
+    .employee-catalog-visibility-loading {
+        padding: 12px;
+        font-size: 12px;
+        color: var(--text-muted, #64748b);
+    }
+    .employee-catalog-visibility-wrap .catalog-list-settings-section__head,
+    .employee-catalog-visibility-wrap .catalog-list-settings-profile {
+        padding: 10px 12px;
+    }
+    .employee-catalog-visibility-wrap .catalog-list-settings-columns {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 6px;
+    }
+    .employee-catalog-visibility-wrap .catalog-list-settings-col {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+</style>
+
+@push('scripts')
+    <script src="{{ asset('assets/js/pages/employee-catalog-visibility.js') }}?v={{ filemtime(public_path('assets/js/pages/employee-catalog-visibility.js')) }}"></script>
+@endpush

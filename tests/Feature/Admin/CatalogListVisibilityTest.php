@@ -6,6 +6,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\CatalogListVisibilityService;
+use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\Support\ProstheticTestHelper;
@@ -188,6 +189,32 @@ class CatalogListVisibilityTest extends TestCase
         $this->assertSame('صنف طقم', $first['name']);
         $this->assertArrayNotHasKey('brand', $first);
         $this->assertArrayNotHasKey('uom', $first);
+    }
+
+    public function test_user_specific_visibility_overrides_role_defaults(): void
+    {
+        $visibility = app(CatalogListVisibilityService::class);
+
+        $role = $this->makeRole('technical');
+        $user = app(UserService::class)->create([
+            'name' => 'فني مخزن',
+            'username' => 'tech-vis-1',
+            'password' => 'secret123',
+            'role_id' => $role->id,
+            'status' => User::STATUS_ACTIVE,
+            'catalog_list_visibility' => [
+                'profiles' => [
+                    'technical_inventory' => [
+                        'enabled' => true,
+                        'columns' => ['code', 'name'],
+                    ],
+                ],
+            ],
+        ])->fresh(['role']);
+
+        $this->assertTrue($visibility->isListEnabledForUser($user, 'technical_inventory'));
+        $columns = $visibility->visibleColumnsForUser($user, 'technical_inventory');
+        $this->assertSame(['code', 'name'], $columns);
     }
 
     public function test_catalog_list_settings_page_loads_for_admin(): void

@@ -99,6 +99,8 @@
 
         var statusSelect = form.querySelector('[name="status"]');
         if (statusSelect) statusSelect.value = 'active';
+
+        if (window.resetEmployeeCatalogVisibility) window.resetEmployeeCatalogVisibility();
       }
 
       var addBtn = document.getElementById('btnAddEmployee');

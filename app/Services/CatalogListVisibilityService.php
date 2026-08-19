@@ -68,7 +68,7 @@ class CatalogListVisibilityService
             return false;
         }
 
-        $roleConfig = $this->roleSectionConfig($roleSlug, $section);
+        $roleConfig = $this->roleSectionConfig($roleSlug, $section, $user);
 
         return (bool) ($roleConfig['enabled'] ?? false);
     }
@@ -89,7 +89,7 @@ class CatalogListVisibilityService
             return false;
         }
 
-        $roleConfig = $this->roleProfileConfig($roleSlug, $profile);
+        $roleConfig = $this->roleProfileConfig($roleSlug, $profile, $user);
 
         return (bool) ($roleConfig['enabled'] ?? false);
     }
@@ -106,7 +106,7 @@ class CatalogListVisibilityService
         }
 
         $roleSlug = $user->role?->slug ?? '';
-        $roleConfig = $this->roleProfileConfig($roleSlug, $profile);
+        $roleConfig = $this->roleProfileConfig($roleSlug, $profile, $user);
         $columns = is_array($roleConfig['columns'] ?? null) ? $roleConfig['columns'] : [];
 
         $valid = array_flip($this->allColumnKeys($profile));
@@ -245,6 +245,110 @@ class CatalogListVisibilityService
         });
     }
 
+    /** @return list<string> */
+    public function profilesForRole(string $roleSlug): array
+    {
+        $dashboard = $roleSlug === Role::SLUG_SUPER_ADMIN ? Role::SLUG_ADMIN : $roleSlug;
+        $out = [];
+
+        foreach ($this->profiles() as $key => $meta) {
+            if (($meta['dashboard'] ?? '') === $dashboard) {
+                $out[] = $key;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array{sections?: array<string, array{enabled?: bool}>, profiles?: array<string, array{enabled?: bool, columns?: list<string>}>}|null  $userStored
+     * @return array{role_slug: string, sections: list<array<string, mixed>>, profiles: list<array<string, mixed>>, has_profiles: bool}
+     */
+    public function catalogForRole(string $roleSlug, ?array $userStored = null): array
+    {
+        $stored = $this->all();
+        $profileKeys = $this->profilesForRole($roleSlug);
+        $sectionGroups = [];
+        $standaloneProfiles = [];
+
+        foreach ($this->profiles() as $profileKey => $profileMeta) {
+            if (! in_array($profileKey, $profileKeys, true)) {
+                continue;
+            }
+
+            $roleConfig = $this->resolveProfileConfig($roleSlug, $profileKey, $userStored, $stored);
+            $profilePayload = $this->buildProfilePayload($profileKey, $profileMeta, $roleConfig);
+
+            $section = $profileMeta['section'] ?? null;
+            if ($section !== null && isset($this->sections()[$section])) {
+                if (! isset($sectionGroups[$section])) {
+                    $sectionRole = $this->resolveSectionConfig($roleSlug, $section, $userStored, $stored);
+                    $sectionGroups[$section] = [
+                        'key' => $section,
+                        'label_ar' => $this->sections()[$section]['label_ar'] ?? $section,
+                        'enabled' => (bool) ($sectionRole['enabled'] ?? false),
+                        'profiles' => [],
+                    ];
+                }
+                $sectionGroups[$section]['profiles'][] = $profilePayload;
+            } else {
+                $standaloneProfiles[] = $profilePayload;
+            }
+        }
+
+        return [
+            'role_slug' => $roleSlug,
+            'sections' => array_values($sectionGroups),
+            'profiles' => $standaloneProfiles,
+            'has_profiles' => $profileKeys !== [],
+        ];
+    }
+
+    /**
+     * @param  array{sections?: array<string, array{enabled?: bool}>, profiles?: array<string, array{enabled?: bool, columns?: list<string>}>}  $input
+     * @return array{sections: array<string, array{enabled: bool}>, profiles: array<string, array{enabled: bool, columns: list<string>}>}
+     */
+    public function normalizeUserVisibility(string $roleSlug, array $input): array
+    {
+        $profileKeys = $this->profilesForRole($roleSlug);
+        $normalized = [
+            'sections' => [],
+            'profiles' => [],
+        ];
+
+        foreach ($this->sections() as $sectionKey => $sectionMeta) {
+            $sectionProfiles = array_values(array_intersect($sectionMeta['profiles'] ?? [], $profileKeys));
+            if ($sectionProfiles === []) {
+                continue;
+            }
+
+            $sectionInput = $input['sections'][$sectionKey] ?? [];
+            $normalized['sections'][$sectionKey] = [
+                'enabled' => filter_var($sectionInput['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ];
+        }
+
+        foreach ($profileKeys as $profileKey) {
+            $profileInput = $input['profiles'][$profileKey] ?? [];
+            $allKeys = $this->allColumnKeys($profileKey);
+            $selected = array_values(array_filter(
+                is_array($profileInput['columns'] ?? null) ? $profileInput['columns'] : [],
+                fn ($key) => is_string($key) && in_array($key, $allKeys, true),
+            ));
+            $enabled = filter_var($profileInput['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($enabled) {
+                $selected = $this->ensureRequiredColumns($profileKey, $selected);
+            }
+
+            $normalized['profiles'][$profileKey] = [
+                'enabled' => $enabled,
+                'columns' => $selected,
+            ];
+        }
+
+        return $normalized;
+    }
+
     /**
      * @return list<array{
      *     slug: string,
@@ -364,6 +468,17 @@ class CatalogListVisibilityService
     {
         $roleConfig = $stored['roles'][$roleSlug][$profileKey]
             ?? $this->defaultRoleProfile($roleSlug, $profileKey);
+
+        return $this->buildProfilePayload($profileKey, $profileMeta, $roleConfig);
+    }
+
+    /**
+     * @param  array{enabled: bool, columns: list<string>}  $roleConfig
+     * @param  array{label_ar?: string, dashboard?: string, page?: string, section?: string}  $profileMeta
+     * @return array<string, mixed>
+     */
+    private function buildProfilePayload(string $profileKey, array $profileMeta, array $roleConfig): array
+    {
         $columns = [];
         foreach ($this->columnDefinitions($profileKey) as $colKey => $colMeta) {
             $columns[] = [
@@ -385,6 +500,60 @@ class CatalogListVisibilityService
         ];
     }
 
+    /**
+     * @param  array{sections: array<string, array{roles: array<string, array{enabled: bool}>>>, roles: array<string, array<string, array{enabled: bool, columns: list<string>}>>}  $stored
+     * @param  array{sections?: array<string, array{enabled?: bool}>, profiles?: array<string, array{enabled?: bool, columns?: list<string>}>}|null  $userStored
+     * @return array{enabled: bool}
+     */
+    private function resolveSectionConfig(string $roleSlug, string $section, ?array $userStored, array $stored): array
+    {
+        if (is_array($userStored) && isset($userStored['sections'][$section]['enabled'])) {
+            return ['enabled' => (bool) $userStored['sections'][$section]['enabled']];
+        }
+
+        $raw = $stored['sections'][$section]['roles'][$roleSlug] ?? null;
+
+        if (! is_array($raw)) {
+            return $this->defaultSectionRole($roleSlug, $section);
+        }
+
+        return ['enabled' => (bool) ($raw['enabled'] ?? false)];
+    }
+
+    /**
+     * @param  array{sections: array<string, array{roles: array<string, array{enabled: bool}>>>, roles: array<string, array<string, array{enabled: bool, columns: list<string>}>>}  $stored
+     * @param  array{sections?: array<string, array{enabled?: bool}>, profiles?: array<string, array{enabled?: bool, columns?: list<string>}>}|null  $userStored
+     * @return array{enabled: bool, columns: list<string>}
+     */
+    private function resolveProfileConfig(string $roleSlug, string $profileKey, ?array $userStored, array $stored): array
+    {
+        if (is_array($userStored) && isset($userStored['profiles'][$profileKey]) && is_array($userStored['profiles'][$profileKey])) {
+            $raw = $userStored['profiles'][$profileKey];
+
+            return [
+                'enabled' => (bool) ($raw['enabled'] ?? false),
+                'columns' => $this->ensureRequiredColumns(
+                    $profileKey,
+                    is_array($raw['columns'] ?? null) ? $raw['columns'] : [],
+                ),
+            ];
+        }
+
+        $raw = $stored['roles'][$roleSlug][$profileKey] ?? null;
+
+        if (! is_array($raw)) {
+            return $this->defaultRoleProfile($roleSlug, $profileKey);
+        }
+
+        return [
+            'enabled' => (bool) ($raw['enabled'] ?? false),
+            'columns' => $this->ensureRequiredColumns(
+                $profileKey,
+                is_array($raw['columns'] ?? null) ? $raw['columns'] : [],
+            ),
+        ];
+    }
+
     /** @return array{enabled: bool} */
     private function defaultSectionRole(string $roleSlug, string $section): array
     {
@@ -397,8 +566,15 @@ class CatalogListVisibilityService
     }
 
     /** @return array{enabled: bool} */
-    private function roleSectionConfig(string $roleSlug, string $section): array
+    private function roleSectionConfig(string $roleSlug, string $section, ?User $user = null): array
     {
+        if ($user !== null && is_array($user->catalog_list_visibility)) {
+            $raw = $user->catalog_list_visibility['sections'][$section] ?? null;
+            if (is_array($raw) && array_key_exists('enabled', $raw)) {
+                return ['enabled' => (bool) $raw['enabled']];
+            }
+        }
+
         $stored = $this->all();
         $raw = $stored['sections'][$section]['roles'][$roleSlug] ?? null;
 
@@ -426,8 +602,21 @@ class CatalogListVisibilityService
     }
 
     /** @return array{enabled: bool, columns: list<string>} */
-    private function roleProfileConfig(string $roleSlug, string $profile): array
+    private function roleProfileConfig(string $roleSlug, string $profile, ?User $user = null): array
     {
+        if ($user !== null && is_array($user->catalog_list_visibility)) {
+            $raw = $user->catalog_list_visibility['profiles'][$profile] ?? null;
+            if (is_array($raw)) {
+                return [
+                    'enabled' => (bool) ($raw['enabled'] ?? false),
+                    'columns' => $this->ensureRequiredColumns(
+                        $profile,
+                        is_array($raw['columns'] ?? null) ? $raw['columns'] : [],
+                    ),
+                ];
+            }
+        }
+
         $stored = $this->all();
         $raw = $stored['roles'][$roleSlug][$profile] ?? null;
 

@@ -7,9 +7,11 @@ use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\CatalogListVisibilityService;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
@@ -68,5 +70,22 @@ class UserController extends Controller
         $this->userService->delete($user);
 
         return response()->json(['message' => 'تم حذف الموظف بنجاح.']);
+    }
+
+    public function catalogListVisibilityDefaults(
+        Request $request,
+        CatalogListVisibilityService $visibility,
+    ): JsonResponse {
+        $role = Role::query()->findOrFail($request->integer('role_id'));
+        $userStored = null;
+
+        if ($userId = $request->integer('user_id')) {
+            $user = User::query()->find($userId);
+            $userStored = $user?->catalog_list_visibility;
+        }
+
+        return response()->json([
+            'catalog' => $visibility->catalogForRole($role->slug, $userStored),
+        ]);
     }
 }
