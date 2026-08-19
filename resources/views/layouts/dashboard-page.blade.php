@@ -67,7 +67,8 @@
         <script src="{{ asset('assets/js/shared/sidebar-nav-groups.js') }}?v={{ filemtime(public_path('assets/js/shared/sidebar-nav-groups.js')) }}"></script>
     @endif
     @include('partials.firebase-web')
-    <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}"></script>
+    <script src="{{ asset('assets/js/shared/notification-sound.js') }}?v={{ filemtime(public_path('assets/js/shared/notification-sound.js')) }}"></script>
+    <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}?v={{ filemtime(public_path('assets/js/shared/dashboard-notifications.js')) }}"></script>
     @php
         $notifAlerts = app(\App\Services\SettingService::class)->notificationAlerts();
     @endphp

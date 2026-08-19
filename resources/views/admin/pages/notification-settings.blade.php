@@ -36,6 +36,7 @@
             <div id="notificationSettingsError" class="notification-settings-error" style="display:none;"></div>
 
             <div class="notification-settings-actions">
+                <button type="button" class="btn-action" id="btnTestNotificationSound">🔊 تجربة الصوت</button>
                 <button type="submit" class="btn-action success">💾 حفظ الإعدادات</button>
             </div>
         </form>
@@ -105,13 +106,22 @@
         color: #b91c1c;
         font-size: 13px;
     }
-    .notification-settings-actions { padding-top: 4px; }
+    .notification-settings-actions { padding-top: 4px; display: flex; flex-wrap: wrap; gap: 10px; }
 </style>
 
 <script>
 (function () {
     var form = document.getElementById('notificationSettingsForm');
     if (!form) return;
+
+    var testBtn = document.getElementById('btnTestNotificationSound');
+    if (testBtn) {
+        testBtn.addEventListener('click', function () {
+            if (window.NotificationSound && typeof window.NotificationSound.play === 'function') {
+                window.NotificationSound.play();
+            }
+        });
+    }
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
