@@ -1,0 +1,149 @@
+/**
+ * Shared catalog-style modal — used on admin and operational dashboards
+ * that do not load admin-dashboard.css (e.g. workshop sections page).
+ */
+.catalog-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+
+.catalog-modal-overlay.open {
+  display: flex;
+}
+
+.catalog-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  animation: catalogModalIn 0.25s ease;
+}
+
+@keyframes catalogModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.catalog-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(14, 116, 144, 0.04));
+}
+
+.catalog-modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--secondary, #334155);
+  margin: 0 0 4px;
+}
+
+.catalog-modal-close {
+  border: none;
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--text-muted, #64748b);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.catalog-modal-close:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+.catalog-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.catalog-modal-body .form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--secondary, #334155);
+}
+
+.catalog-modal-body .form-group .form-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.catalog-modal-body .form-group .form-control:focus {
+  outline: none;
+  border-color: var(--primary, #7c3aed);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.catalog-modal-body .form-group textarea.form-control {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.catalog-modal-body .form-group select.form-control[multiple] {
+  min-height: 130px;
+  padding: 6px 8px;
+}
+
+.catalog-modal-body .form-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--secondary, #334155);
+  cursor: pointer;
+}
+
+.catalog-modal-body .form-check-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.catalog-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border, #e2e8f0);
+  background: #fafafa;
+}
+
+@media (max-width: 768px) {
+  .catalog-modal {
+    max-height: 95vh;
+  }
+}
