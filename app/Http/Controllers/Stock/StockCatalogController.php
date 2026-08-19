@@ -8,6 +8,7 @@ use App\Http\Requests\Stock\StoreCatalogItemRequest;
 use App\Http\Requests\Stock\UpdateCatalogItemRequest;
 use App\Models\StockItem;
 use App\Models\Supplier;
+use App\Services\CatalogListVisibilityService;
 use App\Services\StockCatalogService;
 use App\Services\StockImportService;
 use App\Services\StockItemSalesStatsService;
@@ -55,10 +56,19 @@ class StockCatalogController extends Controller
             ->orderByDesc('id');
 
         $items = $this->fetchForDashboard($query);
+        $user = $request->user();
+        $visibility = app(CatalogListVisibilityService::class);
 
         return response()->json([
-            'data' => $items->map(fn (StockItem $item) => $this->catalogService->formatItem($item))->values(),
+            'data' => $items->map(function (StockItem $item) use ($user, $visibility) {
+                $formatted = $this->catalogService->formatItem($item);
+
+                return $user
+                    ? $visibility->filterItemFields($formatted, $user, 'admin_catalog')
+                    : $formatted;
+            })->values(),
             'total' => $items->count(),
+            'columns' => $visibility->tableOrderForUser($user, 'admin_catalog'),
         ]);
     }
 

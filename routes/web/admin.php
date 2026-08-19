@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BrandingSettingsController;
+use App\Http\Controllers\Admin\CatalogListSettingsController;
 use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\FormFieldSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
@@ -240,6 +241,11 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,notification-settings')->group(function () {
             Route::put('notification-settings', [NotificationSettingsController::class, 'update'])
                 ->name('notification-settings.update');
+        });
+
+        Route::middleware('dashboard.page:admin,catalog-list-settings')->group(function () {
+            Route::put('catalog-list-settings', [CatalogListSettingsController::class, 'update'])
+                ->name('catalog-list-settings.update');
         });
 
         Route::middleware('dashboard.page:admin,pathway-settings')->group(function () {

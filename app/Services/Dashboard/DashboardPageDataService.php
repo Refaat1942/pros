@@ -40,6 +40,7 @@ use App\Services\CostingModeService;
 use App\Services\DoctorTransferService;
 use App\Services\MilitaryDebtService;
 use App\Services\Notifications\NotificationService;
+use App\Services\CatalogListVisibilityService;
 use App\Services\FormFieldPolicyService;
 use App\Services\PathwayConfigService;
 use App\Services\PermissionCatalogService;
@@ -78,6 +79,7 @@ class DashboardPageDataService
             'admin.branding-settings' => $this->adminBrandingSettings(),
             'admin.notification-settings' => $this->adminNotificationSettings(),
             'admin.pathway-settings' => $this->adminPathwaySettings(),
+            'admin.catalog-list-settings' => $this->adminCatalogListSettings(),
             'admin.stock-categories' => $this->adminStockCategories(),
             'admin.catalog' => $this->adminCatalog(),
             'admin.stock-kits' => $this->adminStockKits(),
@@ -234,12 +236,28 @@ class DashboardPageDataService
         ];
     }
 
+    private function adminCatalogListSettings(): array
+    {
+        return [
+            'catalog_list_roles' => app(CatalogListVisibilityService::class)->catalogForAdmin(),
+        ];
+    }
+
     private function adminCatalog(): array
     {
         $catalogService = app(StockCatalogService::class);
         $schema = app(StockCategorySchemaService::class);
+        $visibility = app(CatalogListVisibilityService::class);
+        $user = auth()->user();
         $from = request()->query('from');
         $to = request()->query('to');
+        $items = collect($catalogService->listForDashboard($from, $to));
+
+        if ($user) {
+            $items = $items->map(
+                fn (array $item) => $visibility->filterItemFields($item, $user, 'admin_catalog'),
+            );
+        }
 
         return [
             'stock_categories' => StockCategory::query()
@@ -250,7 +268,7 @@ class DashboardPageDataService
             'suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'stock_items' => $catalogService->listForDashboard($from, $to),
+            'stock_items' => $items->values()->all(),
             'stock_items_total' => $catalogService->countAll($from, $to),
             'date_from' => $from,
             'date_to' => $to,
@@ -816,7 +834,9 @@ class DashboardPageDataService
                 'id' => $item->id,
                 'code' => $item->code,
                 'name' => $item->name,
+                'brand' => $item->brand ?? '',
                 'spec' => $item->spec ?? '',
+                'uom' => $item->uom ?? '',
                 'category' => $item->category?->name ?? '',
                 'category_id' => $item->category_id,
                 'qty' => (int) $item->qty,
@@ -828,6 +848,13 @@ class DashboardPageDataService
                 'barcode' => $item->barcode,
                 'last_moved_at' => $item->last_moved_at?->format('d/m/Y'),
             ])->values()->all(),
+            'inventory_list_columns' => app(CatalogListVisibilityService::class)
+                ->tableOrderForUser(auth()->user(), 'technical_inventory'),
+            'inventory_list_column_labels' => app(CatalogListVisibilityService::class)
+                ->columnDefinitions('technical_inventory'),
+            'inventory_list_enabled' => auth()->user()
+                ? app(CatalogListVisibilityService::class)->isListEnabledForUser(auth()->user(), 'technical_inventory')
+                : true,
             'inventory_suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),

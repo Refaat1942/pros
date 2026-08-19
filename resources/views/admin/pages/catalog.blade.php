@@ -1,14 +1,24 @@
 @php
     use App\Support\CatalogColumns;
+    use App\Services\CatalogListVisibilityService;
 
     /** قائمة مُنسّقة من StockCatalogService::formatItem (مصفوفات). */
     $items = collect($stock_items ?? []);
     $categories = collect($stock_categories ?? []);
     $catalogSuppliers = collect($suppliers ?? []);
     $catalogColumnDefs = CatalogColumns::definitions();
-    $catalogTableOrder = CatalogColumns::tableOrder();
+    $catalogVisibility = app(CatalogListVisibilityService::class);
+    $catalogUser = auth()->user();
+    $catalogTableOrder = $catalogVisibility->tableOrderForUser($catalogUser, 'admin_catalog');
     $catalogTemplateHeaders = CatalogColumns::templateHeaders();
-    $catalogTableColspan = CatalogColumns::tableColspan(auth()->user()?->can('print-barcode') ?? false);
+    $catalogTableColspan = $catalogVisibility->tableColspanForUser(
+        $catalogUser,
+        'admin_catalog',
+        auth()->user()?->can('print-barcode') ?? false,
+    );
+    $catalogListEnabled = $catalogUser
+        ? $catalogVisibility->isListEnabledForUser($catalogUser, 'admin_catalog')
+        : true;
     $dateFrom = $date_from ?? request()->query('from');
     $dateTo = $date_to ?? request()->query('to');
     $exportUrl = route('admin.catalog.export', array_filter([
@@ -98,6 +108,11 @@
         </p>
 
         <div class="panel-body" style="overflow-x:auto;">
+            @unless ($catalogListEnabled)
+                <p style="text-align:center;color:var(--text-muted);padding:24px;">
+                    قائمة الأصناف غير مفعّلة لدورك — راجع مدير النظام في «عرض قوائم الأصناف».
+                </p>
+            @else
             <table class="catalog-slim-table" id="catalogItemsTable" data-paginate="10" style="width:100%;border-collapse:collapse;">
                 <thead>
                     <tr style="background:var(--surface-2,#f8fafc);">
@@ -146,6 +161,7 @@
                     @endforelse
                 </tbody>
             </table>
+            @endunless
         </div>
     </div>
 </div>

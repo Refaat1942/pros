@@ -8,6 +8,7 @@ use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\CatalogListVisibilityService;
 use App\Services\StockReceiveService;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
@@ -38,15 +39,26 @@ class StockReceiveController extends Controller
                 ->when($request->status, fn ($q, $s) => $q->where('status', $s))
                 ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('brand', 'like', "%{$search}%")
                         ->orWhere('code', 'like', "%{$search}%")
                         ->orWhere('barcode', 'like', "%{$search}%");
                 }))
                 ->orderBy('code')
         );
 
+        $user = $request->user();
+        $visibility = app(CatalogListVisibilityService::class);
+
         return response()->json([
-            'data' => collect($items)->map(fn ($item) => $this->formatItem($item))->values(),
+            'data' => collect($items)->map(function ($item) use ($user, $visibility) {
+                $formatted = $this->formatItem($item);
+
+                return $user
+                    ? $visibility->filterItemFields($formatted, $user, 'technical_inventory')
+                    : $formatted;
+            })->values(),
             'total' => $items->count(),
+            'columns' => $visibility->tableOrderForUser($user, 'technical_inventory'),
         ]);
     }
 
@@ -107,6 +119,7 @@ class StockReceiveController extends Controller
             'id',
             'code',
             'name',
+            'brand',
             'spec',
             'category_id',
             'store_class',

@@ -23,6 +23,8 @@ function normalizeInventoryItem(raw) {
     id: raw.id,
     code: raw.code || '',
     name: raw.name || '',
+    brand: raw.brand || '',
+    uom: raw.uom || '',
     spec: raw.spec || '—',
     category: raw.category || '—',
     qty: qty,
@@ -52,6 +54,9 @@ function fetchInventoryFromServer() {
     return response.json();
   }).then(function (payload) {
     window.__INVENTORY_ITEMS = payload.data || [];
+    if (payload.columns && payload.columns.length) {
+      window.__INVENTORY_LIST_COLUMNS = payload.columns;
+    }
     setInventoryItems(window.__INVENTORY_ITEMS);
   });
 }
@@ -220,35 +225,55 @@ function updateInventoryAnalyticsCards() {
   values[3].textContent = String(lowCount);
 }
 
+function renderTechnicalInventoryCell(item, key) {
+  var isLow = item.status === 'low';
+  var isBackorder = item.status === 'backorder';
+  var available = item.available != null ? item.available : (item.qty - (item.reserved || 0));
+  var statusLabel = isBackorder
+    ? 'طلب توريد (' + (item.backorder || 0) + ')'
+    : (isLow ? 'كمية منخفضة' : 'متوفر');
+  var statusClass = isBackorder ? 'backorder' : (isLow ? 'low' : 'available');
+  var availClass = isBackorder ? 'backorder' : item.status;
+
+  switch (key) {
+    case 'code':
+      return '<td class="item-code-cell"><span class="item-code">' + (item.code || '') + '</span></td>';
+    case 'name':
+      return '<td><div class="item-name">' + (item.name || '') + '</div></td>';
+    case 'brand':
+      return '<td style="color:var(--text-muted);">' + (item.brand || '—') + '</td>';
+    case 'uom':
+      return '<td style="text-align:center;color:var(--text-muted);">' + (item.uom || '—') + '</td>';
+    case 'available':
+      return '<td class="qty-cell"><div class="qty-badge ' + availClass + '">' + available + '</div></td>';
+    case 'status':
+      return '<td class="status-cell"><span class="stock-status ' + statusClass + '"><span class="status-dot"></span>' + statusLabel + '</span></td>';
+    case 'qty':
+      return '<td style="text-align:center;">' + (item.qty || 0) + '</td>';
+    case 'reserved':
+      return '<td style="text-align:center;">' + (item.reserved || 0) + '</td>';
+    case 'category':
+      return '<td style="color:var(--text-muted);font-size:12px;">' + (item.category || '—') + '</td>';
+    default:
+      return '<td>—</td>';
+  }
+}
+
 function renderInventory() {
   if (!document.getElementById('inventoryTable')) return;
   var filtered = getFilteredInventory();
+  var columns = window.__INVENTORY_LIST_COLUMNS || ['code', 'name', 'available', 'status'];
+  var colspan = Math.max(1, columns.length);
 
   document.getElementById('inventoryBadge').textContent = inventory.length + ' صنف';
   document.getElementById('inventoryFooter').textContent =
     'عرض ' + filtered.length + ' من ' + inventory.length + ' أصناف';
 
   document.getElementById('inventoryTable').innerHTML = filtered.length ? filtered.map(function (item) {
-    var isLow = item.status === 'low';
-    var isBackorder = item.status === 'backorder';
-    var available = item.available != null ? item.available : (item.qty - (item.reserved || 0));
-    var availClass = isBackorder ? 'backorder' : item.status;
-    var statusLabel = isBackorder
-      ? 'طلب توريد (' + (item.backorder || 0) + ')'
-      : (isLow ? 'كمية منخفضة' : 'متوفر');
-    var statusClass = isBackorder ? 'backorder' : (isLow ? 'low' : 'available');
-    return '<tr>' +
-      '<td class="item-code-cell"><span class="item-code">' + item.code + '</span></td>' +
-      '<td><div class="item-name">' + item.name + '</div></td>' +
-      '<td class="qty-cell"><div class="qty-badge ' + availClass + '">' + available + '</div></td>' +
-      '<td class="status-cell">' +
-      '<span class="stock-status ' + statusClass + '">' +
-      '<span class="status-dot"></span>' +
-      statusLabel +
-      '</span>' +
-      '</td>' +
-      '</tr>';
-  }).join('') : '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد أصناف في المخزون — أضف الأصناف من لوحة الإدارة</td></tr>';
+    return '<tr>' + columns.map(function (key) {
+      return renderTechnicalInventoryCell(item, key);
+    }).join('') + '</tr>';
+  }).join('') : '<tr><td colspan="' + colspan + '" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد أصناف في المخزون — أضف الأصناف من لوحة الإدارة</td></tr>';
   refreshPaginated('inventoryTable');
   updateInventoryAnalyticsCards();
 }

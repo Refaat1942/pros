@@ -31,22 +31,29 @@
         </div>
 
         <div class="stock-table-wrap">
+          @unless ($inventory_list_enabled ?? true)
+            <p style="text-align:center;color:var(--text-muted);padding:24px;">
+              قائمة المخزن غير مفعّلة لدورك — راجع «عرض قوائم الأصناف» في الإعدادات.
+            </p>
+          @else
           <table data-paginate="10" class="stock-table">
             <thead>
-              <tr>
-                <th>كود الصنف</th>
-                <th>اسم الصنف</th>
-                <th class="col-qty">الرصيد المتاح</th>
-                <th class="col-status">الحالة</th>
+              <tr id="inventoryTableHead">
+                @foreach ($inventory_list_columns ?? ['code', 'name', 'available', 'status'] as $colKey)
+                  <th class="{{ in_array($colKey, ['available', 'status', 'qty', 'reserved'], true) ? 'col-qty' : '' }}">
+                    {{ ($inventory_list_column_labels ?? [])[$colKey]['label'] ?? $colKey }}
+                  </th>
+                @endforeach
               </tr>
             </thead>
             <tbody id="inventoryTable" data-server-inventory="1"></tbody>
             <tfoot>
               <tr>
-                <td colspan="4" id="inventoryFooter"></td>
+                <td colspan="{{ max(1, count($inventory_list_columns ?? ['code', 'name', 'available', 'status'])) }}" id="inventoryFooter"></td>
               </tr>
             </tfoot>
           </table>
+          @endunless
         </div>
       </div>
 
@@ -105,6 +112,7 @@
 <script>
 window.__INVENTORY_ITEMS = @json($inventory_items ?? []);
 window.__INBOUND_RECEIVE_ENABLED = @json($inbound_document_upload ?? true);
+window.__INVENTORY_LIST_COLUMNS = @json($inventory_list_columns ?? ['code', 'name', 'available', 'status']);
 </script>
 <script>
 (function () {

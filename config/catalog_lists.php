@@ -1,0 +1,151 @@
+<?php
+
+/**
+ * قوائم الأصناف حسب اللوحة — الأعمدة المتاحة وافتراضيات كل دور.
+ *
+ * يُتحكَّم في الإظهار الفعلي من لوحة «عرض قوائم الأصناف» (CatalogListVisibilityService).
+ */
+return [
+    /** @var array<string, array{label_ar: string, dashboard: string, page: string, default_roles: list<string>, default_columns: list<string>}> */
+    'profiles' => [
+        'admin_catalog' => [
+            'label_ar' => 'جدول الأصناف والأسعار — الإدارة',
+            'dashboard' => 'admin',
+            'page' => 'catalog',
+            'default_roles' => ['super_admin', 'admin'],
+            'default_columns' => [
+                'code', 'page_number', 'name', 'brand', 'alt_codes', 'uom',
+                'opening_qty', 'addition', 'discount', 'catalog_balance', 'warehouse_qty', 'price',
+            ],
+        ],
+        'inventory_overview' => [
+            'label_ar' => 'متابعة حركة الأصناف — الإدارة',
+            'dashboard' => 'admin',
+            'page' => 'inventory-overview',
+            'default_roles' => ['super_admin', 'admin'],
+            'default_columns' => [
+                'code', 'name', 'brand', 'category', 'qty', 'reserved', 'available',
+                'backorder', 'price', 'wac', 'expiry', 'price_history', 'print',
+            ],
+        ],
+        'technical_inventory' => [
+            'label_ar' => 'جدول توفر المخزن — المخزن',
+            'dashboard' => 'technical',
+            'page' => 'inventory',
+            'default_roles' => ['technical'],
+            'default_columns' => ['code', 'name', 'brand', 'uom', 'available', 'status'],
+        ],
+        'spec_picker' => [
+            'label_ar' => 'قائمة اختيار الأصناف — التوصيف',
+            'dashboard' => 'spec',
+            'page' => 'spec',
+            'default_roles' => ['spec'],
+            'default_columns' => ['code', 'name', 'brand', 'uom', 'available'],
+        ],
+        'adjustments_picker' => [
+            'label_ar' => 'قائمة اختيار الأصناف — المعدلات',
+            'dashboard' => 'adjustments',
+            'page' => 'adjustments',
+            'default_roles' => ['adjustments'],
+            'default_columns' => ['code', 'name', 'brand', 'uom', 'available', 'qty'],
+        ],
+        'doctor_picker' => [
+            'label_ar' => 'قائمة توصيات الطبيب',
+            'dashboard' => 'doctor',
+            'page' => 'queue',
+            'default_roles' => ['doctor'],
+            'default_columns' => ['code', 'name', 'brand', 'uom'],
+        ],
+    ],
+
+    /**
+     * أعمدة الملفات غير جدول الإدارة (admin_catalog يستخدم config/catalog.php).
+     *
+     * @var array<string, array<string, array{label: string, gate?: string}>>
+     */
+    'profile_columns' => [
+        'inventory_overview' => [
+            'code' => ['label' => 'الكود / الباركود'],
+            'name' => ['label' => 'الصنف'],
+            'brand' => ['label' => 'الماركة'],
+            'category' => ['label' => 'القسم'],
+            'qty' => ['label' => 'الرصيد'],
+            'reserved' => ['label' => 'محجوز'],
+            'available' => ['label' => 'متاح'],
+            'backorder' => ['label' => 'طلب توريد'],
+            'price' => ['label' => 'السعر', 'gate' => 'view-prices'],
+            'wac' => ['label' => 'WAC', 'gate' => 'view-costs'],
+            'expiry' => ['label' => 'الصلاحية'],
+            'price_history' => ['label' => 'آخر الأسعار', 'gate' => 'view-prices'],
+            'print' => ['label' => 'طباعة', 'gate' => 'print-barcode'],
+        ],
+        'technical_inventory' => [
+            'code' => ['label' => 'كود الصنف'],
+            'name' => ['label' => 'اسم الصنف'],
+            'brand' => ['label' => 'الماركة'],
+            'uom' => ['label' => 'الوحدة'],
+            'available' => ['label' => 'الرصيد المتاح'],
+            'status' => ['label' => 'الحالة'],
+            'qty' => ['label' => 'رصيد المخزن'],
+            'reserved' => ['label' => 'محجوز'],
+            'category' => ['label' => 'القسم'],
+        ],
+        'spec_picker' => [
+            'code' => ['label' => 'كود الصنف'],
+            'name' => ['label' => 'اسم الصنف'],
+            'brand' => ['label' => 'الماركة'],
+            'uom' => ['label' => 'الوحدة'],
+            'available' => ['label' => 'متاح'],
+            'qty' => ['label' => 'الرصيد'],
+        ],
+        'adjustments_picker' => [
+            'code' => ['label' => 'كود الصنف'],
+            'name' => ['label' => 'اسم الصنف'],
+            'brand' => ['label' => 'الماركة'],
+            'uom' => ['label' => 'الوحدة'],
+            'available' => ['label' => 'متاح'],
+            'qty' => ['label' => 'الرصيد'],
+        ],
+        'doctor_picker' => [
+            'code' => ['label' => 'كود الصنف'],
+            'name' => ['label' => 'اسم الصنف'],
+            'brand' => ['label' => 'الماركة'],
+            'uom' => ['label' => 'الوحدة'],
+        ],
+    ],
+
+    /** أعمدة admin_catalog — بوابات إضافية فوق تعريف catalog.php */
+    'admin_catalog_gates' => [
+        'price' => 'view-prices',
+        'opening_qty' => 'view-inventory-overview',
+        'addition' => 'view-inventory-overview',
+        'discount' => 'view-inventory-overview',
+        'catalog_balance' => 'view-inventory-overview',
+        'warehouse_qty' => 'view-inventory-overview',
+    ],
+
+    /** أعمدة إلزامية عند تفعيل القائمة */
+    'required_columns' => [
+        'admin_catalog' => ['code', 'name'],
+        'inventory_overview' => ['code', 'name'],
+        'technical_inventory' => ['code', 'name'],
+        'spec_picker' => ['code', 'name'],
+        'adjustments_picker' => ['code', 'name'],
+        'doctor_picker' => ['code', 'name'],
+    ],
+
+    /** @var array<string, array<string, list<string>>> */
+    'item_field_map' => [
+        'technical_inventory' => [
+            'code' => ['code'],
+            'name' => ['name'],
+            'brand' => ['brand'],
+            'uom' => ['uom'],
+            'available' => ['available'],
+            'status' => ['status'],
+            'qty' => ['qty'],
+            'reserved' => ['reserved'],
+            'category' => ['category'],
+        ],
+    ],
+];
