@@ -1,54 +1,81 @@
 @php
     $employeesUrl = ($sections_employees_url ?? null) ?: route('admin.employees');
     $showAdminEmployeeLink = $show_admin_employee_link ?? true;
+    $technicians = $workshop_technicians ?? [];
+    $sections = $workshop_sections ?? [];
+    $technicianCount = count($technicians);
+    $sectionCount = count($sections);
 @endphp
-@if (empty($workshop_technicians ?? []))
-    <div class="panel" style="margin-bottom:16px;border:1px solid #fdba74;background:#fff7ed;">
-        <div class="panel-body" style="padding:16px 20px;font-size:13px;line-height:1.7;color:#9a3412;">
-            <strong>⚠️ لا يوجد فنيون إنتاج مسجّلون بعد.</strong>
-            <p style="margin:8px 0 0;">
+
+<div class="space-y-4" id="workshopSectionsPage">
+    {{-- دليل سريع --}}
+    <div class="rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm leading-relaxed text-violet-950">
+        <p class="font-extrabold mb-2">📌 كيف تدير الأقسام والفنيين؟</p>
+        <ol class="list-decimal list-inside space-y-1.5 mr-1">
+            <li><strong>الأقسام</strong> — الجدول أدناه. اضغط الزر الأخضر <strong>«➕ إضافة قسم»</strong> لإنشاء قسم جديد.</li>
+            <li><strong>ربط الفنيين</strong> — اضغط <strong>«✏️ تعديل / ربط فنيين»</strong> على أي صف واختر الفنيين من القائمة ثم احفظ.</li>
+            @if ($showAdminEmployeeLink)
+                <li><strong>إضافة فني جديد للنظام</strong> — من لوحة الإدارة → <a href="{{ $employeesUrl }}" class="font-bold underline text-violet-800">الموظفون</a> → دور <strong>«قسم الإنتاج»</strong>، ثم ارجع هنا واربطه بالقسم.</li>
+            @else
+                <li><strong>إضافة فني جديد</strong> — تواصل مع الإدارة لتسجيل موظف بدور «قسم الإنتاج»، ثم اربطه من زر التعديل.</li>
+            @endif
+        </ol>
+    </div>
+
+    @if ($technicianCount === 0)
+        <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+            <strong>⚠️ لا يوجد فنيون مسجّلون بدور «قسم الإنتاج».</strong>
+            <p class="mt-2">
                 @if ($showAdminEmployeeLink)
-                    أضف الموظفين من
-                    <a href="{{ $employeesUrl }}" style="color:#c2410c;font-weight:700;text-decoration:underline;">الموظفون</a>
-                    واختر دور <strong>«قسم الإنتاج»</strong>، ثم ارجع لربطهم بالأقسام.
+                    أضف موظفاً من <a href="{{ $employeesUrl }}" class="font-bold underline">الموظفون</a> أولاً، ثم ارجع لربطهم بالأقسام.
                 @else
-                    تواصل مع الإدارة لإضافة موظفين بدور «قسم الإنتاج»، ثم ارجع لربطهم بالأقسام.
+                    اطلب من الإدارة إضافة موظفين بدور «قسم الإنتاج» قبل ربطهم بالأقسام.
                 @endif
             </p>
         </div>
-    </div>
-@endif
+    @endif
 
-<div class="panel">
-    <div class="panel-header">
-        <h3>🏭 أقسام قسم الإنتاج</h3>
-        <button type="button" class="btn-add-rank" id="btnAddWorkshopSection">➕ إضافة قسم</button>
-    </div>
-    <div class="data-toolbar">
-        <input type="text" id="workshopSectionSearch" placeholder="🔍 بحث...">
-        <span class="toolbar-count" id="workshopSectionCount">0 قسم</span>
-    </div>
-    <div class="panel-body">
-        <table>
-            <thead>
-                <tr>
-                    <th>القسم</th>
-                    <th>الكود</th>
-                    <th>الفنيون</th>
-                    <th>الحالة</th>
-                    <th style="width:160px">إجراء</th>
-                </tr>
-            </thead>
-            <tbody id="workshopSectionsTable"></tbody>
-        </table>
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
+            <div>
+                <h3 class="font-bold text-slate-800 text-lg">🏭 أقسام الإنتاج</h3>
+                <p class="text-xs text-slate-500 mt-0.5">{{ $sectionCount }} قسم · {{ $technicianCount }} فني متاح للربط</p>
+            </div>
+            <button type="button" id="btnAddWorkshopSection"
+                    class="rounded-xl bg-emerald-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-emerald-700 shadow-sm">
+                ➕ إضافة قسم
+            </button>
+        </div>
+
+        <div class="p-4 border-b border-slate-100 flex flex-wrap gap-3 items-center">
+            <input type="text" id="workshopSectionSearch" placeholder="🔍 بحث باسم القسم أو الكود..."
+                   class="flex-1 min-w-[240px] rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/40">
+            <span class="text-sm font-bold text-slate-500" id="workshopSectionCount">{{ $sectionCount }} قسم</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm" data-paginate="10">
+                <thead class="bg-slate-100 text-slate-600">
+                    <tr>
+                        <th class="px-4 py-3 text-right font-bold">القسم</th>
+                        <th class="px-4 py-3 text-right font-bold">الكود</th>
+                        <th class="px-4 py-3 text-right font-bold">الفنيون المربوطون</th>
+                        <th class="px-4 py-3 text-right font-bold">الحالة</th>
+                        <th class="px-4 py-3 text-right font-bold whitespace-nowrap">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="workshopSectionsTable" class="divide-y divide-slate-100"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <div class="catalog-modal-overlay" id="workshopSectionModal" role="dialog" aria-modal="true" aria-labelledby="workshopSectionModalTitle">
-    <div class="catalog-modal" style="max-width:520px;" onclick="event.stopPropagation()">
+    <div class="catalog-modal" style="max-width:560px;" onclick="event.stopPropagation()">
         <div class="catalog-modal-header">
             <div>
-                <h3 id="workshopSectionModalTitle">➕ قسم إنتاج</h3>
+                <h3 id="workshopSectionModalTitle">➕ قسم إنتاج جديد</h3>
+                <p class="text-xs text-slate-500 mt-1" id="workshopSectionModalHint">أدخل بيانات القسم واختر الفنيين المسؤولين عنه.</p>
             </div>
             <button type="button" class="catalog-modal-close" id="closeWorkshopSectionModal" aria-label="إغلاق">&times;</button>
         </div>
@@ -64,35 +91,37 @@
             </div>
             <div class="form-group" style="margin-bottom:14px;">
                 <label for="workshopSectionDescription">الوصف</label>
-                <textarea id="workshopSectionDescription" class="form-control" rows="3" placeholder="وصف مختصر للقسم..."></textarea>
+                <textarea id="workshopSectionDescription" class="form-control" rows="2" placeholder="وصف مختصر..."></textarea>
             </div>
             <div class="form-group" style="margin-bottom:14px;">
-                <label for="workshopSectionTechnicians">الفنيون</label>
-                <select id="workshopSectionTechnicians" class="form-control" multiple size="5"></select>
-                <small style="display:block;margin-top:6px;color:var(--text-muted);font-size:12px;">
-                    اضغط Ctrl (أو Cmd) لاختيار أكثر من فني.
-                    @if (empty($workshop_technicians ?? []))
+                <label for="workshopSectionTechnicians">👷 ربط الفنيين بالقسم</label>
+                <select id="workshopSectionTechnicians" class="form-control" multiple size="6"></select>
+                <small style="display:block;margin-top:6px;color:#64748b;font-size:12px;line-height:1.6;">
+                    اضغط <strong>Ctrl</strong> (أو <strong>Cmd</strong> على Mac) لاختيار أكثر من فني.
+                    @if ($technicianCount === 0)
                         @if ($showAdminEmployeeLink)
-                            القائمة فارغة — <a href="{{ $employeesUrl }}">أضف موظفاً بدور قسم الإنتاج</a>.
+                            <br>القائمة فارغة — <a href="{{ $employeesUrl }}">أضف موظفاً بدور «قسم الإنتاج»</a> من الإدارة.
+                        @else
+                            <br>لا يوجد فنيون — تواصل مع الإدارة لإضافتهم.
                         @endif
                     @endif
                 </small>
             </div>
             <label class="form-check-row" for="workshopSectionActive">
                 <input type="checkbox" id="workshopSectionActive" checked>
-                <span>نشط</span>
+                <span>القسم نشط</span>
             </label>
-            <div id="workshopSectionError" style="display:none;color:#dc2626;margin-top:12px;font-size:13px;"></div>
+            <div id="workshopSectionError" style="display:none;color:#dc2626;margin-top:12px;font-size:13px;padding:10px;background:#fee2e2;border-radius:8px;"></div>
         </div>
         <div class="catalog-modal-footer">
             <button type="button" class="btn-action" id="cancelWorkshopSectionModal">إلغاء</button>
-            <button type="button" class="btn-action success" id="saveWorkshopSectionBtn">💾 حفظ</button>
+            <button type="button" class="btn-action success" id="saveWorkshopSectionBtn">💾 حفظ القسم والفنيين</button>
         </div>
     </div>
 </div>
 
 <script>
-window.__WORKSHOP_SECTIONS = @json($workshop_sections ?? []);
-window.__WORKSHOP_TECHNICIANS = @json($workshop_technicians ?? []);
+window.__WORKSHOP_SECTIONS = @json($sections);
+window.__WORKSHOP_TECHNICIANS = @json($technicians);
 window.__WORKSHOP_SECTIONS_API = @json($workshop_sections_api ?? '/admin/workshop-sections');
 </script>
