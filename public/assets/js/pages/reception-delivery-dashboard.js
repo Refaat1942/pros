@@ -186,10 +186,24 @@
     if (el) el.classList.add('hidden');
   }
 
+  function setConfirmButtonsDisabled(disabled) {
+    ['btnConfirmDelivery', 'btnConfirmDeliveryHeader'].forEach(function (id) {
+      var btn = $(id);
+      if (btn) btn.disabled = disabled;
+    });
+  }
+
+  function toggleConfirmButtons(show) {
+    var headerBtn = $('btnConfirmDeliveryHeader');
+    if (headerBtn) headerBtn.classList.toggle('hidden', !show);
+  }
+
   function selectCase(caseId, label) {
     state.caseId = caseId;
     $('deliveryEmpty') && $('deliveryEmpty').classList.add('hidden');
     $('deliveryWorkspace') && $('deliveryWorkspace').classList.remove('hidden');
+    toggleConfirmButtons(true);
+    setConfirmButtonsDisabled(false);
     clearError();
 
     if (!window.axios || !caseId) return;
@@ -237,8 +251,7 @@
     if (!window.confirm('تأكيد تسليم الطرف وإغلاق الحالة؟')) return;
 
     clearError();
-    var btn = $('btnConfirmDelivery');
-    if (btn) btn.disabled = true;
+    setConfirmButtonsDisabled(true);
 
     axios.post('/reception/delivery/' + state.caseId + '/confirm')
       .then(function (res) {
@@ -266,7 +279,7 @@
       .catch(function (err) {
         var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر التسليم — تحقق من حالة BOM.';
         showError(msg);
-        if (btn) btn.disabled = false;
+        setConfirmButtonsDisabled(false);
       });
   }
 
@@ -365,6 +378,7 @@
 
     $('deliverySearch') && $('deliverySearch').addEventListener('input', filterSearch);
     $('btnConfirmDelivery') && $('btnConfirmDelivery').addEventListener('click', confirmDelivery);
+    $('btnConfirmDeliveryHeader') && $('btnConfirmDeliveryHeader').addEventListener('click', confirmDelivery);
 
     $('btnPostDeliveryReturn') && $('btnPostDeliveryReturn').addEventListener('click', openPostDeliveryReturnModal);
     $('postReturnBomSelect') && $('postReturnBomSelect').addEventListener('change', renderPostReturnLines);
@@ -376,9 +390,9 @@
       $('deliverySuccessModal') && $('deliverySuccessModal').classList.add('hidden');
       $('deliveryWorkspace') && $('deliveryWorkspace').classList.add('hidden');
       $('deliveryEmpty') && $('deliveryEmpty').classList.remove('hidden');
+      toggleConfirmButtons(false);
       state = { caseId: null };
-      var btn = $('btnConfirmDelivery');
-      if (btn) btn.disabled = false;
+      setConfirmButtonsDisabled(false);
     });
     $('deliverySuccessBackdrop') && $('deliverySuccessBackdrop').addEventListener('click', function () {
       $('btnCloseDeliverySuccess') && $('btnCloseDeliverySuccess').click();
