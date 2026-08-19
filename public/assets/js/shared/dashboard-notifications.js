@@ -9,6 +9,10 @@
  */
 (function () {
   function beep() {
+    if (window.NotificationSound && typeof window.NotificationSound.play === 'function') {
+      window.NotificationSound.play();
+      return;
+    }
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
