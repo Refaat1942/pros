@@ -201,7 +201,12 @@ return [
             'statistics' => ['title' => 'إحصائيات قسم الإنتاج', 'icon' => '📊', 'label' => 'الإحصائيات'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/technical-dashboard.css'],
+        'styles' => [
+            'assets/css/dashboard-mobile.css',
+            'assets/css/charts-kit-static.css',
+            'assets/css/technical-dashboard.css',
+            'assets/css/catalog-modal.css',
+        ],
         'scripts' => [
             'assets/vendor/axios.min.js',
             'assets/js/shared/export-kit.js',
