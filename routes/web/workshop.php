@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Bom\ReturnNoteController;
+use App\Http\Controllers\Admin\WorkshopSectionController;
 use App\Http\Controllers\Dashboard\WorkshopDashboardController;
 use App\Http\Controllers\Manufacturing\WorkshopQueueController;
+use App\Http\Controllers\Stock\OperationalCatalogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +23,23 @@ Route::prefix('workshop')
     ->middleware(['auth', 'dashboard.guard'])
     ->name('workshop.')
     ->group(function () {
+        Route::middleware('dashboard.page:workshop,catalog')->group(function () {
+            Route::get('catalog/list', [OperationalCatalogController::class, 'index'])
+                ->defaults('profile', 'workshop_catalog')
+                ->name('catalog.list');
+        });
+
+        Route::middleware(['dashboard.page:workshop,sections', 'can:manage-workshop-sections'])->group(function () {
+            Route::get('sections/list', [WorkshopSectionController::class, 'index'])
+                ->name('sections.list');
+            Route::post('sections', [WorkshopSectionController::class, 'store'])
+                ->name('sections.store');
+            Route::put('sections/{workshopSection}', [WorkshopSectionController::class, 'update'])
+                ->name('sections.update');
+            Route::delete('sections/{workshopSection}', [WorkshopSectionController::class, 'destroy'])
+                ->name('sections.destroy');
+        });
+
         Route::middleware('dashboard.page:workshop,workshop')->group(function () {
             Route::get('workshop/list', [WorkshopQueueController::class, 'index'])
                 ->name('workshop.list');

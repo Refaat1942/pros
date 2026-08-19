@@ -205,7 +205,7 @@ final class PathwayDefaultSteps
             'sort' => $sort,
             'owner_department' => 'adjustments',
             'action_summary' => 'مراجعة البنود — تعديل الكميات',
-            'on_complete' => 'ينتقل للتكاليف',
+            'on_complete' => 'ينتقل للاعتماد',
             'next_step_key' => 'cost_calc',
             'stage_keys' => [CaseRecord::STAGE_ADJUSTMENTS],
             'required' => false,
@@ -219,7 +219,7 @@ final class PathwayDefaultSteps
     {
         return [
             'key' => 'cost_calc',
-            'label' => 'التكاليف',
+            'label' => 'الاعتماد',
             'sort' => $sort,
             'owner_department' => 'costing',
             'action_summary' => $summary ?? 'احتساب التكلفة — تجميد اللقطة — تأكيد السعر',

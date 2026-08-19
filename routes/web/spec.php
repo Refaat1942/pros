@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Dashboard\SpecDashboardController;
 use App\Http\Controllers\Spec\SpecEditRequestController;
+use App\Http\Controllers\Stock\OperationalCatalogController;
 use App\Http\Controllers\TechOrderSpec\TechOrderSpecController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,12 @@ Route::prefix('spec')
         Route::get('orders/export', [TechOrderSpecController::class, 'exportOrders'])
             ->middleware('dashboard.page:spec,orders')
             ->name('orders.export');
+
+        // ── Catalog browse (قائمة الأصناف) ─────────────────────────────────
+        Route::get('catalog/list', [OperationalCatalogController::class, 'index'])
+            ->middleware('dashboard.page:spec,catalog')
+            ->defaults('profile', 'spec_catalog')
+            ->name('catalog.list');
 
         // ── Spec (معاينة التوصيف) ──────────────────────────────────────────
         Route::middleware('dashboard.page:spec,spec')->group(function () {

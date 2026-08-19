@@ -19,15 +19,15 @@ class RolesAndAdminSeeder extends Seeder
         $roles = [
             ['slug' => Role::SLUG_SUPER_ADMIN, 'label_ar' => 'سوبر أدمن'],
             ['slug' => Role::SLUG_ADMIN,       'label_ar' => 'مسؤول النظام (محدود)'],
-            ['slug' => Role::SLUG_RECEPTION,   'label_ar' => 'موظف استقبال'],
-            ['slug' => Role::SLUG_DOCTOR,      'label_ar' => 'طبيب'],
-            ['slug' => Role::SLUG_SPEC,        'label_ar' => 'فني مواصفات'],
-            ['slug' => Role::SLUG_ADJUSTMENTS, 'label_ar' => 'فني تعديلات'],
-            ['slug' => Role::SLUG_COSTING,     'label_ar' => 'فني تكاليف'],
-            ['slug' => Role::SLUG_OPERATIONS,  'label_ar' => 'مكتب عمليات'],
-            ['slug' => Role::SLUG_CASHIER,     'label_ar' => 'موظف الخزنة'],
+            ['slug' => Role::SLUG_RECEPTION,   'label_ar' => 'الاستقبال'],
+            ['slug' => Role::SLUG_DOCTOR,      'label_ar' => 'الطبيب'],
+            ['slug' => Role::SLUG_SPEC,        'label_ar' => 'التوصيف'],
+            ['slug' => Role::SLUG_ADJUSTMENTS, 'label_ar' => 'المعدلات'],
+            ['slug' => Role::SLUG_COSTING,     'label_ar' => 'الاعتماد'],
+            ['slug' => Role::SLUG_OPERATIONS,  'label_ar' => 'مكتب التشغيل'],
+            ['slug' => Role::SLUG_CASHIER,     'label_ar' => 'الخزنة'],
             ['slug' => Role::SLUG_WORKSHOP,    'label_ar' => 'قسم الإنتاج'],
-            ['slug' => Role::SLUG_TECHNICAL,   'label_ar' => 'مسؤول مخزن'],
+            ['slug' => Role::SLUG_TECHNICAL,   'label_ar' => 'المخزن'],
         ];
 
         foreach ($roles as $data) {

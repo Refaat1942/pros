@@ -4,6 +4,7 @@ use App\Http\Controllers\Adjustments\AdjustmentEditRequestController;
 use App\Http\Controllers\Adjustments\AdjustmentsController;
 use App\Http\Controllers\Adjustments\AdjustmentsHistoryController;
 use App\Http\Controllers\Dashboard\AdjustmentsDashboardController;
+use App\Http\Controllers\Stock\OperationalCatalogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -37,6 +38,11 @@ Route::prefix('adjustments')
     ->middleware(['auth', 'dashboard.guard'])
     ->name('adjustments.')
     ->group(function () {
+
+        Route::get('catalog/list', [OperationalCatalogController::class, 'index'])
+            ->middleware('dashboard.page:adjustments,catalog')
+            ->defaults('profile', 'adjustments_catalog')
+            ->name('catalog.list');
 
         // ── Adjustments page (جدول المعدلات) ──────────────────────────────
         Route::middleware('dashboard.page:adjustments,adjustments')->group(function () {

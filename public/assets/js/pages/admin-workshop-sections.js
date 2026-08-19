@@ -1,6 +1,11 @@
 (function () {
-  if (document.body.dataset.dashboard !== 'admin') return;
-  if (document.body.dataset.activePage !== 'workshop-sections') return;
+  var dash = document.body.dataset.dashboard;
+  var page = document.body.dataset.activePage;
+  var allowed = (dash === 'admin' && page === 'workshop-sections')
+    || (dash === 'workshop' && page === 'sections');
+  if (!allowed) return;
+
+  var apiBase = (window.__WORKSHOP_SECTIONS_API || '/admin/workshop-sections').replace(/\/$/, '');
 
   var csrf = document.querySelector('meta[name="csrf-token"]');
   function headers(json) {
@@ -80,7 +85,7 @@
       active: document.getElementById('workshopSectionActive').checked,
       technician_ids: techIds,
     };
-    var url = id ? '/admin/workshop-sections/' + id : '/admin/workshop-sections';
+    var url = id ? apiBase + '/' + id : apiBase;
     fetch(url, { method: id ? 'PUT' : 'POST', headers: headers(true), credentials: 'same-origin', body: JSON.stringify(payload) })
       .then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
       .then(function () { window.location.reload(); })
@@ -93,7 +98,7 @@
 
   function deleteSection(id) {
     if (!confirm('حذف القسم؟')) return;
-    fetch('/admin/workshop-sections/' + id, { method: 'DELETE', headers: headers(), credentials: 'same-origin' })
+    fetch(apiBase + '/' + id, { method: 'DELETE', headers: headers(), credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
       .then(function () { window.location.reload(); })
       .catch(function (err) { alert((err && err.message) || 'تعذّر الحذف'); });

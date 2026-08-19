@@ -11,8 +11,9 @@
         <div class="overflow-y-auto flex-1 p-5 space-y-4">
             <div>
                 <label class="block text-sm font-bold text-slate-700 mb-1">المبلغ (ج.م)</label>
-                <input type="number" step="0.01" min="0.01" id="cashierPaymentAmount"
-                       class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+                <input type="number" step="0.01" min="0.01" id="cashierPaymentAmount" readonly
+                       class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+                <p class="text-xs text-slate-500 mt-1">المبلغ محدد من عرض السعر — لا يُعدَّل يدوياً.</p>
             </div>
 
             <div>

@@ -38,9 +38,7 @@ class PermissionCatalogService
     }
 
     /**
-     * يُسنِد لكل دور (تشغيلي + أدمن) جميع صلاحيات اللوحات التشغيلية.
-     * النتيجة: كل التوجلز خضراء بعد migrate:fresh --seed؛
-     * يستطيع الأدمن تضييق الصلاحيات لاحقاً من صفحة المصفوفة.
+     * يُسنِد لكل دور صلاحيات لوحته فقط + الإجراءات الافتراضية من config/permissions.php.
      *
      * @param  bool  $fullSync  true = استبدال كامل، false = إضافة بدون حذف الموجود
      */
@@ -48,30 +46,52 @@ class PermissionCatalogService
     {
         $this->syncToDatabase();
 
-        $operationalIds = Permission::query()
-            ->where('dashboard', '!=', Role::SLUG_ADMIN)
-            ->pluck('id');
-
-        $adminViewIds = Permission::query()
-            ->where('dashboard', Role::SLUG_ADMIN)
-            ->where('type', Permission::TYPE_VIEW)
-            ->pluck('id');
-
-        Role::query()->each(function (Role $role) use ($operationalIds, $adminViewIds, $fullSync) {
+        Role::query()->each(function (Role $role) use ($fullSync) {
             if ($role->slug === Role::SLUG_SUPER_ADMIN) {
                 return;
             }
 
-            $ids = $role->slug === Role::SLUG_ADMIN
-                ? $operationalIds->merge($adminViewIds)->unique()->values()
-                : $operationalIds;
+            $permissionIds = $this->defaultPermissionIdsForRole($role->slug);
 
             if ($fullSync) {
-                $role->permissions()->sync($ids);
+                $role->permissions()->sync($permissionIds);
             } else {
-                $role->permissions()->syncWithoutDetaching($ids);
+                $role->permissions()->syncWithoutDetaching($permissionIds);
             }
         });
+    }
+
+    /** @return \Illuminate\Support\Collection<int, int> */
+    private function defaultPermissionIdsForRole(string $roleSlug): \Illuminate\Support\Collection
+    {
+        $slugs = collect();
+
+        if ($roleSlug === Role::SLUG_ADMIN) {
+            foreach (array_keys(config('dashboards.admin.pages', [])) as $page) {
+                if ($page === 'notifications') {
+                    continue;
+                }
+                $slugs->push(Permission::viewSlug('admin', $page));
+            }
+        } elseif (config("dashboards.{$roleSlug}.pages")) {
+            foreach (config("dashboards.{$roleSlug}.pages", []) as $pageKey => $pageMeta) {
+                if ($pageKey === 'notifications') {
+                    continue;
+                }
+                if (! empty($pageMeta['hidden'])) {
+                    continue;
+                }
+                $slugs->push(Permission::viewSlug($roleSlug, $pageKey));
+            }
+        }
+
+        foreach (config("permissions.default_actions.{$roleSlug}", []) as $actionSlug) {
+            $slugs->push($actionSlug);
+        }
+
+        return Permission::query()
+            ->whereIn('slug', $slugs->unique()->values()->all())
+            ->pluck('id');
     }
 
     /**

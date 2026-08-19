@@ -9,7 +9,7 @@ return [
         'reception' => ['label_ar' => 'لوحة الاستقبال', 'icon' => '📋'],
         'doctor' => ['label_ar' => 'لوحة الطبيب', 'icon' => '🩺'],
         'spec' => ['label_ar' => 'لوحة التوصيف', 'icon' => '📐'],
-        'adjustments' => ['label_ar' => 'لوحة المعدلات والتكاليف', 'icon' => '📏'],
+        'adjustments' => ['label_ar' => 'لوحة المعدلات', 'icon' => '📏'],
         'costing' => ['label_ar' => 'لوحة الاعتماد', 'icon' => '✅'],
         'operations' => ['label_ar' => 'مكتب التشغيل', 'icon' => '🎯'],
         'cashier' => ['label_ar' => 'الخزنة', 'icon' => '💵'],
@@ -81,7 +81,7 @@ return [
         ],
         'manage-workshop-sections' => [
             'label_ar' => 'إدارة أقسام الإنتاج وربط الفنيين',
-            'dashboard' => 'admin',
+            'dashboard' => 'workshop',
         ],
         'view-workshop-tracking' => [
             'label_ar' => 'لوحة تتبع أوامر الشغل في قسم الإنتاج',
@@ -103,8 +103,8 @@ return [
      * @var array<string, array{0: string, 1: string}>
      */
     'page_action_aliases' => [
+        'manage-workshop-sections' => ['workshop', 'sections'],
         'view-workshop-tracking' => ['admin', 'workshop-tracking'],
-        'manage-workshop-sections' => ['admin', 'workshop-sections'],
         'approve-dispense' => ['admin', 'dispense-approvals'],
         'approve-services' => ['admin', 'services-approvals'],
         'manage-permissions' => ['admin', 'permissions'],
@@ -125,6 +125,7 @@ return [
         'technical' => [],
         'spec' => [],
         'adjustments' => [],
+        'workshop' => ['manage-workshop-sections'],
         'admin' => [
             'view-prices',
             'view-revenue',

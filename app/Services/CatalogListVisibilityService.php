@@ -453,6 +453,35 @@ class CatalogListVisibilityService
         Cache::forget('settings.catalog_list_visibility');
     }
 
+    /** إعادة ضبط إظهار قوائم الأصناف من config/catalog_lists.php */
+    public function seedConfigDefaults(): void
+    {
+        $normalized = [
+            'sections' => [],
+            'roles' => [],
+        ];
+
+        foreach ($this->sections() as $sectionKey => $sectionMeta) {
+            foreach (Role::query()->orderBy('id')->pluck('slug') as $slug) {
+                $normalized['sections'][$sectionKey]['roles'][$slug] = $this->defaultSectionRole($slug, $sectionKey);
+            }
+        }
+
+        foreach (Role::query()->orderBy('id')->pluck('slug') as $slug) {
+            foreach ($this->profiles() as $profileKey => $profileMeta) {
+                unset($profileMeta);
+                $normalized['roles'][$slug][$profileKey] = $this->defaultRoleProfile($slug, $profileKey);
+            }
+        }
+
+        Setting::updateOrCreate(
+            ['key' => self::SETTING_KEY],
+            ['value' => json_encode($normalized, JSON_UNESCAPED_UNICODE)],
+        );
+
+        Cache::forget('settings.catalog_list_visibility');
+    }
+
     /** @return list<string> */
     private function allColumnKeys(string $profile): array
     {

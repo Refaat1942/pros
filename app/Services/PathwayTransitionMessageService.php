@@ -56,7 +56,7 @@ class PathwayTransitionMessageService
         Role::SLUG_ADJUSTMENTS => '/adjustments/adjustments',
         Role::SLUG_COSTING => '/costing/costing',
         Role::SLUG_OPERATIONS => '/operations/pending',
-        Role::SLUG_CASHIER => '/cashier/cashier',
+        Role::SLUG_CASHIER => '/cashier/payments',
         Role::SLUG_TECHNICAL => '/technical/bom',
         Role::SLUG_WORKSHOP => '/workshop/workshop',
         Role::SLUG_ADMIN => '/admin/dashboard',
@@ -97,7 +97,7 @@ class PathwayTransitionMessageService
             $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
             $to = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_MANUFACTURING);
 
-            return "تم التحويل من {$from} إلى {$to} — جاهز للورشة.";
+            return "تم التحويل من {$from} إلى {$to} — جاهز لقسم الإنتاج.";
         }
 
         if ($event === WorkflowEvent::OperationsApproved->value) {
@@ -206,7 +206,7 @@ class PathwayTransitionMessageService
     {
         return match ($event) {
             WorkflowEvent::BomFinished->value => '/reception/delivery',
-            WorkflowEvent::SentToCashier->value => '/cashier/cashier',
+            WorkflowEvent::SentToCashier->value => '/cashier/payments',
             WorkflowEvent::CashierPaid->value => '/operations/pending',
             WorkflowEvent::OperationsApproved->value => '/technical/bom',
             WorkflowEvent::BomDispensed->value => '/workshop/workshop',

@@ -110,11 +110,15 @@ class DashboardPageDataService
             'spec.orders' => $this->specOrders(),
             'spec.pricing' => $this->specPricing(),
             'spec.spec' => $this->specPreview(),
+            'spec.catalog' => $this->operationalCatalogBrowse('spec_catalog', 'catalog'),
             'adjustments.adjustments' => $this->adjustmentsHistory(),
             'adjustments.history' => $this->adjustmentsHistory(),
+            'adjustments.catalog' => $this->operationalCatalogBrowse('adjustments_catalog', 'catalog'),
             'cashier.payments' => $this->cashierPayments(),
             'cashier.statistics' => $this->cashierStatistics(),
             'workshop.workshop' => $this->workshopDesk(),
+            'workshop.catalog' => $this->operationalCatalogBrowse('workshop_catalog', 'catalog'),
+            'workshop.sections' => $this->adminWorkshopSections(),
             'workshop.statistics' => $this->workshopStatistics(),
             'technical.inventory' => $this->technicalInventory(),
             'technical.bom' => $this->technicalBom(),
@@ -813,9 +817,33 @@ class DashboardPageDataService
 
     private function technicalInventory(): array
     {
+        return array_merge(
+            $this->operationalCatalogBrowse('technical_inventory', 'inventory'),
+            $this->technicalInventoryExtras(),
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function operationalCatalogBrowse(string $profile, string $prefix): array
+    {
         $catalogService = app(StockCatalogService::class);
         $visibility = app(CatalogListVisibilityService::class);
         $user = auth()->user();
+
+        return [
+            "{$prefix}_items" => $catalogService->listForTechnicalInventory($user, $profile),
+            "{$prefix}_items_total" => $catalogService->countAll(),
+            "{$prefix}_list_columns" => $visibility->tableOrderForUser($user, $profile),
+            "{$prefix}_list_column_labels" => $visibility->columnDefinitions($profile),
+            "{$prefix}_list_enabled" => $user
+                ? $visibility->isListEnabledForUser($user, $profile)
+                : true,
+        ];
+    }
+
+    private function technicalInventoryExtras(): array
+    {
+        $catalogService = app(StockCatalogService::class);
         $items = $catalogService->allItemsForUnifiedLists();
         $totalCount = $catalogService->countAll();
 
@@ -824,13 +852,6 @@ class DashboardPageDataService
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
 
         return [
-            'inventory_items' => $catalogService->listForTechnicalInventory($user),
-            'inventory_items_total' => $totalCount,
-            'inventory_list_columns' => $visibility->tableOrderForUser($user, 'technical_inventory'),
-            'inventory_list_column_labels' => $visibility->columnDefinitions('technical_inventory'),
-            'inventory_list_enabled' => $user
-                ? $visibility->isListEnabledForUser($user, 'technical_inventory')
-                : true,
             'inventory_suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
