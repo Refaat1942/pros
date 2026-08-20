@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ResetUserPasswordRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Role;
@@ -71,6 +72,24 @@ class UserController extends Controller
         $this->userService->delete($user);
 
         return response()->json(['message' => 'تم حذف الموظف بنجاح.']);
+    }
+
+    public function resetPassword(ResetUserPasswordRequest $request, User $user): JsonResponse
+    {
+        /** @var User|null $actor */
+        $actor = Auth::user();
+
+        if (! $actor?->isSuperAdmin()) {
+            return response()->json(['message' => 'غير مصرّح — هذه العملية للسوبر أدمن فقط.'], 403);
+        }
+
+        if ($actor->id === $user->id) {
+            return response()->json(['message' => 'لا يمكن إعادة تعيين كلمة مرور حسابك من هنا.'], 422);
+        }
+
+        $this->userService->resetPassword($user, $request->validated('password'));
+
+        return response()->json(['message' => 'تم إعادة تعيين كلمة المرور بنجاح.']);
     }
 
     public function catalogListVisibilityDefaults(

@@ -6,6 +6,7 @@ use App\Http\Requests\BaseRequest;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\UserPageAccessService;
+use App\Support\UsernameRules;
 use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends BaseRequest
@@ -14,7 +15,7 @@ class StoreUserRequest extends BaseRequest
     {
         if ($this->has('username')) {
             $this->merge([
-                'username' => strtolower(trim((string) $this->input('username'))),
+                'username' => UsernameRules::normalize((string) $this->input('username')),
             ]);
         }
 
@@ -37,14 +38,7 @@ class StoreUserRequest extends BaseRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => [
-                'required',
-                'string',
-                'min:3',
-                'max:50',
-                'alpha_dash',
-                'unique:users,username',
-            ],
+            'username' => UsernameRules::rules(),
             'password' => ['required', 'string', 'min:6', 'confirmed'],
             'role_id' => [
                 'required',
@@ -64,10 +58,8 @@ class StoreUserRequest extends BaseRequest
 
     public function messages(): array
     {
-        return [
-            'username.unique' => 'اسم المستخدم مستخدم مسبقاً.',
-            'username.alpha_dash' => 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
+        return array_merge([
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
-        ];
+        ], UsernameRules::messageAttributes());
     }
 }

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use App\Support\UsernameRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -48,7 +49,7 @@ class RouteServiceProvider extends ServiceProvider
 
         // تسجيل الدخول: يحدّ من محاولات تخمين كلمة المرور (لكل اسم مستخدم + IP).
         RateLimiter::for('login', function (Request $request) {
-            $key = mb_strtolower((string) $request->input('username')).'|'.$request->ip();
+            $key = UsernameRules::normalize((string) $request->input('username')).'|'.$request->ip();
 
             return Limit::perMinute(5)->by($key);
         });

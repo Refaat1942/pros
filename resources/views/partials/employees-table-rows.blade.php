@@ -1,5 +1,6 @@
 @php
     use App\Models\Role;
+    $isSuperAdmin = auth()->user()?->isSuperAdmin() ?? false;
 @endphp
 @foreach ($employees as $employee)
     @php
@@ -16,7 +17,7 @@
             ])
         @endif
         <td><strong>{{ $employee->name }}</strong></td>
-        <td dir="ltr">{{ $employee->username }}</td>
+        <td>{{ $employee->username }}</td>
         <td>
             <span class="role-badge {{ $employee->role?->slug ?? 'unknown' }}">
                 {{ $employee->role?->label_ar ?? '—' }}
@@ -31,6 +32,14 @@
         <td>
             <div class="table-actions">
                 <a href="{{ route('admin.employees', ['edit' => $employee->id]) }}" class="btn-action" title="تعديل">✏️ تعديل</a>
+                @if ($isSuperAdmin && auth()->id() !== $employee->id)
+                    <button type="button"
+                            class="btn-action"
+                            title="إعادة تعيين كلمة المرور"
+                            onclick="resetEmployeePassword({{ $employee->id }}, {{ json_encode($employee->name) }})">
+                        🔑 كلمة المرور
+                    </button>
+                @endif
                 @unless ($isAdminUser)
                     <form method="POST" action="{{ route('admin.employees.toggle', $employee) }}" style="display:inline;">
                         @csrf

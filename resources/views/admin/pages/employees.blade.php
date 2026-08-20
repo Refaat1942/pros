@@ -86,8 +86,8 @@
                     <input type="text" name="username" class="form-control"
                            data-v-rules="required,username,max:50" maxlength="50"
                            value="{{ old('username', $editUser?->username) }}"
-                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"
-                           dir="ltr">
+                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+                    <small style="display:block;margin-top:4px;font-size:11px;color:var(--text-muted);">عربي أو إنجليزي — أرقام و _ و - مسموح</small>
                 </div>
                 <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">
@@ -199,6 +199,38 @@
         </form>
     </div>
 </div>
+
+@if (auth()->user()?->isSuperAdmin())
+<div class="catalog-modal-overlay" id="employeePasswordResetModal" role="dialog" aria-modal="true">
+    <div class="catalog-modal employee-modal" style="width:min(480px,92vw);" onclick="event.stopPropagation()">
+        <div class="catalog-modal-header">
+            <div>
+                <h3 id="employeePasswordResetTitle">🔑 إعادة تعيين كلمة المرور</h3>
+            </div>
+            <button type="button" class="catalog-modal-close" id="closeEmployeePasswordResetModal" aria-label="إغلاق">&times;</button>
+        </div>
+        <form id="employeePasswordResetForm" data-validate-form>
+            <div class="catalog-modal-body" style="padding:24px 32px;">
+                <p id="employeePasswordResetHint" style="margin:0 0 16px;font-size:13px;color:var(--text-muted);"></p>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">كلمة المرور الجديدة <span style="color:#dc2626">*</span></label>
+                    <input type="password" name="password" class="form-control" data-v-rules="required,password"
+                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+                </div>
+                <div class="form-group">
+                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">تأكيد كلمة المرور <span style="color:#dc2626">*</span></label>
+                    <input type="password" name="password_confirmation" class="form-control" data-v-rules="required,password"
+                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+                </div>
+            </div>
+            <div class="catalog-modal-footer">
+                <button type="button" class="btn-action" id="cancelEmployeePasswordResetModal">إلغاء</button>
+                <button type="submit" class="btn-action success">💾 حفظ كلمة المرور</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 <style>
     #employeeModal .catalog-modal.employee-modal {

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Support\UsernameRules;
 use App\Models\WorkshopSection;
 use Illuminate\Support\Facades\DB;
 
@@ -34,7 +35,7 @@ class WorkshopTechnicianService
         return DB::transaction(function () use ($data, $sectionIds, $roleId) {
             $user = User::create([
                 'name' => $data['name'],
-                'username' => strtolower($data['username']),
+                'username' => UsernameRules::normalize($data['username']),
                 'password' => $data['password'],
                 'role_id' => $roleId,
                 'status' => $data['status'] ?? User::STATUS_ACTIVE,
@@ -63,7 +64,7 @@ class WorkshopTechnicianService
 
             $payload = [
                 'name' => $data['name'] ?? $user->name,
-                'username' => isset($data['username']) ? strtolower($data['username']) : $user->username,
+                'username' => isset($data['username']) ? UsernameRules::normalize($data['username']) : $user->username,
                 'status' => $data['status'] ?? $user->status,
             ];
 
