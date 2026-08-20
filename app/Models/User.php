@@ -27,6 +27,8 @@ class User extends Authenticatable
         'password',
         'role_id',
         'status',
+        'access_tier',
+        'allowed_pages',
         'catalog_list_visibility',
         'last_login_at',
     ];
@@ -40,6 +42,7 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
         'password' => 'hashed',
         'catalog_list_visibility' => 'array',
+        'allowed_pages' => 'array',
     ];
 
     public function role(): BelongsTo
@@ -139,6 +142,10 @@ class User extends Authenticatable
 
         if ($this->isSuperAdmin()) {
             return true;
+        }
+
+        if (! app(\App\Services\UserPageAccessService::class)->canViewPage($this, $dashboard, $page)) {
+            return false;
         }
 
         $slug = Permission::viewSlug($dashboard, $page);

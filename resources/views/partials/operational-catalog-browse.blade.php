@@ -45,13 +45,16 @@
         @endunless
     </div>
 </div>
+@php
+    $catalogBrowseConfig = [
+        'prefix' => $prefix,
+        'title' => $title,
+        'listUrl' => $catalog_list_url ?? null,
+        'items' => $catalog_items ?? [],
+        'columns' => $columns,
+        'enabled' => $enabled,
+    ];
+@endphp
 <script>
-window.__CATALOG_BROWSE = @json([
-    'prefix' => $prefix,
-    'title' => $title,
-    'listUrl' => $catalog_list_url ?? null,
-    'items' => $catalog_items ?? [],
-    'columns' => $columns,
-    'enabled' => $enabled,
-]);
+window.__CATALOG_BROWSE = @json($catalogBrowseConfig);
 </script>

@@ -346,6 +346,22 @@ class NotificationService
     }
 
     /**
+     * تعليم إشعارات حالة معيّنة للدور كمقروءة — عند تنفيذ القسم لطلبه.
+     */
+    public function markCaseReadForRole(int $caseId, ?string $roleSlug): int
+    {
+        if ($caseId <= 0 || $roleSlug === null || $roleSlug === '') {
+            return 0;
+        }
+
+        return AppNotification::query()
+            ->where('case_id', $caseId)
+            ->where('role_slug', $roleSlug)
+            ->unread()
+            ->update(['read_at' => now()]);
+    }
+
+    /**
      * أجهزة (FCM tokens) كل مستخدمي دور معيّن.
      *
      * @return list<string>
