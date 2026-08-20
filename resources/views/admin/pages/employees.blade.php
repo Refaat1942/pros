@@ -48,7 +48,7 @@
 </div>
 
 <div class="catalog-modal-overlay {{ $openModal ? 'open' : '' }}" id="employeeModal" role="dialog" aria-modal="true">
-    <div class="catalog-modal employee-modal" style="max-width:760px;" onclick="event.stopPropagation()">
+    <div class="catalog-modal employee-modal" onclick="event.stopPropagation()">
         <div class="catalog-modal-header">
             <div>
                 <h3 id="employeeModalTitle">{{ $editUser ? '✏️ تعديل موظف' : '➕ إضافة موظف' }}</h3>
@@ -72,15 +72,16 @@
                 @method('PUT')
             @endif
             <input type="hidden" name="form" value="employee">
-            <div class="catalog-modal-body">
-                <div class="form-group" style="margin-bottom:14px;">
+            <div class="catalog-modal-body employee-modal-body">
+                <div class="employee-modal-grid">
+                <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">الاسم <span style="color:#dc2626">*</span></label>
                     <input type="text" name="name" class="form-control"
                            data-v-rules="required,min:2,max:255" maxlength="255"
                            value="{{ old('name', $editUser?->name) }}"
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
                 </div>
-                <div class="form-group" style="margin-bottom:14px;">
+                <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">اسم المستخدم <span style="color:#dc2626">*</span></label>
                     <input type="text" name="username" class="form-control"
                            data-v-rules="required,username,max:50" maxlength="50"
@@ -88,7 +89,7 @@
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"
                            dir="ltr">
                 </div>
-                <div class="form-group" style="margin-bottom:14px;">
+                <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">
                         كلمة المرور
                         <span id="employeePasswordRequired" style="color:#dc2626;{{ $editUser ? 'display:none;' : '' }}">*</span>
@@ -98,13 +99,13 @@
                            data-v-rules="{{ $editUser ? 'password' : 'required,password' }}"
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
                 </div>
-                <div class="form-group" style="margin-bottom:14px;">
+                <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">تأكيد كلمة المرور</label>
                     <input type="password" name="password_confirmation" class="form-control"
                            data-v-rules="password"
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
                 </div>
-                <div class="form-group" style="margin-bottom:14px;">
+                <div class="form-group form-group-full">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">الدور <span style="color:#dc2626">*</span></label>
                     @if ($isAdminEdit)
                         <div id="employeeRoleLockedWrap">
@@ -140,7 +141,7 @@
                     @endif
                 </div>
                 @unless ($isAdminEdit)
-                <div class="form-group employee-access-tier-block" id="employeeAccessTierBlock" style="margin-bottom:14px;display:none;">
+                <div class="form-group form-group-full employee-access-tier-block" id="employeeAccessTierBlock" style="display:none;">
                     <label style="display:block;font-size:13px;font-weight:800;margin-bottom:8px;">🔐 مستوى الصلاحية في القسم</label>
                     <p class="employee-catalog-visibility-hint">مدير القسم يرى كل الصفحات. الموظف يرى الصفحات التي تختارها فقط.</p>
                     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
@@ -158,7 +159,7 @@
                     <input type="hidden" name="allowed_pages" id="employeeAllowedPagesInput" value="">
                     <div id="employeeAllowedPagesWrap" class="employee-catalog-visibility-wrap" style="display:none;"></div>
                 </div>
-                <div class="form-group employee-catalog-visibility-block" id="employeeCatalogVisibilityBlock" style="margin-bottom:14px;display:none;">
+                <div class="form-group form-group-full employee-catalog-visibility-block" id="employeeCatalogVisibilityBlock" style="display:none;">
                     <label style="display:block;font-size:13px;font-weight:800;margin-bottom:8px;">
                         📋 قوائم الأصناف — ماذا يرى هذا الموظف؟
                     </label>
@@ -173,7 +174,7 @@
                     </div>
                 </div>
                 @endunless
-                <div class="form-group" style="margin-bottom:14px;">
+                <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">الحالة</label>
                     @if ($isAdminEdit)
                         <input type="hidden" name="status" value="{{ User::STATUS_ACTIVE }}">
@@ -189,6 +190,7 @@
                         </select>
                     @endif
                 </div>
+                </div>{{-- /.employee-modal-grid --}}
             </div>
             <div class="catalog-modal-footer">
                 <button type="button" class="btn-action" id="cancelEmployeeModal">إلغاء</button>
@@ -199,6 +201,42 @@
 </div>
 
 <style>
+    #employeeModal .catalog-modal.employee-modal {
+        width: min(1080px, 96vw);
+        max-width: none;
+        max-height: 92vh;
+    }
+
+    #employeeModal .catalog-modal-header {
+        padding: 24px 32px 18px;
+    }
+
+    #employeeModal .catalog-modal-header h3 {
+        font-size: 1.35rem;
+    }
+
+    #employeeModal .employee-modal-body {
+        padding: 24px 32px 28px;
+    }
+
+    #employeeModal .catalog-modal-footer {
+        padding: 18px 32px;
+    }
+
+    .employee-modal-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 24px;
+    }
+
+    .employee-modal-grid .form-group-full {
+        grid-column: 1 / -1;
+    }
+
+    .employee-modal-grid .form-group {
+        margin-bottom: 0;
+    }
+
     .employee-catalog-visibility-hint {
         margin: 0 0 10px;
         font-size: 12px;
@@ -210,9 +248,41 @@
         border-radius: 10px;
         overflow: hidden;
         background: #fafbff;
-        max-height: 320px;
+        max-height: 420px;
         overflow-y: auto;
     }
+
+    #employeeAllowedPagesWrap {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+    }
+
+    #employeeAllowedPagesWrap .emp-page-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    #employeeAllowedPagesWrap .emp-page-row:hover {
+        background: #f0fdf4;
+    }
+
+    @media (max-width: 900px) {
+        #employeeAllowedPagesWrap {
+            grid-template-columns: 1fr;
+        }
+
+        .employee-modal-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
     .employee-catalog-visibility-loading {
         padding: 12px;
         font-size: 12px;

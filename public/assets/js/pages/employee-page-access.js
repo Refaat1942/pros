@@ -47,7 +47,7 @@
     var selected = editAllowed.length ? editAllowed : defaults;
     wrap.innerHTML = pages.map(function (p) {
       var on = selected.indexOf(p.key) !== -1 ? ' checked' : '';
-      return '<label class="catalog-list-settings-col" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #e2e8f0;">' +
+      return '<label class="emp-page-row">' +
         '<input type="checkbox" class="emp-page-chk" data-page="' + esc(p.key) + '"' + on + '> ' +
         '<span>' + esc(p.icon) + ' ' + esc(p.label) + '</span></label>';
     }).join('');
