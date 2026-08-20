@@ -10,7 +10,7 @@
   var MESSAGES = {
     required: 'هذا الحقل مطلوب.',
     email: 'أدخل بريداً إلكترونياً صالحاً.',
-    username: 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط (3-50 حرف).',
+    username: 'اسم المستخدم: حروف عربية أو إنجليزية وأرقام و _ و - فقط (3-50 حرف).',
     'egyptian-mobile': 'رقم الهاتف يجب أن يكون 11 رقماً (010 / 011 / 012 / 015).',
     'egyptian-national-id': 'الرقم القومي يجب أن يكون 14 رقماً ويبدأ بـ 2 أو 3.',
     min: 'الحد الأدنى {n} أحرف.',
@@ -87,7 +87,7 @@
     },
     username: function (value) {
       if (!trim(value)) return true;
-      return /^[A-Za-z0-9_\-]{3,50}$/.test(trim(value));
+      return /^[\p{Script=Arabic}A-Za-z0-9_\-]{3,50}$/u.test(trim(value));
     },
     'egyptian-mobile': function (value) {
       if (!trim(value)) return true;

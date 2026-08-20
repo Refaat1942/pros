@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\WorkshopTechnicianService;
+use App\Support\UsernameRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,24 +27,20 @@ class WorkshopTechnicianController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($request->has('username')) {
+            $request->merge([
+                'username' => UsernameRules::normalize((string) $request->input('username')),
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:255'],
-            'username' => [
-                'required',
-                'string',
-                'min:3',
-                'max:50',
-                'alpha_dash',
-                Rule::unique('users', 'username'),
-            ],
+            'username' => UsernameRules::rules(),
             'password' => ['required', 'string', 'min:6'],
             'status' => ['nullable', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
             'section_ids' => ['nullable', 'array'],
             'section_ids.*' => ['integer', 'exists:workshop_sections,id'],
-        ], [
-            'username.unique' => 'اسم المستخدم مستخدم مسبقاً.',
-            'username.alpha_dash' => 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
-        ]);
+        ], UsernameRules::messageAttributes());
 
         $user = $this->technicians->create(
             $validated,
@@ -60,24 +57,20 @@ class WorkshopTechnicianController extends Controller
 
     public function update(Request $request, User $user): JsonResponse
     {
+        if ($request->has('username')) {
+            $request->merge([
+                'username' => UsernameRules::normalize((string) $request->input('username')),
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'min:2', 'max:255'],
-            'username' => [
-                'sometimes',
-                'string',
-                'min:3',
-                'max:50',
-                'alpha_dash',
-                Rule::unique('users', 'username')->ignore($user->id),
-            ],
+            'username' => UsernameRules::optionalRules($user->id),
             'password' => ['nullable', 'string', 'min:6'],
             'status' => ['nullable', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
             'section_ids' => ['nullable', 'array'],
             'section_ids.*' => ['integer', 'exists:workshop_sections,id'],
-        ], [
-            'username.unique' => 'اسم المستخدم مستخدم مسبقاً.',
-            'username.alpha_dash' => 'اسم المستخدم: حروف إنجليزية وأرقام و _ و - فقط.',
-        ]);
+        ], UsernameRules::messageAttributes());
 
         $sectionIds = array_key_exists('section_ids', $validated)
             ? ($validated['section_ids'] ?? [])

@@ -199,4 +199,18 @@ class UserService
             before: $before,
         );
     }
+
+    public function resetPassword(User $user, string $password): User
+    {
+        $user->update(['password' => $password]);
+
+        AuditService::log(
+            action: 'update',
+            description: "إعادة تعيين كلمة مرور: {$user->name} ({$user->username})",
+            tag: 'admin',
+            after: ['user_id' => $user->id, 'username' => $user->username],
+        );
+
+        return $user;
+    }
 }

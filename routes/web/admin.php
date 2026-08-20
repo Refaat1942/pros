@@ -446,5 +446,8 @@ Route::prefix('admin')
 
             Route::delete('employees/{user}', [UserController::class, 'destroy'])
                 ->name('employees.destroy');
+
+            Route::post('employees/{user}/reset-password', [UserController::class, 'resetPassword'])
+                ->name('employees.reset-password');
         });
     });

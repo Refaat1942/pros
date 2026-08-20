@@ -145,6 +145,73 @@
         });
     };
 
+    (function bindEmployeePasswordReset() {
+      var modal = document.getElementById('employeePasswordResetModal');
+      var form = document.getElementById('employeePasswordResetForm');
+      if (!modal || !form) return;
+
+      var resetUserId = null;
+
+      function closeModal() {
+        modal.classList.remove('open');
+        resetUserId = null;
+        form.reset();
+      }
+
+      window.resetEmployeePassword = function (id, name) {
+        resetUserId = id;
+        var hint = document.getElementById('employeePasswordResetHint');
+        if (hint) hint.textContent = 'إعادة تعيين كلمة مرور الموظف «' + name + '».';
+        form.reset();
+        modal.classList.add('open');
+      };
+
+      ['closeEmployeePasswordResetModal', 'cancelEmployeePasswordResetModal'].forEach(function (id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', closeModal);
+      });
+
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!resetUserId) return;
+        if (window.FormValidation && !window.FormValidation.validateForm(form)) return;
+
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        var fd = new FormData(form);
+
+        fetch('/admin/employees/' + encodeURIComponent(resetUserId) + '/reset-password', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'X-CSRF-TOKEN': csrf,
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+          body: fd,
+        })
+          .then(function (r) {
+            return r.ok ? r.json() : r.json().then(function (j) { throw j; });
+          })
+          .then(function (res) {
+            closeModal();
+            alert((res && res.message) ? res.message : 'تم إعادة تعيين كلمة المرور.');
+          })
+          .catch(function (err) {
+            var msg = (err && err.message) ? err.message : 'تعذّر إعادة تعيين كلمة المرور.';
+            if (err && err.errors) {
+              var first = Object.values(err.errors)[0];
+              if (Array.isArray(first) && first[0]) msg = first[0];
+            }
+            alert(msg);
+          });
+      });
+    })();
+
     function bindTableFilter(inputId, tableId, countId, suffix) {
       var input = document.getElementById(inputId);
       var el = document.getElementById(tableId);
