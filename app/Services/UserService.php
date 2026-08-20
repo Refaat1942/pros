@@ -18,6 +18,8 @@ class UserService
             'password' => $data['password'],
             'role_id' => $data['role_id'],
             'status' => $data['status'] ?? User::STATUS_ACTIVE,
+            'access_tier' => $data['access_tier'] ?? UserPageAccessService::TIER_DEPARTMENT_ADMIN,
+            'allowed_pages' => $this->resolveAllowedPages($data),
             'catalog_list_visibility' => $catalogVisibility,
         ]);
 
@@ -61,6 +63,14 @@ class UserService
                 $targetRoleSlug,
                 $data['catalog_list_visibility'] ?? null,
             );
+        }
+
+        if (! in_array($user->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
+            $payload['access_tier'] = $data['access_tier'] ?? $user->access_tier;
+            $payload['allowed_pages'] = $this->resolveAllowedPages(array_merge($data, [
+                'role_id' => $payload['role_id'] ?? $user->role_id,
+                'access_tier' => $payload['access_tier'],
+            ]));
         }
 
         $user->update($payload);
@@ -132,6 +142,21 @@ class UserService
         }
 
         return $input;
+    }
+
+    /** @return list<string>|null */
+    private function resolveAllowedPages(array $data): ?array
+    {
+        $tier = $data['access_tier'] ?? UserPageAccessService::TIER_DEPARTMENT_ADMIN;
+
+        if ($tier !== UserPageAccessService::TIER_DEPARTMENT_STAFF) {
+            return null;
+        }
+
+        $role = Role::query()->findOrFail($data['role_id']);
+        $pages = $data['allowed_pages'] ?? null;
+
+        return app(UserPageAccessService::class)->normalizeStaffPages($role->slug, $pages);
     }
 
     public function toggleStatus(User $user): User

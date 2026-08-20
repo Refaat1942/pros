@@ -63,6 +63,26 @@ class NotificationsFeatureTest extends TestCase
         $this->assertStringContainsString('المعدلات', $notification->title);
     }
 
+    public function test_workflow_advance_marks_department_notification_read(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_EXAM);
+
+        app(WorkflowService::class)->advance($case, WorkflowEvent::ExamApproved->value);
+
+        $specNotif = AppNotification::forRole(Role::SLUG_SPEC)
+            ->unread()
+            ->where('case_id', $case->id)
+            ->first();
+
+        $this->assertNotNull($specNotif);
+
+        $case->refresh();
+        app(WorkflowService::class)->advance($case, WorkflowEvent::SpecSaved->value);
+
+        $this->assertNotNull($specNotif->fresh()->read_at);
+    }
+
     public function test_operations_approval_notifies_warehouse(): void
     {
         $patient = $this->civilianPatient($this->civilianCompany());

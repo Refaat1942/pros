@@ -60,6 +60,9 @@
               data-validate-form
               data-store-url="{{ route('admin.employees.store') }}"
               data-catalog-url="{{ route('admin.employees.catalog-list-visibility') }}"
+              data-role-pages-url="{{ url('/admin/employees/role-pages') }}"
+              data-edit-access-tier="{{ $editUser?->access_tier ?? 'department_admin' }}"
+              data-edit-allowed-pages='@json($editUser?->allowed_pages ?? [])'
               data-edit-user-id="{{ $editUser?->id }}"
               data-add-title="➕ إضافة موظف"
               data-edit-title="✏️ تعديل موظف"
@@ -137,6 +140,24 @@
                     @endif
                 </div>
                 @unless ($isAdminEdit)
+                <div class="form-group employee-access-tier-block" id="employeeAccessTierBlock" style="margin-bottom:14px;display:none;">
+                    <label style="display:block;font-size:13px;font-weight:800;margin-bottom:8px;">🔐 مستوى الصلاحية في القسم</label>
+                    <p class="employee-catalog-visibility-hint">مدير القسم يرى كل الصفحات. الموظف يرى الصفحات التي تختارها فقط.</p>
+                    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;">
+                            <input type="radio" name="access_tier" value="department_admin"
+                                @checked(old('access_tier', $editUser?->access_tier ?? 'department_admin') === 'department_admin')>
+                            مدير القسم — يرى كل شيء في القسم
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;">
+                            <input type="radio" name="access_tier" value="department_staff"
+                                @checked(old('access_tier', $editUser?->access_tier ?? '') === 'department_staff')>
+                            موظف — صفحات محددة فقط
+                        </label>
+                    </div>
+                    <input type="hidden" name="allowed_pages" id="employeeAllowedPagesInput" value="">
+                    <div id="employeeAllowedPagesWrap" class="employee-catalog-visibility-wrap" style="display:none;"></div>
+                </div>
                 <div class="form-group employee-catalog-visibility-block" id="employeeCatalogVisibilityBlock" style="margin-bottom:14px;display:none;">
                     <label style="display:block;font-size:13px;font-weight:800;margin-bottom:8px;">
                         📋 قوائم الأصناف — ماذا يرى هذا الموظف؟
@@ -212,5 +233,6 @@
 </style>
 
 @push('scripts')
+    <script src="{{ asset('assets/js/pages/employee-page-access.js') }}?v={{ filemtime(public_path('assets/js/pages/employee-page-access.js')) }}"></script>
     <script src="{{ asset('assets/js/pages/employee-catalog-visibility.js') }}?v={{ filemtime(public_path('assets/js/pages/employee-catalog-visibility.js')) }}"></script>
 @endpush

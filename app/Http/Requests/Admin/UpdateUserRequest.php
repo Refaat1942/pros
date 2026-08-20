@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Http\Requests\BaseRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\UserPageAccessService;
 use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends BaseRequest
@@ -32,6 +33,13 @@ class UpdateUserRequest extends BaseRequest
             $decoded = json_decode($this->input('catalog_list_visibility'), true);
             $this->merge([
                 'catalog_list_visibility' => is_array($decoded) ? $decoded : null,
+            ]);
+        }
+
+        if ($this->has('allowed_pages') && is_string($this->input('allowed_pages'))) {
+            $decoded = json_decode($this->input('allowed_pages'), true);
+            $this->merge([
+                'allowed_pages' => is_array($decoded) ? $decoded : null,
             ]);
         }
     }
@@ -66,6 +74,12 @@ class UpdateUserRequest extends BaseRequest
             'role_id' => $roleRules,
             'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
             'catalog_list_visibility' => ['nullable', 'array'],
+            'access_tier' => ['nullable', Rule::in([
+                UserPageAccessService::TIER_DEPARTMENT_ADMIN,
+                UserPageAccessService::TIER_DEPARTMENT_STAFF,
+            ])],
+            'allowed_pages' => ['nullable', 'array'],
+            'allowed_pages.*' => ['string', 'max:64'],
         ];
     }
 

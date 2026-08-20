@@ -317,7 +317,43 @@ class PathwayConfigService
                 continue;
             }
 
-            return (string) ($step['label'] ?? CaseStage::labelFor($stageKey));
+            return (string) ($step['label'] ?? $this->fallbackStageLabel($stageKey, $case->manufacturing_stage));
+        }
+
+        return $this->fallbackStageLabel($stageKey, $case->manufacturing_stage);
+    }
+
+    private function fallbackStageLabel(string $stageKey, ?string $mfgStage = null): string
+    {
+        $dept = match (true) {
+            $stageKey === CaseRecord::STAGE_RECEPTION => 'reception',
+            $stageKey === CaseRecord::STAGE_EXAM => 'doctor',
+            $stageKey === CaseRecord::STAGE_TECHNICAL => 'spec',
+            $stageKey === CaseRecord::STAGE_ADJUSTMENTS => 'adjustments',
+            $stageKey === CaseRecord::STAGE_COST_CALC => 'costing',
+            $stageKey === CaseRecord::STAGE_SERVICES_APPROVAL => 'admin',
+            $stageKey === CaseRecord::STAGE_QUOTE => 'operations',
+            $stageKey === CaseRecord::STAGE_OPERATIONS => 'operations',
+            $stageKey === CaseRecord::STAGE_CASHIER => 'cashier',
+            $stageKey === CaseRecord::STAGE_READY_DELIVERY => 'delivery',
+            $stageKey === CaseRecord::STAGE_DELIVERED => 'delivery',
+            $stageKey === CaseRecord::STAGE_MANUFACTURING && $mfgStage === CaseRecord::MFG_WAREHOUSE => 'warehouse',
+            $stageKey === CaseRecord::STAGE_MANUFACTURING => 'workshop',
+            default => null,
+        };
+
+        if ($dept !== null) {
+            $label = PathwayDepartments::label($dept);
+            if ($label !== $dept) {
+                return $label;
+            }
+        }
+
+        $permLabels = config('permissions.dashboard_labels', []);
+        foreach ($permLabels as $key => $meta) {
+            if ($key === $dept) {
+                return (string) ($meta['label_ar'] ?? $key);
+            }
         }
 
         return CaseStage::labelFor($stageKey);

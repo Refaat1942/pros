@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\CatalogListVisibilityService;
+use App\Services\UserPageAccessService;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -86,6 +87,18 @@ class UserController extends Controller
 
         return response()->json([
             'catalog' => $visibility->catalogForRole($role->slug, $userStored),
+        ]);
+    }
+
+    public function rolePages(Role $role, UserPageAccessService $access): JsonResponse
+    {
+        if (in_array($role->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
+            return response()->json(['pages' => [], 'staff_defaults' => []]);
+        }
+
+        return response()->json([
+            'pages' => $access->pagesForRole($role),
+            'staff_defaults' => $access->defaultStaffPages($role->slug),
         ]);
     }
 }

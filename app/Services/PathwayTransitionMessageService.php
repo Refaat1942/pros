@@ -97,14 +97,14 @@ class PathwayTransitionMessageService
             $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
             $to = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_MANUFACTURING);
 
-            return "تم التحويل من {$from} إلى {$to} — جاهز لقسم الإنتاج.";
+            return "تم التحويل من {$from} إلى {$to}.";
         }
 
         if ($event === WorkflowEvent::OperationsApproved->value) {
             $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
             $to = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_MANUFACTURING);
 
-            return "تم التحويل من {$from} إلى {$to} — جاهز للصرف من المخزن.";
+            return "تم التحويل من {$from} إلى {$to}.";
         }
 
         $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);

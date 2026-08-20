@@ -433,6 +433,8 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,employees')->group(function () {
             Route::get('employees/catalog-list-visibility', [UserController::class, 'catalogListVisibilityDefaults'])
                 ->name('employees.catalog-list-visibility');
+            Route::get('employees/role-pages/{role}', [UserController::class, 'rolePages'])
+                ->name('employees.role-pages');
             Route::post('employees', [UserController::class, 'store'])
                 ->name('employees.store');
 
