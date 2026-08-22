@@ -114,21 +114,29 @@ class StockPriceService
      * يُستدعى من:
      *  - addBatch()             (هنا — عند تسجيل دفعة سعر)
      *  - StockReceiveService    (Task 08 — عند الاستلام الفيزيائي)
+     *
+     * C-2: النظام يسمح برصيد سالب (backorder). الرصيد السالب لا يمثّل مخزوناً فعلياً
+     * له قيمة، لذا نستخدم أرضية 0 للكمية السابقة عند ترجيح المتوسط — وإلا أنتجت
+     * الصيغة قيمة WAC سالبة أو مشوّهة. النتيجة: WAC لا يصبح سالباً أبداً، ويبقى
+     * متوسطاً مرجحاً صحيحاً للمخزون الفعلي المستلم.
      */
     public function recalcWac(StockItem $item, int $inQty, float $inPrice): void
     {
-        $priorQty = (int) $item->qty;
-        $priorWac = (float) ($item->wac ?? 0);
-
-        $denominator = $priorQty + $inQty;
-
-        if ($denominator <= 0) {
+        if ($inQty <= 0) {
+            // لا كمية داخلة موجبة — لا تحديث (استلام غير صالح للترجيح).
             return;
         }
 
+        // أرضية 0: الرصيد السالب (backorder) لا يحمل قيمة مخزون عند الترجيح.
+        $priorQty = max(0, (int) $item->qty);
+        $priorWac = max(0.0, (float) ($item->wac ?? 0));
+
+        $denominator = $priorQty + $inQty;
+
+        // $denominator > 0 مضمون لأن $inQty > 0.
         $newWac = (($priorQty * $priorWac) + ($inQty * $inPrice)) / $denominator;
 
         StockItem::where('id', $item->id)
-            ->update(['wac' => round($newWac, 4)]);
+            ->update(['wac' => round(max(0.0, $newWac), 4)]);
     }
 }

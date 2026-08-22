@@ -33,43 +33,48 @@ class CashierPaymentService
      */
     public function confirmPayment(CaseRecord $case, array $data): array
     {
-        $case = CaseRecord::findOrFail($case->id);
-
-        if (! $case->isAwaitingCashier()) {
-            abort(422, 'الحالة ليست بانتظار الدفع في الخزنة.');
-        }
-
+        // فحص المُدخلات (بدون سباق) — قبل بدء المعاملة.
         $method = $data['method'] ?? null;
         if (! in_array($method, PaymentMethod::values(), true)) {
             abort(422, 'وسيلة دفع غير صالحة.');
         }
 
-        $case->loadMissing('patient:id,name');
-        $quote = Quote::where('case_id', $case->id)->orderByDesc('id')->first();
-
-        $quoteTotal = round((float) ($quote?->total ?? $case->quote_total ?? 0), 2);
-        $patientDue = ContractBillingSplit::patientDue($case, $quoteTotal);
-        $alreadyPaid = (float) $case->paid;
-        $manualDue = $quoteTotal <= 0.009 && $patientDue <= 0.009;
-        $remainingBefore = $manualDue
-            ? 0.0
-            : max(0, round($patientDue - $alreadyPaid, 2));
-
-        $amount = isset($data['amount']) && $data['amount'] !== null && $data['amount'] !== ''
-            ? round((float) $data['amount'], 2)
-            : ($manualDue ? 0.0 : $remainingBefore);
-
-        if ($amount <= 0) {
-            abort(422, 'قيمة المبلغ غير صالحة.');
-        }
-
-        if (! $manualDue && $amount > $remainingBefore + 0.009) {
-            abort(422, 'المبلغ يتجاوز المتبقي على المريض ('.number_format($remainingBefore, 2).' ج.م).');
-        }
-
         $receivedBy = Auth::user()?->name ?? 'الخزنة';
+        $caseId = $case->id;
 
-        return DB::transaction(function () use ($case, $quote, $amount, $method, $data, $receivedBy, $alreadyPaid, $patientDue, $manualDue) {
+        // C-1: كل القراءات المالية (الحالة، المدفوع، المتبقي) تتم داخل المعاملة تحت قفل
+        // صف الحالة لمنع التحصيل المزدوج عند تأكيدين متزامنين لنفس الحالة.
+        return DB::transaction(function () use ($caseId, $data, $method, $receivedBy) {
+            /** @var CaseRecord $case */
+            $case = CaseRecord::lockForUpdate()->findOrFail($caseId);
+
+            if (! $case->isAwaitingCashier()) {
+                abort(422, 'الحالة ليست بانتظار الدفع في الخزنة.');
+            }
+
+            $case->loadMissing('patient:id,name');
+            $quote = Quote::where('case_id', $case->id)->orderByDesc('id')->first();
+
+            $quoteTotal = round((float) ($quote?->total ?? $case->quote_total ?? 0), 2);
+            $patientDue = ContractBillingSplit::patientDue($case, $quoteTotal);
+            $alreadyPaid = (float) $case->paid;
+            $manualDue = $quoteTotal <= 0.009 && $patientDue <= 0.009;
+            $remainingBefore = $manualDue
+                ? 0.0
+                : max(0, round($patientDue - $alreadyPaid, 2));
+
+            $amount = isset($data['amount']) && $data['amount'] !== null && $data['amount'] !== ''
+                ? round((float) $data['amount'], 2)
+                : ($manualDue ? 0.0 : $remainingBefore);
+
+            if ($amount <= 0) {
+                abort(422, 'قيمة المبلغ غير صالحة.');
+            }
+
+            if (! $manualDue && $amount > $remainingBefore + 0.009) {
+                abort(422, 'المبلغ يتجاوز المتبقي على المريض ('.number_format($remainingBefore, 2).' ج.م).');
+            }
+
             $installmentNo = Payment::query()
                 ->where('case_id', $case->id)
                 ->count() + 1;

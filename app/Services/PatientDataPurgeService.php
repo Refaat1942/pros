@@ -8,21 +8,13 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * حذف كل ما له علاقة بالمرضى — مع الإبقاء على الكور (مستخدمون، مخزن، إعدادات، جهات).
+ *
+ * C-5: سجل الرقابة (audit_logs) دليل قانوني «إضافة فقط» ولا يُحذف مطلقاً — حتى في
+ * عملية المسح. المسح يهيّئ بيئة نظيفة لبيانات المرضى التشغيلية مع الحفاظ الكامل على
+ * أثر الرقابة. قاعدة البيانات نفسها تمنع حذف/تعديل audit_logs عبر مشغّلات (triggers).
  */
 class PatientDataPurgeService
 {
-    /** @var list<string> */
-    private const PATIENT_AUDIT_TAGS = [
-        'patients',
-        'medical',
-        'spec',
-        'pricing',
-        'quotes',
-        'operations',
-        'delivery',
-        'reception',
-    ];
-
     /** @return array<string, int> */
     public function purge(bool $resetContractDebts = true, bool $syncStock = true): array
     {
@@ -56,9 +48,8 @@ class PatientDataPurgeService
             $counts['appointments'] = DB::table('appointments')->delete();
             $counts['patients'] = DB::table('patients')->delete();
 
-            $counts['audit_logs_patient'] = DB::table('audit_logs')
-                ->whereIn('tag', self::PATIENT_AUDIT_TAGS)
-                ->delete();
+            // C-5: سجل الرقابة يُحفَظ دائماً (append-only) — لا يُحذف في المسح.
+            $counts['audit_logs_preserved'] = (int) DB::table('audit_logs')->count();
 
             if ($resetContractDebts) {
                 $counts['contract_debts_reset'] = DB::table('contract_company_debts')->update([
@@ -73,6 +64,14 @@ class PatientDataPurgeService
                 $counts['stock_items_synced'] = $this->syncStockFromMovements();
             }
         });
+
+        // C-5: تسجيل عملية المسح في سجل الرقابة (بعد نجاح المعاملة) — الأثر يبقى دليلاً.
+        AuditService::log(
+            action: 'purge',
+            description: 'مسح بيانات المرضى التشغيلية — سجل الرقابة محفوظ بالكامل.',
+            tag: 'admin',
+            after: $counts,
+        );
 
         AdminOverviewService::clearBiBoardsCache();
 
