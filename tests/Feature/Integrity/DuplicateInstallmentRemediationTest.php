@@ -3,26 +3,50 @@
 namespace Tests\Feature\Integrity;
 
 use App\Models\Payment;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
  * Correction A: الهجرة لا تُعدّل بيانات مالية تلقائياً — تكشف التكرار وتُوقِف بأمان،
  * والإصلاح يتم عبر أمر متعمّد (عرض أولاً ثم --apply) دون حذف أي دفعة.
+ *
+ * عزل المحرك: هذا الاختبار يفحص «منطق الأمر» (إعادة الترقيم) وهو مستقل عن المحرك
+ * (query-builder صرف). لأنه يحتاج إسقاط القيد الفريد لإدخال تكرار — وعبارات DDL
+ * على MySQL تُنفَّذ COMMIT ضمنياً وتُفسِد عزل RefreshDatabase على القاعدة المشتركة —
+ * نُثبّت هذا الاختبار على اتصال SQLite بذاكرة مستقلة خاص به فقط. أما سلوك القيد
+ * الفعلي على PostgreSQL و MySQL فمُتحقَّق منه مباشرةً (raw SQL) في تقارير التحقق.
  */
 class DuplicateInstallmentRemediationTest extends TestCase
 {
-    use RefreshDatabase;
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-    /**
-     * لاختبار الإصلاح نحتاج بيانات مكررة — وهي ممنوعة بالقيد الفريد. لذا نُسقِط القيد
-     * مؤقتاً، نُدخل التكرار (محاكاة بيانات قديمة قبل القيد)، ثم نتحقق أن الإصلاح
-     * يعيد النظافة. آمن: داخل معاملة اختبار RefreshDatabase تُلغى في النهاية.
-     */
+        // اتصال SQLite مستقل بذاكرة — لا يمسّ قاعدة الاختبار المشتركة (MySQL/PG).
+        config([
+            'database.default' => 'sqlite_remediation',
+            'database.connections.sqlite_remediation' => [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+                'foreign_key_constraints' => true,
+            ],
+        ]);
+
+        DB::purge('sqlite_remediation');
+        $this->artisan('migrate', ['--database' => 'sqlite_remediation', '--force' => true]);
+    }
+
+    protected function tearDown(): void
+    {
+        DB::purge('sqlite_remediation');
+        parent::tearDown();
+    }
+
     private function dropUniqueConstraint(): void
     {
-        \Illuminate\Support\Facades\Schema::table('payments', function ($table) {
+        Schema::connection('sqlite_remediation')->table('payments', function ($table) {
             $table->dropUnique('payments_case_installment_unique');
         });
     }

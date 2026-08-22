@@ -8,13 +8,15 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Correction C: يثبت أن المسح يعمل بشكل صحيح مع قيود RESTRICT للمفاتيح الأجنبية
- * على PostgreSQL — يحذف الأبناء الماليين بترتيب آمن قبل «cases»، ويحفظ سجل الرقابة.
+ * Correction C: يثبت أن المسح يعمل بشكل صحيح مع قيود RESTRICT للمفاتيح الأجنبية —
+ * يحذف الأبناء الماليين (payments/credit_notes/military_debts) بترتيب آمن قبل
+ * «cases»، ويحفظ سجل الرقابة.
  *
- * يُتخطّى على SQLite (لا يفرض RESTRICT عبر ALTER) — هذا الاختبار خاص بـ PostgreSQL
- * وهو بيئة الإنتاج على VPS وعلى الشبكة المحلية الأوفلاين.
+ * يعمل على PostgreSQL و MySQL/MariaDB (كلاهما بيئة إنتاج مدعومة — VPS و الشبكة
+ * المحلية الأوفلاين؛ Laragon قد يستخدم MySQL). يُتخطّى على SQLite فقط لأن هجرة
+ * RESTRICT لا تُطبَّق هناك (تُغطّيها حماية PatientDeletionGuard على مستوى التطبيق).
  */
-class PurgeUnderRestrictPgTest extends TestCase
+class PurgeUnderRestrictTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -22,8 +24,8 @@ class PurgeUnderRestrictPgTest extends TestCase
     {
         parent::setUp();
 
-        if (DB::getDriverName() !== 'pgsql') {
-            $this->markTestSkipped('اختبار خاص بـ PostgreSQL (RESTRICT حقيقي).');
+        if (! in_array(DB::getDriverName(), ['pgsql', 'mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('يتطلب محركاً يفرض RESTRICT عبر ALTER (PostgreSQL/MySQL).');
         }
     }
 
