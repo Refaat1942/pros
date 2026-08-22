@@ -71,6 +71,10 @@ class DashboardPageDataService
             return $this->notificationsInbox($dashboardKey);
         }
 
+        if ($page === 'staff') {
+            return $this->departmentStaff($dashboardKey);
+        }
+
         return match ("{$dashboardKey}.{$page}") {
             'admin.employees' => $this->adminEmployees(),
             'admin.companies' => $this->adminCompanies(),
@@ -127,6 +131,36 @@ class DashboardPageDataService
         };
     }
 
+    private function departmentStaff(string $dashboardKey): array
+    {
+        /** @var User $manager */
+        $manager = auth()->user();
+        $manager->loadMissing('role:id,slug,label_ar');
+
+        $employees = app(\App\Services\DepartmentStaffService::class)
+            ->queryForManager($manager)
+            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at', 'access_tier', 'allowed_pages', 'catalog_list_visibility']);
+
+        $editUser = null;
+        if ($editId = request()->integer('edit')) {
+            $editUser = $employees->firstWhere('id', $editId);
+            if ($editUser === null) {
+                $candidate = User::with('role:id,slug,label_ar')->find($editId);
+                if ($candidate && app(\App\Services\DepartmentStaffService::class)->canManage($manager, $candidate)) {
+                    $editUser = $candidate;
+                }
+            }
+        }
+
+        return [
+            'employees' => $employees,
+            'role' => $manager->role,
+            'dashboard_key' => $dashboardKey,
+            'staff_mode' => 'department',
+            'edit_user' => $editUser,
+        ];
+    }
+
     private function adminEmployees(): array
     {
         $employees = User::query()
@@ -149,6 +183,8 @@ class DashboardPageDataService
         return [
             'employees' => $employees,
             'roles' => $roles,
+            'staff_mode' => 'admin',
+            'dashboard_key' => 'admin',
             'edit_user' => $editUser?->loadMissing('role:id,slug,label_ar'),
             'employee_stats' => [
                 ['icon' => '👥', 'label' => 'الموظفون', 'value' => (string) $employees->count(), 'bg' => 'rgba(124,58,237,0.1)'],

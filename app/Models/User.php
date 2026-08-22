@@ -122,8 +122,25 @@ class User extends Authenticatable
     /**
      * هل يمكن للمستخدم فتح صفحة ضمن لوحة تحكم؟
      */
+    public function isDepartmentManager(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return false;
+        }
+
+        if (in_array($this->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
+            return false;
+        }
+
+        return $this->access_tier !== \App\Services\UserPageAccessService::TIER_DEPARTMENT_STAFF;
+    }
+
     public function canViewDashboardPage(string $dashboard, string $page): bool
     {
+        if ($page === 'staff') {
+            return app(\App\Services\DepartmentStaffService::class)->canAccessStaffPage($this, $dashboard);
+        }
+
         if ($page === 'notifications') {
             if ($this->isSuperAdmin()) {
                 return true;

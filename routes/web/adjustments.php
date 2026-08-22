@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('adjustments', 'adjustments.', AdjustmentsDashboardController::class, 'adjustments', except: ['history']);
+registerDepartmentStaffRoutes('adjustments', 'adjustments.', 'adjustments');
 
 Route::prefix('adjustments')
     ->middleware(['auth', 'dashboard.guard'])

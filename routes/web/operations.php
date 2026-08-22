@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('operations', 'operations.', OperationsDashboardController::class, 'operations');
+registerDepartmentStaffRoutes('operations', 'operations.', 'operations');
 
 /*
 |--------------------------------------------------------------------------
