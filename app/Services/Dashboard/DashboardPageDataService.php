@@ -353,6 +353,7 @@ class DashboardPageDataService
             'admin_case_buckets' => [
                 'waiting_return' => $buckets['waiting_return']->all(),
                 'awaiting_cashier' => $buckets['awaiting_cashier']->all(),
+                'awaiting_assignment' => $buckets['awaiting_assignment']->all(),
                 'in_progress' => $buckets['in_progress']->all(),
                 'delivered' => $buckets['delivered']->all(),
             ],

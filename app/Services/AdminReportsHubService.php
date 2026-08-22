@@ -62,8 +62,10 @@ class AdminReportsHubService
             'spec-edit-requests' => 'مسار المرضى والحالات',
             'visit-types' => 'مسار المرضى والحالات',
             'services-approvals' => 'مسار المرضى والحالات',
-            'workshop-sections' => 'الورشة والإنتاج',
-            'workshop-tracking' => 'الورشة والإنتاج',
+            'workshop-sections' => 'قسم الإنتاج',
+            'workshop-tracking' => 'قسم الإنتاج',
+            'stock-kits' => 'المخزون والتوريد',
+            'catalog-list-settings' => 'الرقابة والنظام',
             'catalog' => 'المخزون والتوريد',
             'stock-categories' => 'المخزون والتوريد',
             'inventory-overview' => 'المخزون والتوريد',
@@ -108,6 +110,7 @@ class AdminReportsHubService
             ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير والورشة'],
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
             ['id' => 'authorizations', 'label' => 'جميع الأذون والاعتمادات', 'icon' => '📜', 'group' => 'المخزون والتوريد', 'description' => 'أذون الصرف، تعديل التوصيف، تصديقات الخدمات، وموافقات التعاقد'],
+            ['id' => 'production-assignment', 'label' => 'تخصيص الإنتاج — قبل الصرف', 'icon' => '👷', 'group' => 'قسم الإنتاج', 'description' => 'أوامر الشغل بانتظار تخصيص القسم والفني واعتماد التخصيص'],
         ] as $extra) {
             $cards[] = $extra;
         }
@@ -167,6 +170,7 @@ class AdminReportsHubService
             'workshop-tracking' => $this->buildWorkshopTracking($from, $to),
             'dispense-approvals' => $this->buildDispenseApprovals($from, $to),
             'authorizations' => $this->buildAuthorizations($from, $to),
+            'production-assignment' => $this->buildProductionAssignment($from, $to),
             'opening-balance' => $this->buildOpeningBalance($from, $to),
             'closing-balance' => $this->buildClosingBalance($from, $to),
             'profitability' => $this->buildProfitability($from, $to),
@@ -1220,6 +1224,68 @@ class AdminReportsHubService
             ],
             'headers' => ['نوع الإذن', 'المرجع', 'المريض', 'الحالة/الجهة', 'الحالة', 'طلب / اعتمد', 'التاريخ'],
             'rows' => $tableRows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildProductionAssignment(?Carbon $from, ?Carbon $to): array
+    {
+        if (! config('workshop.enabled', true)) {
+            return [
+                'title' => 'تخصيص الإنتاج — قبل الصرف',
+                'period_label' => $this->periodLabel($from, $to),
+                'summary' => [['label' => 'الورشة', 'value' => 'معطّلة']],
+                'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'القسم', 'الفني', 'حالة التخصيص', 'آخر تحديث'],
+                'rows' => [],
+            ];
+        }
+
+        $cases = $this->constrainDateRange(
+            CaseRecord::query()
+                ->workshopAssignmentQueue()
+                ->with([
+                    'patient:id,name',
+                    'workshopSection:id,name',
+                    'assignedTechnician:id,name',
+                ]),
+            'updated_at',
+            $from,
+            $to,
+        )
+            ->orderByDesc('updated_at')
+            ->limit(500)
+            ->get();
+
+        $rows = $cases->map(function (CaseRecord $c) {
+            $status = $c->isWorkshopAssignmentApproved()
+                ? 'معتمد — جاهز للصرف'
+                : ($c->workshop_section_id && $c->assigned_technician_id
+                    ? 'بانتظار اعتماد التخصيص'
+                    : 'غير مُخصّص');
+
+            return [
+                $c->case_no ?? '—',
+                $c->work_order_no ?? '—',
+                $c->patient?->name ?? '—',
+                $c->workshopSection?->name ?? '—',
+                $c->assignedTechnician?->name ?? '—',
+                $status,
+                ClinicTime::format($c->updated_at, 'd/m/Y H:i'),
+            ];
+        })->values()->all();
+
+        return [
+            'title' => 'تخصيص الإنتاج — قبل الصرف',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [
+                ['label' => 'إجمالي الطابور', 'value' => (string) $cases->count()],
+                ['label' => 'بانتظار الاعتماد', 'value' => (string) $cases->filter(
+                    fn (CaseRecord $c) => $c->workshop_section_id && $c->assigned_technician_id && ! $c->isWorkshopAssignmentApproved()
+                )->count()],
+                ['label' => 'جاهز للصرف', 'value' => (string) $cases->filter(fn (CaseRecord $c) => $c->isWorkshopAssignmentApproved())->count()],
+            ],
+            'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'القسم', 'الفني', 'حالة التخصيص', 'آخر تحديث'],
+            'rows' => $rows,
         ];
     }
 

@@ -110,11 +110,21 @@ class BiReportService
      */
     public function boardOperations(): array
     {
+        $awaitingAssignment = config('workshop.enabled', true)
+            ? CaseRecord::query()->awaitingWorkshopAssignmentApproval()->count()
+            : 0;
+
+        $readyForDispense = config('workshop.enabled', true)
+            ? CaseRecord::query()->readyForWarehouseDispense()->count()
+            : CaseRecord::where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+                ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_RAW))
+                ->count();
+
         return [
             'open_work_orders' => CaseRecord::where('stage_key', CaseRecord::STAGE_MANUFACTURING)->count(),
-            'awaiting_dispense' => CaseRecord::where('stage_key', CaseRecord::STAGE_MANUFACTURING)
-                ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_RAW))
-                ->count(),
+            'awaiting_assignment' => $awaitingAssignment,
+            'ready_for_dispense' => $readyForDispense,
+            'awaiting_dispense' => $readyForDispense,
             'in_workshop' => CaseRecord::where('stage_key', CaseRecord::STAGE_MANUFACTURING)
                 ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_WIP))
                 ->count(),

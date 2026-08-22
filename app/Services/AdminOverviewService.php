@@ -34,7 +34,7 @@ class AdminOverviewService
     public function pageData(Carbon $from, Carbon $to): array
     {
         $boards = \Illuminate\Support\Facades\Cache::remember(
-            'admin_overview_bi_boards_v1',
+            'admin_overview_bi_boards_v2',
             300,
             fn () => [
                 'board1' => $this->biReports->boardPatients(),
@@ -56,7 +56,7 @@ class AdminOverviewService
         ];
     }
 
-    /** @return array{waiting_return: int, awaiting_cashier: int, in_progress: int, delivered: int} */
+    /** @return array{waiting_return: int, awaiting_cashier: int, awaiting_assignment: int, in_progress: int, delivered: int} */
     public function caseStripCounts(Carbon $from, Carbon $to): array
     {
         $waiting = CaseRecord::query()
@@ -72,13 +72,32 @@ class AdminOverviewService
             ->whereBetween('updated_at', [$from, $to])
             ->count();
 
-        $inProgress = CaseRecord::query()
+        $awaitingAssignment = config('workshop.enabled', true)
+            ? CaseRecord::query()
+                ->awaitingWorkshopAssignmentApproval()
+                ->whereBetween('updated_at', [$from, $to])
+                ->count()
+            : 0;
+
+        $assignmentIds = config('workshop.enabled', true)
+            ? CaseRecord::query()
+                ->awaitingWorkshopAssignmentApproval()
+                ->whereBetween('updated_at', [$from, $to])
+                ->pluck('id')
+            : collect();
+
+        $inProgressQuery = CaseRecord::query()
             ->whereIn('stage_key', [
                 CaseRecord::STAGE_MANUFACTURING,
                 CaseRecord::STAGE_READY_DELIVERY,
             ])
-            ->whereBetween('updated_at', [$from, $to])
-            ->count();
+            ->whereBetween('updated_at', [$from, $to]);
+
+        if ($assignmentIds->isNotEmpty()) {
+            $inProgressQuery->whereNotIn('id', $assignmentIds);
+        }
+
+        $inProgress = $inProgressQuery->count();
 
         $delivered = CaseRecord::query()
             ->where('stage_key', CaseRecord::STAGE_DELIVERED)
@@ -88,6 +107,7 @@ class AdminOverviewService
         return [
             'waiting_return' => $waiting,
             'awaiting_cashier' => $awaitingCashier,
+            'awaiting_assignment' => $awaitingAssignment,
             'in_progress' => $inProgress,
             'delivered' => $delivered,
         ];

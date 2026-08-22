@@ -10,7 +10,7 @@ trait StubsBiReportForOverview
     /** @param array<string, mixed> $operationsBoard */
     protected function stubBiReportServiceForOverview(
         array $inventoryBoard = ['item_count' => 0, 'low_stock' => 0, 'stagnant_items' => [], 'total_value' => 0],
-        array $operationsBoard = ['open_work_orders' => 0, 'awaiting_dispense' => 0, 'in_workshop' => 0, 'ready_for_delivery' => 0],
+        array $operationsBoard = ['open_work_orders' => 0, 'awaiting_assignment' => 0, 'awaiting_dispense' => 0, 'ready_for_dispense' => 0, 'in_workshop' => 0, 'ready_for_delivery' => 0],
     ): void {
         $mock = $this->mock(BiReportService::class);
 

@@ -8,6 +8,7 @@ use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\Quote;
 use App\Services\AdminCaseTrackingService;
+use App\Services\BomService;
 use App\Services\Dashboard\DashboardPageDataService;
 use App\Support\ClinicTime;
 use Tests\Support\ProstheticTestHelper;
@@ -291,5 +292,25 @@ class AdminCaseTrackingTest extends TestCase
         $this->assertSame(0, $buckets['counts']['waiting_return']);
         $this->assertSame(1, $buckets['counts']['awaiting_cashier']);
         $this->assertSame('QT-CASH-01', $buckets['awaiting_cashier']->first()['quoteId']);
+    }
+
+    public function test_manufacturing_case_awaiting_assignment_appears_in_assignment_bucket_not_in_progress(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-ASSIGN-01']);
+
+        $item = $this->stockItem('RM-ASSIGN', qty: 10);
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => $item->code, 'qty' => 1],
+        ]);
+
+        $buckets = app(AdminCaseTrackingService::class)->buckets();
+
+        $this->assertSame(1, $buckets['counts']['awaiting_assignment']);
+        $this->assertSame(0, $buckets['counts']['in_progress']);
+        $row = $buckets['awaiting_assignment']->first();
+        $this->assertSame('WO-ASSIGN-01', $row['workOrderNo']);
+        $this->assertSame('غير مُخصّص', $row['assignmentStatus']);
     }
 }

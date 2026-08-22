@@ -23,9 +23,9 @@
 
     $opsTotal = max(1, (int) ($b3['open_work_orders'] ?? 0) + (int) ($b3['ready_for_delivery'] ?? 0));
     $opsSteps = [
-        ['key' => 'dispense', 'label' => 'بانتظار الصرف', 'val' => (int) ($b3['awaiting_dispense'] ?? 0), 'tone' => 'amber'],
-        ['key' => 'workshop', 'label' => 'داخل الورش', 'val' => (int) ($b3['in_workshop'] ?? 0), 'tone' => 'purple'],
-        ['key' => 'open', 'label' => 'أوامر تشغيل', 'val' => (int) ($b3['open_work_orders'] ?? 0), 'tone' => 'indigo'],
+        ['key' => 'assignment', 'label' => 'بانتظار التخصيص', 'val' => (int) ($b3['awaiting_assignment'] ?? 0), 'tone' => 'amber'],
+        ['key' => 'dispense', 'label' => 'جاهز للصرف', 'val' => (int) ($b3['ready_for_dispense'] ?? $b3['awaiting_dispense'] ?? 0), 'tone' => 'orange'],
+        ['key' => 'workshop', 'label' => 'داخل الإنتاج', 'val' => (int) ($b3['in_workshop'] ?? 0), 'tone' => 'purple'],
         ['key' => 'ready', 'label' => 'جاهز للتسليم', 'val' => (int) ($b3['ready_for_delivery'] ?? 0), 'tone' => 'green'],
     ];
 @endphp
@@ -184,7 +184,7 @@
                     </div>
                 @endforeach
             </div>
-            <p class="bi-pipeline-hint">مسار الإنتاج من الصرف حتى الجاهزية للتسليم — أرقام لحظية من أوامر الشغل.</p>
+            <p class="bi-pipeline-hint">مسار الإنتاج: تخصيص الإنتاج → صرف المخزن → التشغيل → التسليم — أرقام لحظية.</p>
         </div>
     </article>
 

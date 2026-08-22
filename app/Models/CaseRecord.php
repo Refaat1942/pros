@@ -336,6 +336,25 @@ class CaseRecord extends Model
             && $this->assigned_technician_id !== null;
     }
 
+    /** بانتظار تخصيص واعتماد قسم الإنتاج والفني — قبل صرف المخزن. */
+    public function scopeAwaitingWorkshopAssignmentApproval(Builder $query): Builder
+    {
+        return $query
+            ->workshopAssignmentQueue()
+            ->whereNull('workshop_assignment_approved_at');
+    }
+
+    /** جاهز لصرف المخزن — اعتماد التخصيص + BOM خام. */
+    public function scopeReadyForWarehouseDispense(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_MANUFACTURING)
+            ->where('manufacturing_stage', self::MFG_WAREHOUSE)
+            ->whereNotNull('work_order_no')
+            ->whereNotNull('workshop_assignment_approved_at')
+            ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_RAW));
+    }
+
     /** طابور مكتب التشغيل — جاهزة للتسليم بعد إتمام التصنيع من الورشة. */
     public function scopeOperationsDeliveryQueue(Builder $query): Builder
     {

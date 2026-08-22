@@ -721,7 +721,7 @@ class AdminReportsPageTest extends TestCase
         $from = now()->startOfMonth()->toDateString();
         $to = now()->endOfMonth()->toDateString();
 
-        foreach (['services-approvals', 'workshop-sections', 'workshop-tracking', 'dispense-approvals', 'authorizations'] as $section) {
+        foreach (['services-approvals', 'workshop-sections', 'workshop-tracking', 'dispense-approvals', 'authorizations', 'production-assignment'] as $section) {
             $this->actingAs($admin)
                 ->get('/admin/reports/'.$section.'?from='.$from.'&to='.$to)
                 ->assertOk()

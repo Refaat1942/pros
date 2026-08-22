@@ -39,6 +39,7 @@ class AdminOverviewExportService
         $caseRows = [
             ['بانتظار موافقة جهات التعاقد', (string) ($strip['waiting_return'] ?? 0)],
             ['بانتظار الدفع النقدي — الخزنة', (string) ($strip['awaiting_cashier'] ?? 0)],
+            ['بانتظار تخصيص الإنتاج', (string) ($strip['awaiting_assignment'] ?? 0)],
             ['تحت التنفيذ', (string) ($strip['in_progress'] ?? 0)],
             ['تم التسليم', (string) ($strip['delivered'] ?? 0)],
         ];

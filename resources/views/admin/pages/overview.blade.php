@@ -58,6 +58,13 @@
                 </div>
                 <span id="overviewCashierCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['awaiting_cashier'] ?? 0 }}</span>
             </button>
+            <button type="button" class="overview-case-link overview-case-link--assignment" data-goto-cases="awaiting_assignment">
+                <div class="overview-case-link__text">
+                    <strong>بانتظار تخصيص الإنتاج</strong>
+                    <span class="overview-case-link__hint">قسم + فني + اعتماد — قبل الصرف</span>
+                </div>
+                <span id="overviewAssignmentCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['awaiting_assignment'] ?? 0 }}</span>
+            </button>
             <button type="button" class="overview-case-link overview-case-link--progress" data-goto-cases="in_progress">
                 <div class="overview-case-link__text">
                     <strong>تحت التنفيذ</strong>

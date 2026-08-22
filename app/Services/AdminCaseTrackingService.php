@@ -23,7 +23,7 @@ class AdminCaseTrackingService
 {
     public function __construct(private readonly BomService $bomService) {}
 
-    /** @return array{waiting_return: Collection<int, array>, awaiting_cashier: Collection<int, array>, in_progress: Collection<int, array>, delivered: Collection<int, array>, counts: array{waiting_return: int, awaiting_cashier: int, in_progress: int, delivered: int}} */
+    /** @return array{waiting_return: Collection<int, array>, awaiting_cashier: Collection<int, array>, awaiting_assignment: Collection<int, array>, in_progress: Collection<int, array>, delivered: Collection<int, array>, counts: array{waiting_return: int, awaiting_cashier: int, awaiting_assignment: int, in_progress: int, delivered: int}} */
     public function buckets(?Carbon $from = null, ?Carbon $to = null): array
     {
         $from = $from?->copy()->startOfDay();
@@ -41,6 +41,19 @@ class AdminCaseTrackingService
             ->limit((int) config('dashboards.table_fetch_limit', 1000))
             ->get();
 
+        $awaitingAssignment = config('workshop.enabled', true)
+            ? CaseRecord::query()
+                ->with($this->caseRelations())
+                ->awaitingWorkshopAssignmentApproval()
+                ->when($from && $to, fn ($q) => $q->whereBetween('updated_at', [$from, $to]))
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->limit((int) config('dashboards.table_fetch_limit', 1000))
+                ->get()
+            : collect();
+
+        $assignmentIds = $awaitingAssignment->pluck('id')->all();
+
         $progress = CaseRecord::query()
             ->with($this->caseRelations())
             ->whereIn('stage_key', [
@@ -48,6 +61,7 @@ class AdminCaseTrackingService
                 CaseRecord::STAGE_READY_DELIVERY,
             ])
             ->when($waitingIds !== [], fn ($q) => $q->whereNotIn('id', $waitingIds))
+            ->when(config('workshop.enabled', true) && $assignmentIds !== [], fn ($q) => $q->whereNotIn('id', $assignmentIds))
             ->when($from && $to, fn ($q) => $q->whereBetween('updated_at', [$from, $to]))
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
@@ -66,11 +80,13 @@ class AdminCaseTrackingService
         return [
             'waiting_return' => $waiting->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
             'awaiting_cashier' => $awaitingCashier->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
+            'awaiting_assignment' => $awaitingAssignment->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
             'in_progress' => $progress->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
             'delivered' => $delivered->map(fn (CaseRecord $c) => $this->formatRow($c))->values(),
             'counts' => [
                 'waiting_return' => $waiting->count(),
                 'awaiting_cashier' => $awaitingCashier->count(),
+                'awaiting_assignment' => $awaitingAssignment->count(),
                 'in_progress' => $progress->count(),
                 'delivered' => $delivered->count(),
             ],
@@ -106,6 +122,8 @@ class AdminCaseTrackingService
             'bom.items:id,bom_id,qty,unit_cost',
             'pricingRequest:id,case_id,request_no,computed_total',
             'quotes:id,case_id,status',
+            'workshopSection:id,name',
+            'assignedTechnician:id,name',
         ];
     }
 
@@ -125,6 +143,10 @@ class AdminCaseTrackingService
             'company' => $this->contractCompanyColumn($case),
             'patientType' => $case->patient_type,
             'orderRef' => $case->order_ref,
+            'workOrderNo' => $case->work_order_no,
+            'workshopSection' => $case->workshopSection?->name,
+            'assignedTechnician' => $case->assignedTechnician?->name,
+            'assignmentStatus' => $this->assignmentStatusLabel($case),
             'quoteId' => $case->quote_no,
             'quoteDate' => $this->formatDate($case->quote_date),
             'quoteDaysWaiting' => $case->quote_date ? (int) $case->quote_date->diffInDays(now()) : 0,
@@ -149,6 +171,19 @@ class AdminCaseTrackingService
             'canDeliver' => $canDel,
             'deliverBlockReason' => $canDel ? null : $this->deliverBlockReason($case, $bom),
         ];
+    }
+
+    private function assignmentStatusLabel(CaseRecord $case): string
+    {
+        if ($case->isWorkshopAssignmentApproved()) {
+            return 'معتمد — جاهز للصرف';
+        }
+
+        if ($case->workshop_section_id && $case->assigned_technician_id) {
+            return 'بانتظار اعتماد التخصيص';
+        }
+
+        return 'غير مُخصّص';
     }
 
     private function contractCompanyColumn(CaseRecord $case): string
