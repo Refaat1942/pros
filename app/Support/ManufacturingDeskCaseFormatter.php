@@ -36,7 +36,9 @@ class ManufacturingDeskCaseFormatter
             'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage',
             'work_order_no', 'patient_type', 'path', 'quote_no',
             'workshop_section_id', 'assigned_technician_id', 'workshop_progress_pct', 'workshop_assigned_at',
+            'workshop_assignment_approved_at',
         ]) + [
+            'assignment_approved' => $case->isWorkshopAssignmentApproved(),
             'company_name' => $case->displayEntity(),
             'entity' => $case->entityPresentation(),
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',

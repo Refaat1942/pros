@@ -1115,7 +1115,7 @@
               '<td>' + (p.entityHtml || p.company) + '</td>' +
               '<td>' + p.registered + '</td>' +
               '<td>' + p.lastVisit + '</td>' +
-              '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="openPatientFile(\'' + p.phone + '\')">عرض الملف</button></td>' +
+              '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="openPatientFile(' + p.id + ')">عرض الملف</button></td>' +
               '</tr>';
           }).join('')
         : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">لا يوجد مرضى مسجّلون</td></tr>';
@@ -1124,49 +1124,101 @@
       if (window.TablePagination) TablePagination.refreshById('patientsTable');
     }
 
-    function getPatientVisits(patient) {
-      var visits = [{ date: patient.lastVisit, action: 'زيارة', status: patient.statusLabel }];
-      if (patient.status === 'quoted') {
-        visits.push({ date: patient.lastVisit, action: 'عرض سعر', status: 'عرض سعر' });
-      }
-      if (patient.status === 'done') {
-        visits.push({ date: patient.lastVisit, action: 'إغلاق ملف', status: 'مكتمل' });
-      }
-      var regParts = patient.registered.split('/');
-      if (regParts.length === 3) {
-        visits.push({ date: patient.registered, action: 'تسجيل أول', status: 'ملف جديد' });
-      }
-      return visits.slice(0, 4);
-    }
+    var activePatientFileId = null;
 
-    function openPatientFile(phone) {
-      var patient = patientsRegistry.find(function(p) { return p.phone === phone; });
+    function openPatientFile(patientId) {
+      activePatientFileId = patientId;
+      var patient = patientsRegistry.find(function(p) { return p.id === patientId; });
       if (!patient) return;
-      var fileId = 'PAT-' + patient.phone.slice(-6);
 
       document.getElementById('patientFileTitle').textContent = '👤 ' + patient.name;
       document.getElementById('patientFileStatus').innerHTML =
         '<span class="status-badge ' + patient.status + '">' + patient.statusLabel + '</span>' +
-        ' <span style="font-size:12px;color:var(--text-muted);margin-right:8px;">رقم الملف: ' + fileId + '</span>';
+        ' <span style="font-size:12px;color:var(--text-muted);margin-right:8px;">كود: ' + (patient.patient_code || '—') + '</span>';
 
       document.getElementById('patientFileMeta').innerHTML =
         '<div class="item"><div class="lbl">رقم الهاتف</div><div class="val" style="direction:ltr;text-align:right;">' + patient.phone + '</div></div>' +
+        '<div class="item"><div class="lbl">كود المريض</div><div class="val">' + (patient.patient_code || '—') + '</div></div>' +
         (patient.patient_type === 'military'
           ? '<div class="item"><div class="lbl">الرتبة العسكرية</div><div class="val">' + (patient.rank || '—') + '</div></div>'
-            + '<div class="item"><div class="lbl">الرقم العسكري</div><div class="val">' + (patient.militaryNumber || patient.military_number || '—') + '</div></div>'
-            + '<div class="item"><div class="lbl">رقم الأقدمية</div><div class="val">' + (patient.seniorityNumber || patient.seniority_number || '—') + '</div></div>'
-            + '<div class="item"><div class="lbl">السلاح</div><div class="val">' + (patient.militaryWeapon || patient.military_weapon || '—') + '</div></div>'
           : '<div class="item"><div class="lbl">جهة التعاقد</div><div class="val">' + patient.company + '</div></div>') +
         '<div class="item"><div class="lbl">تاريخ التسجيل</div><div class="val">' + patient.registered + '</div></div>' +
-        '<div class="item"><div class="lbl">آخر زيارة</div><div class="val">' + patient.lastVisit + '</div></div>' +
-        '<div class="item"><div class="lbl">مسجل بواسطة</div><div class="val">نورهان علي — الاستقبال</div></div>';
+        '<div class="item"><div class="lbl">آخر زيارة</div><div class="val">' + patient.lastVisit + '</div></div>';
 
-      document.getElementById('patientFileVisits').innerHTML = getPatientVisits(patient).map(function(v) {
-        return '<tr><td>' + v.date + '</td><td>' + v.action + '</td><td>' + v.status + '</td></tr>';
-      }).join('');
+      document.getElementById('patientFileCases').innerHTML =
+        '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted);">جاري التحميل...</td></tr>';
 
       document.getElementById('patientFileModal').classList.add('visible');
+
+      fetch('/reception/patients/' + patientId, {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      })
+        .then(function (res) { return res.ok ? res.json() : Promise.reject(res); })
+        .then(function (data) {
+          var meta = document.getElementById('patientFileMeta');
+          if (meta && data.national_id) {
+            meta.innerHTML += '<div class="item"><div class="lbl">الرقم القومي</div><div class="val" dir="ltr">' + data.national_id + '</div></div>';
+          }
+          if (meta && data.tracking_url) {
+            meta.innerHTML += '<div class="item"><div class="lbl">رابط التتبع</div><div class="val" style="font-size:11px;word-break:break-all;">' + data.tracking_url + '</div></div>';
+          }
+          if (meta && data.patient_type === 'military') {
+            if (data.military_number) {
+              meta.innerHTML += '<div class="item"><div class="lbl">الرقم العسكري</div><div class="val" dir="ltr">' + data.military_number + '</div></div>';
+            }
+            if (data.seniority_number) {
+              meta.innerHTML += '<div class="item"><div class="lbl">رقم الأقدمية</div><div class="val" dir="ltr">' + data.seniority_number + '</div></div>';
+            }
+            if (data.military_weapon) {
+              meta.innerHTML += '<div class="item"><div class="lbl">سلاح الخدمة</div><div class="val">' + data.military_weapon + '</div></div>';
+            }
+            if (data.sovereign_entity) {
+              meta.innerHTML += '<div class="item"><div class="lbl">الجهة السيادية</div><div class="val">' + data.sovereign_entity + '</div></div>';
+            }
+          } else if (meta && data.company_name) {
+            meta.innerHTML += '<div class="item"><div class="lbl">جهة التعاقد (كاملة)</div><div class="val">' + data.company_name + '</div></div>';
+          }
+
+          var casesBody = document.getElementById('patientFileCases');
+          var cases = data.cases || [];
+          if (!casesBody) return;
+          casesBody.innerHTML = cases.length
+            ? cases.map(function (c) {
+                return '<tr><td>' + (c.case_no || '—') + '</td><td>' + (c.order_ref || '—') + '</td><td>' +
+                  (c.stage_label || c.stage_key || '—') + '</td><td>' + (c.work_order_no || '—') + '</td><td>' +
+                  (c.created_at || '—') + '</td></tr>';
+              }).join('')
+            : '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted);">لا توجد حالات مسجّلة</td></tr>';
+
+          var btnNew = document.getElementById('btnPatientNewCase');
+          if (btnNew) {
+            btnNew.disabled = (data.open_cases_count || 0) > 0;
+            btnNew.title = btnNew.disabled ? 'يوجد طلب مفتوح — أكمله أو سلّمه أولاً' : 'فتح طلب جديد للتوصيف';
+          }
+        })
+        .catch(function () {
+          var casesBody = document.getElementById('patientFileCases');
+          if (casesBody) {
+            casesBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#b91c1c;">تعذّر تحميل بيانات الملف</td></tr>';
+          }
+        });
     }
+
+    function initiatePatientCase() {
+      if (!activePatientFileId || !window.axios) return;
+      axios.post('/reception/patients/' + activePatientFileId + '/cases')
+        .then(function (res) {
+          showToast(res.data.message || 'تم فتح طلب جديد');
+          openPatientFile(activePatientFileId);
+          loadPatients();
+        })
+        .catch(function (err) {
+          showToast((err.response && err.response.data && err.response.data.message) || 'تعذّر فتح الطلب', true);
+        });
+    }
+
+    window.openPatientFile = openPatientFile;
 
     function closePatientFileModal() {
       document.getElementById('patientFileModal').classList.remove('visible');
@@ -1494,6 +1546,8 @@
     if (closePatientFileModalBtn) closePatientFileModalBtn.addEventListener('click', closePatientFileModal);
     var btnClosePatientFile = document.getElementById('btnClosePatientFile');
     if (btnClosePatientFile) btnClosePatientFile.addEventListener('click', closePatientFileModal);
+    var btnPatientNewCase = document.getElementById('btnPatientNewCase');
+    if (btnPatientNewCase) btnPatientNewCase.addEventListener('click', initiatePatientCase);
     var patientFileModal = document.getElementById('patientFileModal');
     if (patientFileModal) {
       patientFileModal.addEventListener('click', function(e) {

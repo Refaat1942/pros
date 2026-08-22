@@ -533,6 +533,7 @@ class SpecEditRequestService
                     'workshop_section_id' => null,
                     'assigned_technician_id' => null,
                     'workshop_assigned_at' => null,
+                    'workshop_assignment_approved_at' => null,
                     'workshop_progress_pct' => 0,
                     'manufacturing_stage' => null,
                 ]);

@@ -107,6 +107,7 @@ class AdminReportsHubService
             ['id' => 'inventory-reconciliation', 'label' => 'تسوية مخزون ↔ مالية', 'icon' => '🔗', 'group' => 'التعاقد والمالية', 'description' => 'ربط صرف المخزن (WAC) بالإيرادات والتكلفة المُسلَّمة'],
             ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير والورشة'],
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
+            ['id' => 'authorizations', 'label' => 'جميع الأذون والاعتمادات', 'icon' => '📜', 'group' => 'المخزون والتوريد', 'description' => 'أذون الصرف، تعديل التوصيف، تصديقات الخدمات، وموافقات التعاقد'],
         ] as $extra) {
             $cards[] = $extra;
         }
@@ -165,6 +166,7 @@ class AdminReportsHubService
             'workshop-sections' => $this->buildWorkshopSections($from, $to),
             'workshop-tracking' => $this->buildWorkshopTracking($from, $to),
             'dispense-approvals' => $this->buildDispenseApprovals($from, $to),
+            'authorizations' => $this->buildAuthorizations($from, $to),
             'opening-balance' => $this->buildOpeningBalance($from, $to),
             'closing-balance' => $this->buildClosingBalance($from, $to),
             'profitability' => $this->buildProfitability($from, $to),
@@ -1081,6 +1083,143 @@ class AdminReportsHubService
             ],
             'headers' => ['أمر الشغل', 'المريض', 'رقم الحالة', 'البنود', 'الحالة', 'طلب بواسطة', 'اعتمد بواسطة', 'التاريخ'],
             'rows' => $rows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildAuthorizations(?Carbon $from, ?Carbon $to): array
+    {
+        $rows = collect();
+
+        $dispense = $this->constrainDateRange(
+            StockDispenseRequest::query()->with([
+                'caseRecord:id,case_no,work_order_no,patient_id',
+                'caseRecord.patient:id,name',
+                'requestedBy:id,name',
+                'approvedBy:id,name',
+            ]),
+            'created_at',
+            $from,
+            $to,
+        )->orderByDesc('created_at')->limit(300)->get();
+
+        foreach ($dispense as $r) {
+            $rows->push([
+                'sort' => ($r->approved_at ?? $r->created_at)?->timestamp ?? 0,
+                'cells' => [
+                    'إذن صرف مخزن',
+                    $r->work_order_no ?? '—',
+                    $r->caseRecord?->patient?->name ?? '—',
+                    $r->caseRecord?->case_no ?? '—',
+                    $this->dispenseRequestStatusLabel($r->status),
+                    trim(($r->requestedBy?->name ?? '—').' / '.($r->approvedBy?->name ?? '—')),
+                    ClinicTime::format($r->approved_at ?? $r->created_at, 'd/m/Y H:i'),
+                ],
+            ]);
+        }
+
+        $specEdits = $this->constrainDateRange(
+            SpecEditRequest::query()->with([
+                'techOrderSpec:id,order_ref,patient_name',
+                'caseRecord:id,case_no,order_ref',
+                'requestedBy:id,name',
+                'reviewedBy:id,name',
+            ]),
+            'created_at',
+            $from,
+            $to,
+        )->orderByDesc('created_at')->limit(300)->get();
+
+        foreach ($specEdits as $r) {
+            $rows->push([
+                'sort' => $r->created_at?->timestamp ?? 0,
+                'cells' => [
+                    'تعديل توصيف',
+                    $r->techOrderSpec?->order_ref ?? $r->caseRecord?->order_ref ?? '—',
+                    $r->techOrderSpec?->patient_name ?? '—',
+                    $r->caseRecord?->case_no ?? '—',
+                    $r->status->label(),
+                    trim(($r->requestedBy?->name ?? '—').' / '.($r->reviewedBy?->name ?? '—')),
+                    ClinicTime::format($r->created_at, 'd/m/Y H:i'),
+                ],
+            ]);
+        }
+
+        $services = $this->constrainDateRange(
+            ServicesApproval::query()->with([
+                'caseRecord:id,case_no,patient_id',
+                'caseRecord.patient:id,name',
+                'approvedBy:id,name',
+            ]),
+            'created_at',
+            $from,
+            $to,
+        )->orderByDesc('created_at')->limit(300)->get();
+
+        foreach ($services as $a) {
+            $rows->push([
+                'sort' => ($a->approved_at ?? $a->created_at)?->timestamp ?? 0,
+                'cells' => [
+                    'تصديق خدمات',
+                    $a->caseRecord?->case_no ?? '—',
+                    $a->caseRecord?->patient?->name ?? '—',
+                    $a->caseRecord?->case_no ?? '—',
+                    $this->servicesApprovalStatusLabel($a->status),
+                    $a->approvedBy?->name ?? '—',
+                    ClinicTime::format($a->approved_at ?? $a->created_at, 'd/m/Y H:i'),
+                ],
+            ]);
+        }
+
+        $contracts = ApprovalContract::query()
+            ->when($from || $to, function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->where(function ($q2) use ($from, $to) {
+                        if ($from && $to) {
+                            $q2->whereBetween('approval_date', [$from->toDateString(), $to->toDateString()]);
+                        } elseif ($from) {
+                            $q2->where('approval_date', '>=', $from->toDateString());
+                        } else {
+                            $q2->where('approval_date', '<=', $to->toDateString());
+                        }
+                    })->orWhere(function ($q2) use ($from, $to) {
+                        $this->constrainDateRange($q2, 'created_at', $from, $to);
+                    });
+                });
+            })
+            ->orderByDesc('created_at')
+            ->limit(300)
+            ->get();
+
+        foreach ($contracts as $c) {
+            $rows->push([
+                'sort' => ($c->approval_date ? strtotime($c->approval_date) : null) ?? $c->created_at?->timestamp ?? 0,
+                'cells' => [
+                    'موافقة تعاقد',
+                    $c->contract_no ?? '—',
+                    $c->patient_name ?? '—',
+                    $c->company_name ?? '—',
+                    'موافق',
+                    '—',
+                    ClinicTime::format($c->approval_date ?? $c->created_at, 'd/m/Y'),
+                ],
+            ]);
+        }
+
+        $sorted = $rows->sortByDesc('sort')->values();
+        $tableRows = $sorted->map(fn (array $row) => $row['cells'])->take(500)->all();
+
+        return [
+            'title' => 'جميع الأذون والاعتمادات',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [
+                ['label' => 'إجمالي السجلات', 'value' => (string) count($tableRows)],
+                ['label' => 'أذون صرف', 'value' => (string) $dispense->count()],
+                ['label' => 'تعديل توصيف', 'value' => (string) $specEdits->count()],
+                ['label' => 'تصديق خدمات', 'value' => (string) $services->count()],
+            ],
+            'headers' => ['نوع الإذن', 'المرجع', 'المريض', 'الحالة/الجهة', 'الحالة', 'طلب / اعتمد', 'التاريخ'],
+            'rows' => $tableRows,
         ];
     }
 

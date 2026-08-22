@@ -54,11 +54,17 @@ Route::prefix('workshop')
             Route::get('workshop/list', [WorkshopQueueController::class, 'index'])
                 ->name('workshop.list');
 
+            Route::get('workshop/assignment-queue', [WorkshopQueueController::class, 'assignmentQueue'])
+                ->name('workshop.assignment-queue');
+
             Route::get('workshop-assignment/options', [WorkshopQueueController::class, 'assignmentOptions'])
                 ->name('workshop-assignment.options');
 
             Route::post('workshop/{case}/assign', [WorkshopQueueController::class, 'assign'])
                 ->name('workshop.assign');
+
+            Route::post('workshop/{case}/approve-assignment', [WorkshopQueueController::class, 'approveAssignment'])
+                ->name('workshop.approve-assignment');
 
             Route::get('technicians/board', [WorkshopQueueController::class, 'technicianBoard'])
                 ->name('technicians.board');

@@ -167,17 +167,10 @@ class OperationsDeskController extends Controller
      */
     public function approve(Request $request, CaseRecord $case): JsonResponse
     {
-        $validated = $request->validate([
-            'workshop_section_id' => ['nullable', 'integer', 'exists:workshop_sections,id'],
-            'assigned_technician_id' => ['nullable', 'integer', 'exists:users,id'],
-        ]);
-
         $fromStage = $case->stage_key;
         $case = $this->operationsService->approve(
             $case,
             Auth::user()?->name,
-            $validated['workshop_section_id'] ?? null,
-            $validated['assigned_technician_id'] ?? null,
         );
 
         return response()->json([
@@ -188,7 +181,6 @@ class OperationsDeskController extends Controller
             ),
             'case' => $case->only([
                 'id', 'case_no', 'stage_key', 'manufacturing_stage', 'work_order_no',
-                'workshop_section_id', 'assigned_technician_id',
             ]),
         ]);
     }

@@ -90,7 +90,7 @@ class OperationsDispenseVisibilityTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $case->refresh();
         $this->assertEquals(CaseRecord::MFG_ISSUE, $case->manufacturing_stage);
@@ -113,7 +113,7 @@ class OperationsDispenseVisibilityTest extends TestCase
 
         $this->expectException(HttpException::class);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
     }
 
     public function test_workshop_desk_hidden_until_warehouse_dispense(): void
@@ -142,7 +142,7 @@ class OperationsDispenseVisibilityTest extends TestCase
             'manufacturing_stage' => CaseRecord::MFG_ISSUE,
         ])->assertStatus(422);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
         $ids = collect($data['workshop_cases'])->pluck('id');

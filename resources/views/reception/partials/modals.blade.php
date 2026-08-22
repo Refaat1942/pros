@@ -177,20 +177,23 @@
         <div style="margin-bottom:16px;" id="patientFileStatus"></div>
         <div class="patient-file-meta" id="patientFileMeta"></div>
         <div class="patient-file-section">
-          <h4>📋 آخر الزيارات</h4>
-          <table data-paginate="10" class="patient-visits-table">
+          <h4>📂 طلبات / حالات المريض</h4>
+          <table data-paginate="8" class="patient-visits-table">
             <thead>
               <tr>
+                <th>رقم الحالة</th>
+                <th>مرجع الطلب</th>
+                <th>المرحلة</th>
+                <th>أمر الشغل</th>
                 <th>التاريخ</th>
-                <th>الإجراء</th>
-                <th>الحالة</th>
               </tr>
             </thead>
-            <tbody id="patientFileVisits"></tbody>
+            <tbody id="patientFileCases"></tbody>
           </table>
         </div>
-        <div class="print-scope-hide" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+        <div class="print-scope-hide" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button class="btn btn-secondary" id="btnClosePatientFile">إغلاق</button>
+          <button class="btn btn-primary" id="btnPatientNewCase" type="button">➕ طلب جديد</button>
           <button class="btn btn-primary" id="btnPrintPatientFile" type="button" data-print-scope data-print-target="#patientFileModal .modal-body">🖨️ طباعة الملف</button>
         </div>
       </div>

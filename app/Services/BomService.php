@@ -784,6 +784,9 @@ class BomService
             $this->validateDispenseBarcodes($bom, $scannedBarcodes);
 
             $case = $bom->caseRecord;
+            if ($case) {
+                app(WorkshopAssignmentService::class)->assertDispenseAllowed($case);
+            }
 
             $this->refreshUnitCostsAtDispense($bom);
             $bom->refresh()->load('items');

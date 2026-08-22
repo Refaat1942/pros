@@ -17,12 +17,14 @@ use App\Models\StockItem;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\VisitType;
+use App\Models\WorkshopSection;
 use App\Services\AdjustmentsService;
 use App\Services\BomService;
 use App\Services\CostingService;
 use App\Services\OperationsService;
 use App\Services\PermissionCatalogService;
 use App\Services\WorkflowService;
+use App\Services\WorkshopAssignmentService;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -393,9 +395,58 @@ trait ProstheticTestHelper
             }
         }
 
-        app(BomService::class)->releaseToWip($bom, $scans);
+        $this->releaseBomToWip($bom, $scans);
 
         return $case->fresh();
+    }
+
+    /** صرف BOM إلى WIP مع اعتماد تخصيص الإنتاج عند تفعيل الورشة. */
+    protected function releaseBomToWip(Bom $bom, array $scans): Bom
+    {
+        $case = CaseRecord::query()->findOrFail($bom->case_id);
+        $this->seedWorkshopAssignmentApproved($case->fresh());
+
+        return app(BomService::class)->releaseToWip($bom->fresh(), $scans);
+    }
+
+    /** اعتماد تخصيص الإنتاج — مطلوب قبل صرف المخزن عند تفعيل الورشة. */
+    protected function seedWorkshopAssignmentApproved(CaseRecord $case): CaseRecord
+    {
+        if (! config('workshop.enabled', true)) {
+            return $case->fresh();
+        }
+
+        $case = $case->fresh();
+
+        if ($case->isWorkshopAssignmentApproved()) {
+            return $case;
+        }
+
+        $assignment = app(WorkshopAssignmentService::class);
+
+        if ($case->workshop_section_id && $case->assigned_technician_id) {
+            return $assignment->approveAssignment($case);
+        }
+
+        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $section = WorkshopSection::query()->where('active', true)->first();
+
+        if (! $section) {
+            $section = WorkshopSection::create([
+                'name' => 'اختبار',
+                'code' => 'test',
+                'sort' => 1,
+                'active' => true,
+            ]);
+        }
+
+        if (! $section->technicians()->where('users.id', $tech->id)->exists()) {
+            $section->technicians()->syncWithoutDetaching([$tech->id]);
+        }
+
+        $case = $assignment->assignOnApprove($case, $section->id, $tech->id);
+
+        return $assignment->approveAssignment($case);
     }
 
     /**

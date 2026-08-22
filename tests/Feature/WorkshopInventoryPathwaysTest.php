@@ -96,7 +96,7 @@ class WorkshopInventoryPathwaysTest extends TestCase
             ->assertJsonFragment(['message' => 'لا يمكن حذف الفني — مرتبط بحالات إنتاج.']);
     }
 
-    public function test_operations_approve_assigns_workshop_section_and_technician(): void
+    public function test_operations_approve_issues_work_order_without_production_assignment(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);
         $patient = $this->militaryPatient($this->militaryCompany());
@@ -108,24 +108,71 @@ class WorkshopInventoryPathwaysTest extends TestCase
         ]);
         app(WorkOrderService::class)->generate($case->fresh());
 
-        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
-        $section = WorkshopSection::create(['name' => 'تجميع', 'code' => 'assembly', 'sort' => 10, 'active' => true]);
-        $section->technicians()->sync([$tech->id]);
-
         $ops = $this->userWithRole(Role::SLUG_OPERATIONS);
 
         $this->actingAs($ops)
-            ->postJson("/operations/pending/{$case->id}/approve", [
-                'workshop_section_id' => $section->id,
-                'assigned_technician_id' => $tech->id,
-            ])
+            ->postJson("/operations/pending/{$case->id}/approve")
             ->assertOk();
 
         $case->refresh();
-        $this->assertSame($section->id, $case->workshop_section_id);
-        $this->assertSame($tech->id, $case->assigned_technician_id);
+        $this->assertNull($case->workshop_section_id);
+        $this->assertNull($case->assigned_technician_id);
+        $this->assertNull($case->workshop_assignment_approved_at);
         $this->assertNotNull($case->work_order_no);
         $this->assertSame(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
+    }
+
+    public function test_production_assignment_approval_allows_dispense(): void
+    {
+        config(['inventory.dispense_requires_approval' => true]);
+
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0099']);
+
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+        app(BomService::class)->reserveForCase($case->fresh());
+
+        $case = $this->seedWorkshopAssignmentApproved($case->fresh());
+
+        $technical = $this->userWithRole(Role::SLUG_TECHNICAL);
+        $admin = $this->userWithRole(Role::SLUG_ADMIN);
+
+        $request = app(StockDispenseRequestService::class)->submit(
+            $bom,
+            ['BC-RM-001'],
+            $technical,
+        );
+
+        $this->assertSame(StockDispenseRequest::STATUS_PENDING, $request->status);
+        $this->assertSame(Bom::STAGE_RAW, $bom->fresh()->stage);
+
+        app(StockDispenseRequestService::class)->approve($request->fresh(), $admin);
+
+        $this->assertSame(Bom::STAGE_WIP, $bom->fresh()->stage);
+        $this->assertDatabaseHas('stock_dispense_requests', [
+            'id' => $request->id,
+            'status' => StockDispenseRequest::STATUS_EXECUTED,
+        ]);
+    }
+
+    public function test_dispense_blocked_without_production_assignment_approval(): void
+    {
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0100']);
+
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+        app(BomService::class)->reserveForCase($case->fresh());
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
     }
 
     public function test_dispense_request_pending_then_approve_executes_movement(): void
@@ -141,6 +188,8 @@ class WorkshopInventoryPathwaysTest extends TestCase
             ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
         ]);
         app(BomService::class)->reserveForCase($case->fresh());
+
+        $case = $this->seedWorkshopAssignmentApproved($case->fresh());
 
         $technical = $this->userWithRole(Role::SLUG_TECHNICAL);
         $admin = $this->userWithRole(Role::SLUG_ADMIN);

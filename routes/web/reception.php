@@ -82,6 +82,9 @@ Route::prefix('reception')
             Route::get('patients/{patient}', [PatientController::class, 'show'])
                 ->name('patients.show');
 
+            Route::post('patients/{patient}/cases', [PatientController::class, 'initiateCase'])
+                ->name('patients.cases.store');
+
             Route::put('patients/{patient}', [PatientController::class, 'update'])
                 ->name('patients.update');
         });

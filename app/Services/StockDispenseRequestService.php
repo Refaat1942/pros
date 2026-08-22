@@ -34,6 +34,8 @@ class StockDispenseRequestService
             abort(422, 'لا توجد حالة مرتبطة.');
         }
 
+        app(WorkshopAssignmentService::class)->assertDispenseAllowed($case);
+
         $pending = StockDispenseRequest::query()
             ->where('bom_id', $bom->id)
             ->where('status', StockDispenseRequest::STATUS_PENDING)

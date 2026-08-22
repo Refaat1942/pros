@@ -26,10 +26,40 @@
 </div>
 
 <div class="space-y-6" id="workshopDeskRoot" data-cases-count="{{ $cases->count() }}">
+    <div class="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden" id="workshopAssignmentQueuePanel">
+        <div class="px-5 py-4 border-b border-amber-100 flex flex-wrap items-center justify-between gap-3 bg-amber-50">
+            <div>
+                <h3 class="font-bold text-amber-900 text-base">📋 طابور تخصيص الإنتاج — قبل صرف المخزن</h3>
+                <p class="text-xs text-amber-800 mt-1">أوامر الشغل بعد اعتماد التشغيل — خصّص القسم والفني ثم اعتمد التخصيص ليتاح للمخزن الصرف.</p>
+            </div>
+            <button type="button" id="btnRefreshAssignmentQueue"
+                    class="rounded-xl bg-amber-600 text-white px-4 py-2 text-sm font-bold hover:bg-amber-700 transition-colors">
+                ↻ تحديث الطابور
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table data-paginate="8" class="w-full text-sm">
+                <thead class="bg-amber-50/80 text-slate-600">
+                    <tr>
+                        <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
+                        <th class="px-4 py-3 text-right font-bold">المريض</th>
+                        <th class="px-4 py-3 text-right font-bold">المسار</th>
+                        <th class="px-4 py-3 text-right font-bold">القسم / الفني</th>
+                        <th class="px-4 py-3 text-right font-bold">حالة التخصيص</th>
+                        <th class="px-4 py-3 text-right font-bold">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="workshopAssignmentTableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">جاري تحميل طابور التخصيص...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-violet-100 bg-violet-50">
             <h3 class="font-bold text-violet-900 text-base">👤 تخصيص الفني وقسم الإنتاج</h3>
-            <p class="text-xs text-violet-700 mt-1">اختر أمر الشغل من الجدول ثم حدّد القسم والفني — التخصيص يتم من قسم الإنتاج وليس من مكتب التشغيل.</p>
+            <p class="text-xs text-violet-700 mt-1">اختر أمر الشغل من الطابور أو الجدول ثم حدّد القسم والفني — التخصيص يتم من قسم الإنتاج وليس من مكتب التشغيل.</p>
         </div>
         <div class="p-4 flex flex-wrap gap-4 items-end">
             <div class="min-w-[200px]">
@@ -52,6 +82,10 @@
             <button type="button" id="btnSaveWorkshopAssignment"
                     class="rounded-xl bg-violet-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-violet-700 transition-colors">
                 حفظ التخصيص
+            </button>
+            <button type="button" id="btnApproveWorkshopAssignment"
+                    class="rounded-xl bg-emerald-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-emerald-700 transition-colors">
+                ✓ اعتماد التخصيص
             </button>
         </div>
     </div>

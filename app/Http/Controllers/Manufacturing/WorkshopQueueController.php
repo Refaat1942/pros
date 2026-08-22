@@ -29,7 +29,37 @@ class WorkshopQueueController extends Controller
     ) {}
 
     /**
-     * طابور ورشة التصنيع — أوامر بعد صرف المخزن (BOM wip).
+     * طابور تخصيص الإنتاج — أوامر بعد اعتماد التشغيل وقبل صرف المخزن.
+     */
+    public function assignmentQueue(Request $request): JsonResponse
+    {
+        $cases = $this->fetchForDashboard(
+            CaseRecord::workshopAssignmentQueue()
+                ->with([
+                    'patient:id,patient_code,name',
+                    'workshopSection:id,name,code',
+                    'assignedTechnician:id,name',
+                    'bom:id,case_id,bom_no,stage',
+                    'bom.items:id,bom_id,stock_item_code,name,qty,source',
+                ])
+                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                    $q->where('case_no', 'like', "%{$s}%")
+                        ->orWhere('order_ref', 'like', "%{$s}%")
+                        ->orWhere('work_order_no', 'like', "%{$s}%");
+                }))
+                ->orderByDesc('updated_at')
+        );
+
+        $collection = collect($cases);
+
+        return response()->json([
+            'data' => $collection->map(fn ($c) => ManufacturingDeskCaseFormatter::format($c, 'workshop.work-order.print'))->values(),
+            'total' => $collection->count(),
+        ]);
+    }
+
+    /**
+     * طابور ورشة التصنيع — أوامر بعد صرف المخزn (BOM wip).
      */
     public function index(Request $request): JsonResponse
     {
@@ -82,7 +112,20 @@ class WorkshopQueueController extends Controller
         );
 
         return response()->json([
-            'message' => 'تم تخصيص أمر الشغل.',
+            'message' => 'تم تخصيص أمر الشغل — بانتظار اعتماد التخصيص.',
+            'case' => ManufacturingDeskCaseFormatter::format(
+                $case->load(['patient:id,patient_code,name', 'workshopSection:id,name', 'assignedTechnician:id,name', 'bom.items']),
+                'workshop.work-order.print',
+            ),
+        ]);
+    }
+
+    public function approveAssignment(CaseRecord $case): JsonResponse
+    {
+        $case = $this->workshopAssignment->approveAssignment($case);
+
+        return response()->json([
+            'message' => 'تم اعتماد التخصيص — يمكن للمخزن صرف المواد.',
             'case' => ManufacturingDeskCaseFormatter::format(
                 $case->load(['patient:id,patient_code,name', 'workshopSection:id,name', 'assignedTechnician:id,name', 'bom.items']),
                 'workshop.work-order.print',

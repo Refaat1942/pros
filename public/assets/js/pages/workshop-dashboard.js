@@ -35,6 +35,121 @@
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   }
 
+  function renderAssignmentStatusCell(c) {
+    if (c.assignment_approved) {
+      return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">✓ معتمد — جاهز للصرف</span>';
+    }
+    if (c.workshop_section_id && c.assigned_technician_id) {
+      return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-amber-100 text-amber-800">بانتظار الاعتماد</span>';
+    }
+    return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-slate-100 text-slate-600">غير مخصّص</span>';
+  }
+
+  function renderAssignmentQueueRow(c) {
+    var isMil = c.patient_type === 'military' || c.path === 'military';
+    var search = [c.work_order_no, c.case_no, c.patient && c.patient.name].join(' ');
+    var printBtn = c.work_order_print_url
+      ? '<a href="' + esc(c.work_order_print_url) + '" target="_blank" rel="noopener" ' +
+        'class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ إذن شغل</a> '
+      : '';
+    var approveBtn = (!c.assignment_approved && c.workshop_section_id && c.assigned_technician_id)
+      ? '<button type="button" class="btn-approve-assignment text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700 inline-block mb-1" data-case-id="' + c.id + '">✓ اعتماد</button> '
+      : '';
+
+    return '<tr class="assignment-row hover:bg-slate-50" data-case-id="' + c.id + '" data-search="' + esc(search) + '">' +
+      '<td class="px-4 py-3 font-mono font-bold text-amber-800">' + esc(c.work_order_no || '—') + '</td>' +
+      '<td class="px-4 py-3"><div class="font-semibold text-slate-800">' + esc(c.patient && c.patient.name) + '</div>' +
+        '<div class="text-xs text-slate-400">' + esc(c.case_no) + '</div></td>' +
+      '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg ' +
+        (isMil ? 'bg-indigo-100 text-indigo-700">🪖 عسكري' : 'bg-emerald-100 text-emerald-700">🌐 مدني') + '</span></td>' +
+      '<td class="px-4 py-3">' + renderAssignmentCell(c) + '</td>' +
+      '<td class="px-4 py-3">' + renderAssignmentStatusCell(c) + '</td>' +
+      '<td class="px-4 py-3">' + printBtn + approveBtn +
+        '<button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block" data-case-id="' + c.id + '" data-work-order="' + esc(c.work_order_no || '') + '">👤 تخصيص</button></td></tr>';
+  }
+
+  function bindAssignmentQueueEvents() {
+    document.querySelectorAll('#workshopAssignmentTableBody .btn-select-workshop-case').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectedCaseId = btn.getAttribute('data-case-id');
+        var wo = btn.getAttribute('data-work-order') || selectedCaseId;
+        var input = $('workshopSelectedOrder');
+        if (input) input.value = wo;
+        var cached = assignmentCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
+        if (cached) populateAssignmentForm(cached);
+        document.getElementById('workshopAssignmentQueuePanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    document.querySelectorAll('.btn-approve-assignment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        approveWorkshopAssignment(btn.getAttribute('data-case-id'), btn);
+      });
+    });
+  }
+
+  function populateAssignmentForm(c) {
+    var sectionSel = $('workshopAssignSection');
+    var techSel = $('workshopAssignTechnician');
+    if (sectionSel && c.workshop_section_id) {
+      sectionSel.value = String(c.workshop_section_id);
+      sectionSel.dispatchEvent(new Event('change'));
+    }
+    if (techSel && c.assigned_technician_id) techSel.value = String(c.assigned_technician_id);
+  }
+
+  var assignmentRefreshInFlight = false;
+  var assignmentCache = [];
+
+  function refreshAssignmentQueue() {
+    if (!window.axios || assignmentRefreshInFlight) return;
+    assignmentRefreshInFlight = true;
+    var btn = $('btnRefreshAssignmentQueue');
+    if (btn) { btn.disabled = true; btn.textContent = '↻ جاري التحديث...'; }
+
+    axios.get('/workshop/workshop/assignment-queue')
+      .then(function (res) {
+        assignmentCache = res.data.data || [];
+        var tbody = $('workshopAssignmentTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = assignmentCache.length
+          ? assignmentCache.map(renderAssignmentQueueRow).join('')
+          : '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر بانتظار التخصيص — تظهر بعد اعتماد مكتب التشغيل.</td></tr>';
+        bindAssignmentQueueEvents();
+        if (window.TablePagination && TablePagination.repaginate) TablePagination.repaginate(tbody);
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل طابور التخصيص', true);
+      })
+      .finally(function () {
+        assignmentRefreshInFlight = false;
+        if (btn) { btn.disabled = false; btn.textContent = '↻ تحديث الطابور'; }
+      });
+  }
+
+  function approveWorkshopAssignment(caseId, triggerBtn) {
+    if (!window.axios || !caseId) return;
+    if (!window.confirm('تأكيد اعتماد التخصيص؟\n\nبعد الاعتماد يمكن للمخزن صرف المواد لهذا الأمر.')) return;
+
+    if (triggerBtn) triggerBtn.disabled = true;
+    var formBtn = $('btnApproveWorkshopAssignment');
+    if (formBtn) formBtn.disabled = true;
+
+    axios.post('/workshop/workshop/' + caseId + '/approve-assignment')
+      .then(function (res) {
+        toast(res.data.message || 'تم اعتماد التخصيص');
+        refreshAssignmentQueue();
+        refreshList();
+        refreshTechBoard();
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر اعتماد التخصيص', true);
+      })
+      .finally(function () {
+        if (triggerBtn) triggerBtn.disabled = false;
+        if (formBtn) formBtn.disabled = false;
+      });
+  }
+
   function renderActionCell(c) {
     var printBtn = c.work_order_print_url
       ? '<a href="' + esc(c.work_order_print_url) + '" target="_blank" rel="noopener" ' +
@@ -240,12 +355,10 @@
         var input = $('workshopSelectedOrder');
         if (input) input.value = wo;
         var cached = casesCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
-        if (cached) {
-          var sectionSel = $('workshopAssignSection');
-          var techSel = $('workshopAssignTechnician');
-          if (sectionSel && cached.workshop_section_id) sectionSel.value = String(cached.workshop_section_id);
-          if (sectionSel) sectionSel.dispatchEvent(new Event('change'));
-          if (techSel && cached.assigned_technician_id) techSel.value = String(cached.assigned_technician_id);
+        if (cached) populateAssignmentForm(cached);
+        else {
+          var fromAssignment = assignmentCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
+          if (fromAssignment) populateAssignmentForm(fromAssignment);
         }
       });
     });
@@ -396,6 +509,7 @@
     axios.post('/workshop/workshop/' + selectedCaseId + '/assign', payload)
       .then(function (res) {
         toast(res.data.message || 'تم حفظ التخصيص');
+        refreshAssignmentQueue();
         refreshList();
         refreshTechBoard();
       })
@@ -428,6 +542,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     loadAssignmentOptions();
     bindTableEvents();
+    refreshAssignmentQueue();
     refreshTechBoard();
     var search = $('workshopSearch');
     if (search) search.addEventListener('input', applyFilters);
@@ -450,6 +565,18 @@
     if (techRefresh) techRefresh.addEventListener('click', refreshTechBoard);
     var assignBtn = $('btnSaveWorkshopAssignment');
     if (assignBtn) assignBtn.addEventListener('click', saveWorkshopAssignment);
+    var approveAssignBtn = $('btnApproveWorkshopAssignment');
+    if (approveAssignBtn) {
+      approveAssignBtn.addEventListener('click', function () {
+        if (!selectedCaseId) {
+          toast('اختر أمر شغل من الطابور أولاً', true);
+          return;
+        }
+        approveWorkshopAssignment(selectedCaseId, approveAssignBtn);
+      });
+    }
+    var refreshAssign = $('btnRefreshAssignmentQueue');
+    if (refreshAssign) refreshAssign.addEventListener('click', refreshAssignmentQueue);
     var closeBtn = $('closeWorkshopBomItemsModal');
     var modal = $('workshopBomItemsModal');
     if (closeBtn) closeBtn.addEventListener('click', closeBomItemsModal);

@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Patient;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Patient\StorePatientRequest;
 use App\Http\Requests\Patient\UpdatePatientRequest;
+use App\Models\CaseRecord;
 use App\Models\Patient;
+use App\Services\CaseService;
 use App\Services\CaseTrackingQrService;
 use App\Services\PatientService;
+use App\Enums\CaseStage;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +23,7 @@ class PatientController extends Controller
     public function __construct(
         private readonly PatientService $patientService,
         private readonly CaseTrackingQrService $caseTrackingQrService,
+        private readonly CaseService $caseService,
     ) {}
 
     /**
@@ -74,7 +78,7 @@ class PatientController extends Controller
     {
         $patient->load([
             'contractCompany:id,name,company_code,is_military,is_contracted',
-            'cases' => fn ($q) => $q->latest()->limit(1),
+            'cases' => fn ($q) => $q->latest()->limit(15),
         ]);
 
         $latestCase = $patient->cases->first();
@@ -82,12 +86,50 @@ class PatientController extends Controller
         return response()->json([
             ...$this->formatPatientCard($patient),
             'latest_case' => $latestCase ? [
+                'id' => $latestCase->id,
                 'case_no' => $latestCase->case_no,
+                'order_ref' => $latestCase->order_ref,
                 'stage_key' => $latestCase->stage_key,
+                'stage_label' => CaseStage::labelFor($latestCase->stage_key),
                 'manufacturing_stage' => $latestCase->manufacturing_stage,
+                'work_order_no' => $latestCase->work_order_no,
                 'delivered_at' => $latestCase->delivered_at?->toDateString(),
             ] : null,
+            'cases' => $patient->cases->map(fn (CaseRecord $c) => [
+                'id' => $c->id,
+                'case_no' => $c->case_no,
+                'order_ref' => $c->order_ref,
+                'stage_key' => $c->stage_key,
+                'stage_label' => CaseStage::labelFor($c->stage_key),
+                'work_order_no' => $c->work_order_no,
+                'created_at' => $c->created_at?->format('Y-m-d'),
+                'delivered_at' => $c->delivered_at?->format('Y-m-d'),
+            ])->values(),
+            'open_cases_count' => $patient->cases()
+                ->whereNotIn('stage_key', [CaseRecord::STAGE_DELIVERED])
+                ->count(),
         ]);
+    }
+
+    /** طلب جديد — فتح حالة تشغيلية للمريض (تخطّي الكشف). */
+    public function initiateCase(Patient $patient): JsonResponse
+    {
+        $openCases = $patient->cases()
+            ->whereNotIn('stage_key', [CaseRecord::STAGE_DELIVERED])
+            ->count();
+
+        if ($openCases > 0) {
+            return response()->json([
+                'message' => 'يوجد طلب/حالة مفتوحة لهذا المريض — أغلقها أو أكملها قبل فتح طلب جديد.',
+            ], 422);
+        }
+
+        $case = $this->caseService->initiateFromReception($patient);
+
+        return response()->json([
+            'message' => "تم فتح طلب جديد — {$case->case_no}",
+            'case' => $case->only(['id', 'case_no', 'order_ref', 'stage_key']),
+        ], 201);
     }
 
     /**

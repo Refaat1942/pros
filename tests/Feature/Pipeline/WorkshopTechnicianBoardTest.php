@@ -37,7 +37,7 @@ class WorkshopTechnicianBoardTest extends TestCase
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $this->getJson('/workshop/technicians/board')
             ->assertOk()
@@ -62,7 +62,7 @@ class WorkshopTechnicianBoardTest extends TestCase
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $this->postJson("/workshop/workshop/{$case->id}/progress", ['progress_pct' => 75])
             ->assertOk()

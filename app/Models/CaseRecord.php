@@ -87,6 +87,7 @@ class CaseRecord extends Model
         'workshop_section_id',
         'assigned_technician_id',
         'workshop_assigned_at',
+        'workshop_assignment_approved_at',
         'workshop_progress_pct',
         'pricing_request_id',
         'quote_no',
@@ -131,6 +132,7 @@ class CaseRecord extends Model
         'credit_note_amount' => 'decimal:2',
         'rework_returned_at' => 'datetime',
         'workshop_assigned_at' => 'datetime',
+        'workshop_assignment_approved_at' => 'datetime',
         'workshop_progress_pct' => 'integer',
     ];
 
@@ -315,6 +317,23 @@ class CaseRecord extends Model
         return $query
             ->where('stage_key', self::STAGE_MANUFACTURING)
             ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_WIP));
+    }
+
+    /** طابور تخصيص الإنتاج — بعد إصدار أمر الشغل وقبل صرف المخزن. */
+    public function scopeWorkshopAssignmentQueue(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_MANUFACTURING)
+            ->where('manufacturing_stage', self::MFG_WAREHOUSE)
+            ->whereNotNull('work_order_no')
+            ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_RAW));
+    }
+
+    public function isWorkshopAssignmentApproved(): bool
+    {
+        return $this->workshop_assignment_approved_at !== null
+            && $this->workshop_section_id !== null
+            && $this->assigned_technician_id !== null;
     }
 
     /** طابور مكتب التشغيل — جاهزة للتسليم بعد إتمام التصنيع من الورشة. */

@@ -547,7 +547,7 @@ class AdminReportsPageTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 3],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
 
         $note = app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -601,7 +601,7 @@ class AdminReportsPageTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+        $this->releaseBomToWip($bom->fresh(), ['BC-RM-001']);
 
         $note = app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -721,7 +721,7 @@ class AdminReportsPageTest extends TestCase
         $from = now()->startOfMonth()->toDateString();
         $to = now()->endOfMonth()->toDateString();
 
-        foreach (['services-approvals', 'workshop-sections', 'workshop-tracking', 'dispense-approvals'] as $section) {
+        foreach (['services-approvals', 'workshop-sections', 'workshop-tracking', 'dispense-approvals', 'authorizations'] as $section) {
             $this->actingAs($admin)
                 ->get('/admin/reports/'.$section.'?from='.$from.'&to='.$to)
                 ->assertOk()

@@ -717,7 +717,7 @@
       animation: modalIn 0.3s ease;
     }
 
-    .modal.modal-wide { max-width: 640px; }
+    .modal.modal-wide { max-width: min(960px, 96vw); }
 
     /* Quote modal — عرض A4 كامل داخل المودال */
     .modal.quote-modal {

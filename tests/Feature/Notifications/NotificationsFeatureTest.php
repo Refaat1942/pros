@@ -120,7 +120,7 @@ class NotificationsFeatureTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $this->assertSame(
             0,

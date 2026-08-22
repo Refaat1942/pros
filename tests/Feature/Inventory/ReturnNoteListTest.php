@@ -39,7 +39,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), [$this->stockBarcode]);
+        $this->releaseBomToWip($bom->fresh(), [$this->stockBarcode]);
 
         $this->getJson('/workshop/returns/create')
             ->assertOk()
@@ -62,7 +62,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
+        $this->releaseBomToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
 
         $this->getJson('/workshop/returns/create')
             ->assertOk()
@@ -85,7 +85,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
+        $this->releaseBomToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
 
         app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -114,7 +114,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
+        $this->releaseBomToWip($bom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
 
         $pending = app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -132,7 +132,7 @@ class ReturnNoteListTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
         $completedBom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($completedBom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
+        $this->releaseBomToWip($completedBom->fresh(), [$this->stockBarcode, $this->stockBarcode]);
 
         $done = app(ReturnNoteService::class)->create(
             $completedBom->fresh(),
