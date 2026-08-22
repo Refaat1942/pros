@@ -1224,13 +1224,14 @@
       document.getElementById('patientFileModal').classList.remove('visible');
     }
 
-    function showToast(msg) {
+    // M-5: يمرّر راية الخطأ للتوست حتى تظهر رسائل الأخطاء بنمط خطأ (لا كنجاح أخضر).
+    function showToast(msg, isError) {
       if (window.DashboardToast) {
-        window.DashboardToast.show(msg);
+        window.DashboardToast.show(msg, isError ? { isError: true } : undefined);
         return;
       }
       var toast = document.getElementById('toast');
-      toast.textContent = '✅ ' + msg;
+      toast.textContent = (isError ? '⚠ ' : '✅ ') + msg;
       toast.classList.add('show');
       setTimeout(function() { toast.classList.remove('show'); }, 5000);
     }
