@@ -107,7 +107,7 @@ class AdminReportsHubService
             ['id' => 'inventory-valuation', 'label' => 'تقييم المخزون', 'icon' => '💎', 'group' => 'المخزون والتوريد', 'description' => 'رصيد كل صنف وكمياته وأسعاره وقيمته بالمخزن'],
             ['id' => 'item-margins', 'label' => 'هامش الربح بالأصناف', 'icon' => '📊', 'group' => 'المخزون والتوريد', 'description' => 'WAC مقابل أعلى سعر شراء — هامش الوحدة ونسبته لكل صنف'],
             ['id' => 'inventory-reconciliation', 'label' => 'تسوية مخزون ↔ مالية', 'icon' => '🔗', 'group' => 'التعاقد والمالية', 'description' => 'ربط صرف المخزن (WAC) بالإيرادات والتكلفة المُسلَّمة'],
-            ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير والورشة'],
+            ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير وقسم الإنتاج'],
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
             ['id' => 'authorizations', 'label' => 'جميع الأذون والاعتمادات', 'icon' => '📜', 'group' => 'المخزون والتوريد', 'description' => 'أذون الصرف، تعديل التوصيف، تصديقات الخدمات، وموافقات التعاقد'],
             ['id' => 'production-assignment', 'label' => 'تخصيص الإنتاج — قبل الصرف', 'icon' => '👷', 'group' => 'قسم الإنتاج', 'description' => 'أوامر الشغل بانتظار تخصيص القسم والفني واعتماد التخصيص'],
@@ -666,13 +666,13 @@ class AdminReportsHubService
     {
         return match ($movement->movement_type) {
             StockMovement::TYPE_ISSUE => 'صرف / بيع',
-            StockMovement::TYPE_RETURN => 'ارتجاع من الورشة',
+            StockMovement::TYPE_RETURN => 'ارتجاع من قسم الإنتاج',
             StockMovement::TYPE_RECEIVE => 'توريد',
             default => $movement->movement_type ?? '—',
         };
     }
 
-    /** كمية موقّعة للعرض: موجب للصرف، سالب للارتجاع من الورشة. */
+    /** كمية موقّعة للعرض: موجب للصرف، سالب للارتجاع من قسم الإنتاج. */
     private function signedMovementQuantity(StockMovement $movement): int
     {
         $qty = (int) $movement->quantity;
@@ -994,7 +994,7 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title' => 'أقسام الورشة',
+            'title' => 'أقسام الإنتاج',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [
                 ['label' => 'عدد الأقسام', 'value' => (string) $sections->count()],
@@ -1038,13 +1038,13 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title' => 'تتبع أوامر الشغل — الورشة',
+            'title' => 'تتبع أوامر الشغل — قسم الإنتاج',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [
                 ['label' => 'أوامر تحت التشغيل', 'value' => (string) $cases->count()],
                 ['label' => 'مُسندة لفني', 'value' => (string) $cases->whereNotNull('assigned_technician_id')->count()],
             ],
-            'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'قسم الورشة', 'الفني', 'مرحلة التصنيع', 'التقدم', 'آخر تحديث'],
+            'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'قسم الإنتاج', 'الفني', 'مرحلة التصنيع', 'التقدم', 'آخر تحديث'],
             'rows' => $rows,
         ];
     }
@@ -1234,7 +1234,7 @@ class AdminReportsHubService
             return [
                 'title' => 'تخصيص الإنتاج — قبل الصرف',
                 'period_label' => $this->periodLabel($from, $to),
-                'summary' => [['label' => 'الورشة', 'value' => 'معطّلة']],
+                'summary' => [['label' => 'قسم الإنتاج', 'value' => 'معطّلة']],
                 'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'القسم', 'الفني', 'حالة التخصيص', 'آخر تحديث'],
                 'rows' => [],
             ];

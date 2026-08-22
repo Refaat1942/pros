@@ -147,7 +147,7 @@
                             @if ($bom->stage === 'raw')
                                 <button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm"
                                         data-bom-id="{{ $bom->id }}">
-                                    📤 صرف للورشة
+                                    📤 صرف لقسم الإنتاج
                                 </button>
                                 <a href="{{ $voucherUrl }}" target="_blank" rel="noopener"
                                    class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1 inline-block">
@@ -158,7 +158,7 @@
                                    class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 inline-block">
                                     🖨️ طباعة إذن الصرف
                                 </a>
-                                <span class="text-xs text-slate-500">🏭 تم التحويل للورشة — يُغلق من مكتب التشغيل</span>
+                                <span class="text-xs text-slate-500">🏭 تم التحويل لقسم الإنتاج — يُغلق من مكتب التشغيل</span>
                             @else
                                 <span class="text-xs text-slate-400">—</span>
                             @endif
@@ -178,7 +178,7 @@
     <div class="relative flex min-h-full items-center justify-center p-4">
         <div class="w-full max-w-5xl max-h-[92vh] rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden animate-[fadeIn_0.15s_ease] flex flex-col">
             <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white flex items-center justify-between gap-3 shrink-0">
-                <h3 class="font-bold text-lg">📤 صرف للورشة — مسح الباركود</h3>
+                <h3 class="font-bold text-lg">📤 صرف لقسم الإنتاج — مسح الباركود</h3>
                 <div class="flex items-center gap-2">
                     <a id="printIssueVoucherLink" href="#" target="_blank" rel="noopener"
                        class="hidden rounded-lg bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 text-xs font-bold">

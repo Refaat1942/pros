@@ -39,7 +39,7 @@ class ReceptionSelfServiceLookupTest extends TestCase
             'progress_percent',
             'expected_delivery',
         ]);
-        $response->assertJsonFragment(['label' => 'التصنيع بالورشة']);
+        $response->assertJsonFragment(['label' => 'التصنيع بقسم الإنتاج']);
     }
 
     public function test_lookup_returns_404_for_unknown_phone(): void

@@ -10,6 +10,7 @@ use App\Models\Quote;
 use App\Models\PathwayStep;
 use App\Support\PathwayDefaultSteps;
 use App\Support\PathwayDepartments;
+use App\Support\PathwayStepLabels;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -332,10 +333,10 @@ class PathwayConfigService
         $index = $this->indexOfKey($steps, $stepKey);
 
         if ($index !== null) {
-            return (string) ($steps[$index]['label'] ?? PathwayDepartments::label($stepKey));
+            return (string) ($steps[$index]['label'] ?? PathwayStepLabels::label($stepKey));
         }
 
-        return PathwayDepartments::label($stepKey);
+        return PathwayStepLabels::label($stepKey);
     }
 
     private function fallbackStageLabel(string $stageKey, ?string $mfgStage = null): string
@@ -433,6 +434,46 @@ class PathwayConfigService
     {
         $this->assertPathway($pathway);
         $this->saveSteps($pathway, $this->normalizeDefaults($pathway, self::defaults()[$pathway], false));
+    }
+
+    /** مزامنة تسميات خطوات المسار من القيم الافتراضية — دون تغيير الترتيب أو المنطق. */
+    public function syncStepLabelsFromDefaults(): int
+    {
+        $updated = 0;
+
+        foreach (self::defaults() as $pathway => $defaultSteps) {
+            $defaults = collect($defaultSteps)->keyBy('key');
+
+            PathwayStep::query()
+                ->where('pathway', $pathway)
+                ->each(function (PathwayStep $step) use ($defaults, &$updated) {
+                    $def = $defaults->get($step->key);
+                    if ($def === null) {
+                        return;
+                    }
+
+                    $changes = [];
+
+                    if (($def['label'] ?? '') !== '' && $step->label !== $def['label']) {
+                        $changes['label'] = $def['label'];
+                    }
+
+                    if (($def['on_complete'] ?? '') !== '' && $step->on_complete !== ($def['on_complete'] ?? null)) {
+                        $changes['on_complete'] = $def['on_complete'];
+                    }
+
+                    if (($def['action_summary'] ?? '') !== '' && $step->action_summary !== ($def['action_summary'] ?? null)) {
+                        $changes['action_summary'] = $def['action_summary'];
+                    }
+
+                    if ($changes !== []) {
+                        $step->update($changes);
+                        $updated++;
+                    }
+                });
+        }
+
+        return $updated;
     }
 
     /** @return array<string, mixed> */

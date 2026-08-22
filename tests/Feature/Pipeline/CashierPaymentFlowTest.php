@@ -15,21 +15,13 @@ class CashierPaymentFlowTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_operations_issue_quote_routes_cash_patient_to_cashier(): void
+    public function test_costing_confirm_auto_routes_cash_patient_to_cashier(): void
     {
         $this->stockItem('RM-001', qty: 10);
         $case = $this->operationsReadyCase($this->cashPatient());
 
-        $this->assertSame(CaseRecord::STAGE_OPERATIONS, $case->fresh()->stage_key);
-
-        $ops = $this->userWithRole('operations');
-
-        $this->actingAs($ops)
-            ->postJson('/operations/pending/'.$case->id.'/release-quote')
-            ->assertOk()
-            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_CASHIER);
-
         $this->assertSame(CaseRecord::STAGE_CASHIER, $case->fresh()->stage_key);
+        $this->assertSame(Quote::STATUS_ISSUED, Quote::where('case_id', $case->id)->value('status'));
     }
 
     public function test_contracted_civilian_still_goes_to_reception_not_cashier(): void
@@ -294,9 +286,8 @@ class CashierPaymentFlowTest extends TestCase
     private function cashierAwaitingCase(): CaseRecord
     {
         $case = $this->operationsReadyCase($this->cashPatient());
-        $quote = Quote::where('case_id', $case->id)->firstOrFail();
 
-        app(OperationsService::class)->sendToCashier($case->fresh(), $quote);
+        $this->assertSame(CaseRecord::STAGE_CASHIER, $case->fresh()->stage_key);
 
         return $case->fresh();
     }

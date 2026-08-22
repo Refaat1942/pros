@@ -341,6 +341,6 @@ class OperationsPendingDeskTest extends TestCase
             ->get('/operations/pending')
             ->assertOk()
             ->assertSee('id="pendingTable"', false)
-            ->assertSee('مكتب التشغيل — موافقات وعروض الأسعار', false);
+            ->assertSee('مكتب التشغيل — إصدار أمر الشغل واعتماد الصرف', false);
     }
 }

@@ -40,7 +40,7 @@ class WorkshopSectionController extends Controller
         );
 
         return response()->json([
-            'message' => 'تم إضافة قسم الورشة.',
+            'message' => 'تم إضافة قسم الإنتاج.',
             'section' => $this->sections->listForAdmin()[0] ?? $section,
         ], 201);
     }
@@ -66,7 +66,7 @@ class WorkshopSectionController extends Controller
         $section = $this->sections->update($workshopSection, $validated, $technicianIds);
 
         return response()->json([
-            'message' => 'تم تحديث قسم الورشة.',
+            'message' => 'تم تحديث قسم الإنتاج.',
             'section' => $section->only(['id', 'name', 'code', 'sort', 'active', 'description']),
         ]);
     }
@@ -75,7 +75,7 @@ class WorkshopSectionController extends Controller
     {
         $this->sections->delete($workshopSection);
 
-        return response()->json(['message' => 'تم حذف قسم الورشة.']);
+        return response()->json(['message' => 'تم حذف قسم الإنتاج.']);
     }
 
     /** قائمة مختصرة لاستخدامها في مكتب التشغيل. */

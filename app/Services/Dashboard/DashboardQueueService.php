@@ -176,7 +176,7 @@ class DashboardQueueService
     }
 
     /** @return list<int> */
-    /** أوامر في ورشة التصنيع (BOM wip). */
+    /** أوامر في قسم الإنتاج (BOM wip). */
     public function operationsManufacturingCaseIds(): array
     {
         return CaseRecord::query()

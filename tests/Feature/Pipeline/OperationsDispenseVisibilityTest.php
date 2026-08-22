@@ -72,7 +72,7 @@ class OperationsDispenseVisibilityTest extends TestCase
         $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
         $ids = collect($data['workshop_cases'])->pluck('id');
 
-        $this->assertTrue($ids->contains($case->id), 'الحالة يجب أن تظهر في ورشة التصنيع');
+        $this->assertTrue($ids->contains($case->id), 'الحالة يجب أن تظهر في قسم الإنتاج');
     }
 
     public function test_manufacturing_warehouse_dispense_advances_to_issue(): void
@@ -134,7 +134,7 @@ class OperationsDispenseVisibilityTest extends TestCase
 
         $this->assertFalse(
             $ids->contains($case->id),
-            'الحالة لا يجب أن تظهر في الورشة قبل صرف المواد من المخزن'
+            'الحالة لا يجب أن تظهر في قسم الإنتاج قبل صرف المواد من المخزن'
         );
 
         $this->actingAs($workshop);
@@ -149,7 +149,7 @@ class OperationsDispenseVisibilityTest extends TestCase
 
         $this->assertTrue(
             $ids->contains($case->id),
-            'الحالة يجب أن تظهر في الورشة بعد صرف المواد من المخزن'
+            'الحالة يجب أن تظهر في قسم الإنتاج بعد صرف المواد من المخزن'
         );
     }
 }

@@ -56,7 +56,7 @@ class ReturnNoteController extends Controller
 
     /**
      * BOMs المتاحة لإنشاء إذن ارتجاع.
-     * - افتراضي (ورشة): wip فقط.
+     * - افتراضي (قسم الإنتاج): wip فقط.
      * - post_delivery=1 (استقبال): BOM تام + حالة مُسلَّمة.
      */
     public function create(Request $request): JsonResponse

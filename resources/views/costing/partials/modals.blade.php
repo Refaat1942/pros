@@ -6,17 +6,17 @@
     </div>
     <div class="modal-body">
       <div id="costingPatientBanner" class="costing-patient-banner hidden">
-        <div class="costing-patient-banner__main">
+        <div class="costing-patient-banner__main costing-patient-banner__block">
           <h4 id="costingPatientName">—</h4>
           <p id="costingPatientMeta" class="costing-patient-banner__meta">—</p>
         </div>
-        <div class="costing-patient-banner__spec">
+        <div class="costing-patient-banner__spec costing-patient-banner__block">
           <p class="costing-patient-banner__label">🩺 توصية الطبيب</p>
           <p id="costingDoctorName" class="costing-patient-banner__doctor-name hidden"></p>
           <p id="costingDoctorMessage" class="costing-patient-banner__notes hidden"></p>
           <ul id="costingDoctorRecommendations" class="costing-patient-banner__items hidden"></ul>
         </div>
-        <div class="costing-patient-banner__spec">
+        <div class="costing-patient-banner__spec costing-patient-banner__block">
           <p class="costing-patient-banner__label">📐 التوصيف الفني</p>
           <ul id="costingSpecItems" class="costing-patient-banner__items"></ul>
           <p id="costingSpecNotes" class="costing-patient-banner__notes hidden"></p>
@@ -88,7 +88,7 @@
 
       <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
         <button type="button" class="btn-view" id="btnCancelCosting">إغلاق</button>
-        <button type="button" class="btn-action success" id="btnConfirmCosting">✅ تأكيد  </button>
+        <button type="button" class="btn-action success" id="btnConfirmCosting">✅ تأكيد الاعتماد وإصدار العرض</button>
       </div>
     </div>
   </div>
@@ -162,16 +162,43 @@
   }
   .costing-patient-banner {
     display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 16px;
+    grid-template-columns: 1.1fr 1fr 1fr;
+    gap: 12px;
     margin-bottom: 16px;
-    padding: 16px;
+    padding: 14px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #f5f3ff 0%, #ecfeff 100%);
-    border: 1px solid #ddd6fe;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(15,23,42,.06);
   }
-  @media (max-width: 860px) {
+  @media (max-width: 980px) {
     .costing-patient-banner { grid-template-columns: 1fr; }
+  }
+  .costing-patient-banner__block {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    min-height: 120px;
+  }
+  .costing-grid .bom-table-wrap {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .costing-grid .bom-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .costing-grid .bom-table th,
+  .costing-grid .bom-table td {
+    border: 1px solid #e2e8f0;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .costing-grid .bom-table thead th {
+    background: #f1f5f9;
+    font-weight: 800;
   }
   .costing-patient-banner__main h4 {
     margin: 0 0 6px;

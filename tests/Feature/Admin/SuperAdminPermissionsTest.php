@@ -68,7 +68,7 @@ class SuperAdminPermissionsTest extends TestCase
         $user = User::updateOrCreate(
             ['username' => 'admin-workshop-view-only'],
             [
-                'name' => 'أدمن متابعة ورشة',
+                'name' => 'أدمن متابعة قسم الإنتاج',
                 'password' => UserFactory::TEST_PASSWORD,
                 'role_id' => $adminRole->id,
                 'status' => User::STATUS_ACTIVE,

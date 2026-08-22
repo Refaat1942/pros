@@ -295,7 +295,7 @@ class CaseRecord extends Model
         return $this->stage_key === self::STAGE_CASHIER;
     }
 
-    /** حالات دخلت الورشة فعلياً بعد صرف/تحويل BOM من المخزن. */
+    /** حالات دخلت قسم الإنتاج فعلياً بعد صرف/تحويل BOM من المخزن. */
     public function scopeReleasedToWorkshop(Builder $query): Builder
     {
         return $query
@@ -311,7 +311,7 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $q) => $q->where('stage', Bom::STAGE_FINISHED));
     }
 
-    /** طابور ورشة التصنيع — BOM تحت التشغيل بعد صرف المخزن. */
+    /** طابور قسم الإنتاج — BOM تحت التشغيل بعد صرف المخزن. */
     public function scopeWorkshopDeskQueue(Builder $query): Builder
     {
         return $query
@@ -355,7 +355,7 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_RAW));
     }
 
-    /** طابور مكتب التشغيل — جاهزة للتسليم بعد إتمام التصنيع من الورشة. */
+    /** طابور مكتب التشغيل — جاهزة للتسليم بعد إتمام التصنيع من قسم الإنتاج. */
     public function scopeOperationsDeliveryQueue(Builder $query): Builder
     {
         return $query

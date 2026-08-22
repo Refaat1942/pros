@@ -456,7 +456,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertSame(['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الرصيد'], $report['headers']);
 
         $issueRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'صرف / بيع');
-        $returnRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'ارتجاع من الورشة');
+        $returnRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'ارتجاع من قسم الإنتاج');
 
         $this->assertNotNull($issueRow);
         $this->assertSame('ركبة تجريبية', $issueRow[3]);
@@ -542,7 +542,7 @@ class AdminReportsPageTest extends TestCase
         $case->update(['work_order_no' => 'WO-RPT-RET']);
 
         $this->actingAs($ops);
-        // إصدار 3 وحدات حتى يُسمح بارتجاع وحدتين (تبقى وحدة في الورشة).
+        // إصدار 3 وحدات حتى يُسمح بارتجاع وحدتين (تبقى وحدة في قسم الإنتاج).
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 3],
         ]);

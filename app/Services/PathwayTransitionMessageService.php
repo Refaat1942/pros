@@ -123,7 +123,8 @@ class PathwayTransitionMessageService
         $caseNo = $case->case_no ?? ('#'.$case->id);
 
         $title = match ($event) {
-            WorkflowEvent::BomFinished->value => "{$prefix} طرف جاهز للتسليم",
+            WorkflowEvent::BomFinished->value => "{$prefix} طرف جاهز للتسليم — الاستقبال",
+            WorkflowEvent::SentToCashier->value => "{$prefix} عرض سعر بانتظار الدفع — الخزنة",
             WorkflowEvent::Delivered->value => "{$prefix} تم تسليم وإغلاق حالة",
             WorkflowEvent::ServicesApprovalRequired->value => "{$prefix} بانتظار تصديق إدارة الخدمات",
             default => "{$prefix} حالة جديدة — {$toLabel}",
@@ -182,7 +183,9 @@ class PathwayTransitionMessageService
         }
 
         if ($event === WorkflowEvent::QuoteIssued->value) {
-            return CaseRecord::STAGE_OPERATIONS;
+            return $case->isCashCivilian()
+                ? CaseRecord::STAGE_CASHIER
+                : CaseRecord::STAGE_OPERATIONS;
         }
 
         return self::TARGET_STAGE[$event] ?? null;
@@ -198,9 +201,11 @@ class PathwayTransitionMessageService
             WorkflowEvent::BomDispensed->value => '/workshop/workshop',
             WorkflowEvent::ServicesApprovalRequired->value => '/admin/dashboard',
             WorkflowEvent::ServicesApproved->value => '/operations/pending',
-            WorkflowEvent::QuoteIssued->value => $role === Role::SLUG_RECEPTION
-                ? '/reception/quote'
-                : '/operations/pending',
+            WorkflowEvent::QuoteIssued->value => $case->isCashCivilian()
+                ? '/cashier/payments'
+                : ($role === Role::SLUG_RECEPTION
+                    ? '/reception/quote'
+                    : '/operations/pending'),
             WorkflowEvent::CostingCompleted->value => match ($role) {
                 Role::SLUG_ADMIN => '/admin/dashboard',
                 Role::SLUG_OPERATIONS => '/operations/pending',
@@ -224,6 +229,11 @@ class PathwayTransitionMessageService
             return true;
         }
 
+        // مسار الكاش: QuoteIssued يُتبع فوراً بـ SentToCashier — إشعار واحد للخزنة يكفي.
+        if ($event === WorkflowEvent::QuoteIssued->value && $case->isCashCivilian()) {
+            return true;
+        }
+
         return false;
     }
 
@@ -241,9 +251,11 @@ class PathwayTransitionMessageService
                 $pathway === PathwayStep::PATHWAY_ENTITY => 'quote',
                 default => null,
             },
-            WorkflowEvent::QuoteIssued->value => $pathway === PathwayStep::PATHWAY_ENTITY
-                ? $this->pathwayConfig->entityOperationsStepKey($case)
-                : 'operations_wo',
+            WorkflowEvent::QuoteIssued->value => match (true) {
+                $case->isCashCivilian() => 'cashier',
+                $pathway === PathwayStep::PATHWAY_ENTITY => $this->pathwayConfig->entityOperationsStepKey($case),
+                default => 'operations_wo',
+            },
             WorkflowEvent::OperationsApproved->value => 'warehouse',
             WorkflowEvent::SentToCashier->value => 'cashier',
             WorkflowEvent::CashierPaid->value => 'operations_wo',
@@ -344,7 +356,9 @@ class PathwayTransitionMessageService
                 $pathway === PathwayStep::PATHWAY_ENTITY => 'quote',
                 default => 'operations_wo',
             },
-            WorkflowEvent::QuoteIssued->value => 'operations_wo',
+            WorkflowEvent::QuoteIssued->value => $case->isCashCivilian()
+                ? 'cashier'
+                : 'operations_wo',
             WorkflowEvent::SentToCashier->value => 'cashier',
             WorkflowEvent::CashierPaid->value => 'operations_wo',
             WorkflowEvent::ServicesApprovalRequired->value => 'services_approval',

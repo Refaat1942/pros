@@ -21,7 +21,7 @@ class WorkshopStatisticsPageTest extends TestCase
 
         $this->get(route('workshop.statistics'))
             ->assertOk()
-            ->assertSee('لوحة إحصائيات ورشة التصنيع')
+            ->assertSee('لوحة إحصائيات قسم الإنتاج')
             ->assertSee('workshopStatsRoot', false)
             ->assertSee('workshopCompletedTable', false);
     }

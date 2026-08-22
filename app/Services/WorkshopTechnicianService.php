@@ -45,7 +45,7 @@ class WorkshopTechnicianService
 
             AuditService::log(
                 action: 'create',
-                description: "إضافة فني ورشة: {$user->name} ({$user->username})",
+                description: "إضافة فني قسم الإنتاج: {$user->name} ({$user->username})",
                 tag: 'workshop',
                 after: $user->only(['id', 'name', 'username', 'status']),
             );
@@ -80,7 +80,7 @@ class WorkshopTechnicianService
 
             AuditService::log(
                 action: 'update',
-                description: "تعديل فني ورشة: {$user->name}",
+                description: "تعديل فني قسم الإنتاج: {$user->name}",
                 tag: 'workshop',
                 before: $before,
                 after: $user->fresh()->only(['name', 'username', 'status']),
@@ -104,7 +104,7 @@ class WorkshopTechnicianService
 
         AuditService::log(
             action: 'delete',
-            description: "حذف فني ورشة: {$before['name']}",
+            description: "حذف فني قسم الإنتاج: {$before['name']}",
             tag: 'workshop',
             before: $before,
         );

@@ -84,13 +84,13 @@ class NotificationService
         ],
         WorkflowEvent::BomDispensed->value => [
             'role' => Role::SLUG_WORKSHOP,
-            'title' => '🏭 أمر جديد في ورشة التصنيع',
-            'body' => 'تم صرف مواد المريض {patient} (حالة {case}) — الطلب جاهز للتصنيع في الورشة.',
+            'title' => '🏭 أمر جديد في قسم الإنتاج',
+            'body' => 'تم صرف مواد المريض {patient} (حالة {case}) — الطلب جاهز للتصنيع في قسم الإنتاج.',
         ],
         WorkflowEvent::BomFinished->value => [
             'role' => Role::SLUG_RECEPTION,
             'title' => '✅ طرف جاهز للتسليم — الاستقبال',
-            'body' => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه في الورشة — جاهز لتسليمه للمريض وإغلاق الطلب من الاستقبال.',
+            'body' => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه في قسم الإنتاج — جاهز لتسليمه للمريض وإغلاق الطلب من الاستقبال.',
         ],
         WorkflowEvent::Delivered->value => [
             'role' => Role::SLUG_ADMIN,

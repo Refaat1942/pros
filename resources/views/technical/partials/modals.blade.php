@@ -34,7 +34,7 @@
       <div class="modal-header return-modal-header">
         <div class="return-modal-title-wrap">
           <h3>📥 تأكيد استلام الارتجاع</h3>
-          <p class="modal-subtitle">امسح باركود كل صنف لمطابقة الطلب الوارد من الورشة</p>
+          <p class="modal-subtitle">امسح باركود كل صنف لمطابقة الطلب الوارد من قسم الإنتاج</p>
         </div>
         <button type="button" class="modal-close" id="closeReturnScanModal" aria-label="إغلاق">&times;</button>
       </div>

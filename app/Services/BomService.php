@@ -914,7 +914,7 @@ class BomService
                 return $case;
             }
 
-            abort(422, 'لا يمكن صرف المواد — الحالة ليست جاهزة لدخول الورشة.');
+            abort(422, 'لا يمكن صرف المواد — الحالة ليست جاهزة لدخول قسم الإنتاج.');
         });
     }
 
@@ -933,7 +933,7 @@ class BomService
     }
 
     /**
-     * يمنع إجراءات الورشة قبل صرف المواد من المخزن (BOM خام).
+     * يمنع إجراءات قسم الإنتاج قبل صرف المواد من المخزن (BOM خام).
      */
     public function assertReleasedToWorkshop(CaseRecord $case): void
     {
@@ -941,7 +941,7 @@ class BomService
         $bomStage = $case->bom?->stage;
 
         if (! in_array($bomStage, [Bom::STAGE_WIP, Bom::STAGE_FINISHED], true)) {
-            abort(422, 'لا يمكن تنفيذ إجراءات الورشة قبل صرف المواد وتحويلها من المخزن.');
+            abort(422, 'لا يمكن تنفيذ إجراءات قسم الإنتاج قبل صرف المواد وتحويلها من المخزن.');
         }
     }
 
