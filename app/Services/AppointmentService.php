@@ -135,6 +135,9 @@ class AppointmentService
                 return;
             }
 
+            // C-4: حارس إضافي — لا نحذف مريضاً يحمل أي سجل مالي/قانوني (دفاع في العمق).
+            app(PatientDeletionGuard::class)->assertPatientDeletable($patient);
+
             $patientSnapshot = $patient->only(['id', 'patient_code', 'name']);
             $patient->delete();
 
