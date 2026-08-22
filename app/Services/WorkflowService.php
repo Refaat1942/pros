@@ -108,7 +108,7 @@ class WorkflowService
             'to' => CaseRecord::STAGE_ADJUSTMENTS,
             'mfg' => null,
         ],
-        // المخزن: صرف المواد بالباركود → دخول الورشة.
+        // المخزن: صرف المواد بالباركود → دخول قسم الإنتاج.
         WorkflowEvent::BomDispensed->value => [
             'from' => [CaseRecord::STAGE_MANUFACTURING],
             'to' => CaseRecord::STAGE_MANUFACTURING,

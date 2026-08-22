@@ -492,9 +492,9 @@
       : '';
     var action = '';
     if (b.stage === 'raw') {
-      action = '<button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm" data-bom-id="' + b.id + '">📤 صرف للورشة</button>' + printBtn;
+      action = '<button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm" data-bom-id="' + b.id + '">📤 صرف لقسم الإنتاج</button>' + printBtn;
     } else if (b.stage === 'wip') {
-      action = printBtn + '<span class="text-xs text-slate-500">🏭 تم التحويل للورشة — يُغلق من مكتب التشغيل</span>';
+      action = printBtn + '<span class="text-xs text-slate-500">🏭 تم التحويل لقسم الإنتاج — يُغلق من مكتب التشغيل</span>';
     } else {
       action = '<span class="text-xs text-slate-400">—</span>';
     }

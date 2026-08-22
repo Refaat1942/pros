@@ -1,6 +1,3 @@
-@php
-    $dateDisplay = $receipt['received_at'] ?? now()->format('d/m/Y H:i');
-@endphp
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -12,43 +9,58 @@
         .receipt-title {
             text-align: center;
             font-size: 20pt;
-            font-weight: 800;
+            font-weight: 900;
             text-decoration: underline;
-            margin: 14px 0 6px;
+            margin: 12px 0 8px;
         }
-        .receipt-sub { text-align: center; font-size: 11pt; color: #333; margin-bottom: 14px; }
+        .receipt-sub {
+            text-align: center;
+            font-size: 11pt;
+            color: #333;
+            margin-bottom: 14px;
+        }
         .amount-box {
             border: 2px solid #000;
-            border-radius: 6px;
-            padding: 8px 14px;
-            margin: 10px auto 16px;
-            max-width: 90mm;
+            border-radius: 4px;
+            padding: 10px 14px;
+            margin: 12px auto 16px;
+            max-width: 95mm;
             text-align: center;
-            font-size: 20pt;
-            font-weight: 800;
+            font-size: 22pt;
+            font-weight: 900;
         }
-        .amount-box small { display:block; font-size: 9pt; font-weight: 600; color:#555; }
-        .rec-grid { font-size: 13pt; line-height: 2.15; margin: 10px 0; }
-        .rec-grid .fill { min-width: 55mm; }
+        .amount-box small {
+            display: block;
+            font-size: 9pt;
+            font-weight: 700;
+            color: #444;
+            margin-top: 4px;
+        }
         .words-line {
-            border: 1px dashed #000;
-            border-radius: 6px;
-            padding: 8px 12px;
+            border: 1px solid #000;
+            padding: 10px 12px;
             margin: 10px 0 16px;
             font-size: 12.5pt;
-            font-weight: 700;
+            font-weight: 800;
             background: #fafafa;
+        }
+        .receipt-note {
+            margin-top: 16px;
+            padding-top: 10px;
+            border-top: 1px solid #000;
+            font-size: 10.5pt;
+            color: #333;
+            text-align: center;
         }
         .sign-row {
             display: flex;
             justify-content: space-between;
-            gap: 24px;
-            margin-top: 26px;
+            gap: 20px;
+            margin-top: 24px;
             font-size: 12pt;
-            font-weight: 700;
+            font-weight: 800;
         }
         .sign-row .fill { min-width: 45mm; }
-        .receipt-note { margin-top: 14px; font-size: 10.5pt; color: #444; }
     </style>
 </head>
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
@@ -69,7 +81,7 @@
             @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
             <div class="header-meta">
                 <div class="serial-red">{{ $receipt['payment_no'] }}</div>
-                <div>التاريخ: <span class="fill" style="min-width:30mm;">{{ $dateDisplay }}</span></div>
+                <div>التاريخ: <span class="fill" style="min-width:30mm;">{{ $receipt['received_at'] ?? now()->format('d/m/Y H:i') }}</span></div>
             </div>
         </div>
     </header>
@@ -83,35 +95,53 @@
     </div>
 
     @if(!($receipt['fully_paid'] ?? true))
-    <div class="words-line" style="background:#fffbeb;border-color:#fcd34d;">
+    <div class="words-line" style="background:#fffbeb;">
         المطلوب: {{ number_format($receipt['amount_due'] ?? 0, 2) }} ج.م ·
         المحصّل: {{ number_format($receipt['paid_total'] ?? 0, 2) }} ج.م ·
-        <strong style="color:#b45309;">المتبقي: {{ number_format($receipt['remaining'] ?? 0, 2) }} ج.م</strong>
+        المتبقي: {{ number_format($receipt['remaining'] ?? 0, 2) }} ج.م
     </div>
     @endif
 
-    <div class="words-line">
-        وقدره: {{ $receipt['amount_words'] }}
-    </div>
+    <div class="words-line">وقدره: {{ $receipt['amount_words'] }}</div>
 
-    <section class="rec-grid">
-        <div class="line">استلمنا من السيد/ة: <span class="fill fill-wide">{{ $receipt['patient_name'] }}</span></div>
-        @if(!empty($receipt['patient_serial']))
-            <div class="line">سيريال ملف المريض: <span class="fill" style="min-width:35mm;">{{ $receipt['patient_serial'] }}</span></div>
-        @endif
-        <div class="line">الجهة: <span class="fill fill-wide">{{ $receipt['entity'] }}</span></div>
-        <div class="line">
-            رقم الحالة: <span class="fill" style="min-width:28mm;">{{ $receipt['case_no'] ?? '—' }}</span>
-            المرجع: <span class="fill" style="min-width:28mm;">{{ $receipt['order_ref'] ?? '—' }}</span>
-        </div>
-        <div class="line">وسيلة الدفع: <span class="fill" style="min-width:35mm;">{{ $receipt['method_label'] }}</span></div>
-        @if(!empty($receipt['reference']))
-            <div class="line">{{ $receipt['reference_label'] }}: <span class="fill" style="min-width:40mm;">{{ $receipt['reference'] }}</span></div>
-        @endif
-        @if(!empty($receipt['notes']))
-            <div class="line">ملاحظات: <span class="fill fill-wide">{{ $receipt['notes'] }}</span></div>
-        @endif
-    </section>
+    <table class="print-table meta-table avoid-break">
+        <tbody>
+            <tr>
+                <th>استلمنا من السيد/ة</th>
+                <td class="txt-right">{{ $receipt['patient_name'] }}</td>
+            </tr>
+            @if(!empty($receipt['patient_serial']))
+            <tr>
+                <th>سيريال ملف المريض</th>
+                <td class="txt-right">{{ $receipt['patient_serial'] }}</td>
+            </tr>
+            @endif
+            <tr>
+                <th>الجهة</th>
+                <td class="txt-right">{{ $receipt['entity'] }}</td>
+            </tr>
+            <tr>
+                <th>رقم الحالة / المرجع</th>
+                <td class="txt-right">{{ $receipt['case_no'] ?? '—' }} · {{ $receipt['order_ref'] ?? '—' }}</td>
+            </tr>
+            <tr>
+                <th>وسيلة الدفع</th>
+                <td class="txt-right">{{ $receipt['method_label'] }}</td>
+            </tr>
+            @if(!empty($receipt['reference']))
+            <tr>
+                <th>{{ $receipt['reference_label'] }}</th>
+                <td class="txt-right">{{ $receipt['reference'] }}</td>
+            </tr>
+            @endif
+            @if(!empty($receipt['notes']))
+            <tr>
+                <th>ملاحظات</th>
+                <td class="txt-right">{{ $receipt['notes'] }}</td>
+            </tr>
+            @endif
+        </tbody>
+    </table>
 
     <div class="sign-row">
         <span>أمين الخزنة: <span class="fill">{{ $receipt['received_by'] ?? '' }}</span></span>

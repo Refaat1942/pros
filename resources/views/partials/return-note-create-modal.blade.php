@@ -3,7 +3,7 @@
     <div class="modal-header return-modal-header">
       <div class="return-modal-title-wrap">
         <h3>↩️ طلب ارتجاع مواد للمخزن</h3>
-        <p class="modal-subtitle">إرسال مواد من الورشة إلى المخزن — قائمة تحت التشغيل فقط وبنود مُصرفة فعلاً</p>
+        <p class="modal-subtitle">إرسال مواد من قسم الإنتاج إلى المخزن — قائمة تحت التشغيل فقط وبنود مُصرفة فعلاً</p>
       </div>
       <button type="button" class="modal-close" id="closeReturnCreateModal" aria-label="إغلاق">&times;</button>
     </div>
@@ -31,7 +31,7 @@
       <div class="form-group return-reason-field">
         <label for="returnReason">سبب الارتجاع <span class="required">*</span></label>
         <textarea class="form-control return-reason-input" id="returnReason" rows="2"
-                  placeholder="مثال: فائض عن الحاجة في الورشة، أو تغيير في المواصفات"
+                  placeholder="مثال: فائض عن الحاجة في قسم الإنتاج، أو تغيير في المواصفات"
                   data-v-rules="required,min:3,max:500" maxlength="500"></textarea>
       </div>
     </div>

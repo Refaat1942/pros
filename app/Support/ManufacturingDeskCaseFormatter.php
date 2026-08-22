@@ -6,7 +6,7 @@ use App\Models\CaseRecord;
 use Illuminate\Support\Collection;
 
 /**
- * تنسيق بيانات طابور الورشة / التسليم — مصدر واحد للأرقام والبنود.
+ * تنسيق بيانات طابور قسم الإنتاج / التسليم — مصدر واحد للأرقام والبنود.
  */
 class ManufacturingDeskCaseFormatter
 {

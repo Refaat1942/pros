@@ -157,7 +157,7 @@
         @endif
     </section>
 
-    <p class="line" style="font-weight:800;margin-bottom:8px;">مواد الصرف للورشة (مطابقة التوصيف أعلاه):</p>
+    <p class="line" style="font-weight:800;margin-bottom:8px;">مواد الصرف لقسم الإنتاج (مطابقة التوصيف أعلاه):</p>
 
     <table class="print-table items-table">
         <thead>

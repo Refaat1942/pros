@@ -46,7 +46,7 @@ trait ProstheticTestHelper
             'costing' => 'فني تكاليف',
             'operations' => 'مكتب عمليات',
             'cashier' => 'موظف الخزنة',
-            'workshop' => 'ورشة التصنيع',
+            'workshop' => 'قسم الإنتاج',
             'technical' => 'مسؤول مخزن',
         ];
 
@@ -264,7 +264,8 @@ trait ProstheticTestHelper
      * يقود الحالة عبر خط الأنابيب الجديد حتى مكتب التشغيل (الخطوة 7):
      * توصيف (BOM خام) → معدلات → تكاليف → عرض السعر → مكتب التشغيل.
      *
-     * المدني يتوقف في STAGE_OPERATIONS بانتظار الاعتماد.
+     * المدني التعاقدي يتوقف في STAGE_OPERATIONS بانتظار الاعتماد.
+     * المدني الكاش يُحوَّل تلقائياً للخزنة (STAGE_CASHIER) بعد إصدار العرض.
      * العسكري يُعتمَد صامتاً تلقائياً ويصل STAGE_MANUFACTURING/MFG_WAREHOUSE.
      *
      * @param  list<string>  $codes
@@ -364,8 +365,8 @@ trait ProstheticTestHelper
     }
 
     /**
-     * يقود الحالة حتى دخول الورشة (manufacturing/issue) بعد صرف المخزن:
-     * مكتب التشغيل (اعتماد) → المخزن (صرف) → الورشة.
+     * يقود الحالة حتى دخول قسم الإنتاج (manufacturing/issue) بعد صرف المخزن:
+     * مكتب التشغيل (اعتماد) → المخزن (صرف) → قسم الإنتاج.
      *
      * @param  list<string>  $codes
      */
@@ -400,7 +401,7 @@ trait ProstheticTestHelper
         return $case->fresh();
     }
 
-    /** صرف BOM إلى WIP مع اعتماد تخصيص الإنتاج عند تفعيل الورشة. */
+    /** صرف BOM إلى WIP مع اعتماد تخصيص الإنتاج عند تفعيل قسم الإنتاج. */
     protected function releaseBomToWip(Bom $bom, array $scans): Bom
     {
         $case = CaseRecord::query()->findOrFail($bom->case_id);
@@ -409,7 +410,7 @@ trait ProstheticTestHelper
         return app(BomService::class)->releaseToWip($bom->fresh(), $scans);
     }
 
-    /** اعتماد تخصيص الإنتاج — مطلوب قبل صرف المخزن عند تفعيل الورشة. */
+    /** اعتماد تخصيص الإنتاج — مطلوب قبل صرف المخزن عند تفعيل قسم الإنتاج. */
     protected function seedWorkshopAssignmentApproved(CaseRecord $case): CaseRecord
     {
         if (! config('workshop.enabled', true)) {

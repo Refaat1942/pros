@@ -185,7 +185,7 @@ class OperationsDeskController extends Controller
         ]);
     }
 
-    /** أقسام الورشة + فنيين — لنموذج الاعتماد. */
+    /** أقسام قسم الإنتاج + فنيين — لنموذج الاعتماد. */
     public function workshopAssignmentOptions(): JsonResponse
     {
         if (! config('workshop.enabled', true)) {

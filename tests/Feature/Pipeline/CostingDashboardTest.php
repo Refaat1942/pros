@@ -343,6 +343,29 @@ class CostingDashboardTest extends TestCase
         $this->assertNotNull(Quote::where('case_id', $case->id)->first());
     }
 
+    public function test_cash_civilian_costing_confirm_routes_to_cashier(): void
+    {
+        $this->seedStock();
+        $patient = $this->cashPatient();
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
+        ]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($this->userWithRole('costing'))
+            ->postJson("/costing/queue/{$case->id}/confirm")
+            ->assertOk();
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_CASHIER, $case->stage_key);
+        $this->assertStringContainsString('الخزنة', (string) $response->json('message'));
+        $this->assertNotNull(Quote::where('case_id', $case->id)->first());
+    }
+
     public function test_costing_confirm_after_operations_rework_refreshes_existing_quote(): void
     {
         $adjustments = $this->userWithRole('adjustments');

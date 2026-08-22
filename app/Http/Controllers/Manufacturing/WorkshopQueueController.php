@@ -59,7 +59,7 @@ class WorkshopQueueController extends Controller
     }
 
     /**
-     * طابور ورشة التصنيع — أوامر بعد صرف المخزn (BOM wip).
+     * طابور قسم الإنتاج — أوامر بعد صرف المخزn (BOM wip).
      */
     public function index(Request $request): JsonResponse
     {
@@ -218,7 +218,7 @@ class WorkshopQueueController extends Controller
     }
 
     /**
-     * إذن شغل الورشة — النموذج الرسمي.
+     * إذن شغل قسم الإنتاج — النموذج الرسمي.
      */
     public function printWorkOrder(CaseRecord $case): View
     {

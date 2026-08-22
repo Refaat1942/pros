@@ -1,6 +1,6 @@
 <div class="panel inventory-wrap">
     <div class="panel-header">
-        <h3>↩️ طلبات ارتجاع المواد — ورشة → مخزن</h3>
+        <h3>↩️ طلبات ارتجاع المواد — قسم الإنتاج → مخزن</h3>
         <div style="display:flex;align-items:center;gap:10px;">
             <button type="button" class="btn-view" id="btnRefreshReturns">↻ تحديث</button>
             <span class="badge" id="returnsBadge">0</span>

@@ -15,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * Feature — BOM full lifecycle: raw → WIP → finished → return note
- * (الفصل الخامس: المخزن والصرف الصارم + الفصل السادس: الورشة)
+ * (الفصل الخامس: المخزن والصرف الصارم + الفصل السادس: قسم الإنتاج)
  *
  * IMPORTANT: releaseToWip() now expects ONE barcode scan PER UNIT — the number of
  * scans for a code must equal that code's total quantity (strict code+item+quantity match).
@@ -275,7 +275,7 @@ class BomLifecycleTest extends TestCase
         ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
 
-        // بند واحد بكمية 2 — يُسمح بارتجاع 1 فقط (يبقى 1 في الورشة)
+        // بند واحد بكمية 2 — يُسمح بارتجاع 1 فقط (يبقى 1 في قسم الإنتاج)
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);

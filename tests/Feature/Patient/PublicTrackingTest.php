@@ -44,7 +44,7 @@ class PublicTrackingTest extends TestCase
         $response->assertSee($tracking['progress_percent'].'%', false);
         $response->assertSee('role="progressbar"', false);
         $response->assertSee('case-test1234');
-        $response->assertDontSee('جاري التصنيع بالورشة');
+        $response->assertDontSee('جاري التصنيع بقسم الإنتاج');
         $response->assertDontSee('تسجيل واستقبال');
         $response->assertDontSee('المرحلة الحالية');
         $response->assertDontSee('لا تُعرض تفاصيل مالية');

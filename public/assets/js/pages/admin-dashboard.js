@@ -462,7 +462,7 @@
           hintEl.innerHTML = 'أمر الشغل صادر — يجب تخصيص القسم والفني واعتماد التخصيص من قسم الإنتاج قبل أن يُسمح للمخزن بالصرف.';
           hintEl.style.display = 'block';
         } else if (casesFilter === 'in_progress') {
-          hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/الورشة. التسليم للمريض يتم بعد BOM «تام» فقط.';
+          hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/قسم الإنتاج. التسليم للمريض يتم بعد BOM «تام» فقط.';
           hintEl.style.display = 'block';
         } else {
           hintEl.innerHTML = '';

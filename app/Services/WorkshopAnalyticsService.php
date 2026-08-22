@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * مؤشرات ورسوم بيانية وتقارير لوحة ورشة التصنيع — من بيانات حقيقية فقط.
+ * مؤشرات ورسوم بيانية وتقارير لوحة قسم الإنتاج — من بيانات حقيقية فقط.
  */
 class WorkshopAnalyticsService
 {

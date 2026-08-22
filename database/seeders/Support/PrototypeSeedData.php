@@ -369,7 +369,7 @@ class PrototypeSeedData
                 'patient' => 'عبدالله سامي رشاد',
                 'workOrderNo' => 'WO-2026-0288',
                 'status' => 'authorized',
-                'lines' => [['code' => 'ITM-005', 'name' => 'محول Pyramidal', 'qtyRequested' => 1, 'qtyReturned' => 0, 'reason' => 'فائض عن الحاجة في الورشة']],
+                'lines' => [['code' => 'ITM-005', 'name' => 'محول Pyramidal', 'qtyRequested' => 1, 'qtyReturned' => 0, 'reason' => 'فائض عن الحاجة في قسم الإنتاج']],
                 'createdAt' => '06/06/2026 10:00',
                 'authorizedAt' => '06/06/2026 10:15',
                 'completedAt' => null,
