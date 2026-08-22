@@ -11,6 +11,12 @@
           <p id="costingPatientMeta" class="costing-patient-banner__meta">—</p>
         </div>
         <div class="costing-patient-banner__spec">
+          <p class="costing-patient-banner__label">🩺 توصية الطبيب</p>
+          <p id="costingDoctorName" class="costing-patient-banner__doctor-name hidden"></p>
+          <p id="costingDoctorMessage" class="costing-patient-banner__notes hidden"></p>
+          <ul id="costingDoctorRecommendations" class="costing-patient-banner__items hidden"></ul>
+        </div>
+        <div class="costing-patient-banner__spec">
           <p class="costing-patient-banner__label">📐 التوصيف الفني</p>
           <ul id="costingSpecItems" class="costing-patient-banner__items"></ul>
           <p id="costingSpecNotes" class="costing-patient-banner__notes hidden"></p>
@@ -200,6 +206,12 @@
     gap: 8px;
     padding: 4px 0;
     border-bottom: 1px dashed #e2e8f0;
+  }
+  .costing-patient-banner__doctor-name {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f766e;
   }
   .costing-patient-banner__notes {
     margin: 8px 0 0;

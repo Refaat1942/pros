@@ -323,6 +323,21 @@ class PathwayConfigService
         return $this->fallbackStageLabel($stageKey, $case->manufacturing_stage);
     }
 
+    /** تسمية خطوة محددة بالمفتاح (مثل cost_calc، warehouse) — للرسائل والإشعارات. */
+    public function stepLabelForKey(CaseRecord $case, string $stepKey): string
+    {
+        $case->loadMissing('patient');
+        $pathway = $this->resolvePathway($case->patient, $case);
+        $steps = $this->steps($pathway, activeOnly: true);
+        $index = $this->indexOfKey($steps, $stepKey);
+
+        if ($index !== null) {
+            return (string) ($steps[$index]['label'] ?? PathwayDepartments::label($stepKey));
+        }
+
+        return PathwayDepartments::label($stepKey);
+    }
+
     private function fallbackStageLabel(string $stageKey, ?string $mfgStage = null): string
     {
         $dept = match (true) {

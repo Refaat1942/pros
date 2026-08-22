@@ -208,6 +208,45 @@
               c.patient && c.patient.patient_code ? ('كود: ' + c.patient.patient_code) : '',
             ].filter(Boolean).join(' · ');
           }
+
+          var medical = res.data.medical_record || {};
+          var doctorNameEl = $('costingDoctorName');
+          var doctorMsgEl = $('costingDoctorMessage');
+          var doctorRecEl = $('costingDoctorRecommendations');
+          if (doctorNameEl) {
+            if (medical.doctor_name) {
+              doctorNameEl.textContent = 'د. ' + medical.doctor_name;
+              doctorNameEl.classList.remove('hidden');
+            } else {
+              doctorNameEl.textContent = '';
+              doctorNameEl.classList.add('hidden');
+            }
+          }
+          if (doctorMsgEl) {
+            var doctorText = medical.doctor_message || [medical.diagnosis, medical.prescription].filter(function (x) {
+              return x && String(x).trim();
+            }).join('\n\n');
+            if (doctorText && String(doctorText).trim()) {
+              doctorMsgEl.textContent = doctorText;
+              doctorMsgEl.classList.remove('hidden');
+            } else {
+              doctorMsgEl.textContent = '';
+              doctorMsgEl.classList.add('hidden');
+            }
+          }
+          if (doctorRecEl) {
+            var recs = medical.recommendations || [];
+            if (recs.length) {
+              doctorRecEl.innerHTML = recs.map(function (r) {
+                return '<li><span>' + esc(r.name || '—') + (r.code ? ' <code>' + esc(r.code) + '</code>' : '') + '</span><strong>× ' + esc(r.qty || 1) + '</strong></li>';
+              }).join('');
+              doctorRecEl.classList.remove('hidden');
+            } else {
+              doctorRecEl.innerHTML = '';
+              doctorRecEl.classList.add('hidden');
+            }
+          }
+
           var spec = res.data.spec;
           var specList = $('costingSpecItems');
           if (specList) {

@@ -15,6 +15,9 @@
   var state = {
     specId: null,
     catalog: [],
+    catalogSearchResults: null,
+    catalogSearching: false,
+    catalogSearchTimer: null,
     items: [],
     submitting: false,
   };
@@ -139,11 +142,21 @@
   function renderCatalog(filter) {
     var list = $('specEditCatalogList');
     if (!list) return;
-    var q = (filter || '').trim().toLowerCase();
-    var items = state.catalog.filter(function (item) {
-      if (!q) return true;
-      return (item.code + ' ' + item.name).toLowerCase().indexOf(q) !== -1;
+    var q = (filter || '').trim();
+    var qLower = q.toLowerCase();
+    var source = (q.length >= 1 && state.catalogSearchResults !== null)
+      ? state.catalogSearchResults
+      : state.catalog;
+    var items = source.filter(function (item) {
+      if (!qLower) return true;
+      return (item.code + ' ' + item.name).toLowerCase().indexOf(qLower) !== -1;
     });
+
+    if (state.catalogSearching) {
+      list.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:16px 0;">جاري البحث...</p>';
+      return;
+    }
+
     list.innerHTML = items.map(function (item) {
       var used = state.items.some(function (i) { return i.stock_item_code === item.code; });
       return '<button type="button" data-pick="' + item.code + '" ' + (used ? 'disabled' : '') +
@@ -155,13 +168,57 @@
     list.querySelectorAll('[data-pick]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var code = btn.getAttribute('data-pick');
-        var item = state.catalog.find(function (c) { return c.code === code; });
+        var item = items.find(function (c) { return c.code === code; })
+          || state.catalog.find(function (c) { return c.code === code; });
         if (!item) return;
+        if (!state.catalog.some(function (c) { return c.code === item.code; })) {
+          state.catalog.push(item);
+        }
         state.items.push({ stock_item_code: item.code, name: item.name, qty: 1 });
         renderItems();
         closeOverlay('specEditCatalogModal');
       });
     });
+  }
+
+  function searchCatalogFromServer(q) {
+    if (!window.axios) {
+      renderCatalog(q);
+      return;
+    }
+    state.catalogSearching = true;
+    renderCatalog(q);
+    axios.get('/spec/catalog/search', { params: { q: q, limit: 40 } })
+      .then(function (res) {
+        state.catalogSearchResults = res.data.data || [];
+        state.catalogSearchResults.forEach(function (row) {
+          if (!state.catalog.some(function (c) { return c.code === row.code; })) {
+            state.catalog.push(row);
+          }
+        });
+      })
+      .catch(function () {
+        state.catalogSearchResults = [];
+      })
+      .finally(function () {
+        state.catalogSearching = false;
+        renderCatalog(q);
+      });
+  }
+
+  function onCatalogSearchInput(value) {
+    var q = (value || '').trim();
+    if (state.catalogSearchTimer) clearTimeout(state.catalogSearchTimer);
+
+    if (q.length < 1) {
+      state.catalogSearchResults = null;
+      renderCatalog('');
+      return;
+    }
+
+    state.catalogSearchTimer = setTimeout(function () {
+      searchCatalogFromServer(q);
+    }, 280);
   }
 
   function loadEditContext(specId) {
@@ -261,6 +318,7 @@
   });
 
   $('specEditAddItem')?.addEventListener('click', function () {
+    state.catalogSearchResults = null;
     renderCatalog('');
     if ($('specEditCatalogSearch')) $('specEditCatalogSearch').value = '';
     openOverlay('specEditCatalogModal');
@@ -273,7 +331,7 @@
     if (e.target === $('specEditCatalogModal')) closeOverlay('specEditCatalogModal');
   });
   $('specEditCatalogSearch')?.addEventListener('input', function () {
-    renderCatalog($('specEditCatalogSearch').value);
+    onCatalogSearchInput($('specEditCatalogSearch').value);
   });
 
   function openSpecPreviewItemsModal(specId) {

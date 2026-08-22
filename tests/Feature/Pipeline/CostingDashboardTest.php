@@ -3,6 +3,7 @@
 namespace Tests\Feature\Pipeline;
 
 use App\Models\CaseRecord;
+use App\Models\MedicalRecord;
 use App\Models\Permission;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
@@ -122,6 +123,39 @@ class CostingDashboardTest extends TestCase
             ->getJson('/costing/queue/list')
             ->assertOk()
             ->assertJsonPath('data.0.tech_notes', 'ملاحظة للتكاليف');
+    }
+
+    public function test_costing_show_includes_doctor_clinical_notes(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        MedicalRecord::create([
+            'case_id' => $case->id,
+            'patient_id' => $case->patient_id,
+            'patient_name' => $case->patient->name,
+            'patient_type' => $case->patient_type,
+            'diagnosis' => 'بتر فخذ أيمن',
+            'prescription' => 'طرف صناعي كامل',
+            'doctor_name' => 'د. سامي',
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_APPROVED,
+            'locked' => true,
+        ]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($costing)
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk()
+            ->assertJsonPath('medical_record.doctor_name', 'د. سامي')
+            ->assertJsonPath('medical_record.has_clinical_notes', true);
+
+        $this->assertStringContainsString(
+            'بتر فخذ أيمن',
+            (string) $response->json('medical_record.doctor_message'),
+        );
     }
 
     public function test_costing_show_includes_wac_for_view_costs_role(): void

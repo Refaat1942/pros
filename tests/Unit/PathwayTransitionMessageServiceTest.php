@@ -201,5 +201,22 @@ class PathwayTransitionMessageServiceTest extends TestCase
         $this->assertSame(Role::SLUG_RECEPTION, $payload['role']);
         $this->assertSame('/reception/quote', $payload['url']);
         $this->assertStringContainsString('خطاب', $payload['title']);
+        $this->assertStringContainsString('عرض سعر', $payload['body']);
+        $this->assertStringContainsString('خطاب', $payload['body']);
+    }
+
+    public function test_adjustments_complete_message_uses_step_labels(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        $message = app(PathwayTransitionMessageService::class)->transferMessage(
+            $case->load('patient'),
+            WorkflowEvent::AdjustmentsCompleted->value,
+            CaseRecord::STAGE_ADJUSTMENTS,
+        );
+
+        $this->assertStringContainsString('المعدلات', $message);
+        $this->assertStringContainsString('الاعتماد', $message);
     }
 }

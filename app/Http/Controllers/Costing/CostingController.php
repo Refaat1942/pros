@@ -8,6 +8,7 @@ use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Services\CostingService;
 use App\Services\CostingSnapshotService;
+use App\Services\MedicalContextService;
 use App\Services\PathwayTransitionMessageService;
 use App\Services\PricingService;
 use App\Services\StockCategorySchemaService;
@@ -32,6 +33,7 @@ class CostingController extends Controller
         private readonly StockCategorySchemaService $categorySchema,
         private readonly CostingSnapshotService $snapshotService,
         private readonly PathwayTransitionMessageService $transitions,
+        private readonly MedicalContextService $medicalContext,
     ) {}
 
     /**
@@ -114,6 +116,7 @@ class CostingController extends Controller
                     'stock_item_code', 'name', 'qty', 'uom',
                 ]))->values(),
             ] : null,
+            'medical_record' => $this->medicalContext->formatForCase($case),
             'can_see_internal' => CaseFinancialSummary::canSeeInternalCost(),
             'can_see_rates' => $canSeeRates,
         ]);

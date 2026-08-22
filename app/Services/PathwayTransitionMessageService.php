@@ -93,24 +93,10 @@ class PathwayTransitionMessageService
             return 'تم تحديث حالة الطلب.';
         }
 
-        if ($event === WorkflowEvent::BomDispensed->value) {
-            $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
-            $to = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_MANUFACTURING);
+        $from = $this->resolveFromLabel($case, $event, $fromStageKey);
+        $to = $this->resolveToLabel($case, $event, $fromStageKey, $targetStage);
 
-            return "تم التحويل من {$from} إلى {$to}.";
-        }
-
-        if ($event === WorkflowEvent::OperationsApproved->value) {
-            $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
-            $to = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_MANUFACTURING);
-
-            return "تم التحويل من {$from} إلى {$to}.";
-        }
-
-        $from = $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
-        $to = $this->pathwayConfig->stepLabelForStage($case, $targetStage);
-
-        return "تم التحويل من {$from} إلى {$to}";
+        return "تم التحويل من {$from} إلى {$to}.";
     }
 
     /**
@@ -130,7 +116,7 @@ class PathwayTransitionMessageService
 
         $role = $this->targetRoleForStage($case, $targetStage, $event);
         $prefix = self::TITLE_PREFIX[$event] ?? '📌';
-        $toLabel = $this->pathwayConfig->stepLabelForStage($case, $targetStage);
+        $toLabel = $this->resolveToLabel($case, $event, $fromStageKey, $targetStage);
 
         $case->loadMissing('patient:id,name,patient_code');
         $patient = $case->patient?->name ?? 'غير معروف';
@@ -164,8 +150,8 @@ class PathwayTransitionMessageService
         $case->loadMissing('patient:id,name');
         $patient = $case->patient?->name ?? 'غير معروف';
         $caseNo = $case->case_no ?? ('#'.$case->id);
-        $from = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_OPERATIONS);
-        $to = $this->pathwayConfig->stepLabelForStage($case, CaseRecord::STAGE_OPERATIONS);
+        $from = $this->pathwayConfig->stepLabelForKey($case, 'quote');
+        $to = $this->pathwayConfig->stepLabelForKey($case, 'entity_return');
 
         return [
             'role' => Role::SLUG_RECEPTION,
@@ -308,5 +294,92 @@ class PathwayTransitionMessageService
         }
 
         return Role::SLUG_ADMIN;
+    }
+
+    private function resolveFromLabel(CaseRecord $case, string $event, string $fromStageKey): string
+    {
+        $stepKey = $this->fromStepKeyForEvent($case, $event, $fromStageKey);
+
+        if ($stepKey !== null) {
+            return $this->pathwayConfig->stepLabelForKey($case, $stepKey);
+        }
+
+        return $this->pathwayConfig->stepLabelForStage($case, $fromStageKey);
+    }
+
+    private function resolveToLabel(CaseRecord $case, string $event, string $fromStageKey, string $targetStage): string
+    {
+        $stepKey = $this->toStepKeyForEvent($case, $event, $fromStageKey, $targetStage);
+
+        if ($stepKey !== null) {
+            return $this->pathwayConfig->stepLabelForKey($case, $stepKey);
+        }
+
+        return $this->pathwayConfig->stepLabelForStage($case, $targetStage);
+    }
+
+    private function fromStepKeyForEvent(CaseRecord $case, string $event, string $fromStageKey): ?string
+    {
+        return match ($event) {
+            WorkflowEvent::BomDispensed->value => 'warehouse',
+            WorkflowEvent::BomFinished->value => 'workshop',
+            WorkflowEvent::CashierPaid->value => 'cashier',
+            WorkflowEvent::QuoteIssued->value => 'cost_calc',
+            default => $this->stepKeyForStage($case, $fromStageKey),
+        };
+    }
+
+    private function toStepKeyForEvent(CaseRecord $case, string $event, string $fromStageKey, string $targetStage): ?string
+    {
+        $case->loadMissing(['patient', 'quotes', 'bom']);
+        $pathway = $this->pathwayConfig->resolvePathway($case->patient, $case);
+
+        return match ($event) {
+            WorkflowEvent::ExamApproved->value, WorkflowEvent::ExamSkipped->value => 'technical',
+            WorkflowEvent::SpecSaved->value => 'adjustments',
+            WorkflowEvent::AdjustmentsCompleted->value => 'cost_calc',
+            WorkflowEvent::CostingCompleted->value => match (true) {
+                $case->needsServicesApproval() => 'services_approval',
+                $case->isMilitary() => 'operations_wo',
+                $pathway === PathwayStep::PATHWAY_ENTITY => 'quote',
+                default => 'operations_wo',
+            },
+            WorkflowEvent::QuoteIssued->value => 'operations_wo',
+            WorkflowEvent::SentToCashier->value => 'cashier',
+            WorkflowEvent::CashierPaid->value => 'operations_wo',
+            WorkflowEvent::ServicesApprovalRequired->value => 'services_approval',
+            WorkflowEvent::ServicesApproved->value => 'operations_wo',
+            WorkflowEvent::OperationsApproved->value => 'warehouse',
+            WorkflowEvent::BomDispensed->value => 'workshop',
+            WorkflowEvent::BomFinished->value => 'delivery',
+            WorkflowEvent::Delivered->value => 'delivery',
+            WorkflowEvent::ReturnedToAdjustments->value, WorkflowEvent::SpecEditPostWoRollback->value => 'adjustments',
+            WorkflowEvent::ReturnedToTechnical->value => 'technical',
+            default => $this->stepKeyForStage($case, $targetStage),
+        };
+    }
+
+    private function stepKeyForStage(CaseRecord $case, string $stageKey): ?string
+    {
+        $case->loadMissing(['patient', 'quotes', 'bom']);
+
+        return match ($stageKey) {
+            CaseRecord::STAGE_RECEPTION => 'reception',
+            CaseRecord::STAGE_EXAM => 'exam',
+            CaseRecord::STAGE_TECHNICAL => 'technical',
+            CaseRecord::STAGE_ADJUSTMENTS => 'adjustments',
+            CaseRecord::STAGE_COST_CALC => 'cost_calc',
+            CaseRecord::STAGE_SERVICES_APPROVAL => 'services_approval',
+            CaseRecord::STAGE_QUOTE => 'quote',
+            CaseRecord::STAGE_OPERATIONS => $this->pathwayConfig->entityOperationsStepKey($case),
+            CaseRecord::STAGE_CASHIER => 'cashier',
+            CaseRecord::STAGE_MANUFACTURING => match (true) {
+                $case->bom?->stage === \App\Models\Bom::STAGE_WIP => 'workshop',
+                $case->bom?->stage === \App\Models\Bom::STAGE_FINISHED => 'delivery',
+                default => 'warehouse',
+            },
+            CaseRecord::STAGE_READY_DELIVERY, CaseRecord::STAGE_DELIVERED => 'delivery',
+            default => null,
+        };
     }
 }
