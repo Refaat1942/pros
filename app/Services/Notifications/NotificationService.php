@@ -237,12 +237,20 @@ class NotificationService
         $tokens = $this->tokensForRole($roleSlug);
 
         if ($tokens !== []) {
-            $this->firebase->sendToTokens($tokens, $title, $body, array_merge([
-                'notification_id' => (string) $notification->id,
-                'role' => $roleSlug,
-                'case_id' => (string) ($case?->id ?? ''),
-                'case_no' => (string) ($case?->case_no ?? ''),
-            ], array_map('strval', $data)));
+            // H-5: الإرسال عبر مهمة قابلة للطابور — لا يحجب دورة الطلب عند تفعيل FCM.
+            // على sync (أوفلاين) يعمل داخل الطلب كما كان؛ الخدمة تتخطّى الإرسال إن كان
+            // FCM معطّلاً (لا اتصال شبكي على الشبكة المحلية).
+            \App\Jobs\SendPushNotificationJob::dispatch(
+                $tokens,
+                $title,
+                $body,
+                array_merge([
+                    'notification_id' => (string) $notification->id,
+                    'role' => $roleSlug,
+                    'case_id' => (string) ($case?->id ?? ''),
+                    'case_no' => (string) ($case?->case_no ?? ''),
+                ], array_map('strval', $data)),
+            );
         }
 
         return $notification;

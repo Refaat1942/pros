@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # deploy.sh — production deploy for the Smart Prosthetics ERP
-# Target: Ubuntu 24.04 · nginx + php-fpm · MySQL · git-based deploy
+# Target: Ubuntu 24.04 · nginx + php-fpm · PostgreSQL or MySQL · git-based deploy
+# DB backup is engine-aware (pg_dump / mysqldump) via `php artisan prosthetics:backup`.
 #
 # Usage (run from the app directory on the VPS, as root or a sudo user):
 #   bash deploy.sh
@@ -60,20 +61,37 @@ if ! php -m | grep -qi '^zip$'; then
 fi
 
 # ── 5) DB backup before migrating ───────────────────────────────────────────
+# H-9: نسخة احتياطية مستقلة عن المحرك — تعتمد على أمر التطبيق الذي يكتشف السائق
+#      تلقائياً (pg_dump لـ PostgreSQL / mysqldump لـ MySQL). يعمل على VPS و LAN.
 if [ "${SKIP_DB_BACKUP:-0}" != "1" ]; then
     DB_CONN=$(sed -n 's/^DB_CONNECTION=//p' .env | tr -d '"' | tr -d "'" | head -n1)
-    if [ "${DB_CONN:-mysql}" = "mysql" ] && command -v mysqldump >/dev/null; then
+    log "Backing up database (engine: ${DB_CONN:-unknown}) via artisan prosthetics:backup"
+    if php artisan prosthetics:backup; then
+        printf '  backup OK → storage/backups\n'
+    else
+        # Fallback: direct dump per engine if the artisan command is unavailable.
         DB_NAME=$(sed -n 's/^DB_DATABASE=//p' .env | tr -d '"' | tr -d "'" | head -n1)
         DB_USER=$(sed -n 's/^DB_USERNAME=//p' .env | tr -d '"' | tr -d "'" | head -n1)
         DB_PASS=$(sed -n 's/^DB_PASSWORD=//p' .env | tr -d '"' | tr -d "'" | head -n1)
-        mkdir -p storage/app/backups
-        BACKUP="storage/app/backups/db-$(date +%F-%H%M%S).sql"
-        log "Backing up MySQL database '$DB_NAME' → $BACKUP"
-        MYSQL_PWD="$DB_PASS" mysqldump -u "$DB_USER" "$DB_NAME" > "$BACKUP" \
-            && printf '  backup OK (%s)\n' "$(du -h "$BACKUP" | cut -f1)" \
-            || warn "mysqldump failed — review credentials in .env. Continuing (a snapshot is recommended)."
-    else
-        warn "Skipping DB backup (non-MySQL or mysqldump unavailable). Take a VPS snapshot first."
+        DB_HOST=$(sed -n 's/^DB_HOST=//p' .env | tr -d '"' | tr -d "'" | head -n1)
+        DB_PORT=$(sed -n 's/^DB_PORT=//p' .env | tr -d '"' | tr -d "'" | head -n1)
+        mkdir -p storage/backups
+        BACKUP="storage/backups/db-$(date +%F-%H%M%S).sql"
+        if [ "$DB_CONN" = "pgsql" ] && command -v pg_dump >/dev/null; then
+            log "Fallback pg_dump → $BACKUP"
+            PGPASSWORD="$DB_PASS" pg_dump --host="${DB_HOST:-127.0.0.1}" --port="${DB_PORT:-5432}" \
+                --username="$DB_USER" --no-owner --no-acl "$DB_NAME" > "$BACKUP" \
+                && printf '  backup OK (%s)\n' "$(du -h "$BACKUP" | cut -f1)" \
+                || die "pg_dump failed — take a manual backup/snapshot before deploying."
+        elif [ "$DB_CONN" = "mysql" ] && command -v mysqldump >/dev/null; then
+            log "Fallback mysqldump → $BACKUP"
+            MYSQL_PWD="$DB_PASS" mysqldump --host="${DB_HOST:-127.0.0.1}" --port="${DB_PORT:-3306}" \
+                -u "$DB_USER" --single-transaction --quick --lock-tables=false "$DB_NAME" > "$BACKUP" \
+                && printf '  backup OK (%s)\n' "$(du -h "$BACKUP" | cut -f1)" \
+                || die "mysqldump failed — take a manual backup/snapshot before deploying."
+        else
+            die "No backup mechanism for engine '${DB_CONN:-unknown}'. Take a manual backup/snapshot, or set SKIP_DB_BACKUP=1 to bypass intentionally."
+        fi
     fi
 fi
 

@@ -9,6 +9,7 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Support\QuotePrintPresenter;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * معالجة خطاب الموافقة — استخراج OCR ومطابقة عرض السعر المجمّد.
@@ -53,6 +54,11 @@ class OcrApprovalService
         }
 
         $this->assertOcrMatchesQuote($quote, $extracted);
+
+        // H-2: لا نثق بمسار الملف القادم من العميل — نقبله فقط إن كان خطاب موافقة
+        // فعلياً مرفوعاً تحت approval_letters/ على القرص الخاص. غير ذلك نتجاهله
+        // (نمنع إرفاق أي ملف آخر داخل جذر التخزين بحالة عقد اعتماد).
+        $extracted['letter_path'] = $this->sanitizeLetterPath($extracted['letter_path'] ?? null);
 
         AuditService::log(
             action: 'ocr',
@@ -154,6 +160,33 @@ class OcrApprovalService
         $normalize = static fn (string $s) => preg_replace('/\s+/u', '', mb_strtolower(trim($s)));
 
         return $normalize($a) === $normalize($b);
+    }
+
+    /**
+     * H-2: يتحقق أن مسار الخطاب مسار خطاب موافقة مشروع (approval_letters/ على القرص
+     * الخاص) — يمنع الوصول لملفات أخرى داخل جذر التخزين عبر مسار يتحكم فيه العميل.
+     * يعيد المسار إن كان صالحاً، وإلا null (يُؤرشَف العقد بلا خطاب مرفق بدل رفض العملية).
+     */
+    private function sanitizeLetterPath(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        // منع أي تجاوز مسار أو مسار مطلق — يجب أن يبدأ حصراً بـ approval_letters/.
+        $normalized = ltrim(str_replace('\\', '/', $path), '/');
+
+        if (! str_starts_with($normalized, 'approval_letters/')
+            || str_contains($normalized, '..')) {
+            return null;
+        }
+
+        // يجب أن يكون الملف موجوداً فعلاً على القرص الخاص (حيث تُرفع الخطابات).
+        if (! Storage::disk('local')->exists($normalized)) {
+            return null;
+        }
+
+        return $normalized;
     }
 
     private function caseAwaitingEntityApproval(CaseRecord $case): bool

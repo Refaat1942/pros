@@ -166,7 +166,9 @@ Route::prefix('admin')
         });
 
         // ── مصفوفة الصلاحيات التفصيلية ──────────────────────────────────────
-        Route::middleware('dashboard.page:admin,permissions')->group(function () {
+        // H-4: الكتابة على مصفوفة الصلاحيات للسوبر أدمن فقط — تُفرض عبر middleware
+        //      مخصّص (can:super-admin) وليس فقط عبر شرط داخل المتحكّم.
+        Route::middleware(['dashboard.page:admin,permissions', 'can:super-admin'])->group(function () {
             Route::post('permissions', [PermissionMatrixController::class, 'update'])
                 ->name('permissions.update');
         });

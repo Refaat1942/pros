@@ -178,7 +178,8 @@
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!resetUserId) return;
-        if (window.FormValidation && !window.FormValidation.validateForm(form)) return;
+        // M-4: التحقق العميل الفعلي مُصدَّر باسم DashboardValidation (كان FormValidation خطأ فيفشل بصمت).
+        if (window.DashboardValidation && !window.DashboardValidation.validateForm(form)) return;
 
         var csrfMeta = document.querySelector('meta[name="csrf-token"]');
         var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
