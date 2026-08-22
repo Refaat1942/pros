@@ -31,6 +31,12 @@ class SendPushNotificationJob implements ShouldQueue
     public int $timeout = 30;
 
     /**
+     * H-6: لا يُرسَل الدفع إلا بعد نجاح المعاملة (commit) — يمنع إرسال إشعار عن
+     * انتقال جرى التراجع عنه. على sync (أوفلاين) يعمل ضمن الطلب كالمعتاد.
+     */
+    public bool $afterCommit = true;
+
+    /**
      * @param  list<string>  $tokens
      * @param  array<string, string>  $data
      */
