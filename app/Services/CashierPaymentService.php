@@ -119,11 +119,18 @@ class CashierPaymentService
                 $this->workflowService->advance($case->fresh(), WorkflowEvent::CashierPaid->value);
             }
 
+            // H-1: توضيح — التسعير اليدوي (manualDue) يُحدِّد قيمة العرض عند التحصيل
+            // (حالة الكاش المباشر بلا عرض مُسعّر). نُعلّمه صراحةً في سجل الرقابة للتتبّع.
+            $manualPricingDescription = $manualDue
+                ? " — تسعير يدوي بالخزنة (عرض بلا قيمة مُسبقة)"
+                : '';
+
             AuditService::log(
-                action: 'payment',
-                description: $fullyPaid
+                action: $manualDue ? 'manual_price' : 'payment',
+                description: ($fullyPaid
                     ? "تحصيل دفعة نقدية بالخزنة — {$payment->payment_no} — ".PaymentMethod::labelFor($method)
-                    : "تحصيل دفعة جزئية بالخزنة — {$payment->payment_no} — متبقي {$remaining} ج.م",
+                    : "تحصيل دفعة جزئية بالخزنة — {$payment->payment_no} — متبقي {$remaining} ج.م")
+                    .$manualPricingDescription,
                 tag: 'financial',
                 after: [
                     'payment_no' => $payment->payment_no,
@@ -134,6 +141,7 @@ class CashierPaymentService
                     'paid_total' => $newPaidTotal,
                     'remaining' => $remaining,
                     'fully_paid' => $fullyPaid,
+                    'manual_pricing' => $manualDue,
                     'method' => $method,
                     'received_by' => $receivedBy,
                     'stage_key' => $fullyPaid ? CaseRecord::STAGE_OPERATIONS : CaseRecord::STAGE_CASHIER,

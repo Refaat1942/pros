@@ -15,7 +15,9 @@ class ProcessOcrApprovalRequest extends BaseRequest
             'company_name' => ['required', 'string', 'max:255'],
             'letter_ref' => ['nullable', 'string', 'max:100'],
             'letter_date' => ['nullable', 'string', 'max:50'],
-            'letter_path' => ['nullable', 'string', 'max:500'],
+            // H-2: المسار يُعاد التحقق منه في الخدمة (approval_letters/ فقط + وجود الملف)؛
+            // هنا قيد أولي: يبدأ بـ approval_letters/ ولا يحوي تجاوز مسار (..).
+            'letter_path' => ['nullable', 'string', 'max:500', 'regex:#^approval_letters/[^/\\\\]+$#'],
         ];
     }
 }
