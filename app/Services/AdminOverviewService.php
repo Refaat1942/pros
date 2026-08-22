@@ -13,6 +13,8 @@ use Carbon\Carbon;
  */
 class AdminOverviewService
 {
+    public const BI_BOARDS_CACHE_KEY = 'admin_overview_bi_boards_v2';
+
     public function __construct(
         private readonly AdminReportsHubService $hub,
         private readonly AdminCycleDashboardService $cycle,
@@ -34,7 +36,7 @@ class AdminOverviewService
     public function pageData(Carbon $from, Carbon $to): array
     {
         $boards = \Illuminate\Support\Facades\Cache::remember(
-            'admin_overview_bi_boards_v2',
+            self::BI_BOARDS_CACHE_KEY,
             300,
             fn () => [
                 'board1' => $this->biReports->boardPatients(),
@@ -116,5 +118,10 @@ class AdminOverviewService
     public function periodLabel(Carbon $from, Carbon $to): string
     {
         return 'من '.$from->format('Y-m-d').' إلى '.$to->format('Y-m-d');
+    }
+
+    public static function clearBiBoardsCache(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget(self::BI_BOARDS_CACHE_KEY);
     }
 }

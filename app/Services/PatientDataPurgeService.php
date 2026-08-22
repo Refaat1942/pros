@@ -74,6 +74,8 @@ class PatientDataPurgeService
             }
         });
 
+        AdminOverviewService::clearBiBoardsCache();
+
         return $counts;
     }
 
