@@ -3,6 +3,8 @@
   if (document.body.dataset.activePage !== 'dispense-approvals') return;
 
   var csrf = document.querySelector('meta[name="csrf-token"]');
+  // M-15: قراءة رمز CSRF بأمان حتى لو غاب الـ meta (يمنع خطأ JS صريحاً).
+  function csrfToken() { return csrf ? csrf.getAttribute('content') : ''; }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
   function countScansByCode(lines, bomItems) {
@@ -58,7 +60,10 @@
 
   function load() {
     fetch('/admin/dispense-approvals/list', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
       .then(function (res) {
         var tbody = document.getElementById('dispenseApprovalsTable');
         var data = res.data || [];
@@ -83,13 +88,19 @@
           btn.addEventListener('click', function () {
             var id = btn.getAttribute('data-id');
             if (!confirm('اعتماد الصرف وتنفيذ الخصم؟')) return;
+            // M-15: منع النقر المزدوج — تعطيل الزر أثناء الطلب.
+            if (btn.disabled) return;
+            btn.disabled = true;
             fetch('/admin/dispense-approvals/' + id + '/approve', {
               method: 'POST',
-              headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf.getAttribute('content'), 'X-Requested-With': 'XMLHttpRequest' },
+              headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
               credentials: 'same-origin',
             }).then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
               .then(function () { load(); })
-              .catch(function (err) { alert((err && err.message) || 'فشل الاعتماد'); });
+              .catch(function (err) {
+                btn.disabled = false;
+                alert((err && err.message) || 'فشل الاعتماد');
+              });
           });
         });
         tbody.querySelectorAll('.btn-reject-dispense').forEach(function (btn) {
@@ -99,6 +110,13 @@
             document.getElementById('dispenseRejectModal').classList.add('open');
           });
         });
+      })
+      // M-16: لا يبقى الجدول عالقاً بصمت عند فشل التحميل (500/419/شبكة).
+      .catch(function () {
+        var tbody = document.getElementById('dispenseApprovalsTable');
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#dc2626;">تعذّر تحميل طلبات الصرف — حدّث الصفحة أو أعد المحاولة.</td></tr>';
+        }
       });
   }
 
@@ -118,7 +136,7 @@
     }
     fetch('/admin/dispense-approvals/' + id + '/reject', {
       method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf.getAttribute('content'), 'X-Requested-With': 'XMLHttpRequest' },
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',
       body: JSON.stringify({ reason: reason }),
     }).then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })

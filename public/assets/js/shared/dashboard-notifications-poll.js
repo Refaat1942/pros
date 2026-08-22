@@ -154,8 +154,9 @@
           seen = {};
           items.forEach(function (it) { seen[it.id] = true; });
           firstPollDone = true;
+          // M-8: لا نُصدر صوتاً للأشعارات غير المقروءة الموجودة مسبقاً عند أول تحميل
+          // للصفحة (الشارة تظهر العدد). التذكير الدوري فقط دون رنّة فورية عند التنقّل.
           if (shouldRemind()) {
-            beep();
             startReminder();
           }
           return;
