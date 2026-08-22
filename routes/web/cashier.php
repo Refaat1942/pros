@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('cashier', 'cashier.', CashierDashboardController::class, 'cashier');
+registerDepartmentStaffRoutes('cashier', 'cashier.', 'cashier');
 
 /*
 |--------------------------------------------------------------------------

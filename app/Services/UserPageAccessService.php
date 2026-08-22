@@ -19,7 +19,7 @@ class UserPageAccessService
         $result = [];
 
         foreach ($pages as $key => $meta) {
-            if (! empty($meta['hidden'])) {
+            if (! empty($meta['hidden']) || $key === 'staff') {
                 continue;
             }
 
@@ -72,6 +72,10 @@ class UserPageAccessService
     {
         if ($user->isSuperAdmin()) {
             return true;
+        }
+
+        if ($page === 'staff' && $user->access_tier === self::TIER_DEPARTMENT_STAFF) {
+            return false;
         }
 
         if ($user->access_tier !== self::TIER_DEPARTMENT_STAFF) {

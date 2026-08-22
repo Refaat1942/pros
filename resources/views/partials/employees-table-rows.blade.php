@@ -1,6 +1,8 @@
 @php
     use App\Models\Role;
     $isSuperAdmin = auth()->user()?->isSuperAdmin() ?? false;
+    $staffMode = $staff_mode ?? 'admin';
+    $dashboardKey = $dashboard_key ?? 'admin';
 @endphp
 @foreach ($employees as $employee)
     @php
@@ -31,6 +33,28 @@
         <td>{{ $employee->last_login_at?->format('Y-m-d H:i') ?? '—' }}</td>
         <td>
             <div class="table-actions">
+                @if ($staffMode === 'department')
+                    <a href="{{ route("{$dashboardKey}.staff", ['edit' => $employee->id]) }}" class="btn-action" title="تعديل">✏️ تعديل</a>
+                    <button type="button"
+                            class="btn-action"
+                            title="إعادة تعيين كلمة المرور"
+                            onclick="resetEmployeePassword({{ $employee->id }}, {{ json_encode($employee->name) }})">
+                        🔑 كلمة المرور
+                    </button>
+                    <form method="POST" action="{{ route("{$dashboardKey}.staff.toggle", $employee) }}" style="display:inline;">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit" class="btn-action" title="تبديل الحالة">
+                            {{ $employee->status === \App\Models\User::STATUS_ACTIVE ? 'تعطيل' : 'تفعيل' }}
+                        </button>
+                    </form>
+                    <button type="button"
+                            class="btn-action danger"
+                            title="حذف الموظف"
+                            onclick="deleteEmployee({{ $employee->id }}, {{ json_encode($employee->name) }})">
+                        🗑️ حذف
+                    </button>
+                @else
                 <a href="{{ route('admin.employees', ['edit' => $employee->id]) }}" class="btn-action" title="تعديل">✏️ تعديل</a>
                 @if ($isSuperAdmin && auth()->id() !== $employee->id)
                     <button type="button"
@@ -56,6 +80,7 @@
                             onclick="deleteEmployee({{ $employee->id }}, {{ json_encode($employee->name) }})">
                         🗑️ حذف
                     </button>
+                @endif
                 @endif
             </div>
         </td>

@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('reception', 'reception.', ReceptionDashboardController::class, 'reception');
+registerDepartmentStaffRoutes('reception', 'reception.', 'reception');
 
 /*
 |--------------------------------------------------------------------------

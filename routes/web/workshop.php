@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('workshop', 'workshop.', WorkshopDashboardController::class, 'workshop');
+registerDepartmentStaffRoutes('workshop', 'workshop.', 'workshop');
 
 /*
 |--------------------------------------------------------------------------

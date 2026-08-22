@@ -49,14 +49,9 @@
 
 <div class="catalog-modal-overlay {{ $openModal ? 'open' : '' }}" id="employeeModal" role="dialog" aria-modal="true">
     <div class="catalog-modal employee-modal" onclick="event.stopPropagation()">
-        <div class="catalog-modal-header">
-            <div>
-                <h3 id="employeeModalTitle">{{ $editUser ? '✏️ تعديل موظف' : '➕ إضافة موظف' }}</h3>
-            </div>
-            <button type="button" class="catalog-modal-close" id="closeEmployeeModal" aria-label="إغلاق">&times;</button>
-        </div>
         <form method="POST"
               id="employeeForm"
+              class="employee-modal-form"
               data-validate-form
               data-store-url="{{ route('admin.employees.store') }}"
               data-catalog-url="{{ route('admin.employees.catalog-list-visibility') }}"
@@ -72,6 +67,12 @@
                 @method('PUT')
             @endif
             <input type="hidden" name="form" value="employee">
+            <div class="catalog-modal-header">
+                <div>
+                    <h3 id="employeeModalTitle">{{ $editUser ? '✏️ تعديل موظف' : '➕ إضافة موظف' }}</h3>
+                </div>
+                <button type="button" class="catalog-modal-close" id="closeEmployeeModal" aria-label="إغلاق">&times;</button>
+            </div>
             <div class="catalog-modal-body employee-modal-body">
                 <div class="employee-modal-grid">
                 <div class="form-group">
@@ -233,105 +234,7 @@
 @endif
 
 <style>
-    #employeeModal .catalog-modal.employee-modal {
-        width: min(1080px, 96vw);
-        max-width: none;
-        max-height: 92vh;
-    }
-
-    #employeeModal .catalog-modal-header {
-        padding: 24px 32px 18px;
-    }
-
-    #employeeModal .catalog-modal-header h3 {
-        font-size: 1.35rem;
-    }
-
-    #employeeModal .employee-modal-body {
-        padding: 24px 32px 28px;
-    }
-
-    #employeeModal .catalog-modal-footer {
-        padding: 18px 32px;
-    }
-
-    .employee-modal-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 18px 24px;
-    }
-
-    .employee-modal-grid .form-group-full {
-        grid-column: 1 / -1;
-    }
-
-    .employee-modal-grid .form-group {
-        margin-bottom: 0;
-    }
-
-    .employee-catalog-visibility-hint {
-        margin: 0 0 10px;
-        font-size: 12px;
-        line-height: 1.55;
-        color: var(--text-muted, #64748b);
-    }
-    .employee-catalog-visibility-wrap {
-        border: 1px solid var(--border, #e2e8f0);
-        border-radius: 10px;
-        overflow: hidden;
-        background: #fafbff;
-        max-height: 420px;
-        overflow-y: auto;
-    }
-
-    #employeeAllowedPagesWrap {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0;
-    }
-
-    #employeeAllowedPagesWrap .emp-page-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
-        border-bottom: 1px solid #e2e8f0;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    #employeeAllowedPagesWrap .emp-page-row:hover {
-        background: #f0fdf4;
-    }
-
-    @media (max-width: 900px) {
-        #employeeAllowedPagesWrap {
-            grid-template-columns: 1fr;
-        }
-
-        .employee-modal-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .employee-catalog-visibility-loading {
-        padding: 12px;
-        font-size: 12px;
-        color: var(--text-muted, #64748b);
-    }
-    .employee-catalog-visibility-wrap .catalog-list-settings-section__head,
-    .employee-catalog-visibility-wrap .catalog-list-settings-profile {
-        padding: 10px 12px;
-    }
-    .employee-catalog-visibility-wrap .catalog-list-settings-columns {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 6px;
-    }
-    .employee-catalog-visibility-wrap .catalog-list-settings-col {
-        padding: 6px 8px;
-        font-size: 12px;
-    }
+    /* تنسيقات النافذة في department-staff.css */
 </style>
 
 @push('scripts')
