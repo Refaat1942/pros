@@ -55,6 +55,7 @@ class OfficialPrintDocumentsTest extends TestCase
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
         $this->approveAtOperations($case);
+        $case = $this->seedWorkshopAssignmentApproved($case->fresh());
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $technical = $this->userWithRole('technical');
 
@@ -64,6 +65,11 @@ class OfficialPrintDocumentsTest extends TestCase
             ->assertSee('إذن صرف', false)
             ->assertSee($quote->order_ref, false)
             ->assertSee($quote->patient_name, false)
+            ->assertSee('الطرف الصناعي', false)
+            ->assertSee('مدير الإنتاج', false)
+            ->assertSee('قائد المصنع', false)
+            ->assertSee('الفني المختص', false)
+            ->assertSee($case->work_order_no, false)
             ->assertSee('رئيس المخازن', false)
             ->assertSee('onload="window.print()"', false);
     }
