@@ -175,4 +175,8 @@ if [ "${SKIP_MAINTENANCE:-0}" != "1" ]; then
 fi
 trap - EXIT
 
+fix_storage_permissions
+
 log "Deploy complete — $(git --no-pager log -1 --oneline)"
+warn "لا تشغّل php artisan view:cache أو config:cache كـ root يدوياً — يكسر صلاحيات www-data."
+warn "بعد أي artisan يدوي كـ root: php artisan prosthetics:fix-storage-permissions"
