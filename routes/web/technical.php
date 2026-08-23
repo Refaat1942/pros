@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('technical', 'technical.', TechnicalDashboardController::class, 'technical');
+registerDepartmentStaffRoutes('technical', 'technical.', 'technical');
 
 /*
 |--------------------------------------------------------------------------

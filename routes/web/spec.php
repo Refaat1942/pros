@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('spec', 'spec.', SpecDashboardController::class, 'spec');
+registerDepartmentStaffRoutes('spec', 'spec.', 'spec');
 
 /*
 |--------------------------------------------------------------------------

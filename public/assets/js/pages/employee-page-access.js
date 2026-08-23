@@ -11,6 +11,7 @@
   var roleSelect = document.getElementById('employeeRoleSelect');
   if (!block || !wrap || !hiddenInput || !roleSelect) return;
 
+  var isDepartmentMode = form.dataset.departmentMode === '1';
   var rolePagesUrl = form.dataset.rolePagesUrl;
   var editAllowed = [];
   try {
@@ -22,6 +23,7 @@
   }
 
   function selectedTier() {
+    if (isDepartmentMode) return 'department_staff';
     var checked = form.querySelector('input[name="access_tier"]:checked');
     return checked ? checked.value : 'department_admin';
   }
@@ -59,12 +61,16 @@
   }
 
   function loadPages(roleId) {
-    if (!roleId) {
+    if (!roleId && !isDepartmentMode) {
       block.style.display = 'none';
       return;
     }
 
-    fetch(rolePagesUrl + '/' + roleId, { headers: { Accept: 'application/json' } })
+    var url = isDepartmentMode
+      ? rolePagesUrl
+      : rolePagesUrl + '/' + roleId;
+
+    fetch(url, { headers: { Accept: 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.pages || !data.pages.length) {
@@ -86,18 +92,21 @@
     syncHidden();
   }
 
-  roleSelect.addEventListener('change', function () {
-    editAllowed = [];
-    loadPages(roleSelect.value);
-  });
+  if (!isDepartmentMode) {
+    roleSelect.addEventListener('change', function () {
+      editAllowed = [];
+      loadPages(roleSelect.value);
+    });
 
-  form.querySelectorAll('input[name="access_tier"]').forEach(function (radio) {
-    radio.addEventListener('change', toggleStaffPages);
-  });
+    form.querySelectorAll('input[name="access_tier"]').forEach(function (radio) {
+      radio.addEventListener('change', toggleStaffPages);
+    });
+  }
 
   form.addEventListener('submit', syncHidden);
 
-  if (roleSelect.value) {
-    loadPages(roleSelect.value);
+  var roleId = roleSelect.value || form.dataset.fixedRoleId;
+  if (roleId || isDepartmentMode) {
+    loadPages(roleId);
   }
 })();
