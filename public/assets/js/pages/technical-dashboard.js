@@ -24,6 +24,7 @@ function normalizeInventoryItem(raw) {
     code: raw.code || '',
     name: raw.name || '',
     brand: raw.brand || '',
+    barcode: raw.barcode || '',
     uom: raw.uom || '',
     spec: raw.spec || '—',
     category: raw.category || '—',
@@ -153,7 +154,8 @@ function getFilteredInventory() {
     var matchSearch = !inventorySearchTerm ||
       item.name.indexOf(inventorySearchTerm) !== -1 ||
       item.spec.indexOf(inventorySearchTerm) !== -1 ||
-      item.code.indexOf(inventorySearchTerm) !== -1;
+      item.code.indexOf(inventorySearchTerm) !== -1 ||
+      (item.barcode && item.barcode.indexOf(inventorySearchTerm) !== -1);
     return matchFilter && matchSearch;
   });
 }
@@ -270,7 +272,7 @@ function renderInventory() {
     'عرض ' + filtered.length + ' من ' + inventory.length + ' أصناف';
 
   document.getElementById('inventoryTable').innerHTML = filtered.length ? filtered.map(function (item) {
-    return '<tr>' + columns.map(function (key) {
+    return '<tr data-inventory-code="' + (item.code || '') + '" data-barcode="' + String(item.barcode || '').toUpperCase() + '">' + columns.map(function (key) {
       return renderTechnicalInventoryCell(item, key);
     }).join('') + '</tr>';
   }).join('') : '<tr><td colspan="' + colspan + '" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد أصناف في المخزون — أضف الأصناف من لوحة الإدارة</td></tr>';
@@ -282,6 +284,26 @@ var inventorySearchEl = document.getElementById('inventorySearch');
 if (inventorySearchEl) inventorySearchEl.addEventListener('input', function (e) {
   inventorySearchTerm = e.target.value.trim();
   renderInventory();
+});
+if (inventorySearchEl) inventorySearchEl.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+  var term = (e.target.value || '').trim();
+  if (!term) return;
+  e.preventDefault();
+  inventorySearchTerm = term;
+  renderInventory();
+  var upper = term.toUpperCase();
+  var match = inventory.find(function (item) {
+    return item.barcode && String(item.barcode).toUpperCase() === upper;
+  });
+  if (match) {
+    var row = document.querySelector('#inventoryTable tr[data-inventory-code="' + match.code + '"]');
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.style.background = '#fef9c3';
+      setTimeout(function () { row.style.background = ''; }, 2000);
+    }
+  }
 });
 
 var inventoryFilters = document.querySelectorAll('#inventoryFilters .filter-pill');

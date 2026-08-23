@@ -366,11 +366,11 @@ body.labels-body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-evenly;
-    gap: 0.35mm;
-    padding: 1.2mm 1mm;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 1.4mm 1mm 1.2mm;
     padding-left: calc(1mm + var(--offset-x));
-    padding-top: calc(1.2mm + var(--offset-y));
+    padding-top: calc(1.4mm + var(--offset-y));
     overflow: hidden;
     page-break-inside: avoid;
     box-sizing: border-box;
@@ -379,16 +379,17 @@ body.labels-body {
 }
 
 .label .name {
-    font-size: 7.5pt;
+    font-size: 7pt;
     font-weight: 900;
     text-align: center;
-    line-height: 1.15;
-    max-height: 6mm;
+    line-height: 1.1;
+    max-height: 5.5mm;
     overflow: hidden;
     flex: 0 0 auto;
     width: 100%;
     color: #000;
-    margin: 0;
+    margin: 0 0 2mm 0;
+    padding: 0;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
@@ -402,6 +403,8 @@ body.labels-body {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin: 0;
+    padding: 0.5mm 0;
 }
 
 .label .barcode-img {
@@ -411,9 +414,9 @@ body.labels-body {
     max-width: 100%;
     max-height: calc(var(--label-height) * var(--barcode-height-pct) / 100);
     object-fit: contain;
+    image-rendering: pixelated;
     image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    filter: contrast(1.45) brightness(0.92);
+    filter: contrast(1.75);
 }
 
 .label .barcode svg {
@@ -426,15 +429,16 @@ body.labels-body {
     font-size: 7.5pt;
     font-weight: 900;
     direction: ltr;
-    letter-spacing: 0.35px;
+    letter-spacing: 0.4px;
     flex: 0 0 auto;
     text-align: center;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     color: #000;
-    margin: 0;
-    line-height: 1.15;
+    margin: 2mm 0 0 0;
+    padding: 0;
+    line-height: 1.1;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
@@ -476,11 +480,11 @@ body.labels-body {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: space-evenly;
-        gap: 0.35mm;
-        padding: 1.2mm 1mm;
+        justify-content: flex-start;
+        gap: 0;
+        padding: 1.4mm 1mm 1.2mm;
         padding-left: calc(1mm + var(--offset-x));
-        padding-top: calc(1.2mm + var(--offset-y));
+        padding-top: calc(1.4mm + var(--offset-y));
         page-break-after: always;
         break-after: page;
         -webkit-print-color-adjust: exact;
@@ -491,13 +495,22 @@ body.labels-body {
     .label .code {
         color: #000 !important;
         font-weight: 900 !important;
-        -webkit-text-stroke: 0.15px #000;
+        -webkit-text-stroke: 0.2px #000;
+    }
+
+    .label .name {
+        margin-bottom: 2mm !important;
+    }
+
+    .label .code {
+        margin-top: 2mm !important;
     }
 
     .label .barcode-img {
         visibility: visible !important;
         opacity: 1 !important;
-        filter: contrast(1.65) brightness(0.88) !important;
+        filter: contrast(2) !important;
+        image-rendering: pixelated !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }

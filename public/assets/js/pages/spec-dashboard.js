@@ -227,11 +227,11 @@
   function searchCatalogFromServer(q) {
     if (!window.axios) {
       renderCatalogList(q);
-      return;
+      return Promise.resolve();
     }
     state.catalogSearching = true;
     renderCatalogList(q);
-    axios.get('/spec/catalog/search', { params: { q: q, limit: 40 } })
+    return axios.get('/spec/catalog/search', { params: { q: q, limit: 40 } })
       .then(function (res) {
         state.catalogSearchResults = res.data.data || [];
         mergeCatalogEntries(state.catalogSearchResults);
@@ -813,7 +813,7 @@
     var items = source.filter(function (item) {
       if (!qRaw && !itemMatchesActiveSpecGroups(item)) return false;
       if (!q) return true;
-      return (item.code + ' ' + item.name + ' ' + (item.spec || '') + ' ' + (item.spec_group_label || '')).toLowerCase().indexOf(q) !== -1;
+      return (item.code + ' ' + item.name + ' ' + (item.spec || '') + ' ' + (item.spec_group_label || '') + ' ' + (item.barcode || '') + ' ' + (item.alt_codes || '')).toLowerCase().indexOf(q) !== -1;
     });
 
     if (state.catalogSearching) {
@@ -907,6 +907,25 @@
       }
     });
     if (search) search.addEventListener('input', function () { onCatalogSearchInput(search.value); });
+    if (search) search.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var q = (search.value || '').trim();
+      if (!q) return;
+      e.preventDefault();
+      searchCatalogFromServer(q).then(function () {
+        var upper = q.toUpperCase();
+        var exact = (state.catalogSearchResults || []).find(function (row) {
+          return row.barcode && String(row.barcode).toUpperCase() === upper;
+        });
+        if (!exact) return;
+        expandKitToLines(exact, 1).forEach(function (line) {
+          state.items.push(line);
+        });
+        renderItemsTable();
+        clearError();
+        $('catalogModal').classList.add('hidden');
+      });
+    });
   }
 
   function bindActions() {

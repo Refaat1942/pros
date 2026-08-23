@@ -66,7 +66,7 @@
         </form>
 
         <div class="data-toolbar" style="flex-wrap:wrap;gap:8px;">
-            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث برقم الصنف أو الاسم أو الماركة..." onkeyup="applySlimCatalogFilters()">
+            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث بالصنف، الاسم، الماركة، أو الباركود (امسح و Enter)..." onkeyup="applySlimCatalogFilters()">
             <select id="catalogCategoryFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:160px;">
                 <option value="">🏷️ كل الأقسام</option>
                 @foreach ($categories as $cat)
@@ -133,7 +133,8 @@
                     @forelse ($items as $item)
                         <tr class="catalog-slim-row"
                             data-item-id="{{ $item['id'] ?? '' }}"
-                            data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['brand'] ?? '') . ' ' . ($item['category'] ?? '')) }}"
+                            data-barcode="{{ strtoupper($item['barcode'] ?? '') }}"
+                            data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['brand'] ?? '') . ' ' . ($item['category'] ?? '') . ' ' . ($item['barcode'] ?? '') . ' ' . ($item['alt_codes'] ?? '')) }}"
                             data-category-id="{{ $item['category_id'] ?? '' }}"
                             data-filter-hidden="0"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
@@ -740,6 +741,44 @@
         return m ? m.getAttribute('content') : '';
     }
 
+    function normalizeBarcodeScan(raw) {
+        return String(raw || '').trim().toUpperCase();
+    }
+
+    function focusCatalogRowByBarcode(scan) {
+        var code = normalizeBarcodeScan(scan);
+        if (!code) return false;
+
+        var rows = document.querySelectorAll('#catalogSlimTable .catalog-slim-row');
+        var match = null;
+
+        rows.forEach(function (row) {
+            var bc = (row.getAttribute('data-barcode') || '').toUpperCase();
+            if (bc && bc === code) {
+                match = row;
+            }
+        });
+
+        if (!match) {
+            rows.forEach(function (row) {
+                if (row.dataset.filterHidden === '1') return;
+                var bc = (row.getAttribute('data-barcode') || '').toUpperCase();
+                if (bc && (bc.indexOf(code) !== -1 || code.indexOf(bc) !== -1)) {
+                    match = row;
+                }
+            });
+        }
+
+        if (!match) return false;
+
+        match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        match.style.transition = 'background 0.2s';
+        match.style.background = '#fef9c3';
+        setTimeout(function () { match.style.background = ''; }, 2200);
+
+        return true;
+    }
+
     window.applySlimCatalogFilters = function () {
         var term = (document.getElementById('catalogSlimSearch')?.value || '').toLowerCase().trim();
         var catId = document.getElementById('catalogCategoryFilter')?.value || '';
@@ -1311,7 +1350,8 @@
     }
 
     function catalogRowHtml(item) {
-        var search = escAttr(((item.catalog_number || item.code || '') + ' ' + (item.name || '') + ' ' + (item.brand || '') + ' ' + (item.page_number || '') + ' ' + (item.alt_codes || '')).toLowerCase());
+        var search = escAttr(((item.catalog_number || item.code || '') + ' ' + (item.name || '') + ' ' + (item.brand || '') + ' ' + (item.page_number || '') + ' ' + (item.alt_codes || '') + ' ' + (item.barcode || '')).toLowerCase());
+        var barcodeAttr = escAttr(String(item.barcode || '').toUpperCase());
         var dataAttr = escAttr(JSON.stringify(item));
         var labelsUrl = '/admin/catalog/' + item.id + '/labels';
         var checkboxCol = document.getElementById('catalogSelectAll')
@@ -1320,7 +1360,7 @@
         var dataCols = (catalogTableOrder || []).map(function (key) {
             return renderCatalogDataCell(item, key);
         }).join('');
-        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
+        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
             dataCols +
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
@@ -1452,6 +1492,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (typeof window.applySlimCatalogFilters === 'function') {
         window.applySlimCatalogFilters();
+    }
+
+    var catalogSearchInput = document.getElementById('catalogSlimSearch');
+    if (catalogSearchInput) {
+        catalogSearchInput.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            var val = catalogSearchInput.value.trim();
+            if (!val) return;
+            window.applySlimCatalogFilters();
+            if (typeof focusCatalogRowByBarcode === 'function' && focusCatalogRowByBarcode(val)) {
+                return;
+            }
+            if (window.DashboardToast) {
+                window.DashboardToast.show('لم يُعثَر على صنف بالباركود: ' + val, { isError: true });
+            }
+        });
     }
 
     var itemId = new URLSearchParams(window.location.search).get('item');

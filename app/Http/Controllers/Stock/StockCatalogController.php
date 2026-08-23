@@ -324,6 +324,7 @@ class StockCatalogController extends Controller
         $maxWidthPx = ($labelWidthMm * ($widthPct / 100)) * ($dpi / 25.4);
         $maxHeightPx = (int) round(($labelHeightMm * ($heightPct / 100)) * ($dpi / 25.4));
         $barcodeHeight = min((int) ($settings['barcode_height'] ?? 28), max(16, $maxHeightPx));
+        $quietZone = max(8, min(24, (int) config('label-print.quiet_zone_modules', 14)));
 
         foreach ($items as $item) {
             $svg = Code128::svgFit(
@@ -331,6 +332,7 @@ class StockCatalogController extends Controller
                 height: $barcodeHeight,
                 moduleWidth: $moduleWidth,
                 maxWidthPx: $maxWidthPx,
+                quietZone: $quietZone,
             );
             $dataUri = 'data:image/svg+xml;base64,'.base64_encode($svg);
             for ($i = 0; $i < $copies; $i++) {
