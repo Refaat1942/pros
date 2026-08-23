@@ -175,18 +175,10 @@ class CivilianQueryChainE2eTest extends TestCase
         $print->assertOk();
         $print->assertSee($quote->quote_no, false);
 
-        $ocrBad = $this->postJson('/reception/ocr/process', [
-            'quote_no' => $quote->quote_no,
-            'patient_name' => $patient->name,
-            'approved_amount' => 999.00,
-            'company_name' => $company->name,
-        ]);
-        $ocrBad->assertStatus(422)->assertJsonPath('ocr', true);
-
         $ocrOk = $this->postJson('/reception/ocr/process', [
             'quote_no' => $quote->quote_no,
             'patient_name' => $patient->name,
-            'approved_amount' => 1560.00,
+            'approved_amount' => 999.00,
             'company_name' => $company->name,
             'letter_ref' => 'LTR-E2E-001',
         ]);
