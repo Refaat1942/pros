@@ -53,7 +53,7 @@
   </div>
 
   {{-- تبويب الفنيون --}}
-  <div id="wsTabTechnicians" class="ws-tab-panel is-hidden" role="tabpanel">
+  <div id="wsTabTechnicians" class="ws-tab-panel" role="tabpanel" hidden>
     <div class="panel-hint panel-hint--workshop">
       <div class="panel-hint__label">👷 إدارة فنيي الإنتاج</div>
       <p class="panel-hint__text">أضف فنيين جدد أو عدّل بياناتهم واربطهم بالأقسام المناسبة.</p>
