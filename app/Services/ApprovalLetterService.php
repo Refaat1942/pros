@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * معالجة خطاب الموافقة — رفع + مراجعة يدوية + تسجيل موافقة الجهة.
+ * خطاب موافقة الجهة — رفع أرشيف + إدخال يدوي + تسجيل الموافقة.
  */
-class OcrApprovalService
+class ApprovalLetterService
 {
     public function __construct(private readonly ApprovalService $approvalService) {}
 
@@ -26,12 +26,12 @@ class OcrApprovalService
      *   letter_ref?: string,
      *   letter_date?: string,
      *   letter_path?: string,
-     * }  $extracted
+     * }  $payload
      */
-    public function process(array $extracted): CaseRecord
+    public function confirm(array $payload): CaseRecord
     {
         $quote = Quote::with(['caseRecord.patient'])
-            ->where('quote_no', $extracted['quote_no'])
+            ->where('quote_no', $payload['quote_no'])
             ->first();
 
         if (! $quote || ! $quote->caseRecord) {
@@ -49,13 +49,10 @@ class OcrApprovalService
         }
 
         if ($quote->status !== Quote::STATUS_ISSUED) {
-            abort(422, 'يجب إصدار العرض للجهة قبل معالجة خطاب الموافقة.');
+            abort(422, 'يجب إصدار العرض للجهة قبل تسجيل خطاب الموافقة.');
         }
 
-        // H-2: لا نثق بمسار الملف القادم من العميل — نقبله فقط إن كان خطاب موافقة
-        // فعلياً مرفوعاً تحت approval_letters/ على القرص الخاص. غير ذلك نتجاهله
-        // (نمنع إرفاق أي ملف آخر داخل جذر التخزين بحالة عقد اعتماد).
-        $extracted['letter_path'] = $this->sanitizeLetterPath($extracted['letter_path'] ?? null);
+        $payload['letter_path'] = $this->sanitizeLetterPath($payload['letter_path'] ?? null);
 
         AuditService::log(
             action: 'approval_letter',
@@ -63,24 +60,23 @@ class OcrApprovalService
             tag: 'quotes',
             after: [
                 'quote_no' => $quote->quote_no,
-                'patient_name' => $extracted['patient_name'] ?? null,
-                'approved_amount' => $extracted['approved_amount'] ?? null,
-                'company_name' => $extracted['company_name'] ?? null,
-                'letter_path' => $extracted['letter_path'] ?? null,
+                'patient_name' => $payload['patient_name'] ?? null,
+                'approved_amount' => $payload['approved_amount'] ?? null,
+                'company_name' => $payload['company_name'] ?? null,
+                'letter_path' => $payload['letter_path'] ?? null,
             ],
         );
 
         $case = $this->approvalService->confirm($case, $quote->quote_no);
 
-        $this->archiveContract($case, $quote, $extracted);
+        $this->archiveContract($case, $quote, $payload);
 
         return $case;
     }
 
-    private function archiveContract(CaseRecord $case, Quote $quote, array $extracted): void
+    private function archiveContract(CaseRecord $case, Quote $quote, array $payload): void
     {
-        // معاملة حتى يصبح قفل ترقيم العقد فعّالاً ويمنع تكرار contract_no.
-        DB::transaction(function () use ($case, $quote, $extracted) {
+        DB::transaction(function () use ($case, $quote, $payload) {
             $year = now()->year;
             $prefix = "CNT-{$year}-";
 
@@ -97,30 +93,24 @@ class OcrApprovalService
                 'contract_no' => sprintf('%s%04d', $prefix, $num),
                 'case_id' => $case->id,
                 'quote_id' => $quote->id,
-                'patient_name' => $extracted['patient_name'] ?? $quote->patient_name,
-                'company_name' => $extracted['company_name'] ?? $quote->company_name,
-                'approved_amount' => $extracted['approved_amount'] ?? QuotePrintPresenter::approvedAmount($quote),
+                'patient_name' => $payload['patient_name'] ?? $quote->patient_name,
+                'company_name' => $payload['company_name'] ?? $quote->company_name,
+                'approved_amount' => $payload['approved_amount'] ?? QuotePrintPresenter::approvedAmount($quote),
                 'approval_date' => now()->toDateString(),
                 'work_order_no' => $case->work_order_no,
-                'letter_path' => $extracted['letter_path'] ?? null,
-                'letter_ref' => $extracted['letter_ref'] ?? null,
-                'letter_date' => $extracted['letter_date'] ?? null,
+                'letter_path' => $payload['letter_path'] ?? null,
+                'letter_ref' => $payload['letter_ref'] ?? null,
+                'letter_date' => $payload['letter_date'] ?? null,
             ]);
         });
     }
 
-    /**
-     * H-2: يتحقق أن مسار الخطاب مسار خطاب موافقة مشروع (approval_letters/ على القرص
-     * الخاص) — يمنع الوصول لملفات أخرى داخل جذر التخزين عبر مسار يتحكم فيه العميل.
-     * يعيد المسار إن كان صالحاً، وإلا null (يُؤرشَف العقد بلا خطاب مرفق بدل رفض العملية).
-     */
     private function sanitizeLetterPath(?string $path): ?string
     {
         if ($path === null || $path === '') {
             return null;
         }
 
-        // منع أي تجاوز مسار أو مسار مطلق — يجب أن يبدأ حصراً بـ approval_letters/.
         $normalized = ltrim(str_replace('\\', '/', $path), '/');
 
         if (! str_starts_with($normalized, 'approval_letters/')
@@ -128,7 +118,6 @@ class OcrApprovalService
             return null;
         }
 
-        // يجب أن يكون الملف موجوداً فعلاً على القرص الخاص (حيث تُرفع الخطابات).
         if (! Storage::disk('local')->exists($normalized)) {
             return null;
         }
