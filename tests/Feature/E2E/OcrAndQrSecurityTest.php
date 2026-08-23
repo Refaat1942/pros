@@ -34,7 +34,7 @@ class OcrAndQrSecurityTest extends TestCase
         $user = $this->userWithRole('reception');
         $this->actingAs($user);
 
-        $this->postJson('/reception/ocr/process', [
+        $this->postJson('/reception/approval-letter/confirm', [
             'quote_no' => 'QT-OCR-TEST',
             'patient_name' => $patient->name,
             'approved_amount' => 450.00,

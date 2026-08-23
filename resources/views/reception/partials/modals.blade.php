@@ -34,8 +34,7 @@
   </div>
 
   {{-- ══════════════════════════════════════════════════════════════════════
-       OCR Approval Modal — رفع خطاب الموافقة + Human Override + تأكيد الاعتماد
-       Civilian pathway only.
+       Approval letter modal — رفع خطاب + إدخال يدوي + تأكيد الاعتماد
        ══════════════════════════════════════════════════════════════════════ --}}
   <div class="modal-overlay" id="ocrApprovalModal"
        style="display:none;position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.65);

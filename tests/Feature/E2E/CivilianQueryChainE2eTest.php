@@ -175,7 +175,7 @@ class CivilianQueryChainE2eTest extends TestCase
         $print->assertOk();
         $print->assertSee($quote->quote_no, false);
 
-        $ocrOk = $this->postJson('/reception/ocr/process', [
+        $ocrOk = $this->postJson('/reception/approval-letter/confirm', [
             'quote_no' => $quote->quote_no,
             'patient_name' => $patient->name,
             'approved_amount' => 999.00,

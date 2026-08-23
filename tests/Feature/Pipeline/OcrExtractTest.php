@@ -13,7 +13,7 @@ class OcrExtractTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_extract_endpoint_stores_file_and_returns_quote_defaults_without_ocr(): void
+    public function test_upload_endpoint_stores_file_and_returns_quote_defaults(): void
     {
         $item = $this->stockItem('RM-001', qty: 10, wac: 100.00);
         app(StockPriceService::class)->addBatch(
@@ -40,22 +40,21 @@ class OcrExtractTest extends TestCase
         $file = UploadedFile::fake()->createWithContent('letter.pdf', $pdfBody);
 
         $response = $this->actingAs($recep)
-            ->postJson('/reception/ocr/extract', [
+            ->postJson('/reception/approval-letter/upload', [
                 'quote_no' => $quote->quote_no,
                 'letter_file' => $file,
             ])
             ->assertOk()
             ->assertJsonStructure([
                 'stored_path',
-                'extracted' => ['patient_name', 'approved_amount', 'company_name', 'letter_ref', 'letter_date'],
+                'defaults' => ['patient_name', 'approved_amount', 'company_name', 'letter_ref', 'letter_date'],
+                'hints',
             ]);
 
-        $this->assertSame($patient->name, $response->json('extracted.patient_name'));
-        $this->assertEquals((float) $quote->total, (float) $response->json('extracted.approved_amount'));
-        $this->assertNull($response->json('extracted.letter_ref'));
-        $this->assertNull($response->json('extracted.letter_date'));
-        $this->assertSame('none', $response->json('meta.ocr_engine'));
-        $this->assertFalse($response->json('meta.amount_from_ocr'));
+        $this->assertSame($patient->name, $response->json('defaults.patient_name'));
+        $this->assertEquals((float) $quote->total, (float) $response->json('defaults.approved_amount'));
+        $this->assertNull($response->json('defaults.letter_ref'));
+        $this->assertNull($response->json('defaults.letter_date'));
     }
 
     public function test_ocr_extract_uses_net_amount_when_company_has_discount(): void
@@ -84,13 +83,13 @@ class OcrExtractTest extends TestCase
         $file = UploadedFile::fake()->image('letter.webp');
 
         $response = $this->actingAs($recep)
-            ->postJson('/reception/ocr/extract', [
+            ->postJson('/reception/approval-letter/upload', [
                 'quote_no' => $quote->quote_no,
                 'letter_file' => $file,
             ])
             ->assertOk();
 
-        $this->assertEquals(3600.0, (float) $response->json('extracted.approved_amount'));
+        $this->assertEquals(3600.0, (float) $response->json('defaults.approved_amount'));
         $this->assertEquals(3600.0, (float) $response->json('quote.display_total'));
     }
 
@@ -115,12 +114,12 @@ class OcrExtractTest extends TestCase
         $file = UploadedFile::fake()->image('letter.webp');
 
         $this->actingAs($recep)
-            ->postJson('/reception/ocr/extract', [
+            ->postJson('/reception/approval-letter/upload', [
                 'quote_no' => $quote->quote_no,
                 'letter_file' => $file,
             ])
             ->assertOk()
-            ->assertJsonStructure(['stored_path', 'extracted']);
+            ->assertJsonStructure(['stored_path', 'defaults']);
     }
 
     public function test_loose_binary_extractor_finds_arabic_fragments(): void

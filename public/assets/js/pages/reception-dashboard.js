@@ -1947,81 +1947,8 @@
       });
     }
 
-    var uploadZone = document.getElementById('uploadZone');
-    var fileInput = document.getElementById('fileInput');
-
-    if (uploadZone && fileInput) {
-      uploadZone.addEventListener('click', function() { fileInput.click(); });
-
-      uploadZone.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        uploadZone.classList.add('dragover');
-      });
-
-      uploadZone.addEventListener('dragleave', function() {
-        uploadZone.classList.remove('dragover');
-      });
-
-      uploadZone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        uploadZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) simulateOCR();
-      });
-
-      fileInput.addEventListener('change', function() {
-        if (fileInput.files.length) simulateOCR();
-      });
-    }
-
-    function simulateOCR() {
-      document.getElementById('ocrLoading').classList.add('visible');
-      document.getElementById('ocrResults').classList.remove('visible');
-      document.getElementById('ocrForm').style.display = 'none';
-      document.getElementById('ocrActions').style.display = 'none';
-      uploadZone.style.display = 'none';
-
-      setTimeout(function() {
-        document.getElementById('ocrLoading').classList.remove('visible');
-
-        document.getElementById('ocrName').textContent = '—';
-        document.getElementById('ocrAmount').textContent = '—';
-        document.getElementById('ocrCompany').textContent = '—';
-        document.getElementById('ocrRef').textContent = '—';
-        document.getElementById('ocrDate').textContent = '—';
-
-        document.getElementById('confirmName').value = '';
-        document.getElementById('confirmAmount').value = '';
-
-        document.getElementById('ocrResults').classList.add('visible');
-        document.getElementById('ocrForm').style.display = 'grid';
-        document.getElementById('ocrActions').style.display = 'flex';
-      }, 2200);
-    }
-
-    var btnBypass = document.getElementById('btnBypass');
-    if (btnBypass) btnBypass.addEventListener('click', function() {
-      var patientName = document.getElementById('confirmName').value || 'مريض';
-      var amountStr = document.getElementById('confirmAmount').value || '0';
-      var amount = parseInt(String(amountStr).replace(/\D/g, ''), 10) || 0;
-      var company = document.getElementById('ocrCompany').textContent || '—';
-      var orderRef = 'OCR-' + TODAY_DATE.replace(/\//g, '');
-      var pqMatch = PricingQueue.getAll().find(function(p) {
-        return patientName.indexOf(p.patient.split(' ')[0]) !== -1 ||
-          p.patient.indexOf(patientName.split(' ')[0]) !== -1;
-      });
-      CasesWorkflow.onApprovalConfirmed({
-        patient: patientName,
-        company: company,
-        orderRef: orderRef,
-        approvalDate: TODAY_DATE,
-        totalCost: amount,
-        manufacturingStage: 'issue',
-        path: 'ocr_bypass',
-        recommendations: pqMatch ? (pqMatch.recommendations || []).slice() : []
-      });
-      showToast('تم تأكيد الموافقة — الحالة انتقلت إلى تحت التنفيذ');
-      resetOCR();
-    });
+    var uploadZone = null;
+    var fileInput = null;
 
     window.addEventListener('storage', function(e) {
       if (e.key === PricingQueue.STORAGE_KEY) {
@@ -2033,27 +1960,15 @@
       }
     });
 
-    var btnResetOcr = document.getElementById('btnResetOcr');
-    if (btnResetOcr) btnResetOcr.addEventListener('click', resetOCR);
-
-    function resetOCR() {
-      if (!uploadZone || !fileInput) return;
-      uploadZone.style.display = 'block';
-      document.getElementById('ocrResults').classList.remove('visible');
-      document.getElementById('ocrForm').style.display = 'none';
-      document.getElementById('ocrActions').style.display = 'none';
-      fileInput.value = '';
-    }
-
     // ══════════════════════════════════════════════════════════════════
-    // OCR Approval Modal — رفع خطاب موافقة الجهة الضامنة (Civilian only)
+    // Approval letter modal — رفع خطاب موافقة الجهة (إدخال يدوي)
     // ══════════════════════════════════════════════════════════════════
 
     var _ocrCurrentQuote = null;
     var _ocrStoredPath   = null;
     var _ocrLetterDate   = null;
 
-    function ocrApiErrorMessage(err) {
+    function approvalLetterErrorMessage(err) {
       if (!err) return 'تعذّر إتمام الاعتماد المالي.';
       if (typeof err.message === 'string' && err.message.trim()) return err.message.trim();
       if (err.errors && typeof err.errors === 'object') {
@@ -2066,7 +1981,7 @@
       return 'تعذّر إتمام الاعتماد المالي.';
     }
 
-    function ocrShowError(msg) {
+    function approvalLetterShowError(msg) {
       var errEl = document.getElementById('ocrError');
       if (errEl) {
         errEl.textContent = msg;
@@ -2157,7 +2072,7 @@
       var csrfInput = document.querySelector('meta[name="csrf-token"]');
       var csrf      = csrfInput ? csrfInput.getAttribute('content') : '';
 
-      fetch('/reception/ocr/extract', {
+      fetch('/reception/approval-letter/upload', {
         method: 'POST',
         headers: {
           'Accept':           'application/json',
@@ -2173,7 +2088,7 @@
         .then(function (res) {
           _ocrStoredPath = res.stored_path || null;
 
-          var extracted = res.extracted || {};
+          var extracted = res.defaults || res.extracted || {};
           var nameEl    = document.getElementById('ocrConfirmName');
           var amountEl  = document.getElementById('ocrConfirmAmount');
           var companyEl = document.getElementById('ocrConfirmCompany');
@@ -2190,15 +2105,14 @@
 
           _ocrLetterDate = extracted.letter_date || null;
 
-          var meta = res.meta || {};
+          var hints = res.hints || res.meta || {};
           var warnEl = document.getElementById('ocrMetaWarning');
           if (warnEl) {
             var warnings = [];
-            warnings.push('ℹ️ أدخل البيانات من الخطاب الورقي — لا يوجد قراءة تلقائية للملف.');
-            if (meta.has_contract_discount) {
+            if (hints.has_contract_discount) {
               warnings.push('ℹ️ الجهة لها خصم تعاقدي — المبلغ في الخطاب قد يكون صافياً (' +
-                (meta.expected_net != null ? meta.expected_net : '') + ' ج.م) أو إجمالياً (' +
-                (meta.expected_gross != null ? meta.expected_gross : '') + ' ج.م).');
+                (hints.expected_net != null ? hints.expected_net : '') + ' ج.م) أو إجمالياً (' +
+                (hints.expected_gross != null ? hints.expected_gross : '') + ' ج.م).');
             }
             if (warnings.length) {
               warnEl.innerHTML = warnings.join('<br>');
@@ -2227,7 +2141,7 @@
 
     function confirmOcrApproval() {
       if (!_ocrCurrentQuote) {
-        ocrShowError('لم يُحدَّد عرض السعر — أغلق النافذة وافتح «رفع خطاب الموافقة» من جدول العروض.');
+        approvalLetterShowError('لم يُحدَّد عرض السعر — أغلق النافذة وافتح «رفع خطاب الموافقة» من جدول العروض.');
         return;
       }
 
@@ -2244,12 +2158,12 @@
       var ref     = refEl     ? refEl.value.trim()     : '';
 
       if (!name || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-        ocrShowError('يرجى التحقق من اسم المريض والمبلغ المعتمد (رقم أكبر من صفر).');
+        approvalLetterShowError('يرجى التحقق من اسم المريض والمبلغ المعتمد (رقم أكبر من صفر).');
         return;
       }
 
       if (!company || company === '—' || company.toLowerCase() === 'null') {
-        ocrShowError('يرجى إدخال جهة التعاقد — الحقل مطلوب لاعتماد المبلغ.');
+        approvalLetterShowError('يرجى إدخال جهة التعاقد — الحقل مطلوب لاعتماد المبلغ.');
         return;
       }
 
@@ -2259,7 +2173,7 @@
       var csrfInput = document.querySelector('meta[name="csrf-token"]');
       var csrf      = csrfInput ? csrfInput.getAttribute('content') : '';
 
-      fetch('/reception/ocr/process', {
+      fetch('/reception/approval-letter/confirm', {
         method: 'POST',
         headers: {
           'Accept':           'application/json',
@@ -2311,7 +2225,7 @@
           ocrShowStep('ocrStep4');
         })
         .catch(function (err) {
-          ocrShowError(ocrApiErrorMessage(err));
+          approvalLetterShowError(approvalLetterErrorMessage(err));
           if (btn) { btn.disabled = false; btn.textContent = '✅ تأكيد واعتماد مالي — والتحويل للمخزن'; }
         });
     }

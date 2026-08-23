@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Quote;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Quote\ProcessApprovalLetterRequest;
 use App\Models\Patient;
 use App\Models\Quote;
-use App\Services\OcrLetterExtractionService;
+use App\Services\ApprovalLetterService;
 use App\Support\QuotePrintPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,16 +14,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 /**
- * رفع خطاب الموافقة وتجهيز بيانات المراجعة اليدوية (بدون OCR تلقائي).
+ * رفع خطاب موافقة الجهة وإدخال البيانات يدوياً (بدون OCR).
  */
-class OcrExtractController extends Controller
+class ApprovalLetterController extends Controller
 {
-    public function __construct(private readonly OcrLetterExtractionService $extractionService) {}
+    public function __construct(private readonly ApprovalLetterService $approvalLetterService) {}
 
-    /**
-     * رفع الخطاب واستخراج البيانات للمراجعة البشرية (Human Override).
-     */
-    public function extract(Request $request): JsonResponse
+    public function upload(Request $request): JsonResponse
     {
         $request->validate([
             'quote_no' => ['required', 'string', 'max:50'],
@@ -70,29 +68,25 @@ class OcrExtractController extends Controller
 
         $file = $request->file('letter_file');
         $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
-        // قرص خاص (غير منشور على /storage) — الوصول عبر مسار مُصادَق عليه فقط.
         $path = $file->storeAs('approval_letters', $filename, 'local');
 
-        $extracted = $this->extractionService->defaultsForReview($quote);
+        $case = $quote->caseRecord;
+        $patient = $case->patient;
         $printTotals = QuotePrintPresenter::fromQuote($quote);
 
         return response()->json([
             'stored_path' => $path,
-            'extracted' => [
-                'patient_name' => $extracted['patient_name'],
-                'approved_amount' => $extracted['approved_amount'],
-                'company_name' => $extracted['company_name'],
-                'letter_ref' => $extracted['letter_ref'],
-                'letter_date' => $extracted['letter_date'],
+            'defaults' => [
+                'patient_name' => $patient?->name ?? $quote->patient_name ?? '',
+                'approved_amount' => QuotePrintPresenter::approvedAmount($quote),
+                'company_name' => $case->company_name ?? $quote->company_name ?? '',
+                'letter_ref' => null,
+                'letter_date' => null,
             ],
-            'meta' => [
-                'ocr_engine' => $extracted['ocr_engine'],
-                'raw_text_length' => $extracted['raw_text_length'],
-                'amount_from_ocr' => $extracted['amount_from_ocr'],
-                'used_quote_defaults' => $extracted['used_quote_defaults'],
-                'expected_net' => $extracted['expected_net'],
-                'expected_gross' => $extracted['expected_gross'],
-                'has_contract_discount' => $extracted['has_contract_discount'],
+            'hints' => [
+                'expected_net' => (float) $printTotals['display_total'],
+                'expected_gross' => (float) $printTotals['gross_total'],
+                'has_contract_discount' => (bool) $printTotals['has_discount'],
             ],
             'quote' => [
                 'quote_no' => $quote->quote_no,
@@ -101,6 +95,21 @@ class OcrExtractController extends Controller
                 'gross_total' => $printTotals['gross_total'],
                 'status' => $quote->status,
             ],
+        ]);
+    }
+
+    public function confirm(ProcessApprovalLetterRequest $request): JsonResponse
+    {
+        $case = $this->approvalLetterService->confirm($request->validated());
+
+        return response()->json([
+            'message' => 'تم تسجيل موافقة الجهة — بانتظار إصدار أمر الشغل من مكتب التشغيل.',
+            'case' => $case->only([
+                'id', 'case_no', 'stage_key', 'manufacturing_stage',
+                'work_order_no', 'approval_date', 'approval_confirmed_at',
+            ]),
+            'work_order_no' => $case->work_order_no,
+            'unfrozen' => true,
         ]);
     }
 }

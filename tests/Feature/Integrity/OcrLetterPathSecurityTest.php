@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Integrity;
 
-use App\Http\Requests\Quote\ProcessOcrApprovalRequest;
+use App\Http\Requests\Quote\ProcessApprovalLetterRequest;
 use Illuminate\Support\Facades\Validator;
 use Tests\TestCase;
 
@@ -14,7 +14,7 @@ class OcrLetterPathSecurityTest extends TestCase
 {
     private function rules(): array
     {
-        return (new ProcessOcrApprovalRequest())->rules();
+        return (new ProcessApprovalLetterRequest())->rules();
     }
 
     private function passes(?string $letterPath): bool
