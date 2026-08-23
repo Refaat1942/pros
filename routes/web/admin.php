@@ -128,6 +128,10 @@ Route::prefix('admin')
                 ->middleware('can:print-barcode')
                 ->name('catalog.labels');
 
+            Route::get('catalog/{stockItem}/screen-barcode', [StockCatalogController::class, 'screenBarcode'])
+                ->middleware('can:print-barcode')
+                ->name('catalog.screen-barcode');
+
             Route::get('catalog/{stockItem}/sales-stats', [StockCatalogController::class, 'salesStats'])
                 ->name('catalog.sales-stats');
         });

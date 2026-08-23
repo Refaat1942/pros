@@ -221,6 +221,32 @@ class StockCatalogController extends Controller
     }
 
     /**
+     * باركود كبير على الشاشة — للمسح بماسح USB بدون طابعة.
+     */
+    public function screenBarcode(StockItem $stockItem): Response
+    {
+        $barcode = trim((string) ($stockItem->barcode ?? ''));
+
+        if ($barcode === '') {
+            abort(404, 'لا يوجد باركود لهذا الصنف — ارفع عمود الأكواد في Excel أو عدّل الصنف.');
+        }
+
+        $svg = Code128::svgFit(
+            $barcode,
+            height: 96,
+            moduleWidth: 2.8,
+            maxWidthPx: 720,
+            quietZone: 18,
+        );
+
+        return response()->view('admin.print.barcode-screen', [
+            'name' => $stockItem->name,
+            'barcode' => $barcode,
+            'svg_data_uri' => 'data:image/svg+xml;base64,'.base64_encode($svg),
+        ]);
+    }
+
+    /**
      * طباعة باركود لعدة أصناف دفعة واحدة — ids[] + عدد النسخ + إحداثيات قابلة للضبط.
      */
     public function labelsBulk(Request $request): Response
