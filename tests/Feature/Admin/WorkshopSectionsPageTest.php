@@ -18,7 +18,8 @@ class WorkshopSectionsPageTest extends TestCase
             ->assertOk()
             ->assertSee('workshop-sections-page', false)
             ->assertSee('bom-table', false)
-            ->assertSee('btnAddWorkshopSection', false)
+            ->assertSee('ws-tabs-wrap', false)
+            ->assertSee('ws-tab-label', false)
             ->assertSee('id="wsTabTechnicians" class="ws-tab-panel" role="tabpanel" hidden', false)
             ->assertDontSee('space-y-4', false);
     }

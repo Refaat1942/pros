@@ -6,13 +6,19 @@
 @endphp
 
 <div class="workshop-sections-page" id="workshopSectionsPage">
-  <div class="ws-tabs" role="tablist" aria-label="أقسام الإنتاج والفنيين">
-    <button type="button" data-ws-tab="sections" class="ws-tab-btn active" role="tab" aria-selected="true">
-      🏭 الأقسام <span class="ws-muted">({{ $sectionCount }})</span>
-    </button>
-    <button type="button" data-ws-tab="technicians" class="ws-tab-btn" role="tab" aria-selected="false">
-      👷 الفنيون <span class="ws-muted">({{ $technicianCount }})</span>
-    </button>
+  <div class="ws-tabs-wrap">
+    <div class="ws-tabs" role="tablist" aria-label="أقسام الإنتاج والفنيين">
+      <button type="button" data-ws-tab="sections" class="ws-tab-btn active" role="tab" aria-selected="true">
+        <span class="ws-tab-icon">🏭</span>
+        <span class="ws-tab-label">الأقسام</span>
+        <span class="ws-tab-count">{{ $sectionCount }}</span>
+      </button>
+      <button type="button" data-ws-tab="technicians" class="ws-tab-btn" role="tab" aria-selected="false">
+        <span class="ws-tab-icon">👷</span>
+        <span class="ws-tab-label">الفنيون</span>
+        <span class="ws-tab-count">{{ $technicianCount }}</span>
+      </button>
+    </div>
   </div>
 
   {{-- تبويب الأقسام --}}
