@@ -12,14 +12,23 @@
     ];
 @endphp
 
+<div class="dept-staff-page">
+  <div class="dept-staff-intro">
+    <span class="dept-staff-intro__badge">👥 موظفي القسم — {{ $role?->label_ar ?? '—' }}</span>
+    <p class="dept-staff-intro__text">
+      أضف موظفين تحت إشرافك، حدّد الصفحات التي يرونها، غيّر كلمات المرور، وفعّل أو عطّل الحسابات.
+    </p>
+  </div>
+
 <div class="panel dept-staff-panel">
-    <div class="panel-header">
-        <h3>👥 موظفي القسم — {{ $role?->label_ar ?? '—' }}</h3>
+    <div class="panel-header dept-staff-panel__header">
+        <h3>
+            <span class="dept-staff-title-icon" aria-hidden="true">👥</span>
+            قائمة الموظفين
+            <span class="badge dept-staff-count-badge">{{ $employees->count() }} موظف</span>
+        </h3>
         <button type="button" class="btn-add-rank" id="btnAddEmployee">➕ إضافة موظف</button>
     </div>
-    <p class="employee-catalog-visibility-hint" style="padding:0 16px 12px;">
-        أضف موظفين تحت إشرافك، حدّد الصفحات التي يرونها، غيّر كلمات المرور، وفعّل أو عطّل الحسابات.
-    </p>
     <div class="data-toolbar">
         <input type="text" id="empSearch" placeholder="🔍 بحث بالاسم أو المستخدم...">
         <span class="toolbar-count" id="empCount">{{ $employees->count() }} موظف</span>
@@ -37,16 +46,23 @@
                     </tr>
                 </thead>
                 <tbody id="employeesTableFull" data-server-rendered="1">
-                    @include('partials.employees-table-rows', [
-                        'employees' => $employees,
-                        'staff_mode' => 'department',
-                        'dashboard_key' => $dashboardKey,
-                        'show_bulk' => false,
-                    ])
+                    @if ($employees->isEmpty())
+                        <tr>
+                            <td colspan="5" class="dept-staff-empty">لا يوجد موظفين — اضغط «➕ إضافة موظف» لإنشاء أول حساب.</td>
+                        </tr>
+                    @else
+                        @include('partials.employees-table-rows', [
+                            'employees' => $employees,
+                            'staff_mode' => 'department',
+                            'dashboard_key' => $dashboardKey,
+                            'show_bulk' => false,
+                        ])
+                    @endif
                 </tbody>
             </table>
         </div>
     </div>
+</div>
 </div>
 
 <div class="catalog-modal-overlay {{ $openModal ? 'open' : '' }}" id="employeeModal" role="dialog" aria-modal="true">
