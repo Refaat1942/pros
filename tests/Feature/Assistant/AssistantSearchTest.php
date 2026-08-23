@@ -122,4 +122,50 @@ class AssistantSearchTest extends TestCase
         $response->assertOk();
         $this->assertNotEmpty($response->json('results'));
     }
+
+    public function test_dept_staff_help_for_operations_manager(): void
+    {
+        $user = $this->userWithRole('operations');
+        $user->update(['access_tier' => \App\Services\UserPageAccessService::TIER_DEPARTMENT_ADMIN]);
+
+        $response = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('موظفي القسم').'&dashboard=operations&page=staff'
+        );
+
+        $response->assertOk();
+        $titles = array_column($response->json('results'), 'title');
+        $this->assertTrue(
+            collect($titles)->contains(fn (string $t) => str_contains($t, 'موظفي القسم')),
+            'Expected dept staff help in results: '.implode(', ', $titles)
+        );
+    }
+
+    public function test_barcode_label_help_available(): void
+    {
+        $user = $this->userWithRole('admin');
+
+        $response = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('طباعة ملصق باركود حراري')
+        );
+
+        $response->assertOk();
+        $answers = array_column($response->json('results'), 'answer');
+        $this->assertNotEmpty($answers);
+        $this->assertTrue(
+            collect($answers)->contains(fn (string $a) => str_contains($a, 'حراري') || str_contains($a, 'باركود')),
+        );
+    }
+
+    public function test_assistant_offline_help_entry(): void
+    {
+        $user = $this->userWithRole('reception');
+
+        $response = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('المساعد الذكي اوفلاين')
+        );
+
+        $response->assertOk();
+        $titles = array_column($response->json('results'), 'title');
+        $this->assertContains('المساعد الذكي (أونلاين وأوفلاين)', $titles);
+    }
 }
