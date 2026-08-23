@@ -366,11 +366,11 @@ body.labels-body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 0.6mm;
-    padding: 1mm;
+    justify-content: space-evenly;
+    gap: 0.35mm;
+    padding: 1.2mm 1mm;
     padding-left: calc(1mm + var(--offset-x));
-    padding-top: calc(1mm + var(--offset-y));
+    padding-top: calc(1.2mm + var(--offset-y));
     overflow: hidden;
     page-break-inside: avoid;
     box-sizing: border-box;
@@ -379,15 +379,16 @@ body.labels-body {
 }
 
 .label .name {
-    font-size: 7pt;
-    font-weight: 900;
+    font-size: 6.5pt;
+    font-weight: 600;
     text-align: center;
-    line-height: 1.1;
-    max-height: 6mm;
+    line-height: 1.15;
+    max-height: 5.5mm;
     overflow: hidden;
     flex: 0 0 auto;
     width: 100%;
     color: #000;
+    margin: 0;
 }
 
 .label .barcode {
@@ -419,16 +420,18 @@ body.labels-body {
 }
 
 .label .code {
-    font-size: 7pt;
-    font-weight: 900;
+    font-size: 6.5pt;
+    font-weight: 600;
     direction: ltr;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
     flex: 0 0 auto;
     text-align: center;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     color: #000;
+    margin: 0;
+    line-height: 1.1;
 }
 
 @media print {
@@ -468,7 +471,11 @@ body.labels-body {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: space-evenly;
+        gap: 0.35mm;
+        padding: 1.2mm 1mm;
+        padding-left: calc(1mm + var(--offset-x));
+        padding-top: calc(1.2mm + var(--offset-y));
         page-break-after: always;
         break-after: page;
         -webkit-print-color-adjust: exact;
@@ -478,13 +485,13 @@ body.labels-body {
     .label .name,
     .label .code {
         color: #000 !important;
-        font-weight: 900 !important;
+        font-weight: 600 !important;
     }
 
     .label .barcode-img {
         visibility: visible !important;
         opacity: 1 !important;
-        filter: contrast(1.35);
+        filter: contrast(1.2);
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
