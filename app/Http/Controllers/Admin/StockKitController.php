@@ -46,18 +46,23 @@ class StockKitController extends Controller
         if ($q !== '') {
             $like = '%'.$q.'%';
             $prefix = $q.'%';
-            $query->where(function ($builder) use ($like, $prefix) {
+            $query->where(function ($builder) use ($like, $q) {
                 $builder->where('name', 'like', $like)
                     ->orWhere('name', 'like', $prefix)
                     ->orWhere('code', 'like', $like)
                     ->orWhere('alt_codes', 'like', $like)
-                    ->orWhere('page_number', 'like', $like);
+                    ->orWhere('page_number', 'like', $like)
+                    ->orWhere('barcode', 'like', $like);
 
                 if (Schema::hasColumn('stock_items', 'catalog_number')) {
                     $builder->orWhere('catalog_number', 'like', $like);
                 }
                 if (Schema::hasColumn('stock_items', 'brand')) {
                     $builder->orWhere('brand', 'like', $like);
+                }
+
+                if (strlen($q) >= 3) {
+                    $builder->orWhere('barcode', $q);
                 }
             });
 

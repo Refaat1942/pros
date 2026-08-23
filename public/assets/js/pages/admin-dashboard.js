@@ -958,7 +958,9 @@
         var matchSearch = !catalogSearchTerm ||
           item.name.indexOf(catalogSearchTerm) !== -1 ||
           item.code.indexOf(catalogSearchTerm) !== -1 ||
-          item.spec.indexOf(catalogSearchTerm) !== -1;
+          item.spec.indexOf(catalogSearchTerm) !== -1 ||
+          (item.barcode && item.barcode.indexOf(catalogSearchTerm) !== -1) ||
+          (item.alt_codes && item.alt_codes.indexOf(catalogSearchTerm) !== -1);
         return matchCat && matchSearch;
       });
     }
@@ -1335,6 +1337,21 @@
     onId('catalogSearch', 'input', function(e) {
       catalogSearchTerm = e.target.value.trim();
       renderCatalog();
+    });
+    onId('catalogSearch', 'keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      var term = (e.target.value || '').trim();
+      if (!term) return;
+      e.preventDefault();
+      catalogSearchTerm = term;
+      renderCatalog();
+      var upper = term.toUpperCase();
+      var exact = catalogItems.find(function(item) {
+        return item.barcode && String(item.barcode).toUpperCase() === upper;
+      });
+      if (exact && typeof showCatalogDetail === 'function') {
+        showCatalogDetail(exact.id);
+      }
     });
     onId('catalogCategoryFilter', 'change', function(e) {
       catalogCategoryFilter = e.target.value;

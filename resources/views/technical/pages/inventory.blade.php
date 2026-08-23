@@ -19,7 +19,7 @@
         </div>
 
         <div class="inventory-toolbar">
-          <input type="text" id="inventorySearch" placeholder="بحث بالكود أو اسم الصنف...">
+          <input type="text" id="inventorySearch" placeholder="بحث بالكود، الاسم، أو الباركود (امسح و Enter)...">
           <div class="filter-pills" id="inventoryFilters">
             <button class="filter-pill active" data-filter="all">الكل</button>
             <button class="filter-pill" data-filter="ok">✓ متوفر</button>

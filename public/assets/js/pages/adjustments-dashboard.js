@@ -175,7 +175,7 @@
     var items = catalogCache.filter(function (item) {
       if (!itemMatchesActiveSpecGroups(item)) return false;
       if (!q) return true;
-      return (item.code + ' ' + item.name).toLowerCase().indexOf(q) !== -1;
+      return (item.code + ' ' + item.name + ' ' + (item.barcode || '') + ' ' + (item.alt_codes || '')).toLowerCase().indexOf(q) !== -1;
     });
 
     if (!items.length) {
@@ -976,6 +976,26 @@
         if (e.key === 'Escape') {
           e.preventDefault();
           closeItemPicker();
+          return;
+        }
+        if (e.key === 'Enter') {
+          var scan = (pickerSearch.value || '').trim().toUpperCase();
+          if (!scan) return;
+          e.preventDefault();
+          pickerSearchQuery = pickerSearch.value || '';
+          renderItemPickerList();
+          var exact = catalogCache.find(function (item) {
+            return item.barcode && String(item.barcode).toUpperCase() === scan;
+          });
+          if (exact) {
+            setPickerCodeSelected(exact.code, true);
+            renderItemPickerList();
+            var cb = pickerList.querySelector('.adj-picker-checkbox[value="' + exact.code + '"]');
+            if (cb) {
+              cb.focus();
+              cb.closest('.adj-picker-option').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
         }
       });
     }

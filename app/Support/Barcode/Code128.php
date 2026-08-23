@@ -35,7 +35,7 @@ final class Code128
     /**
      * يبني SVG للباركود.
      */
-    public static function svg(string $data, int $height = 50, float $moduleWidth = 1.4, int $quietZone = 10): string
+    public static function svg(string $data, int $height = 50, float $moduleWidth = 2.0, int $quietZone = 14): string
     {
         return self::renderSvg($data, $height, $moduleWidth, $quietZone);
     }
@@ -48,7 +48,7 @@ final class Code128
         int $height,
         float $moduleWidth,
         float $maxWidthPx,
-        int $quietZone = 10,
+        int $quietZone = 14,
     ): string {
         $width = max(20.0, $moduleWidth);
 
@@ -85,14 +85,14 @@ final class Code128
         $totalUnits = $unitCount + ($quietZone * 2);
         $svgWidth = round($totalUnits * $moduleWidth, 2);
 
-        $x = $quietZone * $moduleWidth;
+        $x = (int) round($quietZone * $moduleWidth);
         $rects = '';
 
         foreach ($modules as [$width, $isBar]) {
-            $w = $width * $moduleWidth;
+            $w = (int) max(1, round($width * $moduleWidth));
             if ($isBar) {
-                $rects .= '<rect x="'.round($x, 2).'" y="0" width="'.round($w, 2)
-                    .'" height="'.$height.'" fill="#000000"/>';
+                $rects .= '<rect x="'.$x.'" y="0" width="'.$w
+                    .'" height="'.$height.'" fill="#000"/>';
             }
             $x += $w;
         }

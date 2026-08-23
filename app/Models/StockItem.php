@@ -370,20 +370,25 @@ class StockItem extends Model
         }
 
         $like = '%'.$q.'%';
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'barcode'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
 
         return static::query()
-            ->where(function ($builder) use ($like) {
+            ->where(function ($builder) use ($like, $q) {
                 $builder->where('name', 'like', $like)
                     ->orWhere('code', 'like', $like)
                     ->orWhere('alt_codes', 'like', $like)
-                    ->orWhere('page_number', 'like', $like);
+                    ->orWhere('page_number', 'like', $like)
+                    ->orWhere('barcode', 'like', $like);
 
                 if (Schema::hasColumn('stock_items', 'catalog_number')) {
                     $builder->orWhere('catalog_number', 'like', $like);
+                }
+
+                if (strlen($q) >= 3) {
+                    $builder->orWhere('barcode', $q);
                 }
             })
             ->orderBy('name')
@@ -397,6 +402,7 @@ class StockItem extends Model
                     'catalog_code' => $item->code,
                     'catalog_number' => $item->catalog_number ?? '',
                     'alt_codes' => $item->operationalCode() ?? '',
+                    'barcode' => $item->barcode ?? '',
                     'name' => $item->name,
                     'spec' => $item->spec,
                     'uom' => $item->uom ?? 'قطعة',
