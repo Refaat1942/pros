@@ -226,10 +226,12 @@ class StockCatalogController extends Controller
      */
     public function screenBarcode(StockItem $stockItem): Response
     {
-        $barcode = trim((string) ($stockItem->barcode ?? ''));
+        $barcode = $this->resolveDisplayBarcode($stockItem);
 
-        if ($barcode === '') {
-            abort(404, 'لا يوجد باركود لهذا الصنف — ارفع عمود الأكواد في Excel أو عدّل الصنف.');
+        if ($barcode === null) {
+            return response()->view('admin.print.barcode-screen-missing', [
+                'name' => $stockItem->name,
+            ]);
         }
 
         $svg = Code128::svgFit(
@@ -245,6 +247,21 @@ class StockCatalogController extends Controller
             'barcode' => $barcode,
             'svg_data_uri' => 'data:image/svg+xml;base64,'.base64_encode($svg),
         ]);
+    }
+
+    private function resolveDisplayBarcode(StockItem $stockItem): ?string
+    {
+        $barcode = trim((string) ($stockItem->barcode ?? ''));
+        if ($barcode !== '') {
+            return $barcode;
+        }
+
+        $operational = trim((string) ($stockItem->operationalCode() ?? ''));
+        if ($operational === '') {
+            return null;
+        }
+
+        return StockItem::barcodeForOperationalCode($operational);
     }
 
     /**
