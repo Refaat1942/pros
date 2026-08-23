@@ -180,9 +180,10 @@ class StockCatalogController extends Controller
     public function import(Request $request, StockImportService $importService): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'max:5120'],
+            'file' => ['required', 'file', 'max:20480'],
         ], [
             'file.required' => 'يرجى اختيار ملف Excel أو CSV.',
+            'file.max' => 'حجم الملف يتجاوز 20 ميجا — قسّم الشيت أو احذف التنسيق الزائد من Excel.',
         ]);
 
         $uploaded = $request->file('file');
