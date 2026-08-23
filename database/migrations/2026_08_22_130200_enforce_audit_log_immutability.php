@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\AuditLogImmutability;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -13,18 +14,34 @@ use Illuminate\Support\Facades\DB;
  * التوافق عبر المحركات:
  *   - PostgreSQL (VPS/LAN): دالة + مشغّلان BEFORE UPDATE/DELETE يرفعان استثناء.
  *   - SQLite (اختبارات): مشغّلان BEFORE UPDATE/DELETE مع RAISE(ABORT).
- *   - MySQL: مشغّلان BEFORE UPDATE/DELETE مع SIGNAL SQLSTATE.
+ *   - MySQL/MariaDB: مشغّلان BEFORE UPDATE/DELETE مع SIGNAL SQLSTATE.
  *
- * الإدراج (INSERT) يبقى مسموحاً — الجدول append-only.
+ * MySQL + binary logging: إنشاء المشغّلات يتطلب صلاحية (SUPER أو
+ * log_bin_trust_function_creators=1). لا نمنح SUPER لمستخدم التطبيق. إن تعذّر
+ * الإنشاء، تَفشل الهجرة **بوضوح** (لا نجاح صامت) مع تعليمات تشغيل أمر الـ DBA:
+ *     php artisan prosthetics:install-audit-guards
+ * بعد تشغيله بحساب مخوّل، أعد تشغيل الهجرة — ستتحقّق من وجود المشغّلَين وتنجح.
+ *
+ * الإدراج (INSERT) يبقى مسموحاً — الجدول append-only. الحماية التطبيقية
+ * (AuditLog model) تبقى قائمة دائماً بصرف النظر عن مشغّلات قاعدة البيانات.
+ *
+ * المنطق الفعلي في App\Support\AuditLogImmutability لإعادة استخدامه من أمر الـ DBA.
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        match (DB::getDriverName()) {
+        $driver = DB::getDriverName();
+
+        if (in_array($driver, ['mysql', 'mariadb'], true)) {
+            $this->installMysqlOrFailClearly();
+
+            return;
+        }
+
+        match ($driver) {
             'pgsql' => $this->createPostgres(),
             'sqlite' => $this->createSqlite(),
-            'mysql', 'mariadb' => $this->createMysql(),
             default => null,
         };
     }
@@ -37,6 +54,41 @@ return new class extends Migration
             'mysql', 'mariadb' => $this->dropMysql(),
             default => null,
         };
+    }
+
+    /**
+     * MySQL/MariaDB: يُثبّت المشغّلات، ثم يتحقّق فعلياً من وجودهما. إن تعذّر الإنشاء
+     * (نقص صلاحية / binlog) تَفشل الهجرة بخطأ واضح بدل النجاح الصامت.
+     */
+    private function installMysqlOrFailClearly(): void
+    {
+        // إن كانت المشغّلات مثبّتة مسبقاً (مثلاً عبر أمر الـ DBA) — الهجرة تنجح idempotently.
+        if (AuditLogImmutability::mysqlTriggersExist()) {
+            return;
+        }
+
+        try {
+            AuditLogImmutability::installMysqlTriggers();
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(
+                "تعذّر إنشاء مشغّلات حماية سجل الرقابة على MySQL/MariaDB — على الأرجح نقص صلاحية ".
+                "(SUPER غير مطلوب) مع تفعيل binary logging.\n".
+                "لا تُمنح SUPER لمستخدم التطبيق. بدلاً من ذلك شغّل بحساب DBA/root مخوّل:\n".
+                "    php artisan prosthetics:install-audit-guards\n".
+                "ثم أعد تشغيل الهجرات (php artisan migrate --force).\n".
+                "الخطأ الأصلي: ".$e->getMessage(),
+                (int) $e->getCode(),
+                $e
+            );
+        }
+
+        // تحقّق صريح: يجب أن يوجد المشغّلان فعلاً بعد الإنشاء، وإلا نَفشل.
+        if (! AuditLogImmutability::mysqlTriggersExist()) {
+            throw new \RuntimeException(
+                'فشل التحقّق: مشغّلات حماية سجل الرقابة غير موجودة بعد محاولة الإنشاء على MySQL/MariaDB. '.
+                'شغّل: php artisan prosthetics:install-audit-guards بحساب مخوّل ثم أعد الهجرة.'
+            );
+        }
     }
 
     // ── PostgreSQL ──────────────────────────────────────────────────────────
@@ -105,31 +157,10 @@ return new class extends Migration
     }
 
     // ── MySQL / MariaDB ─────────────────────────────────────────────────────
-    private function createMysql(): void
-    {
-        DB::unprepared('DROP TRIGGER IF EXISTS audit_logs_no_update;');
-        DB::unprepared('DROP TRIGGER IF EXISTS audit_logs_no_delete;');
-
-        DB::unprepared(<<<'SQL'
-            CREATE TRIGGER audit_logs_no_update
-            BEFORE UPDATE ON audit_logs
-            FOR EACH ROW
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'audit_logs is append-only: UPDATE is not permitted';
-        SQL);
-
-        DB::unprepared(<<<'SQL'
-            CREATE TRIGGER audit_logs_no_delete
-            BEFORE DELETE ON audit_logs
-            FOR EACH ROW
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'audit_logs is append-only: DELETE is not permitted';
-        SQL);
-    }
-
+    // منطق الإنشاء/التحقّق في App\Support\AuditLogImmutability (يُعاد استخدامه من
+    // أمر الـ DBA). هنا نستدعي إزالة المشغّلات فقط عند التراجع.
     private function dropMysql(): void
     {
-        DB::unprepared('DROP TRIGGER IF EXISTS audit_logs_no_update;');
-        DB::unprepared('DROP TRIGGER IF EXISTS audit_logs_no_delete;');
+        AuditLogImmutability::dropMysqlTriggers();
     }
 };
