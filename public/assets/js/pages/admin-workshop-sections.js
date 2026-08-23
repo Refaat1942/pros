@@ -37,16 +37,10 @@
       tabBtns.forEach(function (b) {
         var active = b.getAttribute('data-ws-tab') === tab;
         b.classList.toggle('active', active);
-        b.classList.toggle('bg-white', active);
-        b.classList.toggle('text-violet-900', active);
-        b.classList.toggle('border-slate-200', active);
-        b.classList.toggle('-mb-px', active);
-        b.classList.toggle('border-b-0', active);
-        b.classList.toggle('border-transparent', !active);
-        b.classList.toggle('text-slate-600', !active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
       });
-      document.getElementById('wsTabSections').classList.toggle('hidden', tab !== 'sections');
-      document.getElementById('wsTabTechnicians').classList.toggle('hidden', tab !== 'technicians');
+      document.getElementById('wsTabSections').classList.toggle('is-hidden', tab !== 'sections');
+      document.getElementById('wsTabTechnicians').classList.toggle('is-hidden', tab !== 'technicians');
     });
   });
 
@@ -64,20 +58,20 @@
     var countEl = document.getElementById('workshopSectionCount');
     if (countEl) countEl.textContent = filtered.length + ' قسم';
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-12 text-center text-slate-400">لا توجد أقسام — اضغط «➕ إضافة قسم».</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="ws-empty-cell">لا توجد أقسام — اضغط «➕ إضافة قسم».</td></tr>';
       return;
     }
     tbody.innerHTML = filtered.map(function (r) {
-      var desc = r.description ? esc(r.description) : '<span class="text-slate-400">—</span>';
-      return '<tr class="hover:bg-slate-50">' +
-        '<td class="px-4 py-3"><strong class="text-slate-800">' + esc(r.name) + '</strong></td>' +
-        '<td class="px-4 py-3 font-mono text-xs text-slate-500">' + esc(r.code) + '</td>' +
-        '<td class="px-4 py-3 text-slate-600 text-xs">' + desc + '</td>' +
-        '<td class="px-4 py-3">' + (r.active ? '<span class="text-emerald-700 font-bold">✅ نشط</span>' : '<span class="text-slate-500">⏸️ متوقف</span>') + '</td>' +
-        '<td class="px-4 py-3 whitespace-nowrap space-x-1 space-x-reverse">' +
-          '<button type="button" class="btn-edit-section inline-flex items-center rounded-lg border border-violet-300 bg-violet-50 text-violet-900 px-3 py-1.5 text-xs font-bold hover:bg-violet-100" data-id="' + r.id + '">✏️ تعديل</button> ' +
-          '<button type="button" class="btn-del-section inline-flex items-center rounded-lg border border-red-200 bg-red-50 text-red-700 px-2 py-1.5 text-xs font-bold hover:bg-red-100" data-id="' + r.id + '" title="حذف">🗑️</button>' +
-        '</td></tr>';
+      var desc = r.description ? esc(r.description) : '<span class="ws-muted">—</span>';
+      return '<tr>' +
+        '<td><strong>' + esc(r.name) + '</strong></td>' +
+        '<td class="ws-mono">' + esc(r.code) + '</td>' +
+        '<td class="ws-muted">' + desc + '</td>' +
+        '<td>' + (r.active ? '<span class="ws-status-active">✅ نشط</span>' : '<span class="ws-status-inactive">⏸️ متوقف</span>') + '</td>' +
+        '<td><div class="table-actions">' +
+          '<button type="button" class="btn-action btn-edit-section" data-id="' + r.id + '">✏️ تعديل</button>' +
+          '<button type="button" class="btn-action danger btn-del-section" data-id="' + r.id + '" title="حذف">🗑️</button>' +
+        '</div></td></tr>';
     }).join('');
     tbody.querySelectorAll('.btn-edit-section').forEach(function (btn) {
       btn.addEventListener('click', function () { openSectionModal(parseInt(btn.getAttribute('data-id'), 10)); });
@@ -154,24 +148,24 @@
     var countEl = document.getElementById('workshopTechnicianCount');
     if (countEl) countEl.textContent = filtered.length + ' فني';
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-12 text-center text-slate-400">لا يوجد فنيون — اضغط «➕ إضافة فني».</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="ws-empty-cell">لا يوجد فنيون — اضغط «➕ إضافة فني».</td></tr>';
       return;
     }
     tbody.innerHTML = filtered.map(function (r) {
       var secs = (r.sections || []);
       var secCell = secs.length
-        ? '<span class="text-slate-800">' + secs.map(function (s) { return esc(s.name); }).join('، ') + '</span>'
-        : '<span class="text-amber-700 font-bold text-xs">— غير مربوط بقسم —</span>';
+        ? secs.map(function (s) { return esc(s.name); }).join('، ')
+        : '<span class="ws-warn-text">— غير مربوط بقسم —</span>';
       var active = r.active !== undefined ? r.active : (r.status === 'active');
-      return '<tr class="hover:bg-slate-50">' +
-        '<td class="px-4 py-3"><strong class="text-slate-800">' + esc(r.name) + '</strong></td>' +
-        '<td class="px-4 py-3 font-mono text-xs text-slate-500" dir="ltr">' + esc(r.username) + '</td>' +
-        '<td class="px-4 py-3">' + secCell + '</td>' +
-        '<td class="px-4 py-3">' + (active ? '<span class="text-emerald-700 font-bold">✅ نشط</span>' : '<span class="text-slate-500">⏸️ متوقف</span>') + '</td>' +
-        '<td class="px-4 py-3 whitespace-nowrap space-x-1 space-x-reverse">' +
-          '<button type="button" class="btn-edit-tech inline-flex items-center rounded-lg border border-violet-300 bg-violet-50 text-violet-900 px-3 py-1.5 text-xs font-bold hover:bg-violet-100" data-id="' + r.id + '">✏️ تعديل</button> ' +
-          '<button type="button" class="btn-del-tech inline-flex items-center rounded-lg border border-red-200 bg-red-50 text-red-700 px-2 py-1.5 text-xs font-bold hover:bg-red-100" data-id="' + r.id + '" title="حذف">🗑️</button>' +
-        '</td></tr>';
+      return '<tr>' +
+        '<td><strong>' + esc(r.name) + '</strong></td>' +
+        '<td class="ws-mono">' + esc(r.username) + '</td>' +
+        '<td>' + secCell + '</td>' +
+        '<td>' + (active ? '<span class="ws-status-active">✅ نشط</span>' : '<span class="ws-status-inactive">⏸️ متوقف</span>') + '</td>' +
+        '<td><div class="table-actions">' +
+          '<button type="button" class="btn-action btn-edit-tech" data-id="' + r.id + '">✏️ تعديل</button>' +
+          '<button type="button" class="btn-action danger btn-del-tech" data-id="' + r.id + '" title="حذف">🗑️</button>' +
+        '</div></td></tr>';
     }).join('');
     tbody.querySelectorAll('.btn-edit-tech').forEach(function (btn) {
       btn.addEventListener('click', function () { openTechnicianModal(parseInt(btn.getAttribute('data-id'), 10)); });

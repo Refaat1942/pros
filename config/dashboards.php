@@ -236,6 +236,7 @@ return [
             'assets/css/technical-dashboard.css',
             'assets/css/catalog-modal.css',
             'assets/css/department-staff.css',
+            'assets/css/workshop-sections.css',
         ],
         'scripts' => [
             'assets/vendor/axios.min.js',
@@ -380,7 +381,7 @@ return [
             'notification-settings' => ['title' => 'إعدادات التنبيه الصوتي — الإشعارات', 'icon' => '🔔', 'label' => 'تنبيه الإشعارات'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
-        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css', 'assets/css/catalog-modal.css', 'assets/css/department-staff.css'],
+        'styles' => ['assets/css/dashboard-mobile.css', 'assets/css/charts-kit-static.css', 'assets/css/admin-dashboard.css', 'assets/css/catalog-modal.css', 'assets/css/department-staff.css', 'assets/css/workshop-sections.css'],
         'scripts' => [
             'assets/js/shared/export-kit.js',
             'assets/js/shared/debt-collect.js',
