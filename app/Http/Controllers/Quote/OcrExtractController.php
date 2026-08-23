@@ -13,7 +13,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 /**
- * استخراج بيانات خطاب الموافقة (OCR) من PDF/صورة.
+ * رفع خطاب الموافقة وتجهيز بيانات المراجعة اليدوية (بدون OCR تلقائي).
  */
 class OcrExtractController extends Controller
 {
@@ -73,7 +73,7 @@ class OcrExtractController extends Controller
         // قرص خاص (غير منشور على /storage) — الوصول عبر مسار مُصادَق عليه فقط.
         $path = $file->storeAs('approval_letters', $filename, 'local');
 
-        $extracted = $this->extractionService->extractFromUpload($file, $quote);
+        $extracted = $this->extractionService->defaultsForReview($quote);
         $printTotals = QuotePrintPresenter::fromQuote($quote);
 
         return response()->json([

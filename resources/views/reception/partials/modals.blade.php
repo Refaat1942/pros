@@ -73,28 +73,28 @@
           <input type="file" id="ocrFileInput" accept="image/*,.pdf" style="display:none;">
         </div>
 
-        {{-- Step 2: Loading --}}
+        {{-- Step 2: Uploading --}}
         <div id="ocrStep2" style="display:none;text-align:center;padding:32px;">
           <div style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#059669;
                       border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;"></div>
-          <p style="font-weight:600;color:#374151;">جاري قراءة الخطاب واستخراج البيانات...</p>
-          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">اسم المريض — المبلغ — رقم الخطاب — جهة التعاقد</p>
+          <p style="font-weight:600;color:#374151;">جاري رفع الخطاب...</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">بعد الرفع أدخل البيانات يدوياً من الخطاب الورقي</p>
         </div>
 
-        {{-- Step 3: Human Override verification --}}
+        {{-- Step 3: Manual verification --}}
         <div id="ocrStep3" style="display:none;">
           <div style="background:#fefce8;border:1px solid #fde047;border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;">
             <span style="font-size:18px;flex-shrink:0;">⚠️</span>
             <p style="font-size:13px;color:#78350f;margin:0;line-height:1.6;">
-              <strong>برجاء مراجعة البيانات المستخرجة ومطابقتها مع الخطاب الورقي قبل التأكيد النهائي.</strong>
-              يمكنك تعديل أي حقل يدوياً في حال وجود خطأ في القراءة.
+              <strong>أدخل بيانات الخطاب الورقي يدوياً ثم أكّد الاعتماد.</strong>
+              لا يتم قراءة الملف تلقائياً — راجع الاسم والمبلغ وجهة التعاقد من الورقة قبل الحفظ.
             </p>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
             <div>
               <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">
-                👤 اسم المريض المستخرج
+                👤 اسم المريض
               </label>
               <input type="text" id="ocrConfirmName"
                      style="width:100%;padding:10px 12px;border:2px solid #10b981;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box;"
