@@ -5,6 +5,11 @@
     $dashboardKey = $dashboard_key ?? 'reception';
     $role = $role ?? null;
     $staffBase = url("/{$dashboardKey}/staff");
+    $deptStaffConfig = [
+        'dashboard' => $dashboardKey,
+        'baseUrl' => $staffBase,
+        'staffRoute' => route("{$dashboardKey}.staff"),
+    ];
 @endphp
 
 <div class="panel dept-staff-panel">
@@ -177,9 +182,5 @@
 </div>
 
 <script>
-    window.__DEPT_STAFF = @json([
-        'dashboard' => $dashboardKey,
-        'baseUrl' => $staffBase,
-        'staffRoute' => route("{$dashboardKey}.staff"),
-    ]);
+    window.__DEPT_STAFF = @json($deptStaffConfig);
 </script>
