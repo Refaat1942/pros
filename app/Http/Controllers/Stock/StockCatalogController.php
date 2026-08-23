@@ -13,7 +13,7 @@ use App\Services\StockCatalogService;
 use App\Services\StockImportService;
 use App\Services\StockItemSalesStatsService;
 use App\Services\StockPriceService;
-use App\Support\Barcode\Code128;
+use App\Support\CatalogImportValidator;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -179,13 +179,17 @@ class StockCatalogController extends Controller
     public function import(Request $request, StockImportService $importService): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:5120'],
+            'file' => ['required', 'file', 'max:5120'],
         ], [
             'file.required' => 'يرجى اختيار ملف Excel أو CSV.',
-            'file.mimes' => 'الملف يجب أن يكون بصيغة Excel (.xlsx) أو CSV.',
         ]);
 
-        $summary = $importService->import($request->file('file'));
+        $uploaded = $request->file('file');
+        if ($uploaded === null || ! CatalogImportValidator::isAllowed($uploaded)) {
+            return $this->importValidationFailure($request, 'الملف يجب أن يكون بصيغة Excel (.xlsx) أو CSV.');
+        }
+
+        $summary = $importService->import($uploaded);
 
         $message = "تم الاستيراد: {$summary['created']} صنف جديد، {$summary['updated']} محدَّث، {$summary['skipped']} متخطّى.";
 
@@ -348,5 +352,14 @@ class StockCatalogController extends Controller
         return response()->json(
             $this->salesStatsService->breakdownForItem($stockItem, $range['from'], $range['to'])
         );
+    }
+
+    private function importValidationFailure(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message, 'errors' => ['file' => [$message]]], 422);
+        }
+
+        return back()->withErrors(['file' => $message]);
     }
 }
