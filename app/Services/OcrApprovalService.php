@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Exceptions\OcrMismatchException;
 use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
 use App\Models\Patient;
@@ -12,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * معالجة خطاب الموافقة — استخراج OCR ومطابقة عرض السعر المجمّد.
+ * معالجة خطاب الموافقة — رفع + مراجعة يدوية + تسجيل موافقة الجهة.
  */
 class OcrApprovalService
 {
@@ -42,7 +41,7 @@ class OcrApprovalService
         $case = $quote->caseRecord;
 
         if ($case->patient_type === Patient::TYPE_MILITARY) {
-            abort(422, 'المسار العسكري لا يتطلب خطاب موافقة OCR.');
+            abort(422, 'المسار العسكري لا يتطلب خطاب موافقة.');
         }
 
         if (! $this->caseAwaitingEntityApproval($case)) {
@@ -53,16 +52,14 @@ class OcrApprovalService
             abort(422, 'يجب إصدار العرض للجهة قبل معالجة خطاب الموافقة.');
         }
 
-        $this->assertOcrMatchesQuote($quote, $extracted);
-
         // H-2: لا نثق بمسار الملف القادم من العميل — نقبله فقط إن كان خطاب موافقة
         // فعلياً مرفوعاً تحت approval_letters/ على القرص الخاص. غير ذلك نتجاهله
         // (نمنع إرفاق أي ملف آخر داخل جذر التخزين بحالة عقد اعتماد).
         $extracted['letter_path'] = $this->sanitizeLetterPath($extracted['letter_path'] ?? null);
 
         AuditService::log(
-            action: 'ocr',
-            description: "OCR مطابق — {$quote->quote_no}",
+            action: 'approval_letter',
+            description: "موافقة جهة — {$quote->quote_no}",
             tag: 'quotes',
             after: [
                 'quote_no' => $quote->quote_no,
@@ -110,56 +107,6 @@ class OcrApprovalService
                 'letter_date' => $extracted['letter_date'] ?? null,
             ]);
         });
-    }
-
-    /**
-     * @param  array<string, mixed>  $extracted
-     */
-    private function assertOcrMatchesQuote(Quote $quote, array $extracted): void
-    {
-        $case = $quote->caseRecord;
-        $patient = $case->patient;
-
-        if ($patient && ! empty($extracted['patient_name'])) {
-            if (! $this->textMatches((string) $extracted['patient_name'], $patient->name)) {
-                throw OcrMismatchException::forField('اسم المريض', 'لا يطابق ملف المريض');
-            }
-        }
-
-        if (isset($extracted['approved_amount'])) {
-            $ocrAmount = round((float) $extracted['approved_amount'], 2);
-            $totals = QuotePrintPresenter::fromQuote($quote);
-            $expectedNet = round((float) $totals['display_total'], 2);
-            $expectedGross = round((float) $totals['gross_total'], 2);
-            $tolerance = max(1.0, $expectedNet * 0.01);
-
-            $matchesNet = abs($ocrAmount - $expectedNet) < $tolerance;
-            $matchesGross = abs($ocrAmount - $expectedGross) < $tolerance;
-
-            if (! $matchesNet && ! $matchesGross) {
-                $expectedLabel = $totals['has_discount']
-                    ? "صافٍ {$expectedNet} أو إجمالي {$expectedGross}"
-                    : (string) $expectedNet;
-
-                throw OcrMismatchException::forField(
-                    'القيمة المالية',
-                    "المستخرج {$ocrAmount} ≠ المبلغ المعتمد ({$expectedLabel})"
-                );
-            }
-        }
-
-        if (! empty($extracted['company_name']) && $case->company_name) {
-            if (! $this->textMatches((string) $extracted['company_name'], $case->company_name)) {
-                throw OcrMismatchException::forField('جهة التعاقد', 'لا تطابق السجل');
-            }
-        }
-    }
-
-    private function textMatches(string $a, string $b): bool
-    {
-        $normalize = static fn (string $s) => preg_replace('/\s+/u', '', mb_strtolower(trim($s)));
-
-        return $normalize($a) === $normalize($b);
     }
 
     /**
