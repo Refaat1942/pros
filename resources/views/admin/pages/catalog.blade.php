@@ -152,7 +152,9 @@
                                 <button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button>
                                 <button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button>
                                 @can('print-barcode')
-                                    <a class="btn-action" target="_blank" href="{{ route('admin.catalog.screen-barcode', $item['id']) }}">📱 شاشة</a>
+                                    @if(!empty($item['barcode']) || !empty($item['alt_codes']))
+                                        <a class="btn-action" target="_blank" href="{{ route('admin.catalog.screen-barcode', $item['id']) }}">📱 شاشة</a>
+                                    @endif
                                     <a class="btn-action" target="_blank" href="{{ route('admin.catalog.labels', $item['id']) }}">🏷️ باركود</a>
                                 @endcan
                                 <button type="button" class="btn-action danger" onclick="deleteSlimCatalog({{ $item['id'] }}, {{ json_encode($item['name'] ?? '') }})">🗑️</button>
@@ -1162,7 +1164,7 @@
             + pricesHtml
             + '<h4 style="font-size:14px;font-weight:800;margin:16px 0 10px;color:var(--secondary);">📈 البيع حسب مستوى السعر</h4>'
             + '<div id="catalogViewSalesStats"><p style="color:var(--text-muted);text-align:center;">جاري التحميل...</p></div>'
-            + (item.barcode
+            + (item.barcode || item.alt_codes
                 ? '<p style="margin-top:18px;text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
                     + '<a class="btn-action" target="_blank" href="/admin/catalog/' + item.id + '/screen-barcode">📱 باركود الشاشة</a>'
                     + '<a class="btn-action" target="_blank" href="/admin/catalog/' + item.id + '/labels">🏷️ طباعة ملصق</a>'
@@ -1368,13 +1370,16 @@
         var dataCols = (catalogTableOrder || []).map(function (key) {
             return renderCatalogDataCell(item, key);
         }).join('');
+        var screenBtn = (item.barcode || item.alt_codes)
+            ? '<a class="btn-action" target="_blank" href="' + screenUrl + '">📱 شاشة</a> '
+            : '';
         return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
             dataCols +
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
             '<button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button> ' +
             '<button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button> ' +
-            '<a class="btn-action" target="_blank" href="' + screenUrl + '">📱 شاشة</a> ' +
+            screenBtn +
             '<a class="btn-action" target="_blank" href="' + labelsUrl + '">🏷️ باركود</a> ' +
             '<button type="button" class="btn-action danger" onclick="deleteSlimCatalog(' + item.id + ', ' + JSON.stringify(item.name || '') + ')">🗑️</button>' +
             '</td></tr>';
