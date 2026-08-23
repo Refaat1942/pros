@@ -92,7 +92,7 @@ final class Code128
             $w = $width * $moduleWidth;
             if ($isBar) {
                 $rects .= '<rect x="'.round($x, 2).'" y="0" width="'.round($w, 2)
-                    .'" height="'.$height.'" fill="#000"/>';
+                    .'" height="'.$height.'" fill="#000000"/>';
             }
             $x += $w;
         }
