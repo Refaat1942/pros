@@ -26,6 +26,35 @@ log()  { printf '\n\033[1;36m▶ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m⚠ %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m✖ %s\033[0m\n' "$*" >&2; exit 1; }
 
+# Laravel file cache (rate limiter, sessions) needs writable subdirs under storage/.
+ensure_storage_dirs() {
+    mkdir -p storage/framework/cache/data
+    mkdir -p storage/framework/sessions
+    mkdir -p storage/framework/views
+    mkdir -p storage/logs
+    mkdir -p storage/app/public
+    mkdir -p storage/backups
+    mkdir -p bootstrap/cache
+}
+
+fix_storage_permissions() {
+    if ! id "$WEB_USER" >/dev/null 2>&1; then
+        warn "User $WEB_USER not found — skipping storage permission fix."
+        return
+    fi
+    log "Fixing storage / cache permissions ($WEB_USER)"
+    chown -R "$WEB_USER":"$WEB_USER" storage bootstrap/cache || warn "chown skipped (need root?)."
+    chmod -R 775 storage bootstrap/cache || true
+}
+
+run_artisan() {
+    if id "$WEB_USER" >/dev/null 2>&1 && [ "$(id -u)" -eq 0 ]; then
+        sudo -u "$WEB_USER" php artisan "$@"
+    else
+        php artisan "$@"
+    fi
+}
+
 [ -f artisan ]  || die "artisan not found — run this from the Laravel app root."
 [ -f .env ]     || die ".env not found — configure the environment first."
 command -v php   >/dev/null || die "php is not installed / not in PATH."
@@ -54,6 +83,9 @@ log "Fetching origin/$BRANCH"
 git fetch origin "$BRANCH"
 git reset --hard "origin/$BRANCH"
 git --no-pager log -1 --oneline
+
+ensure_storage_dirs
+fix_storage_permissions
 
 # ── 3) Composer (production) ────────────────────────────────────────────────
 log "Installing production dependencies"
@@ -112,20 +144,17 @@ if ! php artisan migrate --force; then
 fi
 
 # ── 7) Rebuild caches ───────────────────────────────────────────────────────
+# Recreate dirs after migrate/backup; rebuild caches as www-data when running as root.
+ensure_storage_dirs
+fix_storage_permissions
 log "Rebuilding caches"
-php artisan config:clear
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+run_artisan config:clear
+run_artisan config:cache
+run_artisan route:cache
+run_artisan view:cache
 # public disk symlink for legacy assets (safe if it already exists)
-php artisan storage:link 2>/dev/null || true
-
-# ── 8) Permissions ──────────────────────────────────────────────────────────
-if id "$WEB_USER" >/dev/null 2>&1; then
-    log "Fixing storage / cache permissions ($WEB_USER)"
-    chown -R "$WEB_USER":"$WEB_USER" storage bootstrap/cache || warn "chown skipped (need root?)."
-    chmod -R 775 storage bootstrap/cache || true
-fi
+run_artisan storage:link 2>/dev/null || true
+fix_storage_permissions
 
 # ── 9) Reload PHP-FPM ───────────────────────────────────────────────────────
 if command -v systemctl >/dev/null; then
