@@ -30,19 +30,27 @@
   }
 
   // ── Tabs ────────────────────────────────────────────────────────────────
+  var sectionsPanel = document.getElementById('wsTabSections');
+  var techniciansPanel = document.getElementById('wsTabTechnicians');
   var tabBtns = document.querySelectorAll('[data-ws-tab]');
+
+  function showWsTab(tab) {
+    tabBtns.forEach(function (b) {
+      var active = b.getAttribute('data-ws-tab') === tab;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    if (sectionsPanel) sectionsPanel.hidden = tab !== 'sections';
+    if (techniciansPanel) techniciansPanel.hidden = tab !== 'technicians';
+  }
+
   tabBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var tab = btn.getAttribute('data-ws-tab');
-      tabBtns.forEach(function (b) {
-        var active = b.getAttribute('data-ws-tab') === tab;
-        b.classList.toggle('active', active);
-        b.setAttribute('aria-selected', active ? 'true' : 'false');
-      });
-      document.getElementById('wsTabSections').classList.toggle('is-hidden', tab !== 'sections');
-      document.getElementById('wsTabTechnicians').classList.toggle('is-hidden', tab !== 'technicians');
+      showWsTab(btn.getAttribute('data-ws-tab'));
     });
   });
+
+  showWsTab('sections');
 
   // ── Sections ──────────────────────────────────────────────────────────────
   var sectionRows = window.__WORKSHOP_SECTIONS || [];
