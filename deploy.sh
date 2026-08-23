@@ -37,8 +37,17 @@ if [ "${SKIP_MAINTENANCE:-0}" != "1" ]; then
     php artisan down --render="errors::503" || php artisan down || true
 fi
 
-restore_up() { [ "${SKIP_MAINTENANCE:-0}" != "1" ] && php artisan up || true; }
-trap restore_up EXIT
+# لا نُعيد التطبيق للعمل تلقائياً عند الفشل — يبقى في وضع الصيانة حتى ينجح النشر كاملاً.
+# يُبقى التطبيق «حياً» فقط بعد نجاح كل الخطوات (DEPLOY_OK=1) في الخطوة 10.
+DEPLOY_OK=0
+cleanup() {
+    if [ "$DEPLOY_OK" = "1" ]; then
+        return
+    fi
+    warn "فشل النشر — التطبيق مُبقىً في وضع الصيانة عمداً. أصلِح المشكلة ثم أعد تشغيل deploy.sh."
+    warn "لإعادة التطبيق يدوياً بعد الإصلاح: php artisan up"
+}
+trap cleanup EXIT
 
 # ── 2) Pull latest code ─────────────────────────────────────────────────────
 log "Fetching origin/$BRANCH"
@@ -96,8 +105,11 @@ if [ "${SKIP_DB_BACKUP:-0}" != "1" ]; then
 fi
 
 # ── 6) Migrate ──────────────────────────────────────────────────────────────
+# أي فشل في الهجرات يُوقِف النشر فوراً ويُبقي التطبيق في وضع الصيانة (لا يعود «حياً»).
 log "Running migrations"
-php artisan migrate --force
+if ! php artisan migrate --force; then
+    die "فشلت الهجرات — التطبيق مُبقىً في وضع الصيانة. راجع الخطأ أعلاه، أصلِح قاعدة البيانات، ثم أعد تشغيل deploy.sh."
+fi
 
 # ── 7) Rebuild caches ───────────────────────────────────────────────────────
 log "Rebuilding caches"
@@ -126,6 +138,8 @@ if command -v systemctl >/dev/null; then
 fi
 
 # ── 10) Back online ─────────────────────────────────────────────────────────
+# نصل هنا فقط بعد نجاح كل الخطوات السابقة (بفضل set -e). عندها فقط نُعيد التطبيق للعمل.
+DEPLOY_OK=1
 if [ "${SKIP_MAINTENANCE:-0}" != "1" ]; then
     log "Disabling maintenance mode"
     php artisan up
