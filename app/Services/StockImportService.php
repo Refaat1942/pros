@@ -276,7 +276,10 @@ class StockImportService
                 }
 
                 foreach ($labels as $label) {
-                    if ($normalized === mb_strtolower($label) || str_contains($normalized, mb_strtolower($label))) {
+                    $labelNorm = mb_strtolower($label);
+                    if ($normalized === $labelNorm
+                        || str_contains($normalized, $labelNorm)
+                        || ($normalized !== '' && strlen($normalized) >= 2 && str_contains($labelNorm, $normalized))) {
                         $map[$field] = $index;
                         break;
                     }

@@ -152,6 +152,7 @@
                                 <button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button>
                                 <button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button>
                                 @can('print-barcode')
+                                    <a class="btn-action" target="_blank" href="{{ route('admin.catalog.screen-barcode', $item['id']) }}">📱 شاشة</a>
                                     <a class="btn-action" target="_blank" href="{{ route('admin.catalog.labels', $item['id']) }}">🏷️ باركود</a>
                                 @endcan
                                 <button type="button" class="btn-action danger" onclick="deleteSlimCatalog({{ $item['id'] }}, {{ json_encode($item['name'] ?? '') }})">🗑️</button>
@@ -1160,7 +1161,13 @@
             + '<h4 style="font-size:14px;font-weight:800;margin:0 0 10px;color:var(--secondary);">💰 جميع الأسعار</h4>'
             + pricesHtml
             + '<h4 style="font-size:14px;font-weight:800;margin:16px 0 10px;color:var(--secondary);">📈 البيع حسب مستوى السعر</h4>'
-            + '<div id="catalogViewSalesStats"><p style="color:var(--text-muted);text-align:center;">جاري التحميل...</p></div>';
+            + '<div id="catalogViewSalesStats"><p style="color:var(--text-muted);text-align:center;">جاري التحميل...</p></div>'
+            + (item.barcode
+                ? '<p style="margin-top:18px;text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
+                    + '<a class="btn-action" target="_blank" href="/admin/catalog/' + item.id + '/screen-barcode">📱 باركود الشاشة</a>'
+                    + '<a class="btn-action" target="_blank" href="/admin/catalog/' + item.id + '/labels">🏷️ طباعة ملصق</a>'
+                    + '</p>'
+                : '');
 
         modal.classList.add('open');
         modal.removeAttribute('hidden');
@@ -1354,6 +1361,7 @@
         var barcodeAttr = escAttr(String(item.barcode || '').toUpperCase());
         var dataAttr = escAttr(JSON.stringify(item));
         var labelsUrl = '/admin/catalog/' + item.id + '/labels';
+        var screenUrl = '/admin/catalog/' + item.id + '/screen-barcode';
         var checkboxCol = document.getElementById('catalogSelectAll')
             ? '<td style="padding:8px;text-align:center;"><input type="checkbox" class="catalog-barcode-check" value="' + (item.id || '') + '" onclick="syncBarcodeSelection()"></td>'
             : '';
@@ -1366,6 +1374,7 @@
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
             '<button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button> ' +
             '<button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button> ' +
+            '<a class="btn-action" target="_blank" href="' + screenUrl + '">📱 شاشة</a> ' +
             '<a class="btn-action" target="_blank" href="' + labelsUrl + '">🏷️ باركود</a> ' +
             '<button type="button" class="btn-action danger" onclick="deleteSlimCatalog(' + item.id + ', ' + JSON.stringify(item.name || '') + ')">🗑️</button>' +
             '</td></tr>';
