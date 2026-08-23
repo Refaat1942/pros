@@ -14,6 +14,49 @@ use Smalot\PdfParser\Parser;
 class OcrLetterExtractionService
 {
     /**
+     * بيانات افتراضية من عرض السعر للمراجعة اليدوية (بدون OCR عند الرفع).
+     *
+     * @return array{
+     *   patient_name: string,
+     *   approved_amount: float,
+     *   company_name: string,
+     *   letter_ref: null,
+     *   letter_date: null,
+     *   ocr_engine: string,
+     *   raw_text_length: int,
+     *   amount_from_ocr: bool,
+     *   used_quote_defaults: bool,
+     *   expected_net: float,
+     *   expected_gross: float,
+     *   has_contract_discount: bool,
+     * }
+     */
+    public function defaultsForReview(Quote $quote): array
+    {
+        $quote->loadMissing(['caseRecord.patient', 'caseRecord.contractCompany']);
+
+        $case = $quote->caseRecord;
+        $patient = $case?->patient;
+        $approvedAmount = QuotePrintPresenter::approvedAmount($quote);
+        $printTotals = QuotePrintPresenter::fromQuote($quote);
+
+        return [
+            'patient_name' => $patient?->name ?? $quote->patient_name ?? '',
+            'approved_amount' => $approvedAmount,
+            'company_name' => $case?->company_name ?? $quote->company_name ?? '',
+            'letter_ref' => null,
+            'letter_date' => null,
+            'ocr_engine' => 'none',
+            'raw_text_length' => 0,
+            'amount_from_ocr' => false,
+            'used_quote_defaults' => true,
+            'expected_net' => (float) $printTotals['display_total'],
+            'expected_gross' => (float) $printTotals['gross_total'],
+            'has_contract_discount' => (bool) $printTotals['has_discount'],
+        ];
+    }
+
+    /**
      * @return array{
      *   patient_name: string,
      *   approved_amount: float,

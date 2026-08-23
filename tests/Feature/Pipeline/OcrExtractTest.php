@@ -13,7 +13,7 @@ class OcrExtractTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_extract_endpoint_parses_embedded_arabic_from_uploaded_pdf(): void
+    public function test_extract_endpoint_stores_file_and_returns_quote_defaults_without_ocr(): void
     {
         $item = $this->stockItem('RM-001', qty: 10, wac: 100.00);
         app(StockPriceService::class)->addBatch(
@@ -52,8 +52,10 @@ class OcrExtractTest extends TestCase
 
         $this->assertSame($patient->name, $response->json('extracted.patient_name'));
         $this->assertEquals((float) $quote->total, (float) $response->json('extracted.approved_amount'));
-        $this->assertSame('445/2026', $response->json('extracted.letter_ref'));
-        $this->assertSame('2026-06-24', $response->json('extracted.letter_date'));
+        $this->assertNull($response->json('extracted.letter_ref'));
+        $this->assertNull($response->json('extracted.letter_date'));
+        $this->assertSame('none', $response->json('meta.ocr_engine'));
+        $this->assertFalse($response->json('meta.amount_from_ocr'));
     }
 
     public function test_ocr_extract_uses_net_amount_when_company_has_discount(): void
