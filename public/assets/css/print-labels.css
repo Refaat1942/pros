@@ -379,16 +379,18 @@ body.labels-body {
 }
 
 .label .name {
-    font-size: 6.5pt;
-    font-weight: 600;
+    font-size: 7.5pt;
+    font-weight: 900;
     text-align: center;
     line-height: 1.15;
-    max-height: 5.5mm;
+    max-height: 6mm;
     overflow: hidden;
     flex: 0 0 auto;
     width: 100%;
     color: #000;
     margin: 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 .label .barcode {
@@ -411,6 +413,7 @@ body.labels-body {
     object-fit: contain;
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
+    filter: contrast(1.45) brightness(0.92);
 }
 
 .label .barcode svg {
@@ -420,10 +423,10 @@ body.labels-body {
 }
 
 .label .code {
-    font-size: 6.5pt;
-    font-weight: 600;
+    font-size: 7.5pt;
+    font-weight: 900;
     direction: ltr;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.35px;
     flex: 0 0 auto;
     text-align: center;
     max-width: 100%;
@@ -431,7 +434,9 @@ body.labels-body {
     text-overflow: ellipsis;
     color: #000;
     margin: 0;
-    line-height: 1.1;
+    line-height: 1.15;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 @media print {
@@ -485,13 +490,14 @@ body.labels-body {
     .label .name,
     .label .code {
         color: #000 !important;
-        font-weight: 600 !important;
+        font-weight: 900 !important;
+        -webkit-text-stroke: 0.15px #000;
     }
 
     .label .barcode-img {
         visibility: visible !important;
         opacity: 1 !important;
-        filter: contrast(1.2);
+        filter: contrast(1.65) brightness(0.88) !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }

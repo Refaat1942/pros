@@ -14,6 +14,7 @@ use App\Services\StockImportService;
 use App\Services\StockItemSalesStatsService;
 use App\Services\StockPriceService;
 use App\Support\CatalogImportValidator;
+use App\Support\Barcode\Code128;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -271,8 +272,14 @@ class StockCatalogController extends Controller
         return [
             'page_margin' => round((float) $request->query('page_margin', '0'), 2),
             'gap' => round((float) $request->query('gap', '0'), 2),
-            'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '1.0'), 2))),
-            'barcode_height' => max(16, min(80, (int) $request->integer('barcode_height', 28))),
+            'module_width' => max(0.5, min(3.0, round((float) $request->query(
+                'module_width',
+                (string) ($defaults['module_width'] ?? 1.5),
+            ), 2))),
+            'barcode_height' => max(16, min(80, (int) $request->integer(
+                'barcode_height',
+                (int) ($defaults['barcode_height'] ?? 34),
+            ))),
             'barcode_width_pct' => max(20.0, min(95.0, round((float) $request->query(
                 'barcode_width_pct',
                 (string) ($defaults['barcode_width_pct'] ?? 65),
