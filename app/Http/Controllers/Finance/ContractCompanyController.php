@@ -8,18 +8,24 @@ use App\Http\Requests\Finance\UpdateCompanyRequest;
 use App\Http\Requests\Reception\StoreReceptionCompanyRequest;
 use App\Models\ContractCompany;
 use App\Services\AuditService;
+use App\Services\ContractCompanyImportService;
 use App\Services\ContractDebtService;
+use App\Support\CatalogImportValidator;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ContractCompanyController extends Controller
 {
     use PaginationTrait;
 
-    public function __construct(private readonly ContractDebtService $contractDebtService) {}
+    public function __construct(
+        private readonly ContractDebtService $contractDebtService,
+        private readonly ContractCompanyImportService $importService,
+    ) {}
 
     /**
      * قائمة جهات التعاقد مع ملخص المديونية.
@@ -178,6 +184,75 @@ class ContractCompanyController extends Controller
     }
 
     /**
+     * تنزيل قالب Excel للرفع الجماعي.
+     */
+    public function template(): StreamedResponse
+    {
+        $contents = $this->importService->templateBinary();
+        $filename = 'قالب-جهات-التعاقد.xlsx';
+
+        return response()->streamDownload(function () use ($contents) {
+            echo $contents;
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * تصدير جهات التعاقد الحالية بنفس هيكل القالب.
+     */
+    public function export(): StreamedResponse
+    {
+        $companies = ContractCompany::query()
+            ->where('is_military', false)
+            ->orderBy('name')
+            ->get();
+
+        $contents = $this->importService->exportBinary($companies);
+        $filename = 'جهات_التعاقد-'.now()->format('Y-m-d')."-{$companies->count()}.xlsx";
+
+        return response()->streamDownload(function () use ($contents) {
+            echo $contents;
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * الرفع الجماعي — upsert حسب اسم الجهة.
+     */
+    public function import(Request $request): RedirectResponse|JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:20480'],
+        ], [
+            'file.required' => 'يرجى اختيار ملف Excel أو CSV.',
+            'file.max' => 'حجم الملف يتجاوز 20 ميجا.',
+        ]);
+
+        $uploaded = $request->file('file');
+        if ($uploaded === null || ! CatalogImportValidator::isAllowed($uploaded)) {
+            return $this->importValidationFailure($request, 'الملف يجب أن يكون بصيغة Excel (.xlsx) أو CSV.');
+        }
+
+        $summary = $this->importService->import($uploaded);
+
+        $message = "تم الاستيراد: {$summary['created']} جهة جديدة، {$summary['updated']} محدَّثة، {$summary['skipped']} متخطّى.";
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'summary' => $summary,
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.companies')
+            ->with('status', $message)
+            ->with('import_errors', $summary['errors']);
+    }
+
+    /**
      * حذف جهة تعاقد — ممنوع إن وُجدت حالات أو مرضى مرتبطون.
      */
     public function destroy(ContractCompany $company): JsonResponse
@@ -202,6 +277,17 @@ class ContractCompanyController extends Controller
         });
 
         return response()->json(['message' => 'تم حذف جهة التعاقد بنجاح.']);
+    }
+
+    private function importValidationFailure(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message], 422);
+        }
+
+        return redirect()
+            ->route('admin.companies')
+            ->withErrors(['file' => $message]);
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────────
