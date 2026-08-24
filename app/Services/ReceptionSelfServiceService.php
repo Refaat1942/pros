@@ -83,7 +83,6 @@ class ReceptionSelfServiceService
             ->where(function ($builder) use ($q, $digits) {
                 $builder->where('phone', $q)
                     ->orWhere('patient_code', $q)
-                    ->orWhere('patient_qr', $q)
                     ->orWhere('tracking_uid', $q)
                     ->orWhere('national_id', $q)
                     ->orWhere('name', 'like', "%{$q}%");
@@ -93,6 +92,13 @@ class ReceptionSelfServiceService
                         ->orWhere('phone', 'like', "%{$digits}%")
                         ->orWhere('national_id', $digits);
                 }
+
+                $builder->orWhereHas('cases', function ($caseQuery) use ($q) {
+                    $caseQuery->where('case_no', $q)
+                        ->orWhere('order_ref', $q)
+                        ->orWhere('work_order_no', $q)
+                        ->orWhere('quote_no', $q);
+                });
             })
             ->orderByDesc('id')
             ->first();

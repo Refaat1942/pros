@@ -12,14 +12,14 @@ class ReceptionSelfServiceController extends Controller
     public function __construct(private readonly ReceptionSelfServiceService $selfService) {}
 
     /**
-     * استعلام بالهاتف / QR / كود المريض / الاسم — للوحة الاستقبال.
+     * استعلام بالهاتف / كود المريض / الرقم القومي / الاسم / مراجع الحالة — للوحة الاستقبال.
      */
     public function lookup(Request $request): JsonResponse
     {
         $query = trim((string) $request->query('q', ''));
 
         if ($query === '') {
-            return response()->json(['message' => 'يرجى إدخال رقم الهاتف أو كود المريض.'], 422);
+            return response()->json(['message' => 'يرجى إدخال بيانات المريض للبحث (اسم، هاتف، رقم قومي، كود، أو رقم حالة).'], 422);
         }
 
         $result = $this->selfService->lookup($query);
