@@ -145,7 +145,7 @@
                             data-item-id="{{ $item['id'] ?? '' }}"
                             data-barcode="{{ strtoupper($item['barcode'] ?? '') }}"
                             data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['brand'] ?? '') . ' ' . ($item['category'] ?? '') . ' ' . ($item['barcode'] ?? '') . ' ' . ($item['alt_codes'] ?? '')) }}"
-                            data-brand="{{ strtolower($item['brand'] ?? '') }}"
+                            data-brand="{{ mb_strtolower(trim($item['brand'] ?? ''), 'UTF-8') }}"
                             data-category-id="{{ $item['category_id'] ?? '' }}"
                             data-filter-hidden="0"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
@@ -812,6 +812,18 @@
         return true;
     }
 
+    function normalizeBrandKey(value) {
+        var s = String(value || '').trim().toLowerCase();
+        s = s.replace(/[\u0623\u0625\u0622]/g, '\u0627').replace(/\u0629/g, '\u0647');
+        return s;
+    }
+
+    function catalogRowBrandLabel(row) {
+        var item = catalogRowItem(row);
+        var label = (item.brand || row.getAttribute('data-brand') || '').trim();
+        return label;
+    }
+
     function catalogRowItem(row) {
         try {
             return JSON.parse(row.getAttribute('data-item') || '{}');
@@ -881,17 +893,21 @@
         var sel = document.getElementById('catalogBrandFilter');
         if (!sel) return;
         var current = sel.value;
+        /** @type {Record<string, string>} */
         var brands = {};
         document.querySelectorAll('#catalogSlimTable .catalog-slim-row').forEach(function (row) {
-            var b = (row.getAttribute('data-brand') || '').trim();
-            if (b) brands[b] = true;
+            var label = catalogRowBrandLabel(row);
+            if (!label) return;
+            var key = normalizeBrandKey(label);
+            if (!key) return;
+            if (!brands[key]) brands[key] = label;
         });
         var keys = Object.keys(brands).sort(function (a, b) {
-            return a.localeCompare(b, 'ar', { sensitivity: 'base' });
+            return brands[a].localeCompare(brands[b], 'ar', { sensitivity: 'base' });
         });
         sel.innerHTML = '<option value="">🏭 كل الماركات</option>' +
-            keys.map(function (b) {
-                return '<option value="' + b + '">' + b + '</option>';
+            keys.map(function (k) {
+                return '<option value="' + escAttr(k) + '">' + escapeHtml(brands[k]) + '</option>';
             }).join('');
         if (current && brands[current]) sel.value = current;
     }
@@ -899,7 +915,7 @@
     window.applySlimCatalogFilters = function () {
         var term = (document.getElementById('catalogSlimSearch')?.value || '').toLowerCase().trim();
         var catId = document.getElementById('catalogCategoryFilter')?.value || '';
-        var brand = (document.getElementById('catalogBrandFilter')?.value || '').toLowerCase().trim();
+        var brand = normalizeBrandKey(document.getElementById('catalogBrandFilter')?.value || '');
         var stockFilter = document.getElementById('catalogStockFilter')?.value || '';
         var visible = 0;
         var total = 0;
@@ -908,7 +924,7 @@
             total++;
             var hay = row.getAttribute('data-search') || '';
             var rowCat = row.getAttribute('data-category-id') || '';
-            var rowBrand = (row.getAttribute('data-brand') || '').toLowerCase();
+            var rowBrand = normalizeBrandKey(catalogRowBrandLabel(row));
             var item = catalogRowItem(row);
             var catalogBal = parseInt(item.catalog_balance != null ? item.catalog_balance : item.balance, 10) || 0;
             var warehouseQty = parseInt(item.warehouse_qty != null ? item.warehouse_qty : item.qty, 10) || 0;
@@ -930,6 +946,11 @@
 
             var show = matchSearch && matchCat && matchBrand && matchStock;
             row.dataset.filterHidden = show ? '0' : '1';
+            if (show) {
+                delete row.dataset.paginationSkip;
+            } else {
+                row.dataset.paginationSkip = '1';
+            }
             if (show) visible++;
         });
 
