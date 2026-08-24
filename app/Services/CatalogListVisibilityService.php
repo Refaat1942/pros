@@ -184,7 +184,22 @@ class CatalogListVisibilityService
             $filtered['id'] = $item['id'];
         }
 
+        foreach ($this->clientFilterMetaFields($profile) as $metaField) {
+            if (array_key_exists($metaField, $item)) {
+                $filtered[$metaField] = $item[$metaField];
+            }
+        }
+
         return $filtered;
+    }
+
+    /** حقول تُمرَّر للواجهة لدعم الفلترة والبحث حتى لو العمود غير معروض في الجدول. */
+    private function clientFilterMetaFields(string $profile): array
+    {
+        return match ($profile) {
+            'admin_catalog' => ['category_id', 'category', 'barcode', 'min_qty'],
+            default => [],
+        };
     }
 
     /**
