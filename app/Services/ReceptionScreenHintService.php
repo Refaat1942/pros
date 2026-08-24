@@ -120,7 +120,7 @@ class ReceptionScreenHintService
         return [
             'page' => 'selfservice',
             'title' => '📱 متابعة حالة الطلب',
-            'message' => 'شاشة للمريض — امسح QR أو أدخل الرقم لمتابعة مرحلة الطلب.',
+            'message' => 'شاشة للمريض — ابحث بأي بيانات المريض لمتابعة مرحلة الطلب.',
             'count' => null,
             'link' => null,
             'link_label' => null,

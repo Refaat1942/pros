@@ -1334,6 +1334,7 @@
       return '<div class="selfservice-result">' +
         '<div class="selfservice-row"><span>المريض</span><strong>' + escapeHtml(p.name) + ' ' + typeBadge + '</strong></div>' +
         '<div class="selfservice-row"><span>الهاتف</span><strong dir="ltr">' + escapeHtml(p.phone || '—') + '</strong></div>' +
+        '<div class="selfservice-row"><span>الرقم القومي</span><strong dir="ltr">' + escapeHtml(p.national_id || '—') + '</strong></div>' +
         '<div class="selfservice-row"><span>كود المريض</span><strong>' + escapeHtml(p.patient_code || '—') + '</strong></div>' +
         (p.patient_type === 'military'
           ? (p.rank ? '<div class="selfservice-row"><span>الرتبة</span><strong>' + escapeHtml(p.rank) + '</strong></div>' : '')
