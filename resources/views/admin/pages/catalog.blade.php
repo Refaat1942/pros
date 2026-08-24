@@ -147,6 +147,7 @@
                             data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['brand'] ?? '') . ' ' . ($item['category'] ?? '') . ' ' . ($item['barcode'] ?? '') . ' ' . ($item['alt_codes'] ?? '')) }}"
                             data-brand="{{ mb_strtolower(trim($item['brand'] ?? ''), 'UTF-8') }}"
                             data-category-id="{{ $item['category_id'] ?? '' }}"
+                            data-category-name="{{ $item['category'] ?? '' }}"
                             data-filter-hidden="0"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
                             style="border-top:1px solid var(--border);">
@@ -818,10 +819,55 @@
         return s;
     }
 
+    function catalogRepaginateTable() {
+        var table = document.getElementById('catalogItemsTable');
+        if (table && window.TablePagination && TablePagination.repaginate) {
+            TablePagination.repaginate(table);
+        }
+    }
+
+    function getCategoryFilterName(catId) {
+        var sel = document.getElementById('catalogCategoryFilter');
+        if (!sel || !catId) return '';
+        if (String(sel.value) !== String(catId)) return '';
+        var opt = sel.options[sel.selectedIndex];
+        return opt ? opt.textContent.trim() : '';
+    }
+
     function catalogRowBrandLabel(row) {
         var item = catalogRowItem(row);
         var label = (item.brand || row.getAttribute('data-brand') || '').trim();
         return label;
+    }
+
+    function catalogRowCategoryId(row) {
+        var item = catalogRowItem(row);
+        if (item.category_id != null && item.category_id !== '') {
+            return String(item.category_id);
+        }
+        return String(row.getAttribute('data-category-id') || '');
+    }
+
+    function catalogRowCategoryName(row) {
+        var item = catalogRowItem(row);
+        return String(item.category || row.getAttribute('data-category-name') || '').trim();
+    }
+
+    function updateCatalogFilterEmptyRow(visible, filtersActive) {
+        var tbody = document.getElementById('catalogSlimTable');
+        if (!tbody) return;
+        var existing = tbody.querySelector('.catalog-filter-empty-row');
+        if (!filtersActive || visible > 0) {
+            if (existing) existing.remove();
+            return;
+        }
+        if (!existing) {
+            var tr = document.createElement('tr');
+            tr.className = 'catalog-filter-empty-row pagination-empty-row';
+            tr.dataset.paginationSkip = '1';
+            tr.innerHTML = '<td colspan="' + catalogTableColspan + '" style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد أصناف تطابق الفلتر — غيّر القسم أو امسح الفلاتر.</td>';
+            tbody.appendChild(tr);
+        }
     }
 
     function catalogRowItem(row) {
@@ -915,15 +961,19 @@
     window.applySlimCatalogFilters = function () {
         var term = (document.getElementById('catalogSlimSearch')?.value || '').toLowerCase().trim();
         var catId = document.getElementById('catalogCategoryFilter')?.value || '';
+        var catFilterName = getCategoryFilterName(catId);
+        var catFilterKey = normalizeBrandKey(catFilterName);
         var brand = normalizeBrandKey(document.getElementById('catalogBrandFilter')?.value || '');
         var stockFilter = document.getElementById('catalogStockFilter')?.value || '';
         var visible = 0;
         var total = 0;
+        var filtersActive = catId || brand || stockFilter || term;
 
         document.querySelectorAll('#catalogSlimTable .catalog-slim-row').forEach(function (row) {
             total++;
             var hay = row.getAttribute('data-search') || '';
-            var rowCat = row.getAttribute('data-category-id') || '';
+            var rowCatId = catalogRowCategoryId(row);
+            var rowCatNameKey = normalizeBrandKey(catalogRowCategoryName(row));
             var rowBrand = normalizeBrandKey(catalogRowBrandLabel(row));
             var item = catalogRowItem(row);
             var catalogBal = parseInt(item.catalog_balance != null ? item.catalog_balance : item.balance, 10) || 0;
@@ -931,7 +981,9 @@
             var minQty = parseInt(item.min_qty, 10) || 0;
 
             var matchSearch = !term || hay.indexOf(term) !== -1;
-            var matchCat = !catId || rowCat === catId;
+            var matchCat = !catId ||
+                rowCatId === String(catId) ||
+                (catFilterKey && rowCatNameKey === catFilterKey);
             var matchBrand = !brand || rowBrand === brand;
             var matchStock = true;
             if (stockFilter === 'mismatch') {
@@ -954,14 +1006,11 @@
             if (show) visible++;
         });
 
-        var tbody = document.getElementById('catalogSlimTable');
-        if (tbody && window.TablePagination && TablePagination.repaginate) {
-            TablePagination.repaginate(tbody);
-        }
+        updateCatalogFilterEmptyRow(visible, filtersActive);
+        catalogRepaginateTable();
 
         var countEl = document.getElementById('catalogSlimCount');
         if (countEl) {
-            var filtersActive = catId || brand || stockFilter || term;
             countEl.textContent = filtersActive
                 ? (visible + ' من ' + total + ' صنف')
                 : (total + ' صنف');
@@ -1529,7 +1578,7 @@
         var screenBtn = (item.barcode || item.alt_codes)
             ? '<a class="btn-action" target="_blank" href="' + screenUrl + '">📱 شاشة</a> '
             : '';
-        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-brand="' + escAttr(normalizeBrandKey(item.brand || '')) + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
+        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-brand="' + escAttr(normalizeBrandKey(item.brand || '')) + '" data-category-id="' + (item.category_id || '') + '" data-category-name="' + escAttr(item.category || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
             dataCols +
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
@@ -1662,11 +1711,11 @@ document.addEventListener('DOMContentLoaded', function () {
         window.CatalogSections.init(window.__STOCK_CATEGORIES);
     }
 
+    populateBrandFilter();
+
     if (typeof window.applySlimCatalogFilters === 'function') {
         window.applySlimCatalogFilters();
     }
-
-    populateBrandFilter();
 
     document.querySelectorAll('.catalog-sort-th').forEach(function (th) {
         th.addEventListener('click', function () {
@@ -1679,10 +1728,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 catalogSortDir = 'asc';
             }
             sortCatalogRows();
-            if (window.TablePagination && TablePagination.repaginate) {
-                var tbody = document.getElementById('catalogSlimTable');
-                if (tbody) TablePagination.repaginate(tbody);
-            }
+            catalogRepaginateTable();
         });
     });
 

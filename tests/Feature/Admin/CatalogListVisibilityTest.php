@@ -97,6 +97,32 @@ class CatalogListVisibilityTest extends TestCase
         $this->assertArrayNotHasKey('status', $filtered);
     }
 
+    public function test_filter_item_fields_preserves_admin_catalog_client_meta_for_filters(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $visibility = app(CatalogListVisibilityService::class);
+
+        $filtered = $visibility->filterItemFields([
+            'id' => 9,
+            'code' => 'CAT-1',
+            'catalog_number' => 'CAT-1',
+            'name' => 'صنف',
+            'brand' => 'ماتيز',
+            'category_id' => 3,
+            'category' => 'إكسسوارات',
+            'barcode' => 'ABC123',
+            'min_qty' => 2,
+            'uom' => 'قطعة',
+            'qty' => 10,
+        ], $admin->fresh(), 'admin_catalog');
+
+        $this->assertSame(3, $filtered['category_id']);
+        $this->assertSame('إكسسوارات', $filtered['category']);
+        $this->assertSame('ABC123', $filtered['barcode']);
+        $this->assertSame(2, $filtered['min_qty']);
+        $this->assertArrayNotHasKey('wac', $filtered);
+    }
+
     public function test_section_master_toggle_disables_inventory_supply_lists(): void
     {
         $admin = $this->limitedAdminUser();
