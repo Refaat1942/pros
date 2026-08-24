@@ -170,3 +170,14 @@ aside.sidebar .nav-menu li a.active .nav-badge {
   background: #fde68a;
   color: #78350f;
 }
+
+@media (max-width: 768px) {
+  body[data-dashboard] > .main {
+    max-width: 100%;
+  }
+
+  aside.sidebar {
+    width: min(288px, 88vw);
+    max-width: min(288px, 88vw);
+  }
+}
