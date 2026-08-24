@@ -123,7 +123,7 @@
                     قائمة الأصناف غير مفعّلة لدورك — راجع «عرض قوائم الأصناف» في المخزون والتوريد.
                 </p>
             @else
-            <table class="catalog-slim-table" id="catalogItemsTable" data-paginate="10" style="width:100%;border-collapse:collapse;">
+            <table class="catalog-slim-table" id="catalogItemsTable" data-paginate="10" data-sort-filter="off" style="width:100%;border-collapse:collapse;">
                 <thead>
                     <tr style="background:var(--surface-2,#f8fafc);">
                         @can('print-barcode')
