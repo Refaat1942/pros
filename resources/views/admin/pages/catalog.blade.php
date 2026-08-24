@@ -67,11 +67,21 @@
 
         <div class="data-toolbar" style="flex-wrap:wrap;gap:8px;">
             <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث بالصنف، الاسم، الماركة، أو الباركود (امسح و Enter)..." onkeyup="applySlimCatalogFilters()">
-            <select id="catalogCategoryFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:160px;">
+            <select id="catalogCategoryFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:140px;">
                 <option value="">🏷️ كل الأقسام</option>
                 @foreach ($categories as $cat)
                     <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
                 @endforeach
+            </select>
+            <select id="catalogBrandFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:130px;">
+                <option value="">🏭 كل الماركات</option>
+            </select>
+            <select id="catalogStockFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:150px;">
+                <option value="">📦 كل الأرصدة</option>
+                <option value="mismatch">⚠️ رصيد كتالوج ≠ مخزن</option>
+                <option value="low">📉 رصيد منخفض</option>
+                <option value="zero">⭕ رصيد صفر</option>
+                <option value="no_code">❌ بدون أكواد</option>
             </select>
             <button type="button" class="btn-action" style="background:var(--primary);color:#fff;border:none;" onclick="openSlimCatalogForm()">➕ إضافة صنف</button>
 
@@ -124,7 +134,7 @@
                                 $colDef = $catalogColumnDefs[$colKey] ?? [];
                                 $align = ($colDef['align'] ?? 'right') === 'center' ? 'center' : 'right';
                             @endphp
-                            <th style="padding:10px;text-align:{{ $align }};">{{ $colDef['label'] ?? $colKey }}</th>
+                            <th class="catalog-sort-th" data-sort-key="{{ $colKey }}" style="padding:10px;text-align:{{ $align }};">{{ $colDef['label'] ?? $colKey }} <span class="catalog-sort-icon">↕</span></th>
                         @endforeach
                         <th style="padding:10px;text-align:center;min-width:280px;">إجراء</th>
                     </tr>
@@ -135,6 +145,7 @@
                             data-item-id="{{ $item['id'] ?? '' }}"
                             data-barcode="{{ strtoupper($item['barcode'] ?? '') }}"
                             data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['brand'] ?? '') . ' ' . ($item['category'] ?? '') . ' ' . ($item['barcode'] ?? '') . ' ' . ($item['alt_codes'] ?? '')) }}"
+                            data-brand="{{ strtolower($item['brand'] ?? '') }}"
                             data-category-id="{{ $item['category_id'] ?? '' }}"
                             data-filter-hidden="0"
                             data-item="{{ json_encode($item, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
@@ -732,12 +743,31 @@
         color: var(--text-muted, #64748b);
         margin: 0 0 10px;
     }
+    .catalog-sort-th {
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+    }
+    .catalog-sort-th:hover {
+        background: #e2e8f0;
+    }
+    .catalog-sort-icon {
+        font-size: 10px;
+        opacity: 0.55;
+        margin-left: 2px;
+    }
+    .catalog-sort-th.is-sorted .catalog-sort-icon {
+        opacity: 1;
+        color: var(--primary, #059669);
+    }
 </style>
 
 <script>
 (function () {
     var catalogTableOrder = @json($catalogTableOrder);
     var catalogTableColspan = {{ (int) $catalogTableColspan }};
+    var catalogSortKey = '';
+    var catalogSortDir = 'asc';
 
     function csrf() {
         var m = document.querySelector('meta[name="csrf-token"]');
@@ -782,9 +812,95 @@
         return true;
     }
 
+    function catalogRowItem(row) {
+        try {
+            return JSON.parse(row.getAttribute('data-item') || '{}');
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function catalogSortValue(item, key) {
+        if (!item) return '';
+        switch (key) {
+            case 'code':
+                return String(item.catalog_number || item.code || '');
+            case 'page_number':
+                return String(item.page_number || '');
+            case 'name':
+                return String(item.name || '');
+            case 'brand':
+                return String(item.brand || '');
+            case 'alt_codes':
+                return String(item.alt_codes || '');
+            case 'uom':
+                return String(item.uom || '');
+            case 'opening_qty':
+            case 'addition':
+            case 'discount':
+            case 'catalog_balance':
+            case 'warehouse_qty':
+            case 'price':
+                return parseFloat(item[key] != null ? item[key] : 0) || 0;
+            default:
+                return String(item[key] != null ? item[key] : '');
+        }
+    }
+
+    function sortCatalogRows() {
+        var tbody = document.getElementById('catalogSlimTable');
+        if (!tbody || !catalogSortKey) return;
+
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll('.catalog-slim-row'));
+        var dir = catalogSortDir === 'desc' ? -1 : 1;
+
+        rows.sort(function (a, b) {
+            var av = catalogSortValue(catalogRowItem(a), catalogSortKey);
+            var bv = catalogSortValue(catalogRowItem(b), catalogSortKey);
+            var an = typeof av === 'number';
+            var bn = typeof bv === 'number';
+            if (an && bn) {
+                return (av - bv) * dir;
+            }
+            return String(av).localeCompare(String(bv), 'ar', { numeric: true, sensitivity: 'base' }) * dir;
+        });
+
+        rows.forEach(function (row) { tbody.appendChild(row); });
+
+        document.querySelectorAll('.catalog-sort-th').forEach(function (th) {
+            var active = th.getAttribute('data-sort-key') === catalogSortKey;
+            th.classList.toggle('is-sorted', active);
+            var icon = th.querySelector('.catalog-sort-icon');
+            if (icon) {
+                icon.textContent = active ? (catalogSortDir === 'asc' ? '▲' : '▼') : '↕';
+            }
+        });
+    }
+
+    function populateBrandFilter() {
+        var sel = document.getElementById('catalogBrandFilter');
+        if (!sel) return;
+        var current = sel.value;
+        var brands = {};
+        document.querySelectorAll('#catalogSlimTable .catalog-slim-row').forEach(function (row) {
+            var b = (row.getAttribute('data-brand') || '').trim();
+            if (b) brands[b] = true;
+        });
+        var keys = Object.keys(brands).sort(function (a, b) {
+            return a.localeCompare(b, 'ar', { sensitivity: 'base' });
+        });
+        sel.innerHTML = '<option value="">🏭 كل الماركات</option>' +
+            keys.map(function (b) {
+                return '<option value="' + b + '">' + b + '</option>';
+            }).join('');
+        if (current && brands[current]) sel.value = current;
+    }
+
     window.applySlimCatalogFilters = function () {
         var term = (document.getElementById('catalogSlimSearch')?.value || '').toLowerCase().trim();
         var catId = document.getElementById('catalogCategoryFilter')?.value || '';
+        var brand = (document.getElementById('catalogBrandFilter')?.value || '').toLowerCase().trim();
+        var stockFilter = document.getElementById('catalogStockFilter')?.value || '';
         var visible = 0;
         var total = 0;
 
@@ -792,9 +908,27 @@
             total++;
             var hay = row.getAttribute('data-search') || '';
             var rowCat = row.getAttribute('data-category-id') || '';
+            var rowBrand = (row.getAttribute('data-brand') || '').toLowerCase();
+            var item = catalogRowItem(row);
+            var catalogBal = parseInt(item.catalog_balance != null ? item.catalog_balance : item.balance, 10) || 0;
+            var warehouseQty = parseInt(item.warehouse_qty != null ? item.warehouse_qty : item.qty, 10) || 0;
+            var minQty = parseInt(item.min_qty, 10) || 0;
+
             var matchSearch = !term || hay.indexOf(term) !== -1;
             var matchCat = !catId || rowCat === catId;
-            var show = matchSearch && matchCat;
+            var matchBrand = !brand || rowBrand === brand;
+            var matchStock = true;
+            if (stockFilter === 'mismatch') {
+                matchStock = catalogBal !== warehouseQty;
+            } else if (stockFilter === 'low') {
+                matchStock = minQty > 0 ? warehouseQty <= minQty : warehouseQty <= 2;
+            } else if (stockFilter === 'zero') {
+                matchStock = warehouseQty <= 0;
+            } else if (stockFilter === 'no_code') {
+                matchStock = !item.alt_codes && !item.barcode;
+            }
+
+            var show = matchSearch && matchCat && matchBrand && matchStock;
             row.dataset.filterHidden = show ? '0' : '1';
             if (show) visible++;
         });
@@ -806,7 +940,8 @@
 
         var countEl = document.getElementById('catalogSlimCount');
         if (countEl) {
-            countEl.textContent = (catId || term)
+            var filtersActive = catId || brand || stockFilter || term;
+            countEl.textContent = filtersActive
                 ? (visible + ' من ' + total + ' صنف')
                 : (total + ' صنف');
         }
@@ -1373,7 +1508,7 @@
         var screenBtn = (item.barcode || item.alt_codes)
             ? '<a class="btn-action" target="_blank" href="' + screenUrl + '">📱 شاشة</a> '
             : '';
-        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
+        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-brand="' + escAttr(String(item.brand || '').toLowerCase()) + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
             dataCols +
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
@@ -1402,7 +1537,9 @@
         var label = list.length + ' صنف';
         if (countEl) countEl.textContent = label;
         if (badge) badge.textContent = label;
+        populateBrandFilter();
         window.applySlimCatalogFilters();
+        sortCatalogRows();
 
         var table = document.getElementById('catalogItemsTable');
         if (table && window.TablePagination && TablePagination.refresh) {
@@ -1507,6 +1644,26 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof window.applySlimCatalogFilters === 'function') {
         window.applySlimCatalogFilters();
     }
+
+    populateBrandFilter();
+
+    document.querySelectorAll('.catalog-sort-th').forEach(function (th) {
+        th.addEventListener('click', function () {
+            var key = th.getAttribute('data-sort-key') || '';
+            if (!key) return;
+            if (catalogSortKey === key) {
+                catalogSortDir = catalogSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                catalogSortKey = key;
+                catalogSortDir = 'asc';
+            }
+            sortCatalogRows();
+            if (window.TablePagination && TablePagination.repaginate) {
+                var tbody = document.getElementById('catalogSlimTable');
+                if (tbody) TablePagination.repaginate(tbody);
+            }
+        });
+    });
 
     var catalogSearchInput = document.getElementById('catalogSlimSearch');
     if (catalogSearchInput) {

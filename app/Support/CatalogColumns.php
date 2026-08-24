@@ -50,17 +50,17 @@ final class CatalogColumns
     public static function importAliases(): array
     {
         $defaults = [
-            'catalog_number' => ['رقم الصنف', 'كود الصنف'],
-            'page_number' => ['رقم الصفحة'],
-            'name' => ['اسم الصنف'],
-            'brand' => ['الماركة', 'ماركة', 'البراند'],
-            'alt_codes' => ['الأكواد', 'أكواد', 'اكواد', 'الاكواد', 'codes', 'code', 'كود'],
-            'uom' => ['الوحدة'],
-            'opening_qty_raw' => ['رصيد أول المده', 'رصيد أول المدة', 'الكمية'],
-            'addition_raw' => ['الاضافة', 'الإضافة'],
-            'discount_raw' => ['الخصم'],
-            'balance_raw' => ['الرصيد', 'الكمية'],
-            'price_raw' => ['السعر الأساسي', 'السعر', 'سعر التكلفة', 'أعلى سعر'],
+            'catalog_number' => ['رقم الصنف', 'كود الصنف', 'رقم الصنف*', 'item no', 'item number'],
+            'page_number' => ['رقم الصفحة', 'page', 'page no'],
+            'name' => ['اسم الصنف', 'الصنف', 'item name', 'name'],
+            'brand' => ['الماركة', 'ماركة', 'البراند', 'brand'],
+            'alt_codes' => ['الأكواد', 'أكواد', 'اكواد', 'الاكواد', 'codes', 'code', 'كود', 'الكود'],
+            'uom' => ['الوحدة', 'وحدة', 'uom', 'unit'],
+            'opening_qty_raw' => ['رصيد أول المده', 'رصيد أول المدة', 'رصيد اول المدة', 'رصيد أول', 'opening', 'opening qty'],
+            'addition_raw' => ['الاضافة', 'الإضافة', 'اضافة', 'addition'],
+            'discount_raw' => ['الخصم', 'خصم', 'discount'],
+            'balance_raw' => ['الرصيد', 'رصيد', 'balance', 'الرصيد النهائي'],
+            'price_raw' => ['السعر الأساسي', 'السعر', 'سعر التكلفة', 'أعلى سعر', 'price', 'cost'],
         ];
 
         return array_merge($defaults, config('catalog.import_aliases', []));

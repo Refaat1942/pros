@@ -7,8 +7,11 @@
     <script src="{{ asset('assets/js/shared/assistant.js') }}?v={{ filemtime(public_path('assets/js/shared/assistant.js')) }}"></script>
     <script>
         (function () {
-            var minutes = @json((int) config('session.idle_timeout', 5));
-            var ms = Math.max(1, minutes) * 60 * 1000;
+            var minutes = @json((int) config('session.idle_timeout', 0));
+            if (!minutes || minutes <= 0) {
+                return;
+            }
+            var ms = minutes * 60 * 1000;
             var timer;
 
             function logoutIdle() {

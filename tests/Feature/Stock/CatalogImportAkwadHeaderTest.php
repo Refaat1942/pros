@@ -3,6 +3,7 @@
 namespace Tests\Feature\Stock;
 
 use App\Models\StockItem;
+use App\Services\StockImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\Support\ProstheticTestHelper;
@@ -83,5 +84,36 @@ class CatalogImportAkwadHeaderTest extends TestCase
         $this->assertSame(3, StockItem::query()->count());
         $this->assertDatabaseHas('stock_items', ['alt_codes' => '1S101', 'brand' => 'أوتوبوك']);
         $this->assertDatabaseHas('stock_items', ['alt_codes' => '2R10', 'qty' => 3]);
+    }
+
+    public function test_import_reads_all_template_columns_from_header_row(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $headers = StockImportService::headers();
+        $row = ['RM-500', '12', 'صنف كامل', 'Ottobock', '4821', 'قطعة', '10', '5', '2', '13', '99.5'];
+        $contents = implode(',', $headers)."\r\n".implode(',', $row)."\r\n";
+
+        $this->actingAs($admin)
+            ->post(route('admin.catalog.import'), [
+                'file' => UploadedFile::fake()->createWithContent('full-row.csv', $contents),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('stock_items', [
+            'catalog_number' => 'RM-500',
+            'page_number' => '12',
+            'name' => 'صنف كامل',
+            'brand' => 'Ottobock',
+            'alt_codes' => '4821',
+            'uom' => 'قطعة',
+            'opening_qty' => 10,
+            'addition' => 5,
+            'discount' => 2,
+            'qty' => 13,
+        ]);
+
+        $item = StockItem::query()->where('catalog_number', 'RM-500')->first();
+        $this->assertNotNull($item);
+        $this->assertEqualsWithDelta(99.5, (float) $item->price, 0.01);
     }
 }
