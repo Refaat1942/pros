@@ -1529,7 +1529,7 @@
         var screenBtn = (item.barcode || item.alt_codes)
             ? '<a class="btn-action" target="_blank" href="' + screenUrl + '">📱 شاشة</a> '
             : '';
-        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-brand="' + escAttr(String(item.brand || '').toLowerCase()) + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
+        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-brand="' + escAttr(normalizeBrandKey(item.brand || '')) + '" data-category-id="' + (item.category_id || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
             dataCols +
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
