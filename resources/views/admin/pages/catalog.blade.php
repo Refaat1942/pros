@@ -764,6 +764,10 @@
 </style>
 
 <script>
+window.__STOCK_CATEGORIES = @json($categories->values());
+</script>
+<script src="{{ asset('assets/js/pages/catalog-sections.js') }}"></script>
+<script>
 (function () {
     var catalogTableOrder = @json($catalogTableOrder);
     var catalogTableColspan = {{ (int) $catalogTableColspan }};
@@ -933,6 +937,8 @@
                 icon.textContent = active ? (catalogSortDir === 'asc' ? '▲' : '▼') : '↕';
             }
         });
+
+        catalogRepaginateTable();
     }
 
     function populateBrandFilter() {
@@ -1699,63 +1705,66 @@
             uploadCatalogFile();
         });
     }
-})();
-</script>
-<script>
-window.__STOCK_CATEGORIES = @json($categories->values());
-</script>
-<script src="{{ asset('assets/js/pages/catalog-sections.js') }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.CatalogSections && window.__STOCK_CATEGORIES) {
-        window.CatalogSections.init(window.__STOCK_CATEGORIES);
+
+    function bindCatalogSortHeaders() {
+        document.querySelectorAll('.catalog-sort-th').forEach(function (th) {
+            if (th.dataset.catalogSortBound === '1') return;
+            th.dataset.catalogSortBound = '1';
+            th.addEventListener('click', function () {
+                var key = th.getAttribute('data-sort-key') || '';
+                if (!key) return;
+                if (catalogSortKey === key) {
+                    catalogSortDir = catalogSortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    catalogSortKey = key;
+                    catalogSortDir = 'asc';
+                }
+                sortCatalogRows();
+                catalogRepaginateTable();
+            });
+        });
     }
 
-    populateBrandFilter();
+    function initCatalogPage() {
+        if (window.CatalogSections && window.__STOCK_CATEGORIES) {
+            window.CatalogSections.init(window.__STOCK_CATEGORIES);
+        }
 
-    if (typeof window.applySlimCatalogFilters === 'function') {
+        populateBrandFilter();
         window.applySlimCatalogFilters();
-    }
+        bindCatalogSortHeaders();
 
-    document.querySelectorAll('.catalog-sort-th').forEach(function (th) {
-        th.addEventListener('click', function () {
-            var key = th.getAttribute('data-sort-key') || '';
-            if (!key) return;
-            if (catalogSortKey === key) {
-                catalogSortDir = catalogSortDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                catalogSortKey = key;
-                catalogSortDir = 'asc';
-            }
-            sortCatalogRows();
-            catalogRepaginateTable();
-        });
-    });
+        var catalogSearchInput = document.getElementById('catalogSlimSearch');
+        if (catalogSearchInput) {
+            catalogSearchInput.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                var val = catalogSearchInput.value.trim();
+                if (!val) return;
+                window.applySlimCatalogFilters();
+                if (focusCatalogRowByBarcode(val)) {
+                    return;
+                }
+                if (window.DashboardToast) {
+                    window.DashboardToast.show('لم يُعثَر على صنف بالباركود: ' + val, { isError: true });
+                }
+            });
+        }
 
-    var catalogSearchInput = document.getElementById('catalogSlimSearch');
-    if (catalogSearchInput) {
-        catalogSearchInput.addEventListener('keydown', function (e) {
-            if (e.key !== 'Enter') return;
-            e.preventDefault();
-            var val = catalogSearchInput.value.trim();
-            if (!val) return;
-            window.applySlimCatalogFilters();
-            if (typeof focusCatalogRowByBarcode === 'function' && focusCatalogRowByBarcode(val)) {
-                return;
+        var itemId = new URLSearchParams(window.location.search).get('item');
+        if (itemId && typeof window.viewSlimCatalog === 'function') {
+            var row = document.querySelector('#catalogSlimTable tr.catalog-slim-row[data-item-id="' + itemId + '"]');
+            if (row) {
+                var btn = row.querySelector('button[onclick*="viewSlimCatalog"]');
+                window.viewSlimCatalog(btn || row);
             }
-            if (window.DashboardToast) {
-                window.DashboardToast.show('لم يُعثَر على صنف بالباركود: ' + val, { isError: true });
-            }
-        });
-    }
-
-    var itemId = new URLSearchParams(window.location.search).get('item');
-    if (itemId && typeof window.viewSlimCatalog === 'function') {
-        var row = document.querySelector('#catalogSlimTable tr.catalog-slim-row[data-item-id="' + itemId + '"]');
-        if (row) {
-            var btn = row.querySelector('button[onclick*="viewSlimCatalog"]');
-            window.viewSlimCatalog(btn || row);
         }
     }
-});
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCatalogPage);
+    } else {
+        initCatalogPage();
+    }
+})();
 </script>
