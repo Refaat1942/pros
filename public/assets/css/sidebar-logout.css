@@ -1,9 +1,48 @@
 /**
  * Sidebar logout — loaded last so it wins over Tailwind preflight & dashboard resets.
  */
-aside.sidebar {
-  height: 100vh;
+html {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body[data-dashboard] {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body[data-dashboard] > .main {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: calc(100vw - var(--sidebar-width, 260px));
+  box-sizing: border-box;
+}
+
+aside.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: auto;
+  bottom: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: var(--sidebar-width, 260px);
+  max-width: var(--sidebar-width, 260px);
+  margin: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 100;
 }
 
 aside.sidebar .sidebar-nav-scroll {
@@ -130,4 +169,15 @@ aside.sidebar .nav-menu li a .nav-badge {
 aside.sidebar .nav-menu li a.active .nav-badge {
   background: #fde68a;
   color: #78350f;
+}
+
+@media (max-width: 768px) {
+  body[data-dashboard] > .main {
+    max-width: 100%;
+  }
+
+  aside.sidebar {
+    width: min(288px, 88vw);
+    max-width: min(288px, 88vw);
+  }
 }

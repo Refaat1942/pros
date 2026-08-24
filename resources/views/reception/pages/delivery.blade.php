@@ -19,6 +19,32 @@
 
 @push('styles')
 <style>
+  body[data-dashboard="reception"][data-active-page="delivery"] {
+    display: flex !important;
+  }
+
+  body[data-dashboard="reception"][data-active-page="delivery"] > .main {
+    overflow-x: hidden;
+  }
+
+  #deliveryRoot {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #deliveryRoot .ck-analytics {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #deliveryRoot .grid {
+    min-width: 0;
+  }
+
+  #deliveryRoot .grid > * {
+    min-width: 0;
+  }
+
   #deliveryRoot .table-pagination-nav {
     display: flex;
     align-items: center;
