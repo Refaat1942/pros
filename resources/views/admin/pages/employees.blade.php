@@ -13,14 +13,14 @@
     </div>
     <div class="data-toolbar">
         @include('admin.partials.bulk-action-bar', ['bulkBarId' => 'employeesBulkBar'])
-        <input type="text" id="empSearch" placeholder="🔍 بحث بالاسم...">
-        <select id="empRoleFilter">
+        <input type="text" id="empSearch" placeholder="🔍 بحث بالاسم..." data-no-dash-table-search="1">
+        <select id="empRoleFilter" data-no-dash-table-search="1">
             <option value="all">كل الأدوار</option>
             @foreach ($roles as $role)
                 <option value="{{ $role->slug }}">{{ $role->label_ar }}</option>
             @endforeach
         </select>
-        <select id="empStatusFilter">
+        <select id="empStatusFilter" data-no-dash-table-search="1">
             <option value="all">كل الحالات</option>
             <option value="active">نشط</option>
             <option value="inactive">غير نشط</option>

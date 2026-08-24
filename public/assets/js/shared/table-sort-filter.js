@@ -105,6 +105,7 @@
     for (var i = 0; i < inputs.length; i++) {
       var inp = inputs[i];
       if (inp.dataset.dashTableSearchBound === '1') continue;
+      if (inp.dataset.noDashTableSearch === '1') continue;
       if (inp.classList.contains('date-filter-input') || inp.classList.contains('date-filter-native')) continue;
       return inp;
     }
@@ -222,6 +223,8 @@
       state.sortHeaders.push({ th: th, index: index });
 
       th.addEventListener('click', function () {
+        refreshDataRows(state);
+        if (!state.dataRows.length) return;
         if (state.sortCol === index) {
           state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
         } else {
@@ -260,6 +263,11 @@
     }
 
     if (!needsBar) return;
+
+    var panel = state.table.closest('.panel, .section-view');
+    if (!state.searchInput && panel && panel.querySelector('.data-toolbar [data-no-dash-table-search]')) {
+      return;
+    }
 
     var host = state.table.closest('.panel-body, .stock-table-wrap, .panel');
     if (!host) return;
@@ -332,7 +340,6 @@
     if (!tbody) return;
 
     var dataRows = Array.prototype.slice.call(tbody.rows).filter(isDataRow);
-    if (!dataRows.length) return;
 
     table.dataset.sortFilter = '1';
     table.dataset.sortFilterBound = '1';
@@ -449,11 +456,18 @@
 
   function hookPagination() {
     if (!global.TablePagination || global.TablePagination._sortFilterHooked) return;
-    var orig = global.TablePagination.refresh;
+    var origRefresh = global.TablePagination.refresh;
     global.TablePagination.refresh = function (el) {
       refresh(el);
-      return orig.call(global.TablePagination, el);
+      return origRefresh.call(global.TablePagination, el);
     };
+    if (global.TablePagination.repaginate) {
+      var origRepaginate = global.TablePagination.repaginate;
+      global.TablePagination.repaginate = function (el) {
+        refresh(el);
+        return origRepaginate.call(global.TablePagination, el);
+      };
+    }
     global.TablePagination._sortFilterHooked = true;
   }
 
