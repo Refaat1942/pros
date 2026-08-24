@@ -182,6 +182,18 @@ Route::prefix('admin')
             Route::get('companies/list', [ContractCompanyController::class, 'index'])
                 ->name('companies.list');
 
+            Route::get('companies/template', [ContractCompanyController::class, 'template'])
+                ->middleware('throttle:30,1')
+                ->name('companies.template');
+
+            Route::get('companies/export', [ContractCompanyController::class, 'export'])
+                ->middleware('throttle:30,1')
+                ->name('companies.export');
+
+            Route::post('companies/import', [ContractCompanyController::class, 'import'])
+                ->middleware('throttle:10,1')
+                ->name('companies.import');
+
             Route::post('companies', [ContractCompanyController::class, 'store'])
                 ->name('companies.store');
 
