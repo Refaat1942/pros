@@ -17,6 +17,7 @@
 @push('styles-late')
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/workflow-path.css') }}?v={{ filemtime(public_path('assets/css/workflow-path.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/dashboard-table-sort-filter.css') }}?v={{ filemtime(public_path('assets/css/dashboard-table-sort-filter.css')) }}">
     @include('partials.dashboard-date-filters-assets')
 @endpush
 
@@ -28,6 +29,7 @@
     <script src="{{ asset('assets/js/shared/toast.js') }}?v={{ filemtime(public_path('assets/js/shared/toast.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}?v={{ filemtime(public_path('assets/js/shared/table-pagination.js')) }}"></script>
+    <script src="{{ asset('assets/js/shared/table-sort-filter.js') }}?v={{ filemtime(public_path('assets/js/shared/table-sort-filter.js')) }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)
         <script src="{{ str_starts_with($script, 'http') ? $script : asset($script) }}"></script>
     @endforeach
