@@ -53,18 +53,22 @@
         </form>
         <div class="data-toolbar">
             @include('admin.partials.bulk-action-bar', ['bulkBarId' => 'companiesBulkBar'])
-            <input type="text" id="companySearch" placeholder="🔍 بحث باسم الجهة...">
-            <span class="toolbar-count" id="companiesCount">{{ $companyList->count() }} شركة</span>
-            <div class="export-btns" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <div class="export-btns">
                 <a class="btn-action" href="{{ route('admin.companies.template') }}">⬇️ تنزيل القالب</a>
-                <a class="btn-action" href="{{ route('admin.companies.export') }}">📊 تصدير Excel</a>
                 <form id="companiesImportForm" method="POST" action="{{ route('admin.companies.import') }}" enctype="multipart/form-data" style="display:inline-flex;">
                     @csrf
                     <input type="file" id="companiesImportFile" name="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" class="companies-file-input" required>
                     <label for="companiesImportFile" class="btn-action success companies-file-label" id="companiesImportBtn" title="القالب: {{ implode(' | ', $companyTemplateHeaders) }}">📤 رفع ملف Excel</label>
                 </form>
+                <a class="btn-export excel" href="{{ route('admin.companies.export') }}">📊 Excel</a>
             </div>
+            <input type="text" id="companySearch" placeholder="🔍 بحث باسم الجهة...">
+            <span class="toolbar-count" id="companiesCount">{{ $companyList->count() }} جهة</span>
         </div>
+        <p class="companies-import-hint">
+            قالب الرفع الجماعي — <strong>{{ implode(' | ', $companyTemplateHeaders) }}</strong>.
+            نزّل القالب، املأ البيانات، ثم «رفع ملف Excel». الجهات الموجودة تُحدَّث حسب اسم الجهة.
+        </p>
         <div class="panel-body">
             <table class="bulk-select-table" data-bulk-bar="companiesBulkBar" data-bulk-delete-base="/admin/companies" data-paginate="10">
                 <thead>
@@ -131,6 +135,16 @@
     #section-companies .companies-file-label {
         cursor: pointer;
         margin: 0;
+    }
+    #section-companies .companies-import-hint {
+        margin: 0 20px 12px;
+        padding: 10px 12px;
+        font-size: 12px;
+        color: var(--text-muted);
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        line-height: 1.5;
     }
     .company-add-bar {
         display: flex;
