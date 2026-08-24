@@ -35,4 +35,16 @@ class IdleSessionTimeoutTest extends TestCase
             ->get('/admin/branding-settings')
             ->assertOk();
     }
+
+    public function test_idle_timeout_zero_disables_auto_logout(): void
+    {
+        config(['session.idle_timeout' => 0]);
+
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->withSession(['last_activity' => now()->subDays(2)->timestamp])
+            ->get('/admin/branding-settings')
+            ->assertOk();
+    }
 }

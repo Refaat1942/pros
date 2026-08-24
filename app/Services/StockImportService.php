@@ -261,14 +261,16 @@ class StockImportService
     private function buildColumnMap(array $headerCells): array
     {
         $aliases = CatalogColumns::importAliases();
-
         $map = [];
 
         foreach ($headerCells as $index => $cell) {
-            $normalized = mb_strtolower(trim((string) $cell));
+            $normalized = $this->normalizeHeaderLabel((string) $cell);
             if ($normalized === '') {
                 continue;
             }
+
+            $bestField = null;
+            $bestScore = 0;
 
             foreach ($aliases as $field => $labels) {
                 if (array_key_exists($field, $map)) {
@@ -276,18 +278,73 @@ class StockImportService
                 }
 
                 foreach ($labels as $label) {
-                    $labelNorm = mb_strtolower($label);
-                    if ($normalized === $labelNorm
-                        || str_contains($normalized, $labelNorm)
-                        || ($normalized !== '' && strlen($normalized) >= 2 && str_contains($labelNorm, $normalized))) {
-                        $map[$field] = $index;
-                        break;
+                    $labelNorm = $this->normalizeHeaderLabel($label);
+                    if ($labelNorm === '') {
+                        continue;
+                    }
+
+                    $score = 0;
+                    if ($normalized === $labelNorm) {
+                        $score = 200 + strlen($labelNorm);
+                    } elseif (str_contains($normalized, $labelNorm)) {
+                        $score = 100 + strlen($labelNorm);
+                    } elseif (strlen($normalized) >= 2 && str_contains($labelNorm, $normalized)) {
+                        $score = 60 + strlen($normalized);
+                    }
+
+                    if ($score > $bestScore) {
+                        $bestScore = $score;
+                        $bestField = $field;
                     }
                 }
+            }
+
+            if ($bestField !== null && $bestScore > 0) {
+                $map[$bestField] = $index;
             }
         }
 
         return $map;
+    }
+
+    private function normalizeHeaderLabel(string $cell): string
+    {
+        $s = trim($cell);
+        $s = preg_replace('/^\x{FEFF}/u', '', $s) ?? $s;
+        $s = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $s) ?? $s;
+        $s = str_replace(['أ', 'إ', 'آ'], 'ا', $s);
+        $s = str_replace('ة', 'ه', $s);
+
+        return mb_strtolower($s);
+    }
+
+    private function formatImportCell(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_int($value)) {
+            return (string) $value;
+        }
+
+        if (is_float($value)) {
+            if (abs($value - (int) round($value)) < 0.00001) {
+                return (string) (int) round($value);
+            }
+
+            return rtrim(rtrim(sprintf('%.6F', $value), '0'), '.');
+        }
+
+        return trim((string) $value);
     }
 
     /**
@@ -387,7 +444,7 @@ class StockImportService
         foreach ($sheet->getRowIterator() as $row) {
             $lineNo++;
             $cells = array_map(
-                fn ($value) => trim((string) ($value ?? '')),
+                fn ($value) => $this->formatImportCell($value),
                 $row->toArray(),
             );
 
