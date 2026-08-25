@@ -5,6 +5,7 @@ namespace Tests\Feature\Patient;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
+use App\Services\PathwayConfigService;
 use App\Services\PublicTrackingService;
 use Illuminate\Support\Str;
 use Tests\Support\ProstheticTestHelper;
@@ -218,6 +219,78 @@ class PublicTrackingTest extends TestCase
     {
         $this->get(route('public.track.case', ['uid' => 'case-'.Str::random(12)]))
             ->assertNotFound();
+    }
+
+    public function test_legacy_public_selfservice_route_returns_not_found(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+
+        $this->get('/selfservice/'.$patient->patient_qr)->assertNotFound();
+    }
+
+    public function test_tracking_resolves_newest_case_when_multiple_share_uid(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $uid = 'case-multic01';
+        $patient->update(['tracking_uid' => $uid]);
+
+        $caseA = CaseRecord::create([
+            'case_no' => 'C-2026-2001',
+            'order_ref' => 'ORD-2001',
+            'tracking_uid' => $uid,
+            'patient_id' => $patient->id,
+            'contract_company_id' => $company->id,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_DELIVERED,
+        ]);
+
+        $caseB = CaseRecord::create([
+            'case_no' => 'C-2026-2002',
+            'order_ref' => 'ORD-2002',
+            'tracking_uid' => $uid,
+            'patient_id' => $patient->id,
+            'contract_company_id' => $company->id,
+            'company_name' => $company->name,
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'path' => CaseRecord::PATH_STANDARD,
+            'stage_key' => CaseRecord::STAGE_MANUFACTURING,
+        ]);
+
+        $pathwayConfig = app(PathwayConfigService::class);
+        $pathway = $pathwayConfig->resolvePathway($patient, $caseB);
+        $steps = $pathwayConfig->displayStepsForPathway($pathway);
+        $indexB = $pathwayConfig->resolveCurrentIndexForPathway($caseB, $pathway, false);
+        $indexA = $pathwayConfig->resolveCurrentIndexForPathway($caseA, $pathway, false);
+        $expectedPercent = count($steps) > 1
+            ? (int) round(($indexB / (count($steps) - 1)) * 100)
+            : 0;
+        $oldCasePercent = count($steps) > 1
+            ? (int) round(($indexA / (count($steps) - 1)) * 100)
+            : 0;
+
+        $this->assertNotSame(
+            $expectedPercent,
+            $oldCasePercent,
+            'Delivered older case and active manufacturing case must yield different progress.',
+        );
+
+        $tracking = app(PublicTrackingService::class)->resolve($uid);
+        $this->assertSame($expectedPercent, $tracking['progress_percent']);
+
+        $response = $this->get(route('public.track.case', ['uid' => $uid]));
+
+        $response->assertOk();
+        $response->assertSee('متابعة حالة الطلب');
+        $response->assertSee($expectedPercent.'%', false);
+        $response->assertDontSee('جاري التصنيع بقسم الإنتاج');
+        $response->assertDontSee('تم التسليم');
+        $response->assertDontSee('المرحلة الحالية');
+        $response->assertDontSee($patient->name);
+        $response->assertDontSee('50000');
+        $response->assertDontSee('40000');
     }
 
     public function test_patient_registration_generates_tracking_uid_and_qr(): void

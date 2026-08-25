@@ -31,7 +31,7 @@ class PublicTrackingService
      */
     public function resolve(string $uid): array
     {
-        $case = CaseRecord::where('tracking_uid', $uid)->first();
+        $case = CaseRecord::where('tracking_uid', $uid)->orderByDesc('id')->first();
         $patient = Patient::where('tracking_uid', $uid)->first();
 
         if (! $case && ! $patient) {
