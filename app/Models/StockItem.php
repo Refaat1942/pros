@@ -262,7 +262,7 @@ class StockItem extends Model
      */
     public static function pickerCatalogRows(): array
     {
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'price'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
@@ -296,6 +296,7 @@ class StockItem extends Model
                     'qty' => (int) $item->qty,
                     'reserved' => (int) $item->reserved,
                     'available_max' => $item->availableQty(),
+                    'price' => (float) $item->price,
                 ];
             })
             ->filter(fn (array $row) => $row['code'] !== '' && $row['name'] !== '')
@@ -320,7 +321,7 @@ class StockItem extends Model
             return [];
         }
 
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'price'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
@@ -350,6 +351,7 @@ class StockItem extends Model
                     'qty' => (int) $item->qty,
                     'reserved' => (int) $item->reserved,
                     'available_max' => $item->availableQty(),
+                    'price' => (float) $item->price,
                 ];
             })
             ->filter(fn (array $row) => $row['code'] !== '' && $row['name'] !== '')

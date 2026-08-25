@@ -37,6 +37,21 @@
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   }
 
+  function fmtCatalogPrice(n) {
+    return Number(n || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function itemCatalogPrice(it) {
+    if (it && it.price != null && !isNaN(parseFloat(it.price))) {
+      return fmtCatalogPrice(it.price);
+    }
+    var cat = findCatalogItem(it && it.stock_item_code);
+    return cat ? fmtCatalogPrice(cat.price) : '—';
+  }
+
   function apiMessage(err, fallback) {
     var data = err && err.response && err.response.data;
     if (data && data.message) return data.message;
@@ -390,7 +405,7 @@
     if (!tbody) return;
     var specs = specBomItems();
     if (!specs.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">لا توجد بنود توصيف فني.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود توصيف فني.</td></tr>';
       return;
     }
     var groups = {};
@@ -406,14 +421,15 @@
     var html = '';
     order.forEach(function (key) {
       if (key) {
-        html += '<tr class="adj-spec-group"><td colspan="4" style="background:#f5f3ff;font-weight:700;padding:8px 10px;">📦 ' + esc(key) + '</td></tr>';
+        html += '<tr class="adj-spec-group"><td colspan="5" style="background:#f5f3ff;font-weight:700;padding:8px 10px;">📦 ' + esc(key) + '</td></tr>';
       }
       groups[key].forEach(function (it) {
         html += '<tr>' +
           '<td>' + esc(it.stock_item_code) + '</td>' +
           '<td>' + esc(it.name) + '</td>' +
           '<td>' + esc(it.qty) + '</td>' +
-          '<td>' + esc(it.uom || 'قطعة') + '</td></tr>';
+          '<td>' + esc(it.uom || 'قطعة') + '</td>' +
+          '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td></tr>';
       });
     });
     tbody.innerHTML = html;
@@ -428,7 +444,7 @@
     var rows = [];
 
     if (!editRequestItems.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
       return;
     }
 
@@ -439,6 +455,7 @@
         '<td><input type="number" class="form-control adj-edit-qty" data-idx="' + idx + '" min="1" value="' + esc(it.qty) + '"' +
         (activeCase && activeCase.has_pending_edit_request ? ' disabled' : '') + ' style="width:72px;padding:4px 8px;"></td>' +
         '<td>' + esc(it.uom || findCatalogItem(it.stock_item_code)?.uom || 'قطعة') + '</td>' +
+        '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td>' +
         '<td><span class="badge done">معدّلات</span></td>' +
         '<td class="adj-col-action">' +
         (activeCase && activeCase.has_pending_edit_request ? '' :
@@ -448,7 +465,7 @@
         '</td></tr>');
     });
 
-    tbody.innerHTML = rows.join('') || '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات.</td></tr>';
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="7" class="empty-cell">لا توجد بنود معدّلات.</td></tr>';
   }
 
   function syncEditRequestItemsFromInputs() {
@@ -604,7 +621,7 @@
     });
 
     if (!adjItems.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
       return;
     }
 
@@ -622,6 +639,7 @@
         '<td><input type="number" class="form-control adj-item-qty-input" data-item-id="' + esc(it.id) + '"' +
         ' data-qty="' + esc(it.qty) + '" min="1" value="' + esc(it.qty) + '" style="width:82px;padding:4px 8px;"></td>' +
         '<td>' + esc(it.uom || 'قطعة') + '</td>' +
+        '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td>' +
         '<td><span class="badge done">معدّلات</span></td>' +
         removeBtn +
         '</tr>';

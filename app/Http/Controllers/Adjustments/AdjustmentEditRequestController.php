@@ -36,6 +36,7 @@ class AdjustmentEditRequestController extends Controller
                 'qty' => $row['qty'] ?? 0,
                 'reserved' => $row['reserved'] ?? 0,
                 'available' => $row['available_max'] ?? 0,
+                'price' => (float) ($row['price'] ?? 0),
             ]);
 
         return response()->json([
