@@ -92,6 +92,38 @@ class ResourceAuthorizationService
         $this->assertCanMutatePatient($user, $patient);
     }
 
+    /**
+     * إصدار/تأكيد عرض السعر من الاستقبال — لا يُحوّل pending إلى issued.
+     * الإصدار الأول يتم من مكتب التشغيل (releaseToReception); الاستقبال يعيد التأكيد للطباعة فقط.
+     */
+    public function assertCanIssueQuote(User $user, Quote $quote): void
+    {
+        abort_unless(
+            $user->canViewDashboardPage('reception', 'quote'),
+            403,
+            'ليس لديك صلاحية الوصول إلى هذه الصفحة.',
+        );
+
+        $quote->loadMissing('caseRecord');
+
+        abort_unless(
+            $quote->caseRecord?->patient_type === Patient::TYPE_CIVILIAN,
+            404,
+        );
+
+        abort_unless(
+            $quote->status !== Quote::STATUS_PENDING,
+            403,
+            'لا يمكن إصدار العرض من الاستقبال قبل إصدار مكتب التشغيل للعرض.',
+        );
+
+        abort_unless(
+            $quote->status === Quote::STATUS_ISSUED,
+            403,
+            'عرض السعر غير متاح للإصدار من الاستقبال في هذه المرحلة.',
+        );
+    }
+
     public function assertCanPrintQuote(User $user, Quote $quote, string $dashboard): void
     {
         match ($dashboard) {

@@ -60,6 +60,8 @@ class QuoteController extends Controller
      */
     public function issue(Quote $quote): JsonResponse
     {
+        $this->resourceAuth->assertCanIssueQuote(auth()->user(), $quote);
+
         $quote = $this->quoteService->markIssued($quote);
 
         return response()->json([
