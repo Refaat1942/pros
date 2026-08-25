@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bom;
 use App\Models\CaseRecord;
+use App\Models\ContractCompany;
 use App\Models\ContractCompanyDebt;
 use App\Models\MilitaryDebt;
 use App\Models\Patient;
@@ -132,15 +133,49 @@ class BiReportService
         ];
     }
 
-    /**
-     * Board 4 — الجهات والتكاليف (مدني / عسكري منفصلان).
-     */
-    public function boardEntitiesAndCosts(): array
+    /** Board 4 — الخزنة النقدية (محصّل / بانتظار الدفع). */
+    public function boardFinanceCash(): array
+    {
+        return [
+            'cash_collected_total' => round((float) Payment::query()->sum('amount'), 2),
+            'cash_awaiting_payment' => CaseRecord::query()->awaitingCashier()->count(),
+        ];
+    }
+
+    /** Board 4 — مديونيات جهات التعاقد المدنية. */
+    public function boardFinanceCivilianDebt(): array
+    {
+        $companyDebts = $this->civilianCompanyDebtsRows();
+        $netDebts = collect($companyDebts)->sum('remaining');
+
+        return [
+            'net_debts' => round($netDebts, 2),
+            'company_debts' => $companyDebts,
+        ];
+    }
+
+    /** Board 4 — تكاليف مدنية تراكمية / WAC مُسلَّمة. */
+    public function boardFinanceRevenueCost(): array
     {
         $civilianCumulative = (float) CaseRecord::query()
             ->where('patient_type', Patient::TYPE_CIVILIAN)
             ->sum('quote_total');
 
+        $civilianWacCost = (float) CaseRecord::query()
+            ->where('patient_type', Patient::TYPE_CIVILIAN)
+            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
+            ->get(['issue_cost', 'internal_cost'])
+            ->sum(fn (CaseRecord $c) => (float) ($c->issue_cost ?? $c->internal_cost ?? 0));
+
+        return [
+            'civilian_cumulative_cost' => round($civilianCumulative, 2),
+            'civilian_delivered_wac_cost' => round($civilianWacCost, 2),
+        ];
+    }
+
+    /** Board 4 — تكاليف ومديونيات المسار العسكري. */
+    public function boardFinanceMilitary(): array
+    {
         $militaryAggregated = (float) CaseRecord::query()
             ->where('patient_type', Patient::TYPE_MILITARY)
             ->sum('total_cost');
@@ -152,12 +187,53 @@ class BiReportService
 
         $militaryDebtCollected = (float) MilitaryDebt::query()->sum('collected');
 
+        $militaryWacCost = (float) CaseRecord::query()
+            ->where('patient_type', Patient::TYPE_MILITARY)
+            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
+            ->get(['issue_cost', 'internal_cost', 'total_cost'])
+            ->sum(fn (CaseRecord $c) => (float) ($c->issue_cost ?? $c->internal_cost ?? $c->total_cost ?? 0));
+
+        return [
+            'military_aggregated_cost' => round($militaryAggregated, 2),
+            'military_delivered_wac_cost' => round($militaryWacCost, 2),
+            'military_debt_pending' => round($militaryDebtPending, 2),
+            'military_debt_collected' => round($militaryDebtCollected, 2),
+        ];
+    }
+
+    /** Board 4 — أعداد جهات التعاقد (بدون مبالغ مالية). */
+    public function boardFinanceContractsCompanies(): array
+    {
+        return [
+            'contracted_companies' => ContractCompany::query()->where('is_contracted', true)->count(),
+            'companies_total' => ContractCompany::query()->count(),
+        ];
+    }
+
+    /**
+     * Board 4 — الجهات والتكاليف (كامل — للتجميع والاختبارات).
+     */
+    public function boardEntitiesAndCosts(): array
+    {
+        $cash = $this->boardFinanceCash();
+        $civilianDebt = $this->boardFinanceCivilianDebt();
+        $revenueCost = $this->boardFinanceRevenueCost();
+        $military = $this->boardFinanceMilitary();
+
+        return array_merge($cash, $civilianDebt, $revenueCost, $military);
+    }
+
+    /**
+     * @return list<array{company_code: ?string, company_name: ?string, is_military: bool, due: float, collected: float, remaining: float, status: string}>
+     */
+    private function civilianCompanyDebtsRows(): array
+    {
         $debts = ContractCompanyDebt::with('contractCompany:id,company_code,name,is_military')
             ->whereHas('contractCompany', fn ($q) => $q->where('is_military', false))
             ->orderByDesc('due')
             ->get();
 
-        $companyDebts = $debts->map(function (ContractCompanyDebt $d) {
+        return $debts->map(function (ContractCompanyDebt $d) {
             $due = (float) $d->due;
             $collected = (float) $d->collected;
 
@@ -171,36 +247,6 @@ class BiReportService
                 'status' => $d->status,
             ];
         })->all();
-
-        $netDebts = collect($companyDebts)->sum('remaining');
-
-        $civilianWacCost = (float) CaseRecord::query()
-            ->where('patient_type', Patient::TYPE_CIVILIAN)
-            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
-            ->get(['issue_cost', 'internal_cost'])
-            ->sum(fn (CaseRecord $c) => (float) ($c->issue_cost ?? $c->internal_cost ?? 0));
-
-        $militaryWacCost = (float) CaseRecord::query()
-            ->where('patient_type', Patient::TYPE_MILITARY)
-            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
-            ->get(['issue_cost', 'internal_cost', 'total_cost'])
-            ->sum(fn (CaseRecord $c) => (float) ($c->issue_cost ?? $c->internal_cost ?? $c->total_cost ?? 0));
-
-        $cashCollected = (float) Payment::query()->sum('amount');
-        $cashAwaiting = CaseRecord::query()->awaitingCashier()->count();
-
-        return [
-            'civilian_cumulative_cost' => round($civilianCumulative, 2),
-            'civilian_delivered_wac_cost' => round($civilianWacCost, 2),
-            'military_aggregated_cost' => round($militaryAggregated, 2),
-            'military_delivered_wac_cost' => round($militaryWacCost, 2),
-            'military_debt_pending' => round($militaryDebtPending, 2),
-            'military_debt_collected' => round($militaryDebtCollected, 2),
-            'net_debts' => round($netDebts, 2),
-            'cash_collected_total' => round($cashCollected, 2),
-            'cash_awaiting_payment' => $cashAwaiting,
-            'company_debts' => $companyDebts,
-        ];
     }
 
     /**

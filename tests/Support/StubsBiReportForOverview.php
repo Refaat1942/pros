@@ -24,15 +24,40 @@ trait StubsBiReportForOverview
         ]);
         $mock->shouldReceive('boardInventory')->andReturn($inventoryBoard);
         $mock->shouldReceive('boardOperations')->andReturn($operationsBoard);
+        $mock->shouldReceive('boardFinanceCash')->andReturn([
+            'cash_collected_total' => 0,
+            'cash_awaiting_payment' => 0,
+        ]);
+        $mock->shouldReceive('boardFinanceCivilianDebt')->andReturn([
+            'net_debts' => 0,
+            'company_debts' => [],
+        ]);
+        $mock->shouldReceive('boardFinanceRevenueCost')->andReturn([
+            'civilian_cumulative_cost' => 0,
+            'civilian_delivered_wac_cost' => 0,
+        ]);
+        $mock->shouldReceive('boardFinanceMilitary')->andReturn([
+            'military_aggregated_cost' => 0,
+            'military_delivered_wac_cost' => 0,
+            'military_debt_pending' => 0,
+            'military_debt_collected' => 0,
+        ]);
+        $mock->shouldReceive('boardFinanceContractsCompanies')->andReturn([
+            'contracted_companies' => 0,
+            'companies_total' => 0,
+        ]);
         $mock->shouldReceive('boardEntitiesAndCosts')->andReturn([
-            'civilian_cost' => 0,
-            'military_cost' => 0,
-            'net_debt' => 0,
-            'top_debtors' => [],
+            'cash_collected_total' => 0,
+            'cash_awaiting_payment' => 0,
+            'net_debts' => 0,
+            'civilian_cumulative_cost' => 0,
+            'military_aggregated_cost' => 0,
+            'military_debt_pending' => 0,
+            'military_debt_collected' => 0,
         ]);
         $mock->shouldReceive('boardPurchasing')->andReturn([
             'supplier_count' => 0,
-            'price_compare' => [],
+            'price_comparison' => [],
         ]);
     }
 }

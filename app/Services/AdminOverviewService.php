@@ -5,20 +5,27 @@ namespace App\Services;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
+use App\Models\User;
 use App\Support\ClinicTime;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /**
- * تجميع بيانات صفحة نظرة عامة — الإدارة (مع فلترة بالتاريخ).
+ * تجميع بيانات صفحة نظرة عامة — الإدارة (مع فلترة بالتاريخ ونطاق الصلاحيات).
  */
 class AdminOverviewService
 {
-    public const BI_BOARDS_CACHE_KEY = 'admin_overview_bi_boards_v2';
+    public const BI_BOARD_CACHE_PREFIX = 'admin_overview_bi_board_';
+
+    public const FINANCE_SECTION_CACHE_PREFIX = 'admin_overview_finance_';
+
+    public const BI_BOARD_CACHE_VERSION = 'v4';
 
     public function __construct(
         private readonly AdminReportsHubService $hub,
         private readonly AdminCycleDashboardService $cycle,
         private readonly BiReportService $biReports,
+        private readonly AdminOverviewScopeService $scope,
     ) {}
 
     /** @return array{from: Carbon, to: Carbon} */
@@ -33,86 +40,108 @@ class AdminOverviewService
     }
 
     /** @return array<string, mixed> */
-    public function pageData(Carbon $from, Carbon $to): array
+    public function pageData(User $user, Carbon $from, Carbon $to): array
     {
-        $boards = \Illuminate\Support\Facades\Cache::remember(
-            self::BI_BOARDS_CACHE_KEY,
-            300,
-            fn () => [
-                'board1' => $this->biReports->boardPatients(),
-                'board2' => $this->biReports->boardInventory(),
-                'board3' => $this->biReports->boardOperations(),
-                'board4' => $this->biReports->boardEntitiesAndCosts(),
-                'board5' => $this->biReports->boardPurchasing(),
-            ],
-        );
-
-        return [
+        $data = [
             'date_from' => $from->toDateString(),
             'date_to' => $to->toDateString(),
             'period_label' => $this->periodLabel($from, $to),
-            'cycle_cards' => $this->cycle->build($from, $to),
-            'cycle_total_active' => $this->cycle->totalActive($from, $to),
-            'case_strip' => $this->caseStripCounts($from, $to),
-            ...$boards,
         ];
-    }
 
-    /** @return array{waiting_return: int, awaiting_cashier: int, awaiting_assignment: int, in_progress: int, delivered: int} */
-    public function caseStripCounts(Carbon $from, Carbon $to): array
-    {
-        $waiting = CaseRecord::query()
-            ->where('patient_type', Patient::TYPE_CIVILIAN)
-            ->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED)
-            ->where('stage_key', '!=', CaseRecord::STAGE_CASHIER)
-            ->whereHas('quotes', fn ($q) => $q->where('status', Quote::STATUS_ISSUED))
-            ->whereBetween('updated_at', [$from, $to])
-            ->count();
-
-        $awaitingCashier = CaseRecord::query()
-            ->awaitingCashier()
-            ->whereBetween('updated_at', [$from, $to])
-            ->count();
-
-        $awaitingAssignment = config('workshop.enabled', true)
-            ? CaseRecord::query()
-                ->awaitingWorkshopAssignmentApproval()
-                ->whereBetween('updated_at', [$from, $to])
-                ->count()
-            : 0;
-
-        $assignmentIds = config('workshop.enabled', true)
-            ? CaseRecord::query()
-                ->awaitingWorkshopAssignmentApproval()
-                ->whereBetween('updated_at', [$from, $to])
-                ->pluck('id')
-            : collect();
-
-        $inProgressQuery = CaseRecord::query()
-            ->whereIn('stage_key', [
-                CaseRecord::STAGE_MANUFACTURING,
-                CaseRecord::STAGE_READY_DELIVERY,
-            ])
-            ->whereBetween('updated_at', [$from, $to]);
-
-        if ($assignmentIds->isNotEmpty()) {
-            $inProgressQuery->whereNotIn('id', $assignmentIds);
+        $cycleKeys = $this->scope->authorizedCycleKeys($user);
+        if ($cycleKeys !== []) {
+            $data['cycle_cards'] = $this->cycle->build($from, $to, $cycleKeys);
         }
 
-        $inProgress = $inProgressQuery->count();
+        if ($this->scope->canSeeCycleTotalActive($user)) {
+            $data['cycle_total_active'] = $this->cycle->totalActive($from, $to);
+        }
 
-        $delivered = CaseRecord::query()
-            ->where('stage_key', CaseRecord::STAGE_DELIVERED)
-            ->whereBetween('delivered_at', [$from, $to])
-            ->count();
+        $stripKeys = $this->scope->authorizedCaseStripKeys($user);
+        if ($stripKeys !== []) {
+            $data['case_strip'] = $this->caseStripCounts($from, $to, $stripKeys);
+        }
 
-        return [
-            'waiting_return' => $waiting,
-            'awaiting_cashier' => $awaitingCashier,
-            'awaiting_assignment' => $awaitingAssignment,
-            'in_progress' => $inProgress,
-            'delivered' => $delivered,
-        ];
+        foreach ($this->scope->authorizedBiBoardKeys($user) as $boardKey) {
+            if ($boardKey === 'board4') {
+                $board4 = $this->scopedFinanceBoard($user);
+                if ($board4 !== []) {
+                    $data[$boardKey] = $board4;
+                }
+
+                continue;
+            }
+
+            $data[$boardKey] = $this->cachedBiBoard($boardKey);
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  list<string>  $onlyKeys
+     * @return array<string, int>
+     */
+    public function caseStripCounts(Carbon $from, Carbon $to, array $onlyKeys): array
+    {
+        $strip = [];
+
+        if (in_array('waiting_return', $onlyKeys, true)) {
+            $strip['waiting_return'] = CaseRecord::query()
+                ->where('patient_type', Patient::TYPE_CIVILIAN)
+                ->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED)
+                ->where('stage_key', '!=', CaseRecord::STAGE_CASHIER)
+                ->whereHas('quotes', fn ($q) => $q->where('status', Quote::STATUS_ISSUED))
+                ->whereBetween('updated_at', [$from, $to])
+                ->count();
+        }
+
+        if (in_array('awaiting_cashier', $onlyKeys, true)) {
+            $strip['awaiting_cashier'] = CaseRecord::query()
+                ->awaitingCashier()
+                ->whereBetween('updated_at', [$from, $to])
+                ->count();
+        }
+
+        if (in_array('awaiting_assignment', $onlyKeys, true)) {
+            $strip['awaiting_assignment'] = config('workshop.enabled', true)
+                ? CaseRecord::query()
+                    ->awaitingWorkshopAssignmentApproval()
+                    ->whereBetween('updated_at', [$from, $to])
+                    ->count()
+                : 0;
+        }
+
+        if (in_array('in_progress', $onlyKeys, true)) {
+            $assignmentIds = config('workshop.enabled', true)
+                ? CaseRecord::query()
+                    ->awaitingWorkshopAssignmentApproval()
+                    ->whereBetween('updated_at', [$from, $to])
+                    ->pluck('id')
+                : collect();
+
+            $inProgressQuery = CaseRecord::query()
+                ->whereIn('stage_key', [
+                    CaseRecord::STAGE_MANUFACTURING,
+                    CaseRecord::STAGE_READY_DELIVERY,
+                ])
+                ->whereBetween('updated_at', [$from, $to]);
+
+            if ($assignmentIds->isNotEmpty()) {
+                $inProgressQuery->whereNotIn('id', $assignmentIds);
+            }
+
+            $strip['in_progress'] = $inProgressQuery->count();
+        }
+
+        if (in_array('delivered', $onlyKeys, true)) {
+            $strip['delivered'] = CaseRecord::query()
+                ->where('stage_key', CaseRecord::STAGE_DELIVERED)
+                ->whereBetween('delivered_at', [$from, $to])
+                ->count();
+        }
+
+        return $strip;
     }
 
     public function periodLabel(Carbon $from, Carbon $to): string
@@ -120,8 +149,69 @@ class AdminOverviewService
         return 'من '.$from->format('Y-m-d').' إلى '.$to->format('Y-m-d');
     }
 
+    /** @return array<string, array<string, mixed>> */
+    private function scopedFinanceBoard(User $user): array
+    {
+        $board = [];
+
+        foreach ($this->scope->authorizedFinanceSectionKeys($user) as $sectionKey) {
+            $board[$sectionKey] = $this->cachedFinanceSection($sectionKey);
+        }
+
+        return $board;
+    }
+
+    /** @return array<string, mixed> */
+    private function cachedFinanceSection(string $sectionKey): array
+    {
+        $cacheKey = self::FINANCE_SECTION_CACHE_PREFIX.$sectionKey.'_'.self::BI_BOARD_CACHE_VERSION;
+
+        return Cache::remember(
+            $cacheKey,
+            300,
+            fn () => match ($sectionKey) {
+                'cash' => $this->biReports->boardFinanceCash(),
+                'civilian_debt' => $this->biReports->boardFinanceCivilianDebt(),
+                'revenue_cost' => $this->biReports->boardFinanceRevenueCost(),
+                'military' => $this->biReports->boardFinanceMilitary(),
+                'contracts_companies' => $this->biReports->boardFinanceContractsCompanies(),
+                default => [],
+            },
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function cachedBiBoard(string $boardKey): array
+    {
+        $cacheKey = self::BI_BOARD_CACHE_PREFIX.$boardKey.'_'.self::BI_BOARD_CACHE_VERSION;
+
+        return Cache::remember(
+            $cacheKey,
+            300,
+            fn () => match ($boardKey) {
+                'board1' => $this->biReports->boardPatients(),
+                'board2' => $this->biReports->boardInventory(),
+                'board3' => $this->biReports->boardOperations(),
+                'board5' => $this->biReports->boardPurchasing(),
+                default => [],
+            },
+        );
+    }
+
     public static function clearBiBoardsCache(): void
     {
-        \Illuminate\Support\Facades\Cache::forget(self::BI_BOARDS_CACHE_KEY);
+        foreach (['board1', 'board2', 'board3', 'board5'] as $boardKey) {
+            Cache::forget(self::BI_BOARD_CACHE_PREFIX.$boardKey.'_'.self::BI_BOARD_CACHE_VERSION);
+        }
+
+        foreach (['cash', 'civilian_debt', 'revenue_cost', 'military', 'contracts_companies'] as $sectionKey) {
+            Cache::forget(self::FINANCE_SECTION_CACHE_PREFIX.$sectionKey.'_'.self::BI_BOARD_CACHE_VERSION);
+        }
+
+        foreach (['board1', 'board2', 'board3', 'board4', 'board5'] as $boardKey) {
+            Cache::forget(self::BI_BOARD_CACHE_PREFIX.$boardKey.'_v3');
+        }
+
+        Cache::forget('admin_overview_bi_boards_v2');
     }
 }

@@ -29,22 +29,28 @@ class AdminOverviewController extends Controller
      */
     public function index(Request $request): View
     {
+        $user = $request->user();
+        abort_unless($user, 403);
+
         $dates = $this->overview->parseDateRange(
             $request->query('from'),
             $request->query('to'),
         );
 
-        return $this->adminPage('overview', $this->overview->pageData($dates['from'], $dates['to']));
+        return $this->adminPage('overview', $this->overview->pageData($user, $dates['from'], $dates['to']));
     }
 
     public function export(Request $request): StreamedResponse
     {
+        $user = $request->user();
+        abort_unless($user, 403);
+
         $dates = $this->overview->parseDateRange(
             $request->query('from'),
             $request->query('to'),
         );
 
-        $report = $this->exporter->build($dates['from'], $dates['to']);
+        $report = $this->exporter->build($user, $dates['from'], $dates['to']);
         $filename = $this->exportFilename($dates['from'], $dates['to']);
 
         $headers = [

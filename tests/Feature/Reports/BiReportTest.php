@@ -125,6 +125,28 @@ class BiReportTest extends TestCase
         $mock->shouldReceive('boardPatients')->andReturn(['total_cases' => 0, 'civilian_count' => 0, 'military_count' => 0, 'by_stage' => [], 'sla_breaches' => [], 'avg_turnaround' => 0]);
         $mock->shouldReceive('boardInventory')->andReturn(['items' => [], 'low_stock_items' => [], 'total_wac_value' => 0]);
         $mock->shouldReceive('boardOperations')->andReturn(['in_production' => 0, 'ready_delivery' => 0, 'stage_counts' => []]);
+        $mock->shouldReceive('boardFinanceCash')->andReturn([
+            'cash_collected_total' => 0,
+            'cash_awaiting_payment' => 0,
+        ]);
+        $mock->shouldReceive('boardFinanceCivilianDebt')->andReturn([
+            'net_debts' => 0,
+            'company_debts' => [],
+        ]);
+        $mock->shouldReceive('boardFinanceRevenueCost')->andReturn([
+            'civilian_cumulative_cost' => 0,
+            'civilian_delivered_wac_cost' => 0,
+        ]);
+        $mock->shouldReceive('boardFinanceMilitary')->andReturn([
+            'military_aggregated_cost' => 0,
+            'military_delivered_wac_cost' => 0,
+            'military_debt_pending' => 0,
+            'military_debt_collected' => 0,
+        ]);
+        $mock->shouldReceive('boardFinanceContractsCompanies')->andReturn([
+            'contracted_companies' => 0,
+            'companies_total' => 0,
+        ]);
         $mock->shouldReceive('boardEntitiesAndCosts')->andReturn(['top_debtors' => [], 'total_due' => 0, 'total_collected' => 0]);
         $mock->shouldReceive('boardPurchasing')->andReturn(['top_suppliers' => []]);
 
