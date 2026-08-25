@@ -84,20 +84,37 @@ class ContractDebtService
      */
     public function recordPayment(ContractCompany $company, float $amount): void
     {
-        DB::transaction(function () use ($company, $amount) {
+        $paymentAmount = round($amount, 2);
+
+        if ($paymentAmount <= 0) {
+            throw new \InvalidArgumentException('قيمة المبلغ غير صالحة.');
+        }
+
+        DB::transaction(function () use ($company, $paymentAmount) {
             $debt = $this->forCompany($company, lock: true);
+
+            $remaining = $this->remainingDue($debt);
+            if ($remaining <= 0) {
+                throw new \InvalidArgumentException('لا يوجد متبقٍ للتحصيل على هذه الجهة.');
+            }
+
+            if ($paymentAmount > $remaining) {
+                throw new \InvalidArgumentException(
+                    'المبلغ المُدخل أكبر من المتبقي للتحصيل ('.number_format($remaining, 2).' ج.م).'
+                );
+            }
 
             $before = $this->snapshot($debt);
 
-            $debt->collected = (float) $debt->collected + $amount;
+            $debt->collected = round((float) $debt->collected + $paymentAmount, 2);
             $debt->status = $this->computeStatus($debt)->value;
             $debt->save();
 
-            app(DebtCollectionEntryService::class)->record($debt, $amount, (float) $debt->due);
+            app(DebtCollectionEntryService::class)->record($debt, $paymentAmount, (float) $debt->due);
 
             AuditService::log(
                 action: 'payment',
-                description: "تسجيل تحصيل من جهة {$company->name} بمقدار {$amount}",
+                description: "تسجيل تحصيل من جهة {$company->name} بمقدار {$paymentAmount}",
                 tag: 'financial',
                 before: $before,
                 after: $this->snapshot($debt),
@@ -130,6 +147,11 @@ class ContractDebtService
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    private function remainingDue(ContractCompanyDebt $debt): float
+    {
+        return max(0, round((float) $debt->due - (float) $debt->collected, 2));
+    }
 
     private function computeStatus(ContractCompanyDebt $debt): DebtStatus
     {
