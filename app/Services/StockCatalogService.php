@@ -10,6 +10,7 @@ use App\Models\StockItemPrice;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Support\StockCatalogPicker;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
