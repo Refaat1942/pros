@@ -408,8 +408,10 @@ class DashboardPageDataService
 
     private function adminReportsHub(): array
     {
+        $user = auth()->user();
+
         return [
-            'report_sections' => app(AdminReportsHubService::class)->sections(),
+            'report_sections' => app(AdminReportsHubService::class)->sections($user),
         ];
     }
 

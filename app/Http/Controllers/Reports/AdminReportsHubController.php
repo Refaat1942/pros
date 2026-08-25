@@ -34,13 +34,32 @@ class AdminReportsHubController extends Controller
             $request->query('to'),
         );
 
-        return $this->adminPage('reports-section', [
+        return $this->adminReportsSectionPage([
             'report_section' => $section,
             'section_meta' => $this->hub->sectionMeta($section),
             'report_data' => $this->buildReportOrAbort($section, $dates['from'], $dates['to']),
             'date_from' => $dates['from']?->toDateString() ?? '',
             'date_to' => $dates['to']?->toDateString() ?? '',
         ]);
+    }
+
+    /**
+     * تفاصيل تقرير — يتطلب صلاحية مركز التقارير وليس صفحة reports-section المخفية.
+     */
+    private function adminReportsSectionPage(array $data): View
+    {
+        $pages = config('dashboards.admin.pages', []);
+
+        abort_unless(isset($pages['reports-section']), 404);
+
+        $user = auth()->user();
+        abort_unless($user && $user->canViewDashboardPage('admin', 'reports'), 403);
+
+        return view('dashboard.show', array_merge([
+            'dashboardKey' => 'admin',
+            'activePage' => 'reports-section',
+            'pageTitle' => $pages['reports-section']['title'],
+        ], $data));
     }
 
     /** @return array<string, mixed> */

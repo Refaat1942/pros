@@ -214,6 +214,7 @@ class CashierPaymentFlowTest extends TestCase
             'cash-income',
             now()->startOfMonth(),
             now()->endOfMonth(),
+            $this->userWithRole('admin'),
         );
 
         $this->assertSame('التحصيل النقدي — الخزنة', $report['title']);
