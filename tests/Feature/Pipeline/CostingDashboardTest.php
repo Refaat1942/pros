@@ -177,9 +177,32 @@ class CostingDashboardTest extends TestCase
         $response->assertJsonMissingPath('pricing.items.0.wac_unit');
         $response->assertJsonStructure([
             'pricing' => [
-                'items' => [['stock_item_code', 'name', 'qty', 'criteria', 'line_total']],
+                'items' => [['stock_item_code', 'name', 'qty', 'criteria', 'price', 'line_total']],
             ],
         ]);
+    }
+
+    public function test_costing_show_displays_catalog_price_from_stock_item(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        $stock = \App\Models\StockItem::where('code', 'RM-001')->firstOrFail();
+        $stock->update(['price' => 450.00]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($costing)
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk();
+
+        $this->assertEquals(450.00, (float) $response->json('pricing.items.0.price'));
+        $this->assertNotEquals(
+            (float) $response->json('pricing.items.0.price'),
+            (float) $response->json('pricing.items.0.line_total'),
+            'السعر الأساسي يُعرض من الكتالوج — الإجمالي يبقى من منطق التسعير الحالي',
+        );
     }
 
     public function test_costing_show_displays_dynamic_category_criteria(): void

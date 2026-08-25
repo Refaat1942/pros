@@ -244,6 +244,7 @@ class CostingController extends Controller
                         'name' => $item->name,
                         'qty' => $item->qty,
                         'criteria' => $criteria,
+                        'price' => $stockItem ? (float) $stockItem->price : 0.0,
                         'line_total' => (float) $item->line_total,
                     ];
                 })->values()
