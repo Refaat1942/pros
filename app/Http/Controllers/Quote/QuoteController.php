@@ -8,6 +8,7 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\QuoteQrService;
 use App\Services\QuoteService;
+use App\Services\Authorization\ResourceAuthorizationService;
 use App\Support\IssueVoucherPresenter;
 use App\Support\QuotePrintPresenter;
 use App\Traits\PaginationTrait;
@@ -22,6 +23,7 @@ class QuoteController extends Controller
     public function __construct(
         private readonly QuoteService $quoteService,
         private readonly QuoteQrService $quoteQrService,
+        private readonly ResourceAuthorizationService $resourceAuth,
     ) {}
 
     /**
@@ -73,6 +75,12 @@ class QuoteController extends Controller
      */
     public function print(Request $request, Quote $quote): View
     {
+        $this->resourceAuth->assertCanPrintQuote(
+            auth()->user(),
+            $quote,
+            (string) $request->segment(1),
+        );
+
         $quote->load(['items', 'caseRecord.contractCompany']);
 
         abort_unless(

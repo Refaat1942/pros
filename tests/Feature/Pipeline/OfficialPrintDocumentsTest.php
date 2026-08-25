@@ -5,6 +5,7 @@ namespace Tests\Feature\Pipeline;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Quote;
+use App\Services\QuoteService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -33,6 +34,10 @@ class OfficialPrintDocumentsTest extends TestCase
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        if ($quote->status !== Quote::STATUS_ISSUED) {
+            app(QuoteService::class)->markIssued($quote);
+            $quote = $quote->fresh();
+        }
         $ops = $this->userWithRole('operations');
 
         $specItem = $quote->items->firstWhere('source', 'spec') ?? $quote->items->first();

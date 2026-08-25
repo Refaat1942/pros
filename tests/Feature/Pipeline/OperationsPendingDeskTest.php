@@ -6,6 +6,7 @@ use App\Models\CaseRecord;
 use App\Models\Quote;
 use App\Models\StockItem;
 use App\Models\TechOrderSpec;
+use App\Services\QuoteService;
 use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
@@ -319,6 +320,10 @@ class OperationsPendingDeskTest extends TestCase
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        if ($quote->status !== Quote::STATUS_ISSUED) {
+            app(QuoteService::class)->markIssued($quote);
+            $quote = $quote->fresh();
+        }
         $ops = $this->userWithRole('operations');
 
         $this->actingAs($ops)

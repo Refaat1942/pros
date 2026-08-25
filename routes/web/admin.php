@@ -423,6 +423,7 @@ Route::prefix('admin')
                 ->name('military-debts.collections');
 
             Route::delete('military-debts/{militaryDebt}', [MilitaryDebtController::class, 'destroy'])
+                ->middleware('can:delete-military-debt')
                 ->name('military-debts.destroy');
         });
 

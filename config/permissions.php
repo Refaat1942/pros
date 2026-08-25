@@ -95,6 +95,10 @@ return [
             'label_ar' => 'تصديق إدارة الخدمات — مسار عسكري',
             'dashboard' => 'admin',
         ],
+        'delete-military-debt' => [
+            'label_ar' => 'حذف سجل مديونية عسكرية',
+            'dashboard' => 'admin',
+        ],
     ],
 
     /**
