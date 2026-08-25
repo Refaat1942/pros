@@ -178,7 +178,7 @@ class CivilianQueryChainE2eTest extends TestCase
         $ocrOk = $this->postJson('/reception/approval-letter/confirm', [
             'quote_no' => $quote->quote_no,
             'patient_name' => $patient->name,
-            'approved_amount' => 999.00,
+            'approved_amount' => (float) $quote->total,
             'company_name' => $company->name,
             'letter_ref' => 'LTR-E2E-001',
         ]);

@@ -987,25 +987,27 @@ class BomService
      */
     public function finish(Bom $bom): Bom
     {
-        $bom->loadMissing('caseRecord');
-        $case = $bom->caseRecord;
+        return DB::transaction(function () use ($bom) {
+            $bom->loadMissing('caseRecord');
+            $case = $bom->caseRecord;
 
-        if (! $case || $case->stage_key !== CaseRecord::STAGE_MANUFACTURING) {
-            abort(422, 'الحالة ليست في مرحلة التصنيع.');
-        }
+            if (! $case || $case->stage_key !== CaseRecord::STAGE_MANUFACTURING) {
+                abort(422, 'الحالة ليست في مرحلة التصنيع.');
+            }
 
-        $this->assertReleasedToWorkshop($case);
+            $this->assertReleasedToWorkshop($case);
 
-        if ($bom->stage !== Bom::STAGE_WIP) {
-            abort(422, 'BOM ليست تحت التشغيل — لا يمكن إتمام التصنيع.');
-        }
+            if ($bom->stage !== Bom::STAGE_WIP) {
+                abort(422, 'BOM ليست تحت التشغيل — لا يمكن إتمام التصنيع.');
+            }
 
-        $case->update([
-            'manufacturing_stage' => CaseRecord::MFG_CLOSED,
-            'workshop_progress_pct' => 100,
-        ]);
+            $case->update([
+                'manufacturing_stage' => CaseRecord::MFG_CLOSED,
+                'workshop_progress_pct' => 100,
+            ]);
 
-        return $this->closeFinished($bom);
+            return $this->closeFinished($bom);
+        });
     }
 
     /**

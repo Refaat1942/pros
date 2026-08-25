@@ -95,6 +95,18 @@ return [
             'label_ar' => 'تصديق إدارة الخدمات — مسار عسكري',
             'dashboard' => 'admin',
         ],
+        'delete-military-debt' => [
+            'label_ar' => 'حذف سجل مديونية عسكرية',
+            'dashboard' => 'admin',
+        ],
+        'collect-civilian-debt' => [
+            'label_ar' => 'تحصيل مديونية جهة تعاقد مدنية',
+            'dashboard' => 'admin',
+        ],
+        'collect-military-debt' => [
+            'label_ar' => 'تحصيل مديونية جهة عسكرية',
+            'dashboard' => 'admin',
+        ],
     ],
 
     /**

@@ -15,6 +15,7 @@ use App\Models\ContractCompanyDebt;
 use App\Models\DebtCollectionEntry;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\User;
 use App\Models\ReturnNote;
 use App\Models\ServicesApproval;
 use App\Models\SpecEditRequest;
@@ -47,10 +48,26 @@ class AdminReportsHubService
         private readonly ProfitabilityReportService $profitabilityService,
         private readonly InventoryFinancialReconciliationService $reconciliationService,
         private readonly ItemPricingAnalyticsService $itemPricingAnalytics,
+        private readonly AdminReportsScopeService $reportsScope,
     ) {}
 
     /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
-    public function sections(): array
+    public function sections(?User $user = null): array
+    {
+        $user = $user ?? auth()->user();
+
+        if (! $user) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $this->allSectionCards(),
+            fn (array $card) => $this->reportsScope->canSeeSection($user, $card['id']),
+        ));
+    }
+
+    /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
+    private function allSectionCards(): array
     {
         $pages = config('dashboards.admin.pages', []);
         $skip = ['overview', 'bi', 'general-view', 'reports', 'reports-section', 'permissions', 'employees', 'notifications', 'military-ranks', 'military-debts', 'costing-settings', 'branding-settings', 'pathway-settings', 'notification-settings'];
@@ -111,31 +128,34 @@ class AdminReportsHubService
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
             ['id' => 'authorizations', 'label' => 'جميع الأذون والاعتمادات', 'icon' => '📜', 'group' => 'المخزون والتوريد', 'description' => 'أذون الصرف، تعديل التوصيف، تصديقات الخدمات، وموافقات التعاقد'],
             ['id' => 'production-assignment', 'label' => 'تخصيص الإنتاج — قبل الصرف', 'icon' => '👷', 'group' => 'قسم الإنتاج', 'description' => 'أوامر الشغل بانتظار تخصيص القسم والفني واعتماد التخصيص'],
+            ['id' => 'opening-balance', 'label' => 'رصيد أول المدة', 'icon' => '🏦', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الافتتاحية للخزنة والمديونيات وقيمة المخزون في بداية الفترة'],
+            ['id' => 'closing-balance', 'label' => 'رصيد آخر المدة', 'icon' => '🧾', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الختامية بعد حركة الفترة للخزنة والمديونيات وقيمة المخزون'],
+            ['id' => 'profitability', 'label' => 'مراجعة التكاليف والربحية', 'icon' => '📈', 'group' => 'التعاقد والمالية', 'description' => 'مقارنة الإيراد بالتكلفة الداخلية (WAC) للحالات المُسلَّمة ومجمل الربح'],
         ] as $extra) {
             $cards[] = $extra;
-        }
-
-        if (Gate::allows('view-costs')) {
-            foreach ([
-                ['id' => 'opening-balance', 'label' => 'رصيد أول المدة', 'icon' => '🏦', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الافتتاحية للخزنة والمديونيات وقيمة المخزون في بداية الفترة'],
-                ['id' => 'closing-balance', 'label' => 'رصيد آخر المدة', 'icon' => '🧾', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الختامية بعد حركة الفترة للخزنة والمديونيات وقيمة المخزون'],
-                ['id' => 'profitability', 'label' => 'مراجعة التكاليف والربحية', 'icon' => '📈', 'group' => 'التعاقد والمالية', 'description' => 'مقارنة الإيراد بالتكلفة الداخلية (WAC) للحالات المُسلَّمة ومجمل الربح'],
-            ] as $extra) {
-                $cards[] = $extra;
-            }
         }
 
         return $cards;
     }
 
-    public function sectionMeta(string $section): ?array
+    public function sectionMeta(string $section, ?User $user = null): ?array
     {
-        return collect($this->sections())->firstWhere('id', $section);
+        $user = $user ?? auth()->user();
+
+        if (! $user || ! $this->reportsScope->canSeeSection($user, $section)) {
+            return null;
+        }
+
+        return collect($this->allSectionCards())->firstWhere('id', $section);
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    public function build(string $section, ?Carbon $from, ?Carbon $to): array
+    public function build(string $section, ?Carbon $from, ?Carbon $to, ?User $user = null): array
     {
+        $user = $user ?? auth()->user();
+
+        abort_unless($user && $this->reportsScope->canSeeSection($user, $section), 404);
+
         if ($from && $to && $from->gt($to)) {
             [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
         }

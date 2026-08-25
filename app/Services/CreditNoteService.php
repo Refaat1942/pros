@@ -24,31 +24,43 @@ class CreditNoteService
     {
         $this->assertCivilianDelivered($case);
 
-        if ($amount <= 0) {
+        $paymentAmount = round($amount, 2);
+
+        if ($paymentAmount <= 0) {
             abort(422, 'مبلغ الإشعار يجب أن يكون أكبر من الصفر.');
         }
 
-        $originalTotal = (float) ($case->quote_total ?? 0);
+        // معاملة + قفل صف الحالة يمنع تجاوز الحد الإجمالي عند إنشاء إشعارات متزامنة.
+        $note = DB::transaction(function () use ($case, $type, $paymentAmount, $reason) {
+            $lockedCase = CaseRecord::lockForUpdate()->findOrFail($case->id);
+            $this->assertCivilianDelivered($lockedCase);
 
-        if ($amount > $originalTotal) {
-            abort(422, 'مبلغ الإشعار يتجاوز إجمالي العرض.');
-        }
+            $ceiling = $this->creditCeiling($lockedCase);
 
-        $case->load('patient:id,name');
+            if ($paymentAmount > $ceiling) {
+                abort(422, 'مبلغ الإشعار يتجاوز إجمالي العرض.');
+            }
 
-        // معاملة + قفل داخل nextCreditNoteNo يمنع ترقيماً مكرراً عند إنشاء إشعارين متزامنين.
-        $note = DB::transaction(fn () => CreditNote::create([
-            'credit_note_no' => $this->nextCreditNoteNo(),
-            'case_id' => $case->id,
-            'order_ref' => $case->order_ref,
-            'patient_name' => $case->patient?->name ?? '—',
-            'company_name' => $case->company_name,
-            'type' => $type,
-            'amount' => $amount,
-            'original_total' => $originalTotal,
-            'reason' => $reason,
-            'status' => CreditNote::STATUS_PENDING,
-        ]));
+            $committed = $this->sumActiveCreditAmounts($lockedCase->id);
+            if (round($committed + $paymentAmount, 2) > $ceiling) {
+                abort(422, 'مجموع إشعارات الدائن النشطة يتجاوز إجمالي العرض الاقتصادي للحالة.');
+            }
+
+            $lockedCase->load('patient:id,name');
+
+            return CreditNote::create([
+                'credit_note_no' => $this->nextCreditNoteNo(),
+                'case_id' => $lockedCase->id,
+                'order_ref' => $lockedCase->order_ref,
+                'patient_name' => $lockedCase->patient?->name ?? '—',
+                'company_name' => $lockedCase->company_name,
+                'type' => $type,
+                'amount' => $paymentAmount,
+                'original_total' => $ceiling,
+                'reason' => $reason,
+                'status' => CreditNote::STATUS_PENDING,
+            ]);
+        });
 
         AuditService::log(
             action: 'create',
@@ -72,17 +84,27 @@ class CreditNoteService
                 abort(422, 'إشعار الدائن ليس في حالة انتظار.');
             }
 
-            $case = CaseRecord::with('patient')->findOrFail($note->case_id);
+            $case = CaseRecord::lockForUpdate()
+                ->with('patient')
+                ->findOrFail($note->case_id);
             $this->assertCivilianDelivered($case);
 
             if (! PatientEntityPresenter::postsContractDebt($case)) {
                 abort(422, 'إشعار الدائن متاح فقط لحالات جهة تعاقد متعاقدة.');
             }
 
+            $applyAmount = round((float) $note->amount, 2);
+            $ceiling = $this->creditCeiling($case);
+            $approvedTotal = $this->sumApprovedCreditAmounts($case->id);
+
+            if (round($approvedTotal + $applyAmount, 2) > $ceiling) {
+                abort(422, 'تطبيق الإشعار يتجاوز الحد المسموح لإشعارات الدائن على هذه الحالة.');
+            }
+
             $company = ContractCompany::findOrFail($case->contract_company_id);
             $before = $note->only(['status', 'amount']);
 
-            $this->contractDebtService->decreaseDue($company, (float) $note->amount);
+            $this->contractDebtService->decreaseDue($company, $applyAmount);
 
             $case->update([
                 'credit_note_no' => $note->credit_note_no,
@@ -170,5 +192,35 @@ class CreditNoteService
             : 1;
 
         return sprintf('CN-%04d', $num);
+    }
+
+    /**
+     * الحد الاقتصادي الأعلى لإشعارات الدائن على الحالة — يطابق original_total المخزَّن عند الإنشاء.
+     */
+    private function creditCeiling(CaseRecord $case): float
+    {
+        return round((float) ($case->quote_total ?? 0), 2);
+    }
+
+    /**
+     * مجموع إشعارات الدائن النشطة (معلّقة + معتمدة) التي تحجز القدرة الاقتصادية.
+     */
+    private function sumActiveCreditAmounts(int $caseId): float
+    {
+        return round((float) CreditNote::query()
+            ->where('case_id', $caseId)
+            ->whereIn('status', [CreditNote::STATUS_PENDING, CreditNote::STATUS_APPROVED])
+            ->sum('amount'), 2);
+    }
+
+    /**
+     * مجموع الإشعارات المعتمدة فقط — يُستخدم عند التطبيق لمنع الازدواج مع المعلّق.
+     */
+    private function sumApprovedCreditAmounts(int $caseId): float
+    {
+        return round((float) CreditNote::query()
+            ->where('case_id', $caseId)
+            ->where('status', CreditNote::STATUS_APPROVED)
+            ->sum('amount'), 2);
     }
 }

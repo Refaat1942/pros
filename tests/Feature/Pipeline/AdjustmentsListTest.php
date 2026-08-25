@@ -443,6 +443,36 @@ class AdjustmentsListTest extends TestCase
         $this->assertSame(-3, $stock->availableQty());
     }
 
+    public function test_adjustments_show_includes_catalog_price_on_bom_items(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $stock = StockItem::findByOperationalCode('RM-001');
+        $stock->update(['price' => 350.00]);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
+        ]);
+
+        \App\Support\StockCatalogPicker::forgetCachedRows();
+
+        $response = $this->actingAs($user)
+            ->getJson("/adjustments/adjustments/{$case->id}")
+            ->assertOk();
+
+        $this->assertEqualsWithDelta(350.0, (float) $response->json('case.bom.items.0.price'), 0.01);
+        $bomCode = $response->json('case.bom.items.0.stock_item_code');
+        $pickerCode = $stock->pickerCode();
+        $catalogRow = collect($response->json('stock_catalog'))
+            ->firstWhere('code', $pickerCode);
+        $this->assertNotNull($catalogRow, 'Expected catalog row for BOM code '.$bomCode);
+        $this->assertEqualsWithDelta(350.0, (float) $catalogRow['price'], 0.01);
+    }
+
     private function seedStockWithPriceBatch(): void
     {
         $item = $this->stockItem('RM-001', qty: 20);

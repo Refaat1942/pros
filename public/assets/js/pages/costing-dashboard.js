@@ -32,6 +32,13 @@
     return String(Math.round(parseFloat(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
+  function fmtCatalogPrice(n) {
+    return Number(n || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
   function apiMessage(err, fallback) {
     var data = err && err.response && err.response.data;
     if (data && data.message) return data.message;
@@ -282,6 +289,7 @@
               '<td>' + esc(it.name) + '</td>' +
               '<td>' + esc(it.qty) + '</td>' +
               '<td class="costing-criteria-cell">' + esc(it.criteria || '—') + '</td>' +
+              '<td class="catalog-price-cell" style="text-align:center;">' + fmtCatalogPrice(it.price) + '</td>' +
               '<td><strong>' + fmt(it.line_total) + '</strong></td></tr>';
           }).join('');
         }

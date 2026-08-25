@@ -15,10 +15,13 @@ class AdminCycleDashboardService
         private readonly DashboardQueueService $queues,
     ) {}
 
-    /** @return list<array{key: string, icon: string, label: string, hint: string, count: int, color: string, bg: string}> */
-    public function build(Carbon $from, Carbon $to): array
+    /**
+     * @param  list<string>|null  $onlyKeys  مفاتيح البطاقات المسموح بها — null = كل البطاقات
+     * @return list<array{key: string, icon: string, label: string, hint: string, count: int, color: string, bg: string}>
+     */
+    public function build(Carbon $from, Carbon $to, ?array $onlyKeys = null): array
     {
-        return [
+        $cards = [
             [
                 'key' => 'reception',
                 'icon' => '🏥',
@@ -101,6 +104,17 @@ class AdminCycleDashboardService
                 'bg' => 'rgba(180,83,9,0.1)',
             ],
         ];
+
+        if ($onlyKeys === null) {
+            return $cards;
+        }
+
+        $allowed = array_flip($onlyKeys);
+
+        return array_values(array_filter(
+            $cards,
+            fn (array $card) => isset($allowed[$card['key']]),
+        ));
     }
 
     public function totalActive(Carbon $from, Carbon $to): int

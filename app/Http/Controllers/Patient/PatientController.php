@@ -9,6 +9,7 @@ use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Services\CaseService;
 use App\Services\CaseTrackingQrService;
+use App\Services\Authorization\ResourceAuthorizationService;
 use App\Services\PatientService;
 use App\Enums\CaseStage;
 use App\Traits\PaginationTrait;
@@ -24,6 +25,7 @@ class PatientController extends Controller
         private readonly PatientService $patientService,
         private readonly CaseTrackingQrService $caseTrackingQrService,
         private readonly CaseService $caseService,
+        private readonly ResourceAuthorizationService $resourceAuth,
     ) {}
 
     /**
@@ -76,6 +78,8 @@ class PatientController extends Controller
      */
     public function show(Patient $patient): JsonResponse
     {
+        $this->resourceAuth->assertCanViewPatient(auth()->user(), $patient);
+
         $patient->load([
             'contractCompany:id,name,company_code,is_military,is_contracted',
             'cases' => fn ($q) => $q->latest()->limit(15),
@@ -114,6 +118,8 @@ class PatientController extends Controller
     /** طلب جديد — فتح حالة تشغيلية للمريض (تخطّي الكشف). */
     public function initiateCase(Patient $patient): JsonResponse
     {
+        $this->resourceAuth->assertCanOpenCaseForPatient(auth()->user(), $patient);
+
         $openCases = $patient->cases()
             ->whereNotIn('stage_key', [CaseRecord::STAGE_DELIVERED])
             ->count();
@@ -137,6 +143,8 @@ class PatientController extends Controller
      */
     public function update(UpdatePatientRequest $request, Patient $patient): JsonResponse
     {
+        $this->resourceAuth->assertCanMutatePatient(auth()->user(), $patient);
+
         $patient = $this->patientService->update($patient, $request->validated());
 
         return response()->json($this->formatPatientCard($patient));
