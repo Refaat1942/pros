@@ -414,10 +414,6 @@ Route::prefix('admin')
             Route::get('military-debts/list', [MilitaryDebtController::class, 'index'])
                 ->name('military-debts.list');
 
-            Route::patch('military-debts/{militaryDebt}/status', [MilitaryDebtController::class, 'updateStatus'])
-                ->middleware('can:collect-military-debt')
-                ->name('military-debts.status');
-
             Route::post('military-debts/{militaryDebt}/collect', [MilitaryDebtController::class, 'recordPayment'])
                 ->middleware('can:collect-military-debt')
                 ->name('military-debts.collect');
