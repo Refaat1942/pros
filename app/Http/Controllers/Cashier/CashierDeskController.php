@@ -59,6 +59,8 @@ class CashierDeskController extends Controller
      */
     public function confirm(ConfirmPaymentRequest $request, CaseRecord $case): JsonResponse
     {
+        $this->resourceAuth->assertCanConfirmCashPayment(auth()->user(), $case);
+
         $result = $this->cashierPaymentService->confirmPayment($case, $request->validated());
         $payment = $result['payment'];
 

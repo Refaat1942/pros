@@ -46,6 +46,27 @@ class ResourceAuthorizationService
         );
     }
 
+    public function assertCanConfirmCashPayment(User $user, CaseRecord $case): void
+    {
+        abort_unless(
+            $user->canViewDashboardPage('cashier', 'payments'),
+            403,
+            'ليس لديك صلاحية الوصول إلى هذه الصفحة.',
+        );
+
+        abort_unless(
+            $this->isCashierEligibleCaseType($case),
+            403,
+            'لا يمكن تأكيد تحصيل هذه الحالة في الخزنة.',
+        );
+
+        abort_unless(
+            $case->isAwaitingCashier(),
+            403,
+            'الحالة ليست بانتظار الدفع في الخزنة.',
+        );
+    }
+
     public function assertCanViewPatient(User $user, Patient $patient): void
     {
         abort_unless(
@@ -116,7 +137,7 @@ class ResourceAuthorizationService
      */
     private function isCashierPaymentCaseAccessible(CaseRecord $case): bool
     {
-        if ($case->isMilitary() || ! $case->isCashCivilian()) {
+        if (! $this->isCashierEligibleCaseType($case)) {
             return false;
         }
 
@@ -125,5 +146,11 @@ class ResourceAuthorizationService
         }
 
         return Payment::query()->where('case_id', $case->id)->exists();
+    }
+
+    /** مدني كاش فقط — نفس تعريف نطاق إيصال/سجل الدفعات. */
+    private function isCashierEligibleCaseType(CaseRecord $case): bool
+    {
+        return ! $case->isMilitary() && $case->isCashCivilian();
     }
 }

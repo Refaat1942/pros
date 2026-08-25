@@ -9,6 +9,7 @@ use App\Models\Permission;
 use App\Models\Quote;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\AuditLog;
 use App\Services\CashierPaymentService;
 use App\Services\PermissionCatalogService;
 use Illuminate\Support\Facades\Hash;
@@ -92,6 +93,88 @@ class ResourceAuthorizationTest extends TestCase
         $this->actingAs($this->userWithRole('cashier'))
             ->getJson('/cashier/payments/'.$case->id.'/history')
             ->assertStatus(403);
+    }
+
+    // ── Cash payment confirm (write path) ───────────────────────────────────
+
+    public function test_cashier_confirm_payment_allowed_for_civilian_cash_at_cashier_stage(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $case = $this->cashierAwaitingCase();
+
+        $this->actingAs($this->userWithRole('cashier'))
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', ['method' => 'cash'])
+            ->assertOk()
+            ->assertJsonPath('payment.method', 'cash');
+
+        $this->assertSame(1, Payment::where('case_id', $case->id)->count());
+    }
+
+    /**
+     * Abnormal setup: military case forced to cashier stage — proves case-type gate
+     * is independent of workflow stage alone (normal workflow never routes here).
+     */
+    public function test_cashier_confirm_rejects_military_case_at_cashier_stage(): void
+    {
+        $company = $this->militaryCompany();
+        $patient = $this->militaryPatient($company);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_CASHIER);
+        $paidBefore = (float) $case->paid;
+        $financialAuditsBefore = AuditLog::query()->where('tag', 'financial')->count();
+
+        $this->actingAs($this->userWithRole('cashier'))
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', ['method' => 'cash'])
+            ->assertStatus(403);
+
+        $fresh = $case->fresh();
+        $this->assertSame(0, Payment::where('case_id', $case->id)->count());
+        $this->assertEqualsWithDelta($paidBefore, (float) $fresh->paid, 0.001);
+        $this->assertSame(CaseRecord::STAGE_CASHIER, $fresh->stage_key);
+        $this->assertSame(
+            $financialAuditsBefore,
+            AuditLog::query()->where('tag', 'financial')->count(),
+        );
+    }
+
+    /**
+     * Abnormal setup: contracted civilian forced to cashier stage — same boundary as military test.
+     */
+    public function test_cashier_confirm_rejects_contract_civilian_at_cashier_stage(): void
+    {
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_CASHIER);
+        $paidBefore = (float) $case->paid;
+        $financialAuditsBefore = AuditLog::query()->where('tag', 'financial')->count();
+
+        $this->actingAs($this->userWithRole('cashier'))
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', ['method' => 'cash'])
+            ->assertStatus(403);
+
+        $fresh = $case->fresh();
+        $this->assertSame(0, Payment::where('case_id', $case->id)->count());
+        $this->assertEqualsWithDelta($paidBefore, (float) $fresh->paid, 0.001);
+        $this->assertSame(CaseRecord::STAGE_CASHIER, $fresh->stage_key);
+        $this->assertSame(
+            $financialAuditsBefore,
+            AuditLog::query()->where('tag', 'financial')->count(),
+        );
+    }
+
+    public function test_cashier_confirm_requires_confirm_cash_payment_permission(): void
+    {
+        $this->stockItem('RM-001', qty: 10);
+        $case = $this->cashierAwaitingCase();
+        $cashier = $this->userWithRole('cashier');
+        $cashier->role->permissions()->detach(
+            Permission::query()->where('slug', 'confirm-cash-payment')->pluck('id')
+        );
+
+        $this->actingAs($cashier->fresh())
+            ->postJson('/cashier/payments/'.$case->id.'/confirm', ['method' => 'cash'])
+            ->assertStatus(403);
+
+        $this->assertSame(0, Payment::where('case_id', $case->id)->count());
     }
 
     // ── Patient show ────────────────────────────────────────────────────────
