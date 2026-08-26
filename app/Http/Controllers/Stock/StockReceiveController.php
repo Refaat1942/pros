@@ -10,12 +10,15 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Services\CatalogListVisibilityService;
 use App\Services\StockCatalogService;
+use App\Models\SupplyRequestLine;
 use App\Services\StockReceiveService;
+use App\Services\SupplyRequestService;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * استلام مخزون — لوحة التقنية (بدون أسعار شراء أو WAC في الاستجابة).
@@ -55,18 +58,27 @@ class StockReceiveController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $movement = $this->stockReceiveService->receive(
-            item: $item,
-            qty: (int) $request->validated('qty'),
-            unitPrice: (float) $request->validated('unit_price'),
-            supplier: $supplier,
-            invoiceNo: $request->validated('invoice_no'),
-            movedAt: Carbon::parse($request->validated('moved_at')),
-            performedBy: $user,
-            documentPath: $this->storeInboundDocument($request),
-            documentOriginalName: $request->file('document')?->getClientOriginalName(),
-            documentMime: $request->file('document')?->getClientMimeType(),
-        );
+        $movement = DB::transaction(function () use ($request, $item, $supplier, $user) {
+            $movement = $this->stockReceiveService->receive(
+                item: $item,
+                qty: (int) $request->validated('qty'),
+                unitPrice: (float) $request->validated('unit_price'),
+                supplier: $supplier,
+                invoiceNo: $request->validated('invoice_no'),
+                movedAt: Carbon::parse($request->validated('moved_at')),
+                performedBy: $user,
+                documentPath: $this->storeInboundDocument($request),
+                documentOriginalName: $request->file('document')?->getClientOriginalName(),
+                documentMime: $request->file('document')?->getClientMimeType(),
+            );
+
+            if ($lineId = $request->validated('supply_request_line_id')) {
+                $line = SupplyRequestLine::query()->findOrFail($lineId);
+                app(SupplyRequestService::class)->markLineReceived($line, $movement);
+            }
+
+            return $movement;
+        });
 
         return response()->json([
             'message' => 'تم استلام البضاعة بنجاح.',

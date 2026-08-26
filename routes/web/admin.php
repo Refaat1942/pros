@@ -29,6 +29,7 @@ use App\Http\Controllers\Reports\AdminReportsHubController;
 use App\Http\Controllers\Reports\AuditLogController;
 use App\Http\Controllers\Stock\StockCatalogController;
 use App\Http\Controllers\Stock\StockReceiveController;
+use App\Http\Controllers\Stock\SupplyRequestController;
 use App\Http\Controllers\Stock\SupplierController;
 use Illuminate\Support\Facades\Route;
 
@@ -100,11 +101,26 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,supply-request')->group(function () {
             Route::get('supply/list', [StockReceiveController::class, 'index'])
                 ->name('supply.list');
+
+            Route::get('supply/requests', [SupplyRequestController::class, 'index'])
+                ->name('supply.requests');
+
+            Route::post('supply/requests', [SupplyRequestController::class, 'store'])
+                ->name('supply.requests.store');
+
+            Route::post('supply/requests/{supplyRequestLine}/resolve', [SupplyRequestController::class, 'resolve'])
+                ->name('supply.requests.resolve');
+
+            Route::get('supply/search-items', [SupplyRequestController::class, 'searchItems'])
+                ->name('supply.search-items');
         });
 
         Route::middleware('dashboard.page:admin,receive-inbound')->group(function () {
             Route::post('receive/receive', [StockReceiveController::class, 'receive'])
                 ->name('receive.receive');
+
+            Route::get('receive/pending-lines', [SupplyRequestController::class, 'index'])
+                ->name('receive.pending-lines');
         });
 
         Route::middleware('dashboard.page:admin,catalog')->group(function () {
