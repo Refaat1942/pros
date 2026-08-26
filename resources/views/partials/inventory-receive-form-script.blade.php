@@ -15,6 +15,8 @@
     fd.append('supplier_id', document.getElementById('receiveSupplierId').value);
     fd.append('invoice_no', document.getElementById('receiveInvoiceNo').value);
     fd.append('moved_at', document.getElementById('receiveMovedAt').value);
+    var lineIdEl = document.getElementById('receiveSupplyRequestLineId');
+    if (lineIdEl && lineIdEl.value) fd.append('supply_request_line_id', lineIdEl.value);
     var doc = document.getElementById('receiveDocument');
     if (doc && doc.files && doc.files[0]) fd.append('document', doc.files[0]);
     fetch(receiveUrl, {
@@ -30,6 +32,8 @@
         el.textContent = res.message || 'تم الاستلام';
         form.reset();
         document.getElementById('receiveMovedAt').value = new Date().toISOString().slice(0, 10);
+        var lineHidden = document.getElementById('receiveSupplyRequestLineId');
+        if (lineHidden) lineHidden.value = '';
         window.location.reload();
       })
       .catch(function (err) {

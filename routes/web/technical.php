@@ -6,6 +6,7 @@ use App\Http\Controllers\Dashboard\TechnicalDashboardController;
 use App\Http\Controllers\Quote\QuoteController;
 use App\Http\Controllers\Stock\StockCatalogController;
 use App\Http\Controllers\Stock\StockReceiveController;
+use App\Http\Controllers\Stock\SupplyRequestController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,11 +49,26 @@ Route::prefix('technical')
         Route::middleware('dashboard.page:technical,supply-request')->group(function () {
             Route::get('supply/list', [StockReceiveController::class, 'index'])
                 ->name('supply.list');
+
+            Route::get('supply/requests', [SupplyRequestController::class, 'index'])
+                ->name('supply.requests');
+
+            Route::post('supply/requests', [SupplyRequestController::class, 'store'])
+                ->name('supply.requests.store');
+
+            Route::post('supply/requests/{supplyRequestLine}/resolve', [SupplyRequestController::class, 'resolve'])
+                ->name('supply.requests.resolve');
+
+            Route::get('supply/search-items', [SupplyRequestController::class, 'searchItems'])
+                ->name('supply.search-items');
         });
 
         Route::middleware('dashboard.page:technical,receive-inbound')->group(function () {
             Route::post('receive/receive', [StockReceiveController::class, 'receive'])
                 ->name('receive.receive');
+
+            Route::get('receive/pending-lines', [SupplyRequestController::class, 'index'])
+                ->name('receive.pending-lines');
         });
 
         // ── BOM (خام / تشغيل / تام) ────────────────────────────────────────
