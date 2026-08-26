@@ -146,6 +146,7 @@
                             data-barcode="{{ strtoupper($item['barcode'] ?? '') }}"
                             data-search="{{ strtolower(($item['code'] ?? '') . ' ' . ($item['name'] ?? '') . ' ' . ($item['brand'] ?? '') . ' ' . ($item['category'] ?? '') . ' ' . ($item['barcode'] ?? '') . ' ' . ($item['alt_codes'] ?? '')) }}"
                             data-brand="{{ mb_strtolower(trim($item['brand'] ?? ''), 'UTF-8') }}"
+                            data-brand-label="{{ $item['brand'] ?? '' }}"
                             data-category-id="{{ $item['category_id'] ?? '' }}"
                             data-category-name="{{ $item['category'] ?? '' }}"
                             data-filter-hidden="0"
@@ -773,6 +774,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
     var catalogTableColspan = {{ (int) $catalogTableColspan }};
     var catalogSortKey = '';
     var catalogSortDir = 'asc';
+    var catalogFilterTimer = null;
 
     function csrf() {
         var m = document.querySelector('meta[name="csrf-token"]');
@@ -851,9 +853,12 @@ window.__STOCK_CATEGORIES = @json($categories->values());
     }
 
     function catalogRowBrandLabel(row) {
+        var labelAttr = row.getAttribute('data-brand-label');
+        if (labelAttr && labelAttr.trim()) {
+            return labelAttr.trim();
+        }
         var item = catalogRowItem(row);
-        var label = (item.brand || row.getAttribute('data-brand') || '').trim();
-        return label;
+        return (item.brand || '').trim();
     }
 
     function catalogRowCategoryId(row) {
@@ -974,6 +979,16 @@ window.__STOCK_CATEGORIES = @json($categories->values());
                 return '<option value="' + escAttr(k) + '">' + escapeHtml(brands[k]) + '</option>';
             }).join('');
         if (current && brands[current]) sel.value = current;
+    }
+
+    function scheduleApplySlimCatalogFilters() {
+        if (catalogFilterTimer) {
+            clearTimeout(catalogFilterTimer);
+        }
+        catalogFilterTimer = setTimeout(function () {
+            catalogFilterTimer = null;
+            window.applySlimCatalogFilters();
+        }, 100);
     }
 
     window.applySlimCatalogFilters = function () {
@@ -1587,7 +1602,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         var screenBtn = (item.barcode || item.alt_codes)
             ? '<a class="btn-action" target="_blank" href="' + screenUrl + '">📱 شاشة</a> '
             : '';
-        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-brand="' + escAttr(normalizeBrandKey(item.brand || '')) + '" data-category-id="' + (item.category_id || '') + '" data-category-name="' + escAttr(item.category || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
+        return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-brand="' + escAttr(normalizeBrandKey(item.brand || '')) + '" data-brand-label="' + escAttr(item.brand || '') + '" data-category-id="' + (item.category_id || '') + '" data-category-name="' + escAttr(item.category || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
             dataCols +
             '<td style="padding:8px;text-align:center;white-space:nowrap;">' +
@@ -1739,6 +1754,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
 
         var catalogSearchInput = document.getElementById('catalogSlimSearch');
         if (catalogSearchInput) {
+            catalogSearchInput.addEventListener('input', scheduleApplySlimCatalogFilters);
             catalogSearchInput.addEventListener('keydown', function (e) {
                 if (e.key !== 'Enter') return;
                 e.preventDefault();

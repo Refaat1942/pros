@@ -100,9 +100,11 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,supply-request')->group(function () {
             Route::get('supply/list', [StockReceiveController::class, 'index'])
                 ->name('supply.list');
+        });
 
-            Route::post('supply/receive', [StockReceiveController::class, 'receive'])
-                ->name('supply.receive');
+        Route::middleware('dashboard.page:admin,receive-inbound')->group(function () {
+            Route::post('receive/receive', [StockReceiveController::class, 'receive'])
+                ->name('receive.receive');
         });
 
         Route::middleware('dashboard.page:admin,catalog')->group(function () {

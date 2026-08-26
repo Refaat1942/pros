@@ -1,7 +1,7 @@
 <script>
 (function () {
   var active = document.body.dataset.activePage || '';
-  if (active !== 'inventory' && active !== 'supply-request') return;
+  if (active !== 'inventory' && active !== 'receive-inbound') return;
   var form = document.getElementById('inventoryReceiveForm');
   if (!form) return;
   var csrf = document.querySelector('meta[name="csrf-token"]');

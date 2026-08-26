@@ -104,6 +104,7 @@
     );
     for (var i = 0; i < inputs.length; i++) {
       var inp = inputs[i];
+      if (inp.id === 'catalogSlimSearch') continue;
       if (inp.dataset.dashTableSearchBound === '1') continue;
       if (inp.dataset.noDashTableSearch === '1') continue;
       if (inp.classList.contains('date-filter-input') || inp.classList.contains('date-filter-native')) continue;
@@ -434,6 +435,7 @@
   function refresh(el) {
     if (!el) return;
     var table = el.tagName === 'TABLE' ? el : (el.closest ? el.closest('table') : null);
+    if (table && shouldSkipTable(table)) return;
     if (table && table._sortFilterState) {
       refreshDataRows(table._sortFilterState);
       if (table._sortFilterState.searchInput) {
@@ -464,6 +466,10 @@
     if (global.TablePagination.repaginate) {
       var origRepaginate = global.TablePagination.repaginate;
       global.TablePagination.repaginate = function (el) {
+        var table = el && el.tagName === 'TABLE' ? el : (el && el.closest ? el.closest('table') : null);
+        if (table && shouldSkipTable(table)) {
+          return origRepaginate.call(global.TablePagination, el);
+        }
         refresh(el);
         return origRepaginate.call(global.TablePagination, el);
       };

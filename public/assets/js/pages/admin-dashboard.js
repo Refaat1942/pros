@@ -2696,6 +2696,7 @@
       }
 
       document.querySelectorAll('.panel, .bi-card, .ops-overview-panel, .report-card').forEach(function (panel) {
+        if (panel.querySelector('.catalog-slim-table') || panel.closest('#section-catalog')) return;
         if (panelHasExport(panel)) return;
 
         panel.querySelectorAll('table').forEach(function (table) {
