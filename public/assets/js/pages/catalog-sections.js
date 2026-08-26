@@ -63,6 +63,9 @@ window.CatalogSections = (function () {
   function renderCategoryFilter() {
     var sel = document.getElementById('catalogCategoryFilter');
     if (!sel) return;
+    if (sel.options.length > 1) {
+      return;
+    }
     sel.innerHTML = '<option value="">🏷️ كل الأقسام</option>' +
       categories.map(function (c) {
         return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>';

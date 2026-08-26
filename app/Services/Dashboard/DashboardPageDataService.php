@@ -89,6 +89,7 @@ class DashboardPageDataService
             'admin.catalog' => $this->adminCatalog(),
             'admin.add-catalog-item' => $this->catalogItemEntry(),
             'admin.supply-request' => $this->supplyRequestDesk(),
+            'admin.receive-inbound' => $this->receiveInboundDesk(),
             'admin.stock-kits' => $this->adminStockKits(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
             'admin.general-view' => $this->adminGeneralView(),
@@ -130,6 +131,7 @@ class DashboardPageDataService
             'technical.inventory' => $this->technicalInventory(),
             'technical.add-catalog-item' => $this->catalogItemEntry(),
             'technical.supply-request' => $this->supplyRequestDesk(),
+            'technical.receive-inbound' => $this->receiveInboundDesk(),
             'technical.bom' => $this->technicalBom(),
             default => [],
         };
@@ -882,13 +884,48 @@ class DashboardPageDataService
         ];
     }
 
-    /** طلب التوريد — قائمة المخزن + استلام وارد (نفس بيانات المخزن). */
+    /** طلب التوريد — أصناف تحتاج توريد (بدون نموذج استلام وارد). */
     private function supplyRequestDesk(): array
     {
         return array_merge(
             $this->operationalCatalogBrowse('technical_inventory', 'inventory'),
-            $this->technicalInventoryExtras(),
+            $this->technicalInventoryStatsOnly(),
         );
+    }
+
+    /** استلام الوارد — نموذج تسجيل فاتورة توريد فقط. */
+    private function receiveInboundDesk(): array
+    {
+        $catalogService = app(StockCatalogService::class);
+
+        return [
+            'inventory_items' => $catalogService->allItemsForUnifiedLists(),
+            'inventory_suppliers' => Supplier::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'inbound_document_upload' => config('inventory.inbound_document_upload', true),
+        ];
+    }
+
+    /** إحصائيات المخزن للعرض — بدون بيانات استلام وارد. */
+    private function technicalInventoryStatsOnly(): array
+    {
+        $catalogService = app(StockCatalogService::class);
+        $items = $catalogService->allItemsForUnifiedLists();
+        $totalCount = $catalogService->countAll();
+
+        $okCount = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_OK)->count();
+        $lowCount = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_LOW)->count();
+        $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
+
+        return [
+            'inventory_stats' => [
+                ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $totalCount, 'color' => '#4338ca', 'bg' => 'rgba(67,56,202,0.1)'],
+                ['icon' => '✅', 'label' => 'متوفر', 'value' => (string) $okCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
+                ['icon' => '⚠️', 'label' => 'كمية منخفضة', 'value' => (string) $lowCount, 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+            ],
+        ];
     }
 
     /** @return array<string, mixed> */

@@ -30,6 +30,7 @@
   var pickerOpen = false;
   var pickerSearchQuery = '';
   var pickerSelectedCodes = {};
+  var PICKER_RENDER_MAX = 150;
 
   function $(id) { return document.getElementById(id); }
 
@@ -203,7 +204,10 @@
       return;
     }
 
-    list.innerHTML = items.map(function (item) {
+    var truncated = items.length > PICKER_RENDER_MAX;
+    var visibleItems = truncated ? items.slice(0, PICKER_RENDER_MAX) : items;
+
+    list.innerHTML = visibleItems.map(function (item) {
       // يُسمح باختيار كل الأصناف؛ الصنف غير المتاح يظهر بوسم «طلب توريد» بلا حظر.
       var isBackorder = maxAddableQty(item) < 1;
       var checked = !!pickerSelectedCodes[item.code];
@@ -217,7 +221,10 @@
         '<span class="adj-picker-name">' + esc(item.name) +
         (isBackorder ? ' <span class="adj-picker-muted">(طلب توريد)</span>' : '') + '</span>' +
         '</span></label></li>';
-    }).join('');
+    }).join('') +
+      (truncated
+        ? '<li class="adj-picker-empty">يُعرض ' + PICKER_RENDER_MAX + ' من ' + items.length + ' — ضيّق البحث لعرض الباقي</li>'
+        : '');
 
     updateCatalogFooter();
   }

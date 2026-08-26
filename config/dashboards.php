@@ -265,6 +265,7 @@ return [
             'inventory' => ['title' => 'المخزن — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزن'],
             'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد'],
             'supply-request' => ['title' => 'طلب التوريد', 'icon' => '🛒', 'label' => 'طلب التوريد'],
+            'receive-inbound' => ['title' => 'استلام الوارد — تسجيل فاتورة توريد', 'icon' => '📥', 'label' => 'استلام الوارد'],
             'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد لقسم الإنتاج'],
             'returns' => ['title' => 'استلام ارتجاع المواد — من قسم الإنتاج', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
             'staff' => ['title' => 'إدارة موظفي القسم', 'icon' => '👥', 'label' => 'موظفي القسم'],
@@ -317,7 +318,7 @@ return [
             [
                 'label' => 'المخزون والتوريد',
                 'icon' => '📦',
-                'pages' => ['stock-categories', 'catalog', 'add-catalog-item', 'supply-request', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings'],
+                'pages' => ['stock-categories', 'catalog', 'add-catalog-item', 'supply-request', 'receive-inbound', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings'],
             ],
             [
                 'label' => 'التعاقد والمالية',
@@ -350,6 +351,7 @@ return [
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
             'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد'],
             'supply-request' => ['title' => 'طلب التوريد', 'icon' => '🛒', 'label' => 'طلب التوريد'],
+            'receive-inbound' => ['title' => 'استلام الوارد — تسجيل فاتورة توريد', 'icon' => '📥', 'label' => 'استلام الوارد'],
             'stock-kits' => [
                 'title' => 'أطقم جاهزة ومخصصات',
                 'icon' => '🧩',
