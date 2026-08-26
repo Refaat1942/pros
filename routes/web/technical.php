@@ -4,6 +4,7 @@ use App\Http\Controllers\Bom\BomController;
 use App\Http\Controllers\Bom\ReturnNoteController;
 use App\Http\Controllers\Dashboard\TechnicalDashboardController;
 use App\Http\Controllers\Quote\QuoteController;
+use App\Http\Controllers\Stock\StockCatalogController;
 use App\Http\Controllers\Stock\StockReceiveController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,20 @@ Route::prefix('technical')
 
             Route::get('inventory/{stockItem}/movements', [StockReceiveController::class, 'movements'])
                 ->name('inventory.movements');
+        });
+
+        Route::middleware('dashboard.page:technical,add-catalog-item')->group(function () {
+            Route::post('catalog', [StockCatalogController::class, 'store'])
+                ->middleware('can:manage-inventory')
+                ->name('catalog.store');
+        });
+
+        Route::middleware('dashboard.page:technical,supply-request')->group(function () {
+            Route::get('supply/list', [StockReceiveController::class, 'index'])
+                ->name('supply.list');
+
+            Route::post('supply/receive', [StockReceiveController::class, 'receive'])
+                ->name('supply.receive');
         });
 
         // ── BOM (خام / تشغيل / تام) ────────────────────────────────────────

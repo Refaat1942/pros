@@ -66,7 +66,7 @@
         </form>
 
         <div class="data-toolbar" style="flex-wrap:wrap;gap:8px;">
-            <input type="text" id="catalogSlimSearch" placeholder="🔍 بحث بالصنف، الاسم، الماركة، أو الباركود (امسح و Enter)..." onkeyup="applySlimCatalogFilters()">
+            <input type="text" id="catalogSlimSearch" data-no-dash-table-search="1" placeholder="🔍 بحث بالصنف، الاسم، الماركة، أو الباركود (امسح و Enter)...">
             <select id="catalogCategoryFilter" onchange="applySlimCatalogFilters()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:140px;">
                 <option value="">🏷️ كل الأقسام</option>
                 @foreach ($categories as $cat)
@@ -779,6 +779,18 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         return m ? m.getAttribute('content') : '';
     }
 
+    // Expose modal actions immediately — catalog init may defer on large lists.
+    window.openSlimCatalogForm = function () {
+        setForm({});
+        var codeEl = document.getElementById('slimCode');
+        if (codeEl) codeEl.disabled = false;
+        openCatalogFormModal('➕ إضافة صنف');
+    };
+
+    window.closeSlimCatalogForm = function () {
+        closeCatalogFormModal();
+    };
+
     function normalizeBarcodeScan(raw) {
         return String(raw || '').trim().toUpperCase();
     }
@@ -1232,16 +1244,6 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         modal.setAttribute('hidden', '');
     }
 
-    window.openSlimCatalogForm = function () {
-        setForm({});
-        document.getElementById('slimCode').disabled = false;
-        openCatalogFormModal('➕ إضافة صنف');
-    };
-
-    window.closeSlimCatalogForm = function () {
-        closeCatalogFormModal();
-    };
-
     window.editSlimCatalog = function (btn) {
         var row = btn.closest('tr');
         var data = JSON.parse(row.getAttribute('data-item'));
@@ -1478,7 +1480,8 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             if (code) payload.code = code;
         }
 
-        var url = id ? ('/admin/catalog/' + id) : '/admin/catalog';
+        var base = (window.__CATALOG_API_BASE || '/admin/catalog').replace(/\/$/, '');
+        var url = id ? (base + '/' + id) : base;
         var method = id ? 'PUT' : 'POST';
 
         fetch(url, {
@@ -1761,10 +1764,29 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         }
     }
 
+    function bootCatalogPage() {
+        if (window.requestIdleCallback) {
+            window.requestIdleCallback(initCatalogPage, { timeout: 800 });
+        } else {
+            setTimeout(initCatalogPage, 0);
+        }
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCatalogPage);
+        document.addEventListener('DOMContentLoaded', bootCatalogPage);
     } else {
-        initCatalogPage();
+        bootCatalogPage();
+    }
+
+    if (new URLSearchParams(window.location.search).get('open') === 'add-item') {
+        setTimeout(function () {
+            if (window.CatalogSections && window.__STOCK_CATEGORIES) {
+                window.CatalogSections.init(window.__STOCK_CATEGORIES);
+            }
+            if (typeof window.openSlimCatalogForm === 'function') {
+                window.openSlimCatalogForm();
+            }
+        }, 0);
     }
 })();
 </script>

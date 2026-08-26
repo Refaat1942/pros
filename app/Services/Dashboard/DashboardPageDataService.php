@@ -87,6 +87,8 @@ class DashboardPageDataService
             'admin.catalog-list-settings' => $this->adminCatalogListSettings(),
             'admin.stock-categories' => $this->adminStockCategories(),
             'admin.catalog' => $this->adminCatalog(),
+            'admin.add-catalog-item' => $this->catalogItemEntry(),
+            'admin.supply-request' => $this->supplyRequestDesk(),
             'admin.stock-kits' => $this->adminStockKits(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
             'admin.general-view' => $this->adminGeneralView(),
@@ -126,6 +128,8 @@ class DashboardPageDataService
             'workshop.sections' => $this->adminWorkshopSections(),
             'workshop.statistics' => $this->workshopStatistics(),
             'technical.inventory' => $this->technicalInventory(),
+            'technical.add-catalog-item' => $this->catalogItemEntry(),
+            'technical.supply-request' => $this->supplyRequestDesk(),
             'technical.bom' => $this->technicalBom(),
             default => [],
         };
@@ -854,6 +858,32 @@ class DashboardPageDataService
     }
 
     private function technicalInventory(): array
+    {
+        return array_merge(
+            $this->operationalCatalogBrowse('technical_inventory', 'inventory'),
+            $this->technicalInventoryExtras(),
+        );
+    }
+
+    /** بيانات نموذج إضافة صنف — بدون تحميل قائمة الأصناف الكاملة. */
+    private function catalogItemEntry(): array
+    {
+        $schema = app(StockCategorySchemaService::class);
+
+        return [
+            'stock_categories' => StockCategory::query()
+                ->with('fields')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (StockCategory $c) => $schema->formatCategory($c)),
+            'suppliers' => Supplier::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+        ];
+    }
+
+    /** طلب التوريد — قائمة المخزن + استلام وارد (نفس بيانات المخزن). */
+    private function supplyRequestDesk(): array
     {
         return array_merge(
             $this->operationalCatalogBrowse('technical_inventory', 'inventory'),
