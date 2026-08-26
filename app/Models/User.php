@@ -161,6 +161,10 @@ class User extends Authenticatable
             return true;
         }
 
+        if ($page === 'add-catalog-item' && in_array($dashboard, ['technical', 'admin'], true)) {
+            return $this->hasPermission('manage-inventory');
+        }
+
         if (! app(\App\Services\UserPageAccessService::class)->canViewPage($this, $dashboard, $page)) {
             return false;
         }

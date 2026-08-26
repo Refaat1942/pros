@@ -28,6 +28,7 @@ use App\Http\Controllers\Reports\AdminOverviewController;
 use App\Http\Controllers\Reports\AdminReportsHubController;
 use App\Http\Controllers\Reports\AuditLogController;
 use App\Http\Controllers\Stock\StockCatalogController;
+use App\Http\Controllers\Stock\StockReceiveController;
 use App\Http\Controllers\Stock\SupplierController;
 use Illuminate\Support\Facades\Route;
 
@@ -92,12 +93,21 @@ Route::prefix('admin')
     ->group(function () {
 
         // ── Stock Catalog ──────────────────────────────────────────────────
+        Route::post('catalog', [StockCatalogController::class, 'store'])
+            ->middleware('can:manage-inventory')
+            ->name('catalog.store');
+
+        Route::middleware('dashboard.page:admin,supply-request')->group(function () {
+            Route::get('supply/list', [StockReceiveController::class, 'index'])
+                ->name('supply.list');
+
+            Route::post('supply/receive', [StockReceiveController::class, 'receive'])
+                ->name('supply.receive');
+        });
+
         Route::middleware('dashboard.page:admin,catalog')->group(function () {
             Route::get('catalog/items', [StockCatalogController::class, 'index'])
                 ->name('catalog.items');
-
-            Route::post('catalog', [StockCatalogController::class, 'store'])
-                ->name('catalog.store');
 
             Route::put('catalog/{stockItem}', [StockCatalogController::class, 'update'])
                 ->name('catalog.update');

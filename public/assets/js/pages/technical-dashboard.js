@@ -48,7 +48,8 @@ function csrfToken() {
 }
 
 function fetchInventoryFromServer() {
-  return fetch('/technical/inventory/list', {
+  var listUrl = window.__INVENTORY_LIST_URL || '/technical/inventory/list';
+  return fetch(listUrl, {
     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   }).then(function (response) {
     if (!response.ok) throw new Error('inventory_fetch_failed');
@@ -102,7 +103,7 @@ function reloadInventory() {
   syncInventoryStatus();
 }
 
-var inventoryFilter = 'all';
+var inventoryFilter = window.__INVENTORY_DEFAULT_FILTER || 'all';
 var inventorySearchTerm = '';
 
 var pricingFilter = 'all';

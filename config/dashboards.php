@@ -263,6 +263,8 @@ return [
         'sidebar' => ['icon' => '📦', 'title' => 'لوحة المخزن', 'subtitle' => 'إدارة الأصناف والكميات'],
         'pages' => [
             'inventory' => ['title' => 'المخزن — الأصناف والكميات', 'icon' => '📦', 'label' => 'المخزن'],
+            'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد'],
+            'supply-request' => ['title' => 'طلب التوريد', 'icon' => '🛒', 'label' => 'طلب التوريد'],
             'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد لقسم الإنتاج'],
             'returns' => ['title' => 'استلام ارتجاع المواد — من قسم الإنتاج', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
             'staff' => ['title' => 'إدارة موظفي القسم', 'icon' => '👥', 'label' => 'موظفي القسم'],
@@ -279,6 +281,7 @@ return [
             'assets/js/shared/bom-inventory.js',
             'assets/js/shared/operations-desk.js',
             'assets/js/shared/inventory-returns.js',
+            'assets/js/pages/catalog-sections.js',
             'assets/js/pages/technical-dashboard.js',
             'assets/js/pages/technical-bom-dashboard.js',
             'assets/js/pages/returns-dashboard.js',
@@ -314,7 +317,7 @@ return [
             [
                 'label' => 'المخزون والتوريد',
                 'icon' => '📦',
-                'pages' => ['stock-categories', 'catalog', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings'],
+                'pages' => ['stock-categories', 'catalog', 'add-catalog-item', 'supply-request', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings'],
             ],
             [
                 'label' => 'التعاقد والمالية',
@@ -345,6 +348,8 @@ return [
             // ── المخزون والتوريد ───────────────────────────────────────────────
             'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'الأقسام'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
+            'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد'],
+            'supply-request' => ['title' => 'طلب التوريد', 'icon' => '🛒', 'label' => 'طلب التوريد'],
             'stock-kits' => [
                 'title' => 'أطقم جاهزة ومخصصات',
                 'icon' => '🧩',
@@ -393,6 +398,7 @@ return [
             'assets/js/shared/operations-desk.js',
             'assets/js/shared/bulk-table-select.js',
             'assets/js/pages/admin-dashboard.js',
+            'assets/js/pages/catalog-sections.js',
             'assets/js/pages/admin-permissions.js',
             'assets/js/pages/admin-spec-edit-requests.js',
             'assets/js/pages/admin-workshop-sections.js',
