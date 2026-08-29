@@ -98,6 +98,13 @@ class CostingService
 
             $case = $case->fresh()->load('patient');
 
+            if (! $case->isMilitary() && $quoteAmount <= 0) {
+                abort(
+                    422,
+                    'لا يمكن إصدار عرض السعر — إجمالي التكلفة صفر. راجع أسعار الأصناف في الكتالوج أو دفعات الشراء في المخزن ثم أعد المحاولة من الاعتماد.'
+                );
+            }
+
             if ($case->needsServicesApproval()) {
                 $this->workflowService->advance($case, WorkflowEvent::ServicesApprovalRequired->value);
                 app(ServicesApprovalService::class)->openForCase($case);

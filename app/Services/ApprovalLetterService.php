@@ -49,6 +49,10 @@ class ApprovalLetterService
         }
 
         if ($quote->status !== Quote::STATUS_ISSUED) {
+            if ($quote->status === Quote::STATUS_APPROVED) {
+                return $case->fresh()->load('patient');
+            }
+
             abort(422, 'يجب إصدار العرض للجهة قبل تسجيل خطاب الموافقة.');
         }
 

@@ -135,22 +135,13 @@ class CostingController extends Controller
      */
     public function confirm(CaseRecord $case): JsonResponse
     {
-        $fromStage = $case->stage_key;
         $case = $this->costingService->confirmAndIssueQuote($case, Auth::user()?->name);
-
-        $event = $case->stage_key === CaseRecord::STAGE_CASHIER
-            ? WorkflowEvent::SentToCashier->value
-            : WorkflowEvent::QuoteIssued->value;
-
-        $messageFromStage = $case->stage_key === CaseRecord::STAGE_CASHIER
-            ? CaseRecord::STAGE_OPERATIONS
-            : $fromStage;
 
         return response()->json([
             'message' => $this->transitions->transferMessage(
                 $case->load('patient'),
-                $event,
-                $messageFromStage,
+                WorkflowEvent::CostingCompleted->value,
+                CaseRecord::STAGE_COST_CALC,
             ),
             'case' => $this->formatSummary($case->load(['patient', 'pricingRequest', 'quotes'])),
         ]);

@@ -49,7 +49,7 @@
     var suffix = requestNo ? ' — ' + requestNo : '';
     return isMilitaryPatient(type)
       ? 'تم اعتماد التوصيف — جاهز للتشغيل' + suffix
-      : 'تم الإرسال للمعدلات' + suffix;
+      : 'تم الإرسال إلى المعدلات والتكاليف' + suffix;
   }
 
   function updateSubmitLabels(type) {
@@ -63,7 +63,7 @@
     if (bannerText) {
       bannerText.textContent = isMilitaryPatient(patientType)
         ? '✅ تم اعتماد التوصيف — جاهز للتشغيل'
-        : '✅ تم الإرسال للمعدلات';
+        : '✅ تم الإرسال إلى المعدلات والتكاليف';
     }
   }
 
@@ -985,7 +985,7 @@
           var patientType = pricing.patient_type || state.patientType;
           var requestNo = pricing.request_no || '';
           var submittedCaseId = state.caseId;
-          showToast(submitSuccessMessage(patientType, requestNo));
+          showToast(res.data.message || submitSuccessMessage(patientType, requestNo));
           removeCaseFromOrdersList(submittedCaseId);
           resetWorkspace();
         })

@@ -62,11 +62,19 @@ class ApprovalLetterController extends Controller
             return response()->json(['message' => 'المسار العسكري لا يتطلب خطاب موافقة.'], 422);
         }
 
+        if ($quote->status === Quote::STATUS_APPROVED) {
+            return response()->json([
+                'message' => 'تم اعتماد هذا العرض مسبقاً — بانتظار إصدار أمر الشغل من مكتب التشغيل.',
+                'defaults' => $this->approvalLetterDefaults($quote),
+                'hints' => $this->approvalLetterHints($quote),
+                'quote' => $this->approvalLetterQuoteMeta($quote),
+                'already_approved' => true,
+            ]);
+        }
+
         if ($quote->status !== Quote::STATUS_ISSUED) {
             return response()->json(['message' => 'يجب أن يكون العرض صادراً للجهة قبل رفع خطاب الموافقة.'], 422);
         }
-
-        $file = $request->file('letter_file');
         $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
         $path = $file->storeAs('approval_letters', $filename, 'local');
 
@@ -97,6 +105,16 @@ class ApprovalLetterController extends Controller
 
         if ($quote->caseRecord->patient_type === Patient::TYPE_MILITARY) {
             return response()->json(['message' => 'المسار العسكري لا يتطلب خطاب موافقة.'], 422);
+        }
+
+        if ($quote->status === Quote::STATUS_APPROVED) {
+            return response()->json([
+                'message' => 'تم اعتماد هذا العرض مسبقاً — بانتظار إصدار أمر الشغل من مكتب التشغيل.',
+                'defaults' => $this->approvalLetterDefaults($quote),
+                'hints' => $this->approvalLetterHints($quote),
+                'quote' => $this->approvalLetterQuoteMeta($quote),
+                'already_approved' => true,
+            ]);
         }
 
         if ($quote->status !== Quote::STATUS_ISSUED) {
@@ -153,10 +171,16 @@ class ApprovalLetterController extends Controller
 
     public function confirm(ProcessApprovalLetterRequest $request): JsonResponse
     {
-        $case = $this->approvalLetterService->confirm($request->validated());
+        $validated = $request->validated();
+        $quote = Quote::where('quote_no', $validated['quote_no'])->first();
+        $wasAlreadyApproved = $quote && $quote->status === Quote::STATUS_APPROVED;
+
+        $case = $this->approvalLetterService->confirm($validated);
 
         return response()->json([
-            'message' => 'تم تسجيل موافقة الجهة — بانتظار إصدار أمر الشغل من مكتب التشغيل.',
+            'message' => $wasAlreadyApproved
+                ? 'تم اعتماد هذا العرض مسبقاً — بانتظار إصدار أمر الشغل من مكتب التشغيل.'
+                : 'تم تسجيل موافقة الجهة — بانتظار إصدار أمر الشغل من مكتب التشغيل.',
             'case' => $case->only([
                 'id', 'case_no', 'stage_key', 'manufacturing_stage',
                 'work_order_no', 'approval_date', 'approval_confirmed_at',

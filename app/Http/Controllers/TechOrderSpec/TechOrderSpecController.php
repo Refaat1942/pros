@@ -164,6 +164,7 @@ class TechOrderSpecController extends Controller
     public function submit(TechOrderSpec $spec): JsonResponse
     {
         try {
+            $fromStage = $spec->caseRecord?->stage_key ?? CaseRecord::STAGE_TECHNICAL;
             $case = $this->specService->submit($spec);
         } catch (InvalidSpecItemException $e) {
             return response()->json([
@@ -173,7 +174,11 @@ class TechOrderSpecController extends Controller
         }
 
         return response()->json([
-            'message' => 'تم إرسال التوصيف إلى مرحلة المعدلات.',
+            'message' => $this->transitions->transferMessage(
+                $case->load('patient'),
+                WorkflowEvent::SpecSaved->value,
+                $fromStage,
+            ),
             'case' => $this->formatCase($case->load('patient')),
             'spec' => $this->formatSpec($spec->fresh()->load('items')),
         ]);

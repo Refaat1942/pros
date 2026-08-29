@@ -88,7 +88,7 @@
 
         <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button type="button" class="btn-view" id="btnCancelAdj">إغلاق النافذة</button>
-          <button type="button" class="btn-action success" id="btnCompleteAdj">📤 إرسال للتكاليف</button>
+          <button type="button" class="btn-action success" id="btnCompleteAdj">📤 إرسال إلى الاعتماد</button>
           <button type="button" class="btn-action primary" id="btnSubmitAdjEditRequest" hidden>📨 إرسال طلب التعديل للإدارة</button>
         </div>
       </div>

@@ -56,4 +56,44 @@ class ApprovalLetterSkipTest extends TestCase
         ]);
         $this->assertSame(0, ApprovalContract::where('quote_id', $quote->id)->whereNotNull('letter_path')->count());
     }
+
+    public function test_confirm_is_idempotent_when_quote_already_approved(): void
+    {
+        $this->stockItem('RM-001', qty: 5);
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+
+        $quote = Quote::create([
+            'quote_no' => 'QT-SKIP-'.uniqid(),
+            'case_id' => $case->id,
+            'order_ref' => $case->order_ref,
+            'patient_name' => $patient->name,
+            'company_name' => $company->name,
+            'quote_date' => now()->toDateString(),
+            'status' => Quote::STATUS_ISSUED,
+            'total' => 500.00,
+        ]);
+
+        $reception = $this->userWithRole('reception');
+        $payload = [
+            'quote_no' => $quote->quote_no,
+            'patient_name' => $patient->name,
+            'approved_amount' => 500.00,
+            'company_name' => $company->name,
+            'letter_path' => null,
+        ];
+
+        $this->actingAs($reception)
+            ->postJson('/reception/approval-letter/confirm', $payload)
+            ->assertOk();
+
+        $this->actingAs($reception)
+            ->postJson('/reception/approval-letter/confirm', $payload)
+            ->assertOk()
+            ->assertJsonPath('message', 'تم اعتماد هذا العرض مسبقاً — بانتظار إصدار أمر الشغل من مكتب التشغيل.');
+
+        $this->assertSame(Quote::STATUS_APPROVED, $quote->fresh()->status);
+        $this->assertSame(1, ApprovalContract::where('quote_id', $quote->id)->count());
+    }
 }
