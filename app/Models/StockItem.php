@@ -186,8 +186,8 @@ class StockItem extends Model
     /** الباركود الفعلي للمسح/الطباعة — عمود barcode أو BC-{operationalCode}. */
     public function displayBarcode(): ?string
     {
-        $barcode = trim((string) ($this->barcode ?? ''));
-        if ($barcode !== '') {
+        $barcode = self::normalizeScannableBarcode((string) ($this->barcode ?? ''));
+        if ($barcode !== null) {
             return $barcode;
         }
 
@@ -197,6 +197,20 @@ class StockItem extends Model
         }
 
         return self::barcodeForOperationalCode($operational);
+    }
+
+    /** يطبّع نص الباركود ليكون قابلًا للمسح بـ Code128 (ASCII طباعي). */
+    public static function normalizeScannableBarcode(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        $ascii = preg_replace('/[^\x20-\x7E]/', '', $value) ?? '';
+        $ascii = trim($ascii);
+
+        return $ascii !== '' ? $ascii : null;
     }
 
     public static function findByOperationalCode(string $code, bool $lockForUpdate = false): ?self

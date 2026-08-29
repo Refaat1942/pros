@@ -196,10 +196,19 @@ class StockCatalogController extends Controller
         $message = "تم الاستيراد: {$summary['created']} صنف جديد، {$summary['updated']} محدَّث، {$summary['skipped']} متخطّى.";
 
         if ($request->expectsJson()) {
+            $user = $request->user();
+            $visibility = app(CatalogListVisibilityService::class);
+
             return response()->json([
                 'message' => $message,
                 'summary' => $summary,
-                'items' => $this->catalogService->listForDashboard()->values(),
+                'items' => $this->catalogService->listForDashboard()
+                    ->map(function (array $item) use ($user, $visibility) {
+                        return $user
+                            ? $visibility->filterItemFields($item, $user, 'admin_catalog')
+                            : $item;
+                    })
+                    ->values(),
             ]);
         }
 
