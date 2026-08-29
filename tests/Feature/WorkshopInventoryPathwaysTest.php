@@ -232,6 +232,26 @@ class WorkshopInventoryPathwaysTest extends TestCase
         $this->assertTrue($case->isWorkshopAssignmentApproved());
     }
 
+    public function test_assignment_queue_api_returns_pending_work_orders(): void
+    {
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0103']);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+
+        $workshop = $this->userWithRole(Role::SLUG_WORKSHOP);
+
+        $this->actingAs($workshop)
+            ->getJson('/workshop/workshop/assignment-queue')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.work_order_no', 'WO-2026-0103');
+    }
+
     public function test_dispense_blocked_without_production_assignment_approval(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);

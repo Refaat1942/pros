@@ -100,6 +100,31 @@
   var assignmentRefreshInFlight = false;
   var assignmentCache = [];
 
+  function safeRepaginateTable(tableId) {
+    if (!window.TablePagination || !tableId) return;
+    try {
+      if (TablePagination.refreshById) {
+        TablePagination.refreshById(tableId);
+      } else if (TablePagination.repaginate) {
+        var el = document.getElementById(tableId);
+        if (el) TablePagination.repaginate(el);
+      }
+    } catch (e) {
+      console.warn('workshop pagination', e);
+    }
+  }
+
+  function assignmentQueueErrorMessage(err) {
+    if (err && err.response) {
+      var data = err.response.data;
+      if (data && data.message) return data.message;
+      if (err.response.status === 419) return 'انتهت الجلسة — أعد تحميل الصفحة ثم سجّل الدخول إن لزم.';
+      if (err.response.status === 403) return 'ليس لديك صلاحية عرض طابور التخصيص.';
+      return 'تعذّر تحميل طابور التخصيص (خطأ ' + err.response.status + ').';
+    }
+    return 'تعذّر تحميل طابور التخصيص — تحقق من الاتصال ثم أعد المحاولة.';
+  }
+
   function refreshAssignmentQueue() {
     if (!window.axios || assignmentRefreshInFlight) return;
     assignmentRefreshInFlight = true;
@@ -115,10 +140,12 @@
           ? assignmentCache.map(renderAssignmentQueueRow).join('')
           : '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر بانتظار التخصيص — تظهر بعد اعتماد مكتب التشغيل.</td></tr>';
         bindAssignmentQueueEvents();
-        if (window.TablePagination && TablePagination.repaginate) TablePagination.repaginate(tbody);
+        safeRepaginateTable('workshopAssignmentTable');
       })
       .catch(function (err) {
-        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل طابور التخصيص', true);
+        if (err && err.config && err.config.url) {
+          toast(assignmentQueueErrorMessage(err), true);
+        }
       })
       .finally(function () {
         assignmentRefreshInFlight = false;
@@ -545,9 +572,7 @@
       row.dataset.filterHidden = ok ? '0' : '1';
     });
     var tbody = $('workshopTableBody');
-    if (tbody && window.TablePagination && TablePagination.repaginate) {
-      TablePagination.repaginate(tbody);
-    }
+    safeRepaginateTable('workshopDeskTable');
   }
 
   function saveWorkshopAssignment() {
@@ -596,11 +621,19 @@
     }).catch(function () {});
   }
 
+  function bootWorkshopQueues() {
+    refreshAssignmentQueue();
+    refreshTechBoard();
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     loadAssignmentOptions();
     bindTableEvents();
-    refreshAssignmentQueue();
-    refreshTechBoard();
+    if (document.readyState === 'complete') {
+      bootWorkshopQueues();
+    } else {
+      window.addEventListener('load', bootWorkshopQueues, { once: true });
+    }
     var search = $('workshopSearch');
     if (search) search.addEventListener('input', applyFilters);
     var filtersRoot = $('workshopFilters');

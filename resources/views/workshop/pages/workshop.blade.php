@@ -38,7 +38,7 @@
             </button>
         </div>
         <div class="overflow-x-auto">
-            <table data-paginate="8" class="w-full text-sm">
+            <table id="workshopAssignmentTable" data-paginate="8" class="w-full text-sm">
                 <thead class="bg-amber-50/80 text-slate-600">
                     <tr>
                         <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
@@ -132,7 +132,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table data-paginate="10" class="w-full text-sm">
+            <table id="workshopDeskTable" data-paginate="10" class="w-full text-sm">
                 <thead class="bg-slate-100 text-slate-600">
                     <tr>
                         <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>

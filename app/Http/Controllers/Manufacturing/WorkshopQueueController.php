@@ -40,7 +40,7 @@ class WorkshopQueueController extends Controller
                     'workshopSection:id,name,code',
                     'assignedTechnician:id,name',
                     'bom:id,case_id,bom_no,stage',
-                    'bom.items:id,bom_id,stock_item_code,name,qty,source',
+                    'bom.items:id,bom_id,stock_item_code,name,qty',
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
@@ -72,7 +72,7 @@ class WorkshopQueueController extends Controller
                     'workshopSection:id,name,code',
                     'assignedTechnician:id,name',
                     'bom:id,case_id,bom_no,stage',
-                    'bom.items:id,bom_id,stock_item_code,name,qty,source',
+                    'bom.items:id,bom_id,stock_item_code,name,qty',
                 ])
                 ->when($request->filter === 'mine' && Auth::id(), fn ($q) => $q->where('assigned_technician_id', Auth::id()))
                 ->when($request->filter === 'section' && $request->section_id, fn ($q) => $q->where('workshop_section_id', $request->integer('section_id')))
