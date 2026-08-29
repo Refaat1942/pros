@@ -844,18 +844,50 @@ class DashboardPageDataService
             ->orderByDesc('updated_at')
             ->get();
 
+        $assignmentCases = CaseRecord::query()
+            ->workshopAssignmentQueue()
+            ->with([
+                'patient:id,patient_code,name',
+                'workshopSection:id,name,code',
+                'assignedTechnician:id,name',
+                'bom:id,case_id,bom_no,stage',
+                'bom.items:id,bom_id,stock_item_code,name,qty',
+            ])
+            ->orderByDesc('updated_at')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
+
+        $assignmentPayload = $assignmentCases->map(
+            fn (CaseRecord $c) => ManufacturingDeskCaseFormatter::format($c, 'workshop.work-order.print'),
+        )->values();
+
+        $assignmentSections = collect(app(WorkshopSectionService::class)->listActive())
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'code' => $s->code,
+                'technicians' => $s->technicians->map(fn ($u) => $u->only(['id', 'name']))->values(),
+            ])
+            ->values();
+
         $wipCount = $cases->count();
         $milCount = $cases->filter(fn ($c) => $c->isMilitary())->count();
         $civCount = $cases->count() - $milCount;
         $summary = ManufacturingDeskCaseFormatter::workshopSummary($cases);
+        $awaitingAssignment = $assignmentCases->filter(
+            fn (CaseRecord $c) => ! $c->isWorkshopAssignmentApproved(),
+        )->count();
 
         return [
             'workshop_cases' => $cases,
+            'workshop_assignment_cases' => $assignmentCases,
+            'workshop_assignment_payload' => $assignmentPayload,
+            'workshop_assignment_sections' => $assignmentSections,
             'workshop_stats' => [
+                ['icon' => '📋', 'label' => 'بانتظار التخصيص', 'value' => (string) $awaitingAssignment, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)', 'key' => 'awaiting_assignment'],
                 ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)', 'key' => 'wip'],
                 ['icon' => '👤', 'label' => 'مُخصَّص لفني', 'value' => (string) $summary['assigned'], 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)', 'key' => 'assigned'],
                 ['icon' => '⏳', 'label' => 'بدون فني', 'value' => (string) $summary['unassigned'], 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)', 'key' => 'unassigned'],
-                ['icon' => '📈', 'label' => 'متوسط الإنجاز', 'value' => $summary['avg_progress'].'%', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)', 'key' => 'avg_progress'],
             ],
             'workshop_summary' => $summary,
         ];

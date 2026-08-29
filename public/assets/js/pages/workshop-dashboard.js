@@ -143,6 +143,7 @@
         safeRepaginateTable('workshopAssignmentTable');
       })
       .catch(function (err) {
+        if (assignmentCache.length) return;
         if (err && err.config && err.config.url) {
           toast(assignmentQueueErrorMessage(err), true);
         }
@@ -200,6 +201,15 @@
     }
 
     var payload = readAssignmentPayload();
+    var cached = assignmentCache.find(function (c) { return String(c.id) === String(caseId); });
+    if ((!payload.workshop_section_id || !payload.assigned_technician_id) && cached) {
+      if (!payload.workshop_section_id && cached.workshop_section_id) {
+        payload.workshop_section_id = parseInt(cached.workshop_section_id, 10);
+      }
+      if (!payload.assigned_technician_id && cached.assigned_technician_id) {
+        payload.assigned_technician_id = parseInt(cached.assigned_technician_id, 10);
+      }
+    }
     if (!payload.workshop_section_id || !payload.assigned_technician_id) {
       toast('حدّد قسم الإنتاج والفني من القوائم ثم أعد المحاولة.', true);
       return;
@@ -601,24 +611,59 @@
       .finally(function () { if (btn) btn.disabled = false; });
   }
 
-  function loadAssignmentOptions() {
-    if (!window.axios) return;
-    axios.get('/workshop/workshop-assignment/options').then(function (res) {
-      assignmentSections = (res.data && res.data.sections) || [];
-      var sectionSel = $('workshopAssignSection');
-      var techSel = $('workshopAssignTechnician');
-      if (!sectionSel || !techSel) return;
-      sectionSel.innerHTML = '<option value="">— بدون —</option>' + assignmentSections.map(function (s) {
-        return '<option value="' + s.id + '">' + esc(s.name) + (s.code ? ' (' + esc(s.code) + ')' : '') + '</option>';
+  function hydrateAssignmentFromServer() {
+    if (Array.isArray(window.__WORKSHOP_ASSIGNMENT_QUEUE) && window.__WORKSHOP_ASSIGNMENT_QUEUE.length) {
+      assignmentCache = window.__WORKSHOP_ASSIGNMENT_QUEUE;
+    }
+    if (Array.isArray(window.__WORKSHOP_ASSIGNMENT_SECTIONS) && window.__WORKSHOP_ASSIGNMENT_SECTIONS.length) {
+      assignmentSections = window.__WORKSHOP_ASSIGNMENT_SECTIONS;
+    }
+  }
+
+  function paintAssignmentSections() {
+    var sectionSel = $('workshopAssignSection');
+    var techSel = $('workshopAssignTechnician');
+    if (!sectionSel || !techSel || !assignmentSections.length) return;
+
+    sectionSel.innerHTML = '<option value="">— بدون —</option>' + assignmentSections.map(function (s) {
+      return '<option value="' + s.id + '">' + esc(s.name) + (s.code ? ' (' + esc(s.code) + ')' : '') + '</option>';
+    }).join('');
+
+    function syncTechnicians() {
+      var sec = assignmentSections.find(function (s) { return String(s.id) === String(sectionSel.value); });
+      var techs = sec ? (sec.technicians || []) : [];
+      techSel.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
+        return '<option value="' + t.id + '">' + esc(t.name) + '</option>';
       }).join('');
-      sectionSel.addEventListener('change', function () {
-        var sec = assignmentSections.find(function (s) { return String(s.id) === String(sectionSel.value); });
-        var techs = sec ? (sec.technicians || []) : [];
-        techSel.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
-          return '<option value="' + t.id + '">' + esc(t.name) + '</option>';
-        }).join('');
+    }
+
+    if (!sectionSel.dataset.sectionBound) {
+      sectionSel.dataset.sectionBound = '1';
+      sectionSel.addEventListener('change', syncTechnicians);
+    }
+    syncTechnicians();
+  }
+
+  function loadAssignmentOptions() {
+    if (!window.axios) {
+      paintAssignmentSections();
+      return;
+    }
+    if (assignmentSections.length) {
+      paintAssignmentSections();
+      return;
+    }
+    axios.get('/workshop/workshop-assignment/options')
+      .then(function (res) {
+        assignmentSections = (res.data && res.data.sections) || [];
+        paintAssignmentSections();
+      })
+      .catch(function (err) {
+        paintAssignmentSections();
+        if (!assignmentSections.length) {
+          toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل أقسام الإنتاج', true);
+        }
       });
-    }).catch(function () {});
   }
 
   function bootWorkshopQueues() {
@@ -627,6 +672,11 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    hydrateAssignmentFromServer();
+    if (assignmentCache.length) {
+      bindAssignmentQueueEvents();
+      safeRepaginateTable('workshopAssignmentTable');
+    }
     loadAssignmentOptions();
     bindTableEvents();
     if (document.readyState === 'complete') {
