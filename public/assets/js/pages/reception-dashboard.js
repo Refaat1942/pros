@@ -374,12 +374,6 @@
       body.appendChild(iframe);
 
       document.getElementById('quoteModal').classList.add('visible');
-      if (quote.status === 'approved') {
-        markQuoteAsIssued(quote);
-        quote.status = 'issued';
-        quote.statusLabel = 'صُدر — بانتظار رجوع العميل';
-        renderQuoteTable();
-      }
     }
 
     function closeQuoteModal() {
@@ -1640,8 +1634,10 @@
 
       var active = classSel && classSel.value === 'entity' && billingSel && billingSel.value;
       var form = document.getElementById('addPatientForm');
+      var policies = (window.__FORM_FIELD_POLICIES && window.__FORM_FIELD_POLICIES.reception) || {};
+      var companyRequired = policies.contract_company_id === true;
 
-      if (active) {
+      if (active && companyRequired) {
         companySel.setAttribute('data-v-rules', 'required,select');
       } else {
         companySel.removeAttribute('data-v-rules');
@@ -1653,6 +1649,30 @@
       if (active && form && window.DashboardValidation) {
         window.DashboardValidation.validateField(companySel, form);
       }
+    }
+
+    function syncReceptionFormFieldPolicies() {
+      var policies = (window.__FORM_FIELD_POLICIES && window.__FORM_FIELD_POLICIES.reception) || {};
+      var map = {
+        phone: document.getElementById('newPhone'),
+        national_id: document.getElementById('newNationalId'),
+        military_number: document.getElementById('newMilitaryNumber'),
+        seniority_number: document.getElementById('newSeniorityNumber'),
+        military_weapon: document.getElementById('newMilitaryWeapon')
+      };
+
+      Object.keys(map).forEach(function (field) {
+        var el = map[field];
+        if (!el) return;
+        if (policies[field]) {
+          el.setAttribute('data-v-rules', 'required');
+        } else {
+          el.removeAttribute('data-v-rules');
+          if (window.DashboardValidation) window.DashboardValidation.clearInvalid(el);
+        }
+      });
+
+      syncCompanyFieldValidation();
     }
 
     function rebuildCompanyOptions(billingType) {
@@ -2052,6 +2072,78 @@
       return imageExts.indexOf(ext) !== -1 || ext === 'pdf';
     }
 
+    function applyApprovalLetterDefaults(res) {
+      var extracted = res.defaults || res.extracted || {};
+      var nameEl    = document.getElementById('ocrConfirmName');
+      var amountEl  = document.getElementById('ocrConfirmAmount');
+      var companyEl = document.getElementById('ocrConfirmCompany');
+      var refEl2    = document.getElementById('ocrLetterRef');
+
+      if (nameEl)    nameEl.value    = extracted.patient_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.patient : '');
+      if (amountEl)  amountEl.value  = extracted.approved_amount != null
+        ? extracted.approved_amount
+        : (res.quote && res.quote.display_total != null
+          ? res.quote.display_total
+          : (_ocrCurrentQuote ? _ocrCurrentQuote.total : ''));
+      if (companyEl) companyEl.value = extracted.company_name || (_ocrCurrentQuote ? quoteCompanyLabel(_ocrCurrentQuote.company) : '');
+      if (refEl2)    refEl2.value    = extracted.letter_ref      || '';
+
+      _ocrLetterDate = extracted.letter_date || null;
+
+      var hints = res.hints || res.meta || {};
+      var warnEl = document.getElementById('ocrMetaWarning');
+      if (warnEl) {
+        var warnings = [];
+        if (hints.has_contract_discount) {
+          warnings.push('ℹ️ الجهة لها خصم تعاقدي — المبلغ في الخطاب قد يكون صافياً (' +
+            (hints.expected_net != null ? hints.expected_net : '') + ' ج.م) أو إجمالياً (' +
+            (hints.expected_gross != null ? hints.expected_gross : '') + ' ج.م).');
+        }
+        if (warnings.length) {
+          warnEl.innerHTML = warnings.join('<br>');
+          warnEl.style.display = 'block';
+        } else {
+          warnEl.style.display = 'none';
+          warnEl.innerHTML = '';
+        }
+      }
+
+      var errEl = document.getElementById('ocrError');
+      if (errEl) errEl.style.display = 'none';
+
+      ocrShowStep('ocrStep3');
+    }
+
+    function skipApprovalLetterUpload() {
+      if (!_ocrCurrentQuote) return;
+
+      _ocrStoredPath = null;
+      ocrShowStep('ocrStep2');
+
+      var csrfInput = document.querySelector('meta[name="csrf-token"]');
+      var csrf      = csrfInput ? csrfInput.getAttribute('content') : '';
+
+      fetch('/reception/approval-letter/defaults?quote_no=' + encodeURIComponent(_ocrCurrentQuote.id), {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrf
+        },
+        credentials: 'same-origin'
+      })
+        .then(function (r) {
+          return r.ok ? r.json() : r.json().then(function (j) { throw j; });
+        })
+        .then(function (res) {
+          applyApprovalLetterDefaults(res);
+        })
+        .catch(function (err) {
+          ocrShowStep('ocrStep1');
+          approvalLetterShowError((err && err.message) ? err.message : 'تعذّر تحميل بيانات العرض — جرّب مجدداً.');
+        });
+    }
+
     function processOcrFile(file) {
       if (!file || !_ocrCurrentQuote) return;
 
@@ -2088,46 +2180,7 @@
         })
         .then(function (res) {
           _ocrStoredPath = res.stored_path || null;
-
-          var extracted = res.defaults || res.extracted || {};
-          var nameEl    = document.getElementById('ocrConfirmName');
-          var amountEl  = document.getElementById('ocrConfirmAmount');
-          var companyEl = document.getElementById('ocrConfirmCompany');
-          var refEl2    = document.getElementById('ocrLetterRef');
-
-          if (nameEl)    nameEl.value    = extracted.patient_name    || (_ocrCurrentQuote ? _ocrCurrentQuote.patient : '');
-          if (amountEl)  amountEl.value  = extracted.approved_amount != null
-            ? extracted.approved_amount
-            : (res.quote && res.quote.display_total != null
-              ? res.quote.display_total
-              : (_ocrCurrentQuote ? _ocrCurrentQuote.total : ''));
-          if (companyEl) companyEl.value = extracted.company_name || (_ocrCurrentQuote ? quoteCompanyLabel(_ocrCurrentQuote.company) : '');
-          if (refEl2)    refEl2.value    = extracted.letter_ref      || '';
-
-          _ocrLetterDate = extracted.letter_date || null;
-
-          var hints = res.hints || res.meta || {};
-          var warnEl = document.getElementById('ocrMetaWarning');
-          if (warnEl) {
-            var warnings = [];
-            if (hints.has_contract_discount) {
-              warnings.push('ℹ️ الجهة لها خصم تعاقدي — المبلغ في الخطاب قد يكون صافياً (' +
-                (hints.expected_net != null ? hints.expected_net : '') + ' ج.م) أو إجمالياً (' +
-                (hints.expected_gross != null ? hints.expected_gross : '') + ' ج.م).');
-            }
-            if (warnings.length) {
-              warnEl.innerHTML = warnings.join('<br>');
-              warnEl.style.display = 'block';
-            } else {
-              warnEl.style.display = 'none';
-              warnEl.innerHTML = '';
-            }
-          }
-
-          var errEl = document.getElementById('ocrError');
-          if (errEl) errEl.style.display = 'none';
-
-          ocrShowStep('ocrStep3');
+          applyApprovalLetterDefaults(res);
         })
         .catch(function (err) {
           ocrShowStep('ocrStep1');
@@ -2254,6 +2307,9 @@
         ocrShowStep('ocrStep1');
       });
 
+      var skipBtn = document.getElementById('btnSkipApprovalLetter');
+      if (skipBtn) skipBtn.addEventListener('click', skipApprovalLetterUpload);
+
       var confirmBtn = document.getElementById('btnConfirmOcr');
       if (confirmBtn) confirmBtn.addEventListener('click', confirmOcrApproval);
 
@@ -2262,6 +2318,7 @@
     })();
 
     initAppointmentsCalendar();
+    syncReceptionFormFieldPolicies();
     setInterval(refreshAppointmentWaitLabels, 30000);
 
     syncPricingQueueToQuotes();

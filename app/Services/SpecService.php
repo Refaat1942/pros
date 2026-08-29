@@ -220,10 +220,10 @@ class SpecService
     {
         foreach ($items as $item) {
             $code = $item['stock_item_code'] ?? '';
-            $qty = (int) ($item['qty'] ?? 0);
+            $qty = round((float) ($item['qty'] ?? 0), 3);
 
-            if ($qty < 1) {
-                abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
+            if ($qty < 0.001) {
+                abort(422, 'الكمية يجب أن تكون 0.001 على الأقل لكل بند.');
             }
 
             if (! StockItem::findByOperationalCode($code)) {

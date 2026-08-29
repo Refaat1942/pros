@@ -206,6 +206,15 @@ class BaseRequest extends FormRequest
         return array_merge($rules, ['integer', 'min:1', 'max:999999']);
     }
 
+    /** كميات عشرية للتوصيف/المعدلات (مثال: 0.2 كجم، 1.5 متر). */
+    /** @return list<string> */
+    protected function decimalQtyRules(bool $required = true): array
+    {
+        $rules = $required ? ['required'] : ['nullable'];
+
+        return array_merge($rules, ['numeric', 'min:0.001', 'max:999999', 'regex:/^\d+(\.\d{1,3})?$/']);
+    }
+
     /** @return list<string> */
     protected function moneyRules(bool $required = true): array
     {

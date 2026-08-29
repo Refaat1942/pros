@@ -103,6 +103,9 @@ Route::prefix('reception')
             Route::post('approval-letter/upload', [ApprovalLetterController::class, 'upload'])
                 ->name('approval-letter.upload');
 
+            Route::get('approval-letter/defaults', [ApprovalLetterController::class, 'defaults'])
+                ->name('approval-letter.defaults');
+
             Route::post('approval-letter/confirm', [ApprovalLetterController::class, 'confirm'])
                 ->name('approval-letter.confirm');
 

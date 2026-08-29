@@ -479,6 +479,7 @@ class DashboardPageDataService
             'visit_types' => VisitType::query()
                 ->ordered()
                 ->get(['id', 'name']),
+            'form_field_policies' => app(FormFieldPolicyService::class)->policiesForFeatures(['reception', 'appointment']),
         ];
     }
 
@@ -621,6 +622,7 @@ class DashboardPageDataService
                 ['key' => 'today_from_doctor', 'icon' => '📅', 'label' => 'إجمالي المحولون من الطبيب اليوم', 'value' => (string) $stats['today_from_doctor'], 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['key' => 'pending_spec', 'icon' => '📥', 'label' => 'بانتظار التوصيف', 'value' => (string) $stats['pending_spec'], 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
+            'form_field_policies' => app(FormFieldPolicyService::class)->policiesForFeatures(['spec']),
         ];
     }
 

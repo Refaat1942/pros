@@ -141,7 +141,7 @@ class ApprovalLetterAmountValidationTest extends TestCase
         ]);
     }
 
-    public function test_contract_discount_gross_amount_rejected(): void
+    public function test_contract_discount_gross_amount_succeeds(): void
     {
         $company = $this->civilianCompany('جهة خصم 10% ب');
         $company->update(['discount_percent' => 10]);
@@ -167,15 +167,16 @@ class ApprovalLetterAmountValidationTest extends TestCase
         ]);
 
         $ctx = compact('company', 'patient', 'case', 'quote');
-        $auditsBefore = $this->approvalLetterAuditsCount();
         $this->actingAs($this->userWithRole('reception'));
 
         $this->postJson('/reception/approval-letter/confirm', $this->confirmPayload($ctx, 500.00))
-            ->assertStatus(422);
+            ->assertOk();
 
-        $this->assertSame(Quote::STATUS_ISSUED, $quote->fresh()->status);
-        $this->assertSame(0, ApprovalContract::where('quote_id', $quote->id)->count());
-        $this->assertSame($auditsBefore, $this->approvalLetterAuditsCount());
+        $this->assertSame(Quote::STATUS_APPROVED, $quote->fresh()->status);
+        $this->assertDatabaseHas('approval_contracts', [
+            'quote_id' => $quote->id,
+            'approved_amount' => 500.00,
+        ]);
     }
 
     public function test_decimal_normalization_accepts_rounded_canonical_amount(): void

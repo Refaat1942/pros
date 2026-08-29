@@ -51,7 +51,7 @@ class AdjustmentsService
     /**
      * تعديل كمية بند من بنود المعدلات — بنود الفني (source=spec) للقراءة فقط.
      */
-    public function updateItemQty(CaseRecord $case, BomItem $item, int $qty): Bom
+    public function updateItemQty(CaseRecord $case, BomItem $item, float $qty): Bom
     {
         if ($case->stage_key !== CaseRecord::STAGE_ADJUSTMENTS) {
             abort(422, 'الحالة ليست في مرحلة المعدلات.');

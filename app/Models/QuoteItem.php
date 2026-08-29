@@ -20,7 +20,7 @@ class QuoteItem extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'decimal:3',
         'amount' => 'decimal:2',
     ];
 

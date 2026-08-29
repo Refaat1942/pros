@@ -79,6 +79,9 @@
         window.__NOTIF_FEED_URL = "{{ route('notifications.feed') }}?dashboard={{ urlencode($dashboardKey) }}";
         window.__NOTIF_SOUND_ENABLED = @json($notifAlerts['sound_enabled']);
         window.__NOTIF_REMINDER_MS = {{ max(1, (int) $notifAlerts['reminder_minutes']) * 60000 }};
+        @if (!empty($form_field_policies))
+        window.__FORM_FIELD_POLICIES = @json($form_field_policies);
+        @endif
     </script>
     <script src="{{ asset('assets/js/shared/dashboard-notifications-poll.js') }}?v={{ filemtime(public_path('assets/js/shared/dashboard-notifications-poll.js')) }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)
