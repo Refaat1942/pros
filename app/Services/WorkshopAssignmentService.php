@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\CaseRecord;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkshopSection;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\DB;
 
 class WorkshopAssignmentService
@@ -78,7 +80,7 @@ class WorkshopAssignmentService
             abort(422, 'تم اعتماد التخصيص مسبقاً.');
         }
 
-        return DB::transaction(function () use ($case) {
+        $approved = DB::transaction(function () use ($case) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             $before = ['workshop_assignment_approved_at' => $case->workshop_assignment_approved_at];
@@ -99,6 +101,30 @@ class WorkshopAssignmentService
 
             return $case->fresh();
         });
+
+        $approved->loadMissing('patient:id,name');
+        $this->notifyWarehouseDispenseReady($approved);
+
+        return $approved;
+    }
+
+    private function notifyWarehouseDispenseReady(CaseRecord $case): void
+    {
+        if (! config('workshop.enabled', true)) {
+            return;
+        }
+
+        $patient = $case->patient?->name ?? 'غير معروف';
+        $caseNo = $case->case_no ?? ('#'.$case->id);
+
+        app(NotificationService::class)->push(
+            roleSlug: Role::SLUG_TECHNICAL,
+            title: '📦 أمر صرف جديد للمخزن',
+            body: "المريض {$patient} (حالة {$caseNo}) — تم اعتماد التخصيص في قسم الإنتاج — جاهز للصرف بالباركود من المخزن.",
+            case: $case,
+            event: 'workshop_assignment_approved',
+            data: ['url' => '/technical/bom'],
+        );
     }
 
     public function assertDispenseAllowed(CaseRecord $case): void

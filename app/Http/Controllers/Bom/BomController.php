@@ -42,7 +42,7 @@ class BomController extends Controller
     {
         $boms = $this->fetchForDashboard(
             Bom::with([
-                'caseRecord:id,case_no,stage_key,manufacturing_stage,work_order_no,patient_type',
+                'caseRecord:id,case_no,stage_key,manufacturing_stage,work_order_no,patient_type,workshop_section_id,assigned_technician_id,workshop_assignment_approved_at',
                 'items',
             ])
                 ->when($request->stage, fn ($q, $s) => $q->where('stage', $s))
@@ -217,7 +217,39 @@ class BomController extends Controller
         return $case->only([
             'id', 'case_no', 'order_ref', 'stage_key', 'manufacturing_stage',
             'work_order_no', 'patient_type', 'quote_no',
-        ]);
+            'workshop_section_id', 'assigned_technician_id', 'workshop_assignment_approved_at',
+        ]) + [
+            'workshop_assignment_approved' => $case->isWorkshopAssignmentApproved(),
+        ];
+    }
+
+    private function canDispenseBom(Bom $bom): bool
+    {
+        if ($bom->stage !== Bom::STAGE_RAW) {
+            return false;
+        }
+
+        $case = $bom->caseRecord;
+        if (! $case) {
+            return false;
+        }
+
+        if (! config('workshop.enabled', true)) {
+            return true;
+        }
+
+        return $case->isWorkshopAssignmentApproved();
+    }
+
+    private function awaitingWorkshopAssignment(Bom $bom): bool
+    {
+        if ($bom->stage !== Bom::STAGE_RAW || ! config('workshop.enabled', true)) {
+            return false;
+        }
+
+        $case = $bom->caseRecord;
+
+        return $case && ! $case->isWorkshopAssignmentApproved();
     }
 
     private function formatSummary(Bom $bom): array
@@ -240,6 +272,8 @@ class BomController extends Controller
                 : 0,
             'items_preview' => $this->bomItemsPreview($bom),
             'items_embedded' => $this->bomItemsForUser($bom, auth()->user()),
+            'can_dispense' => $this->canDispenseBom($bom),
+            'awaiting_workshop_assignment' => $this->awaitingWorkshopAssignment($bom),
             'case' => $bom->relationLoaded('caseRecord') && $bom->caseRecord
                 ? $this->formatCase($bom->caseRecord)
                 : null,

@@ -721,7 +721,8 @@ function openBarcodeIssue(bomId) {
     return '<div class="barcode-req-item"><span>' + (it.name || it.code) + ' ×' + (it.qty || 1) + '</span><code>' + bc + '</code></div>';
   }).join('');
   document.getElementById('barcodeAlarm').style.display = 'none';
-  document.getElementById('barcodeInput').value = '';
+  var legacyInput = document.getElementById('barcodeModalInput');
+  if (legacyInput) legacyInput.value = '';
   renderScanned();
   document.getElementById('barcodeModal').classList.add('visible');
 }
@@ -732,8 +733,12 @@ function requiredBarcodes() {
 }
 
 function renderScanned() {
-  var el = document.getElementById('barcodeScanned');
-  if (!barcodeState.scanned.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">لم يُمسح أي باركود بعد.</p>'; return; }
+  var el = document.getElementById('barcodeModalScanned');
+  if (!el) return;
+  if (!barcodeState.scanned.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">لم يُمسح أي باركود بعد.</p>';
+    return;
+  }
   el.innerHTML = barcodeState.scanned.map(function (code) {
     var ok = requiredBarcodes().indexOf(code) !== -1;
     return '<span class="barcode-chip ' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓' : '✗') + ' ' + code + '</span>';
@@ -782,8 +787,10 @@ function confirmIssue() {
 }
 
 (function bindBarcode() {
+  if (document.body.dataset.activePage === 'bom') return;
+
   var addBtn = document.getElementById('btnAddScan');
-  var input = document.getElementById('barcodeInput');
+  var input = document.getElementById('barcodeModalInput');
   if (addBtn) addBtn.addEventListener('click', function () { addScan(input.value); input.value = ''; });
   if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { addScan(input.value); input.value = ''; } });
   var simCorrect = document.getElementById('btnSimCorrect');

@@ -74,7 +74,7 @@ class PathwayTransitionMessageService
         WorkflowEvent::QuoteIssued->value => '🎯',
         WorkflowEvent::SentToCashier->value => '💵',
         WorkflowEvent::CashierPaid->value => '💰',
-        WorkflowEvent::OperationsApproved->value => '📦',
+        WorkflowEvent::OperationsApproved->value => '🏭',
         WorkflowEvent::ReturnedToAdjustments->value => '↩️',
         WorkflowEvent::ReturnedToTechnical->value => '↩️',
         WorkflowEvent::SpecEditPostWoRollback->value => '↩️',
@@ -197,7 +197,9 @@ class PathwayTransitionMessageService
             WorkflowEvent::BomFinished->value => '/reception/delivery',
             WorkflowEvent::SentToCashier->value => '/cashier/payments',
             WorkflowEvent::CashierPaid->value => '/operations/pending',
-            WorkflowEvent::OperationsApproved->value => '/technical/bom',
+            WorkflowEvent::OperationsApproved->value => $this->workshopGatesDispense()
+                ? '/workshop/workshop'
+                : '/technical/bom',
             WorkflowEvent::BomDispensed->value => '/workshop/workshop',
             WorkflowEvent::ServicesApprovalRequired->value => '/admin/dashboard',
             WorkflowEvent::ServicesApproved->value => '/operations/pending',
@@ -256,7 +258,7 @@ class PathwayTransitionMessageService
                 $pathway === PathwayStep::PATHWAY_ENTITY => $this->pathwayConfig->entityOperationsStepKey($case),
                 default => 'operations_wo',
             },
-            WorkflowEvent::OperationsApproved->value => 'warehouse',
+            WorkflowEvent::OperationsApproved->value => $this->workshopGatesDispense() ? 'workshop' : 'warehouse',
             WorkflowEvent::SentToCashier->value => 'cashier',
             WorkflowEvent::CashierPaid->value => 'operations_wo',
             WorkflowEvent::ServicesApprovalRequired->value => 'services_approval',
@@ -363,7 +365,7 @@ class PathwayTransitionMessageService
             WorkflowEvent::CashierPaid->value => 'operations_wo',
             WorkflowEvent::ServicesApprovalRequired->value => 'services_approval',
             WorkflowEvent::ServicesApproved->value => 'operations_wo',
-            WorkflowEvent::OperationsApproved->value => 'warehouse',
+            WorkflowEvent::OperationsApproved->value => $this->workshopGatesDispense() ? 'workshop' : 'warehouse',
             WorkflowEvent::BomDispensed->value => 'workshop',
             WorkflowEvent::BomFinished->value => 'delivery',
             WorkflowEvent::Delivered->value => 'delivery',
@@ -395,5 +397,10 @@ class PathwayTransitionMessageService
             CaseRecord::STAGE_READY_DELIVERY, CaseRecord::STAGE_DELIVERED => 'delivery',
             default => null,
         };
+    }
+
+    private function workshopGatesDispense(): bool
+    {
+        return config('workshop.enabled', true);
     }
 }
