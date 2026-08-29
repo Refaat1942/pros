@@ -165,7 +165,7 @@
                                 <button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button>
                                 <button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button>
                                 @can('print-barcode')
-                                    @if(!empty($item['barcode']) || !empty($item['alt_codes']))
+                                    @if(!empty($item['has_scannable_barcode']))
                                         <a class="btn-action" target="_blank" href="{{ route('admin.catalog.screen-barcode', $item['id']) }}">📱 شاشة</a>
                                     @endif
                                     <a class="btn-action" target="_blank" href="{{ route('admin.catalog.labels', $item['id']) }}">🏷️ باركود</a>
@@ -772,6 +772,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
 (function () {
     var catalogTableOrder = @json($catalogTableOrder);
     var catalogTableColspan = {{ (int) $catalogTableColspan }};
+    var catalogCanPrintBarcode = @json(auth()->user()?->can('print-barcode') ?? false);
     var catalogSortKey = '';
     var catalogSortDir = 'asc';
     var catalogFilterTimer = null;
@@ -1392,7 +1393,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             + pricesHtml
             + '<h4 style="font-size:14px;font-weight:800;margin:16px 0 10px;color:var(--secondary);">📈 البيع حسب مستوى السعر</h4>'
             + '<div id="catalogViewSalesStats"><p style="color:var(--text-muted);text-align:center;">جاري التحميل...</p></div>'
-            + (item.barcode || item.alt_codes
+            + (catalogCanPrintBarcode && item.has_scannable_barcode
                 ? '<p style="margin-top:18px;text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
                     + '<a class="btn-action" target="_blank" href="/admin/catalog/' + item.id + '/screen-barcode">📱 باركود الشاشة</a>'
                     + '<a class="btn-action" target="_blank" href="/admin/catalog/' + item.id + '/labels">🏷️ طباعة ملصق</a>'
@@ -1599,8 +1600,11 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         var dataCols = (catalogTableOrder || []).map(function (key) {
             return renderCatalogDataCell(item, key);
         }).join('');
-        var screenBtn = (item.barcode || item.alt_codes)
+        var screenBtn = (catalogCanPrintBarcode && item.has_scannable_barcode)
             ? '<a class="btn-action" target="_blank" href="' + screenUrl + '">📱 شاشة</a> '
+            : '';
+        var barcodeBtn = catalogCanPrintBarcode
+            ? '<a class="btn-action" target="_blank" href="' + labelsUrl + '">🏷️ باركود</a> '
             : '';
         return '<tr class="catalog-slim-row" data-item-id="' + (item.id || '') + '" data-barcode="' + barcodeAttr + '" data-search="' + search + '" data-brand="' + escAttr(normalizeBrandKey(item.brand || '')) + '" data-brand-label="' + escAttr(item.brand || '') + '" data-category-id="' + (item.category_id || '') + '" data-category-name="' + escAttr(item.category || '') + '" data-filter-hidden="0" data-item="' + dataAttr + '" style="border-top:1px solid var(--border);">' +
             checkboxCol +
@@ -1609,7 +1613,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             '<button type="button" class="btn-action" onclick="viewSlimCatalog(this)">👁️ عرض</button> ' +
             '<button type="button" class="btn-action" onclick="editSlimCatalog(this)">✏️ تعديل</button> ' +
             screenBtn +
-            '<a class="btn-action" target="_blank" href="' + labelsUrl + '">🏷️ باركود</a> ' +
+            barcodeBtn +
             '<button type="button" class="btn-action danger" onclick="deleteSlimCatalog(' + item.id + ', ' + JSON.stringify(item.name || '') + ')">🗑️</button>' +
             '</td></tr>';
     }

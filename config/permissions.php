@@ -123,6 +123,7 @@ return [
         'view-inventory-overview' => ['admin', 'inventory-overview'],
         'manage-inventory' => ['admin', 'catalog'],
         'manage-stock-kits' => ['admin', 'stock-kits'],
+        'print-barcode' => ['admin', 'catalog'],
     ],
 
     /**
@@ -143,6 +144,7 @@ return [
             'view-revenue',
             'view-costs',
             'view-military-profit',
+            'print-barcode',
             'manage-permissions',
             'manage-workshop-sections',
             'view-workshop-tracking',

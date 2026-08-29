@@ -46,7 +46,7 @@ class StockKitController extends Controller
         if ($q !== '') {
             $like = '%'.$q.'%';
             $prefix = $q.'%';
-            $query->where(function ($builder) use ($like, $q) {
+            $query->where(function ($builder) use ($like, $q, $prefix) {
                 $builder->where('name', 'like', $like)
                     ->orWhere('name', 'like', $prefix)
                     ->orWhere('code', 'like', $like)

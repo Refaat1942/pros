@@ -205,6 +205,8 @@ class StockCatalogService
             'page_number' => $item->page_number ?? '',
             'barcode' => $item->barcode,
             'alt_codes' => $item->alt_codes ?? '',
+            'display_barcode' => $item->displayBarcode(),
+            'has_scannable_barcode' => $item->displayBarcode() !== null,
             'name' => $item->name,
             'brand' => $item->brand ?? '',
             'spec' => $item->spec,

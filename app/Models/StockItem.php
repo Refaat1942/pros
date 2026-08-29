@@ -183,6 +183,22 @@ class StockItem extends Model
         return 'BC-'.trim($code);
     }
 
+    /** الباركود الفعلي للمسح/الطباعة — عمود barcode أو BC-{operationalCode}. */
+    public function displayBarcode(): ?string
+    {
+        $barcode = trim((string) ($this->barcode ?? ''));
+        if ($barcode !== '') {
+            return $barcode;
+        }
+
+        $operational = $this->operationalCode();
+        if ($operational === null) {
+            return null;
+        }
+
+        return self::barcodeForOperationalCode($operational);
+    }
+
     public static function findByOperationalCode(string $code, bool $lockForUpdate = false): ?self
     {
         $code = trim($code);

@@ -251,17 +251,7 @@ class StockCatalogController extends Controller
 
     private function resolveDisplayBarcode(StockItem $stockItem): ?string
     {
-        $barcode = trim((string) ($stockItem->barcode ?? ''));
-        if ($barcode !== '') {
-            return $barcode;
-        }
-
-        $operational = trim((string) ($stockItem->operationalCode() ?? ''));
-        if ($operational === '') {
-            return null;
-        }
-
-        return StockItem::barcodeForOperationalCode($operational);
+        return $stockItem->displayBarcode();
     }
 
     /**
@@ -371,8 +361,13 @@ class StockCatalogController extends Controller
         $quietZone = max(8, min(24, (int) config('label-print.quiet_zone_modules', 14)));
 
         foreach ($items as $item) {
+            $barcode = $item->displayBarcode();
+            if ($barcode === null) {
+                continue;
+            }
+
             $svg = Code128::svgFit(
-                (string) $item->barcode,
+                $barcode,
                 height: $barcodeHeight,
                 moduleWidth: $moduleWidth,
                 maxWidthPx: $maxWidthPx,
@@ -382,7 +377,7 @@ class StockCatalogController extends Controller
             for ($i = 0; $i < $copies; $i++) {
                 $labels[] = [
                     'name' => (string) $item->name,
-                    'barcode' => (string) $item->barcode,
+                    'barcode' => $barcode,
                     'svg' => $svg,
                     'svg_data_uri' => $dataUri,
                 ];

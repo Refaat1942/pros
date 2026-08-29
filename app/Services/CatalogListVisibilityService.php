@@ -197,7 +197,16 @@ class CatalogListVisibilityService
     private function clientFilterMetaFields(string $profile): array
     {
         return match ($profile) {
-            'admin_catalog' => ['category_id', 'category', 'barcode', 'min_qty'],
+            'admin_catalog' => [
+                'category_id',
+                'category',
+                'barcode',
+                'alt_codes',
+                'operational_code',
+                'display_barcode',
+                'has_scannable_barcode',
+                'min_qty',
+            ],
             default => [],
         };
     }

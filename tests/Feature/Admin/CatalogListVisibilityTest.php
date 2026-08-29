@@ -123,6 +123,41 @@ class CatalogListVisibilityTest extends TestCase
         $this->assertArrayNotHasKey('wac', $filtered);
     }
 
+    public function test_filter_item_fields_preserves_alt_codes_and_scannable_meta_when_column_hidden(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $visibility = app(CatalogListVisibilityService::class);
+
+        $visibility->update([
+            'roles' => [
+                'admin' => [
+                    'admin_catalog' => [
+                        'enabled' => true,
+                        'columns' => ['code', 'name', 'brand'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $filtered = $visibility->filterItemFields([
+            'id' => 20,
+            'code' => 'CAT-20',
+            'name' => 'صنف',
+            'brand' => 'ماتيز',
+            'alt_codes' => 'OP-99',
+            'barcode' => null,
+            'display_barcode' => 'BC-OP-99',
+            'has_scannable_barcode' => true,
+            'category_id' => 1,
+            'category' => 'أطراف',
+            'min_qty' => 0,
+        ], $admin->fresh(), 'admin_catalog');
+
+        $this->assertSame('OP-99', $filtered['alt_codes']);
+        $this->assertSame('BC-OP-99', $filtered['display_barcode']);
+        $this->assertTrue($filtered['has_scannable_barcode']);
+    }
+
     public function test_section_master_toggle_disables_inventory_supply_lists(): void
     {
         $admin = $this->limitedAdminUser();
