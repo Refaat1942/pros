@@ -68,9 +68,9 @@ class NotificationService
             'body' => 'المريض {patient} (حالة {case}) سدد المبلغ في الخزنة — بانتظار اعتماد مكتب التشغيل لإصدار أمر الشغل.',
         ],
         WorkflowEvent::OperationsApproved->value => [
-            'role' => Role::SLUG_TECHNICAL,
-            'title' => '📦 أمر صرف جديد للمخزن',
-            'body' => 'المريض {patient} (حالة {case}) معتمد — جاهز للصرف بالباركود من المخزن.',
+            'role' => Role::SLUG_WORKSHOP,
+            'title' => '🏭 أمر شغل جديد — قسم الإنتاج',
+            'body' => 'المريض {patient} (حالة {case}) معتمد من مكتب التشغيل — بانتظار تخصيص القسم والفني واعتماد التخصيص.',
         ],
         WorkflowEvent::ReturnedToAdjustments->value => [
             'role' => Role::SLUG_ADJUSTMENTS,

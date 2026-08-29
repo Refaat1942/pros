@@ -157,7 +157,7 @@ class PathwayTransitionMessageServiceTest extends TestCase
         $this->assertSame('/cashier/payments', $payload['url']);
     }
 
-    public function test_operations_approved_targets_warehouse(): void
+    public function test_operations_approved_targets_workshop(): void
     {
         app(PathwayConfigService::class)->resetToDefaults(PathwayStep::PATHWAY_CIVILIAN);
 
@@ -170,7 +170,7 @@ class PathwayTransitionMessageServiceTest extends TestCase
             CaseRecord::STAGE_OPERATIONS,
         );
 
-        $this->assertStringContainsString('المخزن', $message);
+        $this->assertStringContainsString('الإنتاج', $message);
 
         $payload = app(PathwayTransitionMessageService::class)->notificationPayload(
             $case,
@@ -178,8 +178,8 @@ class PathwayTransitionMessageServiceTest extends TestCase
             CaseRecord::STAGE_OPERATIONS,
         );
 
-        $this->assertSame(Role::SLUG_TECHNICAL, $payload['role']);
-        $this->assertSame('/technical/bom', $payload['url']);
+        $this->assertSame(Role::SLUG_WORKSHOP, $payload['role']);
+        $this->assertSame('/workshop/workshop', $payload['url']);
     }
 
     public function test_entity_quote_released_payload_targets_reception(): void

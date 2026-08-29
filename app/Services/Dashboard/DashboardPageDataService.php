@@ -996,7 +996,7 @@ class DashboardPageDataService
 
         $boms = Bom::query()
             ->with([
-                'caseRecord:id,case_no,work_order_no,patient_type,manufacturing_stage',
+                'caseRecord:id,case_no,work_order_no,patient_type,manufacturing_stage,workshop_section_id,assigned_technician_id,workshop_assignment_approved_at',
                 'items:id,bom_id,stock_item_code,name,qty,issued_qty,returned_qty,unit_cost',
             ])
             ->whereHas('caseRecord', fn ($q) => $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING))

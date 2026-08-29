@@ -144,11 +144,27 @@
                             @endif
                         </td>
                         <td class="px-4 py-3">
+                            @php
+                                $awaitingWorkshop = $bom->stage === 'raw'
+                                    && config('workshop.enabled', true)
+                                    && $bom->caseRecord
+                                    && ! $bom->caseRecord->isWorkshopAssignmentApproved();
+                            @endphp
                             @if ($bom->stage === 'raw')
-                                <button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm"
-                                        data-bom-id="{{ $bom->id }}">
-                                    📤 صرف لقسم الإنتاج
-                                </button>
+                                @if ($awaitingWorkshop)
+                                    <span class="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 inline-block">
+                                        🏭 بانتظار اعتماد قسم الإنتاج
+                                    </span>
+                                    <a href="{{ url('/workshop/workshop') }}"
+                                       class="rounded-xl border border-cyan-600 text-cyan-800 px-3 py-2 text-xs font-bold hover:bg-cyan-50 ml-1 inline-block">
+                                        فتح طابور الإنتاج
+                                    </a>
+                                @else
+                                    <button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm"
+                                            data-bom-id="{{ $bom->id }}">
+                                        📤 صرف لقسم الإنتاج
+                                    </button>
+                                @endif
                                 <a href="{{ $voucherUrl }}" target="_blank" rel="noopener"
                                    class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1 inline-block">
                                     🖨️ طباعة إذن الصرف
@@ -192,21 +208,22 @@
                 <div id="scanProgressWrap" class="rounded-xl border border-slate-200 bg-white p-3">
                     <div class="flex justify-between items-center mb-2 text-sm font-bold text-slate-700">
                         <span>تقدّم المسح</span>
-                        <span id="scanProgressLabel">0 / 0</span>
+                        <span id="dispenseScanProgressLabel">0 / 0</span>
                     </div>
                     <div class="h-3 rounded-full bg-slate-200 overflow-hidden">
-                        <div id="scanProgressBar" class="h-full bg-emerald-500 transition-all duration-200" style="width:0%;"></div>
+                        <div id="dispenseScanProgressBar" class="h-full bg-emerald-500 transition-all duration-200" style="width:0%;"></div>
                     </div>
                 </div>
                 <div>
-                    <label for="barcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح كود الصنف أو الباركود</label>
-                    <input type="text" id="barcodeInput" autofocus
-                           placeholder="كل مسح = وحدة واحدة (كود الصنف أو BC-...)"
+                    <label for="dispenseBarcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح كود الصنف أو الباركود</label>
+                    <input type="text" id="dispenseBarcodeInput" autofocus
+                           placeholder="كل مسح = وحدة واحدة (كود الصنف أو BC-...) — Enter للإضافة"
                            maxlength="100"
+                           autocomplete="off"
                            class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-                    <p class="text-xs text-slate-500 mt-1">يُحسب تلقائياً — لا حاجة لزر إضافة أو كمية يدوية.</p>
+                    <p class="text-xs text-slate-500 mt-1">يُحسب تلقائياً بعد Enter أو المسح — لا حاجة لزر إضافة أو كمية يدوية.</p>
                 </div>
-                <div id="scannedList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
+                <div id="dispenseScannedList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
                 <div id="dispenseAlarm" class="hidden rounded-xl border-2 border-red-500 bg-red-50 p-5 text-red-800 font-bold text-base animate-pulse">
                     ⛔ <span id="dispenseAlarmText">باركود غير مطابق — تم إيقاف الصرف!</span>
                 </div>

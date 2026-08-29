@@ -83,7 +83,7 @@ class NotificationsFeatureTest extends TestCase
         $this->assertNotNull($specNotif->fresh()->read_at);
     }
 
-    public function test_operations_approval_notifies_warehouse(): void
+    public function test_operations_approval_notifies_workshop(): void
     {
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
@@ -92,6 +92,12 @@ class NotificationsFeatureTest extends TestCase
 
         $this->assertSame(
             1,
+            AppNotification::forRole(Role::SLUG_WORKSHOP)
+                ->where('event', WorkflowEvent::OperationsApproved->value)
+                ->count(),
+        );
+        $this->assertSame(
+            0,
             AppNotification::forRole(Role::SLUG_TECHNICAL)
                 ->where('event', WorkflowEvent::OperationsApproved->value)
                 ->count(),
