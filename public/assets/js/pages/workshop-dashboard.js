@@ -126,11 +126,37 @@
       });
   }
 
+  function resolveSelectedCaseId() {
+    if (selectedCaseId) return selectedCaseId;
+    var woInput = $('workshopSelectedOrder');
+    var wo = (woInput && woInput.value || '').trim();
+    if (!wo) return null;
+    var fromQueue = assignmentCache.find(function (c) {
+      return String(c.work_order_no || '').trim() === wo;
+    });
+    if (fromQueue) {
+      selectedCaseId = String(fromQueue.id);
+      return selectedCaseId;
+    }
+    var fromDesk = casesCache.find(function (c) {
+      return String(c.work_order_no || '').trim() === wo;
+    });
+    if (fromDesk) {
+      selectedCaseId = String(fromDesk.id);
+      return selectedCaseId;
+    }
+    return null;
+  }
+
   function readAssignmentPayload() {
     var sectionEl = $('workshopAssignSection');
     var techEl = $('workshopAssignTechnician');
-    var sectionId = sectionEl && sectionEl.value ? parseInt(sectionEl.value, 10) : null;
-    var techId = techEl && techEl.value ? parseInt(techEl.value, 10) : null;
+    var sectionRaw = sectionEl ? String(sectionEl.value || '').trim() : '';
+    var techRaw = techEl ? String(techEl.value || '').trim() : '';
+    var sectionId = sectionRaw ? parseInt(sectionRaw, 10) : null;
+    var techId = techRaw ? parseInt(techRaw, 10) : null;
+    if (!sectionId || Number.isNaN(sectionId)) sectionId = null;
+    if (!techId || Number.isNaN(techId)) techId = null;
     return {
       workshop_section_id: sectionId,
       assigned_technician_id: techId,
@@ -138,21 +164,33 @@
   }
 
   function approveWorkshopAssignment(caseId, triggerBtn) {
-    if (!window.axios || !caseId) return;
+    if (!window.axios) return;
 
-    var payload = readAssignmentPayload();
-    if (!payload.workshop_section_id || !payload.assigned_technician_id) {
-      toast('حدّد قسم الإنتاج والفني قبل الاعتماد.', true);
+    caseId = resolveSelectedCaseId() || caseId;
+    if (!caseId) {
+      toast('اختر أمر شغل من الطابور أولاً (زر «تخصيص»)', true);
       return;
     }
 
-    if (!window.confirm('تأكيد اعتماد التخصيص؟\n\nبعد الاعتماد يمكن للمخزن صرف المواد لهذا الأمر.')) return;
+    var payload = readAssignmentPayload();
+    if (!payload.workshop_section_id || !payload.assigned_technician_id) {
+      toast('حدّد قسم الإنتاج والفني من القوائم ثم أعد المحاولة.', true);
+      return;
+    }
+
+    if (!window.confirm('تأكيد حفظ واعتماد التخصيص؟\n\nبعد الاعتماد يمكن للمخزن صرف المواد لهذا الأمر.')) return;
 
     if (triggerBtn) triggerBtn.disabled = true;
     var formBtn = $('btnApproveWorkshopAssignment');
+    var saveBtn = $('btnSaveWorkshopAssignment');
     if (formBtn) formBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
 
-    axios.post('/workshop/workshop/' + caseId + '/approve-assignment', payload)
+    // حفظ التخصيص أولاً ثم الاعتماد — يعمل حتى قبل تحديث السيرفر الذي يدمج الطلبين.
+    axios.post('/workshop/workshop/' + caseId + '/assign', payload)
+      .then(function () {
+        return axios.post('/workshop/workshop/' + caseId + '/approve-assignment', payload);
+      })
       .then(function (res) {
         toast(res.data.message || 'تم اعتماد التخصيص');
         refreshAssignmentQueue();
@@ -165,6 +203,7 @@
       .finally(function () {
         if (triggerBtn) triggerBtn.disabled = false;
         if (formBtn) formBtn.disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
       });
   }
 
@@ -586,11 +625,7 @@
     var approveAssignBtn = $('btnApproveWorkshopAssignment');
     if (approveAssignBtn) {
       approveAssignBtn.addEventListener('click', function () {
-        if (!selectedCaseId) {
-          toast('اختر أمر شغل من الطابور أولاً', true);
-          return;
-        }
-        approveWorkshopAssignment(selectedCaseId, approveAssignBtn);
+        approveWorkshopAssignment(null, approveAssignBtn);
       });
     }
     var refreshAssign = $('btnRefreshAssignmentQueue');

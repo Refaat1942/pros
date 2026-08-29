@@ -127,11 +127,11 @@ class WorkshopQueueController extends Controller
             'assigned_technician_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
-        if ($validated['workshop_section_id'] !== null || $validated['assigned_technician_id'] !== null) {
+        if ($request->filled('workshop_section_id') || $request->filled('assigned_technician_id')) {
             $case = $this->workshopAssignment->assignOnApprove(
                 $case,
-                $validated['workshop_section_id'] ?? $case->workshop_section_id,
-                $validated['assigned_technician_id'] ?? $case->assigned_technician_id,
+                $request->integer('workshop_section_id') ?: $case->workshop_section_id,
+                $request->integer('assigned_technician_id') ?: $case->assigned_technician_id,
             );
         }
 
