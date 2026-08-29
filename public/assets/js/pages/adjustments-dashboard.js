@@ -359,6 +359,11 @@
     });
   }
 
+  function syncCompleteButtonLabel() {
+    var btn = $('btnCompleteAdj');
+    if (btn) btn.textContent = '📤 إرسال إلى الاعتماد';
+  }
+
   function applyModalMode() {
     var isDirect = modalMode === 'direct';
     var hasPending = !!(activeCase && activeCase.has_pending_edit_request);
@@ -377,6 +382,7 @@
     if (pendingBanner) {
       pendingBanner.hidden = isDirect || !hasPending;
     }
+    syncCompleteButtonLabel();
   }
 
   function renderWrittenItemsBlock() {
@@ -963,6 +969,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    syncCompleteButtonLabel();
+
     var refresh = $('btnRefreshAdj');
     if (refresh) refresh.addEventListener('click', refreshList);
 
