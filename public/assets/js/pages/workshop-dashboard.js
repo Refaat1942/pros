@@ -100,6 +100,31 @@
   var assignmentRefreshInFlight = false;
   var assignmentCache = [];
 
+  function safeRepaginateTable(tableId) {
+    if (!window.TablePagination || !tableId) return;
+    try {
+      if (TablePagination.refreshById) {
+        TablePagination.refreshById(tableId);
+      } else if (TablePagination.repaginate) {
+        var el = document.getElementById(tableId);
+        if (el) TablePagination.repaginate(el);
+      }
+    } catch (e) {
+      console.warn('workshop pagination', e);
+    }
+  }
+
+  function assignmentQueueErrorMessage(err) {
+    if (err && err.response) {
+      var data = err.response.data;
+      if (data && data.message) return data.message;
+      if (err.response.status === 419) return 'انتهت الجلسة — أعد تحميل الصفحة ثم سجّل الدخول إن لزم.';
+      if (err.response.status === 403) return 'ليس لديك صلاحية عرض طابور التخصيص.';
+      return 'تعذّر تحميل طابور التخصيص (خطأ ' + err.response.status + ').';
+    }
+    return 'تعذّر تحميل طابور التخصيص — تحقق من الاتصال ثم أعد المحاولة.';
+  }
+
   function refreshAssignmentQueue() {
     if (!window.axios || assignmentRefreshInFlight) return;
     assignmentRefreshInFlight = true;
@@ -115,10 +140,13 @@
           ? assignmentCache.map(renderAssignmentQueueRow).join('')
           : '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر بانتظار التخصيص — تظهر بعد اعتماد مكتب التشغيل.</td></tr>';
         bindAssignmentQueueEvents();
-        if (window.TablePagination && TablePagination.repaginate) TablePagination.repaginate(tbody);
+        safeRepaginateTable('workshopAssignmentTable');
       })
       .catch(function (err) {
-        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل طابور التخصيص', true);
+        if (assignmentCache.length) return;
+        if (err && err.config && err.config.url) {
+          toast(assignmentQueueErrorMessage(err), true);
+        }
       })
       .finally(function () {
         assignmentRefreshInFlight = false;
@@ -126,15 +154,80 @@
       });
   }
 
+  function resolveSelectedCaseId() {
+    if (selectedCaseId) return selectedCaseId;
+    var woInput = $('workshopSelectedOrder');
+    var wo = (woInput && woInput.value || '').trim();
+    if (!wo) return null;
+    var fromQueue = assignmentCache.find(function (c) {
+      return String(c.work_order_no || '').trim() === wo;
+    });
+    if (fromQueue) {
+      selectedCaseId = String(fromQueue.id);
+      return selectedCaseId;
+    }
+    var fromDesk = casesCache.find(function (c) {
+      return String(c.work_order_no || '').trim() === wo;
+    });
+    if (fromDesk) {
+      selectedCaseId = String(fromDesk.id);
+      return selectedCaseId;
+    }
+    return null;
+  }
+
+  function readAssignmentPayload() {
+    var sectionEl = $('workshopAssignSection');
+    var techEl = $('workshopAssignTechnician');
+    var sectionRaw = sectionEl ? String(sectionEl.value || '').trim() : '';
+    var techRaw = techEl ? String(techEl.value || '').trim() : '';
+    var sectionId = sectionRaw ? parseInt(sectionRaw, 10) : null;
+    var techId = techRaw ? parseInt(techRaw, 10) : null;
+    if (!sectionId || Number.isNaN(sectionId)) sectionId = null;
+    if (!techId || Number.isNaN(techId)) techId = null;
+    return {
+      workshop_section_id: sectionId,
+      assigned_technician_id: techId,
+    };
+  }
+
   function approveWorkshopAssignment(caseId, triggerBtn) {
-    if (!window.axios || !caseId) return;
-    if (!window.confirm('تأكيد اعتماد التخصيص؟\n\nبعد الاعتماد يمكن للمخزن صرف المواد لهذا الأمر.')) return;
+    if (!window.axios) return;
+
+    caseId = resolveSelectedCaseId() || caseId;
+    if (!caseId) {
+      toast('اختر أمر شغل من الطابور أولاً (زر «تخصيص»)', true);
+      return;
+    }
+
+    var payload = readAssignmentPayload();
+    var cached = assignmentCache.find(function (c) { return String(c.id) === String(caseId); });
+    if ((!payload.workshop_section_id || !payload.assigned_technician_id) && cached) {
+      if (!payload.workshop_section_id && cached.workshop_section_id) {
+        payload.workshop_section_id = parseInt(cached.workshop_section_id, 10);
+      }
+      if (!payload.assigned_technician_id && cached.assigned_technician_id) {
+        payload.assigned_technician_id = parseInt(cached.assigned_technician_id, 10);
+      }
+    }
+    if (!payload.workshop_section_id || !payload.assigned_technician_id) {
+      toast('حدّد قسم الإنتاج والفني من القوائم ثم أعد المحاولة.', true);
+      return;
+    }
+
+    if (!window.confirm('تأكيد حفظ واعتماد التخصيص؟\n\nبعد الاعتماد يمكن للمخزن صرف المواد لهذا الأمر.')) return;
 
     if (triggerBtn) triggerBtn.disabled = true;
     var formBtn = $('btnApproveWorkshopAssignment');
+    var saveBtn = $('btnSaveWorkshopAssignment');
     if (formBtn) formBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
 
-    axios.post('/workshop/workshop/' + caseId + '/approve-assignment')
+    // حفظ التخصيص أولاً ثم الاعتماد — يعمل حتى قبل تحديث السيرفر الذي يدمج الطلبين.
+    axios.post('/workshop/workshop/' + caseId + '/assign', payload)
+      .then(function () {
+        return axios.post('/workshop/workshop/' + caseId + '/approve-assignment', payload);
+      })
       .then(function (res) {
         toast(res.data.message || 'تم اعتماد التخصيص');
         refreshAssignmentQueue();
@@ -147,6 +240,7 @@
       .finally(function () {
         if (triggerBtn) triggerBtn.disabled = false;
         if (formBtn) formBtn.disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
       });
   }
 
@@ -488,9 +582,7 @@
       row.dataset.filterHidden = ok ? '0' : '1';
     });
     var tbody = $('workshopTableBody');
-    if (tbody && window.TablePagination && TablePagination.repaginate) {
-      TablePagination.repaginate(tbody);
-    }
+    safeRepaginateTable('workshopDeskTable');
   }
 
   function saveWorkshopAssignment() {
@@ -519,31 +611,79 @@
       .finally(function () { if (btn) btn.disabled = false; });
   }
 
-  function loadAssignmentOptions() {
-    if (!window.axios) return;
-    axios.get('/workshop/workshop-assignment/options').then(function (res) {
-      assignmentSections = (res.data && res.data.sections) || [];
-      var sectionSel = $('workshopAssignSection');
-      var techSel = $('workshopAssignTechnician');
-      if (!sectionSel || !techSel) return;
-      sectionSel.innerHTML = '<option value="">— بدون —</option>' + assignmentSections.map(function (s) {
-        return '<option value="' + s.id + '">' + esc(s.name) + (s.code ? ' (' + esc(s.code) + ')' : '') + '</option>';
+  function hydrateAssignmentFromServer() {
+    if (Array.isArray(window.__WORKSHOP_ASSIGNMENT_QUEUE) && window.__WORKSHOP_ASSIGNMENT_QUEUE.length) {
+      assignmentCache = window.__WORKSHOP_ASSIGNMENT_QUEUE;
+    }
+    if (Array.isArray(window.__WORKSHOP_ASSIGNMENT_SECTIONS) && window.__WORKSHOP_ASSIGNMENT_SECTIONS.length) {
+      assignmentSections = window.__WORKSHOP_ASSIGNMENT_SECTIONS;
+    }
+  }
+
+  function paintAssignmentSections() {
+    var sectionSel = $('workshopAssignSection');
+    var techSel = $('workshopAssignTechnician');
+    if (!sectionSel || !techSel || !assignmentSections.length) return;
+
+    sectionSel.innerHTML = '<option value="">— بدون —</option>' + assignmentSections.map(function (s) {
+      return '<option value="' + s.id + '">' + esc(s.name) + (s.code ? ' (' + esc(s.code) + ')' : '') + '</option>';
+    }).join('');
+
+    function syncTechnicians() {
+      var sec = assignmentSections.find(function (s) { return String(s.id) === String(sectionSel.value); });
+      var techs = sec ? (sec.technicians || []) : [];
+      techSel.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
+        return '<option value="' + t.id + '">' + esc(t.name) + '</option>';
       }).join('');
-      sectionSel.addEventListener('change', function () {
-        var sec = assignmentSections.find(function (s) { return String(s.id) === String(sectionSel.value); });
-        var techs = sec ? (sec.technicians || []) : [];
-        techSel.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
-          return '<option value="' + t.id + '">' + esc(t.name) + '</option>';
-        }).join('');
+    }
+
+    if (!sectionSel.dataset.sectionBound) {
+      sectionSel.dataset.sectionBound = '1';
+      sectionSel.addEventListener('change', syncTechnicians);
+    }
+    syncTechnicians();
+  }
+
+  function loadAssignmentOptions() {
+    if (!window.axios) {
+      paintAssignmentSections();
+      return;
+    }
+    if (assignmentSections.length) {
+      paintAssignmentSections();
+      return;
+    }
+    axios.get('/workshop/workshop-assignment/options')
+      .then(function (res) {
+        assignmentSections = (res.data && res.data.sections) || [];
+        paintAssignmentSections();
+      })
+      .catch(function (err) {
+        paintAssignmentSections();
+        if (!assignmentSections.length) {
+          toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل أقسام الإنتاج', true);
+        }
       });
-    }).catch(function () {});
+  }
+
+  function bootWorkshopQueues() {
+    refreshAssignmentQueue();
+    refreshTechBoard();
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    hydrateAssignmentFromServer();
+    if (assignmentCache.length) {
+      bindAssignmentQueueEvents();
+      safeRepaginateTable('workshopAssignmentTable');
+    }
     loadAssignmentOptions();
     bindTableEvents();
-    refreshAssignmentQueue();
-    refreshTechBoard();
+    if (document.readyState === 'complete') {
+      bootWorkshopQueues();
+    } else {
+      window.addEventListener('load', bootWorkshopQueues, { once: true });
+    }
     var search = $('workshopSearch');
     if (search) search.addEventListener('input', applyFilters);
     var filtersRoot = $('workshopFilters');
@@ -568,25 +708,7 @@
     var approveAssignBtn = $('btnApproveWorkshopAssignment');
     if (approveAssignBtn) {
       approveAssignBtn.addEventListener('click', function () {
-        if (!selectedCaseId || !window.axios) {
-          toast('اختر أمر شغل من الطابور أولاً', true);
-          return;
-        }
-        // احفظ القسم/الفني المختارين في النموذج أولاً — الاعتماد يتحقق من القيم
-        // المحفوظة في قاعدة البيانات، مش من اختيار القوائم على الشاشة فقط.
-        var sectionEl = $('workshopAssignSection');
-        var techEl = $('workshopAssignTechnician');
-        var payload = {};
-        if (sectionEl && sectionEl.value) payload.workshop_section_id = parseInt(sectionEl.value, 10);
-        if (techEl && techEl.value) payload.assigned_technician_id = parseInt(techEl.value, 10);
-
-        axios.post('/workshop/workshop/' + selectedCaseId + '/assign', payload)
-          .then(function () {
-            approveWorkshopAssignment(selectedCaseId, approveAssignBtn);
-          })
-          .catch(function (err) {
-            toast((err.response && err.response.data && err.response.data.message) || 'تعذّر حفظ التخصيص', true);
-          });
+        approveWorkshopAssignment(null, approveAssignBtn);
       });
     }
     var refreshAssign = $('btnRefreshAssignmentQueue');

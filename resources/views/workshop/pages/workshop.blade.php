@@ -19,6 +19,7 @@
 
 @php
     $cases = $workshop_cases ?? collect();
+    $assignmentCases = $workshop_assignment_cases ?? collect();
 @endphp
 
 <div id="analytics-workshop">
@@ -38,7 +39,7 @@
             </button>
         </div>
         <div class="overflow-x-auto">
-            <table data-paginate="8" class="w-full text-sm">
+            <table id="workshopAssignmentTable" data-paginate="8" class="w-full text-sm">
                 <thead class="bg-amber-50/80 text-slate-600">
                     <tr>
                         <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
@@ -50,7 +51,50 @@
                     </tr>
                 </thead>
                 <tbody id="workshopAssignmentTableBody" class="divide-y divide-slate-100">
-                    <tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">جاري تحميل طابور التخصيص...</td></tr>
+                    @forelse ($assignmentCases as $case)
+                        @php
+                            $isMil = $case->isMilitary();
+                            $voucherUrl = route('workshop.work-order.print', $case);
+                            $awaitingApprove = $case->workshop_section_id && $case->assigned_technician_id && ! $case->isWorkshopAssignmentApproved();
+                        @endphp
+                        <tr class="assignment-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
+                            data-search="{{ $case->work_order_no }} {{ $case->case_no }} {{ $case->patient?->name }}">
+                            <td class="px-4 py-3 font-mono font-bold text-amber-800">{{ $case->work_order_no ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-semibold text-slate-800">{{ $case->patient?->name ?? '—' }}</div>
+                                <div class="text-xs text-slate-400">{{ $case->case_no }}</div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-xs font-bold px-2 py-1 rounded-lg {{ $isMil ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                    {{ $isMil ? '🪖 عسكري' : '🌐 مدني' }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-xs">
+                                <div class="font-semibold text-slate-700">{{ $case->workshopSection?->name ?? '—' }}</div>
+                                <div class="text-slate-400 mt-0.5">{{ $case->assignedTechnician?->name ?? '—' }}</div>
+                            </td>
+                            <td class="px-4 py-3">
+                                @if ($case->isWorkshopAssignmentApproved())
+                                    <span class="text-xs font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">✓ معتمد — جاهز للصرف</span>
+                                @elseif ($awaitingApprove)
+                                    <span class="text-xs font-bold px-2 py-1 rounded-lg bg-amber-100 text-amber-800">بانتظار الاعتماد</span>
+                                @else
+                                    <span class="text-xs font-bold px-2 py-1 rounded-lg bg-slate-100 text-slate-600">غير مخصّص</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                <a href="{{ $voucherUrl }}" target="_blank" rel="noopener"
+                                   class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ إذن شغل</a>
+                                @if ($awaitingApprove)
+                                    <button type="button" class="btn-approve-assignment text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700 inline-block mb-1" data-case-id="{{ $case->id }}">✓ اعتماد</button>
+                                @endif
+                                <button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block"
+                                        data-case-id="{{ $case->id }}" data-work-order="{{ $case->work_order_no ?? '' }}">👤 تخصيص</button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر بانتظار التخصيص — تظهر بعد اعتماد مكتب التشغيل.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -59,7 +103,7 @@
     <div class="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-violet-100 bg-violet-50">
             <h3 class="font-bold text-violet-900 text-base">👤 تخصيص الفني وقسم الإنتاج</h3>
-            <p class="text-xs text-violet-700 mt-1">اختر أمر الشغل من الطابور أو الجدول ثم حدّد القسم والفني — التخصيص يتم من قسم الإنتاج وليس من مكتب التشغيل.</p>
+            <p class="text-xs text-violet-700 mt-1">اختر أمر الشغل من الطابور ثم حدّد القسم والفني. «حفظ التخصيص» للتجربة فقط — «حفظ واعتماد التخصيص» يُرسل للمخزن.</p>
         </div>
         <div class="p-4 flex flex-wrap gap-4 items-end">
             <div class="min-w-[200px]">
@@ -85,7 +129,7 @@
             </button>
             <button type="button" id="btnApproveWorkshopAssignment"
                     class="rounded-xl bg-emerald-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-emerald-700 transition-colors">
-                ✓ اعتماد التخصيص
+                ✓ حفظ واعتماد التخصيص
             </button>
         </div>
     </div>
@@ -132,7 +176,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table data-paginate="10" class="w-full text-sm">
+            <table id="workshopDeskTable" data-paginate="10" class="w-full text-sm">
                 <thead class="bg-slate-100 text-slate-600">
                     <tr>
                         <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
@@ -232,3 +276,10 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+window.__WORKSHOP_ASSIGNMENT_QUEUE = @json($workshop_assignment_payload ?? []);
+window.__WORKSHOP_ASSIGNMENT_SECTIONS = @json($workshop_assignment_sections ?? []);
+</script>
+@endpush

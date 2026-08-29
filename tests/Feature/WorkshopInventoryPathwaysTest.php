@@ -159,6 +159,99 @@ class WorkshopInventoryPathwaysTest extends TestCase
         ]);
     }
 
+    public function test_approve_assignment_saves_dropdown_values_in_one_request(): void
+    {
+        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $workshopUser = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $section = WorkshopSection::create([
+            'name' => 'فوق الركبة',
+            'code' => 'fok_alrkb',
+            'sort' => 1,
+            'active' => true,
+        ]);
+        $section->technicians()->sync([$tech->id]);
+
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0101']);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+
+        $this->assertNull($case->fresh()->workshop_section_id);
+
+        $this->actingAs($workshopUser)
+            ->postJson("/workshop/workshop/{$case->id}/approve-assignment", [
+                'workshop_section_id' => $section->id,
+                'assigned_technician_id' => $tech->id,
+            ])
+            ->assertOk()
+            ->assertJsonFragment(['message' => 'تم اعتماد التخصيص — يمكن للمخزن صرف المواد.']);
+
+        $case->refresh();
+        $this->assertSame($section->id, $case->workshop_section_id);
+        $this->assertSame($tech->id, $case->assigned_technician_id);
+        $this->assertTrue($case->isWorkshopAssignmentApproved());
+    }
+
+    public function test_assign_then_approve_separate_requests(): void
+    {
+        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $workshopUser = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $section = WorkshopSection::create([
+            'name' => 'تجميع',
+            'code' => 'assembly',
+            'sort' => 2,
+            'active' => true,
+        ]);
+        $section->technicians()->sync([$tech->id]);
+
+        $this->stockItem('RM-002', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0102']);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-002', 'name' => 'صنف RM-002', 'qty' => 1],
+        ]);
+
+        $this->actingAs($workshopUser)
+            ->postJson("/workshop/workshop/{$case->id}/assign", [
+                'workshop_section_id' => $section->id,
+                'assigned_technician_id' => $tech->id,
+            ])
+            ->assertOk();
+
+        $this->actingAs($workshopUser)
+            ->postJson("/workshop/workshop/{$case->id}/approve-assignment")
+            ->assertOk();
+
+        $case->refresh();
+        $this->assertTrue($case->isWorkshopAssignmentApproved());
+    }
+
+    public function test_assignment_queue_api_returns_pending_work_orders(): void
+    {
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0103']);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+
+        $workshop = $this->userWithRole(Role::SLUG_WORKSHOP);
+
+        $this->actingAs($workshop)
+            ->getJson('/workshop/workshop/assignment-queue')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.work_order_no', 'WO-2026-0103');
+    }
+
     public function test_dispense_blocked_without_production_assignment_approval(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);

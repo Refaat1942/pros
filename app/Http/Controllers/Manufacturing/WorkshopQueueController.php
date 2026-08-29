@@ -40,7 +40,7 @@ class WorkshopQueueController extends Controller
                     'workshopSection:id,name,code',
                     'assignedTechnician:id,name',
                     'bom:id,case_id,bom_no,stage',
-                    'bom.items:id,bom_id,stock_item_code,name,qty,source',
+                    'bom.items:id,bom_id,stock_item_code,name,qty',
                 ])
                 ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                     $q->where('case_no', 'like', "%{$s}%")
@@ -72,7 +72,7 @@ class WorkshopQueueController extends Controller
                     'workshopSection:id,name,code',
                     'assignedTechnician:id,name',
                     'bom:id,case_id,bom_no,stage',
-                    'bom.items:id,bom_id,stock_item_code,name,qty,source',
+                    'bom.items:id,bom_id,stock_item_code,name,qty',
                 ])
                 ->when($request->filter === 'mine' && Auth::id(), fn ($q) => $q->where('assigned_technician_id', Auth::id()))
                 ->when($request->filter === 'section' && $request->section_id, fn ($q) => $q->where('workshop_section_id', $request->integer('section_id')))
@@ -120,9 +120,22 @@ class WorkshopQueueController extends Controller
         ]);
     }
 
-    public function approveAssignment(CaseRecord $case): JsonResponse
+    public function approveAssignment(Request $request, CaseRecord $case): JsonResponse
     {
-        $case = $this->workshopAssignment->approveAssignment($case);
+        $validated = $request->validate([
+            'workshop_section_id' => ['nullable', 'integer', 'exists:workshop_sections,id'],
+            'assigned_technician_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        if ($request->filled('workshop_section_id') || $request->filled('assigned_technician_id')) {
+            $case = $this->workshopAssignment->assignOnApprove(
+                $case,
+                $request->integer('workshop_section_id') ?: $case->workshop_section_id,
+                $request->integer('assigned_technician_id') ?: $case->assigned_technician_id,
+            );
+        }
+
+        $case = $this->workshopAssignment->approveAssignment($case->fresh());
 
         return response()->json([
             'message' => 'تم اعتماد التخصيص — يمكن للمخزن صرف المواد.',
