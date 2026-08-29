@@ -184,6 +184,11 @@
         return;
       }
 
+      if (quote.status === 'approved') {
+        showToast('تم اعتماد عرض السعر مسبقاً — بانتظار إصدار أمر الشغل من مكتب التشغيل (' + quote.id + ')');
+        return;
+      }
+
       if (quote.status === 'issued') {
         openOcrApprovalModal(quote);
         return;
@@ -1665,7 +1670,8 @@
         var el = map[field];
         if (!el) return;
         if (policies[field]) {
-          el.setAttribute('data-v-rules', 'required');
+          var rules = field === 'military_weapon' ? 'required,select' : 'required';
+          el.setAttribute('data-v-rules', rules);
         } else {
           el.removeAttribute('data-v-rules');
           if (window.DashboardValidation) window.DashboardValidation.clearInvalid(el);
@@ -2029,6 +2035,14 @@
 
     function openOcrApprovalModal(quote) {
       if (!quote) return;
+      if (quote.status === 'approved') {
+        showToast('تم اعتماد هذا العرض مسبقاً — بانتظار إصدار أمر الشغل من مكتب التشغيل.');
+        return;
+      }
+      if (quote.status !== 'issued') {
+        showToast('لا يمكن رفع خطاب الموافقة — العرض ليس في حالة «صادر للجهة».');
+        return;
+      }
       _ocrCurrentQuote = quote;
       _ocrStoredPath   = null;
       _ocrLetterDate   = null;
@@ -2119,6 +2133,8 @@
 
       _ocrStoredPath = null;
       ocrShowStep('ocrStep2');
+      var step2Text = document.querySelector('#ocrStep2 p');
+      if (step2Text) step2Text.textContent = 'جاري تحميل بيانات العرض...';
 
       var csrfInput = document.querySelector('meta[name="csrf-token"]');
       var csrf      = csrfInput ? csrfInput.getAttribute('content') : '';
@@ -2136,6 +2152,12 @@
           return r.ok ? r.json() : r.json().then(function (j) { throw j; });
         })
         .then(function (res) {
+          if (res && res.already_approved) {
+            showToast(res.message || 'تم اعتماد هذا العرض مسبقاً.');
+            closeOcrApprovalModal();
+            fetchServerQuotes();
+            return;
+          }
           applyApprovalLetterDefaults(res);
         })
         .catch(function (err) {
@@ -2179,6 +2201,12 @@
           return r.ok ? r.json() : r.json().then(function (j) { throw j; });
         })
         .then(function (res) {
+          if (res && res.already_approved) {
+            showToast(res.message || 'تم اعتماد هذا العرض مسبقاً.');
+            closeOcrApprovalModal();
+            fetchServerQuotes();
+            return;
+          }
           _ocrStoredPath = res.stored_path || null;
           applyApprovalLetterDefaults(res);
         })
@@ -2265,16 +2293,17 @@
           var succText  = document.getElementById('ocrSuccessText');
           if (woText)   woText.textContent   = res.work_order_no
             ? ('📋 أمر التشغيل: ' + res.work_order_no)
-            : '📋 أمر التشغل سيصدر من مكتب التشغيل';
+            : '📋 أمر الشغل سيُصدر من مكتب التشغيل';
           if (succText) succText.textContent = 'تم اعتماد عرض السعر ' + _ocrCurrentQuote.id + ' — الحالة في مكتب التشغيل بانتظار إصدار أمر الشغل.';
 
           var q = quotations.find(function(x) { return x.id === _ocrCurrentQuote.id; });
           if (q) {
             q.status      = 'approved';
-            q.statusLabel = 'معتمد — تم التحويل للمخزن';
+            q.statusLabel = 'معتمد من الجهة';
           }
           renderQuoteTable();
           renderQuoteAnalytics();
+          fetchServerQuotes();
 
           ocrShowStep('ocrStep4');
         })
