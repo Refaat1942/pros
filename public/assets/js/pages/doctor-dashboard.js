@@ -729,16 +729,21 @@
       renderQueue();
     }
 
-    function showToast(msg) {
+    function showToast(msg, isError) {
+      var toastId = document.getElementById('toast') ? 'toast' : 'notifToast';
       if (window.DashboardToast) {
-        window.DashboardToast.show(msg);
+        window.DashboardToast.show(msg, {
+          id: toastId,
+          isError: !!isError,
+          duration: 4500,
+        });
         return;
       }
-      var toast = document.getElementById('toast');
+      var toast = document.getElementById('toast') || document.getElementById('notifToast');
       if (!toast) return;
-      toast.innerHTML = '✅ ' + msg;
+      toast.innerHTML = isError ? '⚠️ ' + msg : '✅ ' + msg;
       toast.classList.add('show');
-      setTimeout(function() { toast.classList.remove('show'); }, 5000);
+      setTimeout(function() { toast.classList.remove('show'); }, 4500);
     }
 
     function submitDiagnosisToServer(form) {
@@ -784,7 +789,7 @@
           showToast(msg);
           setTimeout(function() {
             window.location.href = dashboardPageUrl('records');
-          }, 1200);
+          }, 4500);
         })
         .catch(function(err) {
           if (saveBtn) saveBtn.disabled = false;
@@ -1057,8 +1062,10 @@
         .then(function (data) {
           var msg = (data && data.message) ? data.message : 'تم التحويل للتوصيف';
           showToast(msg);
-          closeDoctorExamModal();
-          setTimeout(function () { window.location.reload(); }, 1200);
+          setTimeout(function () {
+            closeDoctorExamModal();
+            window.location.reload();
+          }, 4500);
         })
         .catch(function (err) {
           showDoctorExamError(err.message || 'تعذّر حفظ التشخيص.');
@@ -1093,8 +1100,10 @@
         .then(function (data) {
           var msg = (data && data.message) ? data.message : 'تم التحويل للتوصيف';
           showToast(msg);
-          closeDoctorExamModal();
-          setTimeout(function () { window.location.reload(); }, 1200);
+          setTimeout(function () {
+            closeDoctorExamModal();
+            window.location.reload();
+          }, 4500);
         })
         .catch(function (err) {
           showDoctorExamError(err.message || 'تعذّر تخطّي الكشف.');
