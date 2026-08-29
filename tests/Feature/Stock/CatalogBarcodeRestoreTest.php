@@ -111,6 +111,102 @@ class CatalogBarcodeRestoreTest extends TestCase
             ->assertSee(route('admin.catalog.screen-barcode', $item), false);
     }
 
+    public function test_catalog_page_shows_screen_button_when_alt_codes_column_hidden(): void
+    {
+        $admin = $this->limitedAdminWithCatalogViewOnly();
+        app(CatalogListVisibilityService::class)->update([
+            'sections' => [
+                'inventory_supply' => [
+                    'roles' => [
+                        'admin' => ['enabled' => true],
+                    ],
+                ],
+            ],
+            'roles' => [
+                'admin' => [
+                    'admin_catalog' => [
+                        'enabled' => true,
+                        'columns' => ['code', 'name', 'brand'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $item = StockItem::create([
+            'code' => 'ITM-HIDDEN-ALT',
+            'name' => 'صنف أكواد مخفية',
+            'alt_codes' => 'HIDDEN1',
+            'barcode' => null,
+            'qty' => 1,
+            'reserved' => 0,
+            'wac' => 0,
+            'status' => StockItem::STATUS_OK,
+        ]);
+
+        $this->actingAs($admin->fresh())
+            ->get('/admin/catalog')
+            ->assertOk()
+            ->assertSee('/admin/catalog/'.$item->id.'/screen-barcode', false)
+            ->assertSee('📱 شاشة', false);
+    }
+
+    public function test_screen_and_labels_resolve_to_same_barcode_value(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $item = StockItem::create([
+            'code' => 'ITM-SAME-1',
+            'name' => 'تطابق شاشة وملصق',
+            'alt_codes' => 'SAME99',
+            'barcode' => null,
+            'qty' => 0,
+            'reserved' => 0,
+            'wac' => 0,
+            'status' => StockItem::STATUS_OK,
+        ]);
+
+        $expected = StockItem::barcodeForOperationalCode('SAME99');
+
+        $screen = $this->actingAs($admin)
+            ->get(route('admin.catalog.screen-barcode', $item))
+            ->assertOk();
+
+        $labels = $this->actingAs($admin)
+            ->get(route('admin.catalog.labels', $item))
+            ->assertOk();
+
+        $screen->assertSee($expected, false);
+        $labels->assertSee($expected, false);
+    }
+
+    public function test_labels_skip_item_when_barcode_column_is_non_scannable_garbage(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $item = StockItem::create([
+            'code' => 'ITM-GARB-1',
+            'name' => 'باركود غير قابل للمسح',
+            'alt_codes' => 'GOOD1',
+            'barcode' => '٠١٢',
+            'qty' => 0,
+            'reserved' => 0,
+            'wac' => 0,
+            'status' => StockItem::STATUS_OK,
+        ]);
+
+        $expected = StockItem::barcodeForOperationalCode('GOOD1');
+
+        $this->actingAs($admin)
+            ->get(route('admin.catalog.labels', $item))
+            ->assertOk()
+            ->assertSee($expected, false)
+            ->assertDontSee('٠١٢', false);
+    }
+
+    public function test_normalize_scannable_barcode_strips_non_ascii(): void
+    {
+        $this->assertNull(StockItem::normalizeScannableBarcode('٠١٢'));
+        $this->assertSame('BC-OK', StockItem::normalizeScannableBarcode('BC-OK'));
+    }
+
     public function test_labels_use_display_barcode_for_alt_codes_only_item(): void
     {
         $admin = $this->userWithRole('admin');
