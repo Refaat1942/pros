@@ -348,17 +348,17 @@ class ChecklistFeaturesTest extends TestCase
     {
         $admin = $this->userWithRole('admin');
 
-        $a = StockItem::create(['code' => 'RM-A', 'name' => 'صنف أ', 'barcode' => 'BC-RM-A', 'qty' => 5, 'reserved' => 0, 'wac' => 10, 'status' => 'ok']);
-        $b = StockItem::create(['code' => 'RM-B', 'name' => 'صنف ب', 'barcode' => 'BC-RM-B', 'qty' => 5, 'reserved' => 0, 'wac' => 10, 'status' => 'ok']);
+        $a = StockItem::create(['code' => 'RM-A', 'name' => 'صنف أ', 'barcode' => 'BC-RM-A', 'qty' => 3, 'reserved' => 0, 'wac' => 10, 'status' => 'ok']);
+        $b = StockItem::create(['code' => 'RM-B', 'name' => 'صنف ب', 'barcode' => 'BC-RM-B', 'qty' => 4, 'reserved' => 0, 'wac' => 10, 'status' => 'ok']);
 
         $response = $this->actingAs($admin)->get(
-            route('admin.catalog.labels.bulk').'?ids='.$a->id.','.$b->id.'&copies=2&offset_x=3&page_margin=6',
+            route('admin.catalog.labels.bulk').'?ids='.$a->id.','.$b->id.'&offset_x=3&page_margin=6',
         );
 
         $response->assertOk();
         $response->assertSee('BC-RM-A');
         $response->assertSee('BC-RM-B');
-        $response->assertSee('4 ملصق');
+        $response->assertSee('7 ملصق');
         $response->assertSee('label_width_mm', false);
         $response->assertSee('margin_left_mm', false);
         $response->assertSee('--offset-x: 3mm', false);

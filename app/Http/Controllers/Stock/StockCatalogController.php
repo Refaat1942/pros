@@ -276,11 +276,10 @@ class StockCatalogController extends Controller
             ->values();
 
         $items = StockItem::query()->whereIn('id', $ids)->orderBy('name')->get();
-        $copies = max(1, min(200, (int) $request->integer('copies', 1)));
         $settings = $this->labelSettings($request);
 
         return response()->view('admin.print.barcode-labels', [
-            'labels' => $this->buildLabels($items->all(), $copies, $settings),
+            'labels' => $this->buildLabelsForStockBalance($items->all(), $settings),
             'settings' => $settings,
             'heading' => $items->count().' صنف',
         ]);
@@ -394,6 +393,35 @@ class StockCatalogController extends Controller
         }
 
         return $labels;
+    }
+
+    /**
+     * ملصقات دفعة — نسخة واحدة لكل وحدة في رصيد المخزن (عمود qty / warehouse_qty في الكتالوج).
+     *
+     * @param  list<StockItem>  $items
+     * @param  array<string, mixed>  $settings
+     * @return list<array{name:string, barcode:string, svg:string, svg_data_uri:string}>
+     */
+    private function buildLabelsForStockBalance(array $items, array $settings): array
+    {
+        $labels = [];
+
+        foreach ($items as $item) {
+            $copies = $this->labelCopiesForWarehouseQty($item);
+            if ($copies === 0) {
+                continue;
+            }
+
+            $labels = array_merge($labels, $this->buildLabels([$item], $copies, $settings));
+        }
+
+        return $labels;
+    }
+
+    /** عدد الملصقات لصنف — رصيد المخزن الفعلي (عدد صحيح، بحد أقصى 200 مثل copies). */
+    private function labelCopiesForWarehouseQty(StockItem $item): int
+    {
+        return min(200, max(0, (int) $item->qty));
     }
 
     /**
