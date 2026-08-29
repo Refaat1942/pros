@@ -27,10 +27,10 @@ class BomItem extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'decimal:4',
         'unit_cost' => 'decimal:2',
-        'issued_qty' => 'integer',
-        'returned_qty' => 'integer',
+        'issued_qty' => 'decimal:4',
+        'returned_qty' => 'decimal:4',
     ];
 
     public function bom(): BelongsTo

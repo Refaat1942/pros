@@ -24,9 +24,9 @@ final class BomItemAggregator
                     'id' => $item->id,
                     'stock_item_code' => $item->stock_item_code,
                     'name' => $item->name,
-                    'qty' => (int) $item->qty,
-                    'issued_qty' => (int) $item->issued_qty,
-                    'returned_qty' => (int) $item->returned_qty,
+                    'qty' => (float) $item->qty,
+                    'issued_qty' => (float) $item->issued_qty,
+                    'returned_qty' => (float) $item->returned_qty,
                     'unit_cost' => $item->unit_cost,
                 ]
                 : $item;
@@ -45,9 +45,9 @@ final class BomItemAggregator
                 ];
             }
 
-            $grouped[$code]['qty'] += (int) ($row['qty'] ?? 0);
-            $grouped[$code]['issued_qty'] += (int) ($row['issued_qty'] ?? 0);
-            $grouped[$code]['returned_qty'] += (int) ($row['returned_qty'] ?? 0);
+            $grouped[$code]['qty'] += (float) ($row['qty'] ?? 0);
+            $grouped[$code]['issued_qty'] += (float) ($row['issued_qty'] ?? 0);
+            $grouped[$code]['returned_qty'] += (float) ($row['returned_qty'] ?? 0);
         }
 
         return array_values($grouped);

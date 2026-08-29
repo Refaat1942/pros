@@ -79,7 +79,7 @@ class BarcodeValidationService
             || $stockItem->code === $expected;
     }
 
-    private function resolveStockItem(string $scan): ?StockItem
+    public function resolveStockItem(string $scan): ?StockItem
     {
         $scan = trim($scan);
         if ($scan === '') {

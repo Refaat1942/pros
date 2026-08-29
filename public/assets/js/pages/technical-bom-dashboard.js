@@ -11,7 +11,48 @@
     axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
   }
 
-  var state = { bomId: null, items: [], scanned: [], blocked: false };
+  var state = { bomId: null, items: [], lines: [], blocked: false };
+
+  function parseQtyNumber(raw) {
+    return parseFloat(String(raw || '').trim().replace(',', '.'));
+  }
+
+  function formatQty(n) {
+    if (!isFinite(n)) return '0';
+    return String(n).replace(/\.?0+$/, function (m) { return m === '.' ? '' : m; });
+  }
+
+  function findItemForScan(scan) {
+    var upper = String(scan || '').trim().toUpperCase();
+    if (!upper) return null;
+    var found = null;
+    state.items.forEach(function (it) {
+      if (found) return;
+      var code = String(it.stock_item_code || '').toUpperCase();
+      var bc = expectedBarcodeFor(it);
+      if (upper === code || upper === bc) found = it;
+    });
+    return found;
+  }
+
+  function parseClientQty(raw, item) {
+    var s = String(raw || '').trim();
+    if (!s) {
+      return item.fractional_uom ? null : 1;
+    }
+    var gram = s.match(/^(\d+(?:\.\d+)?)\s*(?:جرام|gram|g)$/i);
+    if (gram && /كيلو|kg|kilo/i.test(String(item.uom || ''))) {
+      return parseFloat(gram[1]) / 1000;
+    }
+    var cm = s.match(/^(\d+(?:\.\d+)?)\s*(?:سم|cm|سنتي)$/i);
+    if (cm && /متر|meter|m$/i.test(String(item.uom || ''))) {
+      return parseFloat(cm[1]) / 100;
+    }
+    if (/^\d+(?:\.\d+)?$/.test(s.replace(',', '.'))) {
+      return parseQtyNumber(s);
+    }
+    return null;
+  }
 
   var STAGE_META = {
     raw: { label: '📦 مخزن خام', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
@@ -103,42 +144,45 @@
     return match || scan;
   }
 
-  // خريطة كود الصنف ← الكمية المطلوبة.
   function expectedCounts() {
     var counts = {};
     state.items.forEach(function (it) {
       var code = String(it.stock_item_code || '').toUpperCase();
-      counts[code] = (counts[code] || 0) + (parseInt(it.qty, 10) || 0);
+      counts[code] = (counts[code] || 0) + (parseQtyNumber(it.qty) || 0);
     });
     return counts;
   }
 
   function expectedTotal() {
-    return state.items.reduce(function (sum, it) { return sum + (parseInt(it.qty, 10) || 0); }, 0);
+    return state.items.reduce(function (sum, it) { return sum + (parseQtyNumber(it.qty) || 0); }, 0);
   }
 
-  function scanCounts() {
+  function lineCounts() {
     var counts = {};
-    state.scanned.forEach(function (code) {
-      counts[code] = (counts[code] || 0) + 1;
+    state.lines.forEach(function (line) {
+      counts[line.code] = (counts[line.code] || 0) + (line.qty || 0);
     });
     return counts;
+  }
+
+  function dispensedTotal() {
+    return state.lines.reduce(function (sum, line) { return sum + (line.qty || 0); }, 0);
   }
 
   function renderRequired() {
     var el = $('dispenseRequired');
     if (!el) return;
-    var scanned = scanCounts();
-    el.innerHTML = '<p class="font-bold text-slate-800 mb-3 text-base">أكواد مطلوبة (' + state.items.length + ' صنف · ' + expectedTotal() + ' وحدة):</p>' +
+    var scanned = lineCounts();
+    el.innerHTML = '<p class="font-bold text-slate-800 mb-3 text-base">أكواد مطلوبة (' + state.items.length + ' صنف · ' + formatQty(expectedTotal()) + '):</p>' +
       state.items.map(function (it) {
         var code = String(it.stock_item_code || '').toUpperCase();
         var bc = expectedBarcodeFor(it);
-        var required = parseInt(it.qty, 10) || 0;
+        var required = parseQtyNumber(it.qty) || 0;
         var done = scanned[code] || 0;
-        var complete = done >= required && required > 0;
+        var complete = done >= required && required > 0 && Math.abs(done - required) < 0.0001;
         var statusLabel = complete
           ? '✓ تم'
-          : (done > 0 ? done + ' / ' + required : '—');
+          : (done > 0 ? formatQty(done) + ' / ' + formatQty(required) : '—');
         var rowCls = complete
           ? 'bg-emerald-50 border-emerald-200'
           : (done > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100');
@@ -160,14 +204,15 @@
 
   function renderScanProgress() {
     var total = expectedTotal();
-    var done = state.scanned.length;
+    var done = dispensedTotal();
     var label = $('scanProgressLabel');
     var bar = $('scanProgressBar');
-    if (label) label.textContent = done + ' / ' + total;
+    if (label) label.textContent = formatQty(done) + ' / ' + formatQty(total);
     if (bar) {
       var pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
       bar.style.width = pct + '%';
-      bar.className = 'h-full transition-all duration-200 ' + (done === total && total > 0 ? 'bg-emerald-500' : 'bg-cyan-500');
+      var complete = total > 0 && Math.abs(done - total) < 0.0001;
+      bar.className = 'h-full transition-all duration-200 ' + (complete ? 'bg-emerald-500' : 'bg-cyan-500');
     }
   }
 
@@ -176,16 +221,16 @@
     var seen = {};
     var bad = null;
     var over = null;
-    for (var i = 0; i < state.scanned.length; i++) {
-      var code = state.scanned[i];
+    for (var i = 0; i < state.lines.length; i++) {
+      var code = state.lines[i].code;
       if (!(code in counts)) { bad = code; break; }
-      seen[code] = (seen[code] || 0) + 1;
-      if (seen[code] > counts[code]) { over = code; break; }
+      seen[code] = (seen[code] || 0) + (state.lines[i].qty || 0);
+      if (seen[code] > counts[code] + 0.0001) { over = code; break; }
     }
     if (bad) {
       showAlarm('كود الصنف غير مطابق لأمر التشغيل: ' + bad + ' — تم إيقاف الصرف!');
     } else if (over) {
-      showAlarm('عدد مسحات كود الصنف ' + over + ' يتجاوز الكمية المطلوبة — تم إيقاف الصرف!');
+      showAlarm('كمية الصنف ' + over + ' تتجاوز المطلوب — تم إيقاف الصرف!');
     } else {
       hideAlarm();
     }
@@ -194,7 +239,7 @@
   function renderScanned() {
     var el = $('scannedList');
     if (!el) return;
-    if (!state.scanned.length) {
+    if (!state.lines.length) {
       el.innerHTML = '<span class="text-slate-400 text-sm">لم يُمسح أي باركود بعد.</span>';
       renderScanProgress();
       renderRequired();
@@ -202,23 +247,23 @@
     }
     var counts = expectedCounts();
     var seen = {};
-    el.innerHTML = state.scanned.map(function (code, idx) {
-      seen[code] = (seen[code] || 0) + 1;
-      var ok = (code in counts) && seen[code] <= counts[code];
+    el.innerHTML = state.lines.map(function (line, idx) {
+      seen[line.code] = (seen[line.code] || 0) + (line.qty || 0);
+      var ok = (line.code in counts) && seen[line.code] <= counts[line.code] + 0.0001;
       return '<span class="inline-flex items-center gap-1 rounded-full pl-3 pr-1 py-1 text-xs font-bold ' +
         (ok ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') + '">' +
-        (ok ? '✓' : '✗') + ' ' + esc(code) +
+        (ok ? '✓' : '✗') + ' ' + esc(line.code) + ' · ' + esc(line.label) +
         '<button type="button" class="btn-remove-scan ml-0.5 rounded-full w-5 h-5 inline-flex items-center justify-center ' +
         (ok ? 'hover:bg-emerald-200' : 'hover:bg-red-200') + ' text-current leading-none" ' +
-        'data-scan-idx="' + idx + '" title="حذف المسح" aria-label="حذف ' + esc(code) + '">×</button></span>';
+        'data-scan-idx="' + idx + '" title="حذف المسح" aria-label="حذف ' + esc(line.code) + '">×</button></span>';
     }).join('');
     renderScanProgress();
     renderRequired();
   }
 
   function removeScan(index) {
-    if (index < 0 || index >= state.scanned.length) return;
-    state.scanned.splice(index, 1);
+    if (index < 0 || index >= state.lines.length) return;
+    state.lines.splice(index, 1);
     revalidateAlarm();
     renderScanned();
     clearBarcodeInputError();
@@ -258,14 +303,45 @@
     return /^[A-Za-z0-9\-_]{1,100}$/.test(String(code || '').trim());
   }
 
+  function clearQtyInputError() {
+    var input = $('dispenseQtyInput');
+    if (!input) return;
+    input.classList.remove('v-invalid');
+    input.removeAttribute('aria-invalid');
+    var wrap = input.parentElement;
+    if (!wrap) return;
+    var msg = wrap.querySelector('.v-error-msg');
+    if (msg) msg.remove();
+  }
+
+  function showQtyInputError(message) {
+    var input = $('dispenseQtyInput');
+    if (!input) return;
+    input.classList.add('v-invalid');
+    input.setAttribute('aria-invalid', 'true');
+    var wrap = input.parentElement;
+    if (!wrap) return;
+    var msg = wrap.querySelector('.v-error-msg');
+    if (!msg) {
+      msg = document.createElement('div');
+      msg.className = 'v-error-msg';
+      msg.setAttribute('role', 'alert');
+      wrap.appendChild(msg);
+    }
+    msg.textContent = message;
+    input.focus();
+  }
+
   function openModal(bomId) {
     if (!window.axios) return;
-    state = { bomId: bomId, items: [], scanned: [], blocked: false };
+    state = { bomId: bomId, items: [], lines: [], blocked: false };
     hideAlarm();
     clearBarcodeInputError();
+    clearQtyInputError();
     renderScanned();
     renderScanProgress();
     if ($('barcodeInput')) $('barcodeInput').value = '';
+    if ($('dispenseQtyInput')) $('dispenseQtyInput').value = '';
 
     axios.get('/technical/bom/' + bomId)
       .then(function (res) {
@@ -293,51 +369,108 @@
 
   function closeModal() {
     $('dispenseModal') && $('dispenseModal').classList.add('hidden');
-    state = { bomId: null, items: [], scanned: [], blocked: false };
+    state = { bomId: null, items: [], lines: [], blocked: false };
   }
 
-  function addScan(raw) {
-    var input = $('barcodeInput');
-    var code = String(raw || (input && input.value) || '').trim().toUpperCase();
-    if (!code) return;
-    if (!isValidBarcode(code)) {
+  function addDispenseLine() {
+    var barcodeInput = $('barcodeInput');
+    var qtyInput = $('dispenseQtyInput');
+    var rawBarcode = String(barcodeInput && barcodeInput.value || '').trim().toUpperCase();
+    var qtyRaw = String(qtyInput && qtyInput.value || '').trim();
+    if (!rawBarcode) return;
+    if (!isValidBarcode(rawBarcode)) {
       showBarcodeInputError('الباركود غير صالح.');
       return;
     }
+    var item = findItemForScan(rawBarcode);
+    if (!item) {
+      showBarcodeInputError('الصنف غير موجود في قائمة المواد.');
+      return;
+    }
+    if (item.fractional_uom && !qtyRaw) {
+      clearBarcodeInputError();
+      showQtyInputError('أدخل الكمية — مثلاً 100 جرام أو 0.1');
+      return;
+    }
+    var clientQty = parseClientQty(qtyRaw, item);
+    if (item.fractional_uom && (clientQty === null || clientQty <= 0)) {
+      showQtyInputError('صيغة الكمية غير مفهومة.');
+      return;
+    }
+    var qty = item.fractional_uom ? clientQty : 1;
+    var barcode = expectedBarcodeFor(item);
+    if (rawBarcode !== String(item.stock_item_code || '').toUpperCase() && rawBarcode !== barcode) {
+      barcode = rawBarcode;
+    } else {
+      barcode = barcode || rawBarcode;
+    }
     clearBarcodeInputError();
-    state.scanned.push(normalizeScan(code));
+    clearQtyInputError();
+    state.lines.push({
+      code: String(item.stock_item_code || '').toUpperCase(),
+      barcode: barcode,
+      qty: qty,
+      qtyRaw: qtyRaw || (item.fractional_uom ? String(qty) : ''),
+      uom: item.uom || 'قطعة',
+      label: qtyRaw || (item.fractional_uom ? formatQty(qty) + ' ' + (item.uom || '') : '1 قطعة'),
+    });
     revalidateAlarm();
     renderScanned();
-    renderScanProgress();
-    if ($('barcodeInput')) { $('barcodeInput').value = ''; $('barcodeInput').focus(); }
+    if (barcodeInput) { barcodeInput.value = ''; }
+    if (qtyInput) { qtyInput.value = ''; }
+    if (barcodeInput) barcodeInput.focus();
+  }
+
+  function buildDispensePayload() {
+    return state.lines.map(function (line) {
+      var row = { barcode: line.barcode };
+      if (line.qtyRaw) {
+        row.qty = line.qtyRaw;
+      } else if (line.qty !== 1) {
+        row.qty = line.qty;
+      }
+      return row;
+    });
   }
 
   function confirmDispense() {
     if (state.blocked || !state.bomId || !window.axios) return;
 
     var input = $('barcodeInput');
+    var qtyInput = $('dispenseQtyInput');
     var pending = input ? String(input.value || '').trim().toUpperCase() : '';
+    var pendingQty = qtyInput ? String(qtyInput.value || '').trim() : '';
     clearBarcodeInputError();
+    clearQtyInputError();
 
-    if (pending) {
-      addScan(pending);
-      if (state.blocked) return;
+    if (pending || pendingQty) {
+      if (pendingQty && !pending) {
+        showBarcodeInputError('امسح الباركود أولاً.');
+        return;
+      }
+      if (pending) {
+        if (qtyInput && pendingQty) qtyInput.value = pendingQty;
+        addDispenseLine();
+        if (state.blocked) return;
+      }
     }
 
-    if (!state.scanned.length) {
-      showBarcodeInputError('هذا الحقل مطلوب.');
+    if (!state.lines.length) {
+      showBarcodeInputError('يجب مسح باركود واحد على الأقل.');
       return;
     }
 
-    if (state.scanned.length !== expectedTotal()) {
-      showAlarm('عدد الباركود (' + state.scanned.length + ') لا يطابق إجمالي الكميات المطلوبة (' + expectedTotal() + ')');
+    var total = expectedTotal();
+    var done = dispensedTotal();
+    if (Math.abs(done - total) > 0.0001) {
+      showAlarm('الكمية المصروفة (' + formatQty(done) + ') لا تطابق المطلوب (' + formatQty(total) + ')');
       return;
     }
 
     var btn = $('confirmDispense');
     if (btn) btn.disabled = true;
 
-    axios.post('/technical/bom/' + state.bomId + '/dispense', { scanned_barcodes: state.scanned })
+    axios.post('/technical/bom/' + state.bomId + '/dispense', { dispense_lines: buildDispensePayload() })
       .then(function (res) {
         closeModal();
         toast(res.data.message || '✅ تم الصرف بنجاح');
@@ -531,7 +664,19 @@
     $('cancelDispense') && $('cancelDispense').addEventListener('click', closeModal);
     $('dispenseBackdrop') && $('dispenseBackdrop').addEventListener('click', closeModal);
     $('barcodeInput') && $('barcodeInput').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); addScan(e.target.value); }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var qtyInput = $('dispenseQtyInput');
+        var item = findItemForScan(e.target.value);
+        if (item && item.fractional_uom && qtyInput && !String(qtyInput.value || '').trim()) {
+          qtyInput.focus();
+          return;
+        }
+        addDispenseLine();
+      }
+    });
+    $('dispenseQtyInput') && $('dispenseQtyInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addDispenseLine(); }
     });
     $('scannedList') && $('scannedList').addEventListener('click', function (e) {
       var btn = e.target.closest('.btn-remove-scan');

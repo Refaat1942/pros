@@ -20,6 +20,7 @@ use App\Services\PathwayTransitionMessageService;
 use App\Support\BomItemAggregator;
 use App\Support\IssueVoucherPresenter;
 use App\Support\StockItemUomLookup;
+use App\Support\StockQuantity;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -116,12 +117,12 @@ class BomController extends Controller
     {
         $case = $bom->caseRecord;
         $fromStage = $case?->stage_key ?? CaseRecord::STAGE_MANUFACTURING;
-        $barcodes = $request->validated('scanned_barcodes');
+        $payload = $request->dispensePayload();
 
         if (config('inventory.dispense_requires_approval', true)) {
             $dispenseRequest = app(\App\Services\StockDispenseRequestService::class)->submit(
                 $bom,
-                $barcodes,
+                $payload,
                 $request->user(),
             );
 
@@ -133,7 +134,7 @@ class BomController extends Controller
         }
 
         try {
-            $bom = $this->bomService->releaseToWip($bom, $barcodes);
+            $bom = $this->bomService->releaseToWip($bom, $payload);
         } catch (BarcodeDispenseMismatchException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -263,6 +264,9 @@ class BomController extends Controller
                         return $item + [
                             'expected_barcode' => $barcodes[$item['stock_item_code']] ?? null,
                             'uom' => $uomMap[$item['stock_item_code']] ?? 'قطعة',
+                            'fractional_uom' => StockQuantity::isFractionalUom(
+                                $uomMap[$item['stock_item_code']] ?? 'قطعة'
+                            ),
                         ];
                     })
                     ->values()
