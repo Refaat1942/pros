@@ -1,4 +1,12 @@
 <div class="section-view" id="section-pending">
+  <div class="panel" style="margin-bottom:16px;padding:14px 18px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;line-height:1.7;">
+    <strong style="color:#92400e;">👷 تخصيص واعتماد الصرف — من قسم الإنتاج</strong>
+  <p style="margin:8px 0 0;font-size:13px;color:#78350f;">
+      بعد <strong>إصدار أمر الشغل</strong> من هنا، يذهب الأمر إلى
+      <strong>لوحة قسم الإنتاج → تخصيص واعتماد الصرف</strong> لتحديد القسم والفني والضغط على
+      <strong>«اعتماد التخصيص»</strong>. بعد ذلك فقط يُسمح للمخزن بصرف المواد.
+    </p>
+  </div>
   <div class="panel inventory-wrap">
     <div class="panel-header">
       <h3>✅ مكتب التشغيل — إصدار أمر الشغل واعتماد الصرف</h3>
