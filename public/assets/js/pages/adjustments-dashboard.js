@@ -935,9 +935,9 @@
       window.alert(
         pending.count > 1
           ? ('⚠️ حدّدت ' + pending.count + ' أصناف (كمية ' + pending.qty + ' لكل صنف) ولم تؤكّد إضافتها.\n\n' +
-            'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال للتكاليف».')
+            'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال إلى الاعتماد».')
           : ('⚠️ اخترت صنفاً (كمية ' + pending.qty + ') ولم تؤكّد إضافته.\n\n' +
-            'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال للتكاليف».')
+            'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال إلى الاعتماد».')
       );
       var addBtn = $('btnAddAdjItem');
       if (addBtn) {
@@ -951,8 +951,8 @@
     if (btn) btn.disabled = true;
 
     axios.post(COMPLETE_URL(activeCase.id), {})
-      .then(function () {
-        toast('✅ تم إغلاق المعدلات ودفع الحالة للتكاليف');
+      .then(function (res) {
+        toast('✅ ' + (res.data.message || 'تم التحويل إلى الاعتماد'));
         closeModal();
         refreshList();
       })

@@ -779,11 +779,12 @@
           }
           return res.json();
         })
-        .then(function() {
-          showToast('تم التحويل للتوصيف');
+        .then(function (data) {
+          var msg = (data && data.message) ? data.message : 'تم التحويل للتوصيف';
+          showToast(msg);
           setTimeout(function() {
             window.location.href = dashboardPageUrl('records');
-          }, 700);
+          }, 1200);
         })
         .catch(function(err) {
           if (saveBtn) saveBtn.disabled = false;
@@ -1053,9 +1054,11 @@
             return data;
           });
         })
-        .then(function () {
+        .then(function (data) {
+          var msg = (data && data.message) ? data.message : 'تم التحويل للتوصيف';
+          showToast(msg);
           closeDoctorExamModal();
-          window.location.reload();
+          setTimeout(function () { window.location.reload(); }, 1200);
         })
         .catch(function (err) {
           showDoctorExamError(err.message || 'تعذّر حفظ التشخيص.');
@@ -1087,9 +1090,11 @@
             return data;
           });
         })
-        .then(function () {
+        .then(function (data) {
+          var msg = (data && data.message) ? data.message : 'تم التحويل للتوصيف';
+          showToast(msg);
           closeDoctorExamModal();
-          window.location.reload();
+          setTimeout(function () { window.location.reload(); }, 1200);
         })
         .catch(function (err) {
           showDoctorExamError(err.message || 'تعذّر تخطّي الكشف.');

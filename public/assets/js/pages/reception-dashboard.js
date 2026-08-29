@@ -2108,10 +2108,21 @@
       var warnEl = document.getElementById('ocrMetaWarning');
       if (warnEl) {
         var warnings = [];
+        var expectedNet = hints.expected_net != null ? parseFloat(hints.expected_net) : null;
+        var expectedGross = hints.expected_gross != null ? parseFloat(hints.expected_gross) : null;
+
+        if (expectedNet != null && expectedNet > 0) {
+          warnings.push('ℹ️ مبلغ عرض السعر المطبوع: ' + expectedNet.toFixed(2) + ' ج.م — أدخل نفس المبلغ في الخطاب.');
+        } else if (expectedGross != null && expectedGross > 0) {
+          warnings.push('ℹ️ مبلغ عرض السعر المطبوع: ' + expectedGross.toFixed(2) + ' ج.م — أدخل نفس المبلغ في الخطاب.');
+        } else {
+          warnings.push('⚠️ مبلغ عرض السعر في النظام صفر — راجع الاعتماد (تسعير الأصناف) قبل اعتماد الخطاب، أو أدخل المبلغ المطابق للطباعة إن وُجد.');
+        }
+
         if (hints.has_contract_discount) {
           warnings.push('ℹ️ الجهة لها خصم تعاقدي — المبلغ في الخطاب قد يكون صافياً (' +
-            (hints.expected_net != null ? hints.expected_net : '') + ' ج.م) أو إجمالياً (' +
-            (hints.expected_gross != null ? hints.expected_gross : '') + ' ج.م).');
+            (expectedNet != null ? expectedNet : '') + ' ج.م) أو إجمالياً (' +
+            (expectedGross != null ? expectedGross : '') + ' ج.م).');
         }
         if (warnings.length) {
           warnEl.innerHTML = warnings.join('<br>');
@@ -2309,7 +2320,7 @@
         })
         .catch(function (err) {
           approvalLetterShowError(approvalLetterErrorMessage(err));
-          if (btn) { btn.disabled = false; btn.textContent = '✅ تأكيد واعتماد مالي — والتحويل للمخزن'; }
+          if (btn) { btn.disabled = false; btn.textContent = '✅ تأكيد واعتماد مالي — والتحويل لمكتب التشغيل'; }
         });
     }
 

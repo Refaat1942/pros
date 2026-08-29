@@ -165,7 +165,7 @@ class AdjustmentsController extends Controller
             'tech_notes' => $case->resolvedTechNotes(),
             'written_items' => $case->resolvedWrittenItems(),
             'rework' => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
-            'stage_label' => $isCostCalc ? 'بانتظار التكاليف' : 'المعدلات',
+            'stage_label' => $isCostCalc ? 'بانتظار الاعتماد' : 'المعدلات',
             'can_modify_directly' => $case->isInAdjustments(),
             'can_request_adjustment_edit' => $isCostCalc && ! $case->pendingAdjustmentEditRequest,
             'has_pending_edit_request' => (bool) $case->pendingAdjustmentEditRequest,

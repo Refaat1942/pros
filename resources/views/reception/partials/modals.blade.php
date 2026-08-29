@@ -144,7 +144,7 @@
             </button>
             <button type="button" id="btnConfirmOcr"
                     style="padding:10px 24px;border-radius:8px;border:none;background:#059669;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">
-              ✅ تأكيد واعتماد مالي — والتحويل للمخزن
+              ✅ تأكيد واعتماد مالي — والتحويل لمكتب التشغيل
             </button>
           </div>
         </div>
@@ -156,7 +156,7 @@
           <p style="color:#374151;margin:0 0 6px;" id="ocrSuccessText">—</p>
           <p style="font-family:monospace;font-size:14px;font-weight:700;color:#059669;
                     background:#f0fdf4;border-radius:8px;padding:8px 16px;display:inline-block;margin-top:8px;" id="ocrSuccessWO">—</p>
-          <p style="font-size:12px;color:#6b7280;margin-top:12px;">تم إرسال الحالة إلى لوحة المخزن — يمكن الآن صرف مواد الـ BOM.</p>
+          <p style="font-size:12px;color:#6b7280;margin-top:12px;">بانتظار إصدار أمر الشغل من مكتب التشغيل — ثم تخصيص الإنتاج لاعتماد الصرف من المخزن.</p>
           <button type="button" id="btnCloseOcrSuccess"
                   style="margin-top:20px;padding:10px 28px;border-radius:8px;border:none;background:#059669;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">
             حسناً
