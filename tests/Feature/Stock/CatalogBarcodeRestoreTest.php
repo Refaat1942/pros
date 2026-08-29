@@ -248,4 +248,105 @@ class CatalogBarcodeRestoreTest extends TestCase
         $this->assertContains('print-barcode', $slugs);
         $this->assertContains(Permission::viewSlug('admin', 'catalog'), $slugs);
     }
+
+    public function test_bulk_labels_print_one_label_per_warehouse_qty_unit(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $a = StockItem::create([
+            'code' => 'ITM-BLK-3',
+            'name' => 'ثلاث وحدات',
+            'barcode' => 'BC-BLK-3',
+            'qty' => 3,
+            'reserved' => 0,
+            'wac' => 0,
+            'status' => StockItem::STATUS_OK,
+        ]);
+        $b = StockItem::create([
+            'code' => 'ITM-BLK-4',
+            'name' => 'أربع وحدات',
+            'barcode' => 'BC-BLK-4',
+            'qty' => 4,
+            'reserved' => 0,
+            'wac' => 0,
+            'status' => StockItem::STATUS_OK,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.catalog.labels.bulk').'?ids='.$a->id.','.$b->id)
+            ->assertOk();
+
+        $this->assertSame(7, $this->countLabelDivs($response->getContent()));
+        $response->assertSee('7 ملصق');
+    }
+
+    public function test_bulk_labels_skip_zero_warehouse_qty(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $item = StockItem::create([
+            'code' => 'ITM-BLK-0',
+            'name' => 'رصيد صفر',
+            'barcode' => 'BC-BLK-0',
+            'qty' => 0,
+            'reserved' => 0,
+            'wac' => 0,
+            'status' => StockItem::STATUS_OK,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.catalog.labels.bulk').'?ids='.$item->id)
+            ->assertOk();
+
+        $this->assertSame(0, $this->countLabelDivs($response->getContent()));
+        $response->assertSee('0 ملصق');
+    }
+
+    public function test_bulk_labels_alt_codes_only_print_resolved_barcode_for_each_copy(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $item = StockItem::create([
+            'code' => 'ITM-BLK-ALT',
+            'name' => 'أكواد فقط دفعة',
+            'alt_codes' => 'ALTBLK',
+            'barcode' => null,
+            'qty' => 3,
+            'reserved' => 0,
+            'wac' => 0,
+            'status' => StockItem::STATUS_OK,
+        ]);
+
+        $expected = StockItem::barcodeForOperationalCode('ALTBLK');
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.catalog.labels.bulk').'?ids='.$item->id)
+            ->assertOk()
+            ->assertSee($expected, false);
+
+        $this->assertSame(3, $this->countLabelDivs($response->getContent()));
+    }
+
+    public function test_single_item_labels_still_use_copies_parameter(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $item = StockItem::create([
+            'code' => 'ITM-SINGLE-COPY',
+            'name' => 'نسخ يدوية',
+            'barcode' => 'BC-SINGLE',
+            'qty' => 10,
+            'reserved' => 0,
+            'wac' => 0,
+            'status' => StockItem::STATUS_OK,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.catalog.labels', $item).'?copies=2')
+            ->assertOk()
+            ->assertSee('BC-SINGLE', false);
+
+        $this->assertSame(2, $this->countLabelDivs($response->getContent()));
+    }
+
+    private function countLabelDivs(string $html): int
+    {
+        return substr_count($html, '<div class="label">');
+    }
 }
