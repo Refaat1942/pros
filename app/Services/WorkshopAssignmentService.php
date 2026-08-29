@@ -17,11 +17,11 @@ class WorkshopAssignmentService
         ?int $technicianId,
     ): CaseRecord {
         if (! config('workshop.enabled', true)) {
-            return $case;
+            abort(422, 'ميزة أقسام الإنتاج غير مفعّلة.');
         }
 
         if ($sectionId === null && $technicianId === null) {
-            return $case;
+            abort(422, 'حدّد قسم الإنتاج أو الفني قبل حفظ التخصيص.');
         }
 
         $this->validateAssignmentTargets($sectionId, $technicianId);

@@ -568,11 +568,25 @@
     var approveAssignBtn = $('btnApproveWorkshopAssignment');
     if (approveAssignBtn) {
       approveAssignBtn.addEventListener('click', function () {
-        if (!selectedCaseId) {
+        if (!selectedCaseId || !window.axios) {
           toast('اختر أمر شغل من الطابور أولاً', true);
           return;
         }
-        approveWorkshopAssignment(selectedCaseId, approveAssignBtn);
+        // احفظ القسم/الفني المختارين في النموذج أولاً — الاعتماد يتحقق من القيم
+        // المحفوظة في قاعدة البيانات، مش من اختيار القوائم على الشاشة فقط.
+        var sectionEl = $('workshopAssignSection');
+        var techEl = $('workshopAssignTechnician');
+        var payload = {};
+        if (sectionEl && sectionEl.value) payload.workshop_section_id = parseInt(sectionEl.value, 10);
+        if (techEl && techEl.value) payload.assigned_technician_id = parseInt(techEl.value, 10);
+
+        axios.post('/workshop/workshop/' + selectedCaseId + '/assign', payload)
+          .then(function () {
+            approveWorkshopAssignment(selectedCaseId, approveAssignBtn);
+          })
+          .catch(function (err) {
+            toast((err.response && err.response.data && err.response.data.message) || 'تعذّر حفظ التخصيص', true);
+          });
       });
     }
     var refreshAssign = $('btnRefreshAssignmentQueue');
