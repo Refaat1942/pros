@@ -150,16 +150,17 @@ class NotificationsFeatureTest extends TestCase
 
     public function test_login_registers_device_id_and_type(): void
     {
-        $this->userWithRole('reception');
+        $user = $this->userWithRole('reception');
 
-        $this->post('/reception/login', [
-            'username' => 'reception',
+        $this->post('/login', [
+            'username' => $user->username,
             'password' => 'password',
             'device_id' => 'fcm-token-abc-123',
             'device_type' => 'web',
-        ])->assertRedirect();
+        ])->assertRedirect(route('reception.dashboard'));
 
         $this->assertDatabaseHas('user_devices', [
+            'user_id' => $user->id,
             'device_id' => 'fcm-token-abc-123',
             'device_type' => 'web',
         ]);
@@ -167,10 +168,10 @@ class NotificationsFeatureTest extends TestCase
 
     public function test_login_without_device_still_succeeds(): void
     {
-        $this->userWithRole('doctor');
+        $user = $this->userWithRole('doctor');
 
-        $this->post('/doctor/login', [
-            'username' => 'doctor',
+        $this->post('/login', [
+            'username' => $user->username,
             'password' => 'password',
         ])->assertRedirect(route('doctor.dashboard'));
 

@@ -51,7 +51,7 @@ class StockItem extends Model
         'opening_qty' => 'integer',
         'addition' => 'integer',
         'discount' => 'integer',
-        'reserved' => 'integer',
+        'reserved' => 'decimal:3',
         'min_qty' => 'integer',
         'is_quick_dispense' => 'boolean',
         'price' => 'decimal:2',

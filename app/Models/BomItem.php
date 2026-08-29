@@ -27,7 +27,7 @@ class BomItem extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'decimal:3',
         'unit_cost' => 'decimal:2',
         'issued_qty' => 'integer',
         'returned_qty' => 'integer',

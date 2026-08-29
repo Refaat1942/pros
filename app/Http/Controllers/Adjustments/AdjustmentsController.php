@@ -113,7 +113,7 @@ class AdjustmentsController extends Controller
 
     public function updateItemQty(UpdateAdjustmentItemQtyRequest $request, CaseRecord $case, BomItem $bomItem): JsonResponse
     {
-        $bom = $this->adjustmentsService->updateItemQty($case, $bomItem, (int) $request->validated('qty'));
+        $bom = $this->adjustmentsService->updateItemQty($case, $bomItem, (float) $request->validated('qty'));
 
         return response()->json([
             'message' => 'تم تحديث كمية البند.',

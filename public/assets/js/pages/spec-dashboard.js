@@ -27,6 +27,20 @@
     ordersExportRows: window.__SPEC_ORDERS_EXPORT || [],
   };
 
+  function syncSpecFormFieldPolicies() {
+    var policies = (window.__FORM_FIELD_POLICIES && window.__FORM_FIELD_POLICIES.spec) || {};
+    var writtenEl = document.getElementById('writtenItems');
+    var techEl = document.getElementById('techNotes');
+    if (writtenEl) {
+      writtenEl.setAttribute('data-v-rules', policies.written_items ? 'required,max:5000' : 'max:5000');
+    }
+    if (techEl) {
+      techEl.setAttribute('data-v-rules', policies.tech_notes ? 'required,max:5000' : 'max:5000');
+    }
+  }
+
+  syncSpecFormFieldPolicies();
+
   function isMilitaryPatient(type) {
     return (type || state.patientType) === 'military';
   }
@@ -309,13 +323,13 @@
     if (value === '' || value === null || value === undefined) {
       return fallback !== undefined ? fallback : 0;
     }
-    var n = parseInt(value, 10);
+    var n = parseFloat(String(value).replace(',', '.'));
     return isNaN(n) ? (fallback !== undefined ? fallback : 0) : n;
   }
 
   function normalizeItemQty(qty, fallback) {
-    var n = parseItemQty(qty, fallback !== undefined ? fallback : 1);
-    return n < 1 ? 1 : n;
+    var n = parseItemQty(qty, fallback !== undefined ? fallback : 0.001);
+    return n < 0.001 ? 0.001 : Math.round(n * 1000) / 1000;
   }
 
   function mapSpecItems(items) {
@@ -415,7 +429,7 @@
         '</td>' +
         '<td class="px-4 py-3 text-slate-500">' + (item.uom || '—') + '</td>' +
         '<td class="px-4 py-3">' + stockCell + '</td>' +
-        '<td class="px-4 py-3"><input type="number" step="1" min="1" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
+        '<td class="px-4 py-3"><input type="number" step="0.001" min="0.001" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
           (state.locked ? 'disabled' : '') +
           ' class="spec-qty-input w-20 rounded-lg border px-2 py-1 text-center text-sm ' +
           (warnQty ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-200') + '"></td>' +
@@ -796,7 +810,7 @@
       return {
         stock_item_code: c.code,
         name: c.name,
-        qty: normalizeItemQty((parseInt(c.qty, 10) || 1) * mult, 1),
+        qty: normalizeItemQty((parseFloat(c.qty) || 1) * mult, 0.001),
         uom: c.uom || catalogItem.uom,
         group_label: catalogItem.group_label || catalogItem.spec_group_label || null,
       };

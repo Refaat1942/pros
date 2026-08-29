@@ -70,32 +70,85 @@ class ApprovalLetterController extends Controller
         $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
         $path = $file->storeAs('approval_letters', $filename, 'local');
 
-        $case = $quote->caseRecord;
-        $patient = $case->patient;
-        $printTotals = QuotePrintPresenter::fromQuote($quote);
-
         return response()->json([
             'stored_path' => $path,
-            'defaults' => [
-                'patient_name' => $patient?->name ?? $quote->patient_name ?? '',
-                'approved_amount' => QuotePrintPresenter::approvedAmount($quote),
-                'company_name' => $case->company_name ?? $quote->company_name ?? '',
-                'letter_ref' => null,
-                'letter_date' => null,
-            ],
-            'hints' => [
-                'expected_net' => (float) $printTotals['display_total'],
-                'expected_gross' => (float) $printTotals['gross_total'],
-                'has_contract_discount' => (bool) $printTotals['has_discount'],
-            ],
-            'quote' => [
-                'quote_no' => $quote->quote_no,
-                'total' => (float) $quote->total,
-                'display_total' => $printTotals['display_total'],
-                'gross_total' => $printTotals['gross_total'],
-                'status' => $quote->status,
-            ],
+            'defaults' => $this->approvalLetterDefaults($quote),
+            'hints' => $this->approvalLetterHints($quote),
+            'quote' => $this->approvalLetterQuoteMeta($quote),
         ]);
+    }
+
+    /**
+     * بيانات افتراضية لاعتماد الجهة بدون رفع خطاب — تخطي خطاب الموافقة.
+     */
+    public function defaults(Request $request): JsonResponse
+    {
+        $request->validate([
+            'quote_no' => ['required', 'string', 'max:50'],
+        ]);
+
+        $quote = Quote::with(['caseRecord.patient', 'caseRecord.contractCompany'])
+            ->where('quote_no', $request->input('quote_no'))
+            ->first();
+
+        if (! $quote || ! $quote->caseRecord) {
+            return response()->json(['message' => 'عرض السعر غير موجود.'], 422);
+        }
+
+        if ($quote->caseRecord->patient_type === Patient::TYPE_MILITARY) {
+            return response()->json(['message' => 'المسار العسكري لا يتطلب خطاب موافقة.'], 422);
+        }
+
+        if ($quote->status !== Quote::STATUS_ISSUED) {
+            return response()->json(['message' => 'يجب أن يكون العرض صادراً للجهة قبل تسجيل الموافقة.'], 422);
+        }
+
+        return response()->json([
+            'defaults' => $this->approvalLetterDefaults($quote),
+            'hints' => $this->approvalLetterHints($quote),
+            'quote' => $this->approvalLetterQuoteMeta($quote),
+        ]);
+    }
+
+    /** @return array{patient_name: string, approved_amount: float, company_name: string, letter_ref: null, letter_date: null} */
+    private function approvalLetterDefaults(Quote $quote): array
+    {
+        $case = $quote->caseRecord;
+        $patient = $case?->patient;
+
+        return [
+            'patient_name' => $patient?->name ?? $quote->patient_name ?? '',
+            'approved_amount' => QuotePrintPresenter::approvedAmount($quote),
+            'company_name' => $case->company_name ?? $quote->company_name ?? '',
+            'letter_ref' => null,
+            'letter_date' => null,
+        ];
+    }
+
+    /** @return array{expected_net: float, expected_gross: float, has_contract_discount: bool} */
+    private function approvalLetterHints(Quote $quote): array
+    {
+        $printTotals = QuotePrintPresenter::fromQuote($quote);
+
+        return [
+            'expected_net' => (float) $printTotals['display_total'],
+            'expected_gross' => (float) $printTotals['gross_total'],
+            'has_contract_discount' => (bool) $printTotals['has_discount'],
+        ];
+    }
+
+    /** @return array{quote_no: string, total: float, display_total: float, gross_total: float, status: string} */
+    private function approvalLetterQuoteMeta(Quote $quote): array
+    {
+        $printTotals = QuotePrintPresenter::fromQuote($quote);
+
+        return [
+            'quote_no' => $quote->quote_no,
+            'total' => (float) $quote->total,
+            'display_total' => $printTotals['display_total'],
+            'gross_total' => $printTotals['gross_total'],
+            'status' => $quote->status,
+        ];
     }
 
     public function confirm(ProcessApprovalLetterRequest $request): JsonResponse

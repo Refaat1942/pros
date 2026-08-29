@@ -79,7 +79,7 @@
             </div>
             <div class="form-group adj-qty-field">
               <label for="adjItemQty">الكمية</label>
-              <input type="number" class="form-control" id="adjItemQty" min="1" value="1" disabled>
+              <input type="number" class="form-control" id="adjItemQty" min="0.001" step="0.001" value="1" disabled>
             </div>
             <button type="button" class="btn-action primary adj-add-btn" id="btnAddAdjItem" disabled>إضافة</button>
           </div>

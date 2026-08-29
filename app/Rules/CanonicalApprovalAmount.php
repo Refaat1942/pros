@@ -32,11 +32,19 @@ class CanonicalApprovalAmount implements ValidationRule
             return;
         }
 
-        $expected = round(QuotePrintPresenter::approvedAmount($quote), 2);
+        $expectedNet = round(QuotePrintPresenter::approvedAmount($quote), 2);
+        $printTotals = QuotePrintPresenter::fromQuote($quote);
+        $expectedGross = round((float) $printTotals['gross_total'], 2);
         $submitted = round((float) $value, 2);
 
-        if ($submitted !== $expected) {
-            $fail('المبلغ المعتمد لا يطابق مبلغ عرض السعر المطبوع ('.number_format($expected, 2).' ج.م).');
+        if ($submitted === $expectedNet) {
+            return;
         }
+
+        if (! empty($printTotals['has_discount']) && $submitted === $expectedGross) {
+            return;
+        }
+
+        $fail('المبلغ المعتمد لا يطابق مبلغ عرض السعر المطبوع ('.number_format($expectedNet, 2).' ج.م).');
     }
 }

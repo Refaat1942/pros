@@ -40,7 +40,7 @@ class AdminCaseController extends Controller
         abort_if($case->patient_type === Patient::TYPE_MILITARY, 404);
 
         $quote = Quote::query()
-            ->with(['items', 'caseRecord'])
+            ->with(['items', 'caseRecord.techOrderSpec'])
             ->where('case_id', $case->id)
             ->when($case->quote_no, fn ($q) => $q->where('quote_no', $case->quote_no))
             ->orderByDesc('id')

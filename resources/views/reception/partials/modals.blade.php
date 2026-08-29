@@ -70,6 +70,12 @@
             <p style="font-size:12px;color:#6b7280;margin:0;">يدعم جميع أنواع الصور و PDF — حجم أقصى 10 ميجا</p>
           </div>
           <input type="file" id="ocrFileInput" accept="image/*,.pdf" style="display:none;">
+          <div style="margin-top:16px;text-align:center;">
+            <button type="button" id="btnSkipApprovalLetter"
+                    style="padding:10px 20px;border-radius:8px;border:1px solid #94a3b8;background:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#475569;">
+              ⏭️ تخطي خطاب الموافقة — إدخال يدوي
+            </button>
+          </div>
         </div>
 
         {{-- Step 2: Uploading --}}

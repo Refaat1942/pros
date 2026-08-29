@@ -83,7 +83,7 @@ class QuoteController extends Controller
             (string) $request->segment(1),
         );
 
-        $quote->load(['items', 'caseRecord.contractCompany']);
+        $quote->load(['items', 'caseRecord.contractCompany', 'caseRecord.techOrderSpec']);
 
         abort_unless(
             $quote->caseRecord?->patient_type === Patient::TYPE_CIVILIAN,
