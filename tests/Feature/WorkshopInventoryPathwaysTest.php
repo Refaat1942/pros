@@ -196,6 +196,42 @@ class WorkshopInventoryPathwaysTest extends TestCase
         $this->assertTrue($case->isWorkshopAssignmentApproved());
     }
 
+    public function test_assign_then_approve_separate_requests(): void
+    {
+        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $workshopUser = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $section = WorkshopSection::create([
+            'name' => 'تجميع',
+            'code' => 'assembly',
+            'sort' => 2,
+            'active' => true,
+        ]);
+        $section->technicians()->sync([$tech->id]);
+
+        $this->stockItem('RM-002', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0102']);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-002', 'name' => 'صنف RM-002', 'qty' => 1],
+        ]);
+
+        $this->actingAs($workshopUser)
+            ->postJson("/workshop/workshop/{$case->id}/assign", [
+                'workshop_section_id' => $section->id,
+                'assigned_technician_id' => $tech->id,
+            ])
+            ->assertOk();
+
+        $this->actingAs($workshopUser)
+            ->postJson("/workshop/workshop/{$case->id}/approve-assignment")
+            ->assertOk();
+
+        $case->refresh();
+        $this->assertTrue($case->isWorkshopAssignmentApproved());
+    }
+
     public function test_dispense_blocked_without_production_assignment_approval(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);
