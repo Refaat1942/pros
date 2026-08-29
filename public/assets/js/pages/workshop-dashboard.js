@@ -126,15 +126,33 @@
       });
   }
 
+  function readAssignmentPayload() {
+    var sectionEl = $('workshopAssignSection');
+    var techEl = $('workshopAssignTechnician');
+    var sectionId = sectionEl && sectionEl.value ? parseInt(sectionEl.value, 10) : null;
+    var techId = techEl && techEl.value ? parseInt(techEl.value, 10) : null;
+    return {
+      workshop_section_id: sectionId,
+      assigned_technician_id: techId,
+    };
+  }
+
   function approveWorkshopAssignment(caseId, triggerBtn) {
     if (!window.axios || !caseId) return;
+
+    var payload = readAssignmentPayload();
+    if (!payload.workshop_section_id || !payload.assigned_technician_id) {
+      toast('حدّد قسم الإنتاج والفني قبل الاعتماد.', true);
+      return;
+    }
+
     if (!window.confirm('تأكيد اعتماد التخصيص؟\n\nبعد الاعتماد يمكن للمخزن صرف المواد لهذا الأمر.')) return;
 
     if (triggerBtn) triggerBtn.disabled = true;
     var formBtn = $('btnApproveWorkshopAssignment');
     if (formBtn) formBtn.disabled = true;
 
-    axios.post('/workshop/workshop/' + caseId + '/approve-assignment')
+    axios.post('/workshop/workshop/' + caseId + '/approve-assignment', payload)
       .then(function (res) {
         toast(res.data.message || 'تم اعتماد التخصيص');
         refreshAssignmentQueue();

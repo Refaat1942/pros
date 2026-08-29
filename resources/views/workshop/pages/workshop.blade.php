@@ -59,7 +59,7 @@
     <div class="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-violet-100 bg-violet-50">
             <h3 class="font-bold text-violet-900 text-base">👤 تخصيص الفني وقسم الإنتاج</h3>
-            <p class="text-xs text-violet-700 mt-1">اختر أمر الشغل من الطابور أو الجدول ثم حدّد القسم والفني — التخصيص يتم من قسم الإنتاج وليس من مكتب التشغيل.</p>
+            <p class="text-xs text-violet-700 mt-1">اختر أمر الشغل من الطابور ثم حدّد القسم والفني. «حفظ التخصيص» للتجربة فقط — «حفظ واعتماد التخصيص» يُرسل للمخزن.</p>
         </div>
         <div class="p-4 flex flex-wrap gap-4 items-end">
             <div class="min-w-[200px]">
@@ -85,7 +85,7 @@
             </button>
             <button type="button" id="btnApproveWorkshopAssignment"
                     class="rounded-xl bg-emerald-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-emerald-700 transition-colors">
-                ✓ اعتماد التخصيص
+                ✓ حفظ واعتماد التخصيص
             </button>
         </div>
     </div>

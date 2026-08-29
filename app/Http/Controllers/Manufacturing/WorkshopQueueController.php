@@ -120,9 +120,22 @@ class WorkshopQueueController extends Controller
         ]);
     }
 
-    public function approveAssignment(CaseRecord $case): JsonResponse
+    public function approveAssignment(Request $request, CaseRecord $case): JsonResponse
     {
-        $case = $this->workshopAssignment->approveAssignment($case);
+        $validated = $request->validate([
+            'workshop_section_id' => ['nullable', 'integer', 'exists:workshop_sections,id'],
+            'assigned_technician_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        if ($validated['workshop_section_id'] !== null || $validated['assigned_technician_id'] !== null) {
+            $case = $this->workshopAssignment->assignOnApprove(
+                $case,
+                $validated['workshop_section_id'] ?? $case->workshop_section_id,
+                $validated['assigned_technician_id'] ?? $case->assigned_technician_id,
+            );
+        }
+
+        $case = $this->workshopAssignment->approveAssignment($case->fresh());
 
         return response()->json([
             'message' => 'تم اعتماد التخصيص — يمكن للمخزن صرف المواد.',
