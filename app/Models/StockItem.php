@@ -286,6 +286,44 @@ class StockItem extends Model
     }
 
     /**
+     * خريطة كود BOM → الباركود القابل للمسح (displayBarcode) لكل صنف.
+     *
+     * @return array<string, string>
+     */
+    public static function mapDisplayBarcodesByOperationalCodes(array $codes): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map('trim', $codes))));
+
+        if ($codes === []) {
+            return [];
+        }
+
+        $query = static::query()->where(function ($builder) use ($codes) {
+            $builder->whereIn('alt_codes', $codes)
+                ->orWhereIn('code', $codes);
+
+            if (Schema::hasColumn('stock_items', 'catalog_number')) {
+                $builder->orWhereIn('catalog_number', $codes);
+            }
+        });
+
+        $map = [];
+        foreach ($query->get() as $item) {
+            $display = $item->displayBarcode();
+            if ($display === null) {
+                continue;
+            }
+            foreach ($codes as $requested) {
+                if ($item->matchesPickerCode($requested)) {
+                    $map[$requested] = $display;
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * صفوف اختيار الصنف في التوصيف والمعدلات — code = كود الصنف (alt_codes).
      *
      * @return list<array{code: string, catalog_code: string, name: string, spec: ?string, uom: string, qty: int, reserved: int, available_max: int}>

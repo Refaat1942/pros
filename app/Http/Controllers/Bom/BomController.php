@@ -304,9 +304,8 @@ class BomController extends Controller
             && $visibility->isListEnabledForUser($user, 'technical_bom_items');
 
         $barcodes = $bom->relationLoaded('items') && $bom->items->isNotEmpty()
-            ? StockItem::mapByOperationalCodes(
+            ? StockItem::mapDisplayBarcodesByOperationalCodes(
                 $bom->items->pluck('stock_item_code')->all(),
-                'barcode',
             )
             : [];
 

@@ -55,6 +55,15 @@
             justify-content: space-between;
             gap: 12px;
         }
+        .compact-work-order .wo-title { font-size: 15pt; margin: 6px 0 10px; }
+        .compact-work-order .meta-table { font-size: 10pt; }
+        .compact-work-order .items-table { margin-top: 8px; }
+        .compact-work-order .items-table tbody tr td { padding: 2px 4px; font-size: 10pt; }
+        .compact-work-order .staff-row { margin: 8px 0 6px; font-size: 10.5pt; }
+        .compact-work-order .trial-row { margin: 6px 0 8px; font-size: 10pt; }
+        .compact-work-order .labor-table .h-row { height: 7mm; }
+        .compact-work-order .footer-grid { margin-top: 8px; font-size: 10pt; }
+        .compact-work-order .footer-note { font-size: 10pt; margin-top: 6px; }
     </style>
 </head>
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
@@ -63,7 +72,7 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet">
+<div class="sheet compact-work-order">
     <header class="doc-header">
         <div class="header-right">
             @foreach (app(\App\Services\SettingService::class)->branding()['lines'] as $line)
@@ -128,7 +137,7 @@
             @empty
                 <tr><td colspan="3">—</td></tr>
             @endforelse
-            @for ($i = max(0, 8 - $items->count()); $i > 0; $i--)
+            @for ($i = max(0, 4 - $items->count()); $i > 0; $i--)
                 <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
             @endfor
         </tbody>
@@ -163,7 +172,7 @@
             </tr>
         </thead>
         <tbody>
-            @for ($r = 0; $r < 3; $r++)
+            @for ($r = 0; $r < 2; $r++)
                 <tr class="h-row">
                     <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
                 </tr>

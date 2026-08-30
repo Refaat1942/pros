@@ -10,6 +10,7 @@ use App\Services\BomService;
 use App\Services\WorkshopAssignmentService;
 use App\Services\WorkshopSectionService;
 use App\Services\WorkshopTrackingService;
+use App\Support\IssueVoucherPresenter;
 use App\Support\ManufacturingDeskCaseFormatter;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,8 @@ class WorkshopQueueController extends Controller
                     'patient:id,patient_code,name',
                     'workshopSection:id,name,code',
                     'assignedTechnician:id,name',
+                    'workshopAssignments.workshopSection:id,name,code',
+                    'workshopAssignments.assignedTechnician:id,name',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,qty',
                 ])
@@ -71,6 +74,8 @@ class WorkshopQueueController extends Controller
                     'patient:id,patient_code,name',
                     'workshopSection:id,name,code',
                     'assignedTechnician:id,name',
+                    'workshopAssignments.workshopSection:id,name,code',
+                    'workshopAssignments.assignedTechnician:id,name',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,qty',
                 ])
@@ -101,6 +106,9 @@ class WorkshopQueueController extends Controller
     public function assign(Request $request, CaseRecord $case): JsonResponse
     {
         $validated = $request->validate([
+            'assignments' => ['sometimes', 'array', 'min:1'],
+            'assignments.*.workshop_section_id' => ['required', 'integer', 'exists:workshop_sections,id'],
+            'assignments.*.assigned_technician_id' => ['required', 'integer', 'exists:users,id'],
             'workshop_section_id' => ['nullable', 'integer', 'exists:workshop_sections,id'],
             'assigned_technician_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
@@ -109,12 +117,20 @@ class WorkshopQueueController extends Controller
             $case,
             $validated['workshop_section_id'] ?? null,
             $validated['assigned_technician_id'] ?? null,
+            $validated['assignments'] ?? null,
         );
 
         return response()->json([
             'message' => 'تم تخصيص أمر الشغل — بانتظار اعتماد التخصيص.',
             'case' => ManufacturingDeskCaseFormatter::format(
-                $case->load(['patient:id,patient_code,name', 'workshopSection:id,name', 'assignedTechnician:id,name', 'bom.items']),
+                $case->load([
+                    'patient:id,patient_code,name',
+                    'workshopSection:id,name',
+                    'assignedTechnician:id,name',
+                    'workshopAssignments.workshopSection:id,name',
+                    'workshopAssignments.assignedTechnician:id,name',
+                    'bom.items',
+                ]),
                 'workshop.work-order.print',
             ),
         ]);
@@ -123,15 +139,19 @@ class WorkshopQueueController extends Controller
     public function approveAssignment(Request $request, CaseRecord $case): JsonResponse
     {
         $validated = $request->validate([
+            'assignments' => ['sometimes', 'array', 'min:1'],
+            'assignments.*.workshop_section_id' => ['required', 'integer', 'exists:workshop_sections,id'],
+            'assignments.*.assigned_technician_id' => ['required', 'integer', 'exists:users,id'],
             'workshop_section_id' => ['nullable', 'integer', 'exists:workshop_sections,id'],
             'assigned_technician_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
-        if ($request->filled('workshop_section_id') || $request->filled('assigned_technician_id')) {
+        if ($request->filled('assignments') || $request->filled('workshop_section_id') || $request->filled('assigned_technician_id')) {
             $case = $this->workshopAssignment->assignOnApprove(
                 $case,
                 $request->integer('workshop_section_id') ?: $case->workshop_section_id,
                 $request->integer('assigned_technician_id') ?: $case->assigned_technician_id,
+                $validated['assignments'] ?? null,
             );
         }
 
@@ -140,7 +160,14 @@ class WorkshopQueueController extends Controller
         return response()->json([
             'message' => 'تم اعتماد التخصيص — يمكن للمخزن صرف المواد.',
             'case' => ManufacturingDeskCaseFormatter::format(
-                $case->load(['patient:id,patient_code,name', 'workshopSection:id,name', 'assignedTechnician:id,name', 'bom.items']),
+                $case->load([
+                    'patient:id,patient_code,name',
+                    'workshopSection:id,name',
+                    'assignedTechnician:id,name',
+                    'workshopAssignments.workshopSection:id,name',
+                    'workshopAssignments.assignedTechnician:id,name',
+                    'bom.items',
+                ]),
                 'workshop.work-order.print',
             ),
         ]);
@@ -227,6 +254,20 @@ class WorkshopQueueController extends Controller
             'message' => 'تم التصنيع — يُرجى توجيه العميل إلى المخزن للتسليم.',
             'case' => ManufacturingDeskCaseFormatter::format($case, 'workshop.work-order.print'),
             'bom' => $bom->only(['id', 'bom_no', 'stage', 'finished_at']),
+        ]);
+    }
+
+    /**
+     * إذن صرف / استلام من المخزن — للطباعة من قسم الإنتاج قبل أو بعد الاعتماد.
+     */
+    public function printIssueVoucher(CaseRecord $case): View
+    {
+        $case->load('bom');
+        abort_unless($case->bom, 404, 'لا توجد قائمة مواد لهذه الحالة.');
+
+        return view('prints.issue-voucher', [
+            'voucher' => IssueVoucherPresenter::fromBom($case->bom),
+            'autoPrint' => true,
         ]);
     }
 

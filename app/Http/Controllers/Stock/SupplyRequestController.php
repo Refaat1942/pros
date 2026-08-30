@@ -11,10 +11,24 @@ use App\Services\SupplyRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class SupplyRequestController extends Controller
 {
     public function __construct(private readonly SupplyRequestService $supplyRequestService) {}
+
+    public function printOpen(): View
+    {
+        $lines = $this->supplyRequestService->listOpenLines()
+            ->map(fn (SupplyRequestLine $line) => $this->supplyRequestService->formatLine($line))
+            ->values();
+
+        return view('prints.supply-request-list', [
+            'lines' => $lines,
+            'generatedAt' => now(),
+            'autoPrint' => true,
+        ]);
+    }
 
     public function index(): JsonResponse
     {

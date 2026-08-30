@@ -52,14 +52,14 @@ final class Code128
     ): string {
         $width = max(20.0, $moduleWidth);
 
-        while ($width >= 0.5) {
+        while ($width >= 0.85) {
             if (self::estimatedWidthPx($data, $width, $quietZone) <= $maxWidthPx) {
                 return self::renderSvg($data, $height, $width, $quietZone);
             }
             $width = round($width - 0.05, 2);
         }
 
-        return self::renderSvg($data, $height, 0.5, $quietZone);
+        return self::renderSvg($data, $height, 0.85, $quietZone);
     }
 
     private static function estimatedWidthPx(string $data, float $moduleWidth, int $quietZone): float

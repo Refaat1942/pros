@@ -31,10 +31,12 @@ class SupplyRequestLine extends Model
         'status',
         'resolved_stock_item_id',
         'stock_movement_id',
+        'received_at',
     ];
 
     protected $casts = [
         'qty' => 'integer',
+        'received_at' => 'datetime',
     ];
 
     public function supplyRequest(): BelongsTo

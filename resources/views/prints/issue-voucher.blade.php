@@ -20,66 +20,72 @@
     <title>إذن صرف — {{ $voucherNo }}</title>
     @include('prints.partials.a4-base')
     <style>
-        .spec-section { margin: 12px 0 16px; }
+        .compact-voucher .doc-title { font-size: 14pt; margin-bottom: 8px; }
+        .compact-voucher .meta-table { font-size: 10pt; }
+        .spec-section { margin: 8px 0 10px; }
         .spec-title {
             text-align: center;
             font-weight: 800;
-            font-size: 13pt;
-            margin-bottom: 6px;
+            font-size: 12pt;
+            margin-bottom: 4px;
         }
         .spec-group-label {
             font-weight: 800;
-            font-size: 12pt;
-            margin: 8px 0 4px;
-            padding: 4px 8px;
+            font-size: 11pt;
+            margin: 6px 0 4px;
+            padding: 3px 6px;
             background: #f5f5f5;
             border: 1px solid #ccc;
-            border-radius: 4px;
         }
         .spec-layout {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             border: 1.5px solid #000;
-            min-height: 36mm;
-            margin-bottom: 8px;
+            min-height: 22mm;
+            margin-bottom: 6px;
         }
         .spec-sketch {
-            width: 32mm;
+            width: 28mm;
             border-left: 1.5px solid #000;
             flex-shrink: 0;
         }
-        .spec-lines { flex: 1; padding: 4px 6px; }
+        .spec-lines { flex: 1; padding: 3px 5px; }
         .spec-line {
             border-bottom: 1px dotted #888;
-            min-height: 5mm;
-            font-size: 11pt;
+            min-height: 4mm;
+            font-size: 10pt;
             padding: 1px 2px;
         }
         .notes-box {
             border: 1px solid #000;
-            padding: 6px 8px;
-            font-size: 11pt;
-            margin-top: 6px;
+            padding: 4px 6px;
+            font-size: 10pt;
+            margin-top: 4px;
         }
+        .compact-voucher .items-table { font-size: 10pt; }
         .voucher-signatures {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14px 24px;
-            margin-top: 28px;
-            font-size: 11pt;
+            gap: 10px 16px;
+            margin-top: 16px;
+            font-size: 10pt;
             font-weight: 700;
         }
         .voucher-signatures .sig-block { text-align: center; }
         .voucher-signatures .sig-line {
-            margin-top: 22mm;
+            margin-top: 14mm;
             border-top: 1.5px solid #000;
             padding-top: 4px;
         }
         .voucher-signatures .sig-meta {
-            font-size: 10pt;
+            font-size: 9pt;
             font-weight: 600;
             margin-top: 4px;
             color: #333;
+        }
+        @media print {
+            .compact-voucher { page-break-inside: avoid; max-height: 277mm; overflow: hidden; }
+            .compact-voucher .items-table tbody tr { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -89,7 +95,7 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet avoid-break issue-voucher-sheet">
+<div class="sheet issue-voucher-sheet compact-voucher">
     @include('prints.partials.org-header', ['dept' => 'قسم المخازن'])
 
     <h1 class="doc-title issue-voucher-title">إذن صرف مواد — رقم ( <span class="fill">{{ $voucherNo }}</span> )</h1>
