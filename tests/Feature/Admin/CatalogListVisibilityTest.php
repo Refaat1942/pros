@@ -123,6 +123,46 @@ class CatalogListVisibilityTest extends TestCase
         $this->assertArrayNotHasKey('wac', $filtered);
     }
 
+    public function test_filter_item_fields_preserves_catalog_form_meta_for_edit_modal(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $visibility = app(CatalogListVisibilityService::class);
+
+        $visibility->update([
+            'roles' => [
+                'admin' => [
+                    'admin_catalog' => [
+                        'enabled' => true,
+                        'columns' => ['code', 'name'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $filtered = $visibility->filterItemFields([
+            'id' => 42,
+            'code' => '5/43',
+            'name' => 'صنف',
+            'suppliers' => [['id' => 7, 'name' => 'مورد أ']],
+            'catalog_extra_prices' => [['id' => '12', 'amount' => 150.0]],
+            'price_tiers' => [['amount' => 100.0, 'qty' => 5]],
+            'opening_qty' => 2,
+            'price' => 100.0,
+            'is_quick_dispense' => true,
+            'attributes_map' => ['color' => 'أحمر'],
+            'wac' => 95.5,
+        ], $admin->fresh(), 'admin_catalog');
+
+        $this->assertSame(7, $filtered['suppliers'][0]['id']);
+        $this->assertSame(150.0, $filtered['catalog_extra_prices'][0]['amount']);
+        $this->assertSame(5, $filtered['price_tiers'][0]['qty']);
+        $this->assertSame(2, $filtered['opening_qty']);
+        $this->assertSame(100.0, $filtered['price']);
+        $this->assertTrue($filtered['is_quick_dispense']);
+        $this->assertSame('أحمر', $filtered['attributes_map']['color']);
+        $this->assertArrayNotHasKey('wac', $filtered);
+    }
+
     public function test_filter_item_fields_preserves_alt_codes_and_scannable_meta_when_column_hidden(): void
     {
         $admin = $this->userWithRole('admin');

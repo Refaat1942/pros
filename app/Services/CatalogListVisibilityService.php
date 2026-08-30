@@ -197,18 +197,56 @@ class CatalogListVisibilityService
     private function clientFilterMetaFields(string $profile): array
     {
         return match ($profile) {
-            'admin_catalog' => [
-                'category_id',
-                'category',
-                'barcode',
-                'alt_codes',
-                'operational_code',
-                'display_barcode',
-                'has_scannable_barcode',
-                'min_qty',
-            ],
+            'admin_catalog' => array_merge(
+                [
+                    'category_id',
+                    'category',
+                    'barcode',
+                    'alt_codes',
+                    'operational_code',
+                    'display_barcode',
+                    'has_scannable_barcode',
+                    'min_qty',
+                ],
+                $this->adminCatalogFormMetaFields(),
+            ),
             default => [],
         };
+    }
+
+    /**
+     * حقول نموذج تعديل الصنف — تُمرَّر في data-item حتى لو العمود غير معروض في الجدول.
+     *
+     * @return list<string>
+     */
+    private function adminCatalogFormMetaFields(): array
+    {
+        return [
+            'page_number',
+            'uom',
+            'opening_qty',
+            'addition',
+            'discount',
+            'catalog_balance',
+            'balance',
+            'warehouse_qty',
+            'qty',
+            'reserved',
+            'price',
+            'highest_price',
+            'is_quick_dispense',
+            'spec',
+            'expiry_date',
+            'wac',
+            'status',
+            'suppliers',
+            'prices',
+            'price_tiers',
+            'catalog_extra_prices',
+            'attributes',
+            'attributes_map',
+            'picker_code',
+        ];
     }
 
     /**

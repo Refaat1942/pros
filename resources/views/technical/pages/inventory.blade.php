@@ -18,6 +18,13 @@
           </div>
         </div>
 
+        <p class="catalog-table-hint" style="margin:12px 16px 0;padding:10px 14px;background:rgba(14,116,144,0.08);border:1px solid rgba(14,116,144,0.2);border-radius:8px;font-size:13px;line-height:1.5;">
+          <strong>الرصيد المتاح ≠ رصيد المخزن:</strong>
+          <strong>رصيد المخزن</strong> = الكمية الفعلية في المخزن.
+          <strong>محجوز</strong> = مربوط بطلبات إنتاج قيد التنفيذ.
+          <strong>الرصيد المتاح</strong> = رصيد المخزن − المحجوز (مثال: 10 − 2 = 8).
+        </p>
+
         <div class="inventory-toolbar">
           <input type="text" id="inventorySearch" placeholder="بحث بالكود، الاسم، أو الباركود (امسح و Enter)...">
           <div class="filter-pills" id="inventoryFilters">
