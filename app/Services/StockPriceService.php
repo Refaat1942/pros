@@ -27,6 +27,7 @@ class StockPriceService
         Supplier $supplier,
         string $invoiceNo,
         Carbon $receivedAt,
+        ?int $supplyRequestLineId = null,
     ): StockItemPrice {
         $seq = $item->prices()->count() + 1;
         $priceRef = sprintf('PR-%s-%d', $item->code, $seq);
@@ -39,6 +40,7 @@ class StockPriceService
             'qty' => $qty,
             'invoice_no' => $invoiceNo,
             'received_at' => $receivedAt->toDateString(),
+            'supply_request_line_id' => $supplyRequestLineId,
         ]);
     }
 

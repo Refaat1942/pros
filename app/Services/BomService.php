@@ -34,6 +34,7 @@ class BomService
     public function __construct(
         private readonly BarcodeValidationService $barcodeValidation,
         private readonly StockPriceService $stockPriceService,
+        private readonly PriceBatchDispenseService $priceBatchDispenseService,
         private readonly WorkflowService $workflowService,
         private readonly WorkOrderService $workOrderService,
         private readonly FinancialPostingService $financialPostingService,
@@ -668,17 +669,13 @@ class BomService
     }
 
     /**
-     * عند الصرف: تثبيت WAC الحالي على كل بند — مصدر واحد للتكلفة والحركة المخزنية.
+     * عند الصرف: تثبيت تكلفة الوحدة من دفعات الأسعار المخصصة (FIFO).
      */
-    private function refreshUnitCostsAtDispense(Bom $bom): void
+    private function stampDispenseUnitCostFromAllocations(BomItem $bomItem, array $allocations): void
     {
-        $bom->loadMissing('items');
-
-        foreach ($bom->items as $bomItem) {
-            $bomItem->update([
-                'unit_cost' => $this->stockPriceService->wacUnitPrice($bomItem->stock_item_code),
-            ]);
-        }
+        $bomItem->update([
+            'unit_cost' => $this->priceBatchDispenseService->weightedUnitCost($allocations),
+        ]);
     }
 
     /**
@@ -913,7 +910,6 @@ class BomService
                 app(WorkshopAssignmentService::class)->assertDispenseAllowed($case);
             }
 
-            $this->refreshUnitCostsAtDispense($bom);
             $bom->refresh()->load('items');
 
             $groups = BomItemAggregator::groupModels($bom->items);
@@ -932,23 +928,35 @@ class BomService
 
             foreach ($groups as $code => $rows) {
                 foreach ($rows as $bomItem) {
-                    $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true)
+                    $stockItem = StockItem::whereKey(
+                        StockItem::findByOperationalCode($bomItem->stock_item_code, true)?->id
+                    )->lockForUpdate()->first()
                         ?? abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
 
                     $qty = (float) $bomItem->qty;
-                    $balanceAfter = (float) $stockItem->qty - $qty;
+                    $allocations = $this->priceBatchDispenseService->allocateForDispense($stockItem, $qty);
+                    $this->priceBatchDispenseService->applyDecrements($allocations);
+                    $this->stampDispenseUnitCostFromAllocations($bomItem, $allocations);
 
-                    StockMovement::create([
-                        'stock_item_id' => $stockItem->id,
-                        'movement_type' => StockMovement::TYPE_ISSUE,
-                        'quantity' => -$qty,
-                        'unit_cost' => $bomItem->unit_cost,
-                        'balance_after' => $balanceAfter,
-                        'reference_type' => 'bom',
-                        'reference_id' => $bom->id,
-                        'performed_by_user_id' => $performedById,
-                        'moved_at' => now(),
-                    ]);
+                    $runningBalance = (float) $stockItem->qty;
+
+                    foreach ($allocations as $alloc) {
+                        $allocQty = (float) $alloc['qty'];
+                        $runningBalance -= $allocQty;
+
+                        StockMovement::create([
+                            'stock_item_id' => $stockItem->id,
+                            'stock_item_price_id' => $alloc['batch_id'],
+                            'movement_type' => StockMovement::TYPE_ISSUE,
+                            'quantity' => -$allocQty,
+                            'unit_cost' => $alloc['unit_price'],
+                            'balance_after' => $runningBalance,
+                            'reference_type' => 'bom',
+                            'reference_id' => $bom->id,
+                            'performed_by_user_id' => $performedById,
+                            'moved_at' => now(),
+                        ]);
+                    }
 
                     $stockItem->decrement('qty', $qty);
 

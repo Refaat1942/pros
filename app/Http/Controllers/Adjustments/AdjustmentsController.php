@@ -10,6 +10,7 @@ use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\StockItem;
 use App\Services\AdjustmentsService;
+use App\Services\PriceBatchDispenseService;
 use App\Services\PathwayTransitionMessageService;
 use App\Support\StockCatalogPicker;
 use App\Support\StockItemUomLookup;
@@ -28,6 +29,7 @@ class AdjustmentsController extends Controller
     public function __construct(
         private readonly AdjustmentsService $adjustmentsService,
         private readonly PathwayTransitionMessageService $transitions,
+        private readonly PriceBatchDispenseService $priceBatchDispense,
     ) {}
 
     /**
@@ -89,12 +91,14 @@ class AdjustmentsController extends Controller
                 'available' => $row['available_max'] ?? 0,
                 'uom' => $row['uom'] ?? 'قطعة',
                 'price' => (float) ($row['price'] ?? 0),
+                'price_tier_alert' => $this->priceBatchDispense->multiPriceAlertForCode($row['code']),
             ]);
 
         return response()->json([
             'case' => $this->formatCase($case),
             'stock_catalog' => $stockCatalog,
             'spec_group_matcher' => \App\Support\StockKitGroups::forClientMatcher(),
+            'price_tier_alerts' => $this->priceTierAlertsForCase($case),
         ]);
     }
 
@@ -108,6 +112,9 @@ class AdjustmentsController extends Controller
                 'id' => $bom->id,
                 'items' => $this->mapBomItems($bom->items)->values(),
             ],
+            'price_tier_alerts' => $this->priceTierAlertsForCodes(
+                collect($request->validated('items'))->pluck('stock_item_code')->all()
+            ),
         ], 201);
     }
 
@@ -197,6 +204,8 @@ class AdjustmentsController extends Controller
     /** @param  array<string, string>  $uomMap  @param  array<string, mixed>  $priceMap */
     private function formatBomItem(BomItem $item, array $uomMap = [], array $priceMap = []): array
     {
+        $alert = $this->priceBatchDispense->multiPriceAlertForCode($item->stock_item_code);
+
         return [
             'id' => $item->id,
             'stock_item_code' => $item->stock_item_code,
@@ -207,6 +216,37 @@ class AdjustmentsController extends Controller
             'source' => $item->source,
             'group_label' => $item->group_label,
             'read_only' => $item->source === BomItem::SOURCE_SPEC,
+            'price_tier_alert' => $alert,
         ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function priceTierAlertsForCase(CaseRecord $case): array
+    {
+        if (! $case->bom?->items) {
+            return [];
+        }
+
+        return $this->priceTierAlertsForCodes(
+            $case->bom->items->pluck('stock_item_code')->unique()->all()
+        );
+    }
+
+    /**
+     * @param  list<string>  $codes
+     * @return list<array<string, mixed>>
+     */
+    private function priceTierAlertsForCodes(array $codes): array
+    {
+        $alerts = [];
+
+        foreach ($codes as $code) {
+            $alert = $this->priceBatchDispense->multiPriceAlertForCode($code);
+            if ($alert !== null) {
+                $alerts[] = $alert;
+            }
+        }
+
+        return $alerts;
     }
 }

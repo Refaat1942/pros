@@ -12,6 +12,12 @@
           <p class="adj-rework-text" id="adjReworkReason" style="margin:0;font-size:13px;color:#7f1d1d;white-space:pre-wrap;line-height:1.6;"></p>
         </div>
 
+        <div id="adjPriceTierBanner" class="adj-price-tier-banner" hidden
+             style="margin:0 0 14px;padding:12px 14px;border-radius:10px;border:1px solid #bfdbfe;background:#eff6ff;">
+          <p style="margin:0 0 6px;font-weight:700;color:#1e40af;">💰 تنبيه: أصناف بأكثر من سعر شراء</p>
+          <ul id="adjPriceTierList" style="margin:0;padding:0 0 0 18px;font-size:13px;color:#1e3a8a;line-height:1.6;"></ul>
+        </div>
+
         <div id="adjPendingBanner" class="adj-pending-banner" hidden
              style="margin:0 0 14px;padding:12px 14px;border-radius:10px;border:1px solid #fde68a;background:#fffbeb;">
           <p style="margin:0;font-size:13px;color:#92400e;font-weight:700;">⏳ يوجد طلب تعديل معلّق — بانتظار موافقة الإدارة.</p>

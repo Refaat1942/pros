@@ -21,6 +21,7 @@ class StockItemPrice extends Model
         'qty',
         'invoice_no',
         'received_at',
+        'supply_request_line_id',
     ];
 
     protected $casts = [
@@ -37,5 +38,10 @@ class StockItemPrice extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function supplyRequestLine(): BelongsTo
+    {
+        return $this->belongsTo(SupplyRequestLine::class);
     }
 }

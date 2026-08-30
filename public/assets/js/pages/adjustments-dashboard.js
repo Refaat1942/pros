@@ -722,6 +722,34 @@
       });
   }
 
+  function renderPriceTierBanner(alerts) {
+    var banner = $('adjPriceTierBanner');
+    var list = $('adjPriceTierList');
+    if (!banner || !list) return;
+
+    if (!alerts || !alerts.length) {
+      banner.hidden = true;
+      list.innerHTML = '';
+      return;
+    }
+
+    banner.hidden = false;
+    list.innerHTML = alerts.map(function (a) {
+      return '<li>' + esc(a.message || '') + '</li>';
+    }).join('');
+  }
+
+  function collectPriceTierAlertsFromItems(items) {
+    var alerts = [];
+    var seen = {};
+    (items || []).forEach(function (it) {
+      if (!it || !it.price_tier_alert || seen[it.stock_item_code]) return;
+      seen[it.stock_item_code] = true;
+      alerts.push(it.price_tier_alert);
+    });
+    return alerts;
+  }
+
   function renderReworkBanner(rework) {
     var banner = $('adjReworkBanner');
     if (!banner) return;
@@ -770,6 +798,9 @@
           renderWrittenItemsBlock();
 
           renderReworkBanner(activeCase.rework || null);
+          renderPriceTierBanner(
+            res.data.price_tier_alerts || collectPriceTierAlertsFromItems((activeCase.bom && activeCase.bom.items) || [])
+          );
           resetItemPicker();
           refreshItemPicker();
           applyModalMode();
@@ -812,6 +843,7 @@
     editRequestItems = [];
     resetItemPicker();
     renderReworkBanner(null);
+    renderPriceTierBanner([]);
     applyModalMode();
   }
 
@@ -878,6 +910,10 @@
           activeCase.bom.items = (res.data.bom && res.data.bom.items) || [];
         }
         renderBomItems((res.data.bom && res.data.bom.items) || []);
+        if (res.data.price_tier_alerts && res.data.price_tier_alerts.length) {
+          var merged = collectPriceTierAlertsFromItems((res.data.bom && res.data.bom.items) || []);
+          renderPriceTierBanner(merged);
+        }
         clearPickerSelection();
         refreshItemPicker();
         if (closePopup) closeItemPicker();

@@ -239,6 +239,8 @@ class StockCatalogService
                 'id' => (string) $p->id,
                 'label' => $p->label,
                 'amount' => (float) $p->amount,
+                'qty' => (float) $p->qty,
+                'from_supply' => $p->supply_request_line_id !== null,
             ])->values()->all(),
             'suppliers' => $item->suppliers->map(fn (Supplier $s) => [
                 'id' => $s->id,

@@ -33,8 +33,9 @@ class StockReceiveService
         ?string $documentPath = null,
         ?string $documentOriginalName = null,
         ?string $documentMime = null,
+        ?int $supplyRequestLineId = null,
     ): StockMovement {
-        return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $performedBy, $documentPath, $documentOriginalName, $documentMime) {
+        return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $performedBy, $documentPath, $documentOriginalName, $documentMime, $supplyRequestLineId) {
             $item = StockItem::lockForUpdate()->findOrFail($item->id);
 
             $before = [
@@ -44,8 +45,13 @@ class StockReceiveService
 
             $balanceAfter = $item->qty + $qty;
 
+            $batch = $this->stockPriceService->createPriceBatch(
+                $item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $supplyRequestLineId
+            );
+
             $movement = StockMovement::create([
                 'stock_item_id' => $item->id,
+                'stock_item_price_id' => $batch->id,
                 'movement_type' => StockMovement::TYPE_RECEIVE,
                 'quantity' => $qty,
                 'unit_cost' => $unitPrice,
@@ -60,10 +66,6 @@ class StockReceiveService
                 'performed_by_user_id' => $performedBy->id,
                 'moved_at' => $movedAt,
             ]);
-
-            $this->stockPriceService->createPriceBatch(
-                $item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt
-            );
 
             $this->supplierDebtService->increaseDue($supplier, round($qty * $unitPrice, 2));
             app(SupplierService::class)->attachStockItem($supplier, $item);
