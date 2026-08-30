@@ -1452,9 +1452,10 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             return tiers.map(function (t, idx) {
                 var isPrimary = catalogAmountsEqual(t.amount, item.price);
                 return {
-                    label: isPrimary ? 'السعر الأساسي' : 'سعر إضافي ' + (idx + 1),
+                    label: isPrimary ? 'السعر الأساسي' : 'سعر ' + formatCatalogPrice(t.amount),
                     amount: parseFloat(t.amount) || 0,
                     qty: parseFloat(t.qty) || 0,
+                    from_supply: !!t.from_supply,
                     primary: isPrimary,
                 };
             }).filter(function (r) { return r.amount > 0; });
@@ -1489,14 +1490,16 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         var html = '<p class="catalog-sales-hint">' + (stats.period_label || '') + ' — إجمالي: '
             + (stats.total_sale_times || 0) + ' حالة · ' + (stats.total_sold_qty || 0) + ' قطعة</p>'
             + '<table class="catalog-prices-table catalog-sales-stats-table"><thead><tr>'
-            + '<th>السعر (ج.م)</th><th>مسجّل</th><th>مرات البيع</th><th>الكمية المباعة</th>'
+            + '<th>السعر (ج.م)</th><th>مسجّل</th><th>رصيد المخزن</th><th>مرات البيع</th><th>الكمية المباعة</th>'
             + '</tr></thead><tbody>'
             + rows.map(function (row) {
                 var timesClass = row.sale_times > 0 ? 'stat-hit' : 'stat-zero';
                 var qtyClass = row.sold_qty > 0 ? 'stat-hit' : 'stat-zero';
+                var whClass = (row.warehouse_qty || 0) > 0 ? 'stat-hit' : 'stat-zero';
                 return '<tr>'
                     + '<td class="price-val">' + formatCatalogPrice(row.unit_price) + '</td>'
                     + '<td>' + (row.registered ? '✓' : '—') + '</td>'
+                    + '<td class="' + whClass + '">' + formatTierQtyDisplay(row.warehouse_qty || 0) + '</td>'
                     + '<td class="' + timesClass + '">' + row.sale_times + '</td>'
                     + '<td class="' + qtyClass + '">' + row.sold_qty + '</td>'
                     + '</tr>';
@@ -1517,9 +1520,10 @@ window.__STOCK_CATEGORIES = @json($categories->values());
 
         var prices = itemAllPrices(item);
         var pricesHtml = prices.length
-            ? '<table class="catalog-prices-table"><thead><tr><th>#</th><th>النوع</th><th>القيمة (ج.م)</th><th>الرصيد</th></tr></thead><tbody>'
+            ? '<table class="catalog-prices-table"><thead><tr><th>#</th><th>النوع</th><th>القيمة (ج.م)</th><th>رصيد المخزن</th><th>طلب توريد</th></tr></thead><tbody>'
                 + prices.map(function (p, i) {
-                    return '<tr><td>' + (i + 1) + '</td><td>' + p.label + '</td><td class="price-val">' + formatCatalogPrice(p.amount) + '</td><td>' + formatTierQtyDisplay(p.qty) + '</td></tr>';
+                    var fromSupply = p.from_supply ? 'نعم' : '—';
+                    return '<tr><td>' + (i + 1) + '</td><td>' + p.label + '</td><td class="price-val">' + formatCatalogPrice(p.amount) + '</td><td><strong>' + formatTierQtyDisplay(p.qty) + '</strong></td><td>' + fromSupply + '</td></tr>';
                 }).join('')
                 + '</tbody></table>'
             : '<p style="color:var(--text-muted);text-align:center;">لا توجد أسعار مسجّلة</p>';
@@ -1545,7 +1549,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             + detailBox('السعر الأساسي', '<span class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</span> · رصيد: ' + formatTierQtyDisplay(tierQtyForAmount(item.price, buildPriceTiersFromItem(item))))
             + detailBox('أعلى سعر', '<span class="catalog-price-cell">' + formatCatalogPrice(itemHighestPrice(item)) + '</span>')
             + '</div>'
-            + '<h4 style="font-size:14px;font-weight:800;margin:0 0 10px;color:var(--secondary);">💰 جميع الأسعار</h4>'
+            + '<h4 style="font-size:14px;font-weight:800;margin:0 0 10px;color:var(--secondary);">💰 الأسعار المسجّلة وأرصدة المخزن</h4>'
             + pricesHtml
             + '<h4 style="font-size:14px;font-weight:800;margin:16px 0 10px;color:var(--secondary);">📈 البيع حسب مستوى السعر</h4>'
             + '<div id="catalogViewSalesStats"><p style="color:var(--text-muted);text-align:center;">جاري التحميل...</p></div>'

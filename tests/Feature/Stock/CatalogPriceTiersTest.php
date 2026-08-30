@@ -32,4 +32,29 @@ class CatalogPriceTiersTest extends ProstheticTestCase
         $this->assertNotNull($tier20);
         $this->assertEqualsWithDelta(7.0, (float) $tier20['qty'], 0.0001);
     }
+
+    public function test_unallocated_warehouse_qty_attributed_to_base_price_tier(): void
+    {
+        $item = $this->stockItem('RM-TIER-BASE', qty: 10);
+        $item->update(['price' => 1000.00]);
+
+        // أسعار كتالوج مسجّلة بدون دفعات استلام
+        $item->prices()->create([
+            'price_ref' => 'PR-CAT-1',
+            'amount' => 3000.00,
+            'qty' => 0,
+        ]);
+        $item->prices()->create([
+            'price_ref' => 'PR-CAT-2',
+            'amount' => 2000.00,
+            'qty' => 0,
+        ]);
+
+        $tiers = collect(app(StockCatalogService::class)->aggregatePriceTiers($item->fresh(['prices'])));
+        $base = $tiers->firstWhere('amount', 1000.0);
+
+        $this->assertNotNull($base);
+        $this->assertEqualsWithDelta(10.0, (float) $base['qty'], 0.0001);
+        $this->assertEqualsWithDelta(0.0, (float) $tiers->firstWhere('amount', 3000.0)['qty'], 0.0001);
+    }
 }
