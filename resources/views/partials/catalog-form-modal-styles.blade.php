@@ -242,6 +242,38 @@
         flex-direction: column;
         gap: 8px;
     }
+    .catalog-price-with-qty {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .catalog-price-with-qty .catalog-form-input {
+        flex: 1;
+        min-width: 0;
+    }
+    .slim-price-qty-badge {
+        flex-shrink: 0;
+        font-size: 12px;
+        font-weight: 700;
+        color: #0369a1;
+        background: #e0f2fe;
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+        padding: 6px 10px;
+        white-space: nowrap;
+    }
+    .slim-price-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .slim-price-row .slim-price-amount {
+        flex: 1;
+        min-width: 0;
+        padding: 8px;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px;
+    }
     .catalog-form-error {
         margin-top: 10px;
         padding: 8px;
