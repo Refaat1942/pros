@@ -9,12 +9,12 @@ use App\Models\StockItemPrice;
 use App\Models\StockMovement;
 use Illuminate\Support\Collection;
 /**
- * صرف وارتجاع مخزون حسب دفعات الأسعار — توريد أولاً ثم أقل سعر ثم الأعلى.
+ * صرف وارتجاع مخزون حسب دفعات الأسعار — طلب التوريد أولاً ثم استنفاد كل سعر بترتيب الاستلام.
  */
 class PriceBatchDispenseService
 {
     /**
-     * تخصيص كمية الصرف على دفعات الأسعار (FIFO بالسعر + أولوية طلب التوريد).
+     * تخصيص كمية الصرف على دفعات الأسعار (طلب التوريد ثم استنفاد كل سعر بترتيب الاستلام).
      *
      * @return list<array{batch_id: int, qty: float, unit_price: float}>
      */
@@ -197,7 +197,7 @@ class PriceBatchDispenseService
         $qtys = array_map(fn (array $t) => $this->formatTierQty($t['qty']), $tiers);
 
         $message = sprintf(
-            'الصنف %s له %d أسعار شراء (%s) وأرصدة (%s). عند الصرف: استهلك طلب التوريد أولاً ثم أقل سعر حتى ينفد ثم الأعلى.',
+            'الصنف %s له %d أسعار شراء (%s) وأرصدة (%s). عند الصرف: طلب التوريد أولاً ثم استنفاد رصيد كل سعر بترتيب الاستلام — كل وحدة بسعر دفعتها.',
             $item->operationalCode(),
             count($tiers),
             implode('، ', $amounts),
@@ -255,18 +255,48 @@ class PriceBatchDispenseService
         return $tiers;
     }
 
-    /** @return Collection<int, StockItemPrice> */
+    /**
+     * ترتيب الدفعات: طلب التوريد أولاً، ثم مستويات السعر بأول تاريخ استلام لكل سعر،
+     * ثم FIFO داخل نفس السعر حتى ينفد رصيده قبل الانتقال للسعر التالي.
+     *
+     * @return Collection<int, StockItemPrice>
+     */
     private function orderedConsumableBatches(StockItem $item): Collection
     {
-        return StockItemPrice::query()
+        $batches = StockItemPrice::query()
             ->where('stock_item_id', $item->id)
             ->where('qty', '>', 0)
-            ->orderByRaw('CASE WHEN supply_request_line_id IS NOT NULL THEN 0 ELSE 1 END')
-            ->orderBy('amount')
-            ->orderBy('received_at')
-            ->orderBy('id')
             ->lockForUpdate()
             ->get();
+
+        $supplyBatches = $batches
+            ->filter(fn (StockItemPrice $batch) => $batch->supply_request_line_id !== null)
+            ->sortBy(fn (StockItemPrice $batch) => [$batch->received_at, $batch->id])
+            ->values();
+
+        $regularBatches = $batches
+            ->filter(fn (StockItemPrice $batch) => $batch->supply_request_line_id === null);
+
+        $tierGroups = $regularBatches->groupBy(
+            fn (StockItemPrice $batch) => round((float) $batch->amount, 2)
+        );
+
+        $sortedTiers = $tierGroups->sortBy(function (Collection $group) {
+            $first = $group->sortBy(fn (StockItemPrice $batch) => [$batch->received_at, $batch->id])->first();
+
+            return [$first->received_at, $first->id];
+        });
+
+        $orderedRegular = collect();
+        foreach ($sortedTiers as $tierBatches) {
+            $orderedRegular = $orderedRegular->merge(
+                $tierBatches
+                    ->sortBy(fn (StockItemPrice $batch) => [$batch->received_at, $batch->id])
+                    ->values()
+            );
+        }
+
+        return $supplyBatches->merge($orderedRegular);
     }
 
     private function fallbackBatchForBackorder(StockItem $item): StockItemPrice

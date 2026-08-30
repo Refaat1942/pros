@@ -16,15 +16,15 @@ use Tests\Support\ProstheticTestCase;
 
 class PriceBatchFifoDispenseTest extends ProstheticTestCase
 {
-    public function test_dispense_consumes_lowest_price_tier_first(): void
+    public function test_dispense_exhausts_each_price_tier_in_receive_order(): void
     {
         $supplier = $this->makeSupplier();
         $item = $this->stockItem('RM-FIFO-1', qty: 30);
         $priceService = app(StockPriceService::class);
 
-        $priceService->addBatch($item->fresh(), 5, 10.00, $supplier, 'INV-10', now());
-        $priceService->addBatch($item->fresh(), 10, 20.00, $supplier, 'INV-20', now());
-        $priceService->addBatch($item->fresh(), 15, 30.00, $supplier, 'INV-30', now());
+        $priceService->addBatch($item->fresh(), 5, 10.00, $supplier, 'INV-10', Carbon::parse('2026-01-01'));
+        $priceService->addBatch($item->fresh(), 10, 20.00, $supplier, 'INV-20', Carbon::parse('2026-02-01'));
+        $priceService->addBatch($item->fresh(), 15, 30.00, $supplier, 'INV-30', Carbon::parse('2026-03-01'));
 
         $service = app(PriceBatchDispenseService::class);
         $allocations = $service->allocateForDispense($item->fresh(), 12);
@@ -34,6 +34,22 @@ class PriceBatchFifoDispenseTest extends ProstheticTestCase
         $this->assertEqualsWithDelta(5.0, $allocations[0]['qty'], 0.0001);
         $this->assertSame(20.0, $allocations[1]['unit_price']);
         $this->assertEqualsWithDelta(7.0, $allocations[1]['qty'], 0.0001);
+    }
+
+    public function test_dispense_prefers_earlier_received_price_tier_not_cheaper_later_tier(): void
+    {
+        $supplier = $this->makeSupplier();
+        $item = $this->stockItem('RM-FIFO-2', qty: 15);
+        $priceService = app(StockPriceService::class);
+
+        $priceService->addBatch($item->fresh(), 10, 30.00, $supplier, 'INV-HIGH-FIRST', Carbon::parse('2026-01-01'));
+        $priceService->addBatch($item->fresh(), 5, 10.00, $supplier, 'INV-LOW-LATER', Carbon::parse('2026-02-01'));
+
+        $allocations = app(PriceBatchDispenseService::class)->allocateForDispense($item->fresh(), 8);
+
+        $this->assertCount(1, $allocations);
+        $this->assertSame(30.0, $allocations[0]['unit_price']);
+        $this->assertEqualsWithDelta(8.0, $allocations[0]['qty'], 0.0001);
     }
 
     public function test_supply_request_batch_consumed_before_other_batches(): void
