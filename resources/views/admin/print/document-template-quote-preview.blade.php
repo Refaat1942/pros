@@ -6,7 +6,9 @@
     @include('prints.partials.a4-base')
 </head>
 <body>
-@include('prints.partials.document-template-vars')
+@php
+    $sheetClass = \App\Support\DocumentTemplateSheet::sheetClass($documentTemplate ?? []);
+@endphp
 <div class="{{ $sheetClass }}">
     @include('prints.partials.org-header', [
         'dept' => $documentTemplate['dept_label'] ?? null,

@@ -1,5 +1,5 @@
 @php
+    /** @deprecated استخدم App\Support\DocumentTemplateSheet::sheetClass() في القالب الأب */
     $tpl = $documentTemplate ?? [];
-    $compact = (bool) ($tpl['compact_layout'] ?? true);
-    $sheetClass = trim(($sheetClass ?? 'sheet') . ($compact ? ' doc-tpl-compact' : ''));
+    $sheetClass = \App\Support\DocumentTemplateSheet::sheetClass($tpl, $sheetClass ?? 'sheet');
 @endphp
