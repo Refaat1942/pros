@@ -13,7 +13,7 @@
           <select id="transferStatusFilter">
             <option value="all">كل الحالات</option>
             <option value="قيد التوصيف">قيد التوصيف</option>
-            <option value="في الورشة">في الورشة</option>
+            <option value="في قسم الإنتاج">في قسم الإنتاج</option>
             <option value="مكتمل">مكتمل</option>
           </select>
           <span class="toolbar-count" id="transferCount">{{ $stats['total'] ?? 0 }} حالة</span>

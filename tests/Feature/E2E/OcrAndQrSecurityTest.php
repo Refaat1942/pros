@@ -12,7 +12,7 @@ class OcrAndQrSecurityTest extends TestCase
 {
     use ProstheticTestHelper;
 
-    public function test_ocr_rejects_mismatched_amount_and_freeze_remains(): void
+    public function test_approval_letter_rejects_manual_amount_without_quote_match(): void
     {
         $this->stockItem('RM-001', qty: 5);
         $company = $this->civilianCompany();
@@ -34,16 +34,16 @@ class OcrAndQrSecurityTest extends TestCase
         $user = $this->userWithRole('reception');
         $this->actingAs($user);
 
-        $this->postJson('/reception/ocr/process', [
+        $this->postJson('/reception/approval-letter/confirm', [
             'quote_no' => 'QT-OCR-TEST',
             'patient_name' => $patient->name,
             'approved_amount' => 450.00,
             'company_name' => $company->name,
-        ])->assertStatus(422)->assertJsonPath('blocked', true);
+        ])->assertStatus(422);
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
-        $this->assertNull($case->work_order_no);
+        $this->assertEquals(Quote::STATUS_ISSUED, Quote::where('quote_no', 'QT-OCR-TEST')->value('status'));
     }
 
     public function test_delivery_confirm_blocked_when_bom_not_finished(): void

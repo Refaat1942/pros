@@ -152,7 +152,7 @@ class MilitaryPipelineTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 3],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
 
         $item->refresh();
         $this->assertEquals(7, $item->qty);
@@ -177,7 +177,7 @@ class MilitaryPipelineTest extends TestCase
         ]);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
         $this->advanceCaseToFinishing($case);
         $this->finishBomAfterQuality($case->fresh());
 

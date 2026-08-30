@@ -31,7 +31,7 @@ class PublicTrackingService
      */
     public function resolve(string $uid): array
     {
-        $case = CaseRecord::where('tracking_uid', $uid)->first();
+        $case = CaseRecord::where('tracking_uid', $uid)->orderByDesc('id')->first();
         $patient = Patient::where('tracking_uid', $uid)->first();
 
         if (! $case && ! $patient) {
@@ -121,7 +121,7 @@ class PublicTrackingService
                 CaseRecord::STAGE_COST_CALC => 'جاري احتساب التكاليف',
                 CaseRecord::STAGE_QUOTE => 'إعداد عرض السعر',
                 CaseRecord::STAGE_OPERATIONS => 'بمكتب التشغيل — بانتظار الاعتماد',
-                CaseRecord::STAGE_MANUFACTURING => 'جاري التصنيع بالورشة',
+                CaseRecord::STAGE_MANUFACTURING => 'جاري التصنيع بقسم الإنتاج',
                 CaseRecord::STAGE_READY_DELIVERY => 'جاهز للتسليم',
                 CaseRecord::STAGE_DELIVERED => 'تم التسليم',
                 default => CaseStage::labelFor($stageKey),
@@ -136,7 +136,7 @@ class PublicTrackingService
             CaseRecord::STAGE_COST_CALC,
             CaseRecord::STAGE_QUOTE,
             CaseRecord::STAGE_OPERATIONS => 'جاري التحضير للتصنيع',
-            CaseRecord::STAGE_MANUFACTURING => 'جاري التصنيع بالورشة',
+            CaseRecord::STAGE_MANUFACTURING => 'جاري التصنيع بقسم الإنتاج',
             CaseRecord::STAGE_READY_DELIVERY => 'جاهز للتسليم',
             CaseRecord::STAGE_DELIVERED => 'تم التسليم',
             default => CaseStage::labelFor($stageKey),

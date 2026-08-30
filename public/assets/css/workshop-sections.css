@@ -1,0 +1,184 @@
+/* أقسام الإنتاج والفنيين — تبويبات واضحة (offline + online، بدون Tailwind) */
+
+.workshop-sections-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 8px;
+}
+
+@media (max-width: 900px) {
+    .workshop-sections-page {
+        padding-bottom: 88px;
+    }
+}
+
+/* ── تبويبات كبيرة وواضحة ── */
+.workshop-sections-page .ws-tabs-wrap {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    padding: 14px 14px 0;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.workshop-sections-page .ws-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.workshop-sections-page .ws-tab-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: 1 1 220px;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 22px;
+    margin: 0;
+    border: 2px solid #e2e8f0;
+    border-bottom: none;
+    border-radius: 14px 14px 0 0;
+    background: #eef2f7;
+    color: #64748b;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.workshop-sections-page .ws-tab-btn:hover {
+    color: #6d28d9;
+    background: #f5f3ff;
+    border-color: #ddd6fe;
+}
+
+.workshop-sections-page .ws-tab-btn.active {
+    background: #fff;
+    color: #5b21b6;
+    border-color: #c4b5fd;
+    border-bottom-color: #fff;
+    box-shadow: 0 -6px 16px rgba(124, 58, 237, 0.14);
+    position: relative;
+    z-index: 2;
+}
+
+.workshop-sections-page .ws-tab-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.workshop-sections-page .ws-tab-label {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.workshop-sections-page .ws-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    background: rgba(100, 116, 139, 0.12);
+}
+
+.workshop-sections-page .ws-tab-btn.active .ws-tab-count {
+    color: #6d28d9;
+    background: rgba(124, 58, 237, 0.14);
+}
+
+@media (max-width: 640px) {
+    .workshop-sections-page .ws-tabs {
+        flex-direction: column;
+    }
+
+    .workshop-sections-page .ws-tab-btn {
+        flex: 1 1 auto;
+        border-radius: 12px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .workshop-sections-page .ws-tab-btn.active {
+        border-bottom-color: #c4b5fd;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+    }
+}
+
+.workshop-sections-page .ws-tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.workshop-sections-page .ws-tab-panel[hidden] {
+    display: none !important;
+}
+
+.workshop-sections-page .panel-hint--workshop {
+    margin: 0;
+    padding: 14px 18px;
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+    border-radius: 12px;
+}
+
+.workshop-sections-page .panel-hint__text {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--text-muted, #64748b);
+}
+
+.workshop-sections-page .panel-hint__label {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #5b21b6;
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.18);
+}
+
+.workshop-sections-page .ws-empty-cell {
+    text-align: center;
+    color: var(--text-muted, #94a3b8);
+    padding: 32px 16px;
+}
+
+.workshop-sections-page .ws-muted {
+    color: var(--text-muted, #64748b);
+}
+
+.workshop-sections-page .ws-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    direction: ltr;
+    text-align: left;
+}
+
+.workshop-sections-page .ws-warn-text {
+    color: #b45309;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.workshop-sections-page .ws-status-active {
+    color: #047857;
+    font-weight: 700;
+}
+
+.workshop-sections-page .ws-status-inactive {
+    color: #64748b;
+}

@@ -72,7 +72,7 @@ class OperationsDispenseVisibilityTest extends TestCase
         $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
         $ids = collect($data['workshop_cases'])->pluck('id');
 
-        $this->assertTrue($ids->contains($case->id), 'الحالة يجب أن تظهر في ورشة التصنيع');
+        $this->assertTrue($ids->contains($case->id), 'الحالة يجب أن تظهر في قسم الإنتاج');
     }
 
     public function test_manufacturing_warehouse_dispense_advances_to_issue(): void
@@ -90,7 +90,7 @@ class OperationsDispenseVisibilityTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $case->refresh();
         $this->assertEquals(CaseRecord::MFG_ISSUE, $case->manufacturing_stage);
@@ -113,7 +113,7 @@ class OperationsDispenseVisibilityTest extends TestCase
 
         $this->expectException(HttpException::class);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
     }
 
     public function test_workshop_desk_hidden_until_warehouse_dispense(): void
@@ -134,7 +134,7 @@ class OperationsDispenseVisibilityTest extends TestCase
 
         $this->assertFalse(
             $ids->contains($case->id),
-            'الحالة لا يجب أن تظهر في الورشة قبل صرف المواد من المخزن'
+            'الحالة لا يجب أن تظهر في قسم الإنتاج قبل صرف المواد من المخزن'
         );
 
         $this->actingAs($workshop);
@@ -142,14 +142,14 @@ class OperationsDispenseVisibilityTest extends TestCase
             'manufacturing_stage' => CaseRecord::MFG_ISSUE,
         ])->assertStatus(422);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $data = app(DashboardPageDataService::class)->resolve('workshop', 'workshop');
         $ids = collect($data['workshop_cases'])->pluck('id');
 
         $this->assertTrue(
             $ids->contains($case->id),
-            'الحالة يجب أن تظهر في الورشة بعد صرف المواد من المخزن'
+            'الحالة يجب أن تظهر في قسم الإنتاج بعد صرف المواد من المخزن'
         );
     }
 }

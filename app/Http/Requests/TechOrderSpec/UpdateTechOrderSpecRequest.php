@@ -19,7 +19,7 @@ class UpdateTechOrderSpecRequest extends BaseRequest
             'items' => ['sometimes', 'array', 'min:1'],
             'items.*.stock_item_code' => ['required_with:items', 'string', 'max:500'],
             'items.*.name' => ['required_with:items', 'string', 'min:1', 'max:255'],
-            'items.*.qty' => ['required_with:items', ...$this->positiveQtyRules()],
+            'items.*.qty' => ['required_with:items', ...$this->decimalQtyRules()],
             'items.*.group_label' => ['nullable', 'string', 'max:255'],
         ];
     }
@@ -27,7 +27,7 @@ class UpdateTechOrderSpecRequest extends BaseRequest
     public function messages(): array
     {
         return [
-            'items.*.qty.min' => 'الكمية يجب أن تكون 1 على الأقل لكل بند.',
+            'items.*.qty.min' => 'الكمية يجب أن تكون 0.001 على الأقل لكل بند.',
         ];
     }
 }

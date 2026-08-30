@@ -12,12 +12,12 @@ return [
      * path = dot notation داخل config()
      */
     'sources' => [
-        'catalog.template_headers' => [
+        'catalog.template_column_order' => [
             'dashboard' => 'admin',
             'page' => 'catalog',
             'title' => 'قالب Excel — الأصناف والأسعار',
-            'keywords' => ['excel', 'xlsx', 'قالب', 'استيراد', 'تصدير', 'رفع', 'import', 'export', 'template'],
-            'intro' => 'قالب رفع الأصناف يتكوّن من {count} أعمدة (تتحدّث تلقائياً مع الإعداد):',
+            'keywords' => ['excel', 'xlsx', 'قالب', 'استيراد', 'تصدير', 'رفع', 'import', 'export', 'template', 'ماركة', 'الماركة'],
+            'intro' => 'قالب رفع الأصناف يتكوّن من {count} أعمدة (تتحدّث تلقائياً مع الإعداد — يشمل الماركة بعد اسم الصنف):',
         ],
         'catalog.list_limit' => [
             'dashboard' => 'admin',

@@ -109,11 +109,7 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty = (int) $row['qty'];
-
-                if ($qty < 1) {
-                    abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
-                }
+                $qty = $this->normalizeItemQty($row['qty']);
 
                 if (! StockItem::findByOperationalCode($code)) {
                     abort(422, "الصنف غير موجود: {$code}");
@@ -242,7 +238,7 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty = (int) $row['qty'];
+                $qty = $this->normalizeItemQty($row['qty']);
 
                 if (! StockItem::findByOperationalCode($code)) {
                     abort(422, "الصنف غير موجود: {$code}");
@@ -313,11 +309,7 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty = (int) $row['qty'];
-
-                if ($qty < 1) {
-                    abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
-                }
+                $qty = $this->normalizeItemQty($row['qty']);
 
                 $stockItem = StockItem::findByOperationalCode($code, true);
 
@@ -393,11 +385,7 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty = (int) $row['qty'];
-
-                if ($qty < 1) {
-                    abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
-                }
+                $qty = $this->normalizeItemQty($row['qty']);
 
                 $stockItem = StockItem::findByOperationalCode($code, true);
 
@@ -475,7 +463,7 @@ class BomService
      * تعديل كمية بند من بنود مستشار المعدلات — بنود الفني (source=spec) غير قابلة للتعديل.
      * يضبط الحجز (reserved) بفرق الكمية فقط ويمنع تجاوز المتاح.
      */
-    public function updateAdjustmentItemQty(CaseRecord $case, BomItem $item, int $newQty): Bom
+    public function updateAdjustmentItemQty(CaseRecord $case, BomItem $item, float $newQty): Bom
     {
         return DB::transaction(function () use ($case, $item, $newQty) {
             $bom = Bom::where('case_id', $case->id)->lockForUpdate()->first();
@@ -492,13 +480,11 @@ class BomService
                 abort(422, 'لا يمكن تعديل بنود التوصيف الفني — للقراءة فقط.');
             }
 
-            if ($newQty < 1) {
-                abort(422, 'الكمية يجب أن تكون واحداً على الأقل.');
-            }
+            $newQty = $this->normalizeItemQty($newQty);
 
-            $delta = $newQty - $item->qty;
+            $delta = round($newQty - (float) $item->qty, 3);
 
-            if ($delta === 0) {
+            if (abs($delta) < 0.0005) {
                 return $bom->fresh()->load('items');
             }
 
@@ -696,7 +682,7 @@ class BomService
     private function appendBomItemWithReservation(Bom $bom, array $row, CaseRecord $case): void
     {
         $code = $row['stock_item_code'];
-        $qty = (int) $row['qty'];
+        $qty = $this->normalizeItemQty($row['qty']);
 
         $stockItem = StockItem::findByOperationalCode($code, true);
 
@@ -784,6 +770,9 @@ class BomService
             $this->validateDispenseBarcodes($bom, $scannedBarcodes);
 
             $case = $bom->caseRecord;
+            if ($case) {
+                app(WorkshopAssignmentService::class)->assertDispenseAllowed($case);
+            }
 
             $this->refreshUnitCostsAtDispense($bom);
             $bom->refresh()->load('items');
@@ -911,7 +900,7 @@ class BomService
                 return $case;
             }
 
-            abort(422, 'لا يمكن صرف المواد — الحالة ليست جاهزة لدخول الورشة.');
+            abort(422, 'لا يمكن صرف المواد — الحالة ليست جاهزة لدخول قسم الإنتاج.');
         });
     }
 
@@ -930,7 +919,7 @@ class BomService
     }
 
     /**
-     * يمنع إجراءات الورشة قبل صرف المواد من المخزن (BOM خام).
+     * يمنع إجراءات قسم الإنتاج قبل صرف المواد من المخزن (BOM خام).
      */
     public function assertReleasedToWorkshop(CaseRecord $case): void
     {
@@ -938,7 +927,7 @@ class BomService
         $bomStage = $case->bom?->stage;
 
         if (! in_array($bomStage, [Bom::STAGE_WIP, Bom::STAGE_FINISHED], true)) {
-            abort(422, 'لا يمكن تنفيذ إجراءات الورشة قبل صرف المواد وتحويلها من المخزن.');
+            abort(422, 'لا يمكن تنفيذ إجراءات قسم الإنتاج قبل صرف المواد وتحويلها من المخزن.');
         }
     }
 
@@ -984,22 +973,27 @@ class BomService
      */
     public function finish(Bom $bom): Bom
     {
-        $bom->loadMissing('caseRecord');
-        $case = $bom->caseRecord;
+        return DB::transaction(function () use ($bom) {
+            $bom->loadMissing('caseRecord');
+            $case = $bom->caseRecord;
 
-        if (! $case || $case->stage_key !== CaseRecord::STAGE_MANUFACTURING) {
-            abort(422, 'الحالة ليست في مرحلة التصنيع.');
-        }
+            if (! $case || $case->stage_key !== CaseRecord::STAGE_MANUFACTURING) {
+                abort(422, 'الحالة ليست في مرحلة التصنيع.');
+            }
 
-        $this->assertReleasedToWorkshop($case);
+            $this->assertReleasedToWorkshop($case);
 
-        if ($bom->stage !== Bom::STAGE_WIP) {
-            abort(422, 'BOM ليست تحت التشغيل — لا يمكن إتمام التصنيع.');
-        }
+            if ($bom->stage !== Bom::STAGE_WIP) {
+                abort(422, 'BOM ليست تحت التشغيل — لا يمكن إتمام التصنيع.');
+            }
 
-        $case->update(['manufacturing_stage' => CaseRecord::MFG_CLOSED]);
+            $case->update([
+                'manufacturing_stage' => CaseRecord::MFG_CLOSED,
+                'workshop_progress_pct' => 100,
+            ]);
 
-        return $this->closeFinished($bom);
+            return $this->closeFinished($bom);
+        });
     }
 
     /**
@@ -1070,5 +1064,20 @@ class BomService
             : 1;
 
         return sprintf('BOM-%04d', $num);
+    }
+
+    private function normalizeItemQty(mixed $qty): float
+    {
+        if (! is_numeric($qty)) {
+            abort(422, 'الكمية يجب أن تكون رقماً صحيحاً أو عشرياً.');
+        }
+
+        $normalized = round((float) $qty, 3);
+
+        if ($normalized < 0.001) {
+            abort(422, 'الكمية يجب أن تكون 0.001 على الأقل لكل بند.');
+        }
+
+        return $normalized;
     }
 }

@@ -40,6 +40,7 @@ use App\Services\CostingModeService;
 use App\Services\DoctorTransferService;
 use App\Services\MilitaryDebtService;
 use App\Services\Notifications\NotificationService;
+use App\Services\CatalogListVisibilityService;
 use App\Services\FormFieldPolicyService;
 use App\Services\PathwayConfigService;
 use App\Services\PermissionCatalogService;
@@ -53,8 +54,10 @@ use App\Services\StockPriceService;
 use App\Services\SupplierService;
 use App\Services\WorkshopAnalyticsService;
 use App\Services\WorkshopSectionService;
+use App\Services\WorkshopTechnicianService;
 use App\Services\WorkshopTrackingService;
 use App\Support\ClinicTime;
+use App\Support\ManufacturingDeskCaseFormatter;
 use Carbon\Carbon;
 
 /**
@@ -68,6 +71,10 @@ class DashboardPageDataService
             return $this->notificationsInbox($dashboardKey);
         }
 
+        if ($page === 'staff') {
+            return $this->departmentStaff($dashboardKey);
+        }
+
         return match ("{$dashboardKey}.{$page}") {
             'admin.employees' => $this->adminEmployees(),
             'admin.companies' => $this->adminCompanies(),
@@ -77,8 +84,12 @@ class DashboardPageDataService
             'admin.branding-settings' => $this->adminBrandingSettings(),
             'admin.notification-settings' => $this->adminNotificationSettings(),
             'admin.pathway-settings' => $this->adminPathwaySettings(),
+            'admin.catalog-list-settings' => $this->adminCatalogListSettings(),
             'admin.stock-categories' => $this->adminStockCategories(),
             'admin.catalog' => $this->adminCatalog(),
+            'admin.add-catalog-item' => $this->catalogItemEntry(),
+            'admin.supply-request' => $this->supplyRequestDesk(),
+            'admin.receive-inbound' => $this->receiveInboundDesk(),
             'admin.stock-kits' => $this->adminStockKits(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
             'admin.general-view' => $this->adminGeneralView(),
@@ -107,16 +118,53 @@ class DashboardPageDataService
             'spec.orders' => $this->specOrders(),
             'spec.pricing' => $this->specPricing(),
             'spec.spec' => $this->specPreview(),
+            'spec.catalog' => $this->operationalCatalogBrowse('spec_catalog', 'catalog'),
             'adjustments.adjustments' => $this->adjustmentsHistory(),
             'adjustments.history' => $this->adjustmentsHistory(),
+            'adjustments.catalog' => $this->operationalCatalogBrowse('adjustments_catalog', 'catalog'),
             'cashier.payments' => $this->cashierPayments(),
             'cashier.statistics' => $this->cashierStatistics(),
             'workshop.workshop' => $this->workshopDesk(),
+            'workshop.catalog' => $this->operationalCatalogBrowse('workshop_catalog', 'catalog'),
+            'workshop.sections' => $this->adminWorkshopSections(),
             'workshop.statistics' => $this->workshopStatistics(),
             'technical.inventory' => $this->technicalInventory(),
+            'technical.add-catalog-item' => $this->catalogItemEntry(),
+            'technical.supply-request' => $this->supplyRequestDesk(),
+            'technical.receive-inbound' => $this->receiveInboundDesk(),
             'technical.bom' => $this->technicalBom(),
             default => [],
         };
+    }
+
+    private function departmentStaff(string $dashboardKey): array
+    {
+        /** @var User $manager */
+        $manager = auth()->user();
+        $manager->loadMissing('role:id,slug,label_ar');
+
+        $employees = app(\App\Services\DepartmentStaffService::class)
+            ->queryForManager($manager)
+            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at', 'access_tier', 'allowed_pages', 'catalog_list_visibility']);
+
+        $editUser = null;
+        if ($editId = request()->integer('edit')) {
+            $editUser = $employees->firstWhere('id', $editId);
+            if ($editUser === null) {
+                $candidate = User::with('role:id,slug,label_ar')->find($editId);
+                if ($candidate && app(\App\Services\DepartmentStaffService::class)->canManage($manager, $candidate)) {
+                    $editUser = $candidate;
+                }
+            }
+        }
+
+        return [
+            'employees' => $employees,
+            'role' => $manager->role,
+            'dashboard_key' => $dashboardKey,
+            'staff_mode' => 'department',
+            'edit_user' => $editUser,
+        ];
     }
 
     private function adminEmployees(): array
@@ -124,7 +172,7 @@ class DashboardPageDataService
         $employees = User::query()
             ->with('role:id,slug,label_ar')
             ->orderByDesc('id')
-            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at']);
+            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at', 'catalog_list_visibility']);
 
         $roles = Role::query()
             ->orderBy('label_ar')
@@ -141,7 +189,9 @@ class DashboardPageDataService
         return [
             'employees' => $employees,
             'roles' => $roles,
-            'edit_user' => $editUser,
+            'staff_mode' => 'admin',
+            'dashboard_key' => 'admin',
+            'edit_user' => $editUser?->loadMissing('role:id,slug,label_ar'),
             'employee_stats' => [
                 ['icon' => '👥', 'label' => 'الموظفون', 'value' => (string) $employees->count(), 'bg' => 'rgba(124,58,237,0.1)'],
                 ['icon' => '✅', 'label' => 'نشط', 'value' => (string) $activeCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
@@ -233,12 +283,28 @@ class DashboardPageDataService
         ];
     }
 
+    private function adminCatalogListSettings(): array
+    {
+        return [
+            'catalog_list_roles' => app(CatalogListVisibilityService::class)->catalogForAdmin(),
+        ];
+    }
+
     private function adminCatalog(): array
     {
         $catalogService = app(StockCatalogService::class);
         $schema = app(StockCategorySchemaService::class);
+        $visibility = app(CatalogListVisibilityService::class);
+        $user = auth()->user();
         $from = request()->query('from');
         $to = request()->query('to');
+        $items = collect($catalogService->listForDashboard($from, $to));
+
+        if ($user) {
+            $items = $items->map(
+                fn (array $item) => $visibility->filterItemFields($item, $user, 'admin_catalog'),
+            );
+        }
 
         return [
             'stock_categories' => StockCategory::query()
@@ -249,7 +315,7 @@ class DashboardPageDataService
             'suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'stock_items' => $catalogService->listForDashboard($from, $to),
+            'stock_items' => $items->values()->all(),
             'stock_items_total' => $catalogService->countAll($from, $to),
             'date_from' => $from,
             'date_to' => $to,
@@ -259,27 +325,22 @@ class DashboardPageDataService
     private function adminInventoryOverview(): array
     {
         $priceService = app(StockPriceService::class);
+        $catalogService = app(StockCatalogService::class);
 
-        $items = StockItem::query()
-            ->with([
-                'category:id,name',
-                'prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id'),
-                'attributeValues.field',
-            ])
-            ->orderBy('code')
-            ->limit((int) config('dashboards.table_fetch_limit', 1000))
-            ->get();
+        $items = $catalogService->allItemsForInventoryOverview();
 
         $totalValue = $items->sum(
             fn (StockItem $i) => max(0, (int) $i->qty) * $priceService->wacUnitPrice($i->code)
         );
 
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
+        $totalCount = $catalogService->countAll();
 
         return [
             'inventory_items' => $items,
+            'inventory_items_total' => $totalCount,
             'inventory_overview_stats' => [
-                ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $items->count(), 'bg' => 'rgba(37,99,235,0.1)'],
+                ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $totalCount, 'bg' => 'rgba(37,99,235,0.1)'],
                 ['icon' => '🔻', 'label' => 'أصناف منخفضة', 'value' => (string) $items->where('status', StockItem::STATUS_LOW)->count(), 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
                 ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
                 ['icon' => '💰', 'label' => 'قيمة المخزون', 'value' => number_format($totalValue, 2), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
@@ -334,6 +395,7 @@ class DashboardPageDataService
             'admin_case_buckets' => [
                 'waiting_return' => $buckets['waiting_return']->all(),
                 'awaiting_cashier' => $buckets['awaiting_cashier']->all(),
+                'awaiting_assignment' => $buckets['awaiting_assignment']->all(),
                 'in_progress' => $buckets['in_progress']->all(),
                 'delivered' => $buckets['delivered']->all(),
             ],
@@ -352,8 +414,10 @@ class DashboardPageDataService
 
     private function adminReportsHub(): array
     {
+        $user = auth()->user();
+
         return [
-            'report_sections' => app(AdminReportsHubService::class)->sections(),
+            'report_sections' => app(AdminReportsHubService::class)->sections($user),
         ];
     }
 
@@ -415,6 +479,7 @@ class DashboardPageDataService
             'visit_types' => VisitType::query()
                 ->ordered()
                 ->get(['id', 'name']),
+            'form_field_policies' => app(FormFieldPolicyService::class)->policiesForFeatures(['reception', 'appointment']),
         ];
     }
 
@@ -557,6 +622,7 @@ class DashboardPageDataService
                 ['key' => 'today_from_doctor', 'icon' => '📅', 'label' => 'إجمالي المحولون من الطبيب اليوم', 'value' => (string) $stats['today_from_doctor'], 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['key' => 'pending_spec', 'icon' => '📥', 'label' => 'بانتظار التوصيف', 'value' => (string) $stats['pending_spec'], 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
+            'form_field_policies' => app(FormFieldPolicyService::class)->policiesForFeatures(['spec']),
         ];
     }
 
@@ -649,11 +715,9 @@ class DashboardPageDataService
 
     private function adminWorkshopSections(): array
     {
-        $service = app(WorkshopSectionService::class);
-
         return [
-            'workshop_sections' => $service->listForAdmin(),
-            'workshop_technicians' => $service->workshopTechnicians(),
+            'workshop_sections' => app(WorkshopSectionService::class)->listForAdmin(),
+            'workshop_technicians' => app(WorkshopTechnicianService::class)->listForAdmin(),
         ];
     }
 
@@ -772,61 +836,165 @@ class DashboardPageDataService
             ->workshopDeskQueue()
             ->with([
                 'patient:id,patient_code,name',
+                'workshopSection:id,name,code',
+                'assignedTechnician:id,name',
+                'workshopAssignments.workshopSection:id,name,code',
+                'workshopAssignments.assignedTechnician:id,name',
                 'bom:id,case_id,bom_no,stage',
                 'bom.items:id,bom_id,stock_item_code,name,qty',
             ])
             ->orderByDesc('updated_at')
             ->get();
 
+        $assignmentCases = CaseRecord::query()
+            ->workshopAssignmentQueue()
+            ->with([
+                'patient:id,patient_code,name',
+                'workshopSection:id,name,code',
+                'assignedTechnician:id,name',
+                'workshopAssignments.workshopSection:id,name,code',
+                'workshopAssignments.assignedTechnician:id,name',
+                'bom:id,case_id,bom_no,stage',
+                'bom.items:id,bom_id,stock_item_code,name,qty',
+            ])
+            ->orderByDesc('updated_at')
+            ->limit((int) config('dashboards.table_fetch_limit', 1000))
+            ->get();
+
+        $assignmentPayload = $assignmentCases->map(
+            fn (CaseRecord $c) => ManufacturingDeskCaseFormatter::format($c, 'workshop.work-order.print'),
+        )->values();
+
+        $assignmentSections = collect(app(WorkshopSectionService::class)->listActive())
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'code' => $s->code,
+                'technicians' => $s->technicians->map(fn ($u) => $u->only(['id', 'name']))->values(),
+            ])
+            ->values();
+
         $wipCount = $cases->count();
         $milCount = $cases->filter(fn ($c) => $c->isMilitary())->count();
         $civCount = $cases->count() - $milCount;
+        $summary = ManufacturingDeskCaseFormatter::workshopSummary($cases);
+        $awaitingAssignment = $assignmentCases->filter(
+            fn (CaseRecord $c) => ! $c->isWorkshopAssignmentApproved(),
+        )->count();
 
         return [
             'workshop_cases' => $cases,
+            'workshop_assignment_cases' => $assignmentCases,
+            'workshop_assignment_payload' => $assignmentPayload,
+            'workshop_assignment_sections' => $assignmentSections,
             'workshop_stats' => [
-                ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-                ['icon' => '📦', 'label' => 'إجمالي الأوامر', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
+                ['icon' => '📋', 'label' => 'بانتظار التخصيص', 'value' => (string) $awaitingAssignment, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)', 'key' => 'awaiting_assignment'],
+                ['icon' => '🏭', 'label' => 'تحت التشغيل', 'value' => (string) $wipCount, 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)', 'key' => 'wip'],
+                ['icon' => '👤', 'label' => 'مُخصَّص لفني', 'value' => (string) $summary['assigned'], 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)', 'key' => 'assigned'],
+                ['icon' => '⏳', 'label' => 'بدون فني', 'value' => (string) $summary['unassigned'], 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)', 'key' => 'unassigned'],
             ],
-            'workshop_summary' => [
-                'wip' => $wipCount,
-                'military' => $milCount,
-                'civilian' => $civCount,
-                'total_active' => $cases->count(),
-            ],
+            'workshop_summary' => $summary,
         ];
     }
 
     private function technicalInventory(): array
     {
-        $items = StockItem::query()
-            ->with('category:id,name')
-            ->orderBy('code')
-            ->limit((int) config('dashboards.table_fetch_limit', 1000))
-            ->get();
+        return array_merge(
+            $this->operationalCatalogBrowse('technical_inventory', 'inventory'),
+            $this->technicalInventoryExtras(),
+        );
+    }
+
+    /** بيانات نموذج إضافة صنف — بدون تحميل قائمة الأصناف الكاملة. */
+    private function catalogItemEntry(): array
+    {
+        $schema = app(StockCategorySchemaService::class);
+
+        return [
+            'stock_categories' => StockCategory::query()
+                ->with('fields')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (StockCategory $c) => $schema->formatCategory($c)),
+            'suppliers' => Supplier::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+        ];
+    }
+
+    /** طلب التوريد — أصناف تحتاج توريد (بدون نموذج استلام وارد). */
+    private function supplyRequestDesk(): array
+    {
+        return array_merge(
+            $this->operationalCatalogBrowse('technical_inventory', 'inventory'),
+            $this->technicalInventoryStatsOnly(),
+        );
+    }
+
+    /** استلام الوارد — نموذج تسجيل فاتورة توريد فقط. */
+    private function receiveInboundDesk(): array
+    {
+        $catalogService = app(StockCatalogService::class);
+
+        return [
+            'inventory_items' => $catalogService->allItemsForUnifiedLists(),
+            'inventory_suppliers' => Supplier::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'inbound_document_upload' => config('inventory.inbound_document_upload', true),
+        ];
+    }
+
+    /** إحصائيات المخزن للعرض — بدون بيانات استلام وارد. */
+    private function technicalInventoryStatsOnly(): array
+    {
+        $catalogService = app(StockCatalogService::class);
+        $items = $catalogService->allItemsForUnifiedLists();
+        $totalCount = $catalogService->countAll();
 
         $okCount = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_OK)->count();
         $lowCount = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_LOW)->count();
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
-        $totalCount = $items->count();
 
         return [
-            'inventory_items' => $items->map(fn (StockItem $item) => [
-                'id' => $item->id,
-                'code' => $item->code,
-                'name' => $item->name,
-                'spec' => $item->spec ?? '',
-                'category' => $item->category?->name ?? '',
-                'category_id' => $item->category_id,
-                'qty' => (int) $item->qty,
-                'reserved' => (int) $item->reserved,
-                'min_qty' => (int) ($item->min_qty ?? 0),
-                'available' => $item->availableQty(),
-                'backorder' => $item->backorderQty(),
-                'status' => $item->isBackorder() ? 'backorder' : $item->status,
-                'barcode' => $item->barcode,
-                'last_moved_at' => $item->last_moved_at?->format('d/m/Y'),
-            ])->values()->all(),
+            'inventory_stats' => [
+                ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $totalCount, 'color' => '#4338ca', 'bg' => 'rgba(67,56,202,0.1)'],
+                ['icon' => '✅', 'label' => 'متوفر', 'value' => (string) $okCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
+                ['icon' => '⚠️', 'label' => 'كمية منخفضة', 'value' => (string) $lowCount, 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
+            ],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function operationalCatalogBrowse(string $profile, string $prefix): array
+    {
+        $catalogService = app(StockCatalogService::class);
+        $visibility = app(CatalogListVisibilityService::class);
+        $user = auth()->user();
+
+        return [
+            "{$prefix}_items" => $catalogService->listForTechnicalInventory($user, $profile),
+            "{$prefix}_items_total" => $catalogService->countAll(),
+            "{$prefix}_list_columns" => $visibility->tableOrderForUser($user, $profile),
+            "{$prefix}_list_column_labels" => $visibility->columnDefinitions($profile),
+            "{$prefix}_list_enabled" => $user
+                ? $visibility->isListEnabledForUser($user, $profile)
+                : true,
+        ];
+    }
+
+    private function technicalInventoryExtras(): array
+    {
+        $catalogService = app(StockCatalogService::class);
+        $items = $catalogService->allItemsForUnifiedLists();
+        $totalCount = $catalogService->countAll();
+
+        $okCount = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_OK)->count();
+        $lowCount = $items->filter(fn (StockItem $i) => ! $i->isBackorder() && $i->status === StockItem::STATUS_LOW)->count();
+        $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
+
+        return [
             'inventory_suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -859,10 +1027,13 @@ class DashboardPageDataService
 
     private function technicalBom(): array
     {
+        $user = auth()->user();
+        $visibility = app(CatalogListVisibilityService::class);
+
         $boms = Bom::query()
             ->with([
-                'caseRecord:id,case_no,work_order_no,patient_type,manufacturing_stage',
-                'items:id,bom_id,stock_item_code,name,qty,issued_qty',
+                'caseRecord:id,case_no,work_order_no,patient_type,manufacturing_stage,workshop_section_id,assigned_technician_id,workshop_assignment_approved_at',
+                'items:id,bom_id,stock_item_code,name,qty,issued_qty,returned_qty,unit_cost',
             ])
             ->whereHas('caseRecord', fn ($q) => $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING))
             ->orderByDesc('created_at')
@@ -881,6 +1052,11 @@ class DashboardPageDataService
                 ['icon' => StockWarehouseType::Delivery->icon(), 'label' => StockWarehouseType::Delivery->label(), 'value' => (string) $finCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['icon' => '📋', 'label' => 'إجمالي القوائم', 'value' => (string) $boms->count(), 'bg' => 'rgba(124,58,237,0.1)'],
             ],
+            'bom_list_columns' => $visibility->tableOrderForUser($user, 'technical_bom_items'),
+            'bom_list_column_labels' => $visibility->columnDefinitions('technical_bom_items'),
+            'bom_list_enabled' => $user
+                ? $visibility->isListEnabledForUser($user, 'technical_bom_items')
+                : true,
         ];
     }
 

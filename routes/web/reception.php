@@ -10,9 +10,8 @@ use App\Http\Controllers\Delivery\DeliveryController;
 use App\Http\Controllers\Finance\ContractCompanyController;
 use App\Http\Controllers\Patient\PatientController;
 use App\Http\Controllers\Patient\ReceptionSelfServiceController;
+use App\Http\Controllers\Quote\ApprovalLetterController;
 use App\Http\Controllers\Quote\ApprovalScanController;
-use App\Http\Controllers\Quote\OcrApprovalController;
-use App\Http\Controllers\Quote\OcrExtractController;
 use App\Http\Controllers\Quote\QuoteController;
 use App\Http\Controllers\Reception\ReceptionHintController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('reception', 'reception.', ReceptionDashboardController::class, 'reception');
+registerDepartmentStaffRoutes('reception', 'reception.', 'reception');
 
 /*
 |--------------------------------------------------------------------------
@@ -82,11 +82,14 @@ Route::prefix('reception')
             Route::get('patients/{patient}', [PatientController::class, 'show'])
                 ->name('patients.show');
 
+            Route::post('patients/{patient}/cases', [PatientController::class, 'initiateCase'])
+                ->name('patients.cases.store');
+
             Route::put('patients/{patient}', [PatientController::class, 'update'])
                 ->name('patients.update');
         });
 
-        // ── Quotes + OCR approval scan (civilian only) ─────────────────────
+        // ── Quotes + approval letter upload (civilian only) ───────────────
         Route::middleware('dashboard.page:reception,quote')->group(function () {
             Route::get('quote/list', [QuoteController::class, 'index'])
                 ->name('quote.list');
@@ -97,14 +100,17 @@ Route::prefix('reception')
             Route::get('quote/{quote}/print', [QuoteController::class, 'print'])
                 ->name('quote.print');
 
-            Route::post('ocr/extract', [OcrExtractController::class, 'extract'])
-                ->name('ocr.extract');
+            Route::post('approval-letter/upload', [ApprovalLetterController::class, 'upload'])
+                ->name('approval-letter.upload');
 
-            Route::post('ocr/process', [OcrApprovalController::class, 'process'])
-                ->name('ocr.process');
+            Route::get('approval-letter/defaults', [ApprovalLetterController::class, 'defaults'])
+                ->name('approval-letter.defaults');
 
-            Route::post('ocr/scan', [ApprovalScanController::class, 'scan'])
-                ->name('ocr.scan');
+            Route::post('approval-letter/confirm', [ApprovalLetterController::class, 'confirm'])
+                ->name('approval-letter.confirm');
+
+            Route::post('approval-letter/scan-quote', [ApprovalScanController::class, 'scan'])
+                ->name('approval-letter.scan-quote');
         });
 
         // ── Contracts archive (read-only) ──────────────────────────────────

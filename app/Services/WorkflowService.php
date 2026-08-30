@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\WorkflowEvent;
 use App\Exceptions\InvalidWorkflowTransitionException;
 use App\Models\CaseRecord;
+use App\Models\Role;
 use App\Services\Notifications\NotificationService;
 use App\Services\PathwayTransitionMessageService;
 use Illuminate\Support\Facades\DB;
@@ -107,7 +108,7 @@ class WorkflowService
             'to' => CaseRecord::STAGE_ADJUSTMENTS,
             'mfg' => null,
         ],
-        // المخزن: صرف المواد بالباركود → دخول الورشة.
+        // المخزن: صرف المواد بالباركود → دخول قسم الإنتاج.
         WorkflowEvent::BomDispensed->value => [
             'from' => [CaseRecord::STAGE_MANUFACTURING],
             'to' => CaseRecord::STAGE_MANUFACTURING,
@@ -128,8 +129,9 @@ class WorkflowService
     public function advance(CaseRecord $case, string $event): void
     {
         $fromStageKey = null;
+        $beforeSnapshot = null;
 
-        $updated = DB::transaction(function () use ($case, $event, &$fromStageKey) {
+        $updated = DB::transaction(function () use ($case, $event, &$fromStageKey, &$beforeSnapshot) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             $rule = self::TRANSITIONS[$event] ?? null;
@@ -143,6 +145,7 @@ class WorkflowService
                 'manufacturing_stage' => $case->manufacturing_stage,
             ];
             $fromStageKey = $before['stage_key'];
+            $beforeSnapshot = $before;
 
             $updates = ['stage_key' => $rule['to']];
 
@@ -179,6 +182,16 @@ class WorkflowService
         });
 
         $updated = $this->finalizeAfterTransition($updated);
+
+        $actingRole = $this->actingRoleForEvent($event, $beforeSnapshot ?? ['stage_key' => $fromStageKey, 'manufacturing_stage' => null]);
+
+        if ($actingRole !== null) {
+            try {
+                $this->notifications->markCaseReadForRole($updated->id, $actingRole);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         // إشعار اللوحة التالية بعد نجاح الانتقال — لا يُعطّل التدفق إن فشل الإرسال.
         try {
@@ -253,5 +266,38 @@ class WorkflowService
         }
 
         return app(CaseWorkflowSkipService::class)->applyConfiguredAutoSkip($case);
+    }
+
+    /** @param  array{stage_key: string, manufacturing_stage: ?string}  $before */
+    private function actingRoleForEvent(string $event, array $before): ?string
+    {
+        if ($before['stage_key'] === CaseRecord::STAGE_MANUFACTURING) {
+            return match ($before['manufacturing_stage']) {
+                CaseRecord::MFG_WAREHOUSE => Role::SLUG_TECHNICAL,
+                CaseRecord::MFG_ISSUE, CaseRecord::MFG_WORKSHOP => Role::SLUG_WORKSHOP,
+                default => Role::SLUG_WORKSHOP,
+            };
+        }
+
+        return match ($event) {
+            WorkflowEvent::ExamApproved->value,
+            WorkflowEvent::ExamSkipped->value => Role::SLUG_RECEPTION,
+            WorkflowEvent::SpecSaved->value => Role::SLUG_SPEC,
+            WorkflowEvent::AdjustmentsCompleted->value => Role::SLUG_ADJUSTMENTS,
+            WorkflowEvent::CostingCompleted->value => Role::SLUG_COSTING,
+            WorkflowEvent::ServicesApprovalRequired->value,
+            WorkflowEvent::ServicesApproved->value => Role::SLUG_ADMIN,
+            WorkflowEvent::QuoteIssued->value,
+            WorkflowEvent::SentToCashier->value,
+            WorkflowEvent::OperationsApproved->value,
+            WorkflowEvent::ReturnedToAdjustments->value,
+            WorkflowEvent::ReturnedToTechnical->value => Role::SLUG_OPERATIONS,
+            WorkflowEvent::CashierPaid->value => Role::SLUG_CASHIER,
+            WorkflowEvent::BomDispensed->value => Role::SLUG_TECHNICAL,
+            WorkflowEvent::BomFinished->value => Role::SLUG_WORKSHOP,
+            WorkflowEvent::Delivered->value => Role::SLUG_RECEPTION,
+            WorkflowEvent::SpecEditPostWoRollback->value => Role::SLUG_ADJUSTMENTS,
+            default => null,
+        };
     }
 }

@@ -21,7 +21,7 @@ class WorkshopStatisticsPageTest extends TestCase
 
         $this->get(route('workshop.statistics'))
             ->assertOk()
-            ->assertSee('لوحة إحصائيات ورشة التصنيع')
+            ->assertSee('لوحة إحصائيات قسم الإنتاج')
             ->assertSee('workshopStatsRoot', false)
             ->assertSee('workshopCompletedTable', false);
     }
@@ -48,7 +48,7 @@ class WorkshopStatisticsPageTest extends TestCase
         $this->actingAs($user);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-STAT', 'qty' => 1]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-STAT']);
+        $this->releaseBomToWip($bom, ['BC-RM-STAT']);
         $this->postJson("/workshop/workshop/{$case->id}/finish-quality")->assertOk();
 
         $data = app(WorkshopAnalyticsService::class)->build();

@@ -18,7 +18,11 @@ class EnforceIdleSessionTimeout
             return $next($request);
         }
 
-        $timeoutMinutes = max(1, (int) config('session.idle_timeout', 5));
+        $timeoutMinutes = (int) config('session.idle_timeout', 0);
+        if ($timeoutMinutes <= 0) {
+            return $next($request);
+        }
+
         $timeoutSeconds = $timeoutMinutes * 60;
         $lastActivity = $request->session()->get('last_activity');
 

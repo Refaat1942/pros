@@ -11,8 +11,11 @@ return [
     'label_height_mm' => 25,
     'margin_left_mm' => 0,
     'margin_top_mm' => 0,
-    'barcode_width_pct' => 65,
+    'barcode_width_pct' => 72,
     'barcode_height_pct' => 42,
+    'module_width' => 2.0,
+    'barcode_height' => 40,
+    'quiet_zone_modules' => 14,
     'field_help' => [
         'copies' => 'عدد الملصقات المطبوعة لكل صنف.',
         'label_width_mm' => 'عرض الملصق بالمليمتر — نفس «Width» في إعدادات الطابعة (Custom).',

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('operations', 'operations.', OperationsDashboardController::class, 'operations');
+registerDepartmentStaffRoutes('operations', 'operations.', 'operations');
 
 /*
 |--------------------------------------------------------------------------
@@ -29,9 +30,6 @@ Route::prefix('operations')
         Route::middleware('dashboard.page:operations,pending')->group(function () {
             Route::get('pending/list', [OperationsDeskController::class, 'pending'])
                 ->name('pending.list');
-
-            Route::get('workshop-assignment/options', [OperationsDeskController::class, 'workshopAssignmentOptions'])
-                ->name('workshop-assignment.options');
 
             Route::post('pending/{case}/release-quote', [OperationsDeskController::class, 'releaseQuote'])
                 ->middleware('can:approve-pricing')

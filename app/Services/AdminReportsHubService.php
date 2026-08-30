@@ -15,6 +15,7 @@ use App\Models\ContractCompanyDebt;
 use App\Models\DebtCollectionEntry;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\User;
 use App\Models\ReturnNote;
 use App\Models\ServicesApproval;
 use App\Models\SpecEditRequest;
@@ -47,10 +48,26 @@ class AdminReportsHubService
         private readonly ProfitabilityReportService $profitabilityService,
         private readonly InventoryFinancialReconciliationService $reconciliationService,
         private readonly ItemPricingAnalyticsService $itemPricingAnalytics,
+        private readonly AdminReportsScopeService $reportsScope,
     ) {}
 
     /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
-    public function sections(): array
+    public function sections(?User $user = null): array
+    {
+        $user = $user ?? auth()->user();
+
+        if (! $user) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $this->allSectionCards(),
+            fn (array $card) => $this->reportsScope->canSeeSection($user, $card['id']),
+        ));
+    }
+
+    /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
+    private function allSectionCards(): array
     {
         $pages = config('dashboards.admin.pages', []);
         $skip = ['overview', 'bi', 'general-view', 'reports', 'reports-section', 'permissions', 'employees', 'notifications', 'military-ranks', 'military-debts', 'costing-settings', 'branding-settings', 'pathway-settings', 'notification-settings'];
@@ -62,8 +79,10 @@ class AdminReportsHubService
             'spec-edit-requests' => 'مسار المرضى والحالات',
             'visit-types' => 'مسار المرضى والحالات',
             'services-approvals' => 'مسار المرضى والحالات',
-            'workshop-sections' => 'الورشة والإنتاج',
-            'workshop-tracking' => 'الورشة والإنتاج',
+            'workshop-sections' => 'قسم الإنتاج',
+            'workshop-tracking' => 'قسم الإنتاج',
+            'stock-kits' => 'المخزون والتوريد',
+            'catalog-list-settings' => 'الرقابة والنظام',
             'catalog' => 'المخزون والتوريد',
             'stock-categories' => 'المخزون والتوريد',
             'inventory-overview' => 'المخزون والتوريد',
@@ -105,33 +124,38 @@ class AdminReportsHubService
             ['id' => 'inventory-valuation', 'label' => 'تقييم المخزون', 'icon' => '💎', 'group' => 'المخزون والتوريد', 'description' => 'رصيد كل صنف وكمياته وأسعاره وقيمته بالمخزن'],
             ['id' => 'item-margins', 'label' => 'هامش الربح بالأصناف', 'icon' => '📊', 'group' => 'المخزون والتوريد', 'description' => 'WAC مقابل أعلى سعر شراء — هامش الوحدة ونسبته لكل صنف'],
             ['id' => 'inventory-reconciliation', 'label' => 'تسوية مخزون ↔ مالية', 'icon' => '🔗', 'group' => 'التعاقد والمالية', 'description' => 'ربط صرف المخزن (WAC) بالإيرادات والتكلفة المُسلَّمة'],
-            ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير والورشة'],
+            ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير وقسم الإنتاج'],
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
+            ['id' => 'authorizations', 'label' => 'جميع الأذون والاعتمادات', 'icon' => '📜', 'group' => 'المخزون والتوريد', 'description' => 'أذون الصرف، تعديل التوصيف، تصديقات الخدمات، وموافقات التعاقد'],
+            ['id' => 'production-assignment', 'label' => 'تخصيص الإنتاج — قبل الصرف', 'icon' => '👷', 'group' => 'قسم الإنتاج', 'description' => 'أوامر الشغل بانتظار تخصيص القسم والفني واعتماد التخصيص'],
+            ['id' => 'opening-balance', 'label' => 'رصيد أول المدة', 'icon' => '🏦', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الافتتاحية للخزنة والمديونيات وقيمة المخزون في بداية الفترة'],
+            ['id' => 'closing-balance', 'label' => 'رصيد آخر المدة', 'icon' => '🧾', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الختامية بعد حركة الفترة للخزنة والمديونيات وقيمة المخزون'],
+            ['id' => 'profitability', 'label' => 'مراجعة التكاليف والربحية', 'icon' => '📈', 'group' => 'التعاقد والمالية', 'description' => 'مقارنة الإيراد بالتكلفة الداخلية (WAC) للحالات المُسلَّمة ومجمل الربح'],
         ] as $extra) {
             $cards[] = $extra;
-        }
-
-        if (Gate::allows('view-costs')) {
-            foreach ([
-                ['id' => 'opening-balance', 'label' => 'رصيد أول المدة', 'icon' => '🏦', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الافتتاحية للخزنة والمديونيات وقيمة المخزون في بداية الفترة'],
-                ['id' => 'closing-balance', 'label' => 'رصيد آخر المدة', 'icon' => '🧾', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الختامية بعد حركة الفترة للخزنة والمديونيات وقيمة المخزون'],
-                ['id' => 'profitability', 'label' => 'مراجعة التكاليف والربحية', 'icon' => '📈', 'group' => 'التعاقد والمالية', 'description' => 'مقارنة الإيراد بالتكلفة الداخلية (WAC) للحالات المُسلَّمة ومجمل الربح'],
-            ] as $extra) {
-                $cards[] = $extra;
-            }
         }
 
         return $cards;
     }
 
-    public function sectionMeta(string $section): ?array
+    public function sectionMeta(string $section, ?User $user = null): ?array
     {
-        return collect($this->sections())->firstWhere('id', $section);
+        $user = $user ?? auth()->user();
+
+        if (! $user || ! $this->reportsScope->canSeeSection($user, $section)) {
+            return null;
+        }
+
+        return collect($this->allSectionCards())->firstWhere('id', $section);
     }
 
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
-    public function build(string $section, ?Carbon $from, ?Carbon $to): array
+    public function build(string $section, ?Carbon $from, ?Carbon $to, ?User $user = null): array
     {
+        $user = $user ?? auth()->user();
+
+        abort_unless($user && $this->reportsScope->canSeeSection($user, $section), 404);
+
         if ($from && $to && $from->gt($to)) {
             [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
         }
@@ -165,6 +189,8 @@ class AdminReportsHubService
             'workshop-sections' => $this->buildWorkshopSections($from, $to),
             'workshop-tracking' => $this->buildWorkshopTracking($from, $to),
             'dispense-approvals' => $this->buildDispenseApprovals($from, $to),
+            'authorizations' => $this->buildAuthorizations($from, $to),
+            'production-assignment' => $this->buildProductionAssignment($from, $to),
             'opening-balance' => $this->buildOpeningBalance($from, $to),
             'closing-balance' => $this->buildClosingBalance($from, $to),
             'profitability' => $this->buildProfitability($from, $to),
@@ -660,13 +686,13 @@ class AdminReportsHubService
     {
         return match ($movement->movement_type) {
             StockMovement::TYPE_ISSUE => 'صرف / بيع',
-            StockMovement::TYPE_RETURN => 'ارتجاع من الورشة',
+            StockMovement::TYPE_RETURN => 'ارتجاع من قسم الإنتاج',
             StockMovement::TYPE_RECEIVE => 'توريد',
             default => $movement->movement_type ?? '—',
         };
     }
 
-    /** كمية موقّعة للعرض: موجب للصرف، سالب للارتجاع من الورشة. */
+    /** كمية موقّعة للعرض: موجب للصرف، سالب للارتجاع من قسم الإنتاج. */
     private function signedMovementQuantity(StockMovement $movement): int
     {
         $qty = (int) $movement->quantity;
@@ -988,7 +1014,7 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title' => 'أقسام الورشة',
+            'title' => 'أقسام الإنتاج',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [
                 ['label' => 'عدد الأقسام', 'value' => (string) $sections->count()],
@@ -1032,13 +1058,13 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title' => 'تتبع أوامر الشغل — الورشة',
+            'title' => 'تتبع أوامر الشغل — قسم الإنتاج',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [
                 ['label' => 'أوامر تحت التشغيل', 'value' => (string) $cases->count()],
                 ['label' => 'مُسندة لفني', 'value' => (string) $cases->whereNotNull('assigned_technician_id')->count()],
             ],
-            'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'قسم الورشة', 'الفني', 'مرحلة التصنيع', 'التقدم', 'آخر تحديث'],
+            'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'قسم الإنتاج', 'الفني', 'مرحلة التصنيع', 'التقدم', 'آخر تحديث'],
             'rows' => $rows,
         ];
     }
@@ -1080,6 +1106,205 @@ class AdminReportsHubService
                 ['label' => 'معلّقة', 'value' => (string) $requests->where('status', StockDispenseRequest::STATUS_PENDING)->count()],
             ],
             'headers' => ['أمر الشغل', 'المريض', 'رقم الحالة', 'البنود', 'الحالة', 'طلب بواسطة', 'اعتمد بواسطة', 'التاريخ'],
+            'rows' => $rows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildAuthorizations(?Carbon $from, ?Carbon $to): array
+    {
+        $rows = collect();
+
+        $dispense = $this->constrainDateRange(
+            StockDispenseRequest::query()->with([
+                'caseRecord:id,case_no,work_order_no,patient_id',
+                'caseRecord.patient:id,name',
+                'requestedBy:id,name',
+                'approvedBy:id,name',
+            ]),
+            'created_at',
+            $from,
+            $to,
+        )->orderByDesc('created_at')->limit(300)->get();
+
+        foreach ($dispense as $r) {
+            $rows->push([
+                'sort' => ($r->approved_at ?? $r->created_at)?->timestamp ?? 0,
+                'cells' => [
+                    'إذن صرف مخزن',
+                    $r->work_order_no ?? '—',
+                    $r->caseRecord?->patient?->name ?? '—',
+                    $r->caseRecord?->case_no ?? '—',
+                    $this->dispenseRequestStatusLabel($r->status),
+                    trim(($r->requestedBy?->name ?? '—').' / '.($r->approvedBy?->name ?? '—')),
+                    ClinicTime::format($r->approved_at ?? $r->created_at, 'd/m/Y H:i'),
+                ],
+            ]);
+        }
+
+        $specEdits = $this->constrainDateRange(
+            SpecEditRequest::query()->with([
+                'techOrderSpec:id,order_ref,patient_name',
+                'caseRecord:id,case_no,order_ref',
+                'requestedBy:id,name',
+                'reviewedBy:id,name',
+            ]),
+            'created_at',
+            $from,
+            $to,
+        )->orderByDesc('created_at')->limit(300)->get();
+
+        foreach ($specEdits as $r) {
+            $rows->push([
+                'sort' => $r->created_at?->timestamp ?? 0,
+                'cells' => [
+                    'تعديل توصيف',
+                    $r->techOrderSpec?->order_ref ?? $r->caseRecord?->order_ref ?? '—',
+                    $r->techOrderSpec?->patient_name ?? '—',
+                    $r->caseRecord?->case_no ?? '—',
+                    $r->status->label(),
+                    trim(($r->requestedBy?->name ?? '—').' / '.($r->reviewedBy?->name ?? '—')),
+                    ClinicTime::format($r->created_at, 'd/m/Y H:i'),
+                ],
+            ]);
+        }
+
+        $services = $this->constrainDateRange(
+            ServicesApproval::query()->with([
+                'caseRecord:id,case_no,patient_id',
+                'caseRecord.patient:id,name',
+                'approvedBy:id,name',
+            ]),
+            'created_at',
+            $from,
+            $to,
+        )->orderByDesc('created_at')->limit(300)->get();
+
+        foreach ($services as $a) {
+            $rows->push([
+                'sort' => ($a->approved_at ?? $a->created_at)?->timestamp ?? 0,
+                'cells' => [
+                    'تصديق خدمات',
+                    $a->caseRecord?->case_no ?? '—',
+                    $a->caseRecord?->patient?->name ?? '—',
+                    $a->caseRecord?->case_no ?? '—',
+                    $this->servicesApprovalStatusLabel($a->status),
+                    $a->approvedBy?->name ?? '—',
+                    ClinicTime::format($a->approved_at ?? $a->created_at, 'd/m/Y H:i'),
+                ],
+            ]);
+        }
+
+        $contracts = ApprovalContract::query()
+            ->when($from || $to, function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->where(function ($q2) use ($from, $to) {
+                        if ($from && $to) {
+                            $q2->whereBetween('approval_date', [$from->toDateString(), $to->toDateString()]);
+                        } elseif ($from) {
+                            $q2->where('approval_date', '>=', $from->toDateString());
+                        } else {
+                            $q2->where('approval_date', '<=', $to->toDateString());
+                        }
+                    })->orWhere(function ($q2) use ($from, $to) {
+                        $this->constrainDateRange($q2, 'created_at', $from, $to);
+                    });
+                });
+            })
+            ->orderByDesc('created_at')
+            ->limit(300)
+            ->get();
+
+        foreach ($contracts as $c) {
+            $rows->push([
+                'sort' => ($c->approval_date ? strtotime($c->approval_date) : null) ?? $c->created_at?->timestamp ?? 0,
+                'cells' => [
+                    'موافقة تعاقد',
+                    $c->contract_no ?? '—',
+                    $c->patient_name ?? '—',
+                    $c->company_name ?? '—',
+                    'موافق',
+                    '—',
+                    ClinicTime::format($c->approval_date ?? $c->created_at, 'd/m/Y'),
+                ],
+            ]);
+        }
+
+        $sorted = $rows->sortByDesc('sort')->values();
+        $tableRows = $sorted->map(fn (array $row) => $row['cells'])->take(500)->all();
+
+        return [
+            'title' => 'جميع الأذون والاعتمادات',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [
+                ['label' => 'إجمالي السجلات', 'value' => (string) count($tableRows)],
+                ['label' => 'أذون صرف', 'value' => (string) $dispense->count()],
+                ['label' => 'تعديل توصيف', 'value' => (string) $specEdits->count()],
+                ['label' => 'تصديق خدمات', 'value' => (string) $services->count()],
+            ],
+            'headers' => ['نوع الإذن', 'المرجع', 'المريض', 'الحالة/الجهة', 'الحالة', 'طلب / اعتمد', 'التاريخ'],
+            'rows' => $tableRows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildProductionAssignment(?Carbon $from, ?Carbon $to): array
+    {
+        if (! config('workshop.enabled', true)) {
+            return [
+                'title' => 'تخصيص الإنتاج — قبل الصرف',
+                'period_label' => $this->periodLabel($from, $to),
+                'summary' => [['label' => 'قسم الإنتاج', 'value' => 'معطّلة']],
+                'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'القسم', 'الفني', 'حالة التخصيص', 'آخر تحديث'],
+                'rows' => [],
+            ];
+        }
+
+        $cases = $this->constrainDateRange(
+            CaseRecord::query()
+                ->workshopAssignmentQueue()
+                ->with([
+                    'patient:id,name',
+                    'workshopSection:id,name',
+                    'assignedTechnician:id,name',
+                ]),
+            'updated_at',
+            $from,
+            $to,
+        )
+            ->orderByDesc('updated_at')
+            ->limit(500)
+            ->get();
+
+        $rows = $cases->map(function (CaseRecord $c) {
+            $status = $c->isWorkshopAssignmentApproved()
+                ? 'معتمد — جاهز للصرف'
+                : ($c->workshop_section_id && $c->assigned_technician_id
+                    ? 'بانتظار اعتماد التخصيص'
+                    : 'غير مُخصّص');
+
+            return [
+                $c->case_no ?? '—',
+                $c->work_order_no ?? '—',
+                $c->patient?->name ?? '—',
+                $c->workshopSection?->name ?? '—',
+                $c->assignedTechnician?->name ?? '—',
+                $status,
+                ClinicTime::format($c->updated_at, 'd/m/Y H:i'),
+            ];
+        })->values()->all();
+
+        return [
+            'title' => 'تخصيص الإنتاج — قبل الصرف',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [
+                ['label' => 'إجمالي الطابور', 'value' => (string) $cases->count()],
+                ['label' => 'بانتظار الاعتماد', 'value' => (string) $cases->filter(
+                    fn (CaseRecord $c) => $c->workshop_section_id && $c->assigned_technician_id && ! $c->isWorkshopAssignmentApproved()
+                )->count()],
+                ['label' => 'جاهز للصرف', 'value' => (string) $cases->filter(fn (CaseRecord $c) => $c->isWorkshopAssignmentApproved())->count()],
+            ],
+            'headers' => ['رقم الحالة', 'أمر الشغل', 'المريض', 'القسم', 'الفني', 'حالة التخصيص', 'آخر تحديث'],
             'rows' => $rows,
         ];
     }

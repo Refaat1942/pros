@@ -19,7 +19,7 @@ class TechOrderSpecItem extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'decimal:3',
     ];
 
     public function techOrderSpec(): BelongsTo

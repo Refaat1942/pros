@@ -18,12 +18,27 @@
 
     // العرض للجهة/المريض يعرض بنود التوصيف فقط دون تفصيل أسعار البنود؛
     // القيمة تظهر مرة واحدة في سطر الإجمالي فقط.
-    $specItems   = $quote->items->where('source', BomItem::SOURCE_SPEC)->values();
-    if ($specItems->isEmpty()) {
-        $specItems = $quote->items->values();
+    // عند وجود «الوصف الحر» من التوصيف يُعرض للعميل فقط — لا أسماء الكتالوج.
+    $writtenItems = $case?->resolvedWrittenItems();
+    $writtenLines = $writtenItems !== null
+        ? collect(preg_split('/\R/u', $writtenItems))->map(fn (string $line) => trim($line))->filter()->values()
+        : collect();
+
+    if ($writtenLines->isNotEmpty()) {
+        $displayRows = $writtenLines->map(fn (string $line) => ['description' => $line, 'qty' => null]);
+    } else {
+        $specItems = $quote->items->where('source', BomItem::SOURCE_SPEC)->values();
+        if ($specItems->isEmpty()) {
+            $specItems = $quote->items->values();
+        }
+        $displayRows = $specItems->map(fn ($item) => [
+            'description' => $item->name,
+            'qty' => $item->qty,
+        ]);
     }
-    $minRows     = max($specItems->count(), 4);
-    $emptyRows   = $minRows - $specItems->count();
+
+    $minRows     = max($displayRows->count(), 4);
+    $emptyRows   = $minRows - $displayRows->count();
     $dateDisplay = $quoteDate->format('d/m/Y');
 @endphp
 <!DOCTYPE html>
@@ -610,11 +625,11 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($specItems as $index => $item)
+            @foreach ($displayRows as $index => $row)
                 <tr>
                     <td class="col-no">{{ $index + 1 }}</td>
-                    <td class="col-spec">{{ $item->name }}</td>
-                    <td class="num">{{ $item->qty }}</td>
+                    <td class="col-spec">{{ $row['description'] }}</td>
+                    <td class="num">@if (isset($row['qty'])){{ $row['qty'] }}@else&nbsp;@endif</td>
                     <td class="num">&nbsp;</td>
                     <td class="num">&nbsp;</td>
                     <td>&nbsp;</td>

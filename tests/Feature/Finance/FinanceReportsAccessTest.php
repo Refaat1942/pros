@@ -121,13 +121,13 @@ class FinanceReportsAccessTest extends TestCase
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
 
-        $opening = $hub->build('opening-balance', $dates['from'], $dates['to']);
+        $opening = $hub->build('opening-balance', $dates['from'], $dates['to'], $admin);
         $this->assertSame('رصيد أول المدة', $opening['title']);
         $this->assertSame(['المجال', 'رصيد أول المدة'], $opening['headers']);
         $this->assertNotEmpty($opening['summary']);
         $this->assertNotEmpty($opening['rows']);
 
-        $closing = $hub->build('closing-balance', $dates['from'], $dates['to']);
+        $closing = $hub->build('closing-balance', $dates['from'], $dates['to'], $admin);
         $this->assertSame('رصيد آخر المدة', $closing['title']);
         $this->assertSame(
             ['المجال', 'رصيد أول المدة', 'حركة الفترة', 'رصيد آخر المدة'],
@@ -174,7 +174,7 @@ class FinanceReportsAccessTest extends TestCase
 
         $admin = $this->userWithRole('admin');
         $this->actingAs($admin);
-        $adminReport = $hub->build('profitability', $dates['from'], $dates['to']);
+        $adminReport = $hub->build('profitability', $dates['from'], $dates['to'], $admin);
 
         $this->assertCount(2, $adminReport['rows']);
     }

@@ -306,7 +306,7 @@ class CivilianPipelineTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']); // مسحة لكل وحدة
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']); // مسحة لكل وحدة
 
         $bom->refresh();
         $this->assertEquals(Bom::STAGE_WIP, $bom->stage);
@@ -338,7 +338,7 @@ class CivilianPipelineTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $debt = $company->debt()->first()->fresh();
         $this->assertEquals(400.00, (float) $debt->due,
@@ -361,7 +361,7 @@ class CivilianPipelineTest extends TestCase
         $this->actingAs($user);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
         $this->advanceCaseToFinishing($case);
         $this->finishBomAfterQuality($case->fresh());
 
@@ -382,7 +382,7 @@ class CivilianPipelineTest extends TestCase
         $case->update(['work_order_no' => 'WO-2026-0001', 'quote_total' => 400.00]);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
         $this->advanceCaseToFinishing($case);
         $this->finishBomAfterQuality($case->fresh());
 

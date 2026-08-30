@@ -1,6 +1,10 @@
 @php
     use App\Models\Role;
+<<<<<<< HEAD
     $actorIsSuperAdmin = auth()->user()?->isSuperAdmin() ?? false;
+=======
+    $isSuperAdmin = auth()->user()?->isSuperAdmin() ?? false;
+>>>>>>> origin/master
     $staffMode = $staff_mode ?? 'admin';
     $dashboardKey = $dashboard_key ?? 'admin';
 @endphp
@@ -33,7 +37,7 @@
             ])
         @endif
         <td><strong>{{ $employee->name }}</strong></td>
-        <td dir="ltr">{{ $employee->username }}</td>
+        <td>{{ $employee->username }}</td>
         <td>
             <span class="role-badge {{ $roleSlug ?: 'unknown' }}">
                 {{ $employee->role?->label_ar ?? '—' }}
@@ -70,7 +74,19 @@
                     </button>
                 @else
                 <a href="{{ route('admin.employees', ['edit' => $employee->id]) }}" class="btn-action" title="تعديل">✏️ تعديل</a>
+<<<<<<< HEAD
                 @if ($canToggleEmployee)
+=======
+                @if ($isSuperAdmin && auth()->id() !== $employee->id)
+                    <button type="button"
+                            class="btn-action"
+                            title="إعادة تعيين كلمة المرور"
+                            onclick="resetEmployeePassword({{ $employee->id }}, {{ json_encode($employee->name) }})">
+                        🔑 كلمة المرور
+                    </button>
+                @endif
+                @unless ($isAdminUser)
+>>>>>>> origin/master
                     <form method="POST" action="{{ route('admin.employees.toggle', $employee) }}" style="display:inline;">
                         @csrf
                         @method('PATCH')

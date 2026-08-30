@@ -5,7 +5,7 @@
 @extends('layouts.app')
 
 @section('viewport', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
-@section('title', ($pageTitle ?? $dashboardConfig['title']) . ' — مركز الأطراف الصناعية')
+@section('title', ($pageLabel ?? $pageTitle ?? $dashboardConfig['sidebar']['title'] ?? $dashboardConfig['title']) . ' — مركز الأطراف الصناعية')
 @section('body-attributes'){!! $dashboardConfig['body_attributes'] ?? '' !!} data-dashboard="{{ $dashboardKey }}" data-active-page="{{ $activePage ?? '' }}"@endsection
 
 @push('styles')
@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/entity-badges.css') }}?v={{ filemtime(public_path('assets/css/entity-badges.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-table-search.css') }}?v={{ filemtime(public_path('assets/css/dashboard-table-search.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/dashboard-table-sort-filter.css') }}?v={{ filemtime(public_path('assets/css/dashboard-table-sort-filter.css')) }}">
     @include('partials.dashboard-date-filters-assets')
 @endpush
 
@@ -37,7 +38,7 @@
     <main class="main">
         <div class="page-header">
             <div>
-                <h1>{{ $pageTitle ?? $dashboardConfig['title'] }}</h1>
+                <h1>{{ $pageLabel ?? $pageTitle ?? $dashboardConfig['sidebar']['title'] ?? $dashboardConfig['title'] }}</h1>
                 <p>{{ $dashboardConfig['sidebar']['subtitle'] ?? '' }}</p>
             </div>
             @include('partials.dashboard-header-actions', [
@@ -61,13 +62,15 @@
     <script src="{{ asset('assets/js/shared/toast.js') }}?v={{ filemtime(public_path('assets/js/shared/toast.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}?v={{ filemtime(public_path('assets/js/shared/table-pagination.js')) }}"></script>
+    <script src="{{ asset('assets/js/shared/table-sort-filter.js') }}?v={{ filemtime(public_path('assets/js/shared/table-sort-filter.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/entity-badges.js') }}?v={{ filemtime(public_path('assets/js/shared/entity-badges.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/tech-notes-modal.js') }}"></script>
     @if (! empty($dashboardConfig['nav_groups']))
         <script src="{{ asset('assets/js/shared/sidebar-nav-groups.js') }}?v={{ filemtime(public_path('assets/js/shared/sidebar-nav-groups.js')) }}"></script>
     @endif
     @include('partials.firebase-web')
-    <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}"></script>
+    <script src="{{ asset('assets/js/shared/notification-sound.js') }}?v={{ filemtime(public_path('assets/js/shared/notification-sound.js')) }}"></script>
+    <script src="{{ asset('assets/js/shared/dashboard-notifications.js') }}?v={{ filemtime(public_path('assets/js/shared/dashboard-notifications.js')) }}"></script>
     @php
         $notifAlerts = app(\App\Services\SettingService::class)->notificationAlerts();
     @endphp
@@ -76,6 +79,9 @@
         window.__NOTIF_FEED_URL = "{{ route('notifications.feed') }}?dashboard={{ urlencode($dashboardKey) }}";
         window.__NOTIF_SOUND_ENABLED = @json($notifAlerts['sound_enabled']);
         window.__NOTIF_REMINDER_MS = {{ max(1, (int) $notifAlerts['reminder_minutes']) * 60000 }};
+        @if (!empty($form_field_policies))
+        window.__FORM_FIELD_POLICIES = @json($form_field_policies);
+        @endif
     </script>
     <script src="{{ asset('assets/js/shared/dashboard-notifications-poll.js') }}?v={{ filemtime(public_path('assets/js/shared/dashboard-notifications-poll.js')) }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)

@@ -68,7 +68,7 @@ class SuperAdminPermissionsTest extends TestCase
         $user = User::updateOrCreate(
             ['username' => 'admin-workshop-view-only'],
             [
-                'name' => 'أدمن متابعة ورشة',
+                'name' => 'أدمن متابعة قسم الإنتاج',
                 'password' => UserFactory::TEST_PASSWORD,
                 'role_id' => $adminRole->id,
                 'status' => User::STATUS_ACTIVE,
@@ -181,13 +181,14 @@ class SuperAdminPermissionsTest extends TestCase
             ]
         );
 
+        // H-4: الكتابة على المصفوفة محميّة بـ middleware (can:super-admin) — يُرفض
+        // الأدمن المحدود بـ 403 (حماية أقوى من الاعتماد على شرط داخل المتحكّم فقط).
         $this->actingAs($admin)
             ->post(route('admin.permissions.update'), [
                 '_token' => csrf_token(),
                 'matrix_json' => '{}',
             ])
-            ->assertRedirect(route('admin.permissions'))
-            ->assertSessionHas('error');
+            ->assertForbidden();
     }
 
     public function test_superadmin_login_redirects_to_admin_dashboard(): void

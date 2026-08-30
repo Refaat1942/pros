@@ -83,7 +83,6 @@ class ReceptionSelfServiceService
             ->where(function ($builder) use ($q, $digits) {
                 $builder->where('phone', $q)
                     ->orWhere('patient_code', $q)
-                    ->orWhere('patient_qr', $q)
                     ->orWhere('tracking_uid', $q)
                     ->orWhere('national_id', $q)
                     ->orWhere('name', 'like', "%{$q}%");
@@ -93,6 +92,13 @@ class ReceptionSelfServiceService
                         ->orWhere('phone', 'like', "%{$digits}%")
                         ->orWhere('national_id', $digits);
                 }
+
+                $builder->orWhereHas('cases', function ($caseQuery) use ($q) {
+                    $caseQuery->where('case_no', $q)
+                        ->orWhere('order_ref', $q)
+                        ->orWhere('work_order_no', $q)
+                        ->orWhere('quote_no', $q);
+                });
             })
             ->orderByDesc('id')
             ->first();
@@ -176,7 +182,7 @@ class ReceptionSelfServiceService
                 ['key' => 'registered', 'label' => 'تسجيل واستقبال', 'status' => 'current'],
                 ['key' => 'exam', 'label' => 'الكشف الطبي', 'status' => 'pending'],
                 ['key' => 'technical', 'label' => 'التوصيف الفني', 'status' => 'pending'],
-                ['key' => 'manufacturing', 'label' => 'التصنيع بالورشة', 'status' => 'pending'],
+                ['key' => 'manufacturing', 'label' => 'التصنيع بقسم الإنتاج', 'status' => 'pending'],
                 ['key' => 'ready', 'label' => 'جاهز للتسليم', 'status' => 'pending'],
                 ['key' => 'delivered', 'label' => 'تم التسليم', 'status' => 'pending'],
             ]
@@ -185,7 +191,7 @@ class ReceptionSelfServiceService
                 ['key' => 'exam', 'label' => 'الكشف الطبي', 'status' => 'pending'],
                 ['key' => 'technical', 'label' => 'التوصيف الفني', 'status' => 'pending'],
                 ['key' => 'approval', 'label' => 'اعتماد عروض الأسعار والموافقات', 'status' => 'pending'],
-                ['key' => 'manufacturing', 'label' => 'التصنيع بالورشة', 'status' => 'pending'],
+                ['key' => 'manufacturing', 'label' => 'التصنيع بقسم الإنتاج', 'status' => 'pending'],
                 ['key' => 'ready', 'label' => 'جاهز للتسليم', 'status' => 'pending'],
                 ['key' => 'delivered', 'label' => 'تم التسليم', 'status' => 'pending'],
             ];

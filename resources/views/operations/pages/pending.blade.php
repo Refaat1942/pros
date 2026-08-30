@@ -1,20 +1,13 @@
 <div class="section-view" id="section-pending">
-  <div class="panel" id="workshopAssignmentPanel">
-    <div class="panel-header"><h3>🏭 تخصيص الورشة عند الاعتماد</h3></div>
-    <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;padding:16px;">
-      <p class="text-muted" style="width:100%;margin:0 0 4px;">اختر القسم والفني قبل الضغط على «إصدار أمر الشغل» — يُطبَّق على الحالة التالية التي تعتمدها.</p>
-      <div class="form-group" style="min-width:240px;">
-        <label>قسم الورشة</label>
-        <select id="approveWorkshopSection" class="form-control"><option value="">— بدون —</option></select>
-      </div>
-      <div class="form-group" style="min-width:240px;">
-        <label>الفني</label>
-        <select id="approveWorkshopTechnician" class="form-control"><option value="">— بدون —</option></select>
-      </div>
-    </div>
+  <div class="panel" style="margin-bottom:16px;padding:14px 18px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;line-height:1.7;">
+    <strong style="color:#92400e;">👷 تخصيص الإنتاج — من قسم الإنتاج</strong>
+  <p style="margin:8px 0 0;font-size:13px;color:#78350f;">
+      بعد <strong>إصدار أمر الشغل</strong> من هنا، يذهب الأمر إلى
+      <strong>لوحة قسم الإنتاج → طابور الإنتاج</strong> لتحديد القسم والفني والضغط على
+      <strong>«اعتماد التخصيص»</strong>. بعد ذلك فقط يُسمح للمخزن بصرف المواد.
+    </p>
   </div>
-
-  <div class="panel inventory-wrap" style="margin-top:16px;">
+  <div class="panel inventory-wrap">
     <div class="panel-header">
       <h3>✅ مكتب التشغيل — إصدار أمر الشغل واعتماد الصرف</h3>
       <div style="display:flex;align-items:center;gap:10px;">

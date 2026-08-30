@@ -5,6 +5,8 @@
         ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
         ['icon' => '⚠️', 'label' => 'كمية منخفضة', 'value' => '0', 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
     ];
+    $inventoryListColumns = $inventory_list_columns ?? ['code', 'name', 'available', 'status'];
+    $inventoryListColumnLabels = $inventory_list_column_labels ?? [];
 @endphp
 <div class="section-view" id="section-inventory">
       <div id="analytics-inventory-charts">@include('partials.dashboard-analytics-empty', ['stats' => $invStats, 'hide_charts' => true])</div>
@@ -12,12 +14,12 @@
         <div class="panel-header">
           <h3>📦 توفر المخزون — الكميات المتاحة</h3>
           <div style="display:flex;align-items:center;gap:10px;">
-            <span class="badge" id="inventoryBadge">0 صنف</span>
+            <span class="badge" id="inventoryBadge">{{ ($inventory_items_total ?? count($inventory_items ?? [])) }} صنف</span>
           </div>
         </div>
 
         <div class="inventory-toolbar">
-          <input type="text" id="inventorySearch" placeholder="بحث بالكود أو اسم الصنف...">
+          <input type="text" id="inventorySearch" placeholder="بحث بالكود، الاسم، أو الباركود (امسح و Enter)...">
           <div class="filter-pills" id="inventoryFilters">
             <button class="filter-pill active" data-filter="all">الكل</button>
             <button class="filter-pill" data-filter="ok">✓ متوفر</button>
@@ -31,22 +33,29 @@
         </div>
 
         <div class="stock-table-wrap">
+          @unless ($inventory_list_enabled ?? true)
+            <p style="text-align:center;color:var(--text-muted);padding:24px;">
+              قائمة المخزن غير مفعّلة لدورك — راجع «عرض قوائم الأصناف» في الإعدادات.
+            </p>
+          @else
           <table data-paginate="10" class="stock-table">
             <thead>
-              <tr>
-                <th>كود الصنف</th>
-                <th>اسم الصنف</th>
-                <th class="col-qty">الرصيد المتاح</th>
-                <th class="col-status">الحالة</th>
+              <tr id="inventoryTableHead">
+                @foreach ($inventoryListColumns as $colKey)
+                  <th class="{{ in_array($colKey, ['available', 'status', 'qty', 'reserved'], true) ? 'col-qty' : '' }}">
+                    {{ $inventoryListColumnLabels[$colKey]['label'] ?? $colKey }}
+                  </th>
+                @endforeach
               </tr>
             </thead>
             <tbody id="inventoryTable" data-server-inventory="1"></tbody>
             <tfoot>
               <tr>
-                <td colspan="4" id="inventoryFooter"></td>
+                <td colspan="{{ max(1, count($inventoryListColumns)) }}" id="inventoryFooter"></td>
               </tr>
             </tfoot>
           </table>
+          @endunless
         </div>
       </div>
 
@@ -105,45 +114,8 @@
 <script>
 window.__INVENTORY_ITEMS = @json($inventory_items ?? []);
 window.__INBOUND_RECEIVE_ENABLED = @json($inbound_document_upload ?? true);
+window.__INVENTORY_LIST_COLUMNS = @json($inventoryListColumns);
+window.__INVENTORY_RECEIVE_URL = @json(route('technical.inventory.receive'));
+window.__INVENTORY_LIST_URL = @json(route('technical.inventory.list'));
 </script>
-<script>
-(function () {
-  if (document.body.dataset.dashboard !== 'technical') return;
-  if (document.body.dataset.activePage !== 'inventory') return;
-  var form = document.getElementById('inventoryReceiveForm');
-  if (!form) return;
-  var csrf = document.querySelector('meta[name="csrf-token"]');
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    var fd = new FormData();
-    fd.append('stock_item_id', document.getElementById('receiveStockItemId').value);
-    fd.append('qty', document.getElementById('receiveQty').value);
-    fd.append('unit_price', document.getElementById('receiveUnitPrice').value);
-    fd.append('supplier_id', document.getElementById('receiveSupplierId').value);
-    fd.append('invoice_no', document.getElementById('receiveInvoiceNo').value);
-    fd.append('moved_at', document.getElementById('receiveMovedAt').value);
-    var doc = document.getElementById('receiveDocument');
-    if (doc && doc.files && doc.files[0]) fd.append('document', doc.files[0]);
-    fetch('/technical/inventory/receive', {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '', 'X-Requested-With': 'XMLHttpRequest' },
-      credentials: 'same-origin',
-      body: fd,
-    }).then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
-      .then(function (res) {
-        var el = document.getElementById('receiveFormMessage');
-        el.style.display = 'block';
-        el.style.color = '#059669';
-        el.textContent = res.message || 'تم الاستلام';
-        form.reset();
-        document.getElementById('receiveMovedAt').value = new Date().toISOString().slice(0, 10);
-      })
-      .catch(function (err) {
-        var el = document.getElementById('receiveFormMessage');
-        el.style.display = 'block';
-        el.style.color = '#dc2626';
-        el.textContent = (err && err.message) ? err.message : 'فشل الاستلام';
-      });
-  });
-})();
-</script>
+@include('partials.inventory-receive-form-script')

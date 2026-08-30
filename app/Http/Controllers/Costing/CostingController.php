@@ -8,6 +8,7 @@ use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Services\CostingService;
 use App\Services\CostingSnapshotService;
+use App\Services\MedicalContextService;
 use App\Services\PathwayTransitionMessageService;
 use App\Services\PricingService;
 use App\Services\StockCategorySchemaService;
@@ -32,6 +33,7 @@ class CostingController extends Controller
         private readonly StockCategorySchemaService $categorySchema,
         private readonly CostingSnapshotService $snapshotService,
         private readonly PathwayTransitionMessageService $transitions,
+        private readonly MedicalContextService $medicalContext,
     ) {}
 
     /**
@@ -71,7 +73,8 @@ class CostingController extends Controller
             'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank,contract_company_id',
             'patient.contractCompany:id,name,is_contracted,discount_percent',
             'contractCompany:id,name,is_contracted,discount_percent',
-            'techOrderSpec:id,case_id,tech_notes',
+            'techOrderSpec:id,case_id,tech_notes,written_items',
+            'techOrderSpec.items',
             'bom.items',
             'pricingRequest.items.stockItem.attributeValues.field',
         ]);
@@ -106,6 +109,14 @@ class CostingController extends Controller
                     'stock_item_code', 'name', 'qty', 'source',
                 ]))->values(),
             ] : null,
+            'spec' => $case->techOrderSpec ? [
+                'tech_notes' => $case->techOrderSpec->tech_notes,
+                'written_items' => $case->techOrderSpec->written_items,
+                'items' => $case->techOrderSpec->items->map(fn ($i) => $i->only([
+                    'stock_item_code', 'name', 'qty', 'uom',
+                ]))->values(),
+            ] : null,
+            'medical_record' => $this->medicalContext->formatForCase($case),
             'can_see_internal' => CaseFinancialSummary::canSeeInternalCost(),
             'can_see_rates' => $canSeeRates,
         ]);
@@ -124,14 +135,13 @@ class CostingController extends Controller
      */
     public function confirm(CaseRecord $case): JsonResponse
     {
-        $fromStage = $case->stage_key;
         $case = $this->costingService->confirmAndIssueQuote($case, Auth::user()?->name);
 
         return response()->json([
             'message' => $this->transitions->transferMessage(
                 $case->load('patient'),
-                WorkflowEvent::QuoteIssued->value,
-                $fromStage,
+                WorkflowEvent::CostingCompleted->value,
+                CaseRecord::STAGE_COST_CALC,
             ),
             'case' => $this->formatSummary($case->load(['patient', 'pricingRequest', 'quotes'])),
         ]);
@@ -225,6 +235,7 @@ class CostingController extends Controller
                         'name' => $item->name,
                         'qty' => $item->qty,
                         'criteria' => $criteria,
+                        'price' => $stockItem ? (float) $stockItem->price : 0.0,
                         'line_total' => (float) $item->line_total,
                     ];
                 })->values()

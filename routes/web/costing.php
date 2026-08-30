@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('costing', 'costing.', CostingDashboardController::class, 'costing');
+registerDepartmentStaffRoutes('costing', 'costing.', 'costing');
 
 /*
 |--------------------------------------------------------------------------

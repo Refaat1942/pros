@@ -2520,6 +2520,7 @@
 
     .cases-quick-btn.waiting .cq-count { color: #d97706; }
     .cases-quick-btn.cashier .cq-count { color: #0e7490; }
+    .cases-quick-btn.assignment .cq-count { color: #b45309; }
     .cases-quick-btn.progress .cq-count { color: #0e7490; }
     .cases-quick-btn.delivered .cq-count { color: #059669; }
 
@@ -4600,6 +4601,7 @@
 
     .overview-case-link--wait { border-right-color: #d97706; }
     .overview-case-link--cashier { border-right-color: #0e7490; }
+    .overview-case-link--assignment { border-right-color: #b45309; }
     .overview-case-link--progress { border-right-color: #0e7490; }
     .overview-case-link--done { border-right-color: #059669; }
 
@@ -4615,6 +4617,7 @@
 
     .overview-case-link--wait .overview-case-link__count { color: #d97706; }
     .overview-case-link--cashier .overview-case-link__count { color: #0e7490; }
+    .overview-case-link--assignment .overview-case-link__count { color: #b45309; }
     .overview-case-link--progress .overview-case-link__count { color: #0e7490; }
     .overview-case-link--done .overview-case-link__count { color: #059669; }
 

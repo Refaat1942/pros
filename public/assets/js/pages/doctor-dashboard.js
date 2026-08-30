@@ -118,8 +118,8 @@
 
     function formatTransferStatusMeta(status, statusGroup) {
       if (statusGroup === 'مكتمل' || status === 'مكتمل') return '<span class="record-status-done">✅ مكتمل</span>';
-      if (statusGroup === 'في الورشة' || (status && status.indexOf('التصنيع') !== -1)) {
-        return '<span class="record-status-transfer" style="color:var(--primary)">🏭 في الورشة</span>';
+      if (statusGroup === 'في قسم الإنتاج' || (status && status.indexOf('التصنيع') !== -1)) {
+        return '<span class="record-status-transfer" style="color:var(--primary)">🏭 في قسم الإنتاج</span>';
       }
       return '<span class="record-status-transfer">⚙️ قيد التوصيف</span>';
     }
@@ -553,7 +553,7 @@
       var values = root.querySelectorAll('.ck-stat-value');
       var total = transferred.length;
       var spec = transferred.filter(function(t) { return t.statusGroup === 'قيد التوصيف'; }).length;
-      var workshop = transferred.filter(function(t) { return t.statusGroup === 'في الورشة'; }).length;
+      var workshop = transferred.filter(function(t) { return t.statusGroup === 'في قسم الإنتاج'; }).length;
       var done = transferred.filter(function(t) { return t.statusGroup === 'مكتمل'; }).length;
       if (values[0]) values[0].textContent = String(total);
       if (values[1]) values[1].textContent = String(spec);
@@ -729,16 +729,21 @@
       renderQueue();
     }
 
-    function showToast(msg) {
+    function showToast(msg, isError) {
+      var toastId = document.getElementById('toast') ? 'toast' : 'notifToast';
       if (window.DashboardToast) {
-        window.DashboardToast.show(msg);
+        window.DashboardToast.show(msg, {
+          id: toastId,
+          isError: !!isError,
+          duration: 4500,
+        });
         return;
       }
-      var toast = document.getElementById('toast');
+      var toast = document.getElementById('toast') || document.getElementById('notifToast');
       if (!toast) return;
-      toast.innerHTML = '✅ ' + msg;
+      toast.innerHTML = isError ? '⚠️ ' + msg : '✅ ' + msg;
       toast.classList.add('show');
-      setTimeout(function() { toast.classList.remove('show'); }, 5000);
+      setTimeout(function() { toast.classList.remove('show'); }, 4500);
     }
 
     function submitDiagnosisToServer(form) {
@@ -779,11 +784,12 @@
           }
           return res.json();
         })
-        .then(function() {
-          showToast('تم التحويل للتوصيف');
+        .then(function (data) {
+          var msg = (data && data.message) ? data.message : 'تم التحويل للتوصيف';
+          showToast(msg);
           setTimeout(function() {
             window.location.href = dashboardPageUrl('records');
-          }, 700);
+          }, 4500);
         })
         .catch(function(err) {
           if (saveBtn) saveBtn.disabled = false;
@@ -1053,9 +1059,13 @@
             return data;
           });
         })
-        .then(function () {
-          closeDoctorExamModal();
-          window.location.reload();
+        .then(function (data) {
+          var msg = (data && data.message) ? data.message : 'تم التحويل للتوصيف';
+          showToast(msg);
+          setTimeout(function () {
+            closeDoctorExamModal();
+            window.location.reload();
+          }, 4500);
         })
         .catch(function (err) {
           showDoctorExamError(err.message || 'تعذّر حفظ التشخيص.');
@@ -1087,9 +1097,13 @@
             return data;
           });
         })
-        .then(function () {
-          closeDoctorExamModal();
-          window.location.reload();
+        .then(function (data) {
+          var msg = (data && data.message) ? data.message : 'تم التحويل للتوصيف';
+          showToast(msg);
+          setTimeout(function () {
+            closeDoctorExamModal();
+            window.location.reload();
+          }, 4500);
         })
         .catch(function (err) {
           showDoctorExamError(err.message || 'تعذّر تخطّي الكشف.');

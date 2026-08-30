@@ -30,11 +30,27 @@
   var pickerOpen = false;
   var pickerSearchQuery = '';
   var pickerSelectedCodes = {};
+  var PICKER_RENDER_MAX = 150;
 
   function $(id) { return document.getElementById(id); }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
+
+  function fmtCatalogPrice(n) {
+    return Number(n || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function itemCatalogPrice(it) {
+    if (it && it.price != null && !isNaN(parseFloat(it.price))) {
+      return fmtCatalogPrice(it.price);
+    }
+    var cat = findCatalogItem(it && it.stock_item_code);
+    return cat ? fmtCatalogPrice(cat.price) : '—';
   }
 
   function apiMessage(err, fallback) {
@@ -175,7 +191,7 @@
     var items = catalogCache.filter(function (item) {
       if (!itemMatchesActiveSpecGroups(item)) return false;
       if (!q) return true;
-      return (item.code + ' ' + item.name).toLowerCase().indexOf(q) !== -1;
+      return (item.code + ' ' + item.name + ' ' + (item.barcode || '') + ' ' + (item.alt_codes || '')).toLowerCase().indexOf(q) !== -1;
     });
 
     if (!items.length) {
@@ -188,7 +204,10 @@
       return;
     }
 
-    list.innerHTML = items.map(function (item) {
+    var truncated = items.length > PICKER_RENDER_MAX;
+    var visibleItems = truncated ? items.slice(0, PICKER_RENDER_MAX) : items;
+
+    list.innerHTML = visibleItems.map(function (item) {
       // يُسمح باختيار كل الأصناف؛ الصنف غير المتاح يظهر بوسم «طلب توريد» بلا حظر.
       var isBackorder = maxAddableQty(item) < 1;
       var checked = !!pickerSelectedCodes[item.code];
@@ -202,7 +221,10 @@
         '<span class="adj-picker-name">' + esc(item.name) +
         (isBackorder ? ' <span class="adj-picker-muted">(طلب توريد)</span>' : '') + '</span>' +
         '</span></label></li>';
-    }).join('');
+    }).join('') +
+      (truncated
+        ? '<li class="adj-picker-empty">يُعرض ' + PICKER_RENDER_MAX + ' من ' + items.length + ' — ضيّق البحث لعرض الباقي</li>'
+        : '');
 
     updateCatalogFooter();
   }
@@ -264,6 +286,12 @@
     closeItemPicker();
   }
 
+  function normalizePickerQty(value, fallback) {
+    var n = parseFloat(String(value).replace(',', '.'));
+    if (isNaN(n) || n < 0.001) return fallback !== undefined ? fallback : 0.001;
+    return Math.round(n * 1000) / 1000;
+  }
+
   function syncItemQtyLimits() {
     var qtyEl = $('adjItemQty');
     var addBtn = $('btnAddAdjItem');
@@ -275,7 +303,8 @@
     // لا سقف على الكمية — يُسمح بتجاوز المتاح (بيع بالسالب/طلب توريد).
     qtyEl.disabled = !hasItems;
     qtyEl.removeAttribute('max');
-    qtyEl.min = hasItems ? '1' : '0';
+    qtyEl.min = hasItems ? '0.001' : '0';
+    qtyEl.step = '0.001';
 
     if (!hasItems) {
       qtyEl.value = '1';
@@ -283,8 +312,7 @@
       return;
     }
 
-    var current = parseInt(qtyEl.value, 10);
-    if (!current || current < 1) current = 1;
+    var current = normalizePickerQty(qtyEl.value, 1);
     qtyEl.value = String(current);
 
     if (addBtn) addBtn.disabled = false;
@@ -331,6 +359,11 @@
     });
   }
 
+  function syncCompleteButtonLabel() {
+    var btn = $('btnCompleteAdj');
+    if (btn) btn.textContent = '📤 إرسال إلى الاعتماد';
+  }
+
   function applyModalMode() {
     var isDirect = modalMode === 'direct';
     var hasPending = !!(activeCase && activeCase.has_pending_edit_request);
@@ -349,6 +382,7 @@
     if (pendingBanner) {
       pendingBanner.hidden = isDirect || !hasPending;
     }
+    syncCompleteButtonLabel();
   }
 
   function renderWrittenItemsBlock() {
@@ -379,10 +413,38 @@
       return {
         stock_item_code: c.code,
         name: c.name,
-        qty: (parseInt(c.qty, 10) || 1) * mult,
+        qty: normalizePickerQty((parseFloat(c.qty) || 1) * mult, 0.001),
         group_label: catalogItem.group_label || catalogItem.spec_group_label || null,
       };
     });
+  }
+
+  function itemQtyNumber(it) {
+    return parseFloat(it && it.qty) || 0;
+  }
+
+  function itemLineCatalogTotal(it) {
+    var price = it && it.price != null && !isNaN(parseFloat(it.price))
+      ? parseFloat(it.price)
+      : (findCatalogItem(it && it.stock_item_code) ? parseFloat(findCatalogItem(it.stock_item_code).price) : 0);
+    return Math.round(itemQtyNumber(it) * price * 100) / 100;
+  }
+
+  function bomCatalogGrandTotal(items) {
+    return (items || []).reduce(function (sum, it) {
+      return sum + itemLineCatalogTotal(it);
+    }, 0);
+  }
+
+  function renderCatalogGrandTotalRow(colspan, total, trailingCols) {
+    var trailing = '';
+    var extra = trailingCols || 0;
+    for (var i = 0; i < extra; i++) trailing += '<td></td>';
+    return '<tr class="adj-grand-total-row" style="background:#f8fafc;font-weight:800;">' +
+      '<td colspan="' + colspan + '" style="text-align:right;padding:10px;">الإجمالي الكلي</td>' +
+      '<td class="catalog-price-cell" style="text-align:center;font-size:15px;">' + fmtCatalogPrice(total) + '</td>' +
+      trailing +
+      '</tr>';
   }
 
   function renderSpecBlock() {
@@ -390,7 +452,7 @@
     if (!tbody) return;
     var specs = specBomItems();
     if (!specs.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">لا توجد بنود توصيف فني.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد بنود توصيف فني.</td></tr>';
       return;
     }
     var groups = {};
@@ -406,16 +468,19 @@
     var html = '';
     order.forEach(function (key) {
       if (key) {
-        html += '<tr class="adj-spec-group"><td colspan="4" style="background:#f5f3ff;font-weight:700;padding:8px 10px;">📦 ' + esc(key) + '</td></tr>';
+        html += '<tr class="adj-spec-group"><td colspan="5" style="background:#f5f3ff;font-weight:700;padding:8px 10px;">📦 ' + esc(key) + '</td></tr>';
       }
       groups[key].forEach(function (it) {
         html += '<tr>' +
           '<td>' + esc(it.stock_item_code) + '</td>' +
           '<td>' + esc(it.name) + '</td>' +
           '<td>' + esc(it.qty) + '</td>' +
-          '<td>' + esc(it.uom || 'قطعة') + '</td></tr>';
+          '<td>' + esc(it.uom || 'قطعة') + '</td>' +
+          '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td></tr>';
       });
     });
+    var specTotal = bomCatalogGrandTotal(specs);
+    html += renderCatalogGrandTotalRow(4, specTotal);
     tbody.innerHTML = html;
   }
 
@@ -428,7 +493,7 @@
     var rows = [];
 
     if (!editRequestItems.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
       return;
     }
 
@@ -436,9 +501,10 @@
       rows.push('<tr>' +
         '<td>' + esc(it.stock_item_code) + '</td>' +
         '<td>' + esc(it.name) + '</td>' +
-        '<td><input type="number" class="form-control adj-edit-qty" data-idx="' + idx + '" min="1" value="' + esc(it.qty) + '"' +
+        '<td><input type="number" class="form-control adj-edit-qty" data-idx="' + idx + '" min="0.001" step="0.001" value="' + esc(it.qty) + '"' +
         (activeCase && activeCase.has_pending_edit_request ? ' disabled' : '') + ' style="width:72px;padding:4px 8px;"></td>' +
         '<td>' + esc(it.uom || findCatalogItem(it.stock_item_code)?.uom || 'قطعة') + '</td>' +
+        '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td>' +
         '<td><span class="badge done">معدّلات</span></td>' +
         '<td class="adj-col-action">' +
         (activeCase && activeCase.has_pending_edit_request ? '' :
@@ -448,15 +514,15 @@
         '</td></tr>');
     });
 
-    tbody.innerHTML = rows.join('') || '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات.</td></tr>';
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="7" class="empty-cell">لا توجد بنود معدّلات.</td></tr>';
   }
 
   function syncEditRequestItemsFromInputs() {
     document.querySelectorAll('.adj-edit-qty').forEach(function (input) {
       var idx = parseInt(input.getAttribute('data-idx'), 10);
       if (isNaN(idx) || !editRequestItems[idx]) return;
-      var qty = parseInt(input.value, 10);
-      editRequestItems[idx].qty = qty > 0 ? qty : 1;
+      var qty = normalizePickerQty(input.value, editRequestItems[idx].qty);
+      editRequestItems[idx].qty = qty;
     });
   }
 
@@ -464,7 +530,7 @@
     var code = catalogItem.stock_item_code || catalogItem.code;
     var existing = editRequestItems.filter(function (i) { return i.stock_item_code === code; })[0];
     if (existing) {
-      existing.qty = (parseInt(existing.qty, 10) || 0) + qty;
+      existing.qty = normalizePickerQty((parseFloat(existing.qty) || 0) + qty, qty);
     } else {
       editRequestItems.push({
         stock_item_code: code,
@@ -486,7 +552,7 @@
 
     axios.post(EDIT_REQUEST_URL(activeCase.id), {
       items: editRequestItems.map(function (i) {
-        return { stock_item_code: i.stock_item_code, name: i.name, qty: parseInt(i.qty, 10) || 1 };
+        return { stock_item_code: i.stock_item_code, name: i.name, qty: normalizePickerQty(i.qty, 0.001) };
       }),
     })
       .then(function (res) {
@@ -604,11 +670,11 @@
     });
 
     if (!adjItems.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = adjItems.map(function (it) {
+    var rows = adjItems.map(function (it) {
       var removeBtn = '<td class="adj-col-action">' +
         '<button type="button" class="adj-remove-btn btn-remove-adj-item" data-item-id="' + esc(it.id) + '"' +
         ' title="حذف البند" aria-label="حذف البند">' +
@@ -620,12 +686,15 @@
         '<td>' + esc(it.stock_item_code) + '</td>' +
         '<td>' + esc(it.name) + '</td>' +
         '<td><input type="number" class="form-control adj-item-qty-input" data-item-id="' + esc(it.id) + '"' +
-        ' data-qty="' + esc(it.qty) + '" min="1" value="' + esc(it.qty) + '" style="width:82px;padding:4px 8px;"></td>' +
+        ' data-qty="' + esc(it.qty) + '" min="0.001" step="0.001" value="' + esc(it.qty) + '" style="width:82px;padding:4px 8px;"></td>' +
         '<td>' + esc(it.uom || 'قطعة') + '</td>' +
+        '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td>' +
         '<td><span class="badge done">معدّلات</span></td>' +
         removeBtn +
         '</tr>';
     }).join('');
+    rows += renderCatalogGrandTotalRow(5, bomCatalogGrandTotal(adjItems), 2);
+    tbody.innerHTML = rows;
   }
 
   function updateAdjItemQty(itemId, newQty, inputEl) {
@@ -712,7 +781,7 @@
           axios.get(EDIT_REQUEST_URL(caseId))
             .then(function (editRes) {
               editRequestItems = (editRes.data.items || []).map(function (i) {
-                return { stock_item_code: i.stock_item_code, name: i.name, qty: parseInt(i.qty, 10) || 1 };
+                return { stock_item_code: i.stock_item_code, name: i.name, qty: normalizePickerQty(i.qty, 0.001) };
               });
               if (editRes.data.pending_request) {
                 activeCase.has_pending_edit_request = true;
@@ -750,14 +819,14 @@
     if (!activeCase || !window.axios) return;
 
     var codes = getSelectedCodes();
-    var qty = parseInt(($('adjItemQty') && $('adjItemQty').value) || '0', 10);
+    var qty = normalizePickerQty(($('adjItemQty') && $('adjItemQty').value) || '0', 0);
 
     if (!codes.length) {
       showError('اختر صنفاً واحداً على الأقل من القائمة');
       return;
     }
-    if (!qty || qty < 1) {
-      showError('أدخل كمية صحيحة');
+    if (!qty || qty < 0.001) {
+      showError('أدخل كمية صحيحة (0.001 على الأقل)');
       return;
     }
 
@@ -854,8 +923,8 @@
     var codes = getSelectedCodes();
     if (!codes.length) return null;
 
-    var qty = parseInt(($('adjItemQty') && $('adjItemQty').value) || '0', 10);
-    if (!qty || qty < 1) qty = 1;
+    var qty = normalizePickerQty(($('adjItemQty') && $('adjItemQty').value) || '0', 1);
+    if (qty < 0.001) qty = 0.001;
 
     return {
       count: codes.length,
@@ -872,9 +941,9 @@
       window.alert(
         pending.count > 1
           ? ('⚠️ حدّدت ' + pending.count + ' أصناف (كمية ' + pending.qty + ' لكل صنف) ولم تؤكّد إضافتها.\n\n' +
-            'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال للتكاليف».')
+            'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال إلى الاعتماد».')
           : ('⚠️ اخترت صنفاً (كمية ' + pending.qty + ') ولم تؤكّد إضافته.\n\n' +
-            'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال للتكاليف».')
+            'اضغط «إضافة» أولاً، أو أزل الاختيار ثم أعد «إرسال إلى الاعتماد».')
       );
       var addBtn = $('btnAddAdjItem');
       if (addBtn) {
@@ -888,8 +957,8 @@
     if (btn) btn.disabled = true;
 
     axios.post(COMPLETE_URL(activeCase.id), {})
-      .then(function () {
-        toast('✅ تم إغلاق المعدلات ودفع الحالة للتكاليف');
+      .then(function (res) {
+        toast('✅ ' + (res.data.message || 'تم التحويل إلى الاعتماد'));
         closeModal();
         refreshList();
       })
@@ -900,6 +969,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    syncCompleteButtonLabel();
+
     var refresh = $('btnRefreshAdj');
     if (refresh) refresh.addEventListener('click', refreshList);
 
@@ -948,13 +1019,13 @@
         if (e.target.classList.contains('adj-item-qty-input')) {
           var input = e.target;
           var itemId = input.getAttribute('data-item-id');
-          var prev = parseInt(input.getAttribute('data-qty'), 10) || 1;
-          var next = parseInt(input.value, 10);
-          if (!next || next < 1) {
+          var prev = parseFloat(input.getAttribute('data-qty')) || 0.001;
+          var next = parseFloat(input.value);
+          if (!next || next < 0.001) {
             input.value = String(prev);
             return;
           }
-          if (next === prev) return;
+          if (Math.abs(next - prev) < 0.0005) return;
           updateAdjItemQty(itemId, next, input);
         }
       });
@@ -976,6 +1047,26 @@
         if (e.key === 'Escape') {
           e.preventDefault();
           closeItemPicker();
+          return;
+        }
+        if (e.key === 'Enter') {
+          var scan = (pickerSearch.value || '').trim().toUpperCase();
+          if (!scan) return;
+          e.preventDefault();
+          pickerSearchQuery = pickerSearch.value || '';
+          renderItemPickerList();
+          var exact = catalogCache.find(function (item) {
+            return item.barcode && String(item.barcode).toUpperCase() === scan;
+          });
+          if (exact) {
+            setPickerCodeSelected(exact.code, true);
+            renderItemPickerList();
+            var cb = pickerList.querySelector('.adj-picker-checkbox[value="' + exact.code + '"]');
+            if (cb) {
+              cb.focus();
+              cb.closest('.adj-picker-option').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
         }
       });
     }
@@ -1019,9 +1110,8 @@
 
     if (qtyInput) {
       qtyInput.addEventListener('input', function () {
-        // لا سقف على الكمية (بيع بالسالب مسموح) — فقط منع القيم أقل من 1.
-        var val = parseInt(qtyInput.value, 10);
-        if (val < 1 && qtyInput.value !== '') qtyInput.value = '1';
+        var val = parseFloat(qtyInput.value);
+        if (!isNaN(val) && val < 0.001 && qtyInput.value !== '') qtyInput.value = '0.001';
       });
     }
 

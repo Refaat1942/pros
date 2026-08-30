@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Admin\BrandingSettingsController;
+use App\Http\Controllers\Admin\DocumentsHubController;
+use App\Http\Controllers\Admin\DocumentTemplateController;
+use App\Http\Controllers\Admin\CatalogListSettingsController;
 use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\FormFieldSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
@@ -15,6 +18,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitTypeController;
 use App\Http\Controllers\Admin\WorkflowSettingsController;
 use App\Http\Controllers\Admin\WorkshopSectionController;
+use App\Http\Controllers\Admin\WorkshopTechnicianController;
 use App\Http\Controllers\Admin\WorkshopTrackingController;
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
@@ -26,6 +30,8 @@ use App\Http\Controllers\Reports\AdminOverviewController;
 use App\Http\Controllers\Reports\AdminReportsHubController;
 use App\Http\Controllers\Reports\AuditLogController;
 use App\Http\Controllers\Stock\StockCatalogController;
+use App\Http\Controllers\Stock\StockReceiveController;
+use App\Http\Controllers\Stock\SupplyRequestController;
 use App\Http\Controllers\Stock\SupplierController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,6 +59,18 @@ Route::prefix('admin')
         Route::get('audit', [AuditLogController::class, 'index'])
             ->middleware('dashboard.page:admin,audit')->name('audit');
 
+        Route::get('documents-hub', [DocumentsHubController::class, 'index'])
+            ->middleware('dashboard.page:admin,documents-hub')->name('documents-hub');
+
+        Route::middleware('dashboard.page:admin,documents-hub')->group(function () {
+            Route::get('documents-hub/{document}/edit', [DocumentTemplateController::class, 'edit'])
+                ->name('documents-hub.edit');
+            Route::put('documents-hub/{document}', [DocumentTemplateController::class, 'update'])
+                ->name('documents-hub.update');
+            Route::get('documents-hub/{document}/preview', [DocumentTemplateController::class, 'preview'])
+                ->name('documents-hub.preview');
+        });
+
         Route::middleware('dashboard.page:admin,reports')->group(function () {
             Route::get('reports', [AdminReportsHubController::class, 'index'])->name('reports');
             Route::get('reports/{section}/export', [AdminReportsHubController::class, 'export'])->name('reports.export');
@@ -72,7 +90,7 @@ registerDashboardPages(
     'admin.',
     AdminDashboardController::class,
     'admin',
-    except: ['overview', 'bi', 'audit', 'reports', 'reports-section', 'general-view'],
+    except: ['overview', 'bi', 'audit', 'documents-hub', 'document-template-edit', 'reports', 'reports-section', 'general-view'],
 );
 
 /*
@@ -90,12 +108,41 @@ Route::prefix('admin')
     ->group(function () {
 
         // ── Stock Catalog ──────────────────────────────────────────────────
+        Route::post('catalog', [StockCatalogController::class, 'store'])
+            ->middleware('can:manage-inventory')
+            ->name('catalog.store');
+
+        Route::middleware('dashboard.page:admin,supply-request')->group(function () {
+            Route::get('supply/list', [StockReceiveController::class, 'index'])
+                ->name('supply.list');
+
+            Route::get('supply/requests', [SupplyRequestController::class, 'index'])
+                ->name('supply.requests');
+
+            Route::post('supply/requests', [SupplyRequestController::class, 'store'])
+                ->name('supply.requests.store');
+
+            Route::post('supply/requests/{supplyRequestLine}/resolve', [SupplyRequestController::class, 'resolve'])
+                ->name('supply.requests.resolve');
+
+            Route::get('supply/search-items', [SupplyRequestController::class, 'searchItems'])
+                ->name('supply.search-items');
+
+            Route::get('supply/requests/print', [SupplyRequestController::class, 'printOpen'])
+                ->name('supply.requests.print');
+        });
+
+        Route::middleware('dashboard.page:admin,receive-inbound')->group(function () {
+            Route::post('receive/receive', [StockReceiveController::class, 'receive'])
+                ->name('receive.receive');
+
+            Route::get('receive/pending-lines', [SupplyRequestController::class, 'index'])
+                ->name('receive.pending-lines');
+        });
+
         Route::middleware('dashboard.page:admin,catalog')->group(function () {
             Route::get('catalog/items', [StockCatalogController::class, 'index'])
                 ->name('catalog.items');
-
-            Route::post('catalog', [StockCatalogController::class, 'store'])
-                ->name('catalog.store');
 
             Route::put('catalog/{stockItem}', [StockCatalogController::class, 'update'])
                 ->name('catalog.update');
@@ -125,6 +172,10 @@ Route::prefix('admin')
             Route::get('catalog/{stockItem}/labels', [StockCatalogController::class, 'labels'])
                 ->middleware('can:print-barcode')
                 ->name('catalog.labels');
+
+            Route::get('catalog/{stockItem}/screen-barcode', [StockCatalogController::class, 'screenBarcode'])
+                ->middleware('can:print-barcode')
+                ->name('catalog.screen-barcode');
 
             Route::get('catalog/{stockItem}/sales-stats', [StockCatalogController::class, 'salesStats'])
                 ->name('catalog.sales-stats');
@@ -164,7 +215,9 @@ Route::prefix('admin')
         });
 
         // ── مصفوفة الصلاحيات التفصيلية ──────────────────────────────────────
-        Route::middleware('dashboard.page:admin,permissions')->group(function () {
+        // H-4: الكتابة على مصفوفة الصلاحيات للسوبر أدمن فقط — تُفرض عبر middleware
+        //      مخصّص (can:super-admin) وليس فقط عبر شرط داخل المتحكّم.
+        Route::middleware(['dashboard.page:admin,permissions', 'can:super-admin'])->group(function () {
             Route::post('permissions', [PermissionMatrixController::class, 'update'])
                 ->name('permissions.update');
         });
@@ -173,6 +226,18 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,companies')->group(function () {
             Route::get('companies/list', [ContractCompanyController::class, 'index'])
                 ->name('companies.list');
+
+            Route::get('companies/template', [ContractCompanyController::class, 'template'])
+                ->middleware('throttle:30,1')
+                ->name('companies.template');
+
+            Route::get('companies/export', [ContractCompanyController::class, 'export'])
+                ->middleware('throttle:30,1')
+                ->name('companies.export');
+
+            Route::post('companies/import', [ContractCompanyController::class, 'import'])
+                ->middleware('throttle:10,1')
+                ->name('companies.import');
 
             Route::post('companies', [ContractCompanyController::class, 'store'])
                 ->name('companies.store');
@@ -242,6 +307,11 @@ Route::prefix('admin')
                 ->name('notification-settings.update');
         });
 
+        Route::middleware('dashboard.page:admin,catalog-list-settings')->group(function () {
+            Route::put('catalog-list-settings', [CatalogListSettingsController::class, 'update'])
+                ->name('catalog-list-settings.update');
+        });
+
         Route::middleware('dashboard.page:admin,pathway-settings')->group(function () {
             Route::put('pathway-settings/bulk', [PathwaySettingsController::class, 'updateAll'])
                 ->name('pathway-settings.update-all');
@@ -297,6 +367,22 @@ Route::prefix('admin')
             Route::delete('workshop-sections/{workshopSection}', [WorkshopSectionController::class, 'destroy'])
                 ->middleware('can:manage-workshop-sections')
                 ->name('workshop-sections.destroy');
+
+            Route::get('workshop-technicians/list', [WorkshopTechnicianController::class, 'index'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-technicians.list');
+
+            Route::post('workshop-technicians', [WorkshopTechnicianController::class, 'store'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-technicians.store');
+
+            Route::put('workshop-technicians/{user}', [WorkshopTechnicianController::class, 'update'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-technicians.update');
+
+            Route::delete('workshop-technicians/{user}', [WorkshopTechnicianController::class, 'destroy'])
+                ->middleware('can:manage-workshop-sections')
+                ->name('workshop-technicians.destroy');
         });
 
         Route::get('workshop-sections/options', [WorkshopSectionController::class, 'options'])
@@ -361,6 +447,7 @@ Route::prefix('admin')
                 ->name('civilian-debts.list');
 
             Route::post('civilian-debts/{company}/collect', [CivilianDebtController::class, 'recordPayment'])
+                ->middleware('can:collect-civilian-debt')
                 ->name('civilian-debts.collect');
 
             Route::get('civilian-debts/{company}/collections', [CivilianDebtController::class, 'collectionHistory'])
@@ -372,16 +459,15 @@ Route::prefix('admin')
             Route::get('military-debts/list', [MilitaryDebtController::class, 'index'])
                 ->name('military-debts.list');
 
-            Route::patch('military-debts/{militaryDebt}/status', [MilitaryDebtController::class, 'updateStatus'])
-                ->name('military-debts.status');
-
             Route::post('military-debts/{militaryDebt}/collect', [MilitaryDebtController::class, 'recordPayment'])
+                ->middleware('can:collect-military-debt')
                 ->name('military-debts.collect');
 
             Route::get('military-debts/{militaryDebt}/collections', [MilitaryDebtController::class, 'collectionHistory'])
                 ->name('military-debts.collections');
 
             Route::delete('military-debts/{militaryDebt}', [MilitaryDebtController::class, 'destroy'])
+                ->middleware('can:delete-military-debt')
                 ->name('military-debts.destroy');
         });
 
@@ -408,6 +494,10 @@ Route::prefix('admin')
 
         // ── Employees (Blade form POST) ───────────────────────────────────
         Route::middleware('dashboard.page:admin,employees')->group(function () {
+            Route::get('employees/catalog-list-visibility', [UserController::class, 'catalogListVisibilityDefaults'])
+                ->name('employees.catalog-list-visibility');
+            Route::get('employees/role-pages/{role}', [UserController::class, 'rolePages'])
+                ->name('employees.role-pages');
             Route::post('employees', [UserController::class, 'store'])
                 ->name('employees.store');
 
@@ -419,5 +509,8 @@ Route::prefix('admin')
 
             Route::delete('employees/{user}', [UserController::class, 'destroy'])
                 ->name('employees.destroy');
+
+            Route::post('employees/{user}/reset-password', [UserController::class, 'resetPassword'])
+                ->name('employees.reset-password');
         });
     });

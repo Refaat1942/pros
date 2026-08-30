@@ -9,7 +9,7 @@
 <div class="workshop-stats-page" id="workshopStatsPage" data-server-rendered="1">
     <div class="workshop-stats-hero">
         <div class="workshop-stats-hero__text">
-            <h2>📊 لوحة إحصائيات ورشة التصنيع</h2>
+            <h2>📊 لوحة إحصائيات قسم الإنتاج</h2>
             <p>
                 <span class="workshop-stats-meta">آخر تحديث: {{ $meta['generated_at'] ?? '—' }}</span>
             </p>
@@ -39,7 +39,7 @@
                 <div class="workshop-report-card__value workshop-report-card__value--teal">
                     {{ (int) ($reports['returns_this_month'] ?? 0) }} طلب
                 </div>
-                <p class="workshop-report-card__sub">من الورشة إلى المخزن</p>
+                <p class="workshop-report-card__sub">من قسم الإنتاج إلى المخزن</p>
             </div>
         </div>
 

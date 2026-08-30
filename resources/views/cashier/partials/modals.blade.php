@@ -43,6 +43,8 @@
                 <div id="cashierPaymentHistoryList" class="text-xs bg-emerald-50 border border-emerald-100 rounded-lg p-3 space-y-2 max-h-36 overflow-y-auto"></div>
             </div>
 
+            <div id="cashierPaymentError" class="hidden text-sm font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2"></div>
+
             <p class="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed" id="cashierPaymentHint">
                 يمكن تسجيل دفعة جزئية أو كامل المتبقي. عند اكتمال المبلغ تُعاد الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.
             </p>
@@ -56,3 +58,5 @@
         </div>
     </div>
 </div>
+
+<div class="toast hidden" id="toast" role="alert" aria-live="assertive"></div>

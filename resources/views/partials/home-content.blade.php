@@ -54,20 +54,20 @@
 
             <a href="{{ route('dashboard.login', 'adjustments') }}" class="role-card adjustments">
                 <div class="icon-wrap">📏</div>
-                <h2>مكتب المعدلات الفنية / الاستشاري</h2>
-                <p>مراجعة بنود التوصيف الفني (للقراءة فقط)، وإضافة مكوّنات استشارية إلى قائمة المواد قبل دفع الحالة لمحرّك التكاليف.</p>
+                <h2>المعدلات والتكاليف</h2>
+                <p>مراجعة بنود التوصيف الفني (للقراءة فقط)، وإضافة مكوّنات استشارية قبل إرسال الحالة للاعتماد.</p>
                 <span class="enter-btn">
-                    الدخول لمكتب المعدلات
+                    الدخول للمعدلات والتكاليف
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </span>
             </a>
 
             <a href="{{ route('dashboard.login', 'costing') }}" class="role-card costing">
-                <div class="icon-wrap">💰</div>
-                <h2>التكاليف</h2>
-                <p>مراجعة تكلفة الحالات الواردة من المعدلات، تأكيد أعلى سعر شراء، ثم إصدار عرض السعر وتحويلها لمكتب التشغيل.</p>
+                <div class="icon-wrap">✅</div>
+                <h2>الاعتماد</h2>
+                <p>مراجعة تكلفة الحالات الواردة من المعدلات والتكاليف، تأكيد السعر، ثم إصدار عرض السعر وتحويلها لمكتب التشغيل.</p>
                 <span class="enter-btn">
-                    الدخول للوحة التكاليف
+                    الدخول للاعتماد
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </span>
             </a>
@@ -94,10 +94,10 @@
 
             <a href="{{ route('dashboard.login', 'workshop') }}" class="role-card workshop">
                 <div class="icon-wrap">🏭</div>
-                <h2>ورشة التصنيع</h2>
-                <p>طابور أوامر الإنتاج بعد صرف المخزن — متابعة البنود والكميات وإتمام التصنيع قبل التسليم.</p>
+                <h2>قسم الإنتاج</h2>
+                <p>توزيع الفنيين، متابعة أوامر الإنتاج، نسب الإنجاز، وإتمام التصنيع قبل التسليم.</p>
                 <span class="enter-btn">
-                    الدخول لورشة التصنيع
+                    الدخول لقسم الإنتاج
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </span>
             </a>
@@ -105,7 +105,7 @@
             <a href="{{ route('dashboard.login', 'technical') }}" class="role-card inventory">
                 <div class="icon-wrap">📦</div>
                 <h2>المخزون</h2>
-                <p>إدارة أصناف المخزون والكميات، قوائم BOM، صرف بالباركود، استلام الوارد، وإذن الارتجاع من الورشة.</p>
+                <p>إدارة أصناف المخزون والكميات، قوائم BOM، صرف بالباركود، استلام الوارد، وإذن الارتجاع من قسم الإنتاج.</p>
                 <span class="enter-btn">
                     الدخول للوحة المخزون
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

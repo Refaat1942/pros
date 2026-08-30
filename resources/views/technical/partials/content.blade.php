@@ -10,7 +10,7 @@
     </div> -->
     <ul class="nav-menu">
       <li><a href="#" class="active" data-section="inventory"><span class="nav-icon">📦</span> المخزن</a></li>
-      <li><a href="#" data-section="bom"><span class="nav-icon">📋</span> صرف المواد للورشة</a></li>
+      <li><a href="#" data-section="bom"><span class="nav-icon">📋</span> صرف المواد لقسم الإنتاج</a></li>
       <li><a href="#" data-section="returns"><span class="nav-icon">↩️</span> إذن ارتجاع</a></li>
     </ul>
 
@@ -204,7 +204,7 @@
     <div class="section-view" id="section-returns">
       <div class="panel inventory-wrap">
         <div class="panel-header">
-          <h3>↩️ إذن ارتجاع — ورشة → مخزن</h3>
+          <h3>↩️ إذن ارتجاع — قسم الإنتاج → مخزن</h3>
           <span class="badge" id="returnsBadge">0</span>
         </div>
         <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;">
@@ -275,7 +275,7 @@
         </div>
         <div id="returnLinesPicker"></div>
         <div class="form-group"><label>سبب الارتجاع</label>
-          <input type="text" class="form-control" id="returnReason" placeholder="مثال: فائض عن الحاجة في الورشة">
+          <input type="text" class="form-control" id="returnReason" placeholder="مثال: فائض عن الحاجة في قسم الإنتاج">
         </div>
         <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
           <button type="button" class="btn-view" id="btnCancelReturnCreate">إلغاء</button>

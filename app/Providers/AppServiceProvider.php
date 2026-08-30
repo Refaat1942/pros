@@ -52,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
 
             if ($dashboardKey === 'admin') {
                 $badges['spec-edit-requests'] = app(SpecEditRequestService::class)->pendingCount();
+                $badges['workshop-tracking'] = app(DashboardQueueService::class)->workshopAssignmentQueueCount();
             }
 
             if ($view->name() === 'partials.dashboard-sidebar') {

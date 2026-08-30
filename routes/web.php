@@ -11,6 +11,7 @@
 use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/web/dashboard-routes.php';
+require __DIR__.'/web/department-staff.php';
 
 foreach ([
     'auth',

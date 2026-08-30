@@ -1,13 +1,13 @@
 <div class="panel inventory-wrap">
     <div class="panel-header">
-        <h3>↩️ طلبات ارتجاع المواد — ورشة → مخزن</h3>
+        <h3>↩️ طلبات ارتجاع المواد — قسم الإنتاج → مخزن</h3>
         <div style="display:flex;align-items:center;gap:10px;">
             <button type="button" class="btn-view" id="btnRefreshReturns">↻ تحديث</button>
             <span class="badge" id="returnsBadge">0</span>
         </div>
     </div>
     <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;line-height:1.7;">
-        الورشة تُرسل مواداً زائدة أو غير مستخدمة إلى المخزن أثناء التصنيع.
+        قسم الإنتاج تُرسل مواداً زائدة أو غير مستخدمة إلى المخزن أثناء التصنيع.
         بعد التسليم يُسجَّل الارتجاع من <strong>الاستقبال → التسليمات</strong>.
         بعد الإرسال تظهر الحالة <strong>بانتظار استلام المخزن</strong> حتى يؤكد أمين المخزن بالباركود.
     </p>

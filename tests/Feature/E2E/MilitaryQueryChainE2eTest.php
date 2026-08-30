@@ -108,7 +108,7 @@ class MilitaryQueryChainE2eTest extends TestCase
         $this->assertNotNull($pricingId);
 
         $this->actingAs($recep);
-        $this->postJson('/reception/ocr/process', [
+        $this->postJson('/reception/approval-letter/confirm', [
             'quote_no' => 'QT-FAKE',
             'patient_name' => $patient->name,
             'approved_amount' => 100,

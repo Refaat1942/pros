@@ -35,6 +35,10 @@
 
   function beep() {
     if (!soundEnabled()) return;
+    if (window.NotificationSound && typeof window.NotificationSound.play === 'function') {
+      window.NotificationSound.play();
+      return;
+    }
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
@@ -150,8 +154,11 @@
           seen = {};
           items.forEach(function (it) { seen[it.id] = true; });
           firstPollDone = true;
-          if (shouldRemind()) {
+          if (unreadCount > 0 && !sessionStorage.getItem('notifInitialBeepDone')) {
             beep();
+            sessionStorage.setItem('notifInitialBeepDone', '1');
+          }
+          if (shouldRemind()) {
             startReminder();
           }
           return;

@@ -22,7 +22,7 @@
 
     <div class="panel inventory-wrap">
         <div class="panel-header">
-            <h3>📤 سجل المحوّلين من المعدلات للتكاليف</h3>
+            <h3>📤 سجل المحوّلين من المعدلات والتكاليف للاعتماد</h3>
             <span class="badge" id="adjHistoryCount">{{ $rows->count() }} حالة</span>
         </div>
 

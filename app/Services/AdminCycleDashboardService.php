@@ -15,10 +15,13 @@ class AdminCycleDashboardService
         private readonly DashboardQueueService $queues,
     ) {}
 
-    /** @return list<array{key: string, icon: string, label: string, hint: string, count: int, color: string, bg: string}> */
-    public function build(Carbon $from, Carbon $to): array
+    /**
+     * @param  list<string>|null  $onlyKeys  مفاتيح البطاقات المسموح بها — null = كل البطاقات
+     * @return list<array{key: string, icon: string, label: string, hint: string, count: int, color: string, bg: string}>
+     */
+    public function build(Carbon $from, Carbon $to, ?array $onlyKeys = null): array
     {
-        return [
+        $cards = [
             [
                 'key' => 'reception',
                 'icon' => '🏥',
@@ -59,10 +62,19 @@ class AdminCycleDashboardService
                 'key' => 'operations',
                 'icon' => '⚙️',
                 'label' => 'مكتب التشغيل',
-                'hint' => 'اعتماد وإعادة للمسار',
+                'hint' => 'اعتماد وإصدار أمر الشغل',
                 'count' => $this->queues->operationsQueueCount($from, $to),
                 'color' => '#4f46e5',
                 'bg' => 'rgba(79,70,229,0.1)',
+            ],
+            [
+                'key' => 'production-assignment',
+                'icon' => '👷',
+                'label' => 'تخصيص الإنتاج',
+                'hint' => 'تخصيص القسم والفني — بانتظار الاعتماد',
+                'count' => $this->queues->workshopAssignmentQueueCount($from, $to),
+                'color' => '#b45309',
+                'bg' => 'rgba(180,83,9,0.12)',
             ],
             [
                 'key' => 'cashier',
@@ -76,8 +88,8 @@ class AdminCycleDashboardService
             [
                 'key' => 'workshop',
                 'icon' => '🏭',
-                'label' => 'ورشة التصنيع',
-                'hint' => 'أوامر تحت التشغيل',
+                'label' => 'قسم الإنتاج',
+                'hint' => 'بعد صرف المخزن — تحت التشغيل',
                 'count' => $this->queues->workshopQueueCount($from, $to),
                 'color' => '#0e7490',
                 'bg' => 'rgba(14,116,144,0.12)',
@@ -86,12 +98,23 @@ class AdminCycleDashboardService
                 'key' => 'inventory',
                 'icon' => '📦',
                 'label' => 'المخزن',
-                'hint' => 'BOM خام — بانتظار الصرف',
+                'hint' => 'جاهز للصرف — بعد اعتماد التخصيص',
                 'count' => $this->queues->warehouseQueueCount($from, $to),
                 'color' => '#b45309',
                 'bg' => 'rgba(180,83,9,0.1)',
             ],
         ];
+
+        if ($onlyKeys === null) {
+            return $cards;
+        }
+
+        $allowed = array_flip($onlyKeys);
+
+        return array_values(array_filter(
+            $cards,
+            fn (array $card) => isset($allowed[$card['key']]),
+        ));
     }
 
     public function totalActive(Carbon $from, Carbon $to): int

@@ -27,7 +27,7 @@ class BomItem extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'decimal:3',
         'unit_cost' => 'decimal:2',
         'issued_qty' => 'integer',
         'returned_qty' => 'integer',
@@ -63,7 +63,7 @@ class BomItem extends Model
     /**
      * أقصى كمية يمكن طلب ارتجاعها الآن.
      * - بعد التسليم (BOM تام): يُسمح بارتجاع كل الكمية المُصرفة المتبقية.
-     * - أثناء التشغيل: بند بكمية واحدة يُرتجع بالكامل؛ بند بكمية أكبر يُبقى وحدة في الورشة.
+     * - أثناء التشغيل: بند بكمية واحدة يُرتجع بالكامل؛ بند بكمية أكبر يُبقى وحدة في قسم الإنتاج.
      */
     public function returnRequestMaxQty(?int $pendingReturnQty = null, ?string $bomStage = null): int
     {

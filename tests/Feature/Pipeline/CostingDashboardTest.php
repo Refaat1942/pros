@@ -3,6 +3,7 @@
 namespace Tests\Feature\Pipeline;
 
 use App\Models\CaseRecord;
+use App\Models\MedicalRecord;
 use App\Models\Permission;
 use App\Models\PricingRequest;
 use App\Models\PricingRequestItem;
@@ -124,6 +125,39 @@ class CostingDashboardTest extends TestCase
             ->assertJsonPath('data.0.tech_notes', 'ملاحظة للتكاليف');
     }
 
+    public function test_costing_show_includes_doctor_clinical_notes(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        MedicalRecord::create([
+            'case_id' => $case->id,
+            'patient_id' => $case->patient_id,
+            'patient_name' => $case->patient->name,
+            'patient_type' => $case->patient_type,
+            'diagnosis' => 'بتر فخذ أيمن',
+            'prescription' => 'طرف صناعي كامل',
+            'doctor_name' => 'د. سامي',
+            'record_date' => now()->toDateString(),
+            'status' => MedicalRecord::STATUS_APPROVED,
+            'locked' => true,
+        ]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($costing)
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk()
+            ->assertJsonPath('medical_record.doctor_name', 'د. سامي')
+            ->assertJsonPath('medical_record.has_clinical_notes', true);
+
+        $this->assertStringContainsString(
+            'بتر فخذ أيمن',
+            (string) $response->json('medical_record.doctor_message'),
+        );
+    }
+
     public function test_costing_show_includes_wac_for_view_costs_role(): void
     {
         $costing = $this->userWithRole('costing');
@@ -143,9 +177,32 @@ class CostingDashboardTest extends TestCase
         $response->assertJsonMissingPath('pricing.items.0.wac_unit');
         $response->assertJsonStructure([
             'pricing' => [
-                'items' => [['stock_item_code', 'name', 'qty', 'criteria', 'line_total']],
+                'items' => [['stock_item_code', 'name', 'qty', 'criteria', 'price', 'line_total']],
             ],
         ]);
+    }
+
+    public function test_costing_show_displays_catalog_price_from_stock_item(): void
+    {
+        $costing = $this->userWithRole('costing');
+        $case = $this->caseInAdjustments();
+
+        $stock = \App\Models\StockItem::where('code', 'RM-001')->firstOrFail();
+        $stock->update(['price' => 450.00]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($costing)
+            ->getJson("/costing/queue/{$case->id}")
+            ->assertOk();
+
+        $this->assertEquals(450.00, (float) $response->json('pricing.items.0.price'));
+        $this->assertNotEquals(
+            (float) $response->json('pricing.items.0.price'),
+            (float) $response->json('pricing.items.0.line_total'),
+            'السعر الأساسي يُعرض من الكتالوج — الإجمالي يبقى من منطق التسعير الحالي',
+        );
     }
 
     public function test_costing_show_displays_dynamic_category_criteria(): void
@@ -306,6 +363,29 @@ class CostingDashboardTest extends TestCase
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_OPERATIONS, $case->stage_key);
+        $this->assertNotNull(Quote::where('case_id', $case->id)->first());
+    }
+
+    public function test_cash_civilian_costing_confirm_routes_to_cashier(): void
+    {
+        $this->seedStock();
+        $patient = $this->cashPatient();
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
+        ]);
+
+        $this->actingAs($this->userWithRole('adjustments'))
+            ->postJson("/adjustments/adjustments/{$case->id}/complete");
+
+        $response = $this->actingAs($this->userWithRole('costing'))
+            ->postJson("/costing/queue/{$case->id}/confirm")
+            ->assertOk();
+
+        $case->refresh();
+        $this->assertEquals(CaseRecord::STAGE_CASHIER, $case->stage_key);
+        $this->assertStringContainsString('التشغيل', (string) $response->json('message'));
         $this->assertNotNull(Quote::where('case_id', $case->id)->first());
     }
 

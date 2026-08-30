@@ -8,7 +8,7 @@
       <div class="modal-body">
         <div class="barcode-required" id="barcodeRequired"></div>
         <div class="barcode-scan-row">
-          <input type="text" id="barcodeInput" placeholder="امسح أو اكتب باركود الصنف ثم Enter (مثل BC-001)"
+          <input type="text" id="barcodeModalInput" placeholder="امسح أو اكتب باركود الصنف ثم Enter (مثل BC-001)"
                  data-v-rules="required,barcode" maxlength="100">
           <button type="button" class="btn-view" id="btnAddScan">إضافة مسح</button>
         </div>
@@ -16,7 +16,7 @@
           <button type="button" class="btn-action primary" id="btnSimCorrect">✓ محاكاة مسح صحيح (كل البنود)</button>
           <button type="button" class="btn-action" id="btnSimWrong" style="background:#fee2e2;color:#b91c1c;">✗ محاكاة باركود خاطئ</button>
         </div>
-        <div class="barcode-scanned" id="barcodeScanned"></div>
+        <div class="barcode-scanned" id="barcodeModalScanned"></div>
         <div class="barcode-alarm" id="barcodeAlarm" style="display:none;">
           ⛔ <span id="barcodeAlarmText">باركود غير مطابق لأمر التشغيل! تم إيقاف الصرف.</span>
         </div>
@@ -34,7 +34,7 @@
       <div class="modal-header return-modal-header">
         <div class="return-modal-title-wrap">
           <h3>📥 تأكيد استلام الارتجاع</h3>
-          <p class="modal-subtitle">امسح باركود كل صنف لمطابقة الطلب الوارد من الورشة</p>
+          <p class="modal-subtitle">امسح باركود كل صنف لمطابقة الطلب الوارد من قسم الإنتاج</p>
         </div>
         <button type="button" class="modal-close" id="closeReturnScanModal" aria-label="إغلاق">&times;</button>
       </div>

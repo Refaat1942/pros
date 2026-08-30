@@ -27,6 +27,9 @@ class User extends Authenticatable
         'password',
         'role_id',
         'status',
+        'access_tier',
+        'allowed_pages',
+        'catalog_list_visibility',
         'last_login_at',
     ];
 
@@ -38,6 +41,8 @@ class User extends Authenticatable
     protected $casts = [
         'last_login_at' => 'datetime',
         'password' => 'hashed',
+        'catalog_list_visibility' => 'array',
+        'allowed_pages' => 'array',
     ];
 
     public function role(): BelongsTo
@@ -117,8 +122,25 @@ class User extends Authenticatable
     /**
      * هل يمكن للمستخدم فتح صفحة ضمن لوحة تحكم؟
      */
+    public function isDepartmentManager(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return false;
+        }
+
+        if (in_array($this->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
+            return false;
+        }
+
+        return $this->access_tier !== \App\Services\UserPageAccessService::TIER_DEPARTMENT_STAFF;
+    }
+
     public function canViewDashboardPage(string $dashboard, string $page): bool
     {
+        if ($page === 'staff') {
+            return app(\App\Services\DepartmentStaffService::class)->canAccessStaffPage($this, $dashboard);
+        }
+
         if ($page === 'notifications') {
             if ($this->isSuperAdmin()) {
                 return true;
@@ -137,6 +159,14 @@ class User extends Authenticatable
 
         if ($this->isSuperAdmin()) {
             return true;
+        }
+
+        if ($page === 'add-catalog-item' && in_array($dashboard, ['technical', 'admin'], true)) {
+            return $this->hasPermission('manage-inventory');
+        }
+
+        if (! app(\App\Services\UserPageAccessService::class)->canViewPage($this, $dashboard, $page)) {
+            return false;
         }
 
         $slug = Permission::viewSlug($dashboard, $page);

@@ -51,7 +51,7 @@ class WorkshopSectionService
 
             AuditService::log(
                 action: 'create',
-                description: "إضافة قسم ورشة: {$section->name}",
+                description: "إضافة قسم قسم الإنتاج: {$section->name}",
                 tag: 'workshop',
                 after: $section->toArray(),
             );
@@ -80,7 +80,7 @@ class WorkshopSectionService
 
             AuditService::log(
                 action: 'update',
-                description: "تعديل قسم ورشة: {$section->name}",
+                description: "تعديل قسم قسم الإنتاج: {$section->name}",
                 tag: 'workshop',
                 before: $before,
                 after: $section->fresh()->only(['name', 'code', 'sort', 'active', 'description']),
@@ -101,7 +101,7 @@ class WorkshopSectionService
 
         AuditService::log(
             action: 'delete',
-            description: "حذف قسم ورشة: {$before['name']}",
+            description: "حذف قسم قسم الإنتاج: {$before['name']}",
             tag: 'workshop',
             before: $before,
         );

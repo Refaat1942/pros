@@ -45,7 +45,7 @@ class OperationsQualityFinishTest extends TestCase
         $this->actingAs($user);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $response = $this->postJson("/workshop/workshop/{$case->id}/finish-quality");
 

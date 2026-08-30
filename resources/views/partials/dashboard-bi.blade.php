@@ -1,9 +1,14 @@
 @php
-    $b1 = $board1 ?? [];
-    $b2 = $board2 ?? [];
-    $b3 = $board3 ?? [];
-    $b4 = $board4 ?? [];
-    $b5 = $board5 ?? [];
+    $showB1 = isset($board1) && is_array($board1);
+    $showB2 = isset($board2) && is_array($board2);
+    $showB3 = isset($board3) && is_array($board3);
+    $showB4 = isset($board4) && is_array($board4);
+    $showB5 = isset($board5) && is_array($board5);
+    $b1 = $showB1 ? $board1 : [];
+    $b2 = $showB2 ? $board2 : [];
+    $b3 = $showB3 ? $board3 : [];
+    $b4 = $showB4 ? $board4 : [];
+    $b5 = $showB5 ? $board5 : [];
     $fmt = fn ($n) => number_format((float) $n, 0);
     $fmtMoney = fn ($n) => number_format((float) $n, 2);
 
@@ -23,14 +28,15 @@
 
     $opsTotal = max(1, (int) ($b3['open_work_orders'] ?? 0) + (int) ($b3['ready_for_delivery'] ?? 0));
     $opsSteps = [
-        ['key' => 'dispense', 'label' => 'بانتظار الصرف', 'val' => (int) ($b3['awaiting_dispense'] ?? 0), 'tone' => 'amber'],
-        ['key' => 'workshop', 'label' => 'داخل الورش', 'val' => (int) ($b3['in_workshop'] ?? 0), 'tone' => 'purple'],
-        ['key' => 'open', 'label' => 'أوامر تشغيل', 'val' => (int) ($b3['open_work_orders'] ?? 0), 'tone' => 'indigo'],
+        ['key' => 'assignment', 'label' => 'بانتظار التخصيص', 'val' => (int) ($b3['awaiting_assignment'] ?? 0), 'tone' => 'amber'],
+        ['key' => 'dispense', 'label' => 'جاهز للصرف', 'val' => (int) ($b3['ready_for_dispense'] ?? $b3['awaiting_dispense'] ?? 0), 'tone' => 'orange'],
+        ['key' => 'workshop', 'label' => 'داخل الإنتاج', 'val' => (int) ($b3['in_workshop'] ?? 0), 'tone' => 'purple'],
         ['key' => 'ready', 'label' => 'جاهز للتسليم', 'val' => (int) ($b3['ready_for_delivery'] ?? 0), 'tone' => 'green'],
     ];
 @endphp
 <div class="bi-grid" data-server-rendered="1">
 
+    @if ($showB1)
     {{-- ── 1. إدارة المرضى ─────────────────────────────────────────────── --}}
     <article class="bi-card bi-card--patients" id="bi-board-1">
         <header class="bi-card-head">
@@ -109,7 +115,9 @@
             </div>
         </div>
     </article>
+    @endif
 
+    @if ($showB2)
     {{-- ── 2. المخازن ──────────────────────────────────────────────────── --}}
     <article class="bi-card bi-card--inventory" id="bi-board-2">
         <header class="bi-card-head">
@@ -161,7 +169,9 @@
             </div>
         </div>
     </article>
+    @endif
 
+    @if ($showB3)
     {{-- ── 3. العمليات ─────────────────────────────────────────────────── --}}
     <article class="bi-card bi-card--operations" id="bi-board-3">
         <header class="bi-card-head">
@@ -184,10 +194,19 @@
                     </div>
                 @endforeach
             </div>
-            <p class="bi-pipeline-hint">مسار الإنتاج من الصرف حتى الجاهزية للتسليم — أرقام لحظية من أوامر الشغل.</p>
+            <p class="bi-pipeline-hint">مسار الإنتاج: تخصيص الإنتاج → صرف المخزن → التشغيل → التسليم — أرقام لحظية.</p>
         </div>
     </article>
+    @endif
 
+    @if ($showB4)
+    @php
+        $b4Cash = $b4['cash'] ?? null;
+        $b4CivilianDebt = $b4['civilian_debt'] ?? null;
+        $b4RevenueCost = $b4['revenue_cost'] ?? null;
+        $b4Military = $b4['military'] ?? null;
+        $b4Contracts = $b4['contracts_companies'] ?? null;
+    @endphp
     {{-- ── 4. الجهات والتكاليف ─────────────────────────────────────────── --}}
     <article class="bi-card bi-card--wide bi-card--entities" id="bi-board-4">
         <header class="bi-card-head">
@@ -199,34 +218,54 @@
         </header>
         <div class="bi-card-body">
             <div class="bi-kpi-grid bi-kpi-grid--4">
-                <div class="bi-kpi">
-                    <div class="bi-kpi-label">التكلفة التراكمية — مدني</div>
-                    <div class="bi-kpi-value bi-tone-cyan">{{ $fmtMoney($b4['civilian_cumulative_cost'] ?? 0) }} <small>ج.م</small></div>
-                </div>
-                <div class="bi-kpi">
-                    <div class="bi-kpi-label">💵 محصّل نقدي — الخزنة</div>
-                    <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4['cash_collected_total'] ?? 0) }} <small>ج.م</small></div>
-                </div>
-                <div class="bi-kpi">
-                    <div class="bi-kpi-label">💵 بانتظار الدفع — الخزنة</div>
-                    <div class="bi-kpi-value bi-tone-cyan">{{ $b4['cash_awaiting_payment'] ?? 0 }}</div>
-                </div>
-                <div class="bi-kpi">
-                    <div class="bi-kpi-label">التكلفة المجمعة — عسكري</div>
-                    <div class="bi-kpi-value bi-tone-amber">{{ $fmtMoney($b4['military_aggregated_cost'] ?? 0) }} <small>ج.م</small></div>
-                </div>
-                <div class="bi-kpi">
-                    <div class="bi-kpi-label">🪖 مديونيات بانتظار التحصيل</div>
-                    <div class="bi-kpi-value bi-tone-purple">{{ $fmtMoney($b4['military_debt_pending'] ?? 0) }} <small>ج.م</small></div>
-                </div>
-                <div class="bi-kpi">
-                    <div class="bi-kpi-label">🪖 مديونيات محصّلة</div>
-                    <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4['military_debt_collected'] ?? 0) }} <small>ج.م</small></div>
-                </div>
+                @if (is_array($b4RevenueCost))
+                    <div class="bi-kpi">
+                        <div class="bi-kpi-label">التكلفة التراكمية — مدني</div>
+                        <div class="bi-kpi-value bi-tone-cyan">{{ $fmtMoney($b4RevenueCost['civilian_cumulative_cost'] ?? 0) }} <small>ج.م</small></div>
+                    </div>
+                @endif
+                @if (is_array($b4Cash))
+                    <div class="bi-kpi">
+                        <div class="bi-kpi-label">💵 محصّل نقدي — الخزنة</div>
+                        <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4Cash['cash_collected_total'] ?? 0) }} <small>ج.م</small></div>
+                    </div>
+                    <div class="bi-kpi">
+                        <div class="bi-kpi-label">💵 بانتظار الدفع — الخزنة</div>
+                        <div class="bi-kpi-value bi-tone-cyan">{{ $b4Cash['cash_awaiting_payment'] ?? 0 }}</div>
+                    </div>
+                @endif
+                @if (is_array($b4CivilianDebt))
+                    <div class="bi-kpi">
+                        <div class="bi-kpi-label">🌐 مديونيات جهات التعاقد — المتبقي</div>
+                        <div class="bi-kpi-value bi-tone-cyan">{{ $fmtMoney($b4CivilianDebt['net_debts'] ?? 0) }} <small>ج.م</small></div>
+                    </div>
+                @endif
+                @if (is_array($b4Military))
+                    <div class="bi-kpi">
+                        <div class="bi-kpi-label">التكلفة المجمعة — عسكري</div>
+                        <div class="bi-kpi-value bi-tone-amber">{{ $fmtMoney($b4Military['military_aggregated_cost'] ?? 0) }} <small>ج.م</small></div>
+                    </div>
+                    <div class="bi-kpi">
+                        <div class="bi-kpi-label">🪖 مديونيات بانتظار التحصيل</div>
+                        <div class="bi-kpi-value bi-tone-purple">{{ $fmtMoney($b4Military['military_debt_pending'] ?? 0) }} <small>ج.م</small></div>
+                    </div>
+                    <div class="bi-kpi">
+                        <div class="bi-kpi-label">🪖 مديونيات محصّلة</div>
+                        <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4Military['military_debt_collected'] ?? 0) }} <small>ج.م</small></div>
+                    </div>
+                @endif
+                @if (is_array($b4Contracts))
+                    <div class="bi-kpi">
+                        <div class="bi-kpi-label">جهات تعاقد نشطة</div>
+                        <div class="bi-kpi-value">{{ $b4Contracts['contracted_companies'] ?? 0 }}</div>
+                    </div>
+                @endif
             </div>
         </div>
     </article>
+    @endif
 
+    @if ($showB5)
     {{-- ── 5. المشتريات ─────────────────────────────────────────────────── --}}
     <article class="bi-card bi-card--wide bi-card--purchasing" id="bi-board-5">
         <header class="bi-card-head">
@@ -276,4 +315,5 @@
             </div>
         </div>
     </article>
+    @endif
 </div>

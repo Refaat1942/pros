@@ -15,13 +15,21 @@ class WorkshopTrackingController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $payload = $this->tracking->trackingList(
-            $request->integer('section_id') ?: null,
-            $request->integer('technician_id') ?: null,
-        );
+        $queue = $request->string('queue')->toString();
+
+        $payload = match ($queue) {
+            'assignment' => $this->tracking->assignmentTrackingList(
+                $request->integer('section_id') ?: null,
+            ),
+            default => $this->tracking->trackingList(
+                $request->integer('section_id') ?: null,
+                $request->integer('technician_id') ?: null,
+            ),
+        };
 
         return response()->json($payload + [
             'total' => count($payload['data']),
+            'queue' => $queue ?: 'wip',
         ]);
     }
 }

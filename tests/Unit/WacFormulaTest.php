@@ -86,4 +86,46 @@ class WacFormulaTest extends TestCase
         // (3×100 + 7×157) / 10 = (300 + 1099) / 10 = 139.9
         $this->assertEquals(139.9, (float) $item->wac);
     }
+
+    /**
+     * C-2: النظام يسمح برصيد سالب (backorder). استلام مخزون بعد رصيد سالب يجب
+     * ألا يُنتج WAC سالباً — الكمية السابقة السالبة تُعامَل كصفر عند الترجيح.
+     */
+    public function test_wac_never_negative_after_receiving_into_negative_stock(): void
+    {
+        // رصيد سالب (backorder) مع WAC سابق مرتفع.
+        $item = $this->stockItem('RM-NEG', qty: -5, wac: 300.00);
+
+        $this->service->recalcWac($item, inQty: 10, inPrice: 100.00);
+
+        $item->refresh();
+        // بأرضية 0 للكمية السابقة: (0×… + 10×100) / 10 = 100 — موجب وصحيح.
+        $this->assertEquals(100.0, (float) $item->wac);
+        $this->assertGreaterThanOrEqual(0.0, (float) $item->wac);
+    }
+
+    /** C-2: كمية سابقة سالبة والمقام السالب لا يعطّلان التحديث ولا ينتجان قيمة سالبة. */
+    public function test_wac_recovers_when_prior_qty_more_negative_than_incoming(): void
+    {
+        $item = $this->stockItem('RM-NEG2', qty: -20, wac: 300.00);
+
+        // كمية داخلة أقل من العجز — سابقاً كان المقام ≤ 0 فيُترك WAC قديماً؛ الآن يُحسب على الوارد.
+        $this->service->recalcWac($item, inQty: 5, inPrice: 120.00);
+
+        $item->refresh();
+        // (0×… + 5×120) / 5 = 120 — موجب.
+        $this->assertEquals(120.0, (float) $item->wac);
+        $this->assertGreaterThanOrEqual(0.0, (float) $item->wac);
+    }
+
+    /** C-2: كمية داخلة غير موجبة لا تُحدّث WAC (استلام غير صالح للترجيح). */
+    public function test_wac_unchanged_on_nonpositive_incoming_qty(): void
+    {
+        $item = $this->stockItem('RM-ZERO', qty: 10, wac: 150.00);
+
+        $this->service->recalcWac($item, inQty: 0, inPrice: 999.00);
+
+        $item->refresh();
+        $this->assertEquals(150.0, (float) $item->wac);
+    }
 }

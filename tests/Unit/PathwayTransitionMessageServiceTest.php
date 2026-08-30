@@ -69,7 +69,7 @@ class PathwayTransitionMessageServiceTest extends TestCase
         $this->assertSame('/operations/pending', $payload['url']);
     }
 
-    public function test_civilian_costing_notification_suppressed_quote_issued_notifies_operations(): void
+    public function test_civilian_costing_notification_suppressed_sent_to_cashier_notifies_cashier(): void
     {
         app(PathwayConfigService::class)->resetToDefaults(PathwayStep::PATHWAY_CIVILIAN);
 
@@ -84,15 +84,23 @@ class PathwayTransitionMessageServiceTest extends TestCase
             CaseRecord::STAGE_COST_CALC,
         ));
 
-        $payload = $service->notificationPayload(
+        $this->assertNull($service->notificationPayload(
             $case,
             WorkflowEvent::QuoteIssued->value,
-            CaseRecord::STAGE_QUOTE,
+            CaseRecord::STAGE_OPERATIONS,
+        ));
+
+        $payload = $service->notificationPayload(
+            $case,
+            WorkflowEvent::SentToCashier->value,
+            CaseRecord::STAGE_OPERATIONS,
         );
 
         $this->assertNotNull($payload);
-        $this->assertSame(Role::SLUG_OPERATIONS, $payload['role']);
+        $this->assertSame(Role::SLUG_CASHIER, $payload['role']);
+        $this->assertStringContainsString('الخزنة', $payload['title']);
         $this->assertStringContainsString('تم التحويل', $payload['body']);
+        $this->assertStringContainsString('الخزنة', $payload['body']);
     }
 
     public function test_military_quote_issued_notification_suppressed(): void
@@ -146,10 +154,10 @@ class PathwayTransitionMessageServiceTest extends TestCase
 
         $this->assertNotNull($payload);
         $this->assertSame(Role::SLUG_CASHIER, $payload['role']);
-        $this->assertSame('/cashier/cashier', $payload['url']);
+        $this->assertSame('/cashier/payments', $payload['url']);
     }
 
-    public function test_operations_approved_targets_warehouse(): void
+    public function test_operations_approved_targets_workshop(): void
     {
         app(PathwayConfigService::class)->resetToDefaults(PathwayStep::PATHWAY_CIVILIAN);
 
@@ -162,7 +170,7 @@ class PathwayTransitionMessageServiceTest extends TestCase
             CaseRecord::STAGE_OPERATIONS,
         );
 
-        $this->assertStringContainsString('المخزن', $message);
+        $this->assertStringContainsString('الإنتاج', $message);
 
         $payload = app(PathwayTransitionMessageService::class)->notificationPayload(
             $case,
@@ -170,8 +178,8 @@ class PathwayTransitionMessageServiceTest extends TestCase
             CaseRecord::STAGE_OPERATIONS,
         );
 
-        $this->assertSame(Role::SLUG_TECHNICAL, $payload['role']);
-        $this->assertSame('/technical/bom', $payload['url']);
+        $this->assertSame(Role::SLUG_WORKSHOP, $payload['role']);
+        $this->assertSame('/workshop/workshop', $payload['url']);
     }
 
     public function test_entity_quote_released_payload_targets_reception(): void
@@ -201,5 +209,38 @@ class PathwayTransitionMessageServiceTest extends TestCase
         $this->assertSame(Role::SLUG_RECEPTION, $payload['role']);
         $this->assertSame('/reception/quote', $payload['url']);
         $this->assertStringContainsString('خطاب', $payload['title']);
+        $this->assertStringContainsString('عرض سعر', $payload['body']);
+        $this->assertStringContainsString('خطاب', $payload['body']);
+    }
+
+    public function test_adjustments_complete_message_uses_step_labels(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        $message = app(PathwayTransitionMessageService::class)->transferMessage(
+            $case->load('patient'),
+            WorkflowEvent::AdjustmentsCompleted->value,
+            CaseRecord::STAGE_ADJUSTMENTS,
+        );
+
+        $this->assertStringContainsString('المعدلات', $message);
+        $this->assertStringContainsString('الاعتماد', $message);
+    }
+
+    public function test_transfer_message_never_shows_raw_step_keys(): void
+    {
+        $patient = $this->cashPatient();
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
+
+        $message = app(PathwayTransitionMessageService::class)->transferMessage(
+            $case->load('patient'),
+            WorkflowEvent::SentToCashier->value,
+            CaseRecord::STAGE_OPERATIONS,
+        );
+
+        $this->assertStringContainsString('الخزنة', $message);
+        $this->assertStringNotContainsString('operations_wo', $message);
+        $this->assertStringNotContainsString('cashier', $message);
     }
 }

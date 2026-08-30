@@ -419,7 +419,7 @@ class AdminPatientJourneyService
                     $bom->finished_at,
                     'manufacturing',
                     'التصنيع',
-                    'إتمام التصنيع في الورشة',
+                    'إتمام التصنيع في قسم الإنتاج',
                     ['BOM: '.($bom->bom_no ?? '—')],
                     null,
                     3,

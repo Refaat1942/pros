@@ -24,3 +24,4 @@ yarn-error.log
 # Firebase service-account credentials — secret, never commit
 /firebase/*.json
 firebase-adminsdk-*.json
+composer.phar

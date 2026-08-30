@@ -7,22 +7,26 @@ use App\Models\StockItem;
 use Illuminate\Support\Facades\DB;
 
 /**
- * حذف كل ما له علاقة بالمرضى — مع الإبقاء على الكور (مستخدمون، مخزن، إعدادات، جهات).
+ * مسح إداري متعمّد لكل بيانات المرضى التشغيلية — مع الإبقاء على الكور (مستخدمون،
+ * مخزن، إعدادات، جهات). مسار إداري مقصود، وليس مسار حذف تطبيقي عادي.
+ *
+ * ملاحظات السلامة (Correction C):
+ *   1) يتجاوز عمداً حارس PatientDeletionGuard (المخصّص لمسارات التطبيق العادية).
+ *   2) يحذف الأبناء بترتيب آمن لقيود المفاتيح الأجنبية: تُحذف الجداول المالية
+ *      (payments, military_debts, credit_notes) قبل «cases»، لذا لا تُنتهَك قيود
+ *      RESTRICT على PostgreSQL (VPS + الشبكة المحلية الأوفلاين). تم التحقق فعلياً
+ *      على PostgreSQL في اختبار PurgeUnderRestrictPgTest.
+ *   3) لا يحذف سجل الرقابة (audit_logs) أبداً — دليل قانوني «إضافة فقط»؛ قاعدة
+ *      البيانات نفسها تمنع UPDATE/DELETE عبر مشغّلات.
+ *   4) يحفظ أثر الرقابة كاملاً.
+ *   5) يكتب حدث «purge» في سجل الرقابة بعد نجاح العملية.
+ *   6) يعمل داخل معاملة واحدة — أي فشل يُرجِع كل الحذف بأمان (ذرّي).
+ *
+ * ⚠️ ترتيب الحذف أدناه حسّاس لقيود RESTRICT — لا تُعِد ترتيب حذف
+ *    payments/military_debts/credit_notes إلى ما بعد حذف «cases».
  */
 class PatientDataPurgeService
 {
-    /** @var list<string> */
-    private const PATIENT_AUDIT_TAGS = [
-        'patients',
-        'medical',
-        'spec',
-        'pricing',
-        'quotes',
-        'operations',
-        'delivery',
-        'reception',
-    ];
-
     /** @return array<string, int> */
     public function purge(bool $resetContractDebts = true, bool $syncStock = true): array
     {
@@ -56,9 +60,8 @@ class PatientDataPurgeService
             $counts['appointments'] = DB::table('appointments')->delete();
             $counts['patients'] = DB::table('patients')->delete();
 
-            $counts['audit_logs_patient'] = DB::table('audit_logs')
-                ->whereIn('tag', self::PATIENT_AUDIT_TAGS)
-                ->delete();
+            // C-5: سجل الرقابة يُحفَظ دائماً (append-only) — لا يُحذف في المسح.
+            $counts['audit_logs_preserved'] = (int) DB::table('audit_logs')->count();
 
             if ($resetContractDebts) {
                 $counts['contract_debts_reset'] = DB::table('contract_company_debts')->update([
@@ -73,6 +76,16 @@ class PatientDataPurgeService
                 $counts['stock_items_synced'] = $this->syncStockFromMovements();
             }
         });
+
+        // C-5: تسجيل عملية المسح في سجل الرقابة (بعد نجاح المعاملة) — الأثر يبقى دليلاً.
+        AuditService::log(
+            action: 'purge',
+            description: 'مسح بيانات المرضى التشغيلية — سجل الرقابة محفوظ بالكامل.',
+            tag: 'admin',
+            after: $counts,
+        );
+
+        AdminOverviewService::clearBiBoardsCache();
 
         return $counts;
     }

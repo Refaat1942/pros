@@ -8,12 +8,17 @@ use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\CatalogListVisibilityService;
+use App\Services\StockCatalogService;
+use App\Models\SupplyRequestLine;
 use App\Services\StockReceiveService;
+use App\Services\SupplyRequestService;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * استلام مخزون — لوحة التقنية (بدون أسعار شراء أو WAC في الاستجابة).
@@ -29,24 +34,16 @@ class StockReceiveController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $items = $this->fetchForDashboard(
-            StockItem::query()
-                ->with('category:id,name')
-                ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
-                ->when($request->category, fn ($q, $c) => $q->whereHas('category', fn ($q) => $q->where('name', $c)))
-                ->when($request->store_class, fn ($q, $s) => $q->where('store_class', $s))
-                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-                ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%")
-                        ->orWhere('barcode', 'like', "%{$search}%");
-                }))
-                ->orderBy('code')
-        );
+        $catalogService = app(StockCatalogService::class);
+        $user = $request->user();
+        $visibility = app(CatalogListVisibilityService::class);
+
+        $items = $catalogService->allItemsForUnifiedLists();
 
         return response()->json([
-            'data' => collect($items)->map(fn ($item) => $this->formatItem($item))->values(),
-            'total' => $items->count(),
+            'data' => collect($catalogService->listForTechnicalInventory($user))->values(),
+            'total' => $catalogService->countAll(),
+            'columns' => $visibility->tableOrderForUser($user, 'technical_inventory'),
         ]);
     }
 
@@ -61,18 +58,27 @@ class StockReceiveController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $movement = $this->stockReceiveService->receive(
-            item: $item,
-            qty: (int) $request->validated('qty'),
-            unitPrice: (float) $request->validated('unit_price'),
-            supplier: $supplier,
-            invoiceNo: $request->validated('invoice_no'),
-            movedAt: Carbon::parse($request->validated('moved_at')),
-            performedBy: $user,
-            documentPath: $this->storeInboundDocument($request),
-            documentOriginalName: $request->file('document')?->getClientOriginalName(),
-            documentMime: $request->file('document')?->getClientMimeType(),
-        );
+        $movement = DB::transaction(function () use ($request, $item, $supplier, $user) {
+            $movement = $this->stockReceiveService->receive(
+                item: $item,
+                qty: (int) $request->validated('qty'),
+                unitPrice: (float) $request->validated('unit_price'),
+                supplier: $supplier,
+                invoiceNo: $request->validated('invoice_no'),
+                movedAt: Carbon::parse($request->validated('moved_at')),
+                performedBy: $user,
+                documentPath: $this->storeInboundDocument($request),
+                documentOriginalName: $request->file('document')?->getClientOriginalName(),
+                documentMime: $request->file('document')?->getClientMimeType(),
+            );
+
+            if ($lineId = $request->validated('supply_request_line_id')) {
+                $line = SupplyRequestLine::query()->findOrFail($lineId);
+                app(SupplyRequestService::class)->markLineReceived($line, $movement);
+            }
+
+            return $movement;
+        });
 
         return response()->json([
             'message' => 'تم استلام البضاعة بنجاح.',
@@ -103,20 +109,23 @@ class StockReceiveController extends Controller
 
     private function formatItem(StockItem $item): array
     {
-        return $item->only([
-            'id',
-            'code',
-            'name',
-            'spec',
-            'category_id',
-            'store_class',
-            'uom',
-            'barcode',
-            'qty',
-            'reserved',
-            'min_qty',
-            'last_moved_at',
-        ]) + [
+        $catalogService = app(StockCatalogService::class);
+
+        return [
+            'id' => $item->id,
+            'code' => $catalogService->displayCatalogCode($item),
+            'internal_code' => $item->code,
+            'name' => $item->name,
+            'brand' => $item->brand,
+            'spec' => $item->spec,
+            'category_id' => $item->category_id,
+            'store_class' => $item->store_class,
+            'uom' => $item->uom,
+            'barcode' => $item->barcode,
+            'qty' => $item->qty,
+            'reserved' => $item->reserved,
+            'min_qty' => $item->min_qty,
+            'last_moved_at' => $item->last_moved_at,
             'category' => $item->category?->name,
             'available' => $item->availableQty(),
             'backorder' => $item->backorderQty(),

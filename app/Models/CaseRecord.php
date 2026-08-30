@@ -87,6 +87,7 @@ class CaseRecord extends Model
         'workshop_section_id',
         'assigned_technician_id',
         'workshop_assigned_at',
+        'workshop_assignment_approved_at',
         'workshop_progress_pct',
         'pricing_request_id',
         'quote_no',
@@ -131,6 +132,7 @@ class CaseRecord extends Model
         'credit_note_amount' => 'decimal:2',
         'rework_returned_at' => 'datetime',
         'workshop_assigned_at' => 'datetime',
+        'workshop_assignment_approved_at' => 'datetime',
         'workshop_progress_pct' => 'integer',
     ];
 
@@ -152,6 +154,11 @@ class CaseRecord extends Model
     public function assignedTechnician(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_technician_id');
+    }
+
+    public function workshopAssignments(): HasMany
+    {
+        return $this->hasMany(CaseWorkshopAssignment::class, 'case_id');
     }
 
     public function servicesApproval(): HasOne
@@ -293,7 +300,7 @@ class CaseRecord extends Model
         return $this->stage_key === self::STAGE_CASHIER;
     }
 
-    /** حالات دخلت الورشة فعلياً بعد صرف/تحويل BOM من المخزن. */
+    /** حالات دخلت قسم الإنتاج فعلياً بعد صرف/تحويل BOM من المخزن. */
     public function scopeReleasedToWorkshop(Builder $query): Builder
     {
         return $query
@@ -309,7 +316,7 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $q) => $q->where('stage', Bom::STAGE_FINISHED));
     }
 
-    /** طابور ورشة التصنيع — BOM تحت التشغيل بعد صرف المخزن. */
+    /** طابور قسم الإنتاج — BOM تحت التشغيل بعد صرف المخزن. */
     public function scopeWorkshopDeskQueue(Builder $query): Builder
     {
         return $query
@@ -317,7 +324,43 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_WIP));
     }
 
-    /** طابور مكتب التشغيل — جاهزة للتسليم بعد إتمام التصنيع من الورشة. */
+    /** طابور تخصيص الإنتاج — بعد إصدار أمر الشغل وقبل صرف المخزن. */
+    public function scopeWorkshopAssignmentQueue(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_MANUFACTURING)
+            ->where('manufacturing_stage', self::MFG_WAREHOUSE)
+            ->whereNotNull('work_order_no')
+            ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_RAW));
+    }
+
+    public function isWorkshopAssignmentApproved(): bool
+    {
+        return $this->workshop_assignment_approved_at !== null
+            && $this->workshop_section_id !== null
+            && $this->assigned_technician_id !== null;
+    }
+
+    /** بانتظار تخصيص واعتماد قسم الإنتاج والفني — قبل صرف المخزن. */
+    public function scopeAwaitingWorkshopAssignmentApproval(Builder $query): Builder
+    {
+        return $query
+            ->workshopAssignmentQueue()
+            ->whereNull('workshop_assignment_approved_at');
+    }
+
+    /** جاهز لصرف المخزن — اعتماد التخصيص + BOM خام. */
+    public function scopeReadyForWarehouseDispense(Builder $query): Builder
+    {
+        return $query
+            ->where('stage_key', self::STAGE_MANUFACTURING)
+            ->where('manufacturing_stage', self::MFG_WAREHOUSE)
+            ->whereNotNull('work_order_no')
+            ->whereNotNull('workshop_assignment_approved_at')
+            ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_RAW));
+    }
+
+    /** طابور مكتب التشغيل — جاهزة للتسليم بعد إتمام التصنيع من قسم الإنتاج. */
     public function scopeOperationsDeliveryQueue(Builder $query): Builder
     {
         return $query

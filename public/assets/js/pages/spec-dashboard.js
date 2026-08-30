@@ -27,6 +27,20 @@
     ordersExportRows: window.__SPEC_ORDERS_EXPORT || [],
   };
 
+  function syncSpecFormFieldPolicies() {
+    var policies = (window.__FORM_FIELD_POLICIES && window.__FORM_FIELD_POLICIES.spec) || {};
+    var writtenEl = document.getElementById('writtenItems');
+    var techEl = document.getElementById('techNotes');
+    if (writtenEl) {
+      writtenEl.setAttribute('data-v-rules', policies.written_items ? 'required,max:5000' : 'max:5000');
+    }
+    if (techEl) {
+      techEl.setAttribute('data-v-rules', policies.tech_notes ? 'required,max:5000' : 'max:5000');
+    }
+  }
+
+  syncSpecFormFieldPolicies();
+
   function isMilitaryPatient(type) {
     return (type || state.patientType) === 'military';
   }
@@ -35,7 +49,7 @@
     var suffix = requestNo ? ' — ' + requestNo : '';
     return isMilitaryPatient(type)
       ? 'تم اعتماد التوصيف — جاهز للتشغيل' + suffix
-      : 'تم الإرسال للمعدلات' + suffix;
+      : 'تم الإرسال إلى المعدلات والتكاليف' + suffix;
   }
 
   function updateSubmitLabels(type) {
@@ -49,7 +63,7 @@
     if (bannerText) {
       bannerText.textContent = isMilitaryPatient(patientType)
         ? '✅ تم اعتماد التوصيف — جاهز للتشغيل'
-        : '✅ تم الإرسال للمعدلات';
+        : '✅ تم الإرسال إلى المعدلات والتكاليف';
     }
   }
 
@@ -227,11 +241,11 @@
   function searchCatalogFromServer(q) {
     if (!window.axios) {
       renderCatalogList(q);
-      return;
+      return Promise.resolve();
     }
     state.catalogSearching = true;
     renderCatalogList(q);
-    axios.get('/spec/catalog/search', { params: { q: q, limit: 40 } })
+    return axios.get('/spec/catalog/search', { params: { q: q, limit: 40 } })
       .then(function (res) {
         state.catalogSearchResults = res.data.data || [];
         mergeCatalogEntries(state.catalogSearchResults);
@@ -309,13 +323,13 @@
     if (value === '' || value === null || value === undefined) {
       return fallback !== undefined ? fallback : 0;
     }
-    var n = parseInt(value, 10);
+    var n = parseFloat(String(value).replace(',', '.'));
     return isNaN(n) ? (fallback !== undefined ? fallback : 0) : n;
   }
 
   function normalizeItemQty(qty, fallback) {
-    var n = parseItemQty(qty, fallback !== undefined ? fallback : 1);
-    return n < 1 ? 1 : n;
+    var n = parseItemQty(qty, fallback !== undefined ? fallback : 0.001);
+    return n < 0.001 ? 0.001 : Math.round(n * 1000) / 1000;
   }
 
   function mapSpecItems(items) {
@@ -382,23 +396,43 @@
     });
   }
 
+  function catalogItemAvailable(item) {
+    if (!item) return 0;
+    if (item.available != null) return parseInt(item.available, 10) || 0;
+    if (item.available_max != null) return parseInt(item.available_max, 10) || 0;
+    return (parseInt(item.qty, 10) || 0) - (parseInt(item.reserved, 10) || 0);
+  }
+
+  function stockBadgeHtml(available) {
+    if (available < 1) {
+      return '<span class="text-xs font-bold text-amber-700">0 (طلب توريد)</span>';
+    }
+    return '<span class="text-xs font-bold text-emerald-700">' + available + '</span>';
+  }
+
   function renderItemsTable() {
     var tbody = $('specItemsBody');
     if (!tbody) return;
     if (!state.items.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">أضف أصنافاً من الكاتلوج</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">أضف أصنافاً من الكاتلوج</td></tr>';
       return;
     }
     tbody.innerHTML = state.items.map(function (item, idx) {
+      var cat = catalogEntry(item.stock_item_code);
+      var available = cat ? catalogItemAvailable(cat) : null;
+      var stockCell = available != null ? stockBadgeHtml(available) : '<span class="text-xs text-slate-400">—</span>';
+      var warnQty = available != null && item.qty > available;
       return '<tr data-idx="' + idx + '">' +
         '<td class="px-4 py-3 font-mono text-xs">' + item.stock_item_code + '</td>' +
         '<td class="px-4 py-3 font-semibold text-slate-800">' + item.name +
           (item.group_label ? '<span class="block text-xs text-violet-600">📦 ' + item.group_label + '</span>' : '') +
         '</td>' +
         '<td class="px-4 py-3 text-slate-500">' + (item.uom || '—') + '</td>' +
-        '<td class="px-4 py-3"><input type="number" step="1" min="1" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
+        '<td class="px-4 py-3">' + stockCell + '</td>' +
+        '<td class="px-4 py-3"><input type="number" step="0.001" min="0.001" value="' + item.qty + '" data-qty-idx="' + idx + '" ' +
           (state.locked ? 'disabled' : '') +
-          ' class="spec-qty-input w-20 rounded-lg border border-slate-200 px-2 py-1 text-center text-sm"></td>' +
+          ' class="spec-qty-input w-20 rounded-lg border px-2 py-1 text-center text-sm ' +
+          (warnQty ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-200') + '"></td>' +
         '<td class="px-4 py-3 text-center">' +
           (state.locked ? '—' : '<button type="button" data-remove-idx="' + idx + '" class="text-red-500 hover:text-red-700 font-bold">✕</button>') +
         '</td></tr>';
@@ -776,7 +810,7 @@
       return {
         stock_item_code: c.code,
         name: c.name,
-        qty: normalizeItemQty((parseInt(c.qty, 10) || 1) * mult, 1),
+        qty: normalizeItemQty((parseFloat(c.qty) || 1) * mult, 0.001),
         uom: c.uom || catalogItem.uom,
         group_label: catalogItem.group_label || catalogItem.spec_group_label || null,
       };
@@ -793,7 +827,7 @@
     var items = source.filter(function (item) {
       if (!qRaw && !itemMatchesActiveSpecGroups(item)) return false;
       if (!q) return true;
-      return (item.code + ' ' + item.name + ' ' + (item.spec || '') + ' ' + (item.spec_group_label || '')).toLowerCase().indexOf(q) !== -1;
+      return (item.code + ' ' + item.name + ' ' + (item.spec || '') + ' ' + (item.spec_group_label || '') + ' ' + (item.barcode || '') + ' ' + (item.alt_codes || '')).toLowerCase().indexOf(q) !== -1;
     });
 
     if (state.catalogSearching) {
@@ -825,12 +859,17 @@
       var groupBadge = item.spec_group_label
         ? '<span class="text-xs font-bold text-indigo-600">{' + item.spec_group_label + '}</span> '
         : '';
+      var available = catalogItemAvailable(item);
+      var stockLine = item.type === 'kit'
+        ? ''
+        : '<span class="block text-xs mt-1">متوفر: ' + stockBadgeHtml(available) + '</span>';
       return '<button type="button" data-pick-code="' + item.code + '" ' +
         (already ? 'disabled' : '') +
         ' class="w-full text-right px-4 py-3 rounded-xl hover:bg-amber-50 border border-transparent hover:border-amber-200 mb-1 disabled:opacity-40">' +
         kitBadge + groupBadge +
         '<span class="font-mono text-xs text-slate-500">' + item.code + '</span> ' +
         '<span class="font-bold text-slate-800">' + item.name + '</span>' +
+        stockLine +
         (item.spec ? '<span class="block text-xs text-slate-400 mt-1">' + item.spec + '</span>' : '') +
         '</button>';
     }).join('');
@@ -882,6 +921,25 @@
       }
     });
     if (search) search.addEventListener('input', function () { onCatalogSearchInput(search.value); });
+    if (search) search.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var q = (search.value || '').trim();
+      if (!q) return;
+      e.preventDefault();
+      searchCatalogFromServer(q).then(function () {
+        var upper = q.toUpperCase();
+        var exact = (state.catalogSearchResults || []).find(function (row) {
+          return row.barcode && String(row.barcode).toUpperCase() === upper;
+        });
+        if (!exact) return;
+        expandKitToLines(exact, 1).forEach(function (line) {
+          state.items.push(line);
+        });
+        renderItemsTable();
+        clearError();
+        $('catalogModal').classList.add('hidden');
+      });
+    });
   }
 
   function bindActions() {
@@ -927,7 +985,7 @@
           var patientType = pricing.patient_type || state.patientType;
           var requestNo = pricing.request_no || '';
           var submittedCaseId = state.caseId;
-          showToast(submitSuccessMessage(patientType, requestNo));
+          showToast(res.data.message || submitSuccessMessage(patientType, requestNo));
           removeCaseFromOrdersList(submittedCaseId);
           resetWorkspace();
         })

@@ -14,6 +14,7 @@ use App\Services\CostingService;
 use App\Services\StockDispenseRequestService;
 use App\Services\WorkOrderService;
 use App\Services\WorkshopSectionService;
+use App\Services\WorkshopTechnicianService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -40,7 +41,62 @@ class WorkshopInventoryPathwaysTest extends TestCase
             ->assertJsonFragment(['name' => 'قسم الصب']);
     }
 
-    public function test_operations_approve_assigns_workshop_section_and_technician(): void
+    public function test_workshop_technician_crud_via_api(): void
+    {
+        $admin = $this->userWithRole(Role::SLUG_ADMIN);
+        $this->userWithRole(Role::SLUG_WORKSHOP);
+        $section = WorkshopSection::create(['name' => 'تجميع', 'code' => 'assembly', 'sort' => 10, 'active' => true]);
+
+        $this->actingAs($admin)
+            ->postJson('/admin/workshop-technicians', [
+                'name' => 'فني تجريبي',
+                'username' => 'tech_test_01',
+                'password' => 'secret123',
+                'status' => User::STATUS_ACTIVE,
+                'section_ids' => [$section->id],
+            ])
+            ->assertCreated()
+            ->assertJsonFragment(['message' => 'تم إضافة الفني.']);
+
+        $tech = User::query()->where('username', 'tech_test_01')->first();
+        $this->assertNotNull($tech);
+        $this->assertTrue($tech->workshopSections()->whereKey($section->id)->exists());
+
+        $this->actingAs($admin)
+            ->putJson("/admin/workshop-technicians/{$tech->id}", [
+                'name' => 'فني معدّل',
+                'section_ids' => [],
+            ])
+            ->assertOk()
+            ->assertJsonFragment(['message' => 'تم تحديث بيانات الفني.']);
+
+        $tech->refresh();
+        $this->assertSame('فني معدّل', $tech->name);
+        $this->assertFalse($tech->workshopSections()->exists());
+
+        $this->actingAs($admin)
+            ->deleteJson("/admin/workshop-technicians/{$tech->id}")
+            ->assertOk()
+            ->assertJsonFragment(['message' => 'تم حذف الفني.']);
+
+        $this->assertDatabaseMissing('users', ['id' => $tech->id]);
+    }
+
+    public function test_workshop_technician_delete_blocked_when_assigned_to_case(): void
+    {
+        $admin = $this->userWithRole(Role::SLUG_ADMIN);
+        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
+        $case->update(['assigned_technician_id' => $tech->id]);
+
+        $this->actingAs($admin)
+            ->deleteJson("/admin/workshop-technicians/{$tech->id}")
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'لا يمكن حذف الفني — مرتبط بحالات إنتاج.']);
+    }
+
+    public function test_operations_approve_issues_work_order_without_production_assignment(): void
     {
         $this->stockItem('RM-001', qty: 20, wac: 100.00);
         $patient = $this->militaryPatient($this->militaryCompany());
@@ -52,24 +108,164 @@ class WorkshopInventoryPathwaysTest extends TestCase
         ]);
         app(WorkOrderService::class)->generate($case->fresh());
 
-        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
-        $section = WorkshopSection::create(['name' => 'تجميع', 'code' => 'assembly', 'sort' => 10, 'active' => true]);
-        $section->technicians()->sync([$tech->id]);
-
         $ops = $this->userWithRole(Role::SLUG_OPERATIONS);
 
         $this->actingAs($ops)
-            ->postJson("/operations/pending/{$case->id}/approve", [
+            ->postJson("/operations/pending/{$case->id}/approve")
+            ->assertOk();
+
+        $case->refresh();
+        $this->assertNull($case->workshop_section_id);
+        $this->assertNull($case->assigned_technician_id);
+        $this->assertNull($case->workshop_assignment_approved_at);
+        $this->assertNotNull($case->work_order_no);
+        $this->assertSame(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
+    }
+
+    public function test_production_assignment_approval_allows_dispense(): void
+    {
+        config(['inventory.dispense_requires_approval' => true]);
+
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0099']);
+
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+        app(BomService::class)->reserveForCase($case->fresh());
+
+        $case = $this->seedWorkshopAssignmentApproved($case->fresh());
+
+        $technical = $this->userWithRole(Role::SLUG_TECHNICAL);
+        $admin = $this->userWithRole(Role::SLUG_ADMIN);
+
+        $request = app(StockDispenseRequestService::class)->submit(
+            $bom,
+            ['BC-RM-001'],
+            $technical,
+        );
+
+        $this->assertSame(StockDispenseRequest::STATUS_PENDING, $request->status);
+        $this->assertSame(Bom::STAGE_RAW, $bom->fresh()->stage);
+
+        app(StockDispenseRequestService::class)->approve($request->fresh(), $admin);
+
+        $this->assertSame(Bom::STAGE_WIP, $bom->fresh()->stage);
+        $this->assertDatabaseHas('stock_dispense_requests', [
+            'id' => $request->id,
+            'status' => StockDispenseRequest::STATUS_EXECUTED,
+        ]);
+    }
+
+    public function test_approve_assignment_saves_dropdown_values_in_one_request(): void
+    {
+        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $workshopUser = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $section = WorkshopSection::create([
+            'name' => 'فوق الركبة',
+            'code' => 'fok_alrkb',
+            'sort' => 1,
+            'active' => true,
+        ]);
+        $section->technicians()->sync([$tech->id]);
+
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0101']);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+
+        $this->assertNull($case->fresh()->workshop_section_id);
+
+        $this->actingAs($workshopUser)
+            ->postJson("/workshop/workshop/{$case->id}/approve-assignment", [
+                'workshop_section_id' => $section->id,
+                'assigned_technician_id' => $tech->id,
+            ])
+            ->assertOk()
+            ->assertJsonFragment(['message' => 'تم اعتماد التخصيص — يمكن للمخزن صرف المواد.']);
+
+        $case->refresh();
+        $this->assertSame($section->id, $case->workshop_section_id);
+        $this->assertSame($tech->id, $case->assigned_technician_id);
+        $this->assertTrue($case->isWorkshopAssignmentApproved());
+    }
+
+    public function test_assign_then_approve_separate_requests(): void
+    {
+        $tech = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $workshopUser = $this->userWithRole(Role::SLUG_WORKSHOP);
+        $section = WorkshopSection::create([
+            'name' => 'تجميع',
+            'code' => 'assembly',
+            'sort' => 2,
+            'active' => true,
+        ]);
+        $section->technicians()->sync([$tech->id]);
+
+        $this->stockItem('RM-002', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0102']);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-002', 'name' => 'صنف RM-002', 'qty' => 1],
+        ]);
+
+        $this->actingAs($workshopUser)
+            ->postJson("/workshop/workshop/{$case->id}/assign", [
                 'workshop_section_id' => $section->id,
                 'assigned_technician_id' => $tech->id,
             ])
             ->assertOk();
 
+        $this->actingAs($workshopUser)
+            ->postJson("/workshop/workshop/{$case->id}/approve-assignment")
+            ->assertOk();
+
         $case->refresh();
-        $this->assertSame($section->id, $case->workshop_section_id);
-        $this->assertSame($tech->id, $case->assigned_technician_id);
-        $this->assertNotNull($case->work_order_no);
-        $this->assertSame(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);
+        $this->assertTrue($case->isWorkshopAssignmentApproved());
+    }
+
+    public function test_assignment_queue_api_returns_pending_work_orders(): void
+    {
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0103']);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+
+        $workshop = $this->userWithRole(Role::SLUG_WORKSHOP);
+
+        $this->actingAs($workshop)
+            ->getJson('/workshop/workshop/assignment-queue')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.work_order_no', 'WO-2026-0103');
+    }
+
+    public function test_dispense_blocked_without_production_assignment_approval(): void
+    {
+        $this->stockItem('RM-001', qty: 20, wac: 100.00);
+        $patient = $this->militaryPatient($this->militaryCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0100']);
+
+        $bom = app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
+        ]);
+        app(BomService::class)->reserveForCase($case->fresh());
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
     }
 
     public function test_dispense_request_pending_then_approve_executes_movement(): void
@@ -85,6 +281,8 @@ class WorkshopInventoryPathwaysTest extends TestCase
             ['stock_item_code' => 'RM-001', 'name' => 'صنف RM-001', 'qty' => 1],
         ]);
         app(BomService::class)->reserveForCase($case->fresh());
+
+        $case = $this->seedWorkshopAssignmentApproved($case->fresh());
 
         $technical = $this->userWithRole(Role::SLUG_TECHNICAL);
         $admin = $this->userWithRole(Role::SLUG_ADMIN);

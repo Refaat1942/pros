@@ -30,7 +30,11 @@ class WorkOrderService
             ? ((int) substr($last, strlen($prefix)) + 1)
             : 1;
 
-        $workOrderNo = sprintf('%s%04d', $prefix, $num);
+        // H-7: تفادي 500 عند سباق نادر — نتخطّى أي رقم مستخدَم بالفعل (مثل نمط
+        // nextQuoteNo/nextPaymentNo). التنسيق يتّسع تلقائياً بعد 9999 لنفس السنة.
+        do {
+            $workOrderNo = sprintf('%s%04d', $prefix, $num++);
+        } while (CaseRecord::where('work_order_no', $workOrderNo)->exists());
 
         CaseRecord::where('id', $case->id)->update(['work_order_no' => $workOrderNo]);
 

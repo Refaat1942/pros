@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 /** صفوف اختيار الأصناف + الأطقم في التوصيف والمعدلات. */
 final class StockCatalogPicker
 {
-    private const FULL_ROWS_CACHE_KEY = 'stock_catalog_picker_rows_v2';
+    private const FULL_ROWS_CACHE_KEY = 'stock_catalog_picker_rows_v3';
 
     private const FULL_ROWS_TTL_SECONDS = 300;
 
