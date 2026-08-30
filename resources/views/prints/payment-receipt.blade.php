@@ -66,7 +66,12 @@
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
 
 @php
-    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for('payment_receipt');
+    $printCtx = \App\Support\DocumentPrintContext::fromRequest(request());
+    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for(
+        'payment_receipt',
+        $printCtx->department,
+        $printCtx->stage,
+    );
 @endphp
 @include('prints.partials.document-template-vars')
 

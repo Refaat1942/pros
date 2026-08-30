@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Manufacturing;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PreparesDocumentPrint;
 use App\Models\CaseRecord;
 use Illuminate\View\View;
 
 class ManufacturingStageController extends Controller
 {
+    use PreparesDocumentPrint;
     /**
      * إذن شغل — للطباعة من مكتب التشغيل.
      */
@@ -22,6 +24,7 @@ class ManufacturingStageController extends Controller
         return view('prints.work-order', [
             'case' => $case,
             'autoPrint' => true,
+            'documentTemplate' => $this->documentTemplateForPrint('work_order', $case),
         ]);
     }
 }

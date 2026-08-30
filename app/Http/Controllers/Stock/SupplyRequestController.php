@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Stock;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PreparesDocumentPrint;
 use App\Http\Requests\Stock\ResolveSupplyRequestLineRequest;
 use App\Http\Requests\Stock\StoreSupplyRequestLineRequest;
 use App\Models\SupplyRequestLine;
@@ -15,6 +16,7 @@ use Illuminate\View\View;
 
 class SupplyRequestController extends Controller
 {
+    use PreparesDocumentPrint;
     public function __construct(private readonly SupplyRequestService $supplyRequestService) {}
 
     public function printOpen(): View
@@ -27,6 +29,7 @@ class SupplyRequestController extends Controller
             'lines' => $lines,
             'generatedAt' => now(),
             'autoPrint' => true,
+            'documentTemplate' => $this->documentTemplateForPrint('supply_request_list'),
         ]);
     }
 

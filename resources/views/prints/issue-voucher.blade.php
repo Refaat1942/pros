@@ -14,7 +14,8 @@
     $sectionName = $voucher['workshop_section_name'] ?? null;
 
     $tplService = app(DocumentTemplateService::class);
-    $tpl = $documentTemplate ?? $tplService->for('issue_voucher');
+    $printCtx = \App\Support\DocumentPrintContext::fromRequest(request());
+    $tpl = $documentTemplate ?? $tplService->for('issue_voucher', $printCtx->department, $printCtx->stage);
     $docTitle = $tplService->renderText($tpl['doc_title'] ?? 'إذن صرف مواد — رقم ( {no} )', ['no' => $voucherNo]);
 @endphp
 @include('prints.partials.document-template-vars')

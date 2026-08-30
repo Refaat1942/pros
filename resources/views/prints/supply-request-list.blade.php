@@ -12,7 +12,12 @@
 </head>
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
 @php
-    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for('supply_request_list');
+    $printCtx = \App\Support\DocumentPrintContext::fromRequest(request());
+    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for(
+        'supply_request_list',
+        $printCtx->department,
+        $printCtx->stage,
+    );
 @endphp
 @include('prints.partials.document-template-vars')
 <div class="no-print">

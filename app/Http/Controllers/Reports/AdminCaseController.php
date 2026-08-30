@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reports;
 
 use App\Enums\CaseStage;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PreparesDocumentPrint;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
@@ -17,6 +18,7 @@ use Illuminate\View\View;
 
 class AdminCaseController extends Controller
 {
+    use PreparesDocumentPrint;
     public function __construct(
         private readonly AdminCaseDetailService $detailService,
         private readonly QuoteQrService $quoteQrService,
@@ -53,6 +55,8 @@ class AdminCaseController extends Controller
             'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
             'embed' => $embed,
             'autoPrint' => ! $embed,
+            'printTotals' => \App\Support\QuotePrintPresenter::fromQuote($quote),
+            'documentTemplate' => $this->documentTemplateForPrint('quote', $case),
         ]);
     }
 

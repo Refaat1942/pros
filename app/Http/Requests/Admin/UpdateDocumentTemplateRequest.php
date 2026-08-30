@@ -34,6 +34,8 @@ class UpdateDocumentTemplateRequest extends FormRequest
         }
 
         $rules['font_scale'] = ['nullable', 'in:compact,normal'];
+        $rules['scope_department'] = ['nullable', 'string', 'max:64'];
+        $rules['scope_stage'] = ['nullable', 'string', 'max:64'];
 
         return $rules;
     }

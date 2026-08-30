@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Quote;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PreparesDocumentPrint;
 use App\Models\ApprovalContract;
 use App\Models\Patient;
 use App\Models\Quote;
@@ -19,6 +20,7 @@ use Illuminate\View\View;
 class QuoteController extends Controller
 {
     use PaginationTrait;
+    use PreparesDocumentPrint;
 
     public function __construct(
         private readonly QuoteService $quoteService,
@@ -96,6 +98,7 @@ class QuoteController extends Controller
             'quoteQrSvg' => $this->quoteQrService->svg($quote->quote_no),
             'embed' => $request->boolean('embed'),
             'autoPrint' => ! $request->boolean('embed'),
+            'documentTemplate' => $this->documentTemplateForPrint('quote', $quote->caseRecord),
         ]);
     }
 
@@ -112,6 +115,7 @@ class QuoteController extends Controller
         return view('prints.issue-voucher', [
             'voucher' => IssueVoucherPresenter::fromBom($bom),
             'autoPrint' => true,
+            'documentTemplate' => $this->documentTemplateForPrint('issue_voucher', $quote->caseRecord),
         ]);
     }
 

@@ -1,10 +1,25 @@
 @php
+    use App\Services\DocumentTemplateService;
+    use App\Support\DocumentPrintContext;
+
     $case = $case ?? $spec->caseRecord;
+    $tplService = app(DocumentTemplateService::class);
+    $printCtx = DocumentPrintContext::fromRequest(request(), $case);
+    $tpl = $documentTemplate ?? $tplService->for('spec_print', $printCtx->department, $printCtx->stage);
+    $compact = (bool) ($tpl['compact_layout'] ?? true);
+    $docTitle = $tpl['doc_title'] ?? 'تقرير التوصيف الفني';
+    $deptLabel = $tpl['dept_label'] ?? 'قسم التوصيف الفني';
+    $footerNote = trim((string) ($tpl['footer_note'] ?? ''));
+    $sig1 = $tpl['signature_1'] ?? 'فني التوصيف';
+    $sig2 = $tpl['signature_2'] ?? 'ختم القسم';
+    $showLogo = (bool) ($tpl['show_logo'] ?? true);
+    $showSeal = (bool) ($tpl['show_seal'] ?? true);
     $submittedAt = $spec->submitted_at ?? $spec->updated_at ?? now();
     $dateDisplay = $submittedAt->format('d/m/Y');
-    $minRows = max($spec->items->count(), 6);
+    $minRows = $compact ? max($spec->items->count(), 3) : max($spec->items->count(), 6);
     $emptyRows = $minRows - $spec->items->count();
 @endphp
+@include('prints.partials.document-template-vars', ['documentTemplate' => $tpl])
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -64,6 +79,12 @@
             text-align: center;
         }
         .header-left .header-meta { margin-top: 6px; text-align: center; }
+        @media print {
+            .sheet {
+                max-height: 277mm;
+                overflow: hidden;
+            }
+        }
     </style>
 </head>
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
@@ -72,16 +93,18 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet avoid-break">
+<div class="{{ $sheetClass }} avoid-break">
     <header class="doc-header">
         <div class="header-right">
             @foreach (app(\App\Services\SettingService::class)->branding()['lines'] as $line)
                 <div>{{ $line }}</div>
             @endforeach
-            <div class="dept">قسم التوصيف الفني</div>
+            <div class="dept">{{ $deptLabel }}</div>
         </div>
         <div class="header-left">
-            @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
+            @if ($showLogo || $showSeal)
+                @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => $showSeal, 'showLogo' => $showLogo])
+            @endif
             <div class="header-meta">
                 <div class="serial-red">{{ $spec->order_ref }}</div>
                 <div>رقم الحالة: <span class="fill" style="min-width:16mm;">{{ $case?->case_no ?? '—' }}</span></div>
@@ -90,7 +113,7 @@
         </div>
     </header>
 
-    <h1 class="doc-title">تقرير التوصيف الفني</h1>
+    <h1 class="doc-title">{{ $docTitle }}</h1>
 
     <section class="meta-grid">
         <div class="line">اسم المريض: <span class="fill fill-wide">{{ $spec->patient_name ?? '—' }}</span></div>
@@ -140,14 +163,18 @@
         <div>{{ $spec->tech_notes ?: '—' }}</div>
     </div>
 
+    @if ($footerNote !== '')
+        <p style="margin-top:12px;font-size:11pt;">{{ $footerNote }}</p>
+    @endif
+
     <div class="footer-signatures">
         <div>
-            <div>فني التوصيف</div>
+            <div>{{ $sig1 }}</div>
             <div class="sig-line">التوقيع</div>
         </div>
         <div>
             <div>تاريخ الطباعة: {{ now()->format('d/m/Y') }}</div>
-            <div class="sig-line">ختم القسم</div>
+            <div class="sig-line">{{ $sig2 }}</div>
         </div>
     </div>
 </div>
