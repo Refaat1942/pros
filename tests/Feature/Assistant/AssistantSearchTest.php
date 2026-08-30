@@ -156,6 +156,36 @@ class AssistantSearchTest extends TestCase
         );
     }
 
+    public function test_assistant_knows_price_tier_fifo_and_reports(): void
+    {
+        $user = $this->userWithRole('admin');
+
+        $fifo = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('صرف بأسعار متعددة')
+        );
+        $fifo->assertOk();
+        $titles = array_column($fifo->json('results'), 'title');
+        $this->assertContains('صرف المخزن بأسعار متعددة (دفعات FIFO)', $titles);
+
+        $reports = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('أرصدة مستويات السعر').'&dashboard=admin&page=reports'
+        );
+        $reports->assertOk();
+        $this->assertContains(
+            'تقارير مستويات السعر والأرصدة',
+            array_column($reports->json('results'), 'title')
+        );
+
+        $docs = $this->actingAs($user)->getJson(
+            '/assistant/search?q='.urlencode('مركز الوثائق').'&dashboard=admin&page=documents-hub'
+        );
+        $docs->assertOk();
+        $this->assertContains(
+            'مركز الوثائق والطباعة',
+            array_column($docs->json('results'), 'title')
+        );
+    }
+
     public function test_assistant_offline_help_entry(): void
     {
         $user = $this->userWithRole('reception');

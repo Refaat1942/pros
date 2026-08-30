@@ -453,7 +453,10 @@ class AdminReportsPageTest extends TestCase
         $report = $hub->build('inventory-overview', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('متابعة حركة الأصناف', $report['title']);
-        $this->assertSame(['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الرصيد'], $report['headers']);
+        $this->assertSame(
+            ['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الكمية', 'تكلفة الوحدة', 'سعر الدفعة', 'قيمة الحركة', 'المرجع', 'طلب توريد'],
+            $report['headers']
+        );
 
         $issueRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'صرف / بيع');
         $returnRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'ارتجاع من قسم الإنتاج');
@@ -470,7 +473,50 @@ class AdminReportsPageTest extends TestCase
             ->assertSee('متابعة حركة الأصناف', false)
             ->assertSee('اسم الصنف', false)
             ->assertSee('ركبة تجريبية', false)
+            ->assertSee('سعر الدفعة', false)
             ->assertDontSee('>المرجع<', false);
+    }
+
+    public function test_price_tier_balance_report_lists_tiers_with_quantities(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $supplier = $this->makeSupplier();
+        $item = $this->stockItem('RM-TIER-RPT', qty: 12);
+
+        app(StockPriceService::class)->addBatch($item->fresh(), 5, 10.00, $supplier, 'INV-T1', now());
+        app(StockPriceService::class)->addBatch($item->fresh(), 7, 20.00, $supplier, 'INV-T2', now());
+
+        $from = now()->startOfMonth()->toDateString();
+        $to = now()->toDateString();
+        $hub = app(AdminReportsHubService::class);
+        $dates = $hub->parseDateRange($from, $to);
+
+        $balances = $hub->build('price-tier-balances', $dates['from'], $dates['to'], $admin);
+        $this->assertSame('أرصدة مستويات السعر', $balances['title']);
+        $this->assertContains('سعر الشراء', $balances['headers']);
+        $this->assertContains('رصيد الدفعة', $balances['headers']);
+
+        $tier10 = collect($balances['rows'])->first(fn ($row) => ($row[0] ?? '') === 'RM-TIER-RPT' && str_contains($row[2] ?? '', '10.00'));
+        $this->assertNotNull($tier10);
+        $this->assertSame('5', $tier10[3]);
+
+        $multi = $hub->build('multi-price-items', $dates['from'], $dates['to'], $admin);
+        $this->assertSame('أصناف بأسعار متعددة', $multi['title']);
+        $multiRow = collect($multi['rows'])->first(fn ($row) => ($row[0] ?? '') === 'RM-TIER-RPT');
+        $this->assertNotNull($multiRow);
+        $this->assertSame('2', $multiRow[2]);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/price-tier-balances?from='.$from.'&to='.$to)
+            ->assertOk()
+            ->assertSee('أرصدة مستويات السعر', false)
+            ->assertSee('RM-TIER-RPT', false);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/multi-price-items?from='.$from.'&to='.$to)
+            ->assertOk()
+            ->assertSee('أصناف بأسعار متعددة', false)
+            ->assertSee('RM-TIER-RPT', false);
     }
 
     public function test_inventory_report_shows_stagnant_and_active_items(): void

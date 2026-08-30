@@ -21,6 +21,59 @@
     return div.innerHTML;
   }
 
+  function formatTierQtyDisplay(qty) {
+    var n = parseFloat(qty);
+    if (!isFinite(n)) return '0';
+    if (Math.abs(n - Math.round(n)) < 0.0001) return String(Math.round(n));
+    return String(n).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  }
+
+  function catalogPriceAmountKey(amount) {
+    return (Math.round(parseFloat(amount) * 100) / 100).toFixed(2);
+  }
+
+  function catalogAmountsEqual(a, b) {
+    return catalogPriceAmountKey(a) === catalogPriceAmountKey(b);
+  }
+
+  function tierQtyForAmount(amount, tiers) {
+    if (!tiers || !tiers.length) return 0;
+    var key = catalogPriceAmountKey(amount);
+    for (var i = 0; i < tiers.length; i++) {
+      if (catalogPriceAmountKey(tiers[i].amount) === key) {
+        return parseFloat(tiers[i].qty) || 0;
+      }
+    }
+    return 0;
+  }
+
+  function updateBasePriceQtyBadge(amount, tiers) {
+    var badge = document.getElementById('slimBasePriceQty');
+    if (!badge) return;
+    var qty = tierQtyForAmount(amount, tiers);
+    badge.textContent = 'رصيد: ' + formatTierQtyDisplay(qty);
+    badge.hidden = false;
+  }
+
+  function buildPriceTiersFromItem(item) {
+    if (item.price_tiers && item.price_tiers.length) {
+      return item.price_tiers;
+    }
+    var tiers = [];
+    var base = parseFloat(item.price) || 0;
+    if (base > 0) {
+      tiers.push({ amount: base, qty: 0, id: null });
+    }
+    (item.prices || []).forEach(function (p) {
+      tiers.push({
+        amount: parseFloat(p.amount) || 0,
+        qty: parseFloat(p.qty) || 0,
+        id: p.id || null,
+      });
+    });
+    return tiers;
+  }
+
   function setSupplierValue(id, name) {
     var hidden = document.getElementById('slimSupplierId');
     var label = document.getElementById('slimSupplierLabel');
@@ -115,7 +168,13 @@
     document.getElementById('slimEditId').value = v.id || '';
     document.getElementById('slimEditCode').value = v.code || '';
     document.getElementById('slimExtraPrices').innerHTML = '';
-    (v.prices || []).forEach(function (p) { window.addSlimPriceRow(p.amount); });
+    window.__catalogPriceTiers = buildPriceTiersFromItem(v);
+    updateBasePriceQtyBadge(parseFloat(v.price) || 0, window.__catalogPriceTiers);
+    var baseAmount = parseFloat(v.price) || 0;
+    window.__catalogPriceTiers.forEach(function (t) {
+      if (catalogAmountsEqual(t.amount, baseAmount)) return;
+      window.addSlimPriceRow(t.amount, t.qty, t.id);
+    });
     var quickEl = document.getElementById('slimIsQuickDispense');
     if (quickEl) quickEl.checked = !!v.is_quick_dispense;
     var first = (v.suppliers || [])[0];
@@ -138,7 +197,12 @@
     var rows = [];
     document.querySelectorAll('#slimExtraPrices .slim-price-row').forEach(function (r) {
       var amount = parseFloat(r.querySelector('.slim-price-amount').value || '0');
-      if (amount > 0) rows.push({ amount: amount });
+      if (amount > 0) {
+        var row = { amount: amount };
+        var priceId = r.getAttribute('data-price-id');
+        if (priceId) row.id = priceId;
+        rows.push(row);
+      }
     });
     return rows;
   }
@@ -160,17 +224,21 @@
     modal.setAttribute('hidden', '');
   }
 
-  window.addSlimPriceRow = function (amount) {
+  window.addSlimPriceRow = function (amount, qty, priceId) {
     var box = document.getElementById('slimExtraPrices');
     if (!box) return;
     var row = document.createElement('div');
     row.className = 'slim-price-row';
-    row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+    var qtyText = formatTierQtyDisplay(
+      qty != null ? qty : tierQtyForAmount(amount, window.__catalogPriceTiers || [])
+    );
     row.innerHTML =
-      '<input type="number" min="0" step="0.01" class="slim-price-amount" placeholder="السعر" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;">' +
+      '<span class="slim-price-qty-badge" title="رصيد هذا السعر في المخزن">رصيد: ' + qtyText + '</span>' +
+      '<input type="number" min="0" step="0.01" class="slim-price-amount" placeholder="السعر (ج.م)">' +
       '<button type="button" class="btn-action danger" onclick="this.closest(\'.slim-price-row\').remove()">×</button>';
     box.appendChild(row);
     if (amount != null) row.querySelector('.slim-price-amount').value = amount;
+    if (priceId) row.setAttribute('data-price-id', String(priceId));
   };
 
   window.openSlimCatalogForm = function () {
@@ -294,6 +362,10 @@
 
   ['slimOpeningQty', 'slimAddition', 'slimDiscount'].forEach(function (fieldId) {
     document.getElementById(fieldId)?.addEventListener('input', recalcCatalogBalance);
+  });
+
+  document.getElementById('slimPrice')?.addEventListener('input', function () {
+    updateBasePriceQtyBadge(parseFloat(document.getElementById('slimPrice').value || '0'), window.__catalogPriceTiers || []);
   });
 
   document.getElementById('catalogFormClose')?.addEventListener('click', closeCatalogFormModal);
