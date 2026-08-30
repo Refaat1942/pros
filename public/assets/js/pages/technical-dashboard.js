@@ -23,6 +23,9 @@ function normalizeInventoryItem(raw) {
     id: raw.id,
     code: raw.code || '',
     name: raw.name || '',
+    brand: raw.brand || '',
+    barcode: raw.barcode || '',
+    uom: raw.uom || '',
     spec: raw.spec || '—',
     category: raw.category || '—',
     qty: qty,
@@ -45,13 +48,17 @@ function csrfToken() {
 }
 
 function fetchInventoryFromServer() {
-  return fetch('/technical/inventory/list', {
+  var listUrl = window.__INVENTORY_LIST_URL || '/technical/inventory/list';
+  return fetch(listUrl, {
     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   }).then(function (response) {
     if (!response.ok) throw new Error('inventory_fetch_failed');
     return response.json();
   }).then(function (payload) {
     window.__INVENTORY_ITEMS = payload.data || [];
+    if (payload.columns && payload.columns.length) {
+      window.__INVENTORY_LIST_COLUMNS = payload.columns;
+    }
     setInventoryItems(window.__INVENTORY_ITEMS);
   });
 }
@@ -96,7 +103,7 @@ function reloadInventory() {
   syncInventoryStatus();
 }
 
-var inventoryFilter = 'all';
+var inventoryFilter = window.__INVENTORY_DEFAULT_FILTER || 'all';
 var inventorySearchTerm = '';
 
 var pricingFilter = 'all';
@@ -111,7 +118,7 @@ var sectionTitles = {
   spec: 'معاينة التوصيف (بدون صرف)',
   pricing: 'طلبات مرسلة للتسعير',
   bom: 'قوائم صرف المواد — مخزن خام / مخزن إنتاج / مخزن تسليم',
-  returns: 'إذن ارتجاع — ورشة → مخزن',
+  returns: 'إذن ارتجاع — قسم الإنتاج → مخزن',
   operations: 'مكتب التشغيل — أوامر الصرف والإنتاج',
   adjustments: 'المعدلات — تجارب التركيب والمقاسات'
 };
@@ -148,7 +155,8 @@ function getFilteredInventory() {
     var matchSearch = !inventorySearchTerm ||
       item.name.indexOf(inventorySearchTerm) !== -1 ||
       item.spec.indexOf(inventorySearchTerm) !== -1 ||
-      item.code.indexOf(inventorySearchTerm) !== -1;
+      item.code.indexOf(inventorySearchTerm) !== -1 ||
+      (item.barcode && item.barcode.indexOf(inventorySearchTerm) !== -1);
     return matchFilter && matchSearch;
   });
 }
@@ -220,35 +228,55 @@ function updateInventoryAnalyticsCards() {
   values[3].textContent = String(lowCount);
 }
 
+function renderTechnicalInventoryCell(item, key) {
+  var isLow = item.status === 'low';
+  var isBackorder = item.status === 'backorder';
+  var available = item.available != null ? item.available : (item.qty - (item.reserved || 0));
+  var statusLabel = isBackorder
+    ? 'طلب توريد (' + (item.backorder || 0) + ')'
+    : (isLow ? 'كمية منخفضة' : 'متوفر');
+  var statusClass = isBackorder ? 'backorder' : (isLow ? 'low' : 'available');
+  var availClass = isBackorder ? 'backorder' : item.status;
+
+  switch (key) {
+    case 'code':
+      return '<td class="item-code-cell"><span class="item-code">' + (item.code || '') + '</span></td>';
+    case 'name':
+      return '<td><div class="item-name">' + (item.name || '') + '</div></td>';
+    case 'brand':
+      return '<td style="color:var(--text-muted);">' + (item.brand || '—') + '</td>';
+    case 'uom':
+      return '<td style="text-align:center;color:var(--text-muted);">' + (item.uom || '—') + '</td>';
+    case 'available':
+      return '<td class="qty-cell"><div class="qty-badge ' + availClass + '">' + available + '</div></td>';
+    case 'status':
+      return '<td class="status-cell"><span class="stock-status ' + statusClass + '"><span class="status-dot"></span>' + statusLabel + '</span></td>';
+    case 'qty':
+      return '<td style="text-align:center;">' + (item.qty || 0) + '</td>';
+    case 'reserved':
+      return '<td style="text-align:center;">' + (item.reserved || 0) + '</td>';
+    case 'category':
+      return '<td style="color:var(--text-muted);font-size:12px;">' + (item.category || '—') + '</td>';
+    default:
+      return '<td>—</td>';
+  }
+}
+
 function renderInventory() {
   if (!document.getElementById('inventoryTable')) return;
   var filtered = getFilteredInventory();
+  var columns = window.__INVENTORY_LIST_COLUMNS || ['code', 'name', 'available', 'status'];
+  var colspan = Math.max(1, columns.length);
 
   document.getElementById('inventoryBadge').textContent = inventory.length + ' صنف';
   document.getElementById('inventoryFooter').textContent =
     'عرض ' + filtered.length + ' من ' + inventory.length + ' أصناف';
 
   document.getElementById('inventoryTable').innerHTML = filtered.length ? filtered.map(function (item) {
-    var isLow = item.status === 'low';
-    var isBackorder = item.status === 'backorder';
-    var available = item.available != null ? item.available : (item.qty - (item.reserved || 0));
-    var availClass = isBackorder ? 'backorder' : item.status;
-    var statusLabel = isBackorder
-      ? 'طلب توريد (' + (item.backorder || 0) + ')'
-      : (isLow ? 'كمية منخفضة' : 'متوفر');
-    var statusClass = isBackorder ? 'backorder' : (isLow ? 'low' : 'available');
-    return '<tr>' +
-      '<td class="item-code-cell"><span class="item-code">' + item.code + '</span></td>' +
-      '<td><div class="item-name">' + item.name + '</div></td>' +
-      '<td class="qty-cell"><div class="qty-badge ' + availClass + '">' + available + '</div></td>' +
-      '<td class="status-cell">' +
-      '<span class="stock-status ' + statusClass + '">' +
-      '<span class="status-dot"></span>' +
-      statusLabel +
-      '</span>' +
-      '</td>' +
-      '</tr>';
-  }).join('') : '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد أصناف في المخزون — أضف الأصناف من لوحة الإدارة</td></tr>';
+    return '<tr data-inventory-code="' + (item.code || '') + '" data-barcode="' + String(item.barcode || '').toUpperCase() + '">' + columns.map(function (key) {
+      return renderTechnicalInventoryCell(item, key);
+    }).join('') + '</tr>';
+  }).join('') : '<tr><td colspan="' + colspan + '" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد أصناف في المخزون — أضف الأصناف من لوحة الإدارة</td></tr>';
   refreshPaginated('inventoryTable');
   updateInventoryAnalyticsCards();
 }
@@ -257,6 +285,26 @@ var inventorySearchEl = document.getElementById('inventorySearch');
 if (inventorySearchEl) inventorySearchEl.addEventListener('input', function (e) {
   inventorySearchTerm = e.target.value.trim();
   renderInventory();
+});
+if (inventorySearchEl) inventorySearchEl.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+  var term = (e.target.value || '').trim();
+  if (!term) return;
+  e.preventDefault();
+  inventorySearchTerm = term;
+  renderInventory();
+  var upper = term.toUpperCase();
+  var match = inventory.find(function (item) {
+    return item.barcode && String(item.barcode).toUpperCase() === upper;
+  });
+  if (match) {
+    var row = document.querySelector('#inventoryTable tr[data-inventory-code="' + match.code + '"]');
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.style.background = '#fef9c3';
+      setTimeout(function () { row.style.background = ''; }, 2000);
+    }
+  }
 });
 
 var inventoryFilters = document.querySelectorAll('#inventoryFilters .filter-pill');
@@ -673,7 +721,8 @@ function openBarcodeIssue(bomId) {
     return '<div class="barcode-req-item"><span>' + (it.name || it.code) + ' ×' + (it.qty || 1) + '</span><code>' + bc + '</code></div>';
   }).join('');
   document.getElementById('barcodeAlarm').style.display = 'none';
-  document.getElementById('barcodeInput').value = '';
+  var legacyInput = document.getElementById('barcodeModalInput');
+  if (legacyInput) legacyInput.value = '';
   renderScanned();
   document.getElementById('barcodeModal').classList.add('visible');
 }
@@ -684,8 +733,12 @@ function requiredBarcodes() {
 }
 
 function renderScanned() {
-  var el = document.getElementById('barcodeScanned');
-  if (!barcodeState.scanned.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">لم يُمسح أي باركود بعد.</p>'; return; }
+  var el = document.getElementById('barcodeModalScanned');
+  if (!el) return;
+  if (!barcodeState.scanned.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">لم يُمسح أي باركود بعد.</p>';
+    return;
+  }
   el.innerHTML = barcodeState.scanned.map(function (code) {
     var ok = requiredBarcodes().indexOf(code) !== -1;
     return '<span class="barcode-chip ' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓' : '✗') + ' ' + code + '</span>';
@@ -734,8 +787,10 @@ function confirmIssue() {
 }
 
 (function bindBarcode() {
+  if (document.body.dataset.activePage === 'bom') return;
+
   var addBtn = document.getElementById('btnAddScan');
-  var input = document.getElementById('barcodeInput');
+  var input = document.getElementById('barcodeModalInput');
   if (addBtn) addBtn.addEventListener('click', function () { addScan(input.value); input.value = ''; });
   if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { addScan(input.value); input.value = ''; } });
   var simCorrect = document.getElementById('btnSimCorrect');

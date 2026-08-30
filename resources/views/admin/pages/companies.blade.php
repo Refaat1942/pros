@@ -1,5 +1,8 @@
 @php
+    use App\Support\ContractCompanyColumns;
+
     $companyList = $companies ?? collect();
+    $companyTemplateHeaders = ContractCompanyColumns::templateHeaders();
 
     function formatCompanyDiscount($value): string
     {
@@ -11,9 +14,22 @@
 <div class="section-view" id="section-companies">
     <div class="panel">
         <div class="panel-header">
-                <h3>🏢 جهات التعاقد</h3>
+            <h3>🏢 جهات التعاقد</h3>
             <span class="badge" id="companiesBadge">{{ $companyList->count() }} جهة</span>
         </div>
+        <div id="companiesImportStatus" style="display:none;margin:12px 16px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
+        @if (session('status'))
+            <div style="margin:12px 16px;padding:10px 14px;border-radius:8px;font-size:13px;background:#dcfce7;border:1px solid #86efac;color:#166534;">
+                ✅ {{ session('status') }}
+            </div>
+        @endif
+        @if (!empty(session('import_errors')))
+            <div style="margin:12px 16px;padding:10px 14px;border-radius:8px;font-size:13px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;">
+                @foreach (session('import_errors') as $err)
+                    <div style="margin-top:4px;font-size:12px;">⚠️ {{ $err }}</div>
+                @endforeach
+            </div>
+        @endif
         <form method="POST" action="{{ route('admin.companies.store') }}" class="company-add-bar" data-validate-form id="companyAddForm">
             @csrf
             <input type="hidden" name="form" value="company">
@@ -39,6 +55,15 @@
             @include('admin.partials.bulk-action-bar', ['bulkBarId' => 'companiesBulkBar'])
             <input type="text" id="companySearch" placeholder="🔍 بحث باسم الجهة...">
             <span class="toolbar-count" id="companiesCount">{{ $companyList->count() }} شركة</span>
+            <div class="export-btns" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <a class="btn-action" href="{{ route('admin.companies.template') }}">⬇️ تنزيل القالب</a>
+                <a class="btn-action" href="{{ route('admin.companies.export') }}">📊 تصدير Excel</a>
+                <form id="companiesImportForm" method="POST" action="{{ route('admin.companies.import') }}" enctype="multipart/form-data" style="display:inline-flex;">
+                    @csrf
+                    <input type="file" id="companiesImportFile" name="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" class="companies-file-input" required>
+                    <label for="companiesImportFile" class="btn-action success companies-file-label" id="companiesImportBtn" title="القالب: {{ implode(' | ', $companyTemplateHeaders) }}">📤 رفع ملف Excel</label>
+                </form>
+            </div>
         </div>
         <div class="panel-body">
             <table class="bulk-select-table" data-bulk-bar="companiesBulkBar" data-bulk-delete-base="/admin/companies" data-paginate="10">
@@ -95,6 +120,18 @@
 </div>
 
 <style>
+    #section-companies .companies-file-input {
+        position: absolute;
+        width: 0.1px;
+        height: 0.1px;
+        opacity: 0;
+        overflow: hidden;
+        z-index: -1;
+    }
+    #section-companies .companies-file-label {
+        cursor: pointer;
+        margin: 0;
+    }
     .company-add-bar {
         display: flex;
         flex-wrap: wrap;
@@ -313,5 +350,77 @@
     var cancelBtn = document.getElementById('cancelCompanyEditModal');
     if (closeBtn) closeBtn.addEventListener('click', closeCompanyEditModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeCompanyEditModal);
+
+    function showCompaniesImportStatus(message, isError, errors) {
+        var box = document.getElementById('companiesImportStatus');
+        if (!box) return;
+        box.style.display = 'block';
+        box.style.background = isError ? '#fee2e2' : '#dcfce7';
+        box.style.border = '1px solid ' + (isError ? '#fca5a5' : '#86efac');
+        box.style.color = isError ? '#dc2626' : '#166534';
+        var html = (isError ? '⚠️ ' : '✅ ') + message;
+        if (errors && errors.length) {
+            html += errors.map(function (e) { return '<div style="margin-top:6px;font-size:12px;">⚠️ ' + e + '</div>'; }).join('');
+        }
+        box.innerHTML = html;
+    }
+
+    var importForm = document.getElementById('companiesImportForm');
+    var fileInput = document.getElementById('companiesImportFile');
+    var importLabel = document.getElementById('companiesImportBtn');
+
+    function uploadCompaniesFile() {
+        if (!importForm || !fileInput || !fileInput.files || !fileInput.files[0]) {
+            showCompaniesImportStatus('يرجى اختيار ملف Excel أو CSV.', true);
+            return;
+        }
+
+        var formData = new FormData(importForm);
+        if (importLabel) {
+            importLabel.textContent = 'جاري الرفع…';
+            importLabel.style.pointerEvents = 'none';
+            importLabel.style.opacity = '0.7';
+        }
+
+        fetch(importForm.action, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrf(),
+            },
+            credentials: 'same-origin',
+            body: formData,
+        })
+        .then(function (r) {
+            return r.json().then(function (j) {
+                if (!r.ok) throw j;
+                return j;
+            });
+        })
+        .then(function (res) {
+            showCompaniesImportStatus(res.message || 'تم الاستيراد بنجاح.', false, (res.summary && res.summary.errors) || []);
+            setTimeout(function () { window.location.reload(); }, 1200);
+        })
+        .catch(function (err) {
+            var msg = (err && err.message) ? err.message : 'تعذّر رفع الملف.';
+            if (err && err.errors && err.errors.file && err.errors.file[0]) {
+                msg = err.errors.file[0];
+            }
+            showCompaniesImportStatus(msg, true, (err && err.summary && err.summary.errors) || []);
+        })
+        .finally(function () {
+            if (importLabel) {
+                importLabel.textContent = '📤 رفع ملف Excel';
+                importLabel.style.pointerEvents = '';
+                importLabel.style.opacity = '';
+            }
+            if (fileInput) fileInput.value = '';
+        });
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', uploadCompaniesFile);
+    }
 })();
 </script>

@@ -1,6 +1,6 @@
 @php
     use App\Models\Role;
-    $actorIsSuperAdmin = auth()->user()?->isSuperAdmin() ?? false;
+    $isSuperAdmin = auth()->user()?->isSuperAdmin() ?? false;
     $staffMode = $staff_mode ?? 'admin';
     $dashboardKey = $dashboard_key ?? 'admin';
 @endphp
@@ -9,20 +9,20 @@
         $roleSlug = $employee->role?->slug ?? '';
         $isLimitedAdmin = $roleSlug === Role::SLUG_ADMIN;
         $isSuperAdminUser = $roleSlug === Role::SLUG_SUPER_ADMIN;
-        $canManageLimitedAdmin = $actorIsSuperAdmin && $isLimitedAdmin;
+        $canManageLimitedAdmin = $isSuperAdmin && $isLimitedAdmin;
         $bulkDeleteDisabled = auth()->id() === $employee->id
             || $isSuperAdminUser
-            || ($isLimitedAdmin && ! $actorIsSuperAdmin);
+            || ($isLimitedAdmin && ! $isSuperAdmin);
         $bulkDeleteTitle = $isSuperAdminUser
             ? 'لا يمكن حذف السوبر أدمن'
-            : ($isLimitedAdmin && ! $actorIsSuperAdmin
+            : ($isLimitedAdmin && ! $isSuperAdmin
                 ? 'لا يمكن حذف مسؤول النظام — السوبر أدمن فقط'
                 : (auth()->id() === $employee->id ? 'لا يمكن حذف حسابك الحالي' : ''));
         $canDeleteEmployee = auth()->id() !== $employee->id
             && ! $isSuperAdminUser
-            && (! $isLimitedAdmin || $actorIsSuperAdmin);
+            && (! $isLimitedAdmin || $isSuperAdmin);
         $canToggleEmployee = ! $isSuperAdminUser
-            && (! $isLimitedAdmin || $actorIsSuperAdmin);
+            && (! $isLimitedAdmin || $isSuperAdmin);
     @endphp
     <tr data-role="{{ $roleSlug }}" data-status="{{ $employee->status }}" data-id="{{ $employee->id }}">
         @if ($show_bulk ?? true)
@@ -70,6 +70,14 @@
                     </button>
                 @else
                 <a href="{{ route('admin.employees', ['edit' => $employee->id]) }}" class="btn-action" title="تعديل">✏️ تعديل</a>
+                @if ($isSuperAdmin && auth()->id() !== $employee->id)
+                    <button type="button"
+                            class="btn-action"
+                            title="إعادة تعيين كلمة المرور"
+                            onclick="resetEmployeePassword({{ $employee->id }}, {{ json_encode($employee->name) }})">
+                        🔑 كلمة المرور
+                    </button>
+                @endif
                 @if ($canToggleEmployee)
                     <form method="POST" action="{{ route('admin.employees.toggle', $employee) }}" style="display:inline;">
                         @csrf

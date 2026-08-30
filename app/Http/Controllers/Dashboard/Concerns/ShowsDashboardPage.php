@@ -25,6 +25,7 @@ trait ShowsDashboardPage
             'dashboardKey' => $key,
             'activePage' => $page,
             'pageTitle' => $pages[$page]['title'],
+            'pageLabel' => $pages[$page]['label'] ?? $pages[$page]['title'],
         ], $pageData));
     }
 }

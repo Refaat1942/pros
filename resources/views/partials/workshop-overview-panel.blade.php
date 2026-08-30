@@ -4,7 +4,7 @@
     $mfgLabels = [
         'warehouse'  => 'المخزن',
         'issue'      => 'صرف خامات',
-        'workshop'   => 'الورشة',
+        'workshop'   => 'قسم الإنتاج',
         'fitting'    => 'تجربة تركيب',
         'quality'    => 'مراقبة جودة',
         'generation' => 'توليد',
@@ -15,7 +15,7 @@
 @endphp
 <div class="panel ops-overview-panel workshop-overview-panel" id="workshopDeskOverview">
     <div class="panel-header">
-        <h3>🏭 ورشة التصنيع — <span class="ops-overview-order-count">{{ $cases->count() }}</span> أوامر تحت التشغيل</h3>
+        <h3>🏭 قسم الإنتاج — <span class="ops-overview-order-count">{{ $cases->count() }}</span> أوامر تحت التشغيل</h3>
     </div>
     <div class="ops-overview-summary">
         <div class="ops-overview-stat ops-overview-stat--wip">
@@ -84,7 +84,7 @@
                 @empty
                     <tr>
                         <td colspan="6" style="text-align:center;padding:28px;color:var(--text-muted);">
-                            لا توجد أوامر في الورشة — تظهر بعد صرف المواد من المخزن.
+                            لا توجد أوامر في قسم الإنتاج — تظهر بعد صرف المواد من المخزن.
                         </td>
                     </tr>
                 @endforelse

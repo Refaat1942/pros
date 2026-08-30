@@ -44,10 +44,33 @@ body {
     print-color-adjust: exact;
 }
 
-.sheet {
-    width: 100%;
-    max-width: 190mm;
-    margin: 0 auto;
+.sheet.doc-tpl-compact,
+.doc-tpl-compact.sheet {
+    font-size: 12pt;
+}
+
+.doc-tpl-compact .doc-title {
+    font-size: 14pt !important;
+    margin-bottom: 8px !important;
+}
+
+.doc-tpl-compact .meta-table,
+.doc-tpl-compact .print-table {
+    font-size: 10pt;
+}
+
+.doc-tpl-compact .items-table tbody tr td {
+    padding: 2px 4px;
+}
+
+@media print {
+    .doc-tpl-compact {
+        max-height: 277mm;
+        overflow: hidden;
+    }
+    .doc-tpl-compact .items-table tbody tr {
+        page-break-inside: avoid;
+    }
 }
 
 /* ── رأس المستند ── */

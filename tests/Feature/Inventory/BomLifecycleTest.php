@@ -16,7 +16,7 @@ use Tests\TestCase;
 
 /**
  * Feature — BOM full lifecycle: raw → WIP → finished → return note
- * (الفصل الخامس: المخزن والصرف الصارم + الفصل السادس: الورشة)
+ * (الفصل الخامس: المخزن والصرف الصارم + الفصل السادس: قسم الإنتاج)
  *
  * IMPORTANT: dispense validates total qty per stock code (decimal for كيلو/متر).
  * Count units: one scan = 1 unit unless qty is sent explicitly.
@@ -82,7 +82,7 @@ class BomLifecycleTest extends TestCase
 
         // qty=2 → لازم مسحتين لنفس الباركود
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 2]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']); // 2 scans = qty 2
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']); // 2 scans = qty 2
 
         $bom->refresh();
         $this->assertEquals(Bom::STAGE_WIP, $bom->stage);
@@ -104,7 +104,7 @@ class BomLifecycleTest extends TestCase
         $item->refresh();
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 2]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']);
 
         $movement = \App\Models\StockMovement::query()
             ->where('movement_type', \App\Models\StockMovement::TYPE_ISSUE)
@@ -130,7 +130,7 @@ class BomLifecycleTest extends TestCase
 
         $this->expectException(BarcodeDispenseMismatchException::class);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-999']); // wrong barcode for RM-001!
+        $this->releaseBomToWip($bom, ['BC-RM-999']); // wrong barcode for RM-001!
     }
 
     public function test_mismatched_barcode_count_throws(): void
@@ -143,7 +143,7 @@ class BomLifecycleTest extends TestCase
 
         $this->expectException(BarcodeDispenseMismatchException::class);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']); // 1 scan != qty 2
+        $this->releaseBomToWip($bom, ['BC-RM-001']); // 1 scan != qty 2
     }
 
     public function test_dispense_rejects_too_many_scans_for_a_code(): void
@@ -156,7 +156,7 @@ class BomLifecycleTest extends TestCase
 
         $this->expectException(BarcodeDispenseMismatchException::class);
 
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']); // 2 scans != qty 1
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']); // 2 scans != qty 1
     }
 
     public function test_dispense_into_negative_stock_then_receive_recovers(): void
@@ -176,7 +176,7 @@ class BomLifecycleTest extends TestCase
         $case->update(['work_order_no' => 'WO-2026-NEG-1']);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-777', 'qty' => 2]]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-777', 'BC-RM-777']);
+        $this->releaseBomToWip($bom->fresh(), ['BC-RM-777', 'BC-RM-777']);
 
         $this->assertSame(-2, $item->fresh()->qty, 'الصرف من رصيد صفر يُنتج -2');
 
@@ -207,7 +207,7 @@ class BomLifecycleTest extends TestCase
 
         // First dispense to get to MFG_ISSUE
         $bom = $bomService->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
-        $bomService->releaseToWip($bom, ['BC-RM-001']); // advances to MFG_ISSUE automatically
+        $this->releaseBomToWip($bom, ['BC-RM-001']); // advances to MFG_ISSUE automatically
 
         $case->refresh();
         $this->assertEquals(CaseRecord::MFG_ISSUE, $case->manufacturing_stage);
@@ -227,7 +227,7 @@ class BomLifecycleTest extends TestCase
         $this->actingAs($user);
 
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-001', 'qty' => 1]]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
         $this->advanceCaseToFinishing($case);
         app(BomService::class)->finish($bom->fresh());
 
@@ -259,7 +259,7 @@ class BomLifecycleTest extends TestCase
 
         $item->update(['reserved' => 0]);
 
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001']);
 
         $bom->refresh();
         $item->refresh();
@@ -276,11 +276,11 @@ class BomLifecycleTest extends TestCase
         ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
 
-        // بند واحد بكمية 2 — يُسمح بارتجاع 1 فقط (يبقى 1 في الورشة)
+        // بند واحد بكمية 2 — يُسمح بارتجاع 1 فقط (يبقى 1 في قسم الإنتاج)
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']);
 
         $qtyAfterDispense = $item->fresh()->qty;  // 18
 
@@ -321,7 +321,7 @@ class BomLifecycleTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']);
 
         $case->refresh();
         $this->assertSame(round($wac * 2, 2), (float) $case->issue_cost);
@@ -369,7 +369,7 @@ class BomLifecycleTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $note = app(ReturnNoteService::class)->create($bom->fresh(), [
             ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
@@ -386,7 +386,7 @@ class BomLifecycleTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         app(ReturnNoteService::class)->create($bom->fresh(), [
             ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
@@ -410,7 +410,7 @@ class BomLifecycleTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 4],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
 
         $note = app(ReturnNoteService::class)->create($bom->fresh(), [
             ['stock_item_code' => 'RM-001', 'qty' => 3, 'name' => 'صنف RM-001'],
@@ -436,7 +436,7 @@ class BomLifecycleTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 4],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
         $this->advanceCaseToFinishing($case);
         app(BomService::class)->finish($bom->fresh());
 

@@ -9,7 +9,7 @@ class UpdateAdjustmentItemQtyRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'qty' => ['required', 'integer', 'min:1', 'max:100000'],
+            'qty' => $this->decimalQtyRules(),
         ];
     }
 
@@ -17,7 +17,7 @@ class UpdateAdjustmentItemQtyRequest extends BaseRequest
     {
         return [
             'qty.required' => 'يرجى إدخال الكمية.',
-            'qty.min' => 'الكمية يجب أن تكون واحداً على الأقل.',
+            'qty.min' => 'الكمية يجب أن تكون 0.001 على الأقل.',
         ];
     }
 }

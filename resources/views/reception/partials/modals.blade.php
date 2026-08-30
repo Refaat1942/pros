@@ -34,8 +34,7 @@
   </div>
 
   {{-- ══════════════════════════════════════════════════════════════════════
-       OCR Approval Modal — رفع خطاب الموافقة + Human Override + تأكيد الاعتماد
-       Civilian pathway only.
+       Approval letter modal — رفع خطاب + إدخال يدوي + تأكيد الاعتماد
        ══════════════════════════════════════════════════════════════════════ --}}
   <div class="modal-overlay" id="ocrApprovalModal"
        style="display:none;position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.65);
@@ -71,30 +70,36 @@
             <p style="font-size:12px;color:#6b7280;margin:0;">يدعم جميع أنواع الصور و PDF — حجم أقصى 10 ميجا</p>
           </div>
           <input type="file" id="ocrFileInput" accept="image/*,.pdf" style="display:none;">
+          <div style="margin-top:16px;text-align:center;">
+            <button type="button" id="btnSkipApprovalLetter"
+                    style="padding:10px 20px;border-radius:8px;border:1px solid #94a3b8;background:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#475569;">
+              ⏭️ تخطي خطاب الموافقة — إدخال يدوي
+            </button>
+          </div>
         </div>
 
-        {{-- Step 2: Loading --}}
+        {{-- Step 2: Uploading --}}
         <div id="ocrStep2" style="display:none;text-align:center;padding:32px;">
           <div style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#059669;
                       border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;"></div>
-          <p style="font-weight:600;color:#374151;">جاري قراءة الخطاب واستخراج البيانات...</p>
-          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">اسم المريض — المبلغ — رقم الخطاب — جهة التعاقد</p>
+          <p style="font-weight:600;color:#374151;">جاري رفع الخطاب...</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">بعد الرفع أدخل البيانات يدوياً من الخطاب الورقي</p>
         </div>
 
-        {{-- Step 3: Human Override verification --}}
+        {{-- Step 3: Manual verification --}}
         <div id="ocrStep3" style="display:none;">
           <div style="background:#fefce8;border:1px solid #fde047;border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;">
             <span style="font-size:18px;flex-shrink:0;">⚠️</span>
             <p style="font-size:13px;color:#78350f;margin:0;line-height:1.6;">
-              <strong>برجاء مراجعة البيانات المستخرجة ومطابقتها مع الخطاب الورقي قبل التأكيد النهائي.</strong>
-              يمكنك تعديل أي حقل يدوياً في حال وجود خطأ في القراءة.
+              <strong>أدخل بيانات الخطاب الورقي يدوياً ثم أكّد الاعتماد.</strong>
+              لا يتم قراءة الملف تلقائياً — راجع الاسم والمبلغ وجهة التعاقد من الورقة قبل الحفظ.
             </p>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
             <div>
               <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">
-                👤 اسم المريض المستخرج
+                👤 اسم المريض
               </label>
               <input type="text" id="ocrConfirmName"
                      style="width:100%;padding:10px 12px;border:2px solid #10b981;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box;"
@@ -110,7 +115,7 @@
             </div>
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">
-                🏢 جهة التعاقد
+                🏢 جهة التعاقد <span style="color:#dc2626">*</span>
               </label>
               <input type="text" id="ocrConfirmCompany"
                      style="width:100%;padding:10px 12px;border:2px solid #10b981;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box;"
@@ -139,7 +144,7 @@
             </button>
             <button type="button" id="btnConfirmOcr"
                     style="padding:10px 24px;border-radius:8px;border:none;background:#059669;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">
-              ✅ تأكيد واعتماد مالي — والتحويل للمخزن
+              ✅ تأكيد واعتماد مالي — والتحويل لمكتب التشغيل
             </button>
           </div>
         </div>
@@ -151,7 +156,7 @@
           <p style="color:#374151;margin:0 0 6px;" id="ocrSuccessText">—</p>
           <p style="font-family:monospace;font-size:14px;font-weight:700;color:#059669;
                     background:#f0fdf4;border-radius:8px;padding:8px 16px;display:inline-block;margin-top:8px;" id="ocrSuccessWO">—</p>
-          <p style="font-size:12px;color:#6b7280;margin-top:12px;">تم إرسال الحالة إلى لوحة المخزن — يمكن الآن صرف مواد الـ BOM.</p>
+          <p style="font-size:12px;color:#6b7280;margin-top:12px;">بانتظار إصدار أمر الشغل من مكتب التشغيل — ثم تخصيص الإنتاج لاعتماد الصرف من المخزن.</p>
           <button type="button" id="btnCloseOcrSuccess"
                   style="margin-top:20px;padding:10px 28px;border-radius:8px;border:none;background:#059669;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">
             حسناً
@@ -177,20 +182,23 @@
         <div style="margin-bottom:16px;" id="patientFileStatus"></div>
         <div class="patient-file-meta" id="patientFileMeta"></div>
         <div class="patient-file-section">
-          <h4>📋 آخر الزيارات</h4>
-          <table data-paginate="10" class="patient-visits-table">
+          <h4>📂 طلبات / حالات المريض</h4>
+          <table data-paginate="8" class="patient-visits-table">
             <thead>
               <tr>
+                <th>رقم الحالة</th>
+                <th>مرجع الطلب</th>
+                <th>المرحلة</th>
+                <th>أمر الشغل</th>
                 <th>التاريخ</th>
-                <th>الإجراء</th>
-                <th>الحالة</th>
               </tr>
             </thead>
-            <tbody id="patientFileVisits"></tbody>
+            <tbody id="patientFileCases"></tbody>
           </table>
         </div>
-        <div class="print-scope-hide" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+        <div class="print-scope-hide" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button class="btn btn-secondary" id="btnClosePatientFile">إغلاق</button>
+          <button class="btn btn-primary" id="btnPatientNewCase" type="button">➕ طلب جديد</button>
           <button class="btn btn-primary" id="btnPrintPatientFile" type="button" data-print-scope data-print-target="#patientFileModal .modal-body">🖨️ طباعة الملف</button>
         </div>
       </div>

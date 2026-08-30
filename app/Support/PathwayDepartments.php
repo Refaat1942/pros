@@ -19,7 +19,7 @@ final class PathwayDepartments
             ['value' => 'operations', 'label' => 'مكتب التشغيل', 'icon' => '🎯'],
             ['value' => 'cashier', 'label' => 'الخزنة', 'icon' => '💵'],
             ['value' => 'warehouse', 'label' => 'المخزن', 'icon' => '📦'],
-            ['value' => 'workshop', 'label' => 'الورشة', 'icon' => '🏭'],
+            ['value' => 'workshop', 'label' => 'قسم الإنتاج', 'icon' => '🏭'],
             ['value' => 'delivery', 'label' => 'التسليمات', 'icon' => '📦'],
         ];
     }

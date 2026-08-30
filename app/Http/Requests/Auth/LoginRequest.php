@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Http\Requests\BaseRequest;
+use App\Support\UsernameRules;
 
 class LoginRequest extends BaseRequest
 {
@@ -10,7 +11,7 @@ class LoginRequest extends BaseRequest
     {
         if ($this->has('username')) {
             $this->merge([
-                'username' => strtolower(trim((string) $this->input('username'))),
+                'username' => UsernameRules::normalize((string) $this->input('username')),
             ]);
         }
     }

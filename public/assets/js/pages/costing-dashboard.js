@@ -32,6 +32,13 @@
     return String(Math.round(parseFloat(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
+  function fmtCatalogPrice(n) {
+    return Number(n || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
   function apiMessage(err, fallback) {
     var data = err && err.response && err.response.data;
     if (data && data.message) return data.message;
@@ -91,7 +98,7 @@
         if (!tbody) return;
         if ($('costingBadge')) $('costingBadge').textContent = cases.length;
         if (!cases.length) {
-          tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد حالات بانتظار التكاليف.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">لا توجد حالات بانتظار الاعتماد.</td></tr>';
         } else {
           tbody.innerHTML = cases.map(renderRow).join('');
           bindTableEvents();
@@ -190,10 +197,88 @@
         currentInternalTotal = pricing.internal_total || 0;
 
         if ($('costingModalTitle')) {
-          $('costingModalTitle').textContent = '💰 ' + (c.case_no || '') + ' — ' + (c.patient && c.patient.name || '');
+          $('costingModalTitle').textContent = '✅ ' + (c.case_no || '') + ' — ' + (c.patient && c.patient.name || '');
         }
+
+        var banner = $('costingPatientBanner');
+        if (banner) {
+          banner.classList.remove('hidden');
+          if ($('costingPatientName')) {
+            $('costingPatientName').textContent = (c.patient && c.patient.name) || '—';
+          }
+          if ($('costingPatientMeta')) {
+            $('costingPatientMeta').textContent = [
+              c.case_no || '—',
+              c.order_ref || '',
+              c.pathway_label || '',
+              c.display_entity || '',
+              c.patient && c.patient.patient_code ? ('كود: ' + c.patient.patient_code) : '',
+            ].filter(Boolean).join(' · ');
+          }
+
+          var medical = res.data.medical_record || {};
+          var doctorNameEl = $('costingDoctorName');
+          var doctorMsgEl = $('costingDoctorMessage');
+          var doctorRecEl = $('costingDoctorRecommendations');
+          if (doctorNameEl) {
+            if (medical.doctor_name) {
+              doctorNameEl.textContent = 'د. ' + medical.doctor_name;
+              doctorNameEl.classList.remove('hidden');
+            } else {
+              doctorNameEl.textContent = '';
+              doctorNameEl.classList.add('hidden');
+            }
+          }
+          if (doctorMsgEl) {
+            var doctorText = medical.doctor_message || [medical.diagnosis, medical.prescription].filter(function (x) {
+              return x && String(x).trim();
+            }).join('\n\n');
+            if (doctorText && String(doctorText).trim()) {
+              doctorMsgEl.textContent = doctorText;
+              doctorMsgEl.classList.remove('hidden');
+            } else {
+              doctorMsgEl.textContent = '';
+              doctorMsgEl.classList.add('hidden');
+            }
+          }
+          if (doctorRecEl) {
+            var recs = medical.recommendations || [];
+            if (recs.length) {
+              doctorRecEl.innerHTML = recs.map(function (r) {
+                return '<li><span>' + esc(r.name || '—') + (r.code ? ' <code>' + esc(r.code) + '</code>' : '') + '</span><strong>× ' + esc(r.qty || 1) + '</strong></li>';
+              }).join('');
+              doctorRecEl.classList.remove('hidden');
+            } else {
+              doctorRecEl.innerHTML = '';
+              doctorRecEl.classList.add('hidden');
+            }
+          }
+
+          var spec = res.data.spec;
+          var specList = $('costingSpecItems');
+          if (specList) {
+            var specItems = (spec && spec.items) || [];
+            specList.innerHTML = specItems.length
+              ? specItems.map(function (it) {
+                  return '<li><span><code>' + esc(it.stock_item_code) + '</code> ' + esc(it.name) + '</span><strong>× ' + esc(it.qty) + '</strong></li>';
+                }).join('')
+              : '<li class="text-slate-400">لا توجد بنود توصيف</li>';
+          }
+          var notesEl = $('costingSpecNotes');
+          if (notesEl) {
+            var notes = [(spec && spec.tech_notes) || c.tech_notes || '', (spec && spec.written_items) || ''].filter(function (x) { return x && String(x).trim(); }).join('\n\n');
+            if (notes.trim()) {
+              notesEl.textContent = notes;
+              notesEl.classList.remove('hidden');
+            } else {
+              notesEl.textContent = '';
+              notesEl.classList.add('hidden');
+            }
+          }
+        }
+
         if ($('costingMeta')) {
-          $('costingMeta').textContent = 'طلب: ' + (pricing.request_no || '—') + ' · ' + (c.pathway_label || '');
+          $('costingMeta').textContent = 'طلب: ' + (pricing.request_no || '—');
         }
 
         var body = $('costingItemsBody');
@@ -204,6 +289,7 @@
               '<td>' + esc(it.name) + '</td>' +
               '<td>' + esc(it.qty) + '</td>' +
               '<td class="costing-criteria-cell">' + esc(it.criteria || '—') + '</td>' +
+              '<td class="catalog-price-cell" style="text-align:center;">' + fmtCatalogPrice(it.price) + '</td>' +
               '<td><strong>' + fmt(it.line_total) + '</strong></td></tr>';
           }).join('');
         }

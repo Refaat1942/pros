@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\StockItem;
+use App\Support\CatalogColumns;
+use App\Support\StockCatalogPicker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -11,7 +13,7 @@ use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 
 /**
- * الرفع الجماعي للأصناف — قالب Excel بـ 9 أعمدة (config/catalog.php).
+ * الرفع الجماعي للأصناف — قالب Excel (config/catalog.php).
  */
 class StockImportService
 {
@@ -20,7 +22,7 @@ class StockImportService
     /** @return list<string> */
     public static function headers(): array
     {
-        return config('catalog.template_headers', []);
+        return CatalogColumns::templateHeaders();
     }
 
     public function __construct(private readonly StockCatalogService $catalogService) {}
@@ -100,6 +102,7 @@ class StockImportService
                     'catalog_number' => $parsed['catalog_number'] !== '' ? $parsed['catalog_number'] : null,
                     'page_number' => $parsed['page_number'] !== '' ? $parsed['page_number'] : null,
                     'name' => $parsed['name'],
+                    'brand' => $parsed['brand'] !== '' ? $parsed['brand'] : null,
                     'alt_codes' => $parsed['alt_codes'] !== '' ? $parsed['alt_codes'] : null,
                     'uom' => $parsed['uom'] !== '' ? $parsed['uom'] : null,
                     'opening_qty' => $openingQty,
@@ -107,6 +110,7 @@ class StockImportService
                     'discount' => $discount,
                     'balance' => $balance,
                     'qty' => $balance,
+                    'price' => round((float) $this->num($parsed['price_raw'] ?? '0'), 2),
                 ];
 
                 $existing = $this->findExistingForImport($parsed);
@@ -136,6 +140,8 @@ class StockImportService
             after: ['created' => $created, 'updated' => $updated, 'skipped' => $skipped],
         );
 
+        StockCatalogPicker::forgetCachedRows();
+
         return compact('created', 'updated', 'skipped', 'errors');
     }
 
@@ -145,24 +151,12 @@ class StockImportService
      */
     private function rowFromItem(array $item): array
     {
-        $operational = trim((string) ($item['alt_codes'] ?? $item['operational_code'] ?? ''));
-        if ($operational === '' && ! empty($item['barcode'])) {
-            $operational = preg_replace('/^BC-/i', '', (string) $item['barcode']) ?: '';
-        }
+        $item['uom'] = $this->cleanUomForExport((string) ($item['uom'] ?? ''));
 
-        $uom = $this->cleanUomForExport((string) ($item['uom'] ?? ''));
-
-        return [
-            (string) ($item['catalog_number'] ?? $item['code'] ?? ''),
-            (string) ($item['page_number'] ?? ''),
-            (string) ($item['name'] ?? ''),
-            $operational,
-            $uom,
-            (string) ((int) ($item['opening_qty'] ?? 0)),
-            (string) ((int) ($item['addition'] ?? 0)),
-            (string) ((int) ($item['discount'] ?? 0)),
-            (string) ((int) ($item['catalog_balance'] ?? $item['balance'] ?? $item['qty'] ?? 0)),
-        ];
+        return array_map(
+            fn (string $key) => CatalogColumns::templateValue($item, $key),
+            CatalogColumns::templateOrder(),
+        );
     }
 
     /**
@@ -186,17 +180,23 @@ class StockImportService
         $itemsSheet->setName(self::SHEET_ITEMS);
         $writer->addRow(Row::fromValues($headers));
         if ($includeInstructions) {
-            $writer->addRow(Row::fromValues([
-                '← تعليمات',
-                'اختياري',
-                'مطلوب',
-                'كود الصنف (مطلوب في الرفع الجماعي)',
-                'قطعة / متر ...',
-                'رقم',
-                'رقم',
-                'رقم',
-                'رصيد = أول + إضافة − خصم',
-            ]));
+            $hints = [
+                'code' => '← تعليمات',
+                'page_number' => 'اختياري',
+                'name' => 'مطلوب',
+                'brand' => 'اختياري',
+                'alt_codes' => 'كود الصنف (مطلوب في الرفع الجماعي)',
+                'uom' => 'قطعة / متر ...',
+                'opening_qty' => 'رقم',
+                'addition' => 'رقم',
+                'discount' => 'رقم',
+                'balance' => 'رصيد = أول + إضافة − خصم',
+                'price' => 'سعر التكلفة الأساسي (ج.م)',
+            ];
+            $writer->addRow(Row::fromValues(array_map(
+                fn (string $key) => $hints[$key] ?? '',
+                CatalogColumns::templateOrder(),
+            )));
         }
         foreach ($itemRows as $row) {
             $writer->addRow(Row::fromValues($row));
@@ -214,9 +214,9 @@ class StockImportService
     private function buildExampleRows(): array
     {
         return [
-            ['RM-100', '12', 'مفصل ركبة هيدروليكي', '4821', 'قطعة', '10', '5', '2', '13'],
-            ['RM-101', '13', 'قماش تغليف', '7394', 'متر', '50', '0', '10', '40'],
-            ['RM-102', '14', 'مسامير تثبيت M8', '6150', 'قطعة', '200', '20', '0', '220'],
+            ['RM-100', '12', 'مفصل ركبة هيدروليكي', 'Ottobock', '4821', 'قطعة', '10', '5', '2', '13', '0'],
+            ['RM-101', '13', 'قماش تغليف', 'Generic', '7394', 'متر', '50', '0', '10', '40', '0'],
+            ['RM-102', '14', 'مسامير تثبيت M8', '', '6150', 'قطعة', '200', '20', '0', '220', '0'],
         ];
     }
 
@@ -260,25 +260,17 @@ class StockImportService
      */
     private function buildColumnMap(array $headerCells): array
     {
-        $aliases = [
-            'catalog_number' => ['رقم الصنف', 'كود الصنف'],
-            'page_number' => ['رقم الصفحة'],
-            'name' => ['اسم الصنف'],
-            'alt_codes' => ['الأكواد'],
-            'uom' => ['الوحدة'],
-            'opening_qty_raw' => ['رصيد أول المده', 'رصيد أول المدة', 'الكمية'],
-            'addition_raw' => ['الاضافة', 'الإضافة'],
-            'discount_raw' => ['الخصم'],
-            'balance_raw' => ['الرصيد', 'الكمية'],
-        ];
-
+        $aliases = CatalogColumns::importAliases();
         $map = [];
 
         foreach ($headerCells as $index => $cell) {
-            $normalized = mb_strtolower(trim((string) $cell));
+            $normalized = $this->normalizeHeaderLabel((string) $cell);
             if ($normalized === '') {
                 continue;
             }
+
+            $bestField = null;
+            $bestScore = 0;
 
             foreach ($aliases as $field => $labels) {
                 if (array_key_exists($field, $map)) {
@@ -286,15 +278,73 @@ class StockImportService
                 }
 
                 foreach ($labels as $label) {
-                    if ($normalized === mb_strtolower($label) || str_contains($normalized, mb_strtolower($label))) {
-                        $map[$field] = $index;
-                        break;
+                    $labelNorm = $this->normalizeHeaderLabel($label);
+                    if ($labelNorm === '') {
+                        continue;
+                    }
+
+                    $score = 0;
+                    if ($normalized === $labelNorm) {
+                        $score = 200 + strlen($labelNorm);
+                    } elseif (str_contains($normalized, $labelNorm)) {
+                        $score = 100 + strlen($labelNorm);
+                    } elseif (strlen($normalized) >= 2 && str_contains($labelNorm, $normalized)) {
+                        $score = 60 + strlen($normalized);
+                    }
+
+                    if ($score > $bestScore) {
+                        $bestScore = $score;
+                        $bestField = $field;
                     }
                 }
+            }
+
+            if ($bestField !== null && $bestScore > 0) {
+                $map[$bestField] = $index;
             }
         }
 
         return $map;
+    }
+
+    private function normalizeHeaderLabel(string $cell): string
+    {
+        $s = trim($cell);
+        $s = preg_replace('/^\x{FEFF}/u', '', $s) ?? $s;
+        $s = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $s) ?? $s;
+        $s = str_replace(['أ', 'إ', 'آ'], 'ا', $s);
+        $s = str_replace('ة', 'ه', $s);
+
+        return mb_strtolower($s);
+    }
+
+    private function formatImportCell(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_int($value)) {
+            return (string) $value;
+        }
+
+        if (is_float($value)) {
+            if (abs($value - (int) round($value)) < 0.00001) {
+                return (string) (int) round($value);
+            }
+
+            return rtrim(rtrim(sprintf('%.6F', $value), '0'), '.');
+        }
+
+        return trim((string) $value);
     }
 
     /**
@@ -306,13 +356,6 @@ class StockImportService
         $altCodes = trim((string) ($parsed['alt_codes'] ?? ''));
         $catalogNumber = trim((string) ($parsed['catalog_number'] ?? ''));
         $name = trim((string) ($parsed['name'] ?? ''));
-
-        if ($pageNumber !== '') {
-            $byPage = StockItem::query()->where('page_number', $pageNumber)->first();
-            if ($byPage !== null) {
-                return $byPage;
-            }
-        }
 
         if ($altCodes !== '') {
             $byAlt = StockItem::query()->where('alt_codes', $altCodes)->first();
@@ -340,11 +383,6 @@ class StockImportService
                 if ($byName !== null) {
                     return $byName;
                 }
-            }
-
-            $catalogMatches = StockItem::query()->where('catalog_number', $catalogNumber)->count();
-            if ($catalogMatches === 1 && $pageNumber === '') {
-                return StockItem::query()->where('catalog_number', $catalogNumber)->first();
             }
 
             // توافق خلفي: صنف قديم مُعرَّف برقم الصنف في code فقط.
@@ -378,9 +416,27 @@ class StockImportService
         $reader = new XlsxReader;
         $reader->open($file->getRealPath());
 
-        $sheetIterator = $reader->getSheetIterator();
-        $sheetIterator->rewind();
-        $sheet = $sheetIterator->current();
+        $sheet = null;
+        $fallbackSheet = null;
+
+        foreach ($reader->getSheetIterator() as $candidate) {
+            if ($fallbackSheet === null) {
+                $fallbackSheet = $candidate;
+            }
+
+            if ($candidate->getName() === self::SHEET_ITEMS) {
+                $sheet = $candidate;
+                break;
+            }
+        }
+
+        $sheet ??= $fallbackSheet;
+
+        if ($sheet === null) {
+            $reader->close();
+
+            return [];
+        }
 
         $rows = [];
         $lineNo = 0;
@@ -388,7 +444,7 @@ class StockImportService
         foreach ($sheet->getRowIterator() as $row) {
             $lineNo++;
             $cells = array_map(
-                fn ($value) => trim((string) ($value ?? '')),
+                fn ($value) => $this->formatImportCell($value),
                 $row->toArray(),
             );
 
@@ -440,7 +496,7 @@ class StockImportService
     /**
      * @param  list<string>  $cols
      * @param  array<string, int>|null  $columnMap
-     * @return array{catalog_number:string, page_number:string, name:string, alt_codes:string, uom:string, opening_qty_raw:string, addition_raw:string, discount_raw:string, balance_raw:string}
+     * @return array{catalog_number:string, page_number:string, name:string, brand:string, alt_codes:string, uom:string, opening_qty_raw:string, addition_raw:string, discount_raw:string, balance_raw:string, price_raw:string}
      */
     private function parseRowColumns(array $cols, ?array $columnMap = null): array
     {
@@ -449,12 +505,14 @@ class StockImportService
                 'catalog_number' => $this->cellValue($cols, $columnMap, 'catalog_number'),
                 'page_number' => $this->cellValue($cols, $columnMap, 'page_number'),
                 'name' => $this->cellValue($cols, $columnMap, 'name'),
+                'brand' => $this->cellValue($cols, $columnMap, 'brand'),
                 'alt_codes' => $this->cellValue($cols, $columnMap, 'alt_codes'),
                 'uom' => $this->cellValue($cols, $columnMap, 'uom'),
                 'opening_qty_raw' => $this->cellValue($cols, $columnMap, 'opening_qty_raw'),
                 'addition_raw' => $this->cellValue($cols, $columnMap, 'addition_raw', '0'),
                 'discount_raw' => $this->cellValue($cols, $columnMap, 'discount_raw', '0'),
                 'balance_raw' => $this->cellValue($cols, $columnMap, 'balance_raw'),
+                'price_raw' => $this->cellValue($cols, $columnMap, 'price_raw', '0'),
             ];
         }
 
@@ -463,12 +521,30 @@ class StockImportService
                 'catalog_number' => trim((string) ($cols[0] ?? '')),
                 'page_number' => '',
                 'name' => trim((string) ($cols[1] ?? '')),
+                'brand' => '',
                 'alt_codes' => '',
                 'uom' => trim((string) ($cols[2] ?? '')),
                 'opening_qty_raw' => trim((string) ($cols[3] ?? '')),
                 'addition_raw' => '0',
                 'discount_raw' => '0',
                 'balance_raw' => trim((string) ($cols[3] ?? '')),
+                'price_raw' => '0',
+            ];
+        }
+
+        if ($this->looksLikeLegacyTenColumnRow($cols)) {
+            return [
+                'catalog_number' => trim((string) ($cols[0] ?? '')),
+                'page_number' => trim((string) ($cols[1] ?? '')),
+                'name' => trim((string) ($cols[2] ?? '')),
+                'brand' => '',
+                'alt_codes' => trim((string) ($cols[3] ?? '')),
+                'uom' => trim((string) ($cols[4] ?? '')),
+                'opening_qty_raw' => trim((string) ($cols[5] ?? '')),
+                'addition_raw' => trim((string) ($cols[6] ?? '0')),
+                'discount_raw' => trim((string) ($cols[7] ?? '0')),
+                'balance_raw' => trim((string) ($cols[8] ?? '')),
+                'price_raw' => trim((string) ($cols[9] ?? '0')),
             ];
         }
 
@@ -476,13 +552,27 @@ class StockImportService
             'catalog_number' => trim((string) ($cols[0] ?? '')),
             'page_number' => trim((string) ($cols[1] ?? '')),
             'name' => trim((string) ($cols[2] ?? '')),
-            'alt_codes' => trim((string) ($cols[3] ?? '')),
-            'uom' => trim((string) ($cols[4] ?? '')),
-            'opening_qty_raw' => trim((string) ($cols[5] ?? '')),
-            'addition_raw' => trim((string) ($cols[6] ?? '0')),
-            'discount_raw' => trim((string) ($cols[7] ?? '0')),
-            'balance_raw' => trim((string) ($cols[8] ?? '')),
+            'brand' => trim((string) ($cols[3] ?? '')),
+            'alt_codes' => trim((string) ($cols[4] ?? '')),
+            'uom' => trim((string) ($cols[5] ?? '')),
+            'opening_qty_raw' => trim((string) ($cols[6] ?? '')),
+            'addition_raw' => trim((string) ($cols[7] ?? '0')),
+            'discount_raw' => trim((string) ($cols[8] ?? '0')),
+            'balance_raw' => trim((string) ($cols[9] ?? '')),
+            'price_raw' => trim((string) ($cols[10] ?? '0')),
         ];
+    }
+
+    /** @param  list<string>  $cols */
+    private function looksLikeLegacyTenColumnRow(array $cols): bool
+    {
+        $count = count($cols);
+
+        if ($count <= 10) {
+            return true;
+        }
+
+        return $count === 11 && trim((string) ($cols[10] ?? '')) === '';
     }
 
     /**

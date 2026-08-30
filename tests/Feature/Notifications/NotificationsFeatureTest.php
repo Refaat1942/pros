@@ -63,7 +63,27 @@ class NotificationsFeatureTest extends TestCase
         $this->assertStringContainsString('المعدلات', $notification->title);
     }
 
-    public function test_operations_approval_notifies_warehouse(): void
+    public function test_workflow_advance_marks_department_notification_read(): void
+    {
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_EXAM);
+
+        app(WorkflowService::class)->advance($case, WorkflowEvent::ExamApproved->value);
+
+        $specNotif = AppNotification::forRole(Role::SLUG_SPEC)
+            ->unread()
+            ->where('case_id', $case->id)
+            ->first();
+
+        $this->assertNotNull($specNotif);
+
+        $case->refresh();
+        app(WorkflowService::class)->advance($case, WorkflowEvent::SpecSaved->value);
+
+        $this->assertNotNull($specNotif->fresh()->read_at);
+    }
+
+    public function test_operations_approval_notifies_workshop(): void
     {
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_OPERATIONS);
@@ -72,6 +92,12 @@ class NotificationsFeatureTest extends TestCase
 
         $this->assertSame(
             1,
+            AppNotification::forRole(Role::SLUG_WORKSHOP)
+                ->where('event', WorkflowEvent::OperationsApproved->value)
+                ->count(),
+        );
+        $this->assertSame(
+            0,
             AppNotification::forRole(Role::SLUG_TECHNICAL)
                 ->where('event', WorkflowEvent::OperationsApproved->value)
                 ->count(),
@@ -100,7 +126,7 @@ class NotificationsFeatureTest extends TestCase
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
-        app(BomService::class)->releaseToWip($bom, ['BC-RM-001']);
+        $this->releaseBomToWip($bom, ['BC-RM-001']);
 
         $this->assertSame(
             0,
@@ -130,16 +156,17 @@ class NotificationsFeatureTest extends TestCase
 
     public function test_login_registers_device_id_and_type(): void
     {
-        $this->userWithRole('reception');
+        $user = $this->userWithRole('reception');
 
-        $this->post('/reception/login', [
-            'username' => 'reception',
+        $this->post('/login', [
+            'username' => $user->username,
             'password' => 'password',
             'device_id' => 'fcm-token-abc-123',
             'device_type' => 'web',
-        ])->assertRedirect();
+        ])->assertRedirect(route('reception.dashboard'));
 
         $this->assertDatabaseHas('user_devices', [
+            'user_id' => $user->id,
             'device_id' => 'fcm-token-abc-123',
             'device_type' => 'web',
         ]);
@@ -147,10 +174,10 @@ class NotificationsFeatureTest extends TestCase
 
     public function test_login_without_device_still_succeeds(): void
     {
-        $this->userWithRole('doctor');
+        $user = $this->userWithRole('doctor');
 
-        $this->post('/doctor/login', [
-            'username' => 'doctor',
+        $this->post('/login', [
+            'username' => $user->username,
             'password' => 'password',
         ])->assertRedirect(route('doctor.dashboard'));
 

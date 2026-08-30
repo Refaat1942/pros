@@ -24,6 +24,7 @@ class StockItem extends Model
         'catalog_number',
         'page_number',
         'name',
+        'brand',
         'spec',
         'category_id',
         'store_class',
@@ -182,6 +183,36 @@ class StockItem extends Model
         return 'BC-'.trim($code);
     }
 
+    /** الباركود الفعلي للمسح/الطباعة — عمود barcode أو BC-{operationalCode}. */
+    public function displayBarcode(): ?string
+    {
+        $barcode = self::normalizeScannableBarcode((string) ($this->barcode ?? ''));
+        if ($barcode !== null) {
+            return $barcode;
+        }
+
+        $operational = $this->operationalCode();
+        if ($operational === null) {
+            return null;
+        }
+
+        return self::barcodeForOperationalCode($operational);
+    }
+
+    /** يطبّع نص الباركود ليكون قابلًا للمسح بـ Code128 (ASCII طباعي). */
+    public static function normalizeScannableBarcode(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        $ascii = preg_replace('/[^\x20-\x7E]/', '', $value) ?? '';
+        $ascii = trim($ascii);
+
+        return $ascii !== '' ? $ascii : null;
+    }
+
     public static function findByOperationalCode(string $code, bool $lockForUpdate = false): ?self
     {
         $code = trim($code);
@@ -255,34 +286,85 @@ class StockItem extends Model
     }
 
     /**
+     * خريطة كود BOM → الباركود القابل للمسح (displayBarcode) لكل صنف.
+     *
+     * @return array<string, string>
+     */
+    public static function mapDisplayBarcodesByOperationalCodes(array $codes): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map('trim', $codes))));
+
+        if ($codes === []) {
+            return [];
+        }
+
+        $query = static::query()->where(function ($builder) use ($codes) {
+            $builder->whereIn('alt_codes', $codes)
+                ->orWhereIn('code', $codes);
+
+            if (Schema::hasColumn('stock_items', 'catalog_number')) {
+                $builder->orWhereIn('catalog_number', $codes);
+            }
+        });
+
+        $map = [];
+        foreach ($query->get() as $item) {
+            $display = $item->displayBarcode();
+            if ($display === null) {
+                continue;
+            }
+            foreach ($codes as $requested) {
+                if ($item->matchesPickerCode($requested)) {
+                    $map[$requested] = $display;
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * صفوف اختيار الصنف في التوصيف والمعدلات — code = كود الصنف (alt_codes).
      *
      * @return list<array{code: string, catalog_code: string, name: string, spec: ?string, uom: string, qty: int, reserved: int, available_max: int}>
      */
     public static function pickerCatalogRows(): array
     {
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'price'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
+        if (Schema::hasColumn('stock_items', 'brand')) {
+            $columns[] = 'brand';
+        }
 
-        return static::query()
-            ->orderBy('name')
+        $query = static::query()->orderBy('name');
+        $limit = (int) config('catalog.list_limit', 10000);
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query
             ->get($columns)
             ->map(function (self $item) {
                 $pickerCode = $item->pickerCode();
+                $catalogCode = trim((string) ($item->catalog_number ?? '')) !== ''
+                    ? (string) $item->catalog_number
+                    : $item->code;
 
                 return [
                     'code' => $pickerCode,
-                    'catalog_code' => $item->code,
+                    'catalog_code' => $catalogCode,
                     'catalog_number' => $item->catalog_number ?? '',
                     'alt_codes' => $item->operationalCode() ?? '',
                     'name' => $item->name,
+                    'brand' => trim((string) ($item->brand ?? '')),
                     'spec' => $item->spec,
                     'uom' => $item->uom ?? 'قطعة',
                     'qty' => (int) $item->qty,
                     'reserved' => (int) $item->reserved,
                     'available_max' => $item->availableQty(),
+                    'price' => (float) $item->price,
                 ];
             })
             ->filter(fn (array $row) => $row['code'] !== '' && $row['name'] !== '')
@@ -307,7 +389,7 @@ class StockItem extends Model
             return [];
         }
 
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'price'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
@@ -337,6 +419,7 @@ class StockItem extends Model
                     'qty' => (int) $item->qty,
                     'reserved' => (int) $item->reserved,
                     'available_max' => $item->availableQty(),
+                    'price' => (float) $item->price,
                 ];
             })
             ->filter(fn (array $row) => $row['code'] !== '' && $row['name'] !== '')
@@ -357,20 +440,25 @@ class StockItem extends Model
         }
 
         $like = '%'.$q.'%';
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'barcode'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
 
         return static::query()
-            ->where(function ($builder) use ($like) {
+            ->where(function ($builder) use ($like, $q) {
                 $builder->where('name', 'like', $like)
                     ->orWhere('code', 'like', $like)
                     ->orWhere('alt_codes', 'like', $like)
-                    ->orWhere('page_number', 'like', $like);
+                    ->orWhere('page_number', 'like', $like)
+                    ->orWhere('barcode', 'like', $like);
 
                 if (Schema::hasColumn('stock_items', 'catalog_number')) {
                     $builder->orWhere('catalog_number', 'like', $like);
+                }
+
+                if (strlen($q) >= 3) {
+                    $builder->orWhere('barcode', $q);
                 }
             })
             ->orderBy('name')
@@ -384,6 +472,7 @@ class StockItem extends Model
                     'catalog_code' => $item->code,
                     'catalog_number' => $item->catalog_number ?? '',
                     'alt_codes' => $item->operationalCode() ?? '',
+                    'barcode' => $item->barcode ?? '',
                     'name' => $item->name,
                     'spec' => $item->spec,
                     'uom' => $item->uom ?? 'قطعة',

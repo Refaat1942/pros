@@ -19,6 +19,7 @@
 
 @php
     $cases = $workshop_cases ?? collect();
+    $assignmentCases = $workshop_assignment_cases ?? collect();
 @endphp
 
 <div id="analytics-workshop">
@@ -26,9 +27,153 @@
 </div>
 
 <div class="space-y-6" id="workshopDeskRoot" data-cases-count="{{ $cases->count() }}">
+    <div class="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden" id="workshopAssignmentQueuePanel">
+        <div class="px-5 py-4 border-b border-amber-100 flex flex-wrap items-center justify-between gap-3 bg-amber-50">
+            <div>
+                <h3 class="font-bold text-amber-900 text-base">📋 طابور تخصيص الإنتاج — قبل صرف المخزن</h3>
+                <p class="text-xs text-amber-800 mt-1">أوامر الشغل بعد اعتماد التشغيل — خصّص القسم والفني ثم اعتمد التخصيص ليتاح للمخزن الصرف.</p>
+            </div>
+            <button type="button" id="btnRefreshAssignmentQueue"
+                    class="rounded-xl bg-amber-600 text-white px-4 py-2 text-sm font-bold hover:bg-amber-700 transition-colors">
+                ↻ تحديث الطابور
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table id="workshopAssignmentTable" data-paginate="8" class="w-full text-sm">
+                <thead class="bg-amber-50/80 text-slate-600">
+                    <tr>
+                        <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
+                        <th class="px-4 py-3 text-right font-bold">المريض</th>
+                        <th class="px-4 py-3 text-right font-bold">المسار</th>
+                        <th class="px-4 py-3 text-right font-bold">القسم / الفني</th>
+                        <th class="px-4 py-3 text-right font-bold">حالة التخصيص</th>
+                        <th class="px-4 py-3 text-right font-bold">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="workshopAssignmentTableBody" class="divide-y divide-slate-100">
+                    @forelse ($assignmentCases as $case)
+                        @php
+                            $isMil = $case->isMilitary();
+                            $workOrderUrl = route('workshop.work-order.print', $case);
+                            $issueVoucherUrl = $case->bom ? route('workshop.issue-voucher.print', $case) : null;
+                            $awaitingApprove = ($case->workshop_section_id && $case->assigned_technician_id || $case->workshopAssignments->isNotEmpty())
+                                && ! $case->isWorkshopAssignmentApproved();
+                            $assignmentLines = $case->workshopAssignments->isNotEmpty()
+                                ? $case->workshopAssignments
+                                : collect([$case])->filter(fn ($c) => $c->workshop_section_id);
+                        @endphp
+                        <tr class="assignment-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
+                            data-search="{{ $case->work_order_no }} {{ $case->case_no }} {{ $case->patient?->name }}">
+                            <td class="px-4 py-3 font-mono font-bold text-amber-800">{{ $case->work_order_no ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-semibold text-slate-800">{{ $case->patient?->name ?? '—' }}</div>
+                                <div class="text-xs text-slate-400">{{ $case->case_no }}</div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-xs font-bold px-2 py-1 rounded-lg {{ $isMil ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                    {{ $isMil ? '🪖 عسكري' : '🌐 مدني' }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-xs">
+                                @forelse ($assignmentLines as $assignment)
+                                    <div class="mb-1">
+                                        <div class="font-semibold text-slate-700">{{ $assignment->workshopSection?->name ?? $case->workshopSection?->name ?? '—' }}</div>
+                                        <div class="text-slate-400">{{ $assignment->assignedTechnician?->name ?? $case->assignedTechnician?->name ?? '—' }}</div>
+                                    </div>
+                                @empty
+                                    <span class="text-slate-400">—</span>
+                                @endforelse
+                            </td>
+                            <td class="px-4 py-3">
+                                @if ($case->isWorkshopAssignmentApproved())
+                                    <span class="text-xs font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">✓ معتمد — جاهز للصرف</span>
+                                @elseif ($awaitingApprove)
+                                    <span class="text-xs font-bold px-2 py-1 rounded-lg bg-amber-100 text-amber-800">بانتظار الاعتماد</span>
+                                @else
+                                    <span class="text-xs font-bold px-2 py-1 rounded-lg bg-slate-100 text-slate-600">غير مخصّص</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                <a href="{{ $workOrderUrl }}" target="_blank" rel="noopener"
+                                   class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ إذن شغل</a>
+                                @if ($issueVoucherUrl)
+                                    <a href="{{ $issueVoucherUrl }}" target="_blank" rel="noopener"
+                                       class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">🖨️ إذن استلام</a>
+                                @endif
+                                @if ($awaitingApprove)
+                                    <button type="button" class="btn-approve-assignment text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700 inline-block mb-1" data-case-id="{{ $case->id }}">✓ اعتماد</button>
+                                @endif
+                                <button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block"
+                                        data-case-id="{{ $case->id }}" data-work-order="{{ $case->work_order_no ?? '' }}">👤 تخصيص</button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر بانتظار التخصيص — تظهر بعد اعتماد مكتب التشغيل.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-violet-100 bg-violet-50">
+            <h3 class="font-bold text-violet-900 text-base">👤 تخصيص الفني وقسم الإنتاج</h3>
+            <p class="text-xs text-violet-700 mt-1">اختر أمر الشغل من الطابور ثم حدّد القسم والفني. «حفظ التخصيص» للتجربة فقط — «حفظ واعتماد التخصيص» يُرسل للمخزن.</p>
+        </div>
+        <div class="p-4 flex flex-wrap gap-4 items-end">
+            <div class="min-w-[200px]">
+                <label class="block text-xs font-bold text-slate-600 mb-1">أمر الشغل المحدد</label>
+                <input type="text" id="workshopSelectedOrder" readonly placeholder="— اختر من الجدول —"
+                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono">
+            </div>
+            <div class="w-full">
+                <label class="block text-xs font-bold text-slate-600 mb-2">أقسام الإنتاج والفنيين (يمكن إضافة أكثر من قسم وفني)</label>
+                <div id="workshopAssignmentRows" class="space-y-3"></div>
+                <button type="button" id="btnAddWorkshopAssignmentRow"
+                        class="mt-2 rounded-xl border border-violet-300 text-violet-800 px-4 py-2 text-sm font-bold hover:bg-violet-50">
+                    + إضافة قسم / فني
+                </button>
+            </div>
+            <button type="button" id="btnSaveWorkshopAssignment"
+                    class="rounded-xl bg-violet-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-violet-700 transition-colors">
+                حفظ التخصيص
+            </button>
+            <button type="button" id="btnApproveWorkshopAssignment"
+                    class="rounded-xl bg-emerald-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-emerald-700 transition-colors">
+                ✓ حفظ واعتماد التخصيص
+            </button>
+            <button type="button" id="btnPrintIssueVoucher"
+                    class="rounded-xl border border-cyan-600 text-cyan-800 px-5 py-2.5 text-sm font-bold hover:bg-cyan-50 transition-colors hidden">
+                🖨️ طباعة إذن استلام
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden" id="workshopTechnicianBoard">
+        <div class="px-5 py-4 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-3 bg-indigo-50">
+            <div>
+                <h3 class="font-bold text-indigo-900 text-base">👷 تتبع الفنيين — أوامر وإنجاز</h3>
+                <p class="text-xs text-indigo-700 mt-1">كل فني معه إيه، ونسبة الإنجاز لكل أمر — تتحدّث تلقائياً عند التخصيص أو تحديث الإنجاز.</p>
+            </div>
+            <button type="button" id="btnRefreshTechBoard"
+                    class="rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-bold hover:bg-indigo-700 transition-colors">
+                ↻ تحديث التتبع
+            </button>
+        </div>
+        <div class="p-4">
+            <div id="workshopTechBoardCards" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <p class="text-sm text-slate-400 col-span-full text-center py-8">جاري تحميل تتبع الفنيين...</p>
+            </div>
+            <div id="workshopUnassignedPanel" class="mt-4 hidden">
+                <h4 class="text-sm font-bold text-amber-800 mb-2">⏳ أوامر بدون فني</h4>
+                <div id="workshopUnassignedList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
-            <h3 class="font-bold text-slate-800">🏭 طابور ورشة التصنيع</h3>
+            <h3 class="font-bold text-slate-800">🏭 طابور قسم الإنتاج</h3>
             <button type="button" id="btnRefreshWorkshop"
                     class="rounded-xl bg-workshop text-white px-4 py-2 text-sm font-bold hover:bg-workshop-dark transition-colors">
                 ↻ تحديث
@@ -46,13 +191,14 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table data-paginate="10" class="w-full text-sm">
+            <table id="workshopDeskTable" data-paginate="10" class="w-full text-sm">
                 <thead class="bg-slate-100 text-slate-600">
                     <tr>
                         <th class="px-4 py-3 text-right font-bold">أمر التشغيل</th>
                         <th class="px-4 py-3 text-right font-bold">المريض</th>
                         <th class="px-4 py-3 text-right font-bold">المسار</th>
                         <th class="px-4 py-3 text-right font-bold">مرحلة التصنيع</th>
+                        <th class="px-4 py-3 text-right font-bold">القسم / الفني</th>
                         <th class="px-4 py-3 text-right font-bold">عدد الأصناف</th>
                         <th class="px-4 py-3 text-right font-bold">إجراء</th>
                     </tr>
@@ -83,6 +229,10 @@
                             <td class="px-4 py-3">
                                 <span class="text-xs font-bold px-2 py-1 rounded-lg bg-cyan-100 text-cyan-800">{{ $mfgLabel }}</span>
                             </td>
+                            <td class="px-4 py-3 text-xs">
+                                <div class="font-semibold text-slate-700">{{ $case->workshopSection?->name ?? '—' }}</div>
+                                <div class="text-slate-400 mt-0.5">{{ $case->assignedTechnician?->name ?? '—' }}</div>
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 @if ($itemsCount > 0)
                                     <button type="button"
@@ -103,6 +253,12 @@
                                    class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">
                                     🖨️ طباعة إذن شغل
                                 </a>
+                                @if ($case->bom)
+                                    <a href="{{ route('workshop.issue-voucher.print', $case) }}" target="_blank" rel="noopener"
+                                       class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">
+                                        🖨️ إذن استلام
+                                    </a>
+                                @endif
                                 <button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700"
                                         data-case-id="{{ $case->id }}">
                                     ✓ تم التصنيع
@@ -110,7 +266,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في الورشة حالياً — تظهر بعد صرف المواد من المخزن.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في قسم الإنتاج حالياً — تظهر بعد صرف المواد من المخزن.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -141,3 +297,10 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+window.__WORKSHOP_ASSIGNMENT_QUEUE = @json($workshop_assignment_payload ?? []);
+window.__WORKSHOP_ASSIGNMENT_SECTIONS = @json($workshop_assignment_sections ?? []);
+</script>
+@endpush

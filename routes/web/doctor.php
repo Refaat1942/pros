@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 registerDashboardPages('doctor', 'doctor.', DoctorDashboardController::class, 'doctor');
+registerDepartmentStaffRoutes('doctor', 'doctor.', 'doctor');
 
 /*
 |--------------------------------------------------------------------------

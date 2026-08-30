@@ -27,7 +27,7 @@ enum ManufacturingStage: string
             self::Assembly => 'تجميع',
             self::Casting => 'صب',
             self::Finishing => 'تشطيب',
-            self::Workshop => 'الورشة',
+            self::Workshop => 'قسم الإنتاج',
             self::Fitting => 'قياس',
             self::Quality => 'جودة',
             self::Closed => 'مغلق',
@@ -43,7 +43,7 @@ enum ManufacturingStage: string
         return self::tryFrom($key)?->label() ?? $key;
     }
 
-    /** تسميات مرحلة التصنيع في طابور الورشة. */
+    /** تسميات مرحلة التصنيع في طابور قسم الإنتاج. */
     public static function workshopDeskLabelFor(?string $key): string
     {
         return match ($key) {

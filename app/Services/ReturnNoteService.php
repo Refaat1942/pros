@@ -64,7 +64,7 @@ class ReturnNoteService
                 if ($qty > $bomItem->returnRequestMaxQty(null, $bom->stage)) {
                     $max = $bomItem->returnRequestMaxQty(null, $bom->stage);
                     abort(422, $max === 0
-                        ? "لا يمكن ارتجاع المزيد من الصنف {$code} — الكمية محجوزة في طلب ارتجاع أو يجب الإبقاء على وحدة في الورشة."
+                        ? "لا يمكن ارتجاع المزيد من الصنف {$code} — الكمية محجوزة في طلب ارتجاع أو يجب الإبقاء على وحدة في قسم الإنتاج."
                         : "لا يمكن ارتجاع كامل الكمية للصنف {$code} — الحد الأقصى {$max}.");
                 }
 

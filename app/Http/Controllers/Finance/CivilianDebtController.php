@@ -11,6 +11,7 @@ use App\Services\ContractDebtService;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CivilianDebtController extends Controller
 {
@@ -58,7 +59,11 @@ class CivilianDebtController extends Controller
             ], 422);
         }
 
-        $this->contractDebtService->recordPayment($company, $amount);
+        try {
+            $this->contractDebtService->recordPayment($company, $amount);
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['amount' => $e->getMessage()]);
+        }
 
         $debt = $company->fresh()->load(['debt.contractCompany', 'debt.collectionEntries'])->debt;
 

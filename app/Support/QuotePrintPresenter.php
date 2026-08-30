@@ -50,7 +50,34 @@ final class QuotePrintPresenter
     /** المبلغ المعتمد في OCR والطباعة — صافٍ بعد خصم جهة التعاقد. */
     public static function approvedAmount(Quote $quote): float
     {
-        return self::fromQuote($quote)['display_total'];
+        $totals = self::fromQuote($quote);
+        $display = (float) $totals['display_total'];
+
+        if ($display > 0) {
+            return $display;
+        }
+
+        $quote->loadMissing(['pricingRequest', 'caseRecord.contractCompany']);
+
+        $pricing = $quote->pricingRequest;
+        if (! $pricing) {
+            return $display;
+        }
+
+        $gross = (float) $pricing->selling_price > 0
+            ? (float) $pricing->selling_price
+            : (float) $pricing->computed_total;
+
+        if ($gross <= 0) {
+            return $display;
+        }
+
+        $case = $quote->caseRecord;
+        if (! $case) {
+            return round($gross, 2);
+        }
+
+        return (float) ContractBillingSplit::forCase($case, $gross)['patient_share'];
     }
 
     /** @return array{gross_total: float, discount_percent: float, discount_amount: float, net_total: float, display_total: float, has_discount: bool} */

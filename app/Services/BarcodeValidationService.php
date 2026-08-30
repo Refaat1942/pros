@@ -81,12 +81,18 @@ class BarcodeValidationService
 
     public function resolveStockItem(string $scan): ?StockItem
     {
-        $scan = trim($scan);
+        $scan = $this->normalizeScan($scan);
         if ($scan === '') {
             return null;
         }
 
-        $byBarcode = StockItem::query()->where('barcode', $scan)->first();
+        $upper = strtoupper($scan);
+
+        $byBarcode = StockItem::query()
+            ->where(function ($q) use ($scan, $upper) {
+                $q->where('barcode', $scan)->orWhere('barcode', $upper);
+            })
+            ->first();
         if ($byBarcode !== null) {
             return $byBarcode;
         }
@@ -96,10 +102,24 @@ class BarcodeValidationService
             return $byOperational;
         }
 
-        if (str_starts_with(strtoupper($scan), 'BC-')) {
-            return StockItem::findByOperationalCode(substr($scan, 3));
+        if (str_starts_with($upper, 'BC-')) {
+            return StockItem::findByOperationalCode(substr($upper, 3));
         }
 
         return null;
+    }
+
+    private function normalizeScan(string $scan): string
+    {
+        $scan = preg_replace('/[\x00-\x1F\x7F]/', '', trim($scan)) ?? '';
+        $scan = trim($scan);
+
+        if ($scan === '') {
+            return '';
+        }
+
+        $ascii = StockItem::normalizeScannableBarcode($scan);
+
+        return $ascii ?? strtoupper($scan);
     }
 }

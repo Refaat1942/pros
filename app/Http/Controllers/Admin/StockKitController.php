@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\StockItem;
 use App\Models\StockKit;
+use App\Services\CatalogListVisibilityService;
 use App\Services\StockKitService;
 use App\Support\StockKitGroups;
 use Illuminate\Http\JsonResponse;
@@ -27,6 +28,16 @@ class StockKitController extends Controller
 
     public function searchItems(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $visibility = app(CatalogListVisibilityService::class);
+
+        if ($user === null || ! $visibility->isListEnabledForUser($user, 'stock_kits_picker')) {
+            return response()->json([
+                'message' => 'قائمة بحث الأصناف غير مفعّلة لدورك — راجع «عرض قوائم الأصناف» في المخزون والتوريد.',
+                'data' => [],
+            ], 403);
+        }
+
         $q = trim((string) $request->input('q', ''));
         $limit = min(60, max(10, (int) $request->input('limit', 40)));
 
@@ -35,15 +46,23 @@ class StockKitController extends Controller
         if ($q !== '') {
             $like = '%'.$q.'%';
             $prefix = $q.'%';
-            $query->where(function ($builder) use ($like, $prefix) {
+            $query->where(function ($builder) use ($like, $q, $prefix) {
                 $builder->where('name', 'like', $like)
                     ->orWhere('name', 'like', $prefix)
                     ->orWhere('code', 'like', $like)
                     ->orWhere('alt_codes', 'like', $like)
-                    ->orWhere('page_number', 'like', $like);
+                    ->orWhere('page_number', 'like', $like)
+                    ->orWhere('barcode', 'like', $like);
 
                 if (Schema::hasColumn('stock_items', 'catalog_number')) {
                     $builder->orWhere('catalog_number', 'like', $like);
+                }
+                if (Schema::hasColumn('stock_items', 'brand')) {
+                    $builder->orWhere('brand', 'like', $like);
+                }
+
+                if (strlen($q) >= 3) {
+                    $builder->orWhere('barcode', $q);
                 }
             });
 
@@ -56,18 +75,29 @@ class StockKitController extends Controller
             $query->orderBy('name');
         }
 
+        $dbColumns = $this->searchItemColumnsForUser($user, $visibility);
+        if ($dbColumns === []) {
+            return response()->json(['data' => []]);
+        }
+
         $items = $query
             ->limit($limit)
-            ->get($this->searchItemColumns())
-            ->map(fn (StockItem $item) => [
-                'id' => $item->id,
-                'code' => $item->pickerCode(),
-                'catalog_number' => $item->catalog_number ?? $item->code,
-                'alt_codes' => $item->alt_codes ?? '',
-                'name' => $item->name,
-                'page_number' => $item->page_number ?? '',
-                'uom' => $item->uom ?? 'قطعة',
-            ]);
+            ->get($dbColumns)
+            ->map(function (StockItem $item) use ($user, $visibility) {
+                $row = [
+                    'id' => $item->id,
+                    'code' => $item->pickerCode(),
+                    'catalog_number' => $item->catalog_number ?? $item->code,
+                    'alt_codes' => $item->alt_codes ?? '',
+                    'name' => $item->name,
+                    'brand' => $item->brand ?? '',
+                    'page_number' => $item->page_number ?? '',
+                    'uom' => $item->uom ?? 'قطعة',
+                ];
+
+                return $visibility->filterItemFields($row, $user, 'stock_kits_picker');
+            })
+            ->filter(fn (array $row) => $row !== []);
 
         return response()->json(['data' => $items->values()]);
     }
@@ -178,13 +208,21 @@ class StockKitController extends Controller
     /**
      * @return list<string>
      */
-    private function searchItemColumns(): array
+    private function searchItemColumnsForUser(\App\Models\User $user, CatalogListVisibilityService $visibility): array
     {
-        $columns = ['id', 'code', 'name', 'alt_codes', 'page_number', 'uom'];
-        if (Schema::hasColumn('stock_items', 'catalog_number')) {
-            $columns[] = 'catalog_number';
+        $columns = $visibility->itemDbColumnsForUser($user, 'stock_kits_picker', ['id']);
+        if ($columns === []) {
+            return [];
         }
 
-        return $columns;
+        $allowed = array_flip($columns);
+        $resolved = ['id'];
+        foreach (['code', 'catalog_number', 'name', 'brand', 'alt_codes', 'page_number', 'uom'] as $col) {
+            if (isset($allowed[$col]) && Schema::hasColumn('stock_items', $col)) {
+                $resolved[] = $col;
+            }
+        }
+
+        return array_values(array_unique($resolved));
     }
 }

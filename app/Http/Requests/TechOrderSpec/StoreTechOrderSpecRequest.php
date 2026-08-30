@@ -21,7 +21,7 @@ class StoreTechOrderSpecRequest extends BaseRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.stock_item_code' => ['required', 'string', 'max:500'],
             'items.*.name' => ['required', 'string', 'min:1', 'max:255'],
-            'items.*.qty' => $this->positiveQtyRules(),
+            'items.*.qty' => $this->decimalQtyRules(),
             'items.*.group_label' => ['nullable', 'string', 'max:255'],
         ];
     }
@@ -48,7 +48,7 @@ class StoreTechOrderSpecRequest extends BaseRequest
         return [
             'items.required' => 'يجب إضافة بند واحد على الأقل.',
             'items.min' => 'يجب إضافة بند واحد على الأقل.',
-            'items.*.qty.min' => 'الكمية يجب أن تكون 1 على الأقل لكل بند.',
+            'items.*.qty.min' => 'الكمية يجب أن تكون 0.001 على الأقل لكل بند.',
         ];
     }
 }

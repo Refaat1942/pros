@@ -10,13 +10,19 @@
 
 @push('styles')
     @foreach ($dashboardConfig['styles'] as $style)
-        <link rel="stylesheet" href="{{ asset($style) }}">
+        @php
+            $styleSrc = str_starts_with($style, 'http')
+                ? $style
+                : asset($style) . (is_file(public_path($style)) ? '?v=' . filemtime(public_path($style)) : '');
+        @endphp
+        <link rel="stylesheet" href="{{ $styleSrc }}">
     @endforeach
 @endpush
 
 @push('styles-late')
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard-toast.css') }}?v={{ filemtime(public_path('assets/css/dashboard-toast.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/workflow-path.css') }}?v={{ filemtime(public_path('assets/css/workflow-path.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/dashboard-table-sort-filter.css') }}?v={{ filemtime(public_path('assets/css/dashboard-table-sort-filter.css')) }}">
     @include('partials.dashboard-date-filters-assets')
 @endpush
 
@@ -28,8 +34,14 @@
     <script src="{{ asset('assets/js/shared/toast.js') }}?v={{ filemtime(public_path('assets/js/shared/toast.js')) }}"></script>
     <script src="{{ asset('assets/js/shared/form-validation.js') }}"></script>
     <script src="{{ asset('assets/js/shared/table-pagination.js') }}?v={{ filemtime(public_path('assets/js/shared/table-pagination.js')) }}"></script>
+    <script src="{{ asset('assets/js/shared/table-sort-filter.js') }}?v={{ filemtime(public_path('assets/js/shared/table-sort-filter.js')) }}"></script>
     @foreach ($dashboardConfig['scripts'] as $script)
-        <script src="{{ str_starts_with($script, 'http') ? $script : asset($script) }}"></script>
+        @php
+            $scriptSrc = str_starts_with($script, 'http')
+                ? $script
+                : asset($script) . (is_file(public_path($script)) ? '?v=' . filemtime(public_path($script)) : '');
+        @endphp
+        <script src="{{ $scriptSrc }}"></script>
     @endforeach
     @include('partials.workflow-path-modal')
 @endpush

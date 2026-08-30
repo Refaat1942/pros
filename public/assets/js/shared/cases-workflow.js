@@ -18,7 +18,7 @@ var CasesWorkflow = (function () {
 
   var MANUFACTURING_STAGES = [
     { key: 'warehouse', label: 'تحضير مخزن' },
-    { key: 'workshop', label: 'الورشة' },
+    { key: 'workshop', label: 'قسم الإنتاج' },
     { key: 'fitting', label: 'تركيب وتجربة' },
     { key: 'quality', label: 'فحص جودة' },
     { key: 'issue', label: 'صرف بالباركود' },

@@ -7,6 +7,7 @@ use App\Http\Requests\Cashier\ConfirmPaymentRequest;
 use App\Models\CaseRecord;
 use App\Models\Payment;
 use App\Services\CashierPaymentService;
+use App\Services\Authorization\ResourceAuthorizationService;
 use App\Support\ContractBillingSplit;
 use App\Support\PaymentReceiptPresenter;
 use App\Traits\PaginationTrait;
@@ -23,6 +24,7 @@ class CashierDeskController extends Controller
 
     public function __construct(
         private readonly CashierPaymentService $cashierPaymentService,
+        private readonly ResourceAuthorizationService $resourceAuth,
     ) {}
 
     /**
@@ -57,6 +59,8 @@ class CashierDeskController extends Controller
      */
     public function confirm(ConfirmPaymentRequest $request, CaseRecord $case): JsonResponse
     {
+        $this->resourceAuth->assertCanConfirmCashPayment(auth()->user(), $case);
+
         $result = $this->cashierPaymentService->confirmPayment($case, $request->validated());
         $payment = $result['payment'];
 
@@ -85,6 +89,8 @@ class CashierDeskController extends Controller
      */
     public function casePayments(CaseRecord $case): JsonResponse
     {
+        $this->resourceAuth->assertCanViewCasePayments(auth()->user(), $case);
+
         $payments = Payment::query()
             ->where('case_id', $case->id)
             ->orderBy('installment_no')
@@ -110,6 +116,8 @@ class CashierDeskController extends Controller
      */
     public function printReceipt(Request $request, Payment $payment): View
     {
+        $this->resourceAuth->assertCanViewPayment(auth()->user(), $payment);
+
         $payment->load(['caseRecord', 'patient']);
 
         return view('prints.payment-receipt', [

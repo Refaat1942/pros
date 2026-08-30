@@ -122,11 +122,30 @@ class DashboardQueueService
         return $query->count();
     }
 
+    public function workshopAssignmentQueueCount(?Carbon $from = null, ?Carbon $to = null): int
+    {
+        if (! config('workshop.enabled', true)) {
+            return 0;
+        }
+
+        $query = CaseRecord::query()->awaitingWorkshopAssignmentApproval();
+
+        if ($from && $to) {
+            $query->whereBetween('updated_at', [$from, $to]);
+        }
+
+        return $query->count();
+    }
+
     public function warehouseQueueCount(?Carbon $from = null, ?Carbon $to = null): int
     {
-        $query = Bom::query()
-            ->where('stage', Bom::STAGE_RAW)
-            ->whereHas('caseRecord', fn ($q) => $q->where('stage_key', CaseRecord::STAGE_MANUFACTURING));
+        $query = CaseRecord::query()
+            ->where('stage_key', CaseRecord::STAGE_MANUFACTURING)
+            ->whereHas('bom', fn ($q) => $q->where('stage', Bom::STAGE_RAW));
+
+        if (config('workshop.enabled', true)) {
+            $query->whereNotNull('workshop_assignment_approved_at');
+        }
 
         if ($from && $to) {
             $query->whereBetween('updated_at', [$from, $to]);
@@ -157,7 +176,7 @@ class DashboardQueueService
     }
 
     /** @return list<int> */
-    /** أوامر في ورشة التصنيع (BOM wip). */
+    /** أوامر في قسم الإنتاج (BOM wip). */
     public function operationsManufacturingCaseIds(): array
     {
         return CaseRecord::query()

@@ -10,10 +10,10 @@ return [
         'doctor' => ['label_ar' => 'لوحة الطبيب', 'icon' => '🩺'],
         'spec' => ['label_ar' => 'لوحة التوصيف', 'icon' => '📐'],
         'adjustments' => ['label_ar' => 'لوحة المعدلات', 'icon' => '📏'],
-        'costing' => ['label_ar' => 'لوحة التكاليف', 'icon' => '💰'],
+        'costing' => ['label_ar' => 'لوحة الاعتماد', 'icon' => '✅'],
         'operations' => ['label_ar' => 'مكتب التشغيل', 'icon' => '🎯'],
         'cashier' => ['label_ar' => 'الخزنة', 'icon' => '💵'],
-        'workshop' => ['label_ar' => 'ورشة التصنيع', 'icon' => '🏭'],
+        'workshop' => ['label_ar' => 'قسم الإنتاج', 'icon' => '🏭'],
         'technical' => ['label_ar' => 'لوحة المخزن', 'icon' => '📦'],
         'admin' => ['label_ar' => 'لوحة الإدارة', 'icon' => '⚙️'],
     ],
@@ -80,11 +80,11 @@ return [
             'dashboard' => 'admin',
         ],
         'manage-workshop-sections' => [
-            'label_ar' => 'إدارة أقسام الورشة وربط الفنيين',
-            'dashboard' => 'admin',
+            'label_ar' => 'إدارة أقسام الإنتاج وربط الفنيين',
+            'dashboard' => 'workshop',
         ],
         'view-workshop-tracking' => [
-            'label_ar' => 'لوحة تتبع أوامر الشغل في الورشة',
+            'label_ar' => 'لوحة تتبع أوامر الشغل في قسم الإنتاج',
             'dashboard' => 'admin',
         ],
         'approve-dispense' => [
@@ -95,6 +95,18 @@ return [
             'label_ar' => 'تصديق إدارة الخدمات — مسار عسكري',
             'dashboard' => 'admin',
         ],
+        'delete-military-debt' => [
+            'label_ar' => 'حذف سجل مديونية عسكرية',
+            'dashboard' => 'admin',
+        ],
+        'collect-civilian-debt' => [
+            'label_ar' => 'تحصيل مديونية جهة تعاقد مدنية',
+            'dashboard' => 'admin',
+        ],
+        'collect-military-debt' => [
+            'label_ar' => 'تحصيل مديونية جهة عسكرية',
+            'dashboard' => 'admin',
+        ],
     ],
 
     /**
@@ -103,14 +115,15 @@ return [
      * @var array<string, array{0: string, 1: string}>
      */
     'page_action_aliases' => [
+        'manage-workshop-sections' => ['workshop', 'sections'],
         'view-workshop-tracking' => ['admin', 'workshop-tracking'],
-        'manage-workshop-sections' => ['admin', 'workshop-sections'],
         'approve-dispense' => ['admin', 'dispense-approvals'],
         'approve-services' => ['admin', 'services-approvals'],
         'manage-permissions' => ['admin', 'permissions'],
         'view-inventory-overview' => ['admin', 'inventory-overview'],
         'manage-inventory' => ['admin', 'catalog'],
         'manage-stock-kits' => ['admin', 'stock-kits'],
+        'print-barcode' => ['admin', 'catalog'],
     ],
 
     /**
@@ -125,11 +138,13 @@ return [
         'technical' => [],
         'spec' => [],
         'adjustments' => [],
+        'workshop' => ['manage-workshop-sections'],
         'admin' => [
             'view-prices',
             'view-revenue',
             'view-costs',
             'view-military-profit',
+            'print-barcode',
             'manage-permissions',
             'manage-workshop-sections',
             'view-workshop-tracking',

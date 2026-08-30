@@ -339,4 +339,20 @@ class SpecEditRequestTest extends TestCase
             ->assertSee('>1</span>', false)
             ->assertSee('title="بانتظار الموافقة"', false);
     }
+
+    public function test_spec_edit_context_exposes_catalog_search_for_new_items(): void
+    {
+        $this->stockItem('RM-EDIT-C', qty: 10);
+        ['draft' => $draft, 'spec' => $specUser] = $this->submitSpecToAdjustments();
+
+        $this->actingAs($specUser)
+            ->getJson(route('spec.spec.edit-request.show', $draft))
+            ->assertOk()
+            ->assertJsonPath('can_request_edit', true);
+
+        $this->actingAs($specUser)
+            ->getJson('/spec/catalog/search?q=RM-EDIT-C')
+            ->assertOk()
+            ->assertJsonFragment(['catalog_code' => 'RM-EDIT-C']);
+    }
 }

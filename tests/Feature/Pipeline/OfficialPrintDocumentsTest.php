@@ -5,6 +5,8 @@ namespace Tests\Feature\Pipeline;
 use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\Quote;
+use App\Models\TechOrderSpec;
+use App\Services\QuoteService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -33,6 +35,10 @@ class OfficialPrintDocumentsTest extends TestCase
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        if ($quote->status !== Quote::STATUS_ISSUED) {
+            app(QuoteService::class)->markIssued($quote);
+            $quote = $quote->fresh();
+        }
         $ops = $this->userWithRole('operations');
 
         $specItem = $quote->items->firstWhere('source', 'spec') ?? $quote->items->first();
@@ -49,12 +55,50 @@ class OfficialPrintDocumentsTest extends TestCase
             ->assertSee('onload="window.print()"', false);
     }
 
+    public function test_quote_print_shows_free_description_not_catalog_name(): void
+    {
+        $catalogName = 'اسم كتالوج تفصيلي غير للعرض';
+        $freeDescription = 'طرف صناعي مخصص — التوصيف الحر للعميل';
+
+        $stock = $this->stockItem('RM-001', qty: 10);
+        $stock->update(['name' => $catalogName, 'spec' => 'مواصفات كتالوج داخلية']);
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $case = $this->operationsReadyCase($patient);
+
+        TechOrderSpec::updateOrCreate(
+            ['case_id' => $case->id],
+            [
+                'order_ref' => $case->order_ref,
+                'patient_name' => $patient->name,
+                'company_name' => $patient->company_name ?? '',
+                'written_items' => $freeDescription,
+                'submitted_at' => now(),
+                'locked' => true,
+            ]
+        );
+
+        $quote = Quote::where('case_id', $case->id)->firstOrFail();
+        if ($quote->status !== Quote::STATUS_ISSUED) {
+            app(QuoteService::class)->markIssued($quote);
+        }
+
+        $ops = $this->userWithRole('operations');
+
+        $this->actingAs($ops)
+            ->get(route('operations.quote.print', $quote))
+            ->assertOk()
+            ->assertSee($freeDescription, false)
+            ->assertDontSee($catalogName, false);
+    }
+
     public function test_technical_can_print_issue_voucher(): void
     {
         $this->stockItem('RM-001', qty: 10);
         $patient = $this->civilianPatient($this->civilianCompany());
         $case = $this->operationsReadyCase($patient);
         $this->approveAtOperations($case);
+        $case = $this->seedWorkshopAssignmentApproved($case->fresh());
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $technical = $this->userWithRole('technical');
 
@@ -64,6 +108,11 @@ class OfficialPrintDocumentsTest extends TestCase
             ->assertSee('إذن صرف', false)
             ->assertSee($quote->order_ref, false)
             ->assertSee($quote->patient_name, false)
+            ->assertSee('الطرف الصناعي', false)
+            ->assertSee('مدير الإنتاج', false)
+            ->assertSee('قائد المصنع', false)
+            ->assertSee('الفني المختص', false)
+            ->assertSee($case->work_order_no, false)
             ->assertSee('رئيس المخازن', false)
             ->assertSee('onload="window.print()"', false);
     }

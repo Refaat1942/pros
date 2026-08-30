@@ -81,7 +81,7 @@ class ReceptionScreenHintService
             'title' => '📦 التسليمات',
             'message' => $ready > 0
                 ? "في {$ready} حالة/حالات جاهزة للتسليم — امسح QR بطاقة المريض لإغلاق الحالة."
-                : 'لا توجد تسليمات معلّقة — ستظهر هنا عند جاهزية الطرف من الورشة.',
+                : 'لا توجد تسليمات معلّقة — ستظهر هنا عند جاهزية الطرف من قسم الإنتاج.',
             'count' => $ready > 0 ? $ready : null,
             'link' => route('reception.delivery'),
             'link_label' => 'فتح التسليمات',
@@ -120,7 +120,7 @@ class ReceptionScreenHintService
         return [
             'page' => 'selfservice',
             'title' => '📱 متابعة حالة الطلب',
-            'message' => 'شاشة للمريض — امسح QR أو أدخل الرقم لمتابعة مرحلة الطلب.',
+            'message' => 'شاشة للمريض — ابحث بأي بيانات المريض لمتابعة مرحلة الطلب.',
             'count' => null,
             'link' => null,
             'link_label' => null,

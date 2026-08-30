@@ -4,6 +4,7 @@
     $dept = $dept ?? null;
     $logoSize = $logoSize ?? '30mm';
     $seal = $seal ?? true;
+    $showLogo = $showLogo ?? true;
     $headerMeta = $headerMeta ?? null;
 @endphp
 <header class="doc-header">
@@ -16,7 +17,9 @@
         @endif
     </div>
     <div class="header-left">
-        @include('prints.partials.org-logo', ['logoSize' => $logoSize, 'seal' => $seal])
+        @if ($showLogo)
+            @include('prints.partials.org-logo', ['logoSize' => $logoSize, 'seal' => $seal])
+        @endif
         @if ($headerMeta)
             <div class="header-meta">{!! $headerMeta !!}</div>
         @endif

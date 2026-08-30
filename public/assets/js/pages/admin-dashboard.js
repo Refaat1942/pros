@@ -2,7 +2,7 @@
     var casesFilter = 'waiting_return';
     var casesSearchTerm = '';
     var casesPatientTypeFilter = '';
-    var adminCaseBuckets = window.__ADMIN_CASE_BUCKETS || { waiting_return: [], awaiting_cashier: [], in_progress: [], delivered: [] };
+    var adminCaseBuckets = window.__ADMIN_CASE_BUCKETS || { waiting_return: [], awaiting_cashier: [], awaiting_assignment: [], in_progress: [], delivered: [] };
     var catalogItems = [];
     var catalogSearchTerm = '';
     var catalogCategoryFilter = 'all';
@@ -99,6 +99,8 @@
 
         var statusSelect = form.querySelector('[name="status"]');
         if (statusSelect) statusSelect.value = 'active';
+
+        if (window.resetEmployeeCatalogVisibility) window.resetEmployeeCatalogVisibility();
       }
 
       var addBtn = document.getElementById('btnAddEmployee');
@@ -142,6 +144,74 @@
           alert((err && err.message) ? err.message : 'تعذّر حذف الموظف.');
         });
     };
+
+    (function bindEmployeePasswordReset() {
+      var modal = document.getElementById('employeePasswordResetModal');
+      var form = document.getElementById('employeePasswordResetForm');
+      if (!modal || !form) return;
+
+      var resetUserId = null;
+
+      function closeModal() {
+        modal.classList.remove('open');
+        resetUserId = null;
+        form.reset();
+      }
+
+      window.resetEmployeePassword = function (id, name) {
+        resetUserId = id;
+        var hint = document.getElementById('employeePasswordResetHint');
+        if (hint) hint.textContent = 'إعادة تعيين كلمة مرور الموظف «' + name + '».';
+        form.reset();
+        modal.classList.add('open');
+      };
+
+      ['closeEmployeePasswordResetModal', 'cancelEmployeePasswordResetModal'].forEach(function (id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', closeModal);
+      });
+
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!resetUserId) return;
+        // M-4: التحقق العميل الفعلي مُصدَّر باسم DashboardValidation (كان FormValidation خطأ فيفشل بصمت).
+        if (window.DashboardValidation && !window.DashboardValidation.validateForm(form)) return;
+
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        var fd = new FormData(form);
+
+        fetch('/admin/employees/' + encodeURIComponent(resetUserId) + '/reset-password', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'X-CSRF-TOKEN': csrf,
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+          body: fd,
+        })
+          .then(function (r) {
+            return r.ok ? r.json() : r.json().then(function (j) { throw j; });
+          })
+          .then(function (res) {
+            closeModal();
+            alert((res && res.message) ? res.message : 'تم إعادة تعيين كلمة المرور.');
+          })
+          .catch(function (err) {
+            var msg = (err && err.message) ? err.message : 'تعذّر إعادة تعيين كلمة المرور.';
+            if (err && err.errors) {
+              var first = Object.values(err.errors)[0];
+              if (Array.isArray(first) && first[0]) msg = first[0];
+            }
+            alert(msg);
+          });
+      });
+    })();
 
     function bindTableFilter(inputId, tableId, countId, suffix) {
       var input = document.getElementById(inputId);
@@ -315,14 +385,17 @@
           document.getElementById('overviewWaitingCount').dataset.serverRendered === '1') return;
       var waiting = getAdminCaseBucket('waiting_return').length;
       var cashier = getAdminCaseBucket('awaiting_cashier').length;
+      var assignment = getAdminCaseBucket('awaiting_assignment').length;
       var progress = getAdminCaseBucket('in_progress').length;
       var delivered = getAdminCaseBucket('delivered').length;
       var ow = document.getElementById('overviewWaitingCount');
       var oc = document.getElementById('overviewCashierCount');
+      var oa = document.getElementById('overviewAssignmentCount');
       var op = document.getElementById('overviewProgressCount');
       var od = document.getElementById('overviewDeliveredCount');
       if (ow) ow.textContent = waiting;
       if (oc) oc.textContent = cashier;
+      if (oa) oa.textContent = assignment;
       if (op) op.textContent = progress;
       if (od) od.textContent = delivered;
     }
@@ -351,14 +424,17 @@
       if (!document.getElementById('casesTableBody')) return;
       var waiting = getAdminCaseBucket('waiting_return');
       var cashier = getAdminCaseBucket('awaiting_cashier');
+      var assignment = getAdminCaseBucket('awaiting_assignment');
       var progress = getAdminCaseBucket('in_progress');
       var delivered = getAdminCaseBucket('delivered');
       var casesWaitingCount = document.getElementById('casesWaitingCount');
       var casesCashierCount = document.getElementById('casesCashierCount');
+      var casesAssignmentCount = document.getElementById('casesAssignmentCount');
       var casesProgressCount = document.getElementById('casesProgressCount');
       var casesDeliveredCount = document.getElementById('casesDeliveredCount');
       if (casesWaitingCount) casesWaitingCount.textContent = waiting.length;
       if (casesCashierCount) casesCashierCount.textContent = cashier.length;
+      if (casesAssignmentCount) casesAssignmentCount.textContent = assignment.length;
       if (casesProgressCount) casesProgressCount.textContent = progress.length;
       if (casesDeliveredCount) casesDeliveredCount.textContent = delivered.length;
       renderOverviewCasesCounts();
@@ -367,6 +443,7 @@
       var titles = {
         waiting_return: '📁 المرضى — بانتظار موافقة الجهة',
         awaiting_cashier: '💵 المرضى — بانتظار الدفع في الخزنة',
+        awaiting_assignment: '👷 المرضى — بانتظار تخصيص الإنتاج',
         in_progress: '📁 المرضى — تحت التنفيذ',
         delivered: '📁 المرضى — تم التسليم'
       };
@@ -382,8 +459,11 @@
         } else if (casesFilter === 'awaiting_cashier') {
           hintEl.innerHTML = 'مرضى الكاش — صدر لهم عرض سعر من مكتب التشغيل وبانتظار تحصيل المبلغ في الخزنة قبل الصرف من المخزن.';
           hintEl.style.display = 'block';
+        } else if (casesFilter === 'awaiting_assignment') {
+          hintEl.innerHTML = 'أمر الشغل صادر — يجب تخصيص القسم والفني واعتماد التخصيص من قسم الإنتاج قبل أن يُسمح للمخزن بالصرف.';
+          hintEl.style.display = 'block';
         } else if (casesFilter === 'in_progress') {
-          hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/الورشة. التسليم للمريض يتم بعد BOM «تام» فقط.';
+          hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/قسم الإنتاج. التسليم للمريض يتم بعد BOM «تام» فقط.';
           hintEl.style.display = 'block';
         } else {
           hintEl.innerHTML = '';
@@ -422,6 +502,20 @@
             '<td>' + (c.quoteRefHtml || c.quoteId || '—') + '</td>' +
             '<td>' + (c.quoteDate || '—') + '</td>' +
             '<td class="pricing-total-cell">' + CasesWorkflow.formatMoney(c.totalCost) + '</td>' +
+            '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
+            caseViewCell(c.id) +
+            '</tr>';
+        }).join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات مطابقة</td></tr>';
+      } else if (casesFilter === 'awaiting_assignment') {
+        head.innerHTML = '<tr><th>المريض</th><th>أمر الشغل</th><th>القسم</th><th>الفني</th><th>حالة التخصيص</th>' + pipelineCol + viewCol + '</tr>';
+        body.innerHTML = filtered.length ? filtered.map(function(c) {
+          var tm = CasesWorkflow.getPatientTypeMeta(c.patientType);
+          return '<tr>' +
+            '<td><strong>' + c.patient + '</strong> <span class="patient-type-badge ' + tm.badge + '">' + (tm.icon ? tm.icon + ' ' : '') + tm.label + '</span></td>' +
+            '<td>' + (c.workOrderNo || '—') + '</td>' +
+            '<td>' + (c.workshopSection || '—') + '</td>' +
+            '<td>' + (c.assignedTechnician || '—') + '</td>' +
+            '<td><span class="stage-badge progress">' + (c.assignmentStatus || '—') + '</span></td>' +
             '<td><div class="wf-pipeline">' + (c.pipelineHtml || c.stageLabel || '—') + '</div></td>' +
             caseViewCell(c.id) +
             '</tr>';
@@ -476,6 +570,12 @@
         rows = filtered.map(function(c) {
           return [c.patient, c.company, c.quoteId, ExportKit.formatDateForExport(c.quoteDate), c.totalCost, c.stageLabel];
         });
+      } else if (casesFilter === 'awaiting_assignment') {
+        title = 'حالات بانتظار تخصيص الإنتاج';
+        headers = ['المريض', 'أمر الشغل', 'القسم', 'الفني', 'حالة التخصيص', 'الحالة'];
+        rows = filtered.map(function(c) {
+          return [c.patient, c.workOrderNo || '—', c.workshopSection || '—', c.assignedTechnician || '—', c.assignmentStatus || '—', c.stageLabel];
+        });
       } else if (casesFilter === 'in_progress') {
         title = 'حالات تحت التنفيذ';
         headers = ['المريض', 'جهة التعاقد', 'مرحلة الشغل', 'BOM', 'تاريخ الموافقة'];
@@ -493,6 +593,7 @@
         var caseNames = {
           waiting_return: 'حالات_بانتظار_موافقة_الجهة',
           awaiting_cashier: 'حالات_بانتظار_الدفع_الخزنة',
+          awaiting_assignment: 'حالات_بانتظار_تخصيص_الإنتاج',
           in_progress: 'حالات_تحت_التنفيذ',
           delivered: 'حالات_مسلّمة'
         };
@@ -857,7 +958,9 @@
         var matchSearch = !catalogSearchTerm ||
           item.name.indexOf(catalogSearchTerm) !== -1 ||
           item.code.indexOf(catalogSearchTerm) !== -1 ||
-          item.spec.indexOf(catalogSearchTerm) !== -1;
+          item.spec.indexOf(catalogSearchTerm) !== -1 ||
+          (item.barcode && item.barcode.indexOf(catalogSearchTerm) !== -1) ||
+          (item.alt_codes && item.alt_codes.indexOf(catalogSearchTerm) !== -1);
         return matchCat && matchSearch;
       });
     }
@@ -1234,6 +1337,21 @@
     onId('catalogSearch', 'input', function(e) {
       catalogSearchTerm = e.target.value.trim();
       renderCatalog();
+    });
+    onId('catalogSearch', 'keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      var term = (e.target.value || '').trim();
+      if (!term) return;
+      e.preventDefault();
+      catalogSearchTerm = term;
+      renderCatalog();
+      var upper = term.toUpperCase();
+      var exact = catalogItems.find(function(item) {
+        return item.barcode && String(item.barcode).toUpperCase() === upper;
+      });
+      if (exact && typeof showCatalogDetail === 'function') {
+        showCatalogDetail(exact.id);
+      }
     });
     onId('catalogCategoryFilter', 'change', function(e) {
       catalogCategoryFilter = e.target.value;
@@ -2578,6 +2696,7 @@
       }
 
       document.querySelectorAll('.panel, .bi-card, .ops-overview-panel, .report-card').forEach(function (panel) {
+        if (panel.querySelector('.catalog-slim-table') || panel.closest('#section-catalog')) return;
         if (panelHasExport(panel)) return;
 
         panel.querySelectorAll('table').forEach(function (table) {

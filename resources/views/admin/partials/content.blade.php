@@ -135,7 +135,7 @@
           <span class="badge" id="catalogCount">0 صنف</span>
         </div>
         <div class="data-toolbar">
-          <input type="text" id="catalogSearch" placeholder="🔍 بحث بالصنف أو الكود...">
+          <input type="text" id="catalogSearch" placeholder="🔍 بحث بالصنف، الكود، أو الباركود (امسح و Enter)...">
           <select id="catalogCategoryFilter">
             <option value="all">كل الفئات</option>
             <option value="مفاصل">مفاصل</option>

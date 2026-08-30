@@ -143,7 +143,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('companies', $dates['from'], $dates['to']);
+        $report = $hub->build('companies', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame(
             ['الكود', 'الاسم', 'النوع', 'الجهة', 'التصنيف'],
@@ -185,11 +185,11 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('civilian-debts', $dates['from'], $dates['to']);
+        $report = $hub->build('civilian-debts', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('المديونات', $report['title']);
         $this->assertSame(['التاريخ', 'الجهة', 'المبلغ'], $report['headers']);
-        $this->assertNull($hub->sectionMeta('military-debts'));
+        $this->assertNull($hub->sectionMeta('military-debts', $admin));
 
         $this->actingAs($admin)
             ->get('/admin/reports/civilian-debts?from='.$from.'&to='.$to)
@@ -222,6 +222,7 @@ class AdminReportsPageTest extends TestCase
 
     public function test_reports_hub_service_builds_financial_report_for_range(): void
     {
+        $admin = $this->userWithRole('admin');
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);
         $case = $this->caseAtStage($patient, CaseRecord::STAGE_DELIVERED);
@@ -237,7 +238,7 @@ class AdminReportsPageTest extends TestCase
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange(now()->startOfMonth()->toDateString(), now()->toDateString());
 
-        $report = $hub->build('financial', $dates['from'], $dates['to']);
+        $report = $hub->build('financial', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('الإيرادات والمالية', $report['title']);
         $this->assertSame(
@@ -249,7 +250,6 @@ class AdminReportsPageTest extends TestCase
         $row = $report['rows'][0] ?? [];
         $this->assertSame('INV-2026-0100', $row[3] ?? null);
 
-        $admin = $this->userWithRole('admin');
         $from = now()->startOfMonth()->toDateString();
         $to = now()->toDateString();
 
@@ -285,7 +285,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('catalog', $dates['from'], $dates['to']);
+        $report = $hub->build('catalog', $dates['from'], $dates['to'], $admin);
 
         $this->assertNotEmpty($report['rows']);
         $this->assertSame('NULL-RCV-CAT', $report['rows'][0][0] ?? null);
@@ -377,7 +377,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('catalog', $dates['from'], $dates['to']);
+        $report = $hub->build('catalog', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('01/07/2026 — 03/07/2026', $report['period_label']);
 
@@ -403,7 +403,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('catalog', $dates['from'], $dates['to']);
+        $report = $hub->build('catalog', $dates['from'], $dates['to'], $admin);
 
         $this->assertContains('أسعار متعددة', $report['headers']);
         $this->assertNotEmpty($report['rows']);
@@ -450,13 +450,13 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('inventory-overview', $dates['from'], $dates['to']);
+        $report = $hub->build('inventory-overview', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('متابعة حركة الأصناف', $report['title']);
         $this->assertSame(['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الرصيد'], $report['headers']);
 
         $issueRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'صرف / بيع');
-        $returnRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'ارتجاع من الورشة');
+        $returnRow = collect($report['rows'])->first(fn ($row) => ($row[2] ?? '') === 'RM-MOVE-RPT' && ($row[1] ?? '') === 'ارتجاع من قسم الإنتاج');
 
         $this->assertNotNull($issueRow);
         $this->assertSame('ركبة تجريبية', $issueRow[3]);
@@ -503,7 +503,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('inventory', $dates['from'], $dates['to']);
+        $report = $hub->build('inventory', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('تحليلات المخزون', $report['title']);
         $this->assertSame(
@@ -542,12 +542,12 @@ class AdminReportsPageTest extends TestCase
         $case->update(['work_order_no' => 'WO-RPT-RET']);
 
         $this->actingAs($ops);
-        // إصدار 3 وحدات حتى يُسمح بارتجاع وحدتين (تبقى وحدة في الورشة).
+        // إصدار 3 وحدات حتى يُسمح بارتجاع وحدتين (تبقى وحدة في قسم الإنتاج).
         $bom = app(BomService::class)->createSpecRaw($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 3],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
+        $this->releaseBomToWip($bom->fresh(), ['BC-RM-001', 'BC-RM-001', 'BC-RM-001']);
 
         $note = app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -566,7 +566,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('returns', $dates['from'], $dates['to']);
+        $report = $hub->build('returns', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('طلبات الارتجاع', $report['title']);
         $this->assertNotEmpty($report['row_actions']);
@@ -601,7 +601,7 @@ class AdminReportsPageTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1],
         ]);
         $bom->items()->update(['unit_cost' => 200]);
-        app(BomService::class)->releaseToWip($bom->fresh(), ['BC-RM-001']);
+        $this->releaseBomToWip($bom->fresh(), ['BC-RM-001']);
 
         $note = app(ReturnNoteService::class)->create(
             $bom->fresh(),
@@ -615,7 +615,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('returns', $dates['from'], $dates['to']);
+        $report = $hub->build('returns', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame([], $report['rows']);
 
@@ -633,7 +633,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('spec-edit-requests', $dates['from'], $dates['to']);
+        $report = $hub->build('spec-edit-requests', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('طلبات تعديل التوصيف', $report['title']);
         $this->assertSame(
@@ -658,7 +658,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('suppliers', $dates['from'], $dates['to']);
+        $report = $hub->build('suppliers', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('الموردون', $report['title']);
         $this->assertContains($supplier->name, array_column($report['rows'], 0));
@@ -681,7 +681,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('stock-categories', $dates['from'], $dates['to']);
+        $report = $hub->build('stock-categories', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('أقسام الأصناف', $report['title']);
         $this->assertSame([], $report['summary']);
@@ -721,7 +721,7 @@ class AdminReportsPageTest extends TestCase
         $from = now()->startOfMonth()->toDateString();
         $to = now()->endOfMonth()->toDateString();
 
-        foreach (['services-approvals', 'workshop-sections', 'workshop-tracking', 'dispense-approvals'] as $section) {
+        foreach (['services-approvals', 'workshop-sections', 'workshop-tracking', 'dispense-approvals', 'authorizations', 'production-assignment'] as $section) {
             $this->actingAs($admin)
                 ->get('/admin/reports/'.$section.'?from='.$from.'&to='.$to)
                 ->assertOk()
@@ -734,6 +734,9 @@ class AdminReportsPageTest extends TestCase
 
     public function test_dashboard_page_data_includes_general_view_and_reports_hub(): void
     {
+        $admin = $this->userWithRole('admin');
+        $this->actingAs($admin);
+
         $general = app(DashboardPageDataService::class)->resolve('admin', 'general-view');
         $hub = app(DashboardPageDataService::class)->resolve('admin', 'reports');
 
@@ -824,7 +827,7 @@ class AdminReportsPageTest extends TestCase
 
         $hub = app(AdminReportsHubService::class);
         $dates = $hub->parseDateRange($from, $to);
-        $report = $hub->build('inventory-valuation', $dates['from'], $dates['to']);
+        $report = $hub->build('inventory-valuation', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('تقييم المخزون', $report['title']);
         $this->assertSame('15', $report['summary'][1]['value'] ?? null);

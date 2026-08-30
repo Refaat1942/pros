@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\MedicalRecord;
 
+use App\Enums\WorkflowEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MedicalRecord\StoreMedicalRecordRequest;
 use App\Models\Appointment;
@@ -10,6 +11,7 @@ use App\Models\MedicalRecord;
 use App\Services\Dashboard\DashboardQueueService;
 use App\Services\DoctorTransferService;
 use App\Services\MedicalRecordService;
+use App\Services\PathwayTransitionMessageService;
 use App\Support\ClinicTime;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +26,7 @@ class MedicalRecordController extends Controller
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
         private readonly DoctorTransferService $doctorTransferService,
+        private readonly PathwayTransitionMessageService $transitions,
     ) {}
 
     /**
@@ -94,12 +97,24 @@ class MedicalRecordController extends Controller
     {
         $record = $this->medicalRecordService->saveDraft($request->validated());
 
+        $fromStage = CaseRecord::STAGE_EXAM;
         if ($request->boolean('lock')) {
+            $fromStage = $record->caseRecord?->stage_key ?? CaseRecord::STAGE_EXAM;
             $record = $this->medicalRecordService->lock($record);
         }
 
         if ($request->expectsJson()) {
-            return response()->json($this->formatRecord($record), 201);
+            $payload = $this->formatRecord($record);
+
+            if ($request->boolean('lock') && $record->caseRecord) {
+                $payload['message'] = $this->transitions->transferMessage(
+                    $record->caseRecord->load('patient'),
+                    WorkflowEvent::ExamApproved->value,
+                    $fromStage,
+                );
+            }
+
+            return response()->json($payload, 201);
         }
 
         return redirect()
@@ -117,7 +132,11 @@ class MedicalRecordController extends Controller
         $case = $this->medicalRecordService->skipExam($appointment);
 
         return response()->json([
-            'message' => 'تم تخطّي الكشف وتحويل الحالة للتوصيف.',
+            'message' => $this->transitions->transferMessage(
+                $case->load('patient'),
+                WorkflowEvent::ExamSkipped->value,
+                CaseRecord::STAGE_RECEPTION,
+            ),
             'case' => $this->formatCaseForDoctor($case),
         ]);
     }
@@ -127,12 +146,23 @@ class MedicalRecordController extends Controller
      */
     public function lock(MedicalRecord $record): JsonResponse
     {
+        $fromStage = $record->caseRecord?->stage_key ?? CaseRecord::STAGE_EXAM;
         $record = $this->medicalRecordService->lock($record);
 
-        return response()->json([
+        $payload = [
             'record' => $this->formatRecord($record),
             'case' => $this->formatCaseForDoctor($record->caseRecord),
-        ]);
+        ];
+
+        if ($record->caseRecord) {
+            $payload['message'] = $this->transitions->transferMessage(
+                $record->caseRecord->load('patient'),
+                WorkflowEvent::ExamApproved->value,
+                $fromStage,
+            );
+        }
+
+        return response()->json($payload);
     }
 
     /**

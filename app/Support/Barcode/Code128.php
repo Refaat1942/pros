@@ -35,7 +35,7 @@ final class Code128
     /**
      * يبني SVG للباركود.
      */
-    public static function svg(string $data, int $height = 50, float $moduleWidth = 1.4, int $quietZone = 10): string
+    public static function svg(string $data, int $height = 50, float $moduleWidth = 2.0, int $quietZone = 14): string
     {
         return self::renderSvg($data, $height, $moduleWidth, $quietZone);
     }
@@ -48,18 +48,18 @@ final class Code128
         int $height,
         float $moduleWidth,
         float $maxWidthPx,
-        int $quietZone = 10,
+        int $quietZone = 14,
     ): string {
         $width = max(20.0, $moduleWidth);
 
-        while ($width >= 0.5) {
+        while ($width >= 0.85) {
             if (self::estimatedWidthPx($data, $width, $quietZone) <= $maxWidthPx) {
                 return self::renderSvg($data, $height, $width, $quietZone);
             }
             $width = round($width - 0.05, 2);
         }
 
-        return self::renderSvg($data, $height, 0.5, $quietZone);
+        return self::renderSvg($data, $height, 0.85, $quietZone);
     }
 
     private static function estimatedWidthPx(string $data, float $moduleWidth, int $quietZone): float
@@ -85,13 +85,13 @@ final class Code128
         $totalUnits = $unitCount + ($quietZone * 2);
         $svgWidth = round($totalUnits * $moduleWidth, 2);
 
-        $x = $quietZone * $moduleWidth;
+        $x = (int) round($quietZone * $moduleWidth);
         $rects = '';
 
         foreach ($modules as [$width, $isBar]) {
-            $w = $width * $moduleWidth;
+            $w = (int) max(1, round($width * $moduleWidth));
             if ($isBar) {
-                $rects .= '<rect x="'.round($x, 2).'" y="0" width="'.round($w, 2)
+                $rects .= '<rect x="'.$x.'" y="0" width="'.$w
                     .'" height="'.$height.'" fill="#000"/>';
             }
             $x += $w;

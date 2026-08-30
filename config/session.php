@@ -31,7 +31,7 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', env('SESSION_IDLE_TIMEOUT', 5)),
+    'lifetime' => (int) env('SESSION_LIFETIME', 1440),
 
     'expire_on_close' => false,
 
@@ -40,12 +40,12 @@ return [
     | Idle Session Timeout (minutes)
     |--------------------------------------------------------------------------
     |
-    | After this many minutes without activity the user is logged out and
-    | must sign in again. Enforced by EnforceIdleSessionTimeout middleware.
+    | After this many minutes without activity the user is logged out.
+    | Set to 0 to disable idle logout (recommended for offline LAN kiosks).
     |
     */
 
-    'idle_timeout' => (int) env('SESSION_IDLE_TIMEOUT', 5),
+    'idle_timeout' => (int) env('SESSION_IDLE_TIMEOUT', 0),
 
     /*
     |--------------------------------------------------------------------------

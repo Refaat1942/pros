@@ -43,7 +43,7 @@ class UserFactory extends Factory
                 Role::SLUG_ADJUSTMENTS => 'فني تعديلات',
                 Role::SLUG_COSTING => 'فني تكاليف',
                 Role::SLUG_OPERATIONS => 'مكتب عمليات',
-                Role::SLUG_WORKSHOP => 'ورشة التصنيع',
+                Role::SLUG_WORKSHOP => 'قسم الإنتاج',
                 Role::SLUG_TECHNICAL => 'مسؤول مخزن',
             ];
 

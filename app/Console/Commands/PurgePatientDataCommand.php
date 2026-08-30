@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\AdminOverviewService;
 use App\Services\PatientDataPurgeService;
 use Illuminate\Console\Command;
 
@@ -20,7 +21,9 @@ class PurgePatientDataCommand extends Command
     public function handle(PatientDataPurgeService $purge): int
     {
         if (! $purge->hasPatientRelatedData()) {
+            AdminOverviewService::clearBiBoardsCache();
             $this->info('لا توجد بيانات مرتبطة بالمرضى للحذف.');
+            $this->line('تم تحديث ذاكرة لوحات القيادة في نظرة عامة الإدارة.');
 
             return self::SUCCESS;
         }
@@ -44,6 +47,8 @@ class PurgePatientDataCommand extends Command
             ['الجدول / الإجراء', 'العدد'],
             collect($counts)->map(fn (int $count, string $key) => [$key, $count])->values()->all(),
         );
+
+        $this->line('تم تحديث ذاكرة لوحات القيادة في نظرة عامة الإدارة.');
 
         $this->newLine();
         $this->line('✅ محفوظ: المستخدمون — الأدوار — المخزن والأصناف — الموردون — الجهات — الرتب — إعدادات المسار والتكاليف');

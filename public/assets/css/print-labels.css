@@ -366,11 +366,11 @@ body.labels-body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 0.6mm;
-    padding: 1mm;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 1.4mm 1mm 1.2mm;
     padding-left: calc(1mm + var(--offset-x));
-    padding-top: calc(1mm + var(--offset-y));
+    padding-top: calc(1.4mm + var(--offset-y));
     overflow: hidden;
     page-break-inside: avoid;
     box-sizing: border-box;
@@ -383,11 +383,15 @@ body.labels-body {
     font-weight: 900;
     text-align: center;
     line-height: 1.1;
-    max-height: 6mm;
+    max-height: 5.5mm;
     overflow: hidden;
     flex: 0 0 auto;
     width: 100%;
     color: #000;
+    margin: 0 0 2mm 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 .label .barcode {
@@ -399,6 +403,24 @@ body.labels-body {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin: 0;
+    padding: 0.5mm 0;
+}
+
+.label .barcode-svg-wrap {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    line-height: 0;
+}
+
+.label .barcode-svg-wrap svg {
+    display: block;
+    width: auto !important;
+    max-width: 100%;
+    height: auto !important;
+    max-height: calc(var(--label-height) * var(--barcode-height-pct) / 100);
+    margin: 0 auto;
 }
 
 .label .barcode-img {
@@ -408,8 +430,9 @@ body.labels-body {
     max-width: 100%;
     max-height: calc(var(--label-height) * var(--barcode-height-pct) / 100);
     object-fit: contain;
+    image-rendering: pixelated;
     image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
+    filter: contrast(1.75);
 }
 
 .label .barcode svg {
@@ -419,16 +442,21 @@ body.labels-body {
 }
 
 .label .code {
-    font-size: 7pt;
+    font-size: 7.5pt;
     font-weight: 900;
     direction: ltr;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.4px;
     flex: 0 0 auto;
     text-align: center;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     color: #000;
+    margin: 2mm 0 0 0;
+    padding: 0;
+    line-height: 1.1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 @media print {
@@ -468,7 +496,11 @@ body.labels-body {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
+        gap: 0;
+        padding: 1.4mm 1mm 1.2mm;
+        padding-left: calc(1mm + var(--offset-x));
+        padding-top: calc(1.4mm + var(--offset-y));
         page-break-after: always;
         break-after: page;
         -webkit-print-color-adjust: exact;
@@ -479,12 +511,22 @@ body.labels-body {
     .label .code {
         color: #000 !important;
         font-weight: 900 !important;
+        -webkit-text-stroke: 0.2px #000;
+    }
+
+    .label .name {
+        margin-bottom: 2mm !important;
+    }
+
+    .label .code {
+        margin-top: 2mm !important;
     }
 
     .label .barcode-img {
         visibility: visible !important;
         opacity: 1 !important;
-        filter: contrast(1.35);
+        filter: contrast(2) !important;
+        image-rendering: pixelated !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }

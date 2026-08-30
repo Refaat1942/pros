@@ -16,6 +16,7 @@ class StoreCatalogItemRequest extends BaseRequest
             'code' => ['nullable', 'string', 'max:100', 'unique:stock_items,code'],
             'page_number' => ['nullable', 'string', 'max:50'],
             'name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:120'],
             'alt_codes' => ['nullable', 'string', 'max:500'],
             'uom' => ['nullable', 'string', 'max:50'],
             'qty' => ['nullable', 'integer', 'min:0'],

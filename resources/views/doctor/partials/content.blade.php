@@ -195,7 +195,7 @@
       <div id="analytics-transfer">@include('partials.dashboard-analytics-empty', ['stats' => [
         ['icon' => '🔧', 'label' => 'محول', 'value' => '0', 'bg' => 'rgba(14,116,144,0.1)'],
         ['icon' => '⚙️', 'label' => 'قيد التوصيف', 'value' => '0', 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-        ['icon' => '🏭', 'label' => 'في الورشة', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+        ['icon' => '🏭', 'label' => 'في قسم الإنتاج', 'value' => '0', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
         ['icon' => '✅', 'label' => 'مكتمل', 'value' => '0', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
       ]])</div>
       <div class="panel">
@@ -208,7 +208,7 @@
           <select id="transferStatusFilter">
             <option value="all">كل الحالات</option>
             <option value="قيد التوصيف">قيد التوصيف</option>
-            <option value="في الورشة">في الورشة</option>
+            <option value="في قسم الإنتاج">في قسم الإنتاج</option>
             <option value="مكتمل">مكتمل</option>
           </select>
           <span class="toolbar-count" id="transferCount">0 حالة</span>

@@ -39,7 +39,7 @@
     <div class="header">
         <div>
             <h1>Smart Prosthetics ERP<br>System Blueprint</h1>
-            <div class="sub">Business overview for management, IT, and operations staff · Version 1.0 · August 2026</div>
+            <div class="sub">Business overview for management, IT, and operations staff · Version 1.1 · August 2026</div>
         </div>
         <div class="badge">Blueprint<br>1 / 7</div>
     </div>
@@ -108,11 +108,12 @@
     <p>For civilians, the receptionist also links the patient to a <strong>contract company</strong> (insurer, union, employer) with coverage rules. For military patients, rank and sovereign entity are recorded instead.</p>
 
     <h2>5. Shared Clinical Path (Both Types)</h2>
-    <div class="diagram">Reception → Medical exam → Technical specification → Adjustments → Cost calculation
+    <div class="diagram">Reception → Medical exam → Technical specification → Adjustments &amp; costs → Approval (costing)
          ↓              ↓                    ↓                  ↓              ↓
     Patient file   Doctor diagnosis    Spec engineer picks   Fitting items   Pricing engine
     + QR card      + prescription      components (codes     confirmed       runs in background
-                                       only — no prices)</div>
+                                       only — no prices)      (read-only spec   then approval desk
+                                                              items added)     confirms selling price</div>
 
     <h3>Blind specification rule</h3>
     <p>During technical specification, the specialist sees <strong>item codes and quantities only</strong>. Purchase prices and warehouse balances are hidden so clinical decisions stay independent of finance and stock pressure.</p>
@@ -125,7 +126,7 @@
         <tr><td>3. Operations release</td><td>On successful validation, case unfreezes and receives a central <strong>work order number</strong>.</td></tr>
         <tr><td>4. Cash patients (optional)</td><td>Patients without a contract company pass through the <strong>cashier</strong> for payment before manufacturing.</td></tr>
         <tr><td>5. Warehouse dispense</td><td>Storekeeper scans barcodes against the approved BOM. Mismatch = blocked + audit alert.</td></tr>
-        <tr><td>6. Manufacturing</td><td>Workshop completes production stages (generation → assembly → casting → finishing).</td></tr>
+        <tr><td>6. Manufacturing</td><td><strong>Production department</strong> assigns technicians, tracks progress %, and completes production stages (generation → assembly → casting → finishing).</td></tr>
         <tr><td>7. Delivery</td><td>Reception scans patient QR at delivery. Case closes. Invoice/debt posts to contract entity.</td></tr>
     </table>
 
@@ -135,7 +136,7 @@
         <tr><td>After cost calculation</td><td><strong>No quote</strong> and <strong>no payment wait</strong>. Cost is calculated silently for reporting only.</td></tr>
         <tr><td>Services approval (optional)</td><td>Certain beneficiary categories may require an internal services approval step before operations.</td></tr>
         <tr><td>Operations</td><td>Case auto-advances to operations and is auto-approved for manufacturing.</td></tr>
-        <tr><td>Manufacturing & delivery</td><td>Same warehouse barcode rules and workshop stages as civilian path.</td></tr>
+        <tr><td>Manufacturing & delivery</td><td>Same warehouse barcode rules and production-department stages as civilian path.</td></tr>
         <tr><td>Financial close</td><td>Cost rolls to <strong>sovereign military debt</strong> reports — not patient billing.</td></tr>
     </table>
 
@@ -157,7 +158,7 @@
     </div>
 
     <h2>8. Main Case Pipeline</h2>
-    <div class="diagram">reception → exam → technical → adjustments → cost_calc
+    <div class="diagram">reception → exam → technical → adjustments → cost_calc (approval)
     → [services_approval] → quote → operations → [cashier]
     → manufacturing → ready_delivery → delivered → closed</div>
     <p>Stages in brackets are conditional (pathway configuration or patient type).</p>
@@ -168,11 +169,11 @@
         <tr><th>Staff action</th><th>Automatic result</th></tr>
         <tr><td>Doctor approves exam</td><td>Case appears in technical specification queue</td></tr>
         <tr><td>Spec engineer saves BOM items</td><td>Pricing engine runs in background</td></tr>
-        <tr><td>Costing confirmed (civilian)</td><td>Quote generated; case frozen pending approval</td></tr>
+        <tr><td>Costing confirmed (civilian)</td><td>Quote generated from <strong>Approval</strong> desk; case frozen pending contract approval</td></tr>
         <tr><td>Costing confirmed (military)</td><td>Case jumps to operations — no quote step</td></tr>
         <tr><td>Approval QR scanned (civilian)</td><td>Work order released; warehouse can dispense</td></tr>
-        <tr><td>Barcode dispense completed</td><td>Stock updated; workshop notified; WIP started</td></tr>
-        <tr><td>Workshop marks finished</td><td>Case moves to “ready for delivery”</td></tr>
+        <tr><td>Barcode dispense completed</td><td>Stock updated; production department notified; WIP started</td></tr>
+        <tr><td>Production marks finished</td><td>Case moves to “ready for delivery”</td></tr>
         <tr><td>Delivery QR scanned</td><td>Case closed; financial posting executed</td></tr>
     </table>
 
@@ -217,16 +218,18 @@
                   • Quote price  = qty × Highest Purchase Price (sales basis)
                   • Internal cost = qty × WAC (true inventory cost)
        ↓
-④ COSTING       Add overhead components + profit margin → selling price → Quote (civilian)
+④ APPROVAL       Approval desk (formerly costing) adds overhead + profit → selling price → Quote (civilian)
        ↓
-⑤ APPROVAL      Contract entity approves quote (civilian) OR auto-release (military)
+⑤ CONTRACT APPROVAL Contract entity approves quote (civilian) OR auto-release (military)
        ↓
 ⑥ OPERATIONS    Work order issued → BOM created (raw) → qty reserved on stock
+                  (Operations does <strong>not</strong> assign technicians)
        ↓
 ⑦ WAREHOUSE     Barcode scan each item → StockMovement (issue) → qty DEDUCTED from stock
                   → WIP stage → Civilian: contract debt POSTED on dispense
        ↓
-⑧ WORKSHOP      Manufacturing sub-stages → BOM finished
+⑧ PRODUCTION    Production department assigns technician + section; progress % tracked on dashboard
+                  → Manufacturing sub-stages → BOM finished
        ↓
 ⑨ DELIVERY      Patient QR scan → case closed
                   → Military: sovereign debt posted
@@ -241,7 +244,7 @@
         <tr><td>Goods received (warehouse inward scan)</td><td>Qty increases; WAC recalculated; price batch stored</td><td>Inventory asset value rises (WAC × qty)</td></tr>
         <tr><td>BOM created at operations</td><td>Required qty reserved against catalog</td><td>No ledger yet — planning only</td></tr>
         <tr><td>Barcode dispense (per BOM line)</td><td>Qty decremented; <code>StockMovement</code> logged at <strong>current WAC</strong>; case <code>issue_cost</code> snapshot stored</td><td>Civilian: contract entity debt increased (quote total); cost side = WAC at dispense</td></tr>
-        <tr><td>Material return (authorized)</td><td>Qty restored at WAC unit cost</td><td>Reversal / adjustment audited</td></tr>
+        <tr><td>Material return (authorized)</td><td>Qty restored at <strong>same WAC unit cost</strong> as original dispense; case <code>issue_cost</code> recalculated</td><td>Reversal / adjustment audited</td></tr>
         <tr><td>Delivery closed</td><td>No further stock change</td><td>Military: sovereign debt entry; civilian: final account closure</td></tr>
         <tr><td>Debt collection (finance)</td><td>No stock change</td><td>ContractCompanyDebt.collected increases; remaining balance drops</td></tr>
     </table>
@@ -282,12 +285,12 @@
         <tr><td>Reception</td><td>Patient registration, appointments, quote handover, approval scan, delivery QR</td><td>Quote totals only — no purchase costs</td></tr>
         <tr><td>Doctor</td><td>Clinic queue, medical records, exam approval, transfer to spec</td><td>Blocked — no prices</td></tr>
         <tr><td>Spec engineer</td><td>Technical specification — component codes & quantities</td><td>Blocked — no prices, no stock qty</td></tr>
-        <tr><td>Adjustments desk</td><td>Fitting / adjustment items before costing</td><td>Blocked</td></tr>
-        <tr><td>Costing desk</td><td>Confirm costs, trigger quote (civilian)</td><td>Cost view for pricing role</td></tr>
-        <tr><td>Operations office</td><td>Approve/reject cases, release work orders</td><td>Operational view</td></tr>
+        <tr><td>Adjustments &amp; costs desk</td><td>Fitting / adjustment items before approval; spec lines read-only</td><td>Blocked</td></tr>
+        <tr><td>Approval desk</td><td>Confirm costs, trigger quote (civilian) — UI label: <strong>الاعتماد</strong></td><td>Cost view for pricing role</td></tr>
+        <tr><td>Operations office</td><td>Approve/reject cases, release work orders — no technician assignment</td><td>Operational view</td></tr>
         <tr><td>Cashier</td><td>Cash payment collection (cash civilians)</td><td>Payment amounts</td></tr>
         <tr><td>Warehouse (Technical)</td><td>Stock receive, BOM barcode dispense, returns</td><td>Quantities & specs — no purchase profit view</td></tr>
-        <tr><td>Workshop</td><td>Manufacturing queue, material returns, production stages</td><td>Production status</td></tr>
+        <tr><td>Production department</td><td>Manufacturing queue, technician assignment &amp; progress board, material returns</td><td>Production status</td></tr>
     </table>
 
     <h2>16. Admin — Five BI Command Boards</h2>
@@ -295,7 +298,7 @@
         <tr><th>#</th><th>Board</th><th>Key indicators</th></tr>
         <tr><td>1</td><td>Patients & SLA</td><td>Total/open cases, civilian/military split, average turnaround, SLA breaches</td></tr>
         <tr><td>2</td><td>Inventory</td><td>Stock value (WAC), low stock alerts, stagnant items (&gt;180 days)</td></tr>
-        <tr><td>3</td><td>Operations</td><td>Open work orders, awaiting dispense, in workshop, ready for delivery</td></tr>
+        <tr><td>3</td><td>Operations</td><td>Open work orders, awaiting dispense, in production, ready for delivery</td></tr>
         <tr><td>4</td><td>Entities & costs</td><td>Civilian contract debts, military sovereign debt, cash collected — paths separated</td></tr>
         <tr><td>5</td><td>Purchasing</td><td>WAC vs highest purchase price, supplier price trends</td></tr>
     </table>
@@ -386,7 +389,7 @@
     <table>
         <tr><th>BOM state</th><th>Meaning</th><th>Stock impact</th></tr>
         <tr><td>Raw</td><td>Approved material list — awaiting dispense</td><td>Qty reserved; not yet deducted</td></tr>
-        <tr><td>WIP</td><td>Materials dispensed to workshop</td><td>Qty deducted via barcode; StockMovement issued</td></tr>
+        <tr><td>WIP</td><td>Materials dispensed to production department</td><td>Qty deducted via barcode; StockMovement issued</td></tr>
         <tr><td>Finished</td><td>Prosthetic manufacturing complete</td><td>Ready for patient delivery</td></tr>
     </table>
 
@@ -406,7 +409,7 @@
     <ul>
         <li>Contract companies and coverage rules</li>
         <li>Military ranks and beneficiary categories</li>
-        <li>Stock catalog, categories, suppliers, kits</li>
+        <li>Stock catalog (10-column Excel template incl. <strong>base price</strong>), categories, suppliers, kits</li>
         <li>Visit types, pathway steps, costing modes</li>
         <li>Users, roles, and permission defaults</li>
     </ul>

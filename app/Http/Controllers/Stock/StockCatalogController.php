@@ -8,10 +8,12 @@ use App\Http\Requests\Stock\StoreCatalogItemRequest;
 use App\Http\Requests\Stock\UpdateCatalogItemRequest;
 use App\Models\StockItem;
 use App\Models\Supplier;
+use App\Services\CatalogListVisibilityService;
 use App\Services\StockCatalogService;
 use App\Services\StockImportService;
 use App\Services\StockItemSalesStatsService;
 use App\Services\StockPriceService;
+use App\Support\CatalogImportValidator;
 use App\Support\Barcode\Code128;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
@@ -48,16 +50,26 @@ class StockCatalogController extends Controller
             ->when($request->category_id, fn ($q, $id) => $q->where('category_id', $id))
             ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('brand', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('barcode', 'like', "%{$search}%");
             }))
             ->orderByDesc('id');
 
         $items = $this->fetchForDashboard($query);
+        $user = $request->user();
+        $visibility = app(CatalogListVisibilityService::class);
 
         return response()->json([
-            'data' => $items->map(fn (StockItem $item) => $this->catalogService->formatItem($item))->values(),
+            'data' => $items->map(function (StockItem $item) use ($user, $visibility) {
+                $formatted = $this->catalogService->formatItem($item);
+
+                return $user
+                    ? $visibility->filterItemFields($formatted, $user, 'admin_catalog')
+                    : $formatted;
+            })->values(),
             'total' => $items->count(),
+            'columns' => $visibility->tableOrderForUser($user, 'admin_catalog'),
         ]);
     }
 
@@ -168,21 +180,35 @@ class StockCatalogController extends Controller
     public function import(Request $request, StockImportService $importService): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:5120'],
+            'file' => ['required', 'file', 'max:20480'],
         ], [
             'file.required' => 'يرجى اختيار ملف Excel أو CSV.',
-            'file.mimes' => 'الملف يجب أن يكون بصيغة Excel (.xlsx) أو CSV.',
+            'file.max' => 'حجم الملف يتجاوز 20 ميجا — قسّم الشيت أو احذف التنسيق الزائد من Excel.',
         ]);
 
-        $summary = $importService->import($request->file('file'));
+        $uploaded = $request->file('file');
+        if ($uploaded === null || ! CatalogImportValidator::isAllowed($uploaded)) {
+            return $this->importValidationFailure($request, 'الملف يجب أن يكون بصيغة Excel (.xlsx) أو CSV.');
+        }
+
+        $summary = $importService->import($uploaded);
 
         $message = "تم الاستيراد: {$summary['created']} صنف جديد، {$summary['updated']} محدَّث، {$summary['skipped']} متخطّى.";
 
         if ($request->expectsJson()) {
+            $user = $request->user();
+            $visibility = app(CatalogListVisibilityService::class);
+
             return response()->json([
                 'message' => $message,
                 'summary' => $summary,
-                'items' => $this->catalogService->listForDashboard()->values(),
+                'items' => $this->catalogService->listForDashboard()
+                    ->map(function (array $item) use ($user, $visibility) {
+                        return $user
+                            ? $visibility->filterItemFields($item, $user, 'admin_catalog')
+                            : $item;
+                    })
+                    ->values(),
             ]);
         }
 
@@ -205,6 +231,39 @@ class StockCatalogController extends Controller
     }
 
     /**
+     * باركود كبير على الشاشة — للمسح بماسح USB بدون طابعة.
+     */
+    public function screenBarcode(StockItem $stockItem): Response
+    {
+        $barcode = $this->resolveDisplayBarcode($stockItem);
+
+        if ($barcode === null) {
+            return response()->view('admin.print.barcode-screen-missing', [
+                'name' => $stockItem->name,
+            ]);
+        }
+
+        $svg = Code128::svgFit(
+            $barcode,
+            height: 96,
+            moduleWidth: 2.8,
+            maxWidthPx: 720,
+            quietZone: 18,
+        );
+
+        return response()->view('admin.print.barcode-screen', [
+            'name' => $stockItem->name,
+            'barcode' => $barcode,
+            'svg_data_uri' => 'data:image/svg+xml;base64,'.base64_encode($svg),
+        ]);
+    }
+
+    private function resolveDisplayBarcode(StockItem $stockItem): ?string
+    {
+        return $stockItem->displayBarcode();
+    }
+
+    /**
      * طباعة باركود لعدة أصناف دفعة واحدة — ids[] + عدد النسخ + إحداثيات قابلة للضبط.
      */
     public function labelsBulk(Request $request): Response
@@ -217,11 +276,10 @@ class StockCatalogController extends Controller
             ->values();
 
         $items = StockItem::query()->whereIn('id', $ids)->orderBy('name')->get();
-        $copies = max(1, min(200, (int) $request->integer('copies', 1)));
         $settings = $this->labelSettings($request);
 
         return response()->view('admin.print.barcode-labels', [
-            'labels' => $this->buildLabels($items->all(), $copies, $settings),
+            'labels' => $this->buildLabelsForStockBalance($items->all(), $settings),
             'settings' => $settings,
             'heading' => $items->count().' صنف',
         ]);
@@ -256,8 +314,14 @@ class StockCatalogController extends Controller
         return [
             'page_margin' => round((float) $request->query('page_margin', '0'), 2),
             'gap' => round((float) $request->query('gap', '0'), 2),
-            'module_width' => max(0.5, min(3.0, round((float) $request->query('module_width', '1.0'), 2))),
-            'barcode_height' => max(16, min(80, (int) $request->integer('barcode_height', 28))),
+            'module_width' => max(0.5, min(3.0, round((float) $request->query(
+                'module_width',
+                (string) ($defaults['module_width'] ?? 1.5),
+            ), 2))),
+            'barcode_height' => max(16, min(80, (int) $request->integer(
+                'barcode_height',
+                (int) ($defaults['barcode_height'] ?? 34),
+            ))),
             'barcode_width_pct' => max(20.0, min(95.0, round((float) $request->query(
                 'barcode_width_pct',
                 (string) ($defaults['barcode_width_pct'] ?? 65),
@@ -302,19 +366,26 @@ class StockCatalogController extends Controller
         $maxWidthPx = ($labelWidthMm * ($widthPct / 100)) * ($dpi / 25.4);
         $maxHeightPx = (int) round(($labelHeightMm * ($heightPct / 100)) * ($dpi / 25.4));
         $barcodeHeight = min((int) ($settings['barcode_height'] ?? 28), max(16, $maxHeightPx));
+        $quietZone = max(8, min(24, (int) config('label-print.quiet_zone_modules', 14)));
 
         foreach ($items as $item) {
+            $barcode = $item->displayBarcode();
+            if ($barcode === null) {
+                continue;
+            }
+
             $svg = Code128::svgFit(
-                (string) $item->barcode,
+                $barcode,
                 height: $barcodeHeight,
                 moduleWidth: $moduleWidth,
                 maxWidthPx: $maxWidthPx,
+                quietZone: $quietZone,
             );
             $dataUri = 'data:image/svg+xml;base64,'.base64_encode($svg);
             for ($i = 0; $i < $copies; $i++) {
                 $labels[] = [
                     'name' => (string) $item->name,
-                    'barcode' => (string) $item->barcode,
+                    'barcode' => $barcode,
                     'svg' => $svg,
                     'svg_data_uri' => $dataUri,
                 ];
@@ -322,6 +393,35 @@ class StockCatalogController extends Controller
         }
 
         return $labels;
+    }
+
+    /**
+     * ملصقات دفعة — نسخة واحدة لكل وحدة في رصيد المخزن (عمود qty / warehouse_qty في الكتالوج).
+     *
+     * @param  list<StockItem>  $items
+     * @param  array<string, mixed>  $settings
+     * @return list<array{name:string, barcode:string, svg:string, svg_data_uri:string}>
+     */
+    private function buildLabelsForStockBalance(array $items, array $settings): array
+    {
+        $labels = [];
+
+        foreach ($items as $item) {
+            $copies = $this->labelCopiesForWarehouseQty($item);
+            if ($copies === 0) {
+                continue;
+            }
+
+            $labels = array_merge($labels, $this->buildLabels([$item], $copies, $settings));
+        }
+
+        return $labels;
+    }
+
+    /** عدد الملصقات لصنف — رصيد المخزن الفعلي (عدد صحيح، بحد أقصى 200 مثل copies). */
+    private function labelCopiesForWarehouseQty(StockItem $item): int
+    {
+        return min(200, max(0, (int) $item->qty));
     }
 
     /**
@@ -337,5 +437,14 @@ class StockCatalogController extends Controller
         return response()->json(
             $this->salesStatsService->breakdownForItem($stockItem, $range['from'], $range['to'])
         );
+    }
+
+    private function importValidationFailure(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message, 'errors' => ['file' => [$message]]], 422);
+        }
+
+        return back()->withErrors(['file' => $message]);
     }
 }

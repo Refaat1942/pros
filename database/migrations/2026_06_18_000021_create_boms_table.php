@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('quote_no')->nullable();
             $table->string('patient_name');
             $table->string('stage')->default('raw'); // raw | wip | finished
-            $table->timestamp('released_at')->nullable(); // تاريخ الصرف للورشة
+            $table->timestamp('released_at')->nullable(); // تاريخ الصرف لقسم الإنتاج
             $table->timestamp('finished_at')->nullable(); // تاريخ الإغلاق «تام»
             $table->timestamps();
 

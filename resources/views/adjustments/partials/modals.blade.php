@@ -36,6 +36,7 @@
                   <th>الصنف</th>
                   <th>الكمية</th>
                   <th>الوحدة</th>
+                  <th>سعر الصنف</th>
                 </tr>
               </thead>
               <tbody id="adjSpecItems"></tbody>
@@ -54,6 +55,7 @@
                 <th>الصنف</th>
                 <th>الكمية</th>
                 <th>الوحدة</th>
+                <th>سعر الصنف</th>
                 <th>المصدر</th>
                 <th class="adj-col-action" aria-label="إجراءات"></th>
               </tr>
@@ -77,7 +79,7 @@
             </div>
             <div class="form-group adj-qty-field">
               <label for="adjItemQty">الكمية</label>
-              <input type="number" class="form-control" id="adjItemQty" min="1" value="1" disabled>
+              <input type="number" class="form-control" id="adjItemQty" min="0.001" step="0.001" value="1" disabled>
             </div>
             <button type="button" class="btn-action primary adj-add-btn" id="btnAddAdjItem" disabled>إضافة</button>
           </div>
@@ -86,7 +88,7 @@
 
         <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button type="button" class="btn-view" id="btnCancelAdj">إغلاق النافذة</button>
-          <button type="button" class="btn-action success" id="btnCompleteAdj">📤 إرسال للتكاليف</button>
+          <button type="button" class="btn-action success" id="btnCompleteAdj">📤 إرسال إلى الاعتماد</button>
           <button type="button" class="btn-action primary" id="btnSubmitAdjEditRequest" hidden>📨 إرسال طلب التعديل للإدارة</button>
         </div>
       </div>

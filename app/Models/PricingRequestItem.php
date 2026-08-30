@@ -21,7 +21,7 @@ class PricingRequestItem extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'decimal:3',
         'unit_price' => 'decimal:2',
         'line_total' => 'decimal:2',
     ];

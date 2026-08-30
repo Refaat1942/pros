@@ -150,7 +150,7 @@
     loadEligibleBoms()
       .then(function (boms) {
         if (!boms.length) {
-          toast('⚠️ لا توجد BOM في «تحت التشغيل» ببنود قابلة للارتجاع — قد تكون الكمية محجوزة في طلب ارتجاع معلّق أو لا يتبقى سوى وحدة واحدة في الورشة.', true);
+          toast('⚠️ لا توجد BOM في «تحت التشغيل» ببنود قابلة للارتجاع — قد تكون الكمية محجوزة في طلب ارتجاع معلّق أو لا يتبقى سوى وحدة واحدة في قسم الإنتاج.', true);
           return;
         }
 
@@ -262,7 +262,7 @@
         '<span class="return-qty-wrap">' +
           '<label>الكمية</label>' +
           '<input type="number" class="return-line-qty" data-code="' + code + '" data-max="' + max + '" min="1" max="' + max + '" value="' + defaultQty + '">' +
-          '<span class="return-qty-max">من ' + max + (issued > max ? ' · يبقى 1 بالورشة' : '') + '</span>' +
+          '<span class="return-qty-max">من ' + max + (issued > max ? ' · يبقى 1 بقسم الإنتاج' : '') + '</span>' +
         '</span>' +
       '</div>';
     }).join('');
@@ -312,7 +312,7 @@
     });
 
     if (invalidQty) {
-      toast('لا يمكن ارتجاع كامل الكمية — يجب الإبقاء على وحدة واحدة في الورشة', true);
+      toast('لا يمكن ارتجاع كامل الكمية — يجب الإبقاء على وحدة واحدة في قسم الإنتاج', true);
       return;
     }
 

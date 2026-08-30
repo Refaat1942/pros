@@ -1,6 +1,6 @@
 @php
-    $counts = $admin_case_counts ?? ['waiting_return' => 0, 'awaiting_cashier' => 0, 'in_progress' => 0, 'delivered' => 0];
-    $buckets = $admin_case_buckets ?? ['waiting_return' => [], 'awaiting_cashier' => [], 'in_progress' => [], 'delivered' => []];
+    $counts = $admin_case_counts ?? ['waiting_return' => 0, 'awaiting_cashier' => 0, 'awaiting_assignment' => 0, 'in_progress' => 0, 'delivered' => 0];
+    $buckets = $admin_case_buckets ?? ['waiting_return' => [], 'awaiting_cashier' => [], 'awaiting_assignment' => [], 'in_progress' => [], 'delivered' => []];
     $dateFrom = $case_date_from ?? now()->startOfMonth()->toDateString();
     $dateTo = $case_date_to ?? now()->toDateString();
 @endphp
@@ -29,6 +29,14 @@
           <span class="cq-desc">مرضى الكاش — عرض سعر صادر وبانتظار تحصيل المبلغ</span>
           <span class="cq-count" id="casesCashierCount">{{ $counts['awaiting_cashier'] ?? 0 }}</span>
         </button>
+        @if(config('workshop.enabled', true))
+        <button type="button" class="cases-quick-btn assignment" data-cases-filter="awaiting_assignment">
+          <span class="cq-icon">👷</span>
+          <span class="cq-title">بانتظار تخصيص الإنتاج</span>
+          <span class="cq-desc">أمر شغل صادر — تخصيص القسم والفني واعتماد قبل صرف المخزن</span>
+          <span class="cq-count" id="casesAssignmentCount">{{ $counts['awaiting_assignment'] ?? 0 }}</span>
+        </button>
+        @endif
         <button type="button" class="cases-quick-btn progress" data-cases-filter="in_progress">
           <span class="cq-icon">🏭</span>
           <span class="cq-title">تحت التنفيذ</span>

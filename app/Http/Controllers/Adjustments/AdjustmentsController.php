@@ -8,6 +8,7 @@ use App\Http\Requests\Adjustments\StoreAdjustmentItemsRequest;
 use App\Http\Requests\Adjustments\UpdateAdjustmentItemQtyRequest;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
+use App\Models\StockItem;
 use App\Services\AdjustmentsService;
 use App\Services\PathwayTransitionMessageService;
 use App\Support\StockCatalogPicker;
@@ -87,6 +88,7 @@ class AdjustmentsController extends Controller
                 'reserved' => $row['reserved'] ?? 0,
                 'available' => $row['available_max'] ?? 0,
                 'uom' => $row['uom'] ?? 'قطعة',
+                'price' => (float) ($row['price'] ?? 0),
             ]);
 
         return response()->json([
@@ -111,7 +113,7 @@ class AdjustmentsController extends Controller
 
     public function updateItemQty(UpdateAdjustmentItemQtyRequest $request, CaseRecord $case, BomItem $bomItem): JsonResponse
     {
-        $bom = $this->adjustmentsService->updateItemQty($case, $bomItem, (int) $request->validated('qty'));
+        $bom = $this->adjustmentsService->updateItemQty($case, $bomItem, (float) $request->validated('qty'));
 
         return response()->json([
             'message' => 'تم تحديث كمية البند.',
@@ -163,7 +165,7 @@ class AdjustmentsController extends Controller
             'tech_notes' => $case->resolvedTechNotes(),
             'written_items' => $case->resolvedWrittenItems(),
             'rework' => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
-            'stage_label' => $isCostCalc ? 'بانتظار التكاليف' : 'المعدلات',
+            'stage_label' => $isCostCalc ? 'بانتظار الاعتماد' : 'المعدلات',
             'can_modify_directly' => $case->isInAdjustments(),
             'can_request_adjustment_edit' => $isCostCalc && ! $case->pendingAdjustmentEditRequest,
             'has_pending_edit_request' => (bool) $case->pendingAdjustmentEditRequest,
@@ -187,12 +189,13 @@ class AdjustmentsController extends Controller
     private function mapBomItems($items): Collection
     {
         $uomMap = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->all());
+        $priceMap = StockItem::mapByOperationalCodes($items->pluck('stock_item_code')->all(), 'price');
 
-        return $items->map(fn (BomItem $i) => $this->formatBomItem($i, $uomMap));
+        return $items->map(fn (BomItem $i) => $this->formatBomItem($i, $uomMap, $priceMap));
     }
 
-    /** @param  array<string, string>  $uomMap */
-    private function formatBomItem(BomItem $item, array $uomMap = []): array
+    /** @param  array<string, string>  $uomMap  @param  array<string, mixed>  $priceMap */
+    private function formatBomItem(BomItem $item, array $uomMap = [], array $priceMap = []): array
     {
         return [
             'id' => $item->id,
@@ -200,6 +203,7 @@ class AdjustmentsController extends Controller
             'name' => $item->name,
             'qty' => $item->qty,
             'uom' => $uomMap[$item->stock_item_code] ?? 'قطعة',
+            'price' => (float) ($priceMap[$item->stock_item_code] ?? 0),
             'source' => $item->source,
             'group_label' => $item->group_label,
             'read_only' => $item->source === BomItem::SOURCE_SPEC,

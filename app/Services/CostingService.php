@@ -98,6 +98,13 @@ class CostingService
 
             $case = $case->fresh()->load('patient');
 
+            if (! $case->isMilitary() && $quoteAmount <= 0) {
+                abort(
+                    422,
+                    'لا يمكن إصدار عرض السعر — إجمالي التكلفة صفر. راجع أسعار الأصناف في الكتالوج أو دفعات الشراء في المخزن ثم أعد المحاولة من الاعتماد.'
+                );
+            }
+
             if ($case->needsServicesApproval()) {
                 $this->workflowService->advance($case, WorkflowEvent::ServicesApprovalRequired->value);
                 app(ServicesApprovalService::class)->openForCase($case);
@@ -136,7 +143,15 @@ class CostingService
             );
         });
 
-        $fresh = $case->fresh();
+        $fresh = $case->fresh()->load(['patient', 'pricingRequest.items', 'quotes']);
+
+        if ($fresh->isCashCivilian() && $fresh->stage_key === CaseRecord::STAGE_OPERATIONS) {
+            $quote = $fresh->quotes->sortByDesc('id')->first();
+            if ($quote) {
+                $fresh = $this->operationsService->sendToCashier($fresh, $quote)
+                    ->load(['patient', 'pricingRequest.items', 'quotes']);
+            }
+        }
 
         if ($fresh->isMilitary() && $fresh->stage_key === CaseRecord::STAGE_OPERATIONS) {
             $fresh = $this->operationsService->approve($fresh, 'النظام — اعتماد تلقائي عسكري');

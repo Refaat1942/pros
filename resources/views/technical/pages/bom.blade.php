@@ -19,8 +19,17 @@
 
 @php
     use App\Enums\StockWarehouseType;
+    use App\Services\CatalogListVisibilityService;
+    use App\Support\BomItemAggregator;
 
     $boms = $warehouse_boms ?? collect();
+    $bomVisibility = app(CatalogListVisibilityService::class);
+    $bomUser = auth()->user();
+    $bomListEnabled = $bomUser
+        ? $bomVisibility->isListEnabledForUser($bomUser, 'technical_bom_items')
+        : true;
+    $bomListColumns = $bomVisibility->tableOrderForUser($bomUser, 'technical_bom_items');
+    $bomListColumnLabels = $bomVisibility->columnDefinitions('technical_bom_items');
     $stageMeta = [
         'raw'      => ['label' => StockWarehouseType::Raw->icon() . ' ' . StockWarehouseType::Raw->label(), 'cls' => 'bg-amber-100 text-amber-800 border-amber-200'],
         'wip'      => ['label' => '🏭 قيد التصنيع', 'cls' => 'bg-cyan-100 text-cyan-800 border-cyan-200'],
@@ -94,30 +103,68 @@
                         <td class="px-4 py-3">
                             <span class="text-xs font-bold px-2 py-1 rounded-lg border {{ $meta['cls'] }}">{{ $meta['label'] }}</span>
                         </td>
-                        <td class="px-4 py-3 text-center">
-                            @if ($bom->items->isNotEmpty())
+                        <td class="px-4 py-3 text-center align-top">
+                            @if (! $bomListEnabled)
+                                <span class="text-xs text-slate-400">غير متاح</span>
+                            @elseif ($bom->items->isNotEmpty())
                                 @php
-                                    $bomItemsJson = \App\Support\BomItemAggregator::byStockCode($bom->items);
+                                    $bomItemsRaw = BomItemAggregator::enrichWithStockMeta(
+                                        BomItemAggregator::byStockCode($bom->items),
+                                    );
+                                    $bomItemsJson = collect($bomItemsRaw)
+                                        ->map(fn (array $item) => $bomVisibility->filterItemFields($item, $bomUser, 'technical_bom_items'))
+                                        ->filter(fn (array $row) => $row !== [])
+                                        ->values()
+                                        ->all();
+                                    $bomPreview = collect($bomItemsJson)->take(3);
                                 @endphp
-                                <button type="button"
-                                        class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50"
-                                        data-bom-id="{{ $bom->id }}"
-                                        data-bom-no="{{ $bom->bom_no }}"
-                                        data-patient="{{ $bom->patient_name }}"
-                                        data-work-order="{{ $bom->caseRecord?->work_order_no ?? '—' }}"
-                                        data-items='@json($bomItemsJson)'>
-                                    عرض
-                                </button>
+                                @if ($bomItemsJson !== [])
+                                    <div class="text-xs text-slate-600 text-right space-y-0.5 mb-1.5 max-w-[220px] ml-auto">
+                                        @foreach ($bomPreview as $previewItem)
+                                            <div class="truncate">{{ ($previewItem['stock_item_code'] ?? $previewItem['code'] ?? '—') }} — {{ $previewItem['name'] ?? '—' }}</div>
+                                        @endforeach
+                                        @if (count($bomItemsJson) > 3)
+                                            <div class="text-slate-400">+{{ count($bomItemsJson) - 3 }} أصناف</div>
+                                        @endif
+                                    </div>
+                                    <button type="button"
+                                            class="btn-view-bom-items text-xs font-bold rounded-lg border border-slate-300 text-slate-700 px-3 py-1.5 hover:bg-slate-50"
+                                            data-bom-id="{{ $bom->id }}"
+                                            data-bom-no="{{ $bom->bom_no }}"
+                                            data-patient="{{ $bom->patient_name }}"
+                                            data-work-order="{{ $bom->caseRecord?->work_order_no ?? '—' }}"
+                                            data-items='@json($bomItemsJson)'>
+                                        عرض ({{ count($bomItemsJson) }})
+                                    </button>
+                                @else
+                                    <span class="text-xs text-slate-400">—</span>
+                                @endif
                             @else
                                 <span class="text-xs text-slate-400">—</span>
                             @endif
                         </td>
                         <td class="px-4 py-3">
+                            @php
+                                $awaitingWorkshop = $bom->stage === 'raw'
+                                    && config('workshop.enabled', true)
+                                    && $bom->caseRecord
+                                    && ! $bom->caseRecord->isWorkshopAssignmentApproved();
+                            @endphp
                             @if ($bom->stage === 'raw')
-                                <button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm"
-                                        data-bom-id="{{ $bom->id }}">
-                                    📤 صرف للورشة
-                                </button>
+                                @if ($awaitingWorkshop)
+                                    <span class="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 inline-block">
+                                        🏭 بانتظار اعتماد قسم الإنتاج
+                                    </span>
+                                    <a href="{{ url('/workshop/workshop') }}"
+                                       class="rounded-xl border border-cyan-600 text-cyan-800 px-3 py-2 text-xs font-bold hover:bg-cyan-50 ml-1 inline-block">
+                                        فتح طابور الإنتاج
+                                    </a>
+                                @else
+                                    <button type="button" class="btn-dispense rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold hover:bg-emerald-700 shadow-sm"
+                                            data-bom-id="{{ $bom->id }}">
+                                        📤 صرف لقسم الإنتاج
+                                    </button>
+                                @endif
                                 <a href="{{ $voucherUrl }}" target="_blank" rel="noopener"
                                    class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 ml-1 inline-block">
                                     🖨️ طباعة إذن الصرف
@@ -127,7 +174,7 @@
                                    class="rounded-xl border border-violet-600 text-violet-800 px-3 py-2 text-xs font-bold hover:bg-violet-50 inline-block">
                                     🖨️ طباعة إذن الصرف
                                 </a>
-                                <span class="text-xs text-slate-500">🏭 تم التحويل للورشة — يُغلق من مكتب التشغيل</span>
+                                <span class="text-xs text-slate-500">🏭 تم التحويل لقسم الإنتاج — يُغلق من مكتب التشغيل</span>
                             @else
                                 <span class="text-xs text-slate-400">—</span>
                             @endif
@@ -147,7 +194,7 @@
     <div class="relative flex min-h-full items-center justify-center p-4">
         <div class="w-full max-w-5xl max-h-[92vh] rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden animate-[fadeIn_0.15s_ease] flex flex-col">
             <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white flex items-center justify-between gap-3 shrink-0">
-                <h3 class="font-bold text-lg">📤 صرف للورشة — مسح الباركود</h3>
+                <h3 class="font-bold text-lg">📤 صرف لقسم الإنتاج — مسح الباركود</h3>
                 <div class="flex items-center gap-2">
                     <a id="printIssueVoucherLink" href="#" target="_blank" rel="noopener"
                        class="hidden rounded-lg bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 text-xs font-bold">
@@ -161,18 +208,19 @@
                 <div id="scanProgressWrap" class="rounded-xl border border-slate-200 bg-white p-3">
                     <div class="flex justify-between items-center mb-2 text-sm font-bold text-slate-700">
                         <span>تقدّم المسح</span>
-                        <span id="scanProgressLabel">0 / 0</span>
+                        <span id="dispenseScanProgressLabel">0 / 0</span>
                     </div>
                     <div class="h-3 rounded-full bg-slate-200 overflow-hidden">
-                        <div id="scanProgressBar" class="h-full bg-emerald-500 transition-all duration-200" style="width:0%;"></div>
+                        <div id="dispenseScanProgressBar" class="h-full bg-emerald-500 transition-all duration-200" style="width:0%;"></div>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label for="barcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح كود الصنف أو الباركود</label>
-                        <input type="text" id="barcodeInput" autofocus
+                        <label for="dispenseBarcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح كود الصنف أو الباركود</label>
+                        <input type="text" id="dispenseBarcodeInput" autofocus
                                placeholder="BC-... أو كود الصنف"
                                maxlength="100"
+                               autocomplete="off"
                                class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
                     </div>
                     <div>
@@ -184,7 +232,7 @@
                     </div>
                 </div>
                 <p class="text-xs text-slate-500">للأصناف بالقطعة: كل مسح = وحدة واحدة. للكيلو/الجرام/المتر: امسح ثم اكتب الكمية (مثلاً سعر الكيلو 1000 وجرام 100 → 0.1×1000).</p>
-                <div id="scannedList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
+                <div id="dispenseScannedList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
                 <div id="dispenseAlarm" class="hidden rounded-xl border-2 border-red-500 bg-red-50 p-5 text-red-800 font-bold text-base animate-pulse">
                     ⛔ <span id="dispenseAlarmText">باركود غير مطابق — تم إيقاف الصرف!</span>
                 </div>
@@ -213,13 +261,12 @@
         <div class="overflow-y-auto flex-1 p-4">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-600">
-                    <tr>
-                        <th class="px-3 py-2 text-right font-bold">الكود</th>
-                        <th class="px-3 py-2 text-right font-bold">الصنف</th>
-                        <th class="px-3 py-2 text-right font-bold w-16">المطلوب</th>
-                        <th class="px-3 py-2 text-right font-bold w-16">الوحدة</th>
-                        <th class="px-3 py-2 text-right font-bold w-16">المصروف</th>
-                        <th class="px-3 py-2 text-right font-bold w-16">المرتجع</th>
+                    <tr id="bomItemsHeadRow">
+                        @foreach ($bomListColumns as $colKey)
+                            <th class="px-3 py-2 text-right font-bold {{ in_array($colKey, ['qty', 'issued_qty', 'returned_qty', 'unit_cost'], true) ? 'w-20' : '' }}">
+                                {{ $bomListColumnLabels[$colKey]['label'] ?? $colKey }}
+                            </th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody id="bomItemsBody" class="divide-y divide-slate-100"></tbody>
@@ -229,5 +276,10 @@
 </div>
 
 @push('scripts')
+<script>
+window.__BOM_LIST_ENABLED = @json($bomListEnabled);
+window.__BOM_LIST_COLUMNS = @json($bomListColumns);
+window.__BOM_LIST_COLUMN_LABELS = @json(collect($bomListColumnLabels)->mapWithKeys(fn ($def, $key) => [$key => $def['label'] ?? $key]));
+</script>
 <script src="{{ asset('assets/vendor/axios.min.js') }}?v={{ filemtime(public_path('assets/vendor/axios.min.js')) }}"></script>
 @endpush

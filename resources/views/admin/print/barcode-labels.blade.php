@@ -125,10 +125,7 @@
             <div class="label">
                 <div class="name">{{ $label['name'] }}</div>
                 <div class="barcode">
-                    <img class="barcode-img"
-                         src="{{ $label['svg_data_uri'] }}"
-                         alt="{{ $label['barcode'] }}"
-                         decoding="sync">
+                    <div class="barcode-svg-wrap">{!! $label['svg'] !!}</div>
                 </div>
                 <div class="code">{{ $label['barcode'] }}</div>
             </div>
@@ -145,21 +142,7 @@
         }
 
         function printLabels() {
-            var imgs = document.querySelectorAll('.barcode-img');
-            var waits = Array.prototype.map.call(imgs, function (img) {
-                if (img.complete) {
-                    return Promise.resolve();
-                }
-
-                return new Promise(function (resolve) {
-                    img.onload = resolve;
-                    img.onerror = resolve;
-                });
-            });
-
-            Promise.all(waits).then(function () {
-                window.print();
-            });
+            window.print();
         }
     </script>
 </body>

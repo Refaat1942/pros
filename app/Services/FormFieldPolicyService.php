@@ -31,6 +31,19 @@ class FormFieldPolicyService
         ],
     ];
 
+    /** @return array<string, array<string, bool>> */
+    public function policiesForFeatures(array $features): array
+    {
+        $all = $this->all();
+        $out = [];
+
+        foreach ($features as $feature) {
+            $out[$feature] = $all[$feature] ?? [];
+        }
+
+        return $out;
+    }
+
     public function isRequired(string $feature, string $field): bool
     {
         $policies = $this->all();

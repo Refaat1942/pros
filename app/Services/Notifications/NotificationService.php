@@ -68,9 +68,9 @@ class NotificationService
             'body' => 'المريض {patient} (حالة {case}) سدد المبلغ في الخزنة — بانتظار اعتماد مكتب التشغيل لإصدار أمر الشغل.',
         ],
         WorkflowEvent::OperationsApproved->value => [
-            'role' => Role::SLUG_TECHNICAL,
-            'title' => '📦 أمر صرف جديد للمخزن',
-            'body' => 'المريض {patient} (حالة {case}) معتمد — جاهز للصرف بالباركود من المخزن.',
+            'role' => Role::SLUG_WORKSHOP,
+            'title' => '🏭 أمر شغل جديد — قسم الإنتاج',
+            'body' => 'المريض {patient} (حالة {case}) معتمد من مكتب التشغيل — بانتظار تخصيص القسم والفني واعتماد التخصيص.',
         ],
         WorkflowEvent::ReturnedToAdjustments->value => [
             'role' => Role::SLUG_ADJUSTMENTS,
@@ -84,13 +84,13 @@ class NotificationService
         ],
         WorkflowEvent::BomDispensed->value => [
             'role' => Role::SLUG_WORKSHOP,
-            'title' => '🏭 أمر جديد في ورشة التصنيع',
-            'body' => 'تم صرف مواد المريض {patient} (حالة {case}) — الطلب جاهز للتصنيع في الورشة.',
+            'title' => '🏭 أمر جديد في قسم الإنتاج',
+            'body' => 'تم صرف مواد المريض {patient} (حالة {case}) — الطلب جاهز للتصنيع في قسم الإنتاج.',
         ],
         WorkflowEvent::BomFinished->value => [
             'role' => Role::SLUG_RECEPTION,
             'title' => '✅ طرف جاهز للتسليم — الاستقبال',
-            'body' => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه في الورشة — جاهز لتسليمه للمريض وإغلاق الطلب من الاستقبال.',
+            'body' => 'المريض {patient} (حالة {case}) أُتمِم تصنيعه في قسم الإنتاج — جاهز لتسليمه للمريض وإغلاق الطلب من الاستقبال.',
         ],
         WorkflowEvent::Delivered->value => [
             'role' => Role::SLUG_ADMIN,
@@ -237,12 +237,20 @@ class NotificationService
         $tokens = $this->tokensForRole($roleSlug);
 
         if ($tokens !== []) {
-            $this->firebase->sendToTokens($tokens, $title, $body, array_merge([
-                'notification_id' => (string) $notification->id,
-                'role' => $roleSlug,
-                'case_id' => (string) ($case?->id ?? ''),
-                'case_no' => (string) ($case?->case_no ?? ''),
-            ], array_map('strval', $data)));
+            // H-5: الإرسال عبر مهمة قابلة للطابور — لا يحجب دورة الطلب عند تفعيل FCM.
+            // على sync (أوفلاين) يعمل داخل الطلب كما كان؛ الخدمة تتخطّى الإرسال إن كان
+            // FCM معطّلاً (لا اتصال شبكي على الشبكة المحلية).
+            \App\Jobs\SendPushNotificationJob::dispatch(
+                $tokens,
+                $title,
+                $body,
+                array_merge([
+                    'notification_id' => (string) $notification->id,
+                    'role' => $roleSlug,
+                    'case_id' => (string) ($case?->id ?? ''),
+                    'case_no' => (string) ($case?->case_no ?? ''),
+                ], array_map('strval', $data)),
+            );
         }
 
         return $notification;
@@ -341,6 +349,22 @@ class NotificationService
         }
 
         return AppNotification::forRole($roleSlug)
+            ->unread()
+            ->update(['read_at' => now()]);
+    }
+
+    /**
+     * تعليم إشعارات حالة معيّنة للدور كمقروءة — عند تنفيذ القسم لطلبه.
+     */
+    public function markCaseReadForRole(int $caseId, ?string $roleSlug): int
+    {
+        if ($caseId <= 0 || $roleSlug === null || $roleSlug === '') {
+            return 0;
+        }
+
+        return AppNotification::query()
+            ->where('case_id', $caseId)
+            ->where('role_slug', $roleSlug)
             ->unread()
             ->update(['read_at' => now()]);
     }

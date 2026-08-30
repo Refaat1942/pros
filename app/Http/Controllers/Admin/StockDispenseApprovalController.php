@@ -17,9 +17,12 @@ class StockDispenseApprovalController extends Controller
 
     public function index(): JsonResponse
     {
+        // استعلام واحد بدل استدعاء listPending() مرتين.
+        $pending = $this->dispenseRequests->listPending();
+
         return response()->json([
-            'data' => $this->dispenseRequests->listPending(),
-            'total' => count($this->dispenseRequests->listPending()),
+            'data' => $pending,
+            'total' => count($pending),
         ]);
     }
 

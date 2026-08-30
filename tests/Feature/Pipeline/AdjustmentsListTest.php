@@ -6,6 +6,7 @@ use App\Models\BomItem;
 use App\Models\CaseRecord;
 use App\Models\StockItem;
 use App\Models\TechOrderSpec;
+use App\Services\AdjustmentsService;
 use App\Services\BomService;
 use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
@@ -412,7 +413,7 @@ class AdjustmentsListTest extends TestCase
                 ],
             ])
             ->assertStatus(422)
-            ->assertJsonPath('message', 'الصنف المختار غير موجود في المخزون.');
+            ->assertJsonPath('message', 'الصنف غير موجود في الكتالوج.');
     }
 
     public function test_adding_item_with_qty_above_available_allows_backorder(): void
@@ -441,6 +442,72 @@ class AdjustmentsListTest extends TestCase
         // RM-002: رصيد 2، محجوز 5 ⇒ متاح = -3.
         $stock = StockItem::where('code', 'RM-002')->firstOrFail();
         $this->assertSame(-3, $stock->availableQty());
+    }
+
+    public function test_adjustments_show_includes_catalog_price_on_bom_items(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $stock = StockItem::findByOperationalCode('RM-001');
+        $stock->update(['price' => 350.00]);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'qty' => 2],
+        ]);
+
+        \App\Support\StockCatalogPicker::forgetCachedRows();
+
+        $response = $this->actingAs($user)
+            ->getJson("/adjustments/adjustments/{$case->id}")
+            ->assertOk();
+
+        $this->assertEqualsWithDelta(350.0, (float) $response->json('case.bom.items.0.price'), 0.01);
+        $bomCode = $response->json('case.bom.items.0.stock_item_code');
+        $pickerCode = $stock->pickerCode();
+        $catalogRow = collect($response->json('stock_catalog'))
+            ->firstWhere('code', $pickerCode);
+        $this->assertNotNull($catalogRow, 'Expected catalog row for BOM code '.$bomCode);
+        $this->assertEqualsWithDelta(350.0, (float) $catalogRow['price'], 0.01);
+    }
+
+    public function test_adjustments_bom_items_include_catalog_grand_total_fields(): void
+    {
+        $this->seedStockWithPriceBatch();
+        $stock = StockItem::findByOperationalCode('RM-001');
+        $stock->update(['price' => 100.00]);
+
+        $company = $this->civilianCompany();
+        $patient = $this->civilianPatient($company);
+        $user = $this->userWithRole('adjustments');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_ADJUSTMENTS);
+
+        app(BomService::class)->createSpecRaw($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'بند توصيف', 'qty' => 2],
+        ]);
+
+        $case = $case->fresh();
+        app(AdjustmentsService::class)->addItems($case, [
+            ['stock_item_code' => 'RM-001', 'name' => 'بند معدلات', 'qty' => 1.5],
+        ]);
+
+        \App\Support\StockCatalogPicker::forgetCachedRows();
+
+        $response = $this->actingAs($user)
+            ->getJson("/adjustments/adjustments/{$case->id}")
+            ->assertOk();
+
+        $items = collect($response->json('case.bom.items'));
+        $specLine = $items->firstWhere('source', 'spec');
+        $adjLine = $items->firstWhere('source', 'adjustment');
+
+        $this->assertNotNull($specLine);
+        $this->assertNotNull($adjLine);
+        $this->assertEqualsWithDelta(200.0, (float) $specLine['price'] * (float) $specLine['qty'], 0.01);
+        $this->assertEqualsWithDelta(150.0, (float) $adjLine['price'] * (float) $adjLine['qty'], 0.01);
     }
 
     private function seedStockWithPriceBatch(): void

@@ -13,10 +13,13 @@
   }
 
   var MFG_LABELS = {
-    warehouse: 'المخزن', issue: 'قيد التصنيع', workshop: 'الورشة', fitting: 'تجربة تركيب',
+    warehouse: 'المخزن', issue: 'قيد التصنيع', workshop: 'قسم الإنتاج', fitting: 'تجربة تركيب',
     quality: 'مراقبة جودة', generation: 'توليد', assembly: 'تم التصنيع', casting: 'صب',
     finishing: 'تشطيب', closed: 'مغلق'
   };
+
+  var assignmentSections = [];
+  var selectedCaseId = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -32,12 +35,340 @@
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   }
 
+  function renderAssignmentStatusCell(c) {
+    if (c.assignment_approved) {
+      return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">✓ معتمد — جاهز للصرف</span>';
+    }
+    if (hasAssignments(c)) {
+      return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-amber-100 text-amber-800">بانتظار الاعتماد</span>';
+    }
+    return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-slate-100 text-slate-600">غير مخصّص</span>';
+  }
+
+  function hasAssignments(c) {
+    if (c.workshop_assignments && c.workshop_assignments.length) return true;
+    return c.workshop_section_id && c.assigned_technician_id;
+  }
+
+  function renderIssueVoucherBtn(c) {
+    if (!c.issue_voucher_print_url) return '';
+    return '<a href="' + esc(c.issue_voucher_print_url) + '" target="_blank" rel="noopener" ' +
+      'class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">🖨️ إذن استلام</a> ';
+  }
+
+  function renderAssignmentQueueRow(c) {
+    var isMil = c.patient_type === 'military' || c.path === 'military';
+    var search = [c.work_order_no, c.case_no, c.patient && c.patient.name].join(' ');
+    var printBtn = c.work_order_print_url
+      ? '<a href="' + esc(c.work_order_print_url) + '" target="_blank" rel="noopener" ' +
+        'class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ إذن شغل</a> '
+      : '';
+    var issueBtn = renderIssueVoucherBtn(c);
+    var approveBtn = (!c.assignment_approved && hasAssignments(c))
+      ? '<button type="button" class="btn-approve-assignment text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700 inline-block mb-1" data-case-id="' + c.id + '">✓ اعتماد</button> '
+      : '';
+
+    return '<tr class="assignment-row hover:bg-slate-50" data-case-id="' + c.id + '" data-search="' + esc(search) + '">' +
+      '<td class="px-4 py-3 font-mono font-bold text-amber-800">' + esc(c.work_order_no || '—') + '</td>' +
+      '<td class="px-4 py-3"><div class="font-semibold text-slate-800">' + esc(c.patient && c.patient.name) + '</div>' +
+        '<div class="text-xs text-slate-400">' + esc(c.case_no) + '</div></td>' +
+      '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg ' +
+        (isMil ? 'bg-indigo-100 text-indigo-700">🪖 عسكري' : 'bg-emerald-100 text-emerald-700">🌐 مدني') + '</span></td>' +
+      '<td class="px-4 py-3">' + renderAssignmentCell(c) + '</td>' +
+      '<td class="px-4 py-3">' + renderAssignmentStatusCell(c) + '</td>' +
+      '<td class="px-4 py-3">' + printBtn + issueBtn + approveBtn +
+        '<button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block" data-case-id="' + c.id + '" data-work-order="' + esc(c.work_order_no || '') + '">👤 تخصيص</button></td></tr>';
+  }
+
+  function bindAssignmentQueueEvents() {
+    document.querySelectorAll('#workshopAssignmentTableBody .btn-select-workshop-case').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectedCaseId = btn.getAttribute('data-case-id');
+        var wo = btn.getAttribute('data-work-order') || selectedCaseId;
+        var input = $('workshopSelectedOrder');
+        if (input) input.value = wo;
+        var cached = assignmentCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
+        if (cached) {
+          populateAssignmentForm(cached);
+          updateIssueVoucherButton(cached);
+        }
+        document.getElementById('workshopAssignmentQueuePanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    document.querySelectorAll('.btn-approve-assignment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        approveWorkshopAssignment(btn.getAttribute('data-case-id'), btn);
+      });
+    });
+  }
+
+  function populateAssignmentForm(c) {
+    clearAssignmentRows();
+    var list = (c.workshop_assignments && c.workshop_assignments.length)
+      ? c.workshop_assignments
+      : (c.workshop_section_id ? [{
+          workshop_section_id: c.workshop_section_id,
+          assigned_technician_id: c.assigned_technician_id,
+        }] : []);
+    if (!list.length) {
+      addAssignmentRow();
+      return;
+    }
+    list.forEach(function (row) {
+      addAssignmentRow(row.workshop_section_id, row.assigned_technician_id);
+    });
+  }
+
+  function updateIssueVoucherButton(c) {
+    var btn = $('btnPrintIssueVoucher');
+    if (!btn) return;
+    if (c && c.issue_voucher_print_url) {
+      btn.classList.remove('hidden');
+      btn.onclick = function () {
+        window.open(c.issue_voucher_print_url, '_blank', 'noopener');
+      };
+    } else {
+      btn.classList.add('hidden');
+      btn.onclick = null;
+    }
+  }
+
+  function clearAssignmentRows() {
+    var root = $('workshopAssignmentRows');
+    if (root) root.innerHTML = '';
+  }
+
+  function syncRowTechnicians(sectionSelect, techSelect) {
+    if (!sectionSelect || !techSelect) return;
+    var sec = assignmentSections.find(function (s) {
+      return String(s.id) === String(sectionSelect.value);
+    });
+    var techs = sec ? (sec.technicians || []) : [];
+    var current = techSelect.value;
+    techSelect.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
+      return '<option value="' + t.id + '">' + esc(t.name) + '</option>';
+    }).join('');
+    if (current && techs.some(function (t) { return String(t.id) === String(current); })) {
+      techSelect.value = current;
+    }
+  }
+
+  function addAssignmentRow(sectionId, techId) {
+    var root = $('workshopAssignmentRows');
+    if (!root) return null;
+
+    var row = document.createElement('div');
+    row.className = 'workshop-assignment-row flex flex-wrap gap-3 items-end border border-slate-100 rounded-xl p-3 bg-slate-50/50';
+
+    var sectionWrap = document.createElement('div');
+    sectionWrap.className = 'min-w-[200px] flex-1';
+    sectionWrap.innerHTML = '<label class="block text-xs font-bold text-slate-600 mb-1">قسم الإنتاج</label>';
+    var sectionSel = document.createElement('select');
+    sectionSel.className = 'assign-section w-full rounded-xl border border-slate-200 px-3 py-2 text-sm';
+    sectionSel.innerHTML = '<option value="">— بدون —</option>' + assignmentSections.map(function (s) {
+      return '<option value="' + s.id + '">' + esc(s.name) + (s.code ? ' (' + esc(s.code) + ')' : '') + '</option>';
+    }).join('');
+    sectionWrap.appendChild(sectionSel);
+
+    var techWrap = document.createElement('div');
+    techWrap.className = 'min-w-[200px] flex-1';
+    techWrap.innerHTML = '<label class="block text-xs font-bold text-slate-600 mb-1">الفني</label>';
+    var techSel = document.createElement('select');
+    techSel.className = 'assign-tech w-full rounded-xl border border-slate-200 px-3 py-2 text-sm';
+    techWrap.appendChild(techSel);
+
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'text-xs font-bold text-red-600 hover:text-red-800 px-2 py-2';
+    removeBtn.textContent = '✕ حذف';
+    removeBtn.addEventListener('click', function () {
+      if (root.querySelectorAll('.workshop-assignment-row').length <= 1) {
+        sectionSel.value = '';
+        techSel.innerHTML = '<option value="">— بدون —</option>';
+        return;
+      }
+      row.remove();
+    });
+
+    sectionSel.addEventListener('change', function () {
+      syncRowTechnicians(sectionSel, techSel);
+    });
+
+    row.appendChild(sectionWrap);
+    row.appendChild(techWrap);
+    row.appendChild(removeBtn);
+    root.appendChild(row);
+
+    syncRowTechnicians(sectionSel, techSel);
+    if (sectionId) sectionSel.value = String(sectionId);
+    syncRowTechnicians(sectionSel, techSel);
+    if (techId) techSel.value = String(techId);
+
+    return row;
+  }
+
+  var assignmentRefreshInFlight = false;
+  var assignmentCache = [];
+
+  function safeRepaginateTable(tableId) {
+    if (!window.TablePagination || !tableId) return;
+    try {
+      if (TablePagination.refreshById) {
+        TablePagination.refreshById(tableId);
+      } else if (TablePagination.repaginate) {
+        var el = document.getElementById(tableId);
+        if (el) TablePagination.repaginate(el);
+      }
+    } catch (e) {
+      console.warn('workshop pagination', e);
+    }
+  }
+
+  function assignmentQueueErrorMessage(err) {
+    if (err && err.response) {
+      var data = err.response.data;
+      if (data && data.message) return data.message;
+      if (err.response.status === 419) return 'انتهت الجلسة — أعد تحميل الصفحة ثم سجّل الدخول إن لزم.';
+      if (err.response.status === 403) return 'ليس لديك صلاحية عرض طابور التخصيص.';
+      return 'تعذّر تحميل طابور التخصيص (خطأ ' + err.response.status + ').';
+    }
+    return 'تعذّر تحميل طابور التخصيص — تحقق من الاتصال ثم أعد المحاولة.';
+  }
+
+  function refreshAssignmentQueue() {
+    if (!window.axios || assignmentRefreshInFlight) return;
+    assignmentRefreshInFlight = true;
+    var btn = $('btnRefreshAssignmentQueue');
+    if (btn) { btn.disabled = true; btn.textContent = '↻ جاري التحديث...'; }
+
+    axios.get('/workshop/workshop/assignment-queue')
+      .then(function (res) {
+        assignmentCache = res.data.data || [];
+        var tbody = $('workshopAssignmentTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = assignmentCache.length
+          ? assignmentCache.map(renderAssignmentQueueRow).join('')
+          : '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر بانتظار التخصيص — تظهر بعد اعتماد مكتب التشغيل.</td></tr>';
+        bindAssignmentQueueEvents();
+        safeRepaginateTable('workshopAssignmentTable');
+      })
+      .catch(function (err) {
+        if (assignmentCache.length) return;
+        if (err && err.config && err.config.url) {
+          toast(assignmentQueueErrorMessage(err), true);
+        }
+      })
+      .finally(function () {
+        assignmentRefreshInFlight = false;
+        if (btn) { btn.disabled = false; btn.textContent = '↻ تحديث الطابور'; }
+      });
+  }
+
+  function resolveSelectedCaseId() {
+    if (selectedCaseId) return selectedCaseId;
+    var woInput = $('workshopSelectedOrder');
+    var wo = (woInput && woInput.value || '').trim();
+    if (!wo) return null;
+    var fromQueue = assignmentCache.find(function (c) {
+      return String(c.work_order_no || '').trim() === wo;
+    });
+    if (fromQueue) {
+      selectedCaseId = String(fromQueue.id);
+      return selectedCaseId;
+    }
+    var fromDesk = casesCache.find(function (c) {
+      return String(c.work_order_no || '').trim() === wo;
+    });
+    if (fromDesk) {
+      selectedCaseId = String(fromDesk.id);
+      return selectedCaseId;
+    }
+    return null;
+  }
+
+  function readAssignmentPayload() {
+    var rows = document.querySelectorAll('.workshop-assignment-row');
+    var assignments = [];
+    rows.forEach(function (row) {
+      var sectionEl = row.querySelector('.assign-section');
+      var techEl = row.querySelector('.assign-tech');
+      var sectionId = sectionEl && sectionEl.value ? parseInt(sectionEl.value, 10) : null;
+      var techId = techEl && techEl.value ? parseInt(techEl.value, 10) : null;
+      if (sectionId && techId && !Number.isNaN(sectionId) && !Number.isNaN(techId)) {
+        assignments.push({
+          workshop_section_id: sectionId,
+          assigned_technician_id: techId,
+        });
+      }
+    });
+    return { assignments: assignments };
+  }
+
+  function approveWorkshopAssignment(caseId, triggerBtn) {
+    if (!window.axios) return;
+
+    caseId = resolveSelectedCaseId() || caseId;
+    if (!caseId) {
+      toast('اختر أمر شغل من الطابور أولاً (زر «تخصيص»)', true);
+      return;
+    }
+
+    var payload = readAssignmentPayload();
+    if (!payload.assignments.length) {
+      toast('حدّد قسم الإنتاج والفني من القوائم ثم أعد المحاولة.', true);
+      return;
+    }
+
+    if (!window.confirm('تأكيد حفظ واعتماد التخصيص؟\n\nبعد الاعتماد يمكن للمخزن صرف المواد لهذا الأمر.')) return;
+
+    if (triggerBtn) triggerBtn.disabled = true;
+    var formBtn = $('btnApproveWorkshopAssignment');
+    var saveBtn = $('btnSaveWorkshopAssignment');
+    if (formBtn) formBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
+
+    // حفظ التخصيص أولاً ثم الاعتماد — يعمل حتى قبل تحديث السيرفر الذي يدمج الطلبين.
+    axios.post('/workshop/workshop/' + caseId + '/assign', payload)
+      .then(function () {
+        return axios.post('/workshop/workshop/' + caseId + '/approve-assignment', payload);
+      })
+      .then(function (res) {
+        toast(res.data.message || 'تم اعتماد التخصيص');
+        refreshAssignmentQueue();
+        refreshList();
+        refreshTechBoard();
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر اعتماد التخصيص', true);
+      })
+      .finally(function () {
+        if (triggerBtn) triggerBtn.disabled = false;
+        if (formBtn) formBtn.disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
+      });
+  }
+
   function renderActionCell(c) {
     var printBtn = c.work_order_print_url
       ? '<a href="' + esc(c.work_order_print_url) + '" target="_blank" rel="noopener" ' +
         'class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ طباعة إذن شغل</a> '
       : '';
-    return printBtn + '<button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" data-case-id="' + c.id + '">✓ تم التصنيع</button>';
+    return printBtn + renderIssueVoucherBtn(c) +
+      '<button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1" data-case-id="' + c.id + '" data-work-order="' + esc(c.work_order_no || '') + '">👤 تخصيص</button> ' +
+      '<button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" data-case-id="' + c.id + '">✓ تم التصنيع</button>';
+  }
+
+  function renderAssignmentCell(c) {
+    var list = (c.workshop_assignments && c.workshop_assignments.length)
+      ? c.workshop_assignments
+      : (c.workshop_section ? [{ workshop_section: c.workshop_section, assigned_technician: c.assigned_technician }] : []);
+    if (!list.length) return '<span class="text-xs text-slate-400">—</span>';
+    return list.map(function (row) {
+      var section = (row.workshop_section && row.workshop_section.name) || '—';
+      var tech = (row.assigned_technician && row.assigned_technician.name) || '—';
+      return '<div class="text-xs mb-1 last:mb-0"><span class="font-semibold text-slate-700">' + esc(section) + '</span>' +
+        '<div class="text-slate-400 mt-0.5">' + esc(tech) + '</div></div>';
+    }).join('');
   }
 
   function renderRow(c) {
@@ -53,19 +384,162 @@
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg ' +
         (isMil ? 'bg-indigo-100 text-indigo-700">🪖 عسكري' : 'bg-emerald-100 text-emerald-700">🌐 مدني') + '</span></td>' +
       '<td class="px-4 py-3"><span class="text-xs font-bold px-2 py-1 rounded-lg bg-cyan-100 text-cyan-800">' + esc(mfgLabel) + '</span></td>' +
+      '<td class="px-4 py-3">' + renderAssignmentCell(c) + '</td>' +
       '<td class="px-4 py-3 text-center">' + renderItemsCell(c) + '</td>' +
       '<td class="px-4 py-3">' + renderActionCell(c) + '</td></tr>';
   }
 
   function updateSummary(summary) {
     summary = summary || {};
+    if (summary.total_wip != null && summary.wip == null) summary.wip = summary.total_wip;
 
     var analytics = document.getElementById('analytics-workshop');
     if (!analytics) return;
+
+    var statMap = {
+      wip: summary.wip,
+      assigned: summary.assigned,
+      unassigned: summary.unassigned,
+      avg_progress: summary.avg_progress != null ? summary.avg_progress + '%' : null,
+    };
+
+    analytics.querySelectorAll('[data-stat-key]').forEach(function (el) {
+      var key = el.getAttribute('data-stat-key');
+      if (statMap[key] != null) el.textContent = statMap[key];
+    });
+
     var values = analytics.querySelectorAll('.ck-stat-value');
-    if (values.length < 2) return;
-    values[0].textContent = summary.wip != null ? summary.wip : 0;
-    values[1].textContent = summary.total_active != null ? summary.total_active : 0;
+    if (values.length >= 4) {
+      if (summary.wip != null) values[0].textContent = summary.wip;
+      if (summary.assigned != null) values[1].textContent = summary.assigned;
+      if (summary.unassigned != null) values[2].textContent = summary.unassigned;
+      if (summary.avg_progress != null) values[3].textContent = summary.avg_progress + '%';
+    } else if (values.length >= 2) {
+      values[0].textContent = summary.wip != null ? summary.wip : 0;
+      values[1].textContent = summary.total_active != null ? summary.total_active : 0;
+    }
+  }
+
+  function renderTechOrderCard(order) {
+    var doneClass = order.is_done ? ' border-emerald-200 bg-emerald-50/40' : ' border-slate-200';
+    var pct = order.progress_pct || 0;
+    return '<div class="rounded-xl border p-3' + doneClass + '" data-case-id="' + order.id + '">' +
+      '<div class="flex items-start justify-between gap-2 mb-2">' +
+        '<div class="min-w-0">' +
+          '<div class="font-mono text-sm font-bold text-violet-800">' + esc(order.work_order_no || '—') + '</div>' +
+          '<div class="text-xs text-slate-600 truncate">' + esc(order.patient && order.patient.name) + '</div>' +
+          '<div class="text-[11px] text-slate-400">' + esc(order.case_no) + ' · ' + esc(order.pathway_label) + '</div>' +
+        '</div>' +
+        '<span class="text-xs font-bold px-2 py-1 rounded-lg ' + (order.is_done ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-100 text-cyan-800') + '">' +
+          esc(order.manufacturing_stage_label || '—') + '</span>' +
+      '</div>' +
+      '<label class="block text-[11px] font-bold text-slate-500 mb-1">نسبة الإنجاز: <span class="tech-progress-val">' + pct + '</span>%</label>' +
+      '<input type="range" min="0" max="100" step="5" value="' + pct + '" class="tech-progress-slider w-full accent-violet-600" data-case-id="' + order.id + '">' +
+    '</div>';
+  }
+
+  function renderTechnicianBoard(payload) {
+    payload = payload || {};
+    var cardsRoot = $('workshopTechBoardCards');
+    var unassignedPanel = $('workshopUnassignedPanel');
+    var unassignedList = $('workshopUnassignedList');
+    if (!cardsRoot) return;
+
+    var technicians = payload.technicians || [];
+    if (!technicians.length) {
+      cardsRoot.innerHTML = '<p class="text-sm text-slate-400 col-span-full text-center py-8">لا يوجد فنيون لديهم أوامر حالياً — خصّص الفنيين من الأعلى.</p>';
+    } else {
+      cardsRoot.innerHTML = technicians.map(function (group) {
+        var tech = group.technician || {};
+        var section = (group.section && group.section.name) || '—';
+        var orders = group.orders || [];
+        return '<div class="rounded-2xl border border-indigo-100 bg-white shadow-sm overflow-hidden">' +
+          '<div class="px-4 py-3 bg-indigo-50 border-b border-indigo-100">' +
+            '<div class="font-bold text-indigo-900">' + esc(tech.name || '—') + '</div>' +
+            '<div class="text-xs text-indigo-700 mt-0.5">' + esc(section) + ' · ' + (group.active_count || 0) + ' نشط · ' + (group.done_count || 0) + ' مكتمل · متوسط ' + (group.avg_progress || 0) + '%</div>' +
+          '</div>' +
+          '<div class="p-3 space-y-2 max-h-80 overflow-y-auto">' +
+            (orders.length
+              ? orders.map(renderTechOrderCard).join('')
+              : '<p class="text-xs text-slate-400 text-center py-4">لا توجد أوامر.</p>') +
+          '</div></div>';
+      }).join('');
+    }
+
+    var unassigned = payload.unassigned || [];
+    if (unassignedPanel && unassignedList) {
+      if (unassigned.length) {
+        unassignedPanel.classList.remove('hidden');
+        unassignedList.innerHTML = unassigned.map(function (order) {
+          return '<div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm">' +
+            '<div><span class="font-mono font-bold text-amber-900">' + esc(order.work_order_no || '—') + '</span> · ' +
+            esc(order.patient && order.patient.name) + ' <span class="text-xs text-amber-700">(' + esc(order.case_no) + ')</span></div>' +
+            '<button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1 hover:bg-violet-50" data-case-id="' + order.id + '" data-work-order="' + esc(order.work_order_no || '') + '">👤 تخصيص</button>' +
+          '</div>';
+        }).join('');
+      } else {
+        unassignedPanel.classList.add('hidden');
+        unassignedList.innerHTML = '';
+      }
+    }
+
+    bindTechBoardEvents();
+    if (payload.summary) updateSummary(payload.summary);
+  }
+
+  var techBoardInFlight = false;
+
+  function refreshTechBoard() {
+    if (!window.axios || techBoardInFlight) return;
+    techBoardInFlight = true;
+    var btn = $('btnRefreshTechBoard');
+    if (btn) { btn.disabled = true; btn.textContent = '↻ جاري التحديث...'; }
+
+    axios.get('/workshop/technicians/board')
+      .then(function (res) { renderTechnicianBoard(res.data || {}); })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل تتبع الفنيين', true);
+      })
+      .finally(function () {
+        techBoardInFlight = false;
+        if (btn) { btn.disabled = false; btn.textContent = '↻ تحديث التتبع'; }
+      });
+  }
+
+  function saveProgress(caseId, percent, slider) {
+    if (!window.axios || !caseId) return;
+    if (slider) slider.disabled = true;
+    axios.post('/workshop/workshop/' + caseId + '/progress', { progress_pct: percent })
+      .then(function () {
+        refreshList();
+        refreshTechBoard();
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحديث الإنجاز', true);
+      })
+      .finally(function () { if (slider) slider.disabled = false; });
+  }
+
+  function bindTechBoardEvents() {
+    document.querySelectorAll('.tech-progress-slider').forEach(function (slider) {
+      slider.addEventListener('input', function () {
+        var card = slider.closest('[data-case-id]');
+        var valEl = card && card.querySelector('.tech-progress-val');
+        if (valEl) valEl.textContent = slider.value;
+      });
+      slider.addEventListener('change', function () {
+        saveProgress(slider.getAttribute('data-case-id'), parseInt(slider.value, 10), slider);
+      });
+    });
+    document.querySelectorAll('#workshopUnassignedPanel .btn-select-workshop-case').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectedCaseId = btn.getAttribute('data-case-id');
+        var wo = btn.getAttribute('data-work-order') || selectedCaseId;
+        var input = $('workshopSelectedOrder');
+        if (input) input.value = wo;
+        document.getElementById('workshopDeskRoot')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
   }
 
   function renderItemsCell(c) {
@@ -77,6 +551,26 @@
   function bindTableEvents() {
     document.querySelectorAll('.btn-complete-manufacturing').forEach(function (btn) {
       btn.addEventListener('click', completeManufacturing);
+    });
+    document.querySelectorAll('.btn-select-workshop-case').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectedCaseId = btn.getAttribute('data-case-id');
+        var wo = btn.getAttribute('data-work-order') || selectedCaseId;
+        var input = $('workshopSelectedOrder');
+        if (input) input.value = wo;
+        var cached = casesCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
+        if (cached) {
+          populateAssignmentForm(cached);
+          updateIssueVoucherButton(cached);
+        }
+        else {
+          var fromAssignment = assignmentCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
+          if (fromAssignment) {
+            populateAssignmentForm(fromAssignment);
+            updateIssueVoucherButton(fromAssignment);
+          }
+        }
+      });
     });
     document.querySelectorAll('.btn-view-bom-items').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -103,6 +597,7 @@
           duration: 8000,
         });
         refreshList();
+        refreshTechBoard();
       })
       .catch(function (err) {
         toast((err.response && err.response.data && err.response.data.message) || 'تعذّر إتمام التصنيع', true);
@@ -181,7 +676,7 @@
         if (!tbody) return;
         tbody.innerHTML = casesCache.length
           ? casesCache.map(renderRow).join('')
-          : '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في الورشة حالياً.</td></tr>';
+          : '<tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">لا توجد أوامر في قسم الإنتاج حالياً.</td></tr>';
         bindTableEvents();
         updateSummary(res.data.summary || {});
         applyFilters();
@@ -203,13 +698,92 @@
       row.dataset.filterHidden = ok ? '0' : '1';
     });
     var tbody = $('workshopTableBody');
-    if (tbody && window.TablePagination && TablePagination.repaginate) {
-      TablePagination.repaginate(tbody);
+    safeRepaginateTable('workshopDeskTable');
+  }
+
+  function saveWorkshopAssignment() {
+    if (!selectedCaseId || !window.axios) {
+      toast('اختر أمر شغل من الجدول أولاً', true);
+      return;
+    }
+    var payload = readAssignmentPayload();
+    if (!payload.assignments.length) {
+      toast('حدّد قسم إنتاج وفني واحد على الأقل', true);
+      return;
+    }
+
+    var btn = $('btnSaveWorkshopAssignment');
+    if (btn) btn.disabled = true;
+    axios.post('/workshop/workshop/' + selectedCaseId + '/assign', payload)
+      .then(function (res) {
+        toast(res.data.message || 'تم حفظ التخصيص');
+        if (res.data.case) updateIssueVoucherButton(res.data.case);
+        refreshAssignmentQueue();
+        refreshList();
+        refreshTechBoard();
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر حفظ التخصيص', true);
+      })
+      .finally(function () { if (btn) btn.disabled = false; });
+  }
+
+  function hydrateAssignmentFromServer() {
+    if (Array.isArray(window.__WORKSHOP_ASSIGNMENT_QUEUE) && window.__WORKSHOP_ASSIGNMENT_QUEUE.length) {
+      assignmentCache = window.__WORKSHOP_ASSIGNMENT_QUEUE;
+    }
+    if (Array.isArray(window.__WORKSHOP_ASSIGNMENT_SECTIONS) && window.__WORKSHOP_ASSIGNMENT_SECTIONS.length) {
+      assignmentSections = window.__WORKSHOP_ASSIGNMENT_SECTIONS;
     }
   }
 
+  function paintAssignmentSections() {
+    if (!assignmentSections.length) return;
+    var root = $('workshopAssignmentRows');
+    if (!root || root.children.length) return;
+    addAssignmentRow();
+  }
+
+  function loadAssignmentOptions() {
+    if (!window.axios) {
+      paintAssignmentSections();
+      return;
+    }
+    if (assignmentSections.length) {
+      paintAssignmentSections();
+      return;
+    }
+    axios.get('/workshop/workshop-assignment/options')
+      .then(function (res) {
+        assignmentSections = (res.data && res.data.sections) || [];
+        paintAssignmentSections();
+      })
+      .catch(function (err) {
+        paintAssignmentSections();
+        if (!assignmentSections.length) {
+          toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل أقسام الإنتاج', true);
+        }
+      });
+  }
+
+  function bootWorkshopQueues() {
+    refreshAssignmentQueue();
+    refreshTechBoard();
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    hydrateAssignmentFromServer();
+    if (assignmentCache.length) {
+      bindAssignmentQueueEvents();
+      safeRepaginateTable('workshopAssignmentTable');
+    }
+    loadAssignmentOptions();
     bindTableEvents();
+    if (document.readyState === 'complete') {
+      bootWorkshopQueues();
+    } else {
+      window.addEventListener('load', bootWorkshopQueues, { once: true });
+    }
     var search = $('workshopSearch');
     if (search) search.addEventListener('input', applyFilters);
     var filtersRoot = $('workshopFilters');
@@ -226,7 +800,21 @@
       });
     }
     var refresh = $('btnRefreshWorkshop');
-    if (refresh) refresh.addEventListener('click', refreshList);
+    if (refresh) refresh.addEventListener('click', function () { refreshList(); refreshTechBoard(); });
+    var techRefresh = $('btnRefreshTechBoard');
+    if (techRefresh) techRefresh.addEventListener('click', refreshTechBoard);
+    var assignBtn = $('btnSaveWorkshopAssignment');
+    if (assignBtn) assignBtn.addEventListener('click', saveWorkshopAssignment);
+    var approveAssignBtn = $('btnApproveWorkshopAssignment');
+    if (approveAssignBtn) {
+      approveAssignBtn.addEventListener('click', function () {
+        approveWorkshopAssignment(null, approveAssignBtn);
+      });
+    }
+    var refreshAssign = $('btnRefreshAssignmentQueue');
+    if (refreshAssign) refreshAssign.addEventListener('click', refreshAssignmentQueue);
+    var addRowBtn = $('btnAddWorkshopAssignmentRow');
+    if (addRowBtn) addRowBtn.addEventListener('click', function () { addAssignmentRow(); });
     var closeBtn = $('closeWorkshopBomItemsModal');
     var modal = $('workshopBomItemsModal');
     if (closeBtn) closeBtn.addEventListener('click', closeBomItemsModal);

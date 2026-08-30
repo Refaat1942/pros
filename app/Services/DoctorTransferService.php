@@ -117,7 +117,7 @@ class DoctorTransferService
         }
 
         if (in_array($case->stage_key, [CaseRecord::STAGE_MANUFACTURING, CaseRecord::STAGE_READY_DELIVERY], true)) {
-            return 'في الورشة';
+            return 'في قسم الإنتاج';
         }
 
         return 'قيد التوصيف';
@@ -135,7 +135,7 @@ class DoctorTransferService
         return [
             'total' => $rows->count(),
             'spec' => $rows->where('status_group', 'قيد التوصيف')->count(),
-            'workshop' => $rows->where('status_group', 'في الورشة')->count(),
+            'workshop' => $rows->where('status_group', 'في قسم الإنتاج')->count(),
             'done' => $rows->where('status_group', 'مكتمل')->count(),
         ];
     }

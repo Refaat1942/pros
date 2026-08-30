@@ -4,13 +4,13 @@
     $patient = $case->patient;
     $bom     = $case->bom;
     $items   = $bom?->items ?? collect();
-    $specLines = max($items->count(), 12);
-    $emptySpec = $specLines - $items->count();
     $dateDisplay = now()->format('d/m/Y');
     $approvalNo = $case->quote_no ?? '—';
     $approvalDate = $case->approval_date?->format('d/m/Y') ?? '—';
     $valueDisplay = number_format(CaseFinancialSummary::billableAmount($case), 0);
+    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for('work_order');
 @endphp
+@include('prints.partials.document-template-vars')
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -19,61 +19,28 @@
     <title>إذن شغل — {{ $case->work_order_no ?? $case->order_ref }}</title>
     @include('prints.partials.a4-base')
     <style>
-        .meta-grid { font-size: 12.5pt; line-height: 2.1; margin-bottom: 10px; }
-        .spec-section { margin: 10px 0; }
-        .spec-title {
+        .wo-title {
             text-align: center;
-            font-weight: 800;
-            font-size: 14pt;
-            margin-bottom: 6px;
-        }
-        .spec-layout {
-            display: flex;
-            gap: 8px;
-            border: 1.5px solid #000;
-            min-height: 72mm;
-        }
-        .spec-sketch {
-            width: 38mm;
-            border-left: 1.5px solid #000;
-            flex-shrink: 0;
-        }
-        .spec-lines { flex: 1; padding: 4px 6px; }
-        .spec-line {
-            border-bottom: 1px dotted #888;
-            min-height: 5.2mm;
-            font-size: 11.5pt;
-            padding: 1px 2px;
+            font-size: 18pt;
+            font-weight: 900;
+            text-decoration: underline;
+            margin: 10px 0 14px;
         }
         .staff-row {
             display: flex;
             justify-content: space-between;
             gap: 8px;
-            margin: 10px 0 6px;
-            font-size: 12pt;
-            font-weight: 700;
+            margin: 12px 0 8px;
+            font-size: 11.5pt;
+            font-weight: 800;
         }
         .trial-row {
             display: flex;
             flex-wrap: wrap;
             gap: 12px 24px;
-            font-size: 11.5pt;
+            font-size: 11pt;
             margin: 8px 0 12px;
         }
-        .labor-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10pt;
-            margin-top: 6px;
-        }
-        .labor-table th,
-        .labor-table td {
-            border: 1px solid #000;
-            padding: 3px 4px;
-            text-align: center;
-            vertical-align: middle;
-        }
-        .labor-table th { font-weight: 700; background: #f5f5f5; }
         .labor-table .h-row { height: 9mm; }
         .footer-grid {
             display: grid;
@@ -81,7 +48,7 @@
             gap: 8px;
             margin-top: 14px;
             font-size: 11pt;
-            font-weight: 700;
+            font-weight: 800;
         }
         .footer-note {
             margin-top: 8px;
@@ -90,6 +57,15 @@
             justify-content: space-between;
             gap: 12px;
         }
+        .compact-work-order .wo-title { font-size: 15pt; margin: 6px 0 10px; }
+        .compact-work-order .meta-table { font-size: 10pt; }
+        .compact-work-order .items-table { margin-top: 8px; }
+        .compact-work-order .items-table tbody tr td { padding: 2px 4px; font-size: 10pt; }
+        .compact-work-order .staff-row { margin: 8px 0 6px; font-size: 10.5pt; }
+        .compact-work-order .trial-row { margin: 6px 0 8px; font-size: 10pt; }
+        .compact-work-order .labor-table .h-row { height: 7mm; }
+        .compact-work-order .footer-grid { margin-top: 8px; font-size: 10pt; }
+        .compact-work-order .footer-note { font-size: 10pt; margin-top: 6px; }
     </style>
 </head>
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
@@ -98,76 +74,98 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet">
+<div class="{{ $sheetClass }} compact-work-order">
     <header class="doc-header">
         <div class="header-right">
             @foreach (app(\App\Services\SettingService::class)->branding()['lines'] as $line)
                 <div>{{ $line }}</div>
             @endforeach
-            <div class="dept">القسم المالي</div>
+            <div class="dept">{{ $tpl['dept_label'] ?? 'قسم الإنتاج — إذن شغل' }}</div>
         </div>
         <div class="header-left">
-            @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
+            @if (!empty($tpl['show_logo']))
+                @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => (bool) ($tpl['show_seal'] ?? true)])
+            @endif
             <div class="header-meta">
                 <div class="serial-red">{{ $case->order_ref }}</div>
-                <div>إذن شغل رقم: <span class="fill" style="min-width:18mm;">{{ $case->work_order_no ?? '—' }}</span></div>
-                <div>التاريخ: <span class="fill" style="min-width:22mm;">{{ $dateDisplay }}</span>م</div>
-                <div>رقم الحالة: ( <span class="fill" style="min-width:16mm;">{{ $case->case_no }}</span> )</div>
+                <div>إذن شغل رقم: <span class="fill">{{ $case->work_order_no ?? '—' }}</span></div>
+                <div>التاريخ: <span class="fill">{{ $dateDisplay }}</span> م</div>
+                <div>رقم الحالة: <span class="fill">{{ $case->case_no }}</span></div>
             </div>
         </div>
     </header>
 
-    <section class="meta-grid">
-        <div class="line">الإسم: <span class="fill fill-wide">{{ $patient?->name ?? $bom?->patient_name ?? '—' }}</span></div>
-        <div class="line">
-            رقم التصديق: <span class="fill" style="min-width:28mm;">{{ $approvalNo }}</span>
-            تاريخه: <span class="fill" style="min-width:22mm;">{{ $approvalDate }}</span>
-        </div>
-        <div class="line">الجهة المحول منها: <span class="fill fill-wide">{{ $case->displayEntity() }}</span></div>
-        <div class="line">العنوان: <span class="fill fill-wide">&nbsp;</span></div>
-        <div class="line">
-            القيمة: <span class="fill" style="min-width:24mm;">{{ $valueDisplay }}</span>
-            ( نقدي / شيك / قرار / خطاب تحويل )
-        </div>
-    </section>
+    <div class="wo-title">{{ $tpl['doc_title'] ?? 'إذن شغل' }}</div>
 
-    <section class="spec-section avoid-break">
-        <div class="spec-title">المواصفات</div>
-        <div class="spec-layout">
-            <div class="spec-sketch" aria-hidden="true">&nbsp;</div>
-            <div class="spec-lines">
-                @foreach ($items as $item)
-                    <div class="spec-line">
-                        {{ $item->name }}@if($item->qty > 1) — ×{{ $item->qty }}@endif
-                        @if($item->stock_item_code) ({{ $item->stock_item_code }})@endif
-                    </div>
-                @endforeach
-                @for ($i = 0; $i < $emptySpec; $i++)
-                    <div class="spec-line">&nbsp;</div>
-                @endfor
-            </div>
-        </div>
-    </section>
+    <table class="print-table meta-table avoid-break">
+        <tbody>
+            <tr>
+                <th>الاسم</th>
+                <td class="txt-right">{{ $patient?->name ?? $bom?->patient_name ?? '—' }}</td>
+            </tr>
+            <tr>
+                <th>رقم التصديق / التاريخ</th>
+                <td class="txt-right">{{ $approvalNo }} · {{ $approvalDate }}</td>
+            </tr>
+            <tr>
+                <th>الجهة المحول منها</th>
+                <td class="txt-right">{{ $case->displayEntity() }}</td>
+            </tr>
+            <tr>
+                <th>العنوان</th>
+                <td class="txt-right">&nbsp;</td>
+            </tr>
+            <tr>
+                <th>القيمة (نقدي / شيك / قرار / خطاب)</th>
+                <td class="txt-right num">{{ $valueDisplay }} ج.م</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="print-table items-table avoid-break" style="margin-top:14px;">
+        <caption>{{ $tpl['items_section_title'] ?? 'المواصفات / بنود العمل' }}</caption>
+        <thead>
+            <tr>
+                <th style="width:18%">الكود</th>
+                <th class="col-name">الصنف</th>
+                <th style="width:12%">الكمية</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($items as $item)
+                <tr>
+                    <td class="mono">{{ $item->stock_item_code ?: '—' }}</td>
+                    <td class="col-name txt-right">{{ $item->name }}</td>
+                    <td class="num">{{ $item->qty }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="3">—</td></tr>
+            @endforelse
+            @for ($i = max(0, 4 - $items->count()); $i > 0; $i--)
+                <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+            @endfor
+        </tbody>
+    </table>
 
     <div class="staff-row">
-        <span>الموظف المختص: <span class="fill" style="min-width:30mm;">&nbsp;</span></span>
-        <span>رئيس القسم: <span class="fill" style="min-width:30mm;">&nbsp;</span></span>
-        <span>تنفذ . مدير الإنتاج: <span class="fill" style="min-width:24mm;">&nbsp;</span></span>
+        <span>{{ $tpl['signature_1'] ?? 'الموظف المختص' }}: <span class="fill">&nbsp;</span></span>
+        <span>{{ $tpl['signature_2'] ?? 'رئيس القسم' }}: <span class="fill">&nbsp;</span></span>
+        <span>{{ $tpl['signature_3'] ?? 'مدير الإنتاج' }}: <span class="fill">&nbsp;</span></span>
     </div>
 
     <div class="trial-row">
-        <span>تاريخ التجربة الأولى: <span class="fill" style="min-width:22mm;">&nbsp;</span></span>
-        <span>توقيع المختص: <span class="fill" style="min-width:28mm;">&nbsp;</span></span>
-        <span>تاريخ التجربة الثانية: <span class="fill" style="min-width:22mm;">&nbsp;</span></span>
+        <span>تاريخ التجربة الأولى: <span class="fill">&nbsp;</span></span>
+        <span>توقيع المختص: <span class="fill">&nbsp;</span></span>
+        <span>تاريخ التجربة الثانية: <span class="fill">&nbsp;</span></span>
     </div>
 
-    <table class="labor-table print-table avoid-break">
+    <table class="print-table labor-table avoid-break">
         <thead>
             <tr>
                 <th rowspan="2">القسم المختص</th>
                 <th rowspan="2">اسم القائم بالتشغيل</th>
-                <th colspan="2">التاريخ ( من — إلى )</th>
-                <th colspan="2">ساعة التشغيل ( ساعة — دقيقة )</th>
+                <th colspan="2">التاريخ (من — إلى)</th>
+                <th colspan="2">ساعة التشغيل</th>
                 <th rowspan="2">رئيس قسم الإنتاج</th>
             </tr>
             <tr>
@@ -178,36 +176,30 @@
             </tr>
         </thead>
         <tbody>
-            @for ($r = 0; $r < 3; $r++)
+            @for ($r = 0; $r < 2; $r++)
                 <tr class="h-row">
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
+                    <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
                 </tr>
             @endfor
         </tbody>
     </table>
 
     <div class="footer-note">
-        <span>ملاحظة المصنع: <span class="fill" style="min-width:40mm;">&nbsp;</span></span>
-        <span>مجموعة ساعات العمل: <span class="fill" style="min-width:20mm;">&nbsp;</span></span>
+        <span>ملاحظة المصنع: <span class="fill">{{ $tpl['footer_note'] ?? '' }}</span></span>
+        <span>مجموعة ساعات العمل: <span class="fill">&nbsp;</span></span>
     </div>
 
     <div class="footer-grid avoid-break">
-        <div>مراجعة التصنيع: <span class="fill" style="min-width:24mm;">&nbsp;</span></div>
-        <div>مراجعة الخامات: <span class="fill" style="min-width:24mm;">&nbsp;</span></div>
-        <div>ملاحظات: <span class="fill" style="min-width:20mm;">&nbsp;</span></div>
+        <div>مراجعة التصنيع: <span class="fill">&nbsp;</span></div>
+        <div>مراجعة الخامات: <span class="fill">&nbsp;</span></div>
+        <div>ملاحظات: <span class="fill">&nbsp;</span></div>
     </div>
     <div class="footer-note" style="margin-top:10px;">
         <span>توقيع المستلم وعنوانه: <span class="fill fill-wide">&nbsp;</span></span>
     </div>
     <div class="footer-note">
-        <span>التاريخ: <span class="fill" style="min-width:22mm;">&nbsp;</span> / <span class="fill" style="min-width:10mm;">&nbsp;</span> / 20<span class="fill" style="min-width:8mm;">&nbsp;</span> م</span>
-        <span>توقيع ( &nbsp;&nbsp; ) مدير الإنتاج</span>
+        <span>التاريخ: <span class="fill">&nbsp;</span> / <span class="fill">&nbsp;</span> / 20<span class="fill">&nbsp;</span> م</span>
+        <span>توقيع مدير الإنتاج: <span class="fill">&nbsp;</span></span>
     </div>
 </div>
 

@@ -4,7 +4,10 @@
         <button type="button" class="btn-action" id="btnRefreshDispenseApprovals">↻ تحديث</button>
     </div>
     <p class="text-muted" style="padding:0 16px 8px;">
-        طلبات الصرف المعلّقة من المخزن — راجع الأصناف قبل الاعتماد. الرفض يتطلب سبباً يُرسل للمخزن للتعديل.
+        طلبات الصرف المعلّقة من المخزن — تظهر فقط بعد <strong>اعتماد تخصيص الإنتاج</strong> (قسم + فني).
+        للاطلاع على كل أنواع الأذون راجع تقرير
+        <a href="{{ route('admin.reports.section', ['section' => 'authorizations']) }}">جميع الأذون والاعتمادات</a>.
+        الرفض يتطلب سبباً يُرسل للمخزن للتعديل.
     </p>
     <div class="panel-body">
         <table>

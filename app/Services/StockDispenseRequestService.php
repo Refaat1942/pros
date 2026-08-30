@@ -22,31 +22,33 @@ class StockDispenseRequestService
      */
     public function submit(Bom $bom, array $dispensePayload, User $requester): StockDispenseRequest
     {
-        $bom->loadMissing(['caseRecord', 'items']);
+        $bomId = $bom->id;
 
-        if ($bom->stage !== Bom::STAGE_RAW) {
-            abort(422, 'BOM ليست جاهزة للصرف.');
-        }
+        return DB::transaction(function () use ($bomId, $dispensePayload, $requester) {
+            $bom = Bom::lockForUpdate()->with(['caseRecord', 'items'])->findOrFail($bomId);
 
-        $case = $bom->caseRecord;
-        if (! $case) {
-            abort(422, 'لا توجد حالة مرتبطة.');
-        }
+            if ($bom->stage !== Bom::STAGE_RAW) {
+                abort(422, 'BOM ليست جاهزة للصرف.');
+            }
 
-        $pending = StockDispenseRequest::query()
-            ->where('bom_id', $bom->id)
-            ->where('status', StockDispenseRequest::STATUS_PENDING)
-            ->exists();
+            $case = $bom->caseRecord;
+            if (! $case) {
+                abort(422, 'لا توجد حالة مرتبطة.');
+            }
 
-        if ($pending) {
-            abort(422, 'يوجد طلب صرف معلّق لهذه BOM.');
-        }
+            app(WorkshopAssignmentService::class)->assertDispenseAllowed($case);
 
-        $this->bomService->validateDispenseLines($bom, $dispensePayload);
+            if (StockDispenseRequest::query()
+                ->where('bom_id', $bom->id)
+                ->where('status', StockDispenseRequest::STATUS_PENDING)
+                ->exists()) {
+                abort(422, 'يوجد طلب صرف معلّق لهذه BOM.');
+            }
 
-        $storedLines = $this->bomService->resolveDispenseLinesForStorage($bom, $dispensePayload);
+            $this->bomService->validateDispenseLines($bom, $dispensePayload);
 
-        return DB::transaction(function () use ($bom, $case, $storedLines, $requester) {
+            $storedLines = $this->bomService->resolveDispenseLinesForStorage($bom, $dispensePayload);
+
             $request = StockDispenseRequest::create([
                 'case_id' => $case->id,
                 'bom_id' => $bom->id,
@@ -86,19 +88,20 @@ class StockDispenseRequestService
             abort(403, 'لا تملك صلاحية اعتماد الصرف.');
         }
 
-        if (! $request->isPending()) {
-            abort(422, 'طلب الصرف ليس معلّقاً.');
-        }
+        $requestId = $request->id;
 
-        return DB::transaction(function () use ($request, $approver) {
-            $request = StockDispenseRequest::lockForUpdate()->findOrFail($request->id);
+        return DB::transaction(function () use ($requestId, $approver) {
+            $request = StockDispenseRequest::lockForUpdate()->findOrFail($requestId);
+
+            if ($request->status !== StockDispenseRequest::STATUS_PENDING) {
+                abort(422, 'طلب الصرف ليس معلّقاً.');
+            }
+
             $bom = Bom::lockForUpdate()->with('caseRecord')->findOrFail($request->bom_id);
 
             if ($bom->stage !== Bom::STAGE_RAW) {
                 abort(422, 'تم تنفيذ الصرف مسبقاً.');
             }
-
-            $fromStage = $bom->caseRecord?->stage_key ?? 'manufacturing';
 
             $payload = $this->normalizeStoredLines($request->lines ?? []);
 
@@ -161,3 +164,85 @@ class StockDispenseRequestService
     }
 
     public function reject(StockDispenseRequest $request, User $approver, string $reason): StockDispenseRequest
+    {
+        if (! $approver->hasPermission('approve-dispense')) {
+            abort(403, 'لا تملك صلاحية اعتماد الصرف.');
+        }
+
+        $requestId = $request->id;
+
+        return DB::transaction(function () use ($requestId, $approver, $reason) {
+            $request = StockDispenseRequest::lockForUpdate()
+                ->with(['caseRecord', 'requestedBy'])
+                ->findOrFail($requestId);
+
+            if ($request->status !== StockDispenseRequest::STATUS_PENDING) {
+                abort(422, 'طلب الصرف ليس معلّقاً.');
+            }
+
+            $request->update([
+                'status' => StockDispenseRequest::STATUS_REJECTED,
+                'approved_by_user_id' => $approver->id,
+                'approved_at' => now(),
+                'rejection_reason' => $reason,
+            ]);
+
+            AuditService::log(
+                action: 'reject',
+                description: "رفض طلب صرف مخزني — #{$request->id}",
+                tag: 'warehouse',
+                after: ['reason' => $reason],
+            );
+
+            $case = $request->caseRecord;
+            if ($case) {
+                try {
+                    $body = "الحالة {$case->case_no} — رُفض طلب الصرف.";
+                    if ($reason) {
+                        $body .= " السبب: {$reason}";
+                    }
+                    $this->notifications->push(
+                        roleSlug: Role::SLUG_TECHNICAL,
+                        title: '❌ رُفض طلب صرف مخزني',
+                        body: $body,
+                        case: $case,
+                        event: 'dispense_request_rejected',
+                        data: ['url' => '/technical/bom', 'request_id' => (string) $request->id],
+                    );
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+
+            return $request->fresh();
+        });
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function listPending(): array
+    {
+        return StockDispenseRequest::query()
+            ->where('status', StockDispenseRequest::STATUS_PENDING)
+            ->with([
+                'caseRecord:id,case_no,work_order_no,patient_id',
+                'caseRecord.patient:id,name',
+                'bom:id,bom_no,stage',
+                'requestedBy:id,name',
+            ])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (StockDispenseRequest $r) => [
+                'id' => $r->id,
+                'status' => $r->status,
+                'work_order_no' => $r->work_order_no,
+                'lines_count' => count($r->lines ?? []),
+                'created_at' => $r->created_at?->toIso8601String(),
+                'case' => $r->caseRecord?->only(['id', 'case_no', 'work_order_no']),
+                'patient_name' => $r->caseRecord?->patient?->name,
+                'bom' => $r->bom?->only(['id', 'bom_no', 'stage']),
+                'requested_by' => $r->requestedBy?->only(['id', 'name']),
+            ])
+            ->values()
+            ->all();
+    }
+}

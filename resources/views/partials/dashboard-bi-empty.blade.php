@@ -32,7 +32,7 @@
             <div class="bi-row"><span>بانتظار الصرف</span><strong>0</strong></div>
             <div class="bi-row"><span>داخل الورش حالياً</span><strong>0</strong></div>
             <div class="bi-row"><span>جاهز للتسليم</span><strong style="color:#059669">0</strong></div>
-            <div class="bi-sub">⏲️ زمن الإنتاج التقديري لكل ورشة:
+            <div class="bi-sub">⏲️ زمن الإنتاج التقديري لكل قسم إنتاج:
                 <ul class="bi-list"><li>—</li></ul>
             </div>
         </div>
