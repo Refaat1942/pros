@@ -19,6 +19,7 @@ class StockMovement extends Model
 
     protected $fillable = [
         'stock_item_id',
+        'stock_item_price_id',
         'movement_type',
         'quantity',
         'unit_cost',
@@ -44,6 +45,11 @@ class StockMovement extends Model
     public function stockItem(): BelongsTo
     {
         return $this->belongsTo(StockItem::class);
+    }
+
+    public function stockItemPrice(): BelongsTo
+    {
+        return $this->belongsTo(StockItemPrice::class);
     }
 
     public function supplier(): BelongsTo

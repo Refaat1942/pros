@@ -199,6 +199,29 @@ class NotificationService
     }
 
     /**
+     * تنبيه مستشار المعدلات — صنف بأكثر من سعر شرفعلى الرصيد.
+     */
+    public function notifyAdjustmentsMultiPriceItem(CaseRecord $case, array $alert): AppNotification
+    {
+        $case->loadMissing('patient:id,name');
+        $patient = $case->patient?->name ?? 'غير معروف';
+        $caseNo = $case->case_no ?? ('#'.$case->id);
+        $code = $alert['stock_item_code'] ?? '—';
+
+        return $this->push(
+            roleSlug: Role::SLUG_ADJUSTMENTS,
+            title: '💰 صنف بأكثر من سعر شراء',
+            body: "{$alert['message']} — مريض {$patient} (حالة {$caseNo}).",
+            case: $case,
+            event: 'multi_price_stock_item',
+            data: [
+                'stock_item_code' => $code,
+                'url' => '/adjustments/adjustments',
+            ],
+        );
+    }
+
+    /**
      * يُطلق إشعار انتقال المرحلة للدور المستهدف.
      */
     public function notifyTransition(CaseRecord $case, string $event, ?string $fromStageKey = null): ?AppNotification

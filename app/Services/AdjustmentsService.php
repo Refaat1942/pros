@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bom;
 use App\Models\BomItem;
 use App\Models\CaseRecord;
+use App\Services\Notifications\NotificationService;
 
 /**
  * المعدلات (الخطوة 4) — مرحلة المراجعة والإضافة قبل التكاليف.
@@ -20,6 +21,8 @@ class AdjustmentsService
         private readonly BomService $bomService,
         private readonly CostingService $costingService,
         private readonly SpecEditRequestService $editRequestService,
+        private readonly PriceBatchDispenseService $priceBatchDispense,
+        private readonly NotificationService $notifications,
     ) {}
 
     /**
@@ -33,7 +36,23 @@ class AdjustmentsService
             abort(422, 'الحالة ليست في مرحلة المعدلات.');
         }
 
-        return $this->bomService->appendAdjustmentItems($case, $items);
+        $bom = $this->bomService->appendAdjustmentItems($case, $items);
+        $this->notifyMultiPriceAlerts($case, $items);
+
+        return $bom;
+    }
+
+    /**
+     * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
+     */
+    private function notifyMultiPriceAlerts(CaseRecord $case, array $items): void
+    {
+        foreach ($items as $row) {
+            $alert = $this->priceBatchDispense->multiPriceAlertForCode($row['stock_item_code']);
+            if ($alert !== null) {
+                $this->notifications->notifyAdjustmentsMultiPriceItem($case, $alert);
+            }
+        }
     }
 
     /**

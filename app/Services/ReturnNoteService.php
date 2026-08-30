@@ -21,6 +21,7 @@ class ReturnNoteService
     public function __construct(
         private readonly BarcodeValidationService $barcodeValidation,
         private readonly StockPriceService $stockPriceService,
+        private readonly PriceBatchDispenseService $priceBatchDispenseService,
     ) {}
 
     /**
@@ -132,7 +133,9 @@ class ReturnNoteService
                     abort(422, "باركود غير مطابق للصنف {$line->stock_item_code}.");
                 }
 
-                $stockItem = StockItem::findByOperationalCode($line->stock_item_code, true)
+                $stockItem = StockItem::whereKey(
+                    StockItem::findByOperationalCode($line->stock_item_code, true)?->id
+                )->lockForUpdate()->first()
                     ?? abort(422, "الصنف غير موجود: {$line->stock_item_code}");
 
                 if (! isset($stockBefore[$stockItem->code])) {
@@ -142,22 +145,72 @@ class ReturnNoteService
                 }
 
                 $bomItem = $note->bom?->items->firstWhere('stock_item_code', $line->stock_item_code);
+                $bom = $note->bom;
 
-                $qtyBefore = (int) $stockItem->qty;
-                $unitCost = $this->returnUnitCost($bomItem, $line->stock_item_code);
-                $balanceAfter = $qtyBefore + $qtyReturned;
+                $qtyBefore = (float) $stockItem->qty;
+                $allocations = $bom
+                    ? $this->priceBatchDispenseService->allocateForReturn($bom, $stockItem, (float) $qtyReturned)
+                    : [[
+                        'batch_id' => 0,
+                        'qty' => (float) $qtyReturned,
+                        'unit_price' => $this->returnUnitCost($bomItem, $line->stock_item_code),
+                    ]];
 
-                StockMovement::create([
-                    'stock_item_id' => $stockItem->id,
-                    'movement_type' => StockMovement::TYPE_RETURN,
-                    'quantity' => $qtyReturned,
-                    'unit_cost' => $unitCost,
-                    'balance_after' => $balanceAfter,
-                    'reference_type' => 'return_note',
-                    'reference_id' => $note->id,
-                    'performed_by_user_id' => $performedById,
-                    'moved_at' => now(),
-                ]);
+                if ($bom && $allocations !== []) {
+                    $this->priceBatchDispenseService->applyIncrements($allocations);
+                }
+
+                $runningBalance = $qtyBefore;
+                $lineValue = 0.0;
+                $unitCostForLine = 0.0;
+
+                foreach ($allocations as $alloc) {
+                    if ((int) $alloc['batch_id'] === 0) {
+                        $allocQty = (float) $alloc['qty'];
+                        $unitCost = (float) $alloc['unit_price'];
+                        $runningBalance += $allocQty;
+
+                        StockMovement::create([
+                            'stock_item_id' => $stockItem->id,
+                            'movement_type' => StockMovement::TYPE_RETURN,
+                            'quantity' => $allocQty,
+                            'unit_cost' => $unitCost,
+                            'balance_after' => $runningBalance,
+                            'reference_type' => 'return_note',
+                            'reference_id' => $note->id,
+                            'performed_by_user_id' => $performedById,
+                            'moved_at' => now(),
+                        ]);
+
+                        $lineValue += $allocQty * $unitCost;
+                        $unitCostForLine = $unitCost;
+
+                        continue;
+                    }
+
+                    $allocQty = (float) $alloc['qty'];
+                    $unitCost = (float) $alloc['unit_price'];
+                    $runningBalance += $allocQty;
+
+                    StockMovement::create([
+                        'stock_item_id' => $stockItem->id,
+                        'stock_item_price_id' => $alloc['batch_id'],
+                        'movement_type' => StockMovement::TYPE_RETURN,
+                        'quantity' => $allocQty,
+                        'unit_cost' => $unitCost,
+                        'balance_after' => $runningBalance,
+                        'reference_type' => 'return_note',
+                        'reference_id' => $note->id,
+                        'performed_by_user_id' => $performedById,
+                        'moved_at' => now(),
+                    ]);
+
+                    $lineValue += $allocQty * $unitCost;
+                }
+
+                if ($allocations !== [] && $qtyReturned > 0) {
+                    $unitCostForLine = round($lineValue / (float) $qtyReturned, 4);
+                }
 
                 $stockItem->increment('qty', $qtyReturned);
 
@@ -171,10 +224,10 @@ class ReturnNoteService
                     'stock_item_code' => $line->stock_item_code,
                     'name' => $line->name,
                     'qty_returned' => $qtyReturned,
-                    'qty_before' => $qtyBefore,
-                    'qty_after' => $balanceAfter,
-                    'unit_cost' => $unitCost,
-                    'line_value' => round($qtyReturned * $unitCost, 2),
+                    'qty_before' => (int) $qtyBefore,
+                    'qty_after' => (int) $runningBalance,
+                    'unit_cost' => $unitCostForLine,
+                    'line_value' => round($lineValue, 2),
                 ];
 
                 if ($bomItem) {

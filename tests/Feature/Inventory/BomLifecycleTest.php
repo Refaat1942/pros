@@ -92,7 +92,7 @@ class BomLifecycleTest extends TestCase
         $this->assertEquals(0, $item->reserved);
     }
 
-    public function test_dispense_stamps_wac_on_movements_and_issue_cost_on_case(): void
+    public function test_dispense_stamps_fifo_batch_cost_on_movements_and_issue_cost(): void
     {
         ['item' => $item, 'case' => $case, 'user' => $user] = $this->prepareCase();
         $this->actingAs($user);
@@ -112,10 +112,10 @@ class BomLifecycleTest extends TestCase
             ->first();
 
         $this->assertNotNull($movement);
-        $this->assertEqualsWithDelta((float) $item->fresh()->wac, (float) $movement->unit_cost, 0.01);
+        $this->assertEqualsWithDelta(100.0, (float) $movement->unit_cost, 0.01);
 
         $case->refresh();
-        $this->assertSame(round((float) $item->wac * 2, 2), (float) $case->issue_cost);
+        $this->assertSame(200.0, (float) $case->issue_cost);
     }
 
     /** المشهد الدرامي: الإنذار الحاد */
@@ -316,7 +316,7 @@ class BomLifecycleTest extends TestCase
         $priceService->addBatch($item->fresh(), 10, 100.00, $supplier, 'INV-RET-A', now());
         $priceService->addBatch($item->fresh(), 10, 250.00, $supplier, 'INV-RET-B', now());
         $item->refresh();
-        $wac = (float) $item->wac;
+        $lowBatchPrice = 100.0;
 
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
@@ -324,7 +324,7 @@ class BomLifecycleTest extends TestCase
         $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']);
 
         $case->refresh();
-        $this->assertSame(round($wac * 2, 2), (float) $case->issue_cost);
+        $this->assertSame(round($lowBatchPrice * 2, 2), (float) $case->issue_cost);
 
         $returnNote = app(ReturnNoteService::class)->create($bom->fresh(), [
             ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
@@ -354,8 +354,8 @@ class BomLifecycleTest extends TestCase
         $this->assertSame(1, $returnMovement->quantity);
 
         $case->refresh();
-        $this->assertSame(round($wac * 1, 2), (float) $case->issue_cost,
-            'issue_cost must drop by the WAC value of returned units');
+        $this->assertSame(100.0, (float) $case->issue_cost,
+            'issue_cost must drop by the FIFO batch value of returned units');
 
         $bom->refresh()->load('items');
         $this->assertSame(1, $bom->items->first()->returned_qty);

@@ -59,6 +59,8 @@ class StockReceiveController extends Controller
         $user = Auth::user();
 
         $movement = DB::transaction(function () use ($request, $item, $supplier, $user) {
+            $lineId = $request->validated('supply_request_line_id');
+
             $movement = $this->stockReceiveService->receive(
                 item: $item,
                 qty: (int) $request->validated('qty'),
@@ -70,9 +72,10 @@ class StockReceiveController extends Controller
                 documentPath: $this->storeInboundDocument($request),
                 documentOriginalName: $request->file('document')?->getClientOriginalName(),
                 documentMime: $request->file('document')?->getClientMimeType(),
+                supplyRequestLineId: $lineId ? (int) $lineId : null,
             );
 
-            if ($lineId = $request->validated('supply_request_line_id')) {
+            if ($lineId) {
                 $line = SupplyRequestLine::query()->findOrFail($lineId);
                 app(SupplyRequestService::class)->markLineReceived($line, $movement);
             }
