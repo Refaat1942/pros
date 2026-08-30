@@ -9,7 +9,10 @@ use App\Models\CustomDocument;
 use App\Services\AuditService;
 use App\Services\CustomDocumentService;
 use App\Services\DocumentTemplateService;
+use App\Services\QuoteQrService;
+use App\Support\DocumentPreviewSamples;
 use App\Support\DocumentScopeCatalog;
+use App\Support\QuotePrintPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,6 +22,7 @@ class DocumentTemplateController extends Controller
     public function __construct(
         private readonly DocumentTemplateService $templates,
         private readonly CustomDocumentService $customDocuments,
+        private readonly QuoteQrService $quoteQrService,
     ) {}
 
     public function edit(Request $request, string $document): View
@@ -60,6 +64,8 @@ class DocumentTemplateController extends Controller
             'departmentOptions' => DocumentScopeCatalog::departmentOptions(),
             'stageOptions' => DocumentScopeCatalog::stageOptions(),
             'configuredScopes' => $this->templates->configuredScopeKeys($document),
+            'sourceView' => $def['view'] ?? null,
+            'customDocumentsTableReady' => $this->customDocuments->tableReady(),
         ]);
     }
 
@@ -130,10 +136,18 @@ class DocumentTemplateController extends Controller
                     'documentTemplate' => $tpl,
                     'previewValueDisplay' => '15,000',
                 ]),
-                'quote' => view('admin.print.document-template-quote-preview', [
+                'quote' => view('quotes.print', [
+                    'quote' => $sampleQuote = DocumentPreviewSamples::quote(),
+                    'printTotals' => QuotePrintPresenter::fromQuote($sampleQuote),
+                    'quoteQrSvg' => $this->safeQuoteQr($sampleQuote->quote_no),
+                    'embed' => false,
+                    'autoPrint' => $autoPrint,
                     'documentTemplate' => $tpl,
                 ]),
-                'spec_print' => view('admin.print.document-template-spec-preview', [
+                'spec_print' => view('spec.print', [
+                    'spec' => DocumentPreviewSamples::techOrderSpec(),
+                    'case' => DocumentPreviewSamples::techOrderSpec()->caseRecord,
+                    'autoPrint' => $autoPrint,
                     'documentTemplate' => $tpl,
                 ]),
                 default => abort(404),
@@ -145,6 +159,17 @@ class DocumentTemplateController extends Controller
                 'document' => $document,
                 'errorMessage' => config('app.debug') ? $e->getMessage() : null,
             ]);
+        }
+    }
+
+    private function safeQuoteQr(string $quoteNo): ?string
+    {
+        try {
+            return $this->quoteQrService->svg($quoteNo);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
         }
     }
 

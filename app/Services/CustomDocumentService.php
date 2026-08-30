@@ -6,6 +6,7 @@ use App\Models\CustomDocument;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -49,6 +50,8 @@ class CustomDocumentService
      */
     public function create(array $data, User $actor, ?UploadedFile $reference = null): CustomDocument
     {
+        abort_unless($this->tableReady(), 503, 'جدول الوثائق المخصصة غير جاهز — نفّذ migrate على السيرفر.');
+
         return DB::transaction(function () use ($data, $actor, $reference) {
             $title = trim($data['title']);
             $key = $this->uniqueKey($title);
@@ -137,6 +140,10 @@ class CustomDocumentService
 
     public function findByKey(string $key): ?CustomDocument
     {
+        if (! $this->tableReady()) {
+            return null;
+        }
+
         return CustomDocument::query()
             ->where('key', $key)
             ->where('is_active', true)
@@ -146,12 +153,25 @@ class CustomDocumentService
     /** @return list<CustomDocument> */
     public function activeList(): array
     {
+        if (! $this->tableReady()) {
+            return [];
+        }
+
         return CustomDocument::query()
             ->where('is_active', true)
             ->orderBy('group_label')
             ->orderBy('title')
             ->get()
             ->all();
+    }
+
+    public function tableReady(): bool
+    {
+        try {
+            return Schema::hasTable('custom_documents');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function uniqueKey(string $title): string

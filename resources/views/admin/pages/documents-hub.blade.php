@@ -13,6 +13,16 @@
                 <button type="button" id="btnOpenCustomDocumentModal" class="btn-action success">➕ إضافة وثيقة جديدة</button>
             @endif
         </div>
+        @if (empty($customDocumentsTableReady))
+            <div class="panel-body" style="padding-top:0;">
+                <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:10px;padding:12px 16px;font-size:13px;line-height:1.6;">
+                    <strong>تنبيه:</strong> جدول الوثائق المخصصة غير جاهز على هذا السيرفر.
+                    الوثائق الأساسية (عرض سعر، إيصال، إذن صرف…) تعمل بعد التحديث، لكن «إضافة وثيقة جديدة» تحتاج:
+                    <code style="display:block;margin-top:8px;">bash deploy.sh</code>
+                    أو <code>php artisan migrate --force</code>
+                </div>
+            </div>
+        @endif
         <div class="panel-body" style="display:grid;gap:20px;">
             @foreach ($documents as $group)
                 <section>
