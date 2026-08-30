@@ -31,6 +31,27 @@ class DocumentTemplateSettingsTest extends TestCase
         $this->assertSame('مخزن تجريبي', $tpl['dept_label']);
     }
 
+    public function test_documents_hub_index_ok_without_custom_documents_table(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        $this->actingAs($super)
+            ->get(route('admin.documents-hub'))
+            ->assertOk()
+            ->assertSee('مركز الوثائق', false)
+            ->assertSee('عرض سعر', false);
+    }
+
+    public function test_preview_quote_uses_real_print_template(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        $this->actingAs($super)
+            ->get(route('admin.documents-hub.preview', 'quote'))
+            ->assertOk()
+            ->assertSee('مريض تجريبي — معاينة القالب', false);
+    }
+
     public function test_scoped_template_overrides_global_for_department(): void
     {
         Setting::updateOrCreate(

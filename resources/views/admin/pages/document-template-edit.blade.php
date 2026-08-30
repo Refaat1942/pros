@@ -75,9 +75,19 @@
 
             <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;line-height:1.6;">
                 عدّل العنوان، الترويسة، التوقيعات، وخيارات الشكل لهذه الوثيقة فقط.
+                المعاينة تعرض <strong>نفس قالب الطباعة الفعلي</strong> المستخدم في النظام.
+                @if (!empty($sourceView))
+                    <span style="display:block;margin-top:6px;font-size:12px;">القالب المصدر: <code>{{ $sourceView }}</code></span>
+                @endif
                 الترويسة العامة (شعار المؤسسة وأسطر الجهة) من
                 <a href="{{ url('/admin/branding-settings') }}">الهوية البصرية</a>.
             </p>
+
+            @if (empty($customDocumentsTableReady) && !empty($isCustomDocument))
+                <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:16px;">
+                    جدول الوثائق المخصصة غير جاهز — نفّذ <code>php artisan migrate --force</code> على السيرفر.
+                </div>
+            @endif
 
             <div class="doc-template-grid">
                 @foreach ($fields as $field)

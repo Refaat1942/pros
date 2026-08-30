@@ -22,7 +22,7 @@ class DocumentTemplateService
         $out = [];
 
         foreach ($definitions as $key => $def) {
-            $merged = $this->mergeDefinition($key, $def, $stored[$key] ?? []);
+            $merged = $this->mergeDefinition($key, $def, $this->normalizeDocumentEntry($stored[$key] ?? []));
             $out[$key] = [
                 'key' => $key,
                 'group' => $def['group'],
@@ -64,7 +64,7 @@ class DocumentTemplateService
         $def = $this->definition($key);
         $stored = $this->storedRaw();
 
-        return $this->mergeDefinition($key, $def, $stored[$key] ?? [], $department, $stage);
+        return $this->mergeDefinition($key, $def, $this->normalizeDocumentEntry($stored[$key] ?? []), $department, $stage);
     }
 
     /**
@@ -105,7 +105,9 @@ class DocumentTemplateService
     public function configuredScopeKeys(string $key): array
     {
         $stored = $this->storedRaw();
-        $scopes = $stored[$key][self::SCOPES_KEY] ?? [];
+        $entry = $this->normalizeDocumentEntry($stored[$key] ?? []);
+
+        $scopes = $entry[self::SCOPES_KEY] ?? [];
 
         if (! is_array($scopes)) {
             return [];
@@ -144,14 +146,14 @@ class DocumentTemplateService
         $scopeKey = DocumentScopeCatalog::scopeKey($department, $stage);
 
         if ($scopeKey === null) {
-            $entry = $stored[$key] ?? [];
+            $entry = $this->normalizeDocumentEntry($stored[$key] ?? []);
             $scopes = is_array($entry[self::SCOPES_KEY] ?? null) ? $entry[self::SCOPES_KEY] : [];
             $stored[$key] = array_merge($this->globalFields($entry), $clean);
             if ($scopes !== []) {
                 $stored[$key][self::SCOPES_KEY] = $scopes;
             }
         } else {
-            $entry = $stored[$key] ?? [];
+            $entry = $this->normalizeDocumentEntry($stored[$key] ?? []);
             $scopes = is_array($entry[self::SCOPES_KEY] ?? null) ? $entry[self::SCOPES_KEY] : [];
             $scopes[$scopeKey] = array_merge($scopes[$scopeKey] ?? [], $clean);
             $stored[$key] = array_merge($this->globalFields($entry), [self::SCOPES_KEY => $scopes]);
@@ -399,6 +401,15 @@ class DocumentTemplateService
         unset($global[self::SCOPES_KEY]);
 
         return $global;
+    }
+
+    /**
+     * @param  mixed  $entry
+     * @return array<string, mixed>
+     */
+    private function normalizeDocumentEntry(mixed $entry): array
+    {
+        return is_array($entry) ? $entry : [];
     }
 
     private function castField(string $type, mixed $value, mixed $default): mixed

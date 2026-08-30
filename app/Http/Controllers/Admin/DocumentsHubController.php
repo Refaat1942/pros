@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\CustomDocumentService;
 use App\Services\DocumentTemplateService;
 use Illuminate\View\View;
 
@@ -20,6 +21,7 @@ class DocumentsHubController extends Controller
             'pageTitle' => $pages['documents-hub']['title'] ?? 'مركز الوثائق',
             'pageLabel' => $pages['documents-hub']['label'] ?? 'مركز الوثائق',
             'documents' => $this->templates->hubGroups(),
+            'customDocumentsTableReady' => app(CustomDocumentService::class)->tableReady(),
         ]);
     }
 }
