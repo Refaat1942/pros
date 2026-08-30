@@ -568,29 +568,20 @@ class StockCatalogService
                 continue;
             }
 
-            $qty = (float) $batch->qty;
-            if ($qty <= 0 && $batch->supply_request_line_id === null) {
-                continue;
-            }
-
             if (! isset($byAmount[$amount])) {
                 $byAmount[$amount] = [
                     'amount' => $amount,
                     'qty' => 0.0,
                     'from_supply' => false,
-                    'id' => null,
+                    'id' => (int) $batch->id,
                     'first_received_at' => $batch->received_at,
                 ];
             }
 
-            $byAmount[$amount]['qty'] += $qty;
+            $byAmount[$amount]['qty'] += (float) $batch->qty;
 
             if ($batch->supply_request_line_id !== null) {
                 $byAmount[$amount]['from_supply'] = true;
-            }
-
-            if ($byAmount[$amount]['id'] === null) {
-                $byAmount[$amount]['id'] = (int) $batch->id;
             }
 
             if ($batch->received_at !== null
@@ -598,6 +589,23 @@ class StockCatalogService
                     || $batch->received_at->lt($byAmount[$amount]['first_received_at']))) {
                 $byAmount[$amount]['first_received_at'] = $batch->received_at;
             }
+        }
+
+        $baseAmount = round((float) $item->price, 2);
+        if ($baseAmount > 0 && ! isset($byAmount[$baseAmount])) {
+            $byAmount[$baseAmount] = [
+                'amount' => $baseAmount,
+                'qty' => 0.0,
+                'from_supply' => false,
+                'id' => null,
+                'first_received_at' => null,
+            ];
+        }
+
+        $allocatedQty = array_sum(array_map(fn (array $tier) => $tier['qty'], $byAmount));
+        $remainder = max(0.0, (float) $item->qty - $allocatedQty);
+        if ($remainder > 0 && $baseAmount > 0 && isset($byAmount[$baseAmount])) {
+            $byAmount[$baseAmount]['qty'] += $remainder;
         }
 
         $tiers = array_values($byAmount);
