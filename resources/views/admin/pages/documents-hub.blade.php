@@ -48,8 +48,8 @@
 </div>
 
 @if (auth()->user()?->isSuperAdmin())
-<div id="customDocumentModal" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.45);">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6" role="dialog" aria-modal="true" aria-labelledby="customDocumentModalTitle">
+<div id="customDocumentModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.45);">
+    <div style="background:#fff;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.15);width:100%;max-width:520px;padding:24px;" role="dialog" aria-modal="true" aria-labelledby="customDocumentModalTitle">
         <h4 id="customDocumentModalTitle" style="margin:0 0 12px;font-size:18px;">إضافة وثيقة جديدة</h4>
         <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">
             ارفع نموذج (PDF أو صورة) ثم عدّل المحتوى والتنسيق في شاشة التخصيص.
@@ -57,24 +57,24 @@
         <form id="customDocumentForm" enctype="multipart/form-data">
             <div style="display:grid;gap:12px;">
                 <div>
-                    <label for="custom_doc_title" class="block text-sm font-bold mb-1">اسم الوثيقة</label>
-                    <input type="text" id="custom_doc_title" name="title" required maxlength="200" class="form-control w-full" placeholder="مثال: خطاب موافقة جهة">
+                    <label for="custom_doc_title" style="display:block;font-size:13px;font-weight:700;margin-bottom:4px;">اسم الوثيقة</label>
+                    <input type="text" id="custom_doc_title" name="title" required maxlength="200" class="form-control" style="width:100%;" placeholder="مثال: خطاب موافقة جهة">
                 </div>
                 <div>
-                    <label for="custom_doc_group" class="block text-sm font-bold mb-1">المجموعة</label>
-                    <input type="text" id="custom_doc_group" name="group_label" required maxlength="120" class="form-control w-full" placeholder="مثال: المالية والاستقبال">
+                    <label for="custom_doc_group" style="display:block;font-size:13px;font-weight:700;margin-bottom:4px;">المجموعة</label>
+                    <input type="text" id="custom_doc_group" name="group_label" required maxlength="120" class="form-control" style="width:100%;" placeholder="مثال: المالية والاستقبال">
                 </div>
                 <div>
-                    <label for="custom_doc_description" class="block text-sm font-bold mb-1">وصف مختصر</label>
-                    <input type="text" id="custom_doc_description" name="description" maxlength="2000" class="form-control w-full">
+                    <label for="custom_doc_description" style="display:block;font-size:13px;font-weight:700;margin-bottom:4px;">وصف مختصر</label>
+                    <input type="text" id="custom_doc_description" name="description" maxlength="2000" class="form-control" style="width:100%;">
                 </div>
                 <div>
-                    <label for="custom_doc_reference" class="block text-sm font-bold mb-1">رفع نموذج (PDF / صورة)</label>
-                    <input type="file" id="custom_doc_reference" name="reference" accept=".pdf,.jpg,.jpeg,.png,.webp" class="form-control w-full">
+                    <label for="custom_doc_reference" style="display:block;font-size:13px;font-weight:700;margin-bottom:4px;">رفع نموذج (PDF / صورة)</label>
+                    <input type="file" id="custom_doc_reference" name="reference" accept=".pdf,.jpg,.jpeg,.png,.webp" class="form-control" style="width:100%;">
                 </div>
                 <div>
-                    <label for="custom_doc_body" class="block text-sm font-bold mb-1">محتوى أولي (اختياري — HTML)</label>
-                    <textarea id="custom_doc_body" name="body_html" rows="4" class="form-control w-full" placeholder="يمكنك لصق نص من النموذج هنا"></textarea>
+                    <label for="custom_doc_body" style="display:block;font-size:13px;font-weight:700;margin-bottom:4px;">محتوى أولي (اختياري — HTML)</label>
+                    <textarea id="custom_doc_body" name="body_html" rows="4" class="form-control" style="width:100%;" placeholder="يمكنك لصق نص من النموذج هنا"></textarea>
                 </div>
             </div>
             <p id="customDocumentFormMessage" style="margin:12px 0 0;font-size:13px;"></p>
@@ -86,7 +86,6 @@
     </div>
 </div>
 
-@push('scripts')
 <script>
 (function () {
   var modal = document.getElementById('customDocumentModal');
@@ -98,19 +97,21 @@
 
   function openModal() {
     if (!modal) return;
-    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
     if (form) form.reset();
     if (msg) msg.textContent = '';
   }
   function closeModal() {
-    if (modal) modal.classList.add('hidden');
+    if (modal) modal.style.display = 'none';
   }
 
-  openBtn && openBtn.addEventListener('click', openModal);
-  closeBtn && closeBtn.addEventListener('click', closeModal);
-  modal && modal.addEventListener('click', function (e) {
-    if (e.target === modal) closeModal();
-  });
+  if (openBtn) openBtn.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (modal) {
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeModal();
+    });
+  }
 
   if (!form) return;
 
@@ -119,7 +120,6 @@
     var btn = document.getElementById('btnSaveCustomDocument');
     if (btn) btn.disabled = true;
 
-    var fd = new FormData(form);
     fetch('/admin/documents-hub/custom', {
       method: 'POST',
       headers: {
@@ -128,7 +128,7 @@
         'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '',
       },
       credentials: 'same-origin',
-      body: fd,
+      body: new FormData(form),
     })
       .then(function (r) {
         return r.ok ? r.json() : r.json().then(function (j) { throw new Error(j.message || 'فشل الإنشاء'); });
@@ -150,5 +150,4 @@
   });
 })();
 </script>
-@endpush
 @endauth

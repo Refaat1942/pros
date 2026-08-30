@@ -1,15 +1,23 @@
-{{-- ترويسة رسمية موحّدة للمطبوعات: أسطر الجهة + القسم + الشعار + بيانات جانبية اختيارية --}}
 @php
-    $branding = app(\App\Services\SettingService::class)->branding();
+    $branding = ['lines' => ['مركز الأطراف الصناعية'], 'center_name' => 'مركز الأطراف الصناعية', 'logo_path' => 'assets/img/logo.png'];
+    try {
+        $branding = app(\App\Services\SettingService::class)->branding();
+    } catch (\Throwable $e) {
+        report($e);
+    }
     $dept = $dept ?? null;
     $logoSize = $logoSize ?? '30mm';
     $seal = $seal ?? true;
     $showLogo = $showLogo ?? true;
     $headerMeta = $headerMeta ?? null;
+    $lines = $branding['lines'] ?? [];
+    if (! is_array($lines) || $lines === []) {
+        $lines = ['مركز الأطراف الصناعية'];
+    }
 @endphp
 <header class="doc-header">
     <div class="header-right">
-        @foreach ($branding['lines'] as $line)
+        @foreach ($lines as $line)
             <div>{{ $line }}</div>
         @endforeach
         @if ($dept)

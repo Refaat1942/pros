@@ -72,49 +72,58 @@ class DocumentTemplateController extends Controller
     {
         abort_unless($this->templates->exists($document), 404);
 
-        $tpl = $this->templates->for($document);
-        $autoPrint = false;
+        try {
+            $tpl = $this->templates->for($document);
+            $autoPrint = false;
 
-        if ($this->templates->isCustom($document)) {
-            $custom = $this->customDocuments->findByKey($document);
+            if ($this->templates->isCustom($document)) {
+                $custom = $this->customDocuments->findByKey($document);
 
-            return view('admin.print.custom-document-preview', [
-                'documentTemplate' => $tpl,
-                'customDocument' => $custom,
+                return view('admin.print.custom-document-preview', [
+                    'documentTemplate' => $tpl,
+                    'customDocument' => $custom,
+                ]);
+            }
+
+            return match ($document) {
+                'issue_voucher' => view('prints.issue-voucher', [
+                    'voucher' => $this->sampleIssueVoucher(),
+                    'autoPrint' => $autoPrint,
+                    'documentTemplate' => $tpl,
+                ]),
+                'payment_receipt' => view('prints.payment-receipt', [
+                    'receipt' => $this->samplePaymentReceipt(),
+                    'autoPrint' => $autoPrint,
+                    'documentTemplate' => $tpl,
+                ]),
+                'supply_request_list' => view('prints.supply-request-list', [
+                    'lines' => $this->sampleSupplyLines(),
+                    'generatedAt' => now(),
+                    'autoPrint' => $autoPrint,
+                    'documentTemplate' => $tpl,
+                ]),
+                'work_order' => view('prints.work-order', [
+                    'case' => $this->sampleWorkOrderCase(),
+                    'autoPrint' => $autoPrint,
+                    'documentTemplate' => $tpl,
+                    'previewValueDisplay' => '15,000',
+                ]),
+                'quote' => view('admin.print.document-template-quote-preview', [
+                    'documentTemplate' => $tpl,
+                ]),
+                'spec_print' => view('admin.print.document-template-spec-preview', [
+                    'documentTemplate' => $tpl,
+                ]),
+                default => abort(404),
+            };
+        } catch (\Throwable $e) {
+            report($e);
+
+            return view('admin.print.document-preview-error', [
+                'document' => $document,
+                'errorMessage' => config('app.debug') ? $e->getMessage() : null,
             ]);
         }
-
-        return match ($document) {
-            'issue_voucher' => view('prints.issue-voucher', [
-                'voucher' => $this->sampleIssueVoucher(),
-                'autoPrint' => $autoPrint,
-                'documentTemplate' => $tpl,
-            ]),
-            'payment_receipt' => view('prints.payment-receipt', [
-                'receipt' => $this->samplePaymentReceipt(),
-                'autoPrint' => $autoPrint,
-                'documentTemplate' => $tpl,
-            ]),
-            'supply_request_list' => view('prints.supply-request-list', [
-                'lines' => $this->sampleSupplyLines(),
-                'generatedAt' => now(),
-                'autoPrint' => $autoPrint,
-                'documentTemplate' => $tpl,
-            ]),
-            'work_order' => view('prints.work-order', [
-                'case' => $this->sampleWorkOrderCase(),
-                'autoPrint' => $autoPrint,
-                'documentTemplate' => $tpl,
-                'previewValueDisplay' => '15,000',
-            ]),
-            'quote' => view('admin.print.document-template-quote-preview', [
-                'documentTemplate' => $tpl,
-            ]),
-            'spec_print' => view('admin.print.document-template-spec-preview', [
-                'documentTemplate' => $tpl,
-            ]),
-            default => abort(404),
-        };
     }
 
     /** @return array<string, mixed> */

@@ -178,6 +178,7 @@ trap - EXIT
 fix_storage_permissions
 
 log "Deploy complete — $(git --no-pager log -1 --oneline)"
+warn "مركز الوثائق: /admin/documents-hub — بعد النشر شغّل migrate إن لم يُشغَّل تلقائياً."
 warn "تحقق من الواجهة: زر المعدلات «إرسال إلى الاعتماد» — رسالة الطبيب «تم التحويل … للتوصيف». حدّث المتصفح Ctrl+F5 بعد النشر."
 warn "لا تشغّل php artisan view:cache أو config:cache كـ root يدوياً — يكسر صلاحيات www-data."
 warn "بعد أي artisan يدوي كـ root: php artisan prosthetics:fix-storage-permissions"
