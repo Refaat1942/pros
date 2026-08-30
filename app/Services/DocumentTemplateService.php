@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\CustomDocument;
+use App\Models\CustomDocument;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class DocumentTemplateService
 {
@@ -31,7 +33,7 @@ class DocumentTemplateService
             ];
         }
 
-        foreach (app(CustomDocumentService::class)->activeList() as $custom) {
+        foreach ($this->safeCustomDocuments() as $custom) {
             $def = $this->customDefinition($custom);
             $merged = $this->mergeCustomTemplate($custom);
             $out[$custom->key] = [
@@ -52,7 +54,7 @@ class DocumentTemplateService
     /** @return array<string, mixed> */
     public function for(string $key): array
     {
-        $custom = app(CustomDocumentService::class)->findByKey($key);
+        $custom = $this->findCustomByKey($key);
         if ($custom) {
             return $this->mergeCustomTemplate($custom);
         }
@@ -68,7 +70,7 @@ class DocumentTemplateService
      */
     public function definition(string $key): array
     {
-        $custom = app(CustomDocumentService::class)->findByKey($key);
+        $custom = $this->findCustomByKey($key);
         if ($custom) {
             return $this->customDefinition($custom);
         }
@@ -88,19 +90,19 @@ class DocumentTemplateService
             return true;
         }
 
-        return app(CustomDocumentService::class)->findByKey($key) instanceof CustomDocument;
+        return $this->findCustomByKey($key) instanceof CustomDocument;
     }
 
     public function isCustom(string $key): bool
     {
         return str_starts_with($key, 'custom_')
-            && app(CustomDocumentService::class)->findByKey($key) instanceof CustomDocument;
+            && $this->findCustomByKey($key) instanceof CustomDocument;
     }
 
     /** @param  array<string, mixed>  $payload */
     public function update(string $key, array $payload): array
     {
-        $custom = app(CustomDocumentService::class)->findByKey($key);
+        $custom = $this->findCustomByKey($key);
         if ($custom) {
             return $this->updateCustomTemplate($custom, $payload);
         }
@@ -295,5 +297,45 @@ class DocumentTemplateService
     private static function cacheKey(): string
     {
         return 'settings.'.self::SETTING_KEY;
+    }
+
+    /** @return list<CustomDocument> */
+    private function safeCustomDocuments(): array
+    {
+        if (! $this->customDocumentsTableReady()) {
+            return [];
+        }
+
+        try {
+            return app(CustomDocumentService::class)->activeList();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [];
+        }
+    }
+
+    private function findCustomByKey(string $key): ?CustomDocument
+    {
+        if (! $this->customDocumentsTableReady()) {
+            return null;
+        }
+
+        try {
+            return app(CustomDocumentService::class)->findByKey($key);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    private function customDocumentsTableReady(): bool
+    {
+        try {
+            return Schema::hasTable('custom_documents');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }
