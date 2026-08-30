@@ -14,18 +14,17 @@ class StockDispenseRequestService
 {
     public function __construct(
         private readonly BomService $bomService,
-        private readonly BarcodeValidationService $barcodeValidation,
         private readonly NotificationService $notifications,
     ) {}
 
     /**
-     * @param  list<string>  $scannedBarcodes
+     * @param  list<string>|list<array{barcode: string, qty?: mixed, qty_uom?: string}>  $dispensePayload
      */
-    public function submit(Bom $bom, array $scannedBarcodes, User $requester): StockDispenseRequest
+    public function submit(Bom $bom, array $dispensePayload, User $requester): StockDispenseRequest
     {
         $bomId = $bom->id;
 
-        return DB::transaction(function () use ($bomId, $scannedBarcodes, $requester) {
+        return DB::transaction(function () use ($bomId, $dispensePayload, $requester) {
             $bom = Bom::lockForUpdate()->with(['caseRecord', 'items'])->findOrFail($bomId);
 
             if ($bom->stage !== Bom::STAGE_RAW) {
@@ -46,12 +45,9 @@ class StockDispenseRequestService
                 abort(422, 'يوجد طلب صرف معلّق لهذه BOM.');
             }
 
-            $this->bomService->validateDispenseBarcodes($bom, $scannedBarcodes);
+            $this->bomService->validateDispenseLines($bom, $dispensePayload);
 
-            $normalizedLines = array_map(
-                fn (string $scan) => $this->barcodeValidation->resolveStockItemCode($scan) ?? trim($scan),
-                $scannedBarcodes,
-            );
+            $storedLines = $this->bomService->resolveDispenseLinesForStorage($bom, $dispensePayload);
 
             $request = StockDispenseRequest::create([
                 'case_id' => $case->id,
@@ -59,7 +55,7 @@ class StockDispenseRequestService
                 'work_order_no' => $case->work_order_no,
                 'status' => StockDispenseRequest::STATUS_PENDING,
                 'requested_by_user_id' => $requester->id,
-                'lines' => array_values($normalizedLines),
+                'lines' => $storedLines,
             ]);
 
             AuditService::log(
@@ -107,7 +103,9 @@ class StockDispenseRequestService
                 abort(422, 'تم تنفيذ الصرف مسبقاً.');
             }
 
-            $this->bomService->releaseToWip($bom, $request->lines ?? []);
+            $payload = $this->normalizeStoredLines($request->lines ?? []);
+
+            $this->bomService->releaseToWip($bom, $payload);
 
             $request->update([
                 'status' => StockDispenseRequest::STATUS_EXECUTED,
@@ -124,6 +122,45 @@ class StockDispenseRequestService
 
             return $request->fresh(['caseRecord', 'bom', 'requestedBy', 'approvedBy']);
         });
+    }
+
+    /**
+     * @param  list<mixed>  $lines
+     * @return list<string>|list<array{barcode: string, qty?: mixed, qty_uom?: string}>
+     */
+    private function normalizeStoredLines(array $lines): array
+    {
+        if ($lines === []) {
+            return [];
+        }
+
+        if (is_string($lines[0] ?? null)) {
+            return array_values(array_filter(array_map('strval', $lines)));
+        }
+
+        $payload = [];
+        foreach ($lines as $line) {
+            if (! is_array($line)) {
+                continue;
+            }
+
+            $barcode = trim((string) ($line['barcode'] ?? ''));
+            if ($barcode === '') {
+                continue;
+            }
+
+            $row = ['barcode' => $barcode];
+            if (array_key_exists('qty', $line)) {
+                $row['qty'] = $line['qty'];
+            }
+            if (isset($line['qty_uom'])) {
+                $row['qty_uom'] = $line['qty_uom'];
+            }
+
+            $payload[] = $row;
+        }
+
+        return $payload;
     }
 
     public function reject(StockDispenseRequest $request, User $approver, string $reason): StockDispenseRequest

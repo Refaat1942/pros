@@ -163,8 +163,8 @@ class UserService
     {
         $user->loadMissing('role:id,slug');
 
-        if (in_array($user->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
-            throw new \InvalidArgumentException('لا يمكن تعطيل حساب السوبر أدمن أو مسؤول النظام.');
+        if ($user->role?->slug === Role::SLUG_SUPER_ADMIN) {
+            throw new \InvalidArgumentException('لا يمكن تعطيل حساب السوبر أدمن.');
         }
 
         $before = $user->only(['status']);

@@ -40,12 +40,20 @@ class UserController extends Controller
 
     public function toggleStatus(User $user): RedirectResponse
     {
+        /** @var User|null $actor */
+        $actor = Auth::user();
         $user->loadMissing('role:id,slug');
 
-        if (in_array($user->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
+        if ($user->role?->slug === Role::SLUG_SUPER_ADMIN) {
             return redirect()
                 ->route('admin.employees')
-                ->with('error', 'لا يمكن تعطيل حساب السوبر أدمن أو مسؤول النظام.');
+                ->with('error', 'لا يمكن تعطيل حساب السوبر أدمن.');
+        }
+
+        if ($user->role?->slug === Role::SLUG_ADMIN && ! $actor?->isSuperAdmin()) {
+            return redirect()
+                ->route('admin.employees')
+                ->with('error', 'لا يمكن تعطيل مسؤول النظام — السوبر أدمن فقط.');
         }
 
         $user = $this->userService->toggleStatus($user);
@@ -59,14 +67,21 @@ class UserController extends Controller
 
     public function destroy(User $user): JsonResponse
     {
-        if (Auth::id() === $user->id) {
+        /** @var User|null $actor */
+        $actor = Auth::user();
+
+        if ($actor?->id === $user->id) {
             return response()->json(['message' => 'لا يمكن حذف حسابك الحالي.'], 422);
         }
 
         $user->loadMissing('role:id,slug');
 
-        if (in_array($user->role?->slug, [Role::SLUG_ADMIN, Role::SLUG_SUPER_ADMIN], true)) {
-            return response()->json(['message' => 'لا يمكن حذف حساب السوبر أدمن أو مسؤول النظام.'], 422);
+        if ($user->role?->slug === Role::SLUG_SUPER_ADMIN) {
+            return response()->json(['message' => 'لا يمكن حذف حساب السوبر أدمن.'], 422);
+        }
+
+        if ($user->role?->slug === Role::SLUG_ADMIN && ! $actor?->isSuperAdmin()) {
+            return response()->json(['message' => 'لا يمكن حذف مسؤول النظام — السوبر أدمن فقط.'], 422);
         }
 
         $this->userService->delete($user);

@@ -214,15 +214,24 @@
                         <div id="dispenseScanProgressBar" class="h-full bg-emerald-500 transition-all duration-200" style="width:0%;"></div>
                     </div>
                 </div>
-                <div>
-                    <label for="dispenseBarcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح كود الصنف أو الباركود</label>
-                    <input type="text" id="dispenseBarcodeInput" autofocus
-                           placeholder="كل مسح = وحدة واحدة (كود الصنف أو BC-...) — Enter للإضافة"
-                           maxlength="100"
-                           autocomplete="off"
-                           class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-                    <p class="text-xs text-slate-500 mt-1">يُحسب تلقائياً بعد Enter أو المسح — لا حاجة لزر إضافة أو كمية يدوية.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="dispenseBarcodeInput" class="block text-xs font-bold text-slate-600 mb-1">امسح كود الصنف أو الباركود</label>
+                        <input type="text" id="dispenseBarcodeInput" autofocus
+                               placeholder="BC-... أو كود الصنف"
+                               maxlength="100"
+                               autocomplete="off"
+                               class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                    </div>
+                    <div>
+                        <label for="dispenseQtyInput" class="block text-xs font-bold text-slate-600 mb-1">الكمية (للكيلو/المتر — مثلاً 100 جرام أو 0.1)</label>
+                        <input type="text" id="dispenseQtyInput"
+                               placeholder="اختياري للقطعة — مطلوب للكيلو/المتر"
+                               maxlength="64"
+                               class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                    </div>
                 </div>
+                <p class="text-xs text-slate-500">للأصناف بالقطعة: كل مسح = وحدة واحدة. للكيلو/الجرام/المتر: امسح ثم اكتب الكمية (مثلاً سعر الكيلو 1000 وجرام 100 → 0.1×1000).</p>
                 <div id="dispenseScannedList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
                 <div id="dispenseAlarm" class="hidden rounded-xl border-2 border-red-500 bg-red-50 p-5 text-red-800 font-bold text-base animate-pulse">
                     ⛔ <span id="dispenseAlarmText">باركود غير مطابق — تم إيقاف الصرف!</span>

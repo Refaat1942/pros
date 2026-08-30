@@ -5,6 +5,7 @@ namespace Tests\Feature\Inventory;
 use App\Exceptions\BarcodeDispenseMismatchException;
 use App\Models\Bom;
 use App\Models\CaseRecord;
+use App\Models\StockItem;
 use App\Services\BomService;
 use App\Services\DeliveryService;
 use App\Services\ReturnNoteService;
@@ -17,8 +18,8 @@ use Tests\TestCase;
  * Feature — BOM full lifecycle: raw → WIP → finished → return note
  * (الفصل الخامس: المخزن والصرف الصارم + الفصل السادس: قسم الإنتاج)
  *
- * IMPORTANT: releaseToWip() now expects ONE barcode scan PER UNIT — the number of
- * scans for a code must equal that code's total quantity (strict code+item+quantity match).
+ * IMPORTANT: dispense validates total qty per stock code (decimal for كيلو/متر).
+ * Count units: one scan = 1 unit unless qty is sent explicitly.
  */
 class BomLifecycleTest extends TestCase
 {
@@ -459,5 +460,46 @@ class BomLifecycleTest extends TestCase
         ]);
 
         $this->assertEquals($qtyBeforeReturn + 4, $item->fresh()->qty);
+    }
+
+    public function test_fractional_kilo_dispense_100_grams_updates_stock_and_cost(): void
+    {
+        $op = $this->testOperationalCode('RM-KG');
+        $item = StockItem::create([
+            'code' => 'ITM-'.$op,
+            'name' => 'لاصق كيلو',
+            'spec' => 'اختبار',
+            'store_class' => 'A',
+            'is_quick_dispense' => false,
+            'uom' => 'كيلو',
+            'alt_codes' => $op,
+            'barcode' => StockItem::barcodeForOperationalCode($op),
+            'qty' => 1,
+            'reserved' => 0,
+            'price' => 1000,
+            'wac' => 1000,
+            'status' => 'ok',
+            'last_moved_at' => now()->toDateString(),
+        ]);
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-FRAC-01']);
+        $this->actingAs($user);
+
+        $bom = app(BomService::class)->create($case, [
+            ['stock_item_code' => $op, 'qty' => 0.1],
+        ]);
+
+        app(BomService::class)->releaseToWip($bom, [
+            ['barcode' => $item->barcode, 'qty' => '100 جرام'],
+        ]);
+
+        $item->refresh();
+        $this->assertEqualsWithDelta(0.9, (float) $item->qty, 0.0001);
+
+        $case->refresh();
+        $this->assertEqualsWithDelta(100.0, (float) $case->issue_cost, 0.01);
     }
 }

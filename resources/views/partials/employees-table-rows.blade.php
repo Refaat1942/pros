@@ -6,22 +6,36 @@
 @endphp
 @foreach ($employees as $employee)
     @php
-        $isAdminUser = ($employee->role?->slug ?? '') === Role::SLUG_ADMIN;
+        $roleSlug = $employee->role?->slug ?? '';
+        $isLimitedAdmin = $roleSlug === Role::SLUG_ADMIN;
+        $isSuperAdminUser = $roleSlug === Role::SLUG_SUPER_ADMIN;
+        $canManageLimitedAdmin = $isSuperAdmin && $isLimitedAdmin;
+        $bulkDeleteDisabled = auth()->id() === $employee->id
+            || $isSuperAdminUser
+            || ($isLimitedAdmin && ! $isSuperAdmin);
+        $bulkDeleteTitle = $isSuperAdminUser
+            ? 'لا يمكن حذف السوبر أدمن'
+            : ($isLimitedAdmin && ! $isSuperAdmin
+                ? 'لا يمكن حذف مسؤول النظام — السوبر أدمن فقط'
+                : (auth()->id() === $employee->id ? 'لا يمكن حذف حسابك الحالي' : ''));
+        $canDeleteEmployee = auth()->id() !== $employee->id
+            && ! $isSuperAdminUser
+            && (! $isLimitedAdmin || $isSuperAdmin);
+        $canToggleEmployee = ! $isSuperAdminUser
+            && (! $isLimitedAdmin || $isSuperAdmin);
     @endphp
-    <tr data-role="{{ $employee->role?->slug ?? '' }}" data-status="{{ $employee->status }}" data-id="{{ $employee->id }}">
+    <tr data-role="{{ $roleSlug }}" data-status="{{ $employee->status }}" data-id="{{ $employee->id }}">
         @if ($show_bulk ?? true)
             @include('admin.partials.bulk-select-td', [
                 'id' => $employee->id,
-                'disabled' => auth()->id() === $employee->id || $isAdminUser,
-                'disabledTitle' => $isAdminUser
-                    ? 'لا يمكن حذف مسؤول النظام'
-                    : 'لا يمكن حذف حسابك الحالي',
+                'disabled' => $bulkDeleteDisabled,
+                'disabledTitle' => $bulkDeleteTitle,
             ])
         @endif
         <td><strong>{{ $employee->name }}</strong></td>
-        <td>{{ $employee->username }}</td>
+        <td dir="ltr">{{ $employee->username }}</td>
         <td>
-            <span class="role-badge {{ $employee->role?->slug ?? 'unknown' }}">
+            <span class="role-badge {{ $roleSlug ?: 'unknown' }}">
                 {{ $employee->role?->label_ar ?? '—' }}
             </span>
         </td>
@@ -64,7 +78,7 @@
                         🔑 كلمة المرور
                     </button>
                 @endif
-                @unless ($isAdminUser)
+                @if ($canToggleEmployee)
                     <form method="POST" action="{{ route('admin.employees.toggle', $employee) }}" style="display:inline;">
                         @csrf
                         @method('PATCH')
@@ -72,11 +86,11 @@
                             {{ $employee->status === \App\Models\User::STATUS_ACTIVE ? 'تعطيل' : 'تفعيل' }}
                         </button>
                     </form>
-                @endunless
-                @if (auth()->id() !== $employee->id && ! $isAdminUser)
+                @endif
+                @if ($canDeleteEmployee)
                     <button type="button"
                             class="btn-action danger"
-                            title="حذف الموظف"
+                            title="{{ $canManageLimitedAdmin ? 'حذف مسؤول النظام (سوبر أدمن)' : 'حذف الموظف' }}"
                             onclick="deleteEmployee({{ $employee->id }}, {{ json_encode($employee->name) }})">
                         🗑️ حذف
                     </button>

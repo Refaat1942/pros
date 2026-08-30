@@ -13,6 +13,7 @@ use App\Models\PricingRequest;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Support\BomItemAggregator;
+use App\Support\StockQuantity;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -109,11 +110,13 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty = $this->normalizeItemQty($row['qty']);
+                $stockItem = StockItem::findByOperationalCode($code);
 
-                if (! StockItem::findByOperationalCode($code)) {
+                if (! $stockItem) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
+
+                $qty = $this->parseBomItemQty($row, $stockItem);
 
                 BomItem::create([
                     'bom_id' => $bom->id,
@@ -177,9 +180,9 @@ class BomService
     /**
      * عكس تأثير حجز BOM على reserved.
      */
-    private function reverseReservedDelta(StockItem $stockItem, int $qty): void
+    private function reverseReservedDelta(StockItem $stockItem, float|int $qty): void
     {
-        $stockItem->increment('reserved', -$qty);
+        $stockItem->decrement('reserved', $qty);
     }
 
     /**
@@ -238,11 +241,13 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty = $this->normalizeItemQty($row['qty']);
+                $stockItem = StockItem::findByOperationalCode($code);
 
-                if (! StockItem::findByOperationalCode($code)) {
+                if (! $stockItem) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
+
+                $qty = $this->parseBomItemQty($row, $stockItem);
 
                 BomItem::create([
                     'bom_id' => $bom->id,
@@ -309,13 +314,13 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty = $this->normalizeItemQty($row['qty']);
-
                 $stockItem = StockItem::findByOperationalCode($code, true);
 
                 if (! $stockItem) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
+
+                $qty = $this->parseBomItemQty($row, $stockItem);
 
                 $existingAdj = $bom->items->first(
                     fn (BomItem $i) => $i->stock_item_code === $code && $i->source === BomItem::SOURCE_ADJUSTMENT
@@ -385,13 +390,13 @@ class BomService
 
             foreach ($items as $row) {
                 $code = $row['stock_item_code'];
-                $qty = $this->normalizeItemQty($row['qty']);
-
                 $stockItem = StockItem::findByOperationalCode($code, true);
 
                 if (! $stockItem) {
                     abort(422, "الصنف غير موجود: {$code}");
                 }
+
+                $qty = $this->parseBomItemQty($row, $stockItem);
 
                 // يُسمح بتجاوز الرصيد — متاح سالب (backorder).
                 $stockItem->increment('reserved', $qty);
@@ -677,18 +682,53 @@ class BomService
     }
 
     /**
-     * @param  array{stock_item_code: string, name?: string, qty: int}  $row
+     * @param  array{stock_item_code: string, name?: string, qty: mixed, qty_uom?: string}  $row
+     */
+    private function parseBomItemQty(array $row, ?StockItem $stockItem = null): float
+    {
+        $code = $row['stock_item_code'];
+        $stockItem ??= StockItem::findByOperationalCode($code, true);
+
+        if (! $stockItem) {
+            abort(422, "الصنف غير موجود: {$code}");
+        }
+
+        $uom = $stockItem->uom ?? 'قطعة';
+
+        try {
+            $qty = StockQuantity::toItemUom($row['qty'] ?? null, $row['qty_uom'] ?? null, $uom);
+        } catch (\InvalidArgumentException $e) {
+            abort(422, $e->getMessage());
+        }
+
+        if ($qty <= 0) {
+            abort(422, 'الكمية يجب أن تكون أكبر من صفر.');
+        }
+
+        if (! StockQuantity::isFractionalUom($uom) && $qty < 1) {
+            abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
+        }
+
+        if (! StockQuantity::isFractionalUom($uom) && abs($qty - round($qty)) > 0.0001) {
+            abort(422, 'الصنف يُدار بوحدات عدّ — الكمية يجب أن تكون صحيحة.');
+        }
+
+        return $qty;
+    }
+
+    /**
+     * @param  array{stock_item_code: string, name?: string, qty: mixed, qty_uom?: string}  $row
      */
     private function appendBomItemWithReservation(Bom $bom, array $row, CaseRecord $case): void
     {
         $code = $row['stock_item_code'];
-        $qty = $this->normalizeItemQty($row['qty']);
-
         $stockItem = StockItem::findByOperationalCode($code, true);
 
         if (! $stockItem) {
             abort(422, "الصنف غير موجود: {$code}");
         }
+
+        $qty = $this->parseBomItemQty($row, $stockItem);
 
         // يُسمح بتجاوز الرصيد — متاح سالب (backorder) بدل رفض الإنشاء.
         // تكلفة BOM = WAC (تقييم مخزني) — أعلى سعر شراء يُستخدم في التسعير فقط.
@@ -708,11 +748,78 @@ class BomService
     }
 
     /**
-     * التحقق من الباركود قبل تقديم طلب الصرف (بدون خصم).
-     *
-     * @param  list<string>  $scannedBarcodes
+     * @param  list<string>|list<array{barcode: string, qty?: mixed, qty_uom?: string}>  $dispenseInput
+     * @return list<array{barcode: string, qty?: mixed, qty_uom?: string}>
      */
-    public function validateDispenseBarcodes(Bom $bom, array $scannedBarcodes): void
+    private function normalizeDispenseInput(array $dispenseInput): array
+    {
+        $lines = [];
+
+        foreach ($dispenseInput as $row) {
+            if (is_string($row)) {
+                $barcode = trim($row);
+                if ($barcode !== '') {
+                    $lines[] = ['barcode' => $barcode];
+                }
+
+                continue;
+            }
+
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $barcode = trim((string) ($row['barcode'] ?? ''));
+            if ($barcode === '') {
+                continue;
+            }
+
+            $line = ['barcode' => $barcode];
+            if (array_key_exists('qty', $row) && $row['qty'] !== null && $row['qty'] !== '') {
+                $line['qty'] = $row['qty'];
+            }
+            if (isset($row['qty_uom']) && trim((string) $row['qty_uom']) !== '') {
+                $line['qty_uom'] = trim((string) $row['qty_uom']);
+            }
+
+            $lines[] = $line;
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param  list<string>|list<array{barcode: string, qty?: mixed, qty_uom?: string}>  $dispenseInput
+     * @return list<array{barcode: string, qty: float, qty_uom: string, stock_item_code: string}>
+     */
+    public function resolveDispenseLinesForStorage(Bom $bom, array $dispenseInput): array
+    {
+        $bom->loadMissing('items');
+        $resolved = [];
+
+        foreach ($this->normalizeDispenseInput($dispenseInput) as $line) {
+            $stockItem = $this->barcodeValidation->resolveStockItem($line['barcode']);
+            $code = $stockItem?->operationalCode() ?? trim((string) ($line['stock_item_code'] ?? ''));
+            $uom = $stockItem?->uom ?? 'قطعة';
+            $qtyInUom = StockQuantity::toItemUom($line['qty'] ?? null, $line['qty_uom'] ?? null, $uom);
+
+            $resolved[] = [
+                'barcode' => $line['barcode'],
+                'qty' => $qtyInUom,
+                'qty_uom' => $uom,
+                'stock_item_code' => $code,
+            ];
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * التحقق من الباركود والكميات قبل تقديم طلب الصرف (بدون خصم).
+     *
+     * @param  list<string>|list<array{barcode: string, qty?: mixed, qty_uom?: string}>  $dispenseInput
+     */
+    public function validateDispenseLines(Bom $bom, array $dispenseInput): void
     {
         $bom->loadMissing(['items', 'caseRecord']);
 
@@ -720,54 +827,86 @@ class BomService
             abort(422, 'BOM ليست في مرحلة raw — لا يمكن الصرف.');
         }
 
-        $groups = BomItemAggregator::groupModels($bom->items);
-        $expectedTotal = $groups->sum(fn ($rows) => (int) $rows->sum('qty'));
+        $rawLines = $this->normalizeDispenseInput($dispenseInput);
 
-        if (count($scannedBarcodes) !== $expectedTotal) {
-            throw BarcodeDispenseMismatchException::forItem(
-                "عدد الباركود الممسوح ({$expectedTotal} مطلوب) لا يطابق إجمالي الكميات"
-            );
+        if ($rawLines === []) {
+            throw BarcodeDispenseMismatchException::forItem('لا توجد بنود صرف.');
         }
 
-        $remaining = array_values($scannedBarcodes);
-
+        $groups = BomItemAggregator::groupModels($bom->items);
+        $expectedByCode = [];
         foreach ($groups as $code => $rows) {
-            $representative = $rows->first();
-            $needed = (int) $rows->sum('qty');
-            $matched = 0;
+            $expectedByCode[$code] = (float) $rows->sum('qty');
+        }
 
-            foreach ($remaining as $idx => $barcode) {
-                if ($this->barcodeValidation->validateScan($barcode, $representative)) {
-                    unset($remaining[$idx]);
-                    $matched++;
+        $dispensedByCode = [];
 
-                    if ($matched === $needed) {
-                        break;
-                    }
-                }
+        foreach ($rawLines as $line) {
+            $barcode = $line['barcode'];
+            $stockItem = $this->barcodeValidation->resolveStockItem($barcode);
+
+            if ($stockItem === null) {
+                throw BarcodeDispenseMismatchException::forItem($barcode);
             }
 
-            if ($matched !== $needed) {
+            $code = $stockItem->operationalCode();
+            $representative = $groups->get($code)?->first();
+
+            if ($representative === null || ! $this->barcodeValidation->validateScan($barcode, $representative)) {
+                throw BarcodeDispenseMismatchException::forItem($code ?: $barcode);
+            }
+
+            $uom = $stockItem->uom ?? 'قطعة';
+            $qtyInUom = StockQuantity::toItemUom($line['qty'] ?? null, $line['qty_uom'] ?? null, $uom);
+
+            if ($qtyInUom <= 0) {
+                throw BarcodeDispenseMismatchException::forItem(
+                    "كمية غير صالحة للصنف {$code}"
+                );
+            }
+
+            if (! StockQuantity::isFractionalUom($uom) && abs($qtyInUom - round($qtyInUom)) > 0.0001) {
+                throw BarcodeDispenseMismatchException::forItem(
+                    "الصنف {$code} يُصرف بوحدات عدّ — الكمية يجب أن تكون صحيحة"
+                );
+            }
+
+            $dispensedByCode[$code] = ($dispensedByCode[$code] ?? 0.0) + $qtyInUom;
+        }
+
+        foreach ($expectedByCode as $code => $expected) {
+            $got = $dispensedByCode[$code] ?? 0.0;
+            if (abs($got - $expected) > 0.0001) {
                 throw BarcodeDispenseMismatchException::forItem($code);
             }
         }
 
-        if (count($remaining) > 0) {
-            throw BarcodeDispenseMismatchException::forItem('باركود زائد لا يطابق بنود BOM');
+        foreach ($dispensedByCode as $code => $got) {
+            if (! isset($expectedByCode[$code])) {
+                throw BarcodeDispenseMismatchException::forItem('باركود زائد لا يطابق بنود BOM');
+            }
         }
+    }
+
+    /**
+     * @param  list<string>  $scannedBarcodes
+     */
+    public function validateDispenseBarcodes(Bom $bom, array $scannedBarcodes): void
+    {
+        $this->validateDispenseLines($bom, $scannedBarcodes);
     }
 
     /**
      * التحقق من الباركود وصرف المواد إلى WIP.
      *
-     * @param  list<string>  $scannedBarcodes
+     * @param  list<string>|list<array{barcode: string, qty?: mixed, qty_uom?: string}>  $dispenseInput
      */
-    public function releaseToWip(Bom $bom, array $scannedBarcodes): Bom
+    public function releaseToWip(Bom $bom, array $dispenseInput): Bom
     {
-        return DB::transaction(function () use ($bom, $scannedBarcodes) {
+        return DB::transaction(function () use ($bom, $dispenseInput) {
             $bom = Bom::lockForUpdate()->with(['items', 'caseRecord'])->findOrFail($bom->id);
 
-            $this->validateDispenseBarcodes($bom, $scannedBarcodes);
+            $this->validateDispenseLines($bom, $dispenseInput);
 
             $case = $bom->caseRecord;
             if ($case) {
@@ -796,8 +935,8 @@ class BomService
                     $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true)
                         ?? abort(422, "الصنف غير موجود: {$bomItem->stock_item_code}");
 
-                    $qty = $bomItem->qty;
-                    $balanceAfter = $stockItem->qty - $qty;
+                    $qty = (float) $bomItem->qty;
+                    $balanceAfter = (float) $stockItem->qty - $qty;
 
                     StockMovement::create([
                         'stock_item_id' => $stockItem->id,
@@ -813,8 +952,7 @@ class BomService
 
                     $stockItem->decrement('qty', $qty);
 
-                    // BOM خام من التوصيف/seed قد يُصرف بدون حجز مسبق — لا ننقص reserved تحت الصفر.
-                    $reservedRelease = min($stockItem->reserved, $qty);
+                    $reservedRelease = min((float) $stockItem->reserved, $qty);
                     if ($reservedRelease > 0) {
                         $stockItem->decrement('reserved', $reservedRelease);
                     }
@@ -860,7 +998,7 @@ class BomService
 
             if ($case) {
                 $issueCost = round($bom->items->sum(
-                    fn ($item) => (int) $item->qty * (float) $item->unit_cost
+                    fn ($item) => (float) $item->qty * (float) $item->unit_cost
                 ), 2);
                 $case->update(['issue_cost' => $issueCost]);
 

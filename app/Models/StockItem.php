@@ -47,12 +47,12 @@ class StockItem extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
-        'opening_qty' => 'integer',
-        'addition' => 'integer',
-        'discount' => 'integer',
-        'reserved' => 'decimal:3',
-        'min_qty' => 'integer',
+        'qty' => 'decimal:4',
+        'opening_qty' => 'decimal:4',
+        'addition' => 'decimal:4',
+        'discount' => 'decimal:4',
+        'reserved' => 'decimal:4',
+        'min_qty' => 'decimal:4',
         'is_quick_dispense' => 'boolean',
         'price' => 'decimal:2',
         'expiry_date' => 'date',

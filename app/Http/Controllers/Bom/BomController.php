@@ -21,6 +21,8 @@ use App\Services\CatalogListVisibilityService;
 use App\Services\PathwayTransitionMessageService;
 use App\Support\BomItemAggregator;
 use App\Support\IssueVoucherPresenter;
+use App\Support\StockItemUomLookup;
+use App\Support\StockQuantity;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -117,12 +119,12 @@ class BomController extends Controller
     {
         $case = $bom->caseRecord;
         $fromStage = $case?->stage_key ?? CaseRecord::STAGE_MANUFACTURING;
-        $barcodes = $request->validated('scanned_barcodes');
+        $payload = $request->dispensePayload();
 
         if (config('inventory.dispense_requires_approval', true)) {
             $dispenseRequest = app(\App\Services\StockDispenseRequestService::class)->submit(
                 $bom,
-                $barcodes,
+                $payload,
                 $request->user(),
             );
 
@@ -134,7 +136,7 @@ class BomController extends Controller
         }
 
         try {
-            $bom = $this->bomService->releaseToWip($bom, $barcodes);
+            $bom = $this->bomService->releaseToWip($bom, $payload);
         } catch (BarcodeDispenseMismatchException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -309,12 +311,19 @@ class BomController extends Controller
             )
             : [];
 
+        $uomMap = $bom->relationLoaded('items') && $bom->items->isNotEmpty()
+            ? StockItemUomLookup::forCodes($bom->items->pluck('stock_item_code')->all())
+            : [];
+
         $items = [];
         if ($listEnabled && $bom->relationLoaded('items')) {
             $items = collect(BomItemAggregator::enrichWithStockMeta(BomItemAggregator::byStockCode($bom->items)))
-                ->map(function (array $item) use ($barcodes, $user, $visibility) {
+                ->map(function (array $item) use ($barcodes, $uomMap, $user, $visibility) {
+                    $uom = $uomMap[$item['stock_item_code']] ?? ($item['uom'] ?? 'قطعة');
                     $row = $item + [
                         'expected_barcode' => $barcodes[$item['stock_item_code']] ?? null,
+                        'uom' => $uom,
+                        'fractional_uom' => StockQuantity::isFractionalUom($uom),
                     ];
 
                     return $visibility->filterItemFields($row, $user, 'technical_bom_items');
