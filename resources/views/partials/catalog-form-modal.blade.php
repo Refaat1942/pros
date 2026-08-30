@@ -128,6 +128,8 @@
                             <h4 class="catalog-form-card__title catalog-form-card__title--inline">💰 أسعار إضافية</h4>
                             <button type="button" class="btn-action" onclick="addSlimPriceRow()">+ سعر إضافي</button>
                         </div>
+                        <p class="catalog-tier-hint">«مخزن» أمام السعر للعرض فقط — الرصيد يتغيّر من الاستلام أو من رصيد أول المدة/الإضافة/الخصم.</p>
+                        <div id="slimWarehouseTiers" class="catalog-warehouse-tiers" hidden></div>
                         <div id="slimExtraPrices" class="catalog-extra-prices__list"></div>
                     </div>
                 </section>

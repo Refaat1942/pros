@@ -242,6 +242,18 @@
         flex-direction: column;
         gap: 8px;
     }
+    .catalog-tier-hint {
+        font-size: 12px;
+        color: var(--text-muted, #64748b);
+        margin: 0 0 10px;
+        line-height: 1.5;
+    }
+    .catalog-warehouse-tiers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
     .catalog-price-with-qty {
         display: flex;
         align-items: center;
