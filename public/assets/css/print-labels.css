@@ -407,6 +407,22 @@ body.labels-body {
     padding: 0.5mm 0;
 }
 
+.label .barcode-svg-wrap {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    line-height: 0;
+}
+
+.label .barcode-svg-wrap svg {
+    display: block;
+    width: auto !important;
+    max-width: 100%;
+    height: auto !important;
+    max-height: calc(var(--label-height) * var(--barcode-height-pct) / 100);
+    margin: 0 auto;
+}
+
 .label .barcode-img {
     display: block;
     width: 100%;

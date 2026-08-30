@@ -61,6 +61,9 @@ Route::prefix('technical')
 
             Route::get('supply/search-items', [SupplyRequestController::class, 'searchItems'])
                 ->name('supply.search-items');
+
+            Route::get('supply/requests/print', [SupplyRequestController::class, 'printOpen'])
+                ->name('supply.requests.print');
         });
 
         Route::middleware('dashboard.page:technical,receive-inbound')->group(function () {

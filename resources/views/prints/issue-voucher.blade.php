@@ -1,5 +1,6 @@
 @php
     use App\Support\StockItemUomLookup;
+    use App\Services\DocumentTemplateService;
 
     $voucherNo   = $voucher['voucher_no'] ?? '—';
     $workOrderNo = $voucher['work_order_no'] ?? '—';
@@ -11,7 +12,12 @@
     $uomMap      = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->filter()->all());
     $technician  = $voucher['technician_name'] ?? null;
     $sectionName = $voucher['workshop_section_name'] ?? null;
+
+    $tplService = app(DocumentTemplateService::class);
+    $tpl = $documentTemplate ?? $tplService->for('issue_voucher');
+    $docTitle = $tplService->renderText($tpl['doc_title'] ?? 'إذن صرف مواد — رقم ( {no} )', ['no' => $voucherNo]);
 @endphp
+@include('prints.partials.document-template-vars')
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -20,66 +26,72 @@
     <title>إذن صرف — {{ $voucherNo }}</title>
     @include('prints.partials.a4-base')
     <style>
-        .spec-section { margin: 12px 0 16px; }
+        .compact-voucher .doc-title { font-size: 14pt; margin-bottom: 8px; }
+        .compact-voucher .meta-table { font-size: 10pt; }
+        .spec-section { margin: 8px 0 10px; }
         .spec-title {
             text-align: center;
             font-weight: 800;
-            font-size: 13pt;
-            margin-bottom: 6px;
+            font-size: 12pt;
+            margin-bottom: 4px;
         }
         .spec-group-label {
             font-weight: 800;
-            font-size: 12pt;
-            margin: 8px 0 4px;
-            padding: 4px 8px;
+            font-size: 11pt;
+            margin: 6px 0 4px;
+            padding: 3px 6px;
             background: #f5f5f5;
             border: 1px solid #ccc;
-            border-radius: 4px;
         }
         .spec-layout {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             border: 1.5px solid #000;
-            min-height: 36mm;
-            margin-bottom: 8px;
+            min-height: 22mm;
+            margin-bottom: 6px;
         }
         .spec-sketch {
-            width: 32mm;
+            width: 28mm;
             border-left: 1.5px solid #000;
             flex-shrink: 0;
         }
-        .spec-lines { flex: 1; padding: 4px 6px; }
+        .spec-lines { flex: 1; padding: 3px 5px; }
         .spec-line {
             border-bottom: 1px dotted #888;
-            min-height: 5mm;
-            font-size: 11pt;
+            min-height: 4mm;
+            font-size: 10pt;
             padding: 1px 2px;
         }
         .notes-box {
             border: 1px solid #000;
-            padding: 6px 8px;
-            font-size: 11pt;
-            margin-top: 6px;
+            padding: 4px 6px;
+            font-size: 10pt;
+            margin-top: 4px;
         }
+        .compact-voucher .items-table { font-size: 10pt; }
         .voucher-signatures {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14px 24px;
-            margin-top: 28px;
-            font-size: 11pt;
+            gap: 10px 16px;
+            margin-top: 16px;
+            font-size: 10pt;
             font-weight: 700;
         }
         .voucher-signatures .sig-block { text-align: center; }
         .voucher-signatures .sig-line {
-            margin-top: 22mm;
+            margin-top: 14mm;
             border-top: 1.5px solid #000;
             padding-top: 4px;
         }
         .voucher-signatures .sig-meta {
-            font-size: 10pt;
+            font-size: 9pt;
             font-weight: 600;
             margin-top: 4px;
             color: #333;
+        }
+        @media print {
+            .compact-voucher { page-break-inside: avoid; max-height: 277mm; overflow: hidden; }
+            .compact-voucher .items-table tbody tr { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -89,10 +101,14 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet avoid-break issue-voucher-sheet">
-    @include('prints.partials.org-header', ['dept' => 'قسم المخازن'])
+<div class="{{ $sheetClass }} issue-voucher-sheet compact-voucher">
+    @include('prints.partials.org-header', [
+        'dept' => $tpl['dept_label'] ?? 'قسم المخازن',
+        'seal' => (bool) ($tpl['show_seal'] ?? true),
+        'showLogo' => (bool) ($tpl['show_logo'] ?? true),
+    ])
 
-    <h1 class="doc-title issue-voucher-title">إذن صرف مواد — رقم ( <span class="fill">{{ $voucherNo }}</span> )</h1>
+    <h1 class="doc-title issue-voucher-title">{{ $docTitle }}</h1>
 
     <table class="meta-table print-table" style="margin-bottom: 14px;">
         <tbody>
@@ -115,8 +131,9 @@
         </tbody>
     </table>
 
+    @if (!empty($tpl['show_spec_section']))
     <section class="spec-section avoid-break">
-        <div class="spec-title">الطرف الصناعي — التوصيف (غير منفصل عن إذن الصرف)</div>
+        <div class="spec-title">{{ $tpl['spec_section_title'] ?? 'الطرف الصناعي — التوصيف' }}</div>
         @forelse ($specGroups as $group)
             @if (count($specGroups) > 1)
                 <div class="spec-group-label">{{ $group['label'] }}</div>
@@ -156,8 +173,9 @@
             </div>
         @endif
     </section>
+    @endif
 
-    <p class="line" style="font-weight:800;margin-bottom:8px;">مواد الصرف لقسم الإنتاج (مطابقة التوصيف أعلاه):</p>
+    <p class="line" style="font-weight:800;margin-bottom:8px;">{{ $tpl['intro_line'] ?? 'مواد الصرف لقسم الإنتاج:' }}</p>
 
     <table class="print-table items-table">
         <thead>
@@ -188,7 +206,7 @@
 
     <footer class="voucher-signatures avoid-break">
         <div class="sig-block">
-            <div>الفني المختص</div>
+            <div>{{ $tpl['signature_1'] ?? 'الفني المختص' }}</div>
             @if ($technician || $sectionName)
                 <div class="sig-meta">
                     @if ($technician){{ $technician }}@endif
@@ -199,18 +217,21 @@
             <div class="sig-line">التوقيع</div>
         </div>
         <div class="sig-block">
-            <div>مدير الإنتاج</div>
+            <div>{{ $tpl['signature_2'] ?? 'مدير الإنتاج' }}</div>
             <div class="sig-line">التوقيع</div>
         </div>
         <div class="sig-block">
-            <div>قائد المصنع</div>
+            <div>{{ $tpl['signature_3'] ?? 'قائد المصنع' }}</div>
             <div class="sig-line">التوقيع</div>
         </div>
         <div class="sig-block">
-            <div>رئيس المخازن</div>
+            <div>{{ $tpl['signature_4'] ?? 'رئيس المخازن' }}</div>
             <div class="sig-line">التوقيع — يعتمد</div>
         </div>
     </footer>
+    @if (!empty($tpl['footer_note']))
+        <p style="margin-top:10px;font-size:10pt;font-weight:600;">{{ $tpl['footer_note'] }}</p>
+    @endif
 </div>
 
 </body>

@@ -32,6 +32,8 @@ class IssueVoucherPresenter
             'caseRecord.techOrderSpec.items',
             'caseRecord.workshopSection:id,name',
             'caseRecord.assignedTechnician:id,name',
+            'caseRecord.workshopAssignments.workshopSection:id,name',
+            'caseRecord.workshopAssignments.assignedTechnician:id,name',
         ]);
 
         $case = $bom->caseRecord;
@@ -39,6 +41,7 @@ class IssueVoucherPresenter
             ? Quote::where('case_id', $case->id)->orderByDesc('id')->first()
             : null;
         $spec = $case?->techOrderSpec;
+        $assignmentLabels = self::assignmentLabels($case);
 
         return [
             'voucher_no' => $quote?->order_ref ?: ($bom->order_ref ?: ($case?->order_ref ?? '—')),
@@ -48,10 +51,43 @@ class IssueVoucherPresenter
             'company_name' => $quote?->company_name ?: ($case?->displayEntity() ?? '—'),
             'written_items' => $spec?->written_items,
             'tech_notes' => $spec?->tech_notes,
-            'technician_name' => $case?->assignedTechnician?->name,
-            'workshop_section_name' => $case?->workshopSection?->name,
+            'technician_name' => $assignmentLabels['technicians'] ?: $case?->assignedTechnician?->name,
+            'workshop_section_name' => $assignmentLabels['sections'] ?: $case?->workshopSection?->name,
             'spec_groups' => self::specGroups($spec?->items ?? $bom->items, $bom->items),
             'items' => collect(BomItemAggregator::byStockCode($bom->items)),
+        ];
+    }
+
+    /** @return array{technicians: ?string, sections: ?string} */
+    private static function assignmentLabels(?\App\Models\CaseRecord $case): array
+    {
+        if (! $case) {
+            return ['technicians' => null, 'sections' => null];
+        }
+
+        $case->loadMissing('workshopAssignments.workshopSection', 'workshopAssignments.assignedTechnician');
+
+        if ($case->workshopAssignments->isEmpty()) {
+            return ['technicians' => null, 'sections' => null];
+        }
+
+        $techs = $case->workshopAssignments
+            ->map(fn ($row) => $row->assignedTechnician?->name)
+            ->filter()
+            ->unique()
+            ->values()
+            ->implode(' · ');
+
+        $sections = $case->workshopAssignments
+            ->map(fn ($row) => $row->workshopSection?->name)
+            ->filter()
+            ->unique()
+            ->values()
+            ->implode(' · ');
+
+        return [
+            'technicians' => $techs !== '' ? $techs : null,
+            'sections' => $sections !== '' ? $sections : null,
         ];
     }
 

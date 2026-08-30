@@ -15,6 +15,7 @@
     $supplyRequestsStoreUrl = $supply_requests_store_url ?? '/technical/supply/requests';
     $supplySearchItemsUrl = $supply_search_items_url ?? '/technical/supply/search-items';
     $supplyResolveUrlBase = $supply_resolve_url_base ?? '/technical/supply/requests';
+    $supplyPrintUrl = $supply_print_url ?? null;
     $addCatalogItemUrl = $add_catalog_item_url ?? null;
     $receiveInboundUrl = $receive_inbound_url ?? null;
 @endphp
@@ -77,7 +78,10 @@
     <div class="panel inventory-wrap" style="margin-bottom:16px;">
         <div class="panel-header">
             <h3>📋 طلبات توريد مسجّلة</h3>
-            <span class="badge" id="supplyOpenLinesBadge">0</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <button type="button" class="btn-action primary" id="btnPrintSupplyRequests">🖨️ طباعة الطلبات</button>
+                <span class="badge" id="supplyOpenLinesBadge">0</span>
+            </div>
         </div>
         <div class="stock-table-wrap" style="padding:0 16px 16px;">
             <table class="stock-table" id="supplyOpenLinesTable">
@@ -89,11 +93,13 @@
                         <th class="col-qty">الكمية</th>
                         <th>الوحدة</th>
                         <th>الحالة</th>
+                        <th>تاريخ الطلب</th>
+                        <th>تاريخ الاستلام</th>
                         <th>إجراء</th>
                     </tr>
                 </thead>
                 <tbody id="supplyOpenLinesBody">
-                    <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد طلبات مفتوحة.</td></tr>
+                    <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد طلبات مفتوحة.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -205,6 +211,7 @@ window.__SUPPLY_REQUEST_API = {
     store: @json($supplyRequestsStoreUrl),
     search: @json($supplySearchItemsUrl),
     resolveBase: @json($supplyResolveUrlBase),
+    print: @json($supplyPrintUrl),
     receiveInbound: @json($receiveInboundUrl),
 };
 </script>

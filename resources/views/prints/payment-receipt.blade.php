@@ -65,29 +65,25 @@
 </head>
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
 
+@php
+    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for('payment_receipt');
+@endphp
+@include('prints.partials.document-template-vars')
+
 <div class="no-print">
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet">
-    <header class="doc-header">
-        <div class="header-right">
-            @foreach (app(\App\Services\SettingService::class)->branding()['lines'] as $line)
-                <div>{{ $line }}</div>
-            @endforeach
-            <div class="dept">الخزنة — القسم المالي</div>
-        </div>
-        <div class="header-left">
-            @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
-            <div class="header-meta">
-                <div class="serial-red">{{ $receipt['payment_no'] }}</div>
-                <div>التاريخ: <span class="fill" style="min-width:30mm;">{{ $receipt['received_at'] ?? now()->format('d/m/Y H:i') }}</span></div>
-            </div>
-        </div>
-    </header>
+<div class="{{ $sheetClass }}">
+    @include('prints.partials.org-header', [
+        'dept' => $tpl['dept_label'] ?? 'الخزنة',
+        'seal' => (bool) ($tpl['show_seal'] ?? true),
+        'showLogo' => (bool) ($tpl['show_logo'] ?? true),
+        'headerMeta' => '<div class="serial-red">'.e($receipt['payment_no']).'</div><div>التاريخ: <span class="fill">'.e($receipt['received_at'] ?? now()->format('d/m/Y H:i')).'</span></div>',
+    ])
 
-    <div class="receipt-title">إيصال دفع</div>
-    <div class="receipt-sub">سيريال الإيصال: {{ $receipt['payment_no'] }} · {{ $receipt['installment_label'] ?? 'دفعة 1' }}</div>
+    <div class="receipt-title">{{ $tpl['doc_title'] ?? 'إيصال دفع' }}</div>
+    <div class="receipt-sub">{{ $tpl['subtitle'] ?? '' }} · سيريال: {{ $receipt['payment_no'] }} · {{ $receipt['installment_label'] ?? 'دفعة 1' }}</div>
 
     <div class="amount-box">
         {{ number_format($receipt['amount'], 2) }} ج.م
@@ -144,12 +140,12 @@
     </table>
 
     <div class="sign-row">
-        <span>أمين الخزنة: <span class="fill">{{ $receipt['received_by'] ?? '' }}</span></span>
-        <span>توقيع المستلم: <span class="fill">&nbsp;</span></span>
+        <span>{{ $tpl['signature_1'] ?? 'أمين الخزنة' }}: <span class="fill">{{ $receipt['received_by'] ?? '' }}</span></span>
+        <span>{{ $tpl['signature_2'] ?? 'توقيع المستلم' }}: <span class="fill">&nbsp;</span></span>
     </div>
 
     <div class="receipt-note">
-        هذا الإيصال إثبات لاستلام المبلغ الموضح أعلاه — يُحتفظ بنسخة بملف الحالة.
+        {{ $tpl['footer_note'] ?: 'هذا الإيصال إثبات لاستلام المبلغ الموضح أعلاه — يُحتفظ بنسخة بملف الحالة.' }}
     </div>
 </div>
 

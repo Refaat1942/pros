@@ -81,6 +81,9 @@ Route::prefix('workshop')
 
             Route::get('work-order/{case}/print', [WorkshopQueueController::class, 'printWorkOrder'])
                 ->name('work-order.print');
+
+            Route::get('case/{case}/print-issue-voucher', [WorkshopQueueController::class, 'printIssueVoucher'])
+                ->name('issue-voucher.print');
         });
 
         // ── Return requests (طلب ارتجاع مواد → المخزن) ─────────────────────

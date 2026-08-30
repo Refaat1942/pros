@@ -7,6 +7,7 @@
     'supply_requests_store_url' => route('admin.supply.requests.store'),
     'supply_search_items_url' => route('admin.supply.search-items'),
     'supply_resolve_url_base' => url('/admin/supply/requests'),
+    'supply_print_url' => route('admin.supply.requests.print'),
     'add_catalog_item_url' => route('admin.add-catalog-item'),
     'receive_inbound_url' => route('admin.receive-inbound'),
 ])

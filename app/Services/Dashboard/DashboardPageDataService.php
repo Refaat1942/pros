@@ -838,6 +838,8 @@ class DashboardPageDataService
                 'patient:id,patient_code,name',
                 'workshopSection:id,name,code',
                 'assignedTechnician:id,name',
+                'workshopAssignments.workshopSection:id,name,code',
+                'workshopAssignments.assignedTechnician:id,name',
                 'bom:id,case_id,bom_no,stage',
                 'bom.items:id,bom_id,stock_item_code,name,qty',
             ])
@@ -850,6 +852,8 @@ class DashboardPageDataService
                 'patient:id,patient_code,name',
                 'workshopSection:id,name,code',
                 'assignedTechnician:id,name',
+                'workshopAssignments.workshopSection:id,name,code',
+                'workshopAssignments.assignedTechnician:id,name',
                 'bom:id,case_id,bom_no,stage',
                 'bom.items:id,bom_id,stock_item_code,name,qty',
             ])

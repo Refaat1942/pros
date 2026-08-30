@@ -156,6 +156,11 @@ class CaseRecord extends Model
         return $this->belongsTo(User::class, 'assigned_technician_id');
     }
 
+    public function workshopAssignments(): HasMany
+    {
+        return $this->hasMany(CaseWorkshopAssignment::class, 'case_id');
+    }
+
     public function servicesApproval(): HasOne
     {
         return $this->hasOne(ServicesApproval::class, 'case_id');

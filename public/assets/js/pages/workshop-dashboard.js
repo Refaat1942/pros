@@ -39,10 +39,21 @@
     if (c.assignment_approved) {
       return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">✓ معتمد — جاهز للصرف</span>';
     }
-    if (c.workshop_section_id && c.assigned_technician_id) {
+    if (hasAssignments(c)) {
       return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-amber-100 text-amber-800">بانتظار الاعتماد</span>';
     }
     return '<span class="text-xs font-bold px-2 py-1 rounded-lg bg-slate-100 text-slate-600">غير مخصّص</span>';
+  }
+
+  function hasAssignments(c) {
+    if (c.workshop_assignments && c.workshop_assignments.length) return true;
+    return c.workshop_section_id && c.assigned_technician_id;
+  }
+
+  function renderIssueVoucherBtn(c) {
+    if (!c.issue_voucher_print_url) return '';
+    return '<a href="' + esc(c.issue_voucher_print_url) + '" target="_blank" rel="noopener" ' +
+      'class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">🖨️ إذن استلام</a> ';
   }
 
   function renderAssignmentQueueRow(c) {
@@ -52,7 +63,8 @@
       ? '<a href="' + esc(c.work_order_print_url) + '" target="_blank" rel="noopener" ' +
         'class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ إذن شغل</a> '
       : '';
-    var approveBtn = (!c.assignment_approved && c.workshop_section_id && c.assigned_technician_id)
+    var issueBtn = renderIssueVoucherBtn(c);
+    var approveBtn = (!c.assignment_approved && hasAssignments(c))
       ? '<button type="button" class="btn-approve-assignment text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700 inline-block mb-1" data-case-id="' + c.id + '">✓ اعتماد</button> '
       : '';
 
@@ -64,7 +76,7 @@
         (isMil ? 'bg-indigo-100 text-indigo-700">🪖 عسكري' : 'bg-emerald-100 text-emerald-700">🌐 مدني') + '</span></td>' +
       '<td class="px-4 py-3">' + renderAssignmentCell(c) + '</td>' +
       '<td class="px-4 py-3">' + renderAssignmentStatusCell(c) + '</td>' +
-      '<td class="px-4 py-3">' + printBtn + approveBtn +
+      '<td class="px-4 py-3">' + printBtn + issueBtn + approveBtn +
         '<button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block" data-case-id="' + c.id + '" data-work-order="' + esc(c.work_order_no || '') + '">👤 تخصيص</button></td></tr>';
   }
 
@@ -76,7 +88,10 @@
         var input = $('workshopSelectedOrder');
         if (input) input.value = wo;
         var cached = assignmentCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
-        if (cached) populateAssignmentForm(cached);
+        if (cached) {
+          populateAssignmentForm(cached);
+          updateIssueVoucherButton(cached);
+        }
         document.getElementById('workshopAssignmentQueuePanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
@@ -88,13 +103,108 @@
   }
 
   function populateAssignmentForm(c) {
-    var sectionSel = $('workshopAssignSection');
-    var techSel = $('workshopAssignTechnician');
-    if (sectionSel && c.workshop_section_id) {
-      sectionSel.value = String(c.workshop_section_id);
-      sectionSel.dispatchEvent(new Event('change'));
+    clearAssignmentRows();
+    var list = (c.workshop_assignments && c.workshop_assignments.length)
+      ? c.workshop_assignments
+      : (c.workshop_section_id ? [{
+          workshop_section_id: c.workshop_section_id,
+          assigned_technician_id: c.assigned_technician_id,
+        }] : []);
+    if (!list.length) {
+      addAssignmentRow();
+      return;
     }
-    if (techSel && c.assigned_technician_id) techSel.value = String(c.assigned_technician_id);
+    list.forEach(function (row) {
+      addAssignmentRow(row.workshop_section_id, row.assigned_technician_id);
+    });
+  }
+
+  function updateIssueVoucherButton(c) {
+    var btn = $('btnPrintIssueVoucher');
+    if (!btn) return;
+    if (c && c.issue_voucher_print_url) {
+      btn.classList.remove('hidden');
+      btn.onclick = function () {
+        window.open(c.issue_voucher_print_url, '_blank', 'noopener');
+      };
+    } else {
+      btn.classList.add('hidden');
+      btn.onclick = null;
+    }
+  }
+
+  function clearAssignmentRows() {
+    var root = $('workshopAssignmentRows');
+    if (root) root.innerHTML = '';
+  }
+
+  function syncRowTechnicians(sectionSelect, techSelect) {
+    if (!sectionSelect || !techSelect) return;
+    var sec = assignmentSections.find(function (s) {
+      return String(s.id) === String(sectionSelect.value);
+    });
+    var techs = sec ? (sec.technicians || []) : [];
+    var current = techSelect.value;
+    techSelect.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
+      return '<option value="' + t.id + '">' + esc(t.name) + '</option>';
+    }).join('');
+    if (current && techs.some(function (t) { return String(t.id) === String(current); })) {
+      techSelect.value = current;
+    }
+  }
+
+  function addAssignmentRow(sectionId, techId) {
+    var root = $('workshopAssignmentRows');
+    if (!root) return null;
+
+    var row = document.createElement('div');
+    row.className = 'workshop-assignment-row flex flex-wrap gap-3 items-end border border-slate-100 rounded-xl p-3 bg-slate-50/50';
+
+    var sectionWrap = document.createElement('div');
+    sectionWrap.className = 'min-w-[200px] flex-1';
+    sectionWrap.innerHTML = '<label class="block text-xs font-bold text-slate-600 mb-1">قسم الإنتاج</label>';
+    var sectionSel = document.createElement('select');
+    sectionSel.className = 'assign-section w-full rounded-xl border border-slate-200 px-3 py-2 text-sm';
+    sectionSel.innerHTML = '<option value="">— بدون —</option>' + assignmentSections.map(function (s) {
+      return '<option value="' + s.id + '">' + esc(s.name) + (s.code ? ' (' + esc(s.code) + ')' : '') + '</option>';
+    }).join('');
+    sectionWrap.appendChild(sectionSel);
+
+    var techWrap = document.createElement('div');
+    techWrap.className = 'min-w-[200px] flex-1';
+    techWrap.innerHTML = '<label class="block text-xs font-bold text-slate-600 mb-1">الفني</label>';
+    var techSel = document.createElement('select');
+    techSel.className = 'assign-tech w-full rounded-xl border border-slate-200 px-3 py-2 text-sm';
+    techWrap.appendChild(techSel);
+
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'text-xs font-bold text-red-600 hover:text-red-800 px-2 py-2';
+    removeBtn.textContent = '✕ حذف';
+    removeBtn.addEventListener('click', function () {
+      if (root.querySelectorAll('.workshop-assignment-row').length <= 1) {
+        sectionSel.value = '';
+        techSel.innerHTML = '<option value="">— بدون —</option>';
+        return;
+      }
+      row.remove();
+    });
+
+    sectionSel.addEventListener('change', function () {
+      syncRowTechnicians(sectionSel, techSel);
+    });
+
+    row.appendChild(sectionWrap);
+    row.appendChild(techWrap);
+    row.appendChild(removeBtn);
+    root.appendChild(row);
+
+    syncRowTechnicians(sectionSel, techSel);
+    if (sectionId) sectionSel.value = String(sectionId);
+    syncRowTechnicians(sectionSel, techSel);
+    if (techId) techSel.value = String(techId);
+
+    return row;
   }
 
   var assignmentRefreshInFlight = false;
@@ -177,18 +287,21 @@
   }
 
   function readAssignmentPayload() {
-    var sectionEl = $('workshopAssignSection');
-    var techEl = $('workshopAssignTechnician');
-    var sectionRaw = sectionEl ? String(sectionEl.value || '').trim() : '';
-    var techRaw = techEl ? String(techEl.value || '').trim() : '';
-    var sectionId = sectionRaw ? parseInt(sectionRaw, 10) : null;
-    var techId = techRaw ? parseInt(techRaw, 10) : null;
-    if (!sectionId || Number.isNaN(sectionId)) sectionId = null;
-    if (!techId || Number.isNaN(techId)) techId = null;
-    return {
-      workshop_section_id: sectionId,
-      assigned_technician_id: techId,
-    };
+    var rows = document.querySelectorAll('.workshop-assignment-row');
+    var assignments = [];
+    rows.forEach(function (row) {
+      var sectionEl = row.querySelector('.assign-section');
+      var techEl = row.querySelector('.assign-tech');
+      var sectionId = sectionEl && sectionEl.value ? parseInt(sectionEl.value, 10) : null;
+      var techId = techEl && techEl.value ? parseInt(techEl.value, 10) : null;
+      if (sectionId && techId && !Number.isNaN(sectionId) && !Number.isNaN(techId)) {
+        assignments.push({
+          workshop_section_id: sectionId,
+          assigned_technician_id: techId,
+        });
+      }
+    });
+    return { assignments: assignments };
   }
 
   function approveWorkshopAssignment(caseId, triggerBtn) {
@@ -201,16 +314,7 @@
     }
 
     var payload = readAssignmentPayload();
-    var cached = assignmentCache.find(function (c) { return String(c.id) === String(caseId); });
-    if ((!payload.workshop_section_id || !payload.assigned_technician_id) && cached) {
-      if (!payload.workshop_section_id && cached.workshop_section_id) {
-        payload.workshop_section_id = parseInt(cached.workshop_section_id, 10);
-      }
-      if (!payload.assigned_technician_id && cached.assigned_technician_id) {
-        payload.assigned_technician_id = parseInt(cached.assigned_technician_id, 10);
-      }
-    }
-    if (!payload.workshop_section_id || !payload.assigned_technician_id) {
+    if (!payload.assignments.length) {
       toast('حدّد قسم الإنتاج والفني من القوائم ثم أعد المحاولة.', true);
       return;
     }
@@ -249,16 +353,22 @@
       ? '<a href="' + esc(c.work_order_print_url) + '" target="_blank" rel="noopener" ' +
         'class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ طباعة إذن شغل</a> '
       : '';
-    return printBtn +
+    return printBtn + renderIssueVoucherBtn(c) +
       '<button type="button" class="btn-select-workshop-case text-xs font-bold rounded-lg border border-violet-300 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1" data-case-id="' + c.id + '" data-work-order="' + esc(c.work_order_no || '') + '">👤 تخصيص</button> ' +
       '<button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700" data-case-id="' + c.id + '">✓ تم التصنيع</button>';
   }
 
   function renderAssignmentCell(c) {
-    var section = (c.workshop_section && c.workshop_section.name) || '—';
-    var tech = (c.assigned_technician && c.assigned_technician.name) || '—';
-    return '<div class="text-xs"><span class="font-semibold text-slate-700">' + esc(section) + '</span>' +
-      '<div class="text-slate-400 mt-0.5">' + esc(tech) + '</div></div>';
+    var list = (c.workshop_assignments && c.workshop_assignments.length)
+      ? c.workshop_assignments
+      : (c.workshop_section ? [{ workshop_section: c.workshop_section, assigned_technician: c.assigned_technician }] : []);
+    if (!list.length) return '<span class="text-xs text-slate-400">—</span>';
+    return list.map(function (row) {
+      var section = (row.workshop_section && row.workshop_section.name) || '—';
+      var tech = (row.assigned_technician && row.assigned_technician.name) || '—';
+      return '<div class="text-xs mb-1 last:mb-0"><span class="font-semibold text-slate-700">' + esc(section) + '</span>' +
+        '<div class="text-slate-400 mt-0.5">' + esc(tech) + '</div></div>';
+    }).join('');
   }
 
   function renderRow(c) {
@@ -449,10 +559,16 @@
         var input = $('workshopSelectedOrder');
         if (input) input.value = wo;
         var cached = casesCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
-        if (cached) populateAssignmentForm(cached);
+        if (cached) {
+          populateAssignmentForm(cached);
+          updateIssueVoucherButton(cached);
+        }
         else {
           var fromAssignment = assignmentCache.find(function (c) { return String(c.id) === String(selectedCaseId); });
-          if (fromAssignment) populateAssignmentForm(fromAssignment);
+          if (fromAssignment) {
+            populateAssignmentForm(fromAssignment);
+            updateIssueVoucherButton(fromAssignment);
+          }
         }
       });
     });
@@ -590,17 +706,18 @@
       toast('اختر أمر شغل من الجدول أولاً', true);
       return;
     }
-    var sectionEl = $('workshopAssignSection');
-    var techEl = $('workshopAssignTechnician');
-    var payload = {};
-    if (sectionEl && sectionEl.value) payload.workshop_section_id = parseInt(sectionEl.value, 10);
-    if (techEl && techEl.value) payload.assigned_technician_id = parseInt(techEl.value, 10);
+    var payload = readAssignmentPayload();
+    if (!payload.assignments.length) {
+      toast('حدّد قسم إنتاج وفني واحد على الأقل', true);
+      return;
+    }
 
     var btn = $('btnSaveWorkshopAssignment');
     if (btn) btn.disabled = true;
     axios.post('/workshop/workshop/' + selectedCaseId + '/assign', payload)
       .then(function (res) {
         toast(res.data.message || 'تم حفظ التخصيص');
+        if (res.data.case) updateIssueVoucherButton(res.data.case);
         refreshAssignmentQueue();
         refreshList();
         refreshTechBoard();
@@ -621,27 +738,10 @@
   }
 
   function paintAssignmentSections() {
-    var sectionSel = $('workshopAssignSection');
-    var techSel = $('workshopAssignTechnician');
-    if (!sectionSel || !techSel || !assignmentSections.length) return;
-
-    sectionSel.innerHTML = '<option value="">— بدون —</option>' + assignmentSections.map(function (s) {
-      return '<option value="' + s.id + '">' + esc(s.name) + (s.code ? ' (' + esc(s.code) + ')' : '') + '</option>';
-    }).join('');
-
-    function syncTechnicians() {
-      var sec = assignmentSections.find(function (s) { return String(s.id) === String(sectionSel.value); });
-      var techs = sec ? (sec.technicians || []) : [];
-      techSel.innerHTML = '<option value="">— بدون —</option>' + techs.map(function (t) {
-        return '<option value="' + t.id + '">' + esc(t.name) + '</option>';
-      }).join('');
-    }
-
-    if (!sectionSel.dataset.sectionBound) {
-      sectionSel.dataset.sectionBound = '1';
-      sectionSel.addEventListener('change', syncTechnicians);
-    }
-    syncTechnicians();
+    if (!assignmentSections.length) return;
+    var root = $('workshopAssignmentRows');
+    if (!root || root.children.length) return;
+    addAssignmentRow();
   }
 
   function loadAssignmentOptions() {
@@ -713,6 +813,8 @@
     }
     var refreshAssign = $('btnRefreshAssignmentQueue');
     if (refreshAssign) refreshAssign.addEventListener('click', refreshAssignmentQueue);
+    var addRowBtn = $('btnAddWorkshopAssignmentRow');
+    if (addRowBtn) addRowBtn.addEventListener('click', function () { addAssignmentRow(); });
     var closeBtn = $('closeWorkshopBomItemsModal');
     var modal = $('workshopBomItemsModal');
     if (closeBtn) closeBtn.addEventListener('click', closeBomItemsModal);

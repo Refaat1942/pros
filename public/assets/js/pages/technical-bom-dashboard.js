@@ -98,7 +98,7 @@
   }
 
   function normalizeScan(raw) {
-    var scan = String(raw || '').trim().toUpperCase();
+    var scan = sanitizeScanInput(raw);
     if (!scan) return '';
     var match = null;
     state.items.forEach(function (it) {
@@ -110,6 +110,12 @@
       }
     });
     return match || scan;
+  }
+
+  function sanitizeScanInput(raw) {
+    var s = String(raw || '').replace(/[\x00-\x1F\x7F]/g, '').trim();
+    s = s.replace(/^[^A-Za-z0-9]+/, '').replace(/[^A-Za-z0-9\-_]+$/, '');
+    return s.trim().toUpperCase();
   }
 
   // خريطة كود الصنف ← الكمية المطلوبة.
@@ -307,7 +313,7 @@
 
   function addScan(raw) {
     var input = $d('dispenseBarcodeInput');
-    var code = String(raw || (input && input.value) || '').trim().toUpperCase();
+    var code = sanitizeScanInput(raw || (input && input.value) || '');
     if (!code) return;
     if (!isValidBarcode(code)) {
       showBarcodeInputError('الباركود غير صالح.');
@@ -596,8 +602,30 @@
 
     var barcodeInput = $d('dispenseBarcodeInput');
     if (barcodeInput) {
+      var scanDebounce = null;
       barcodeInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); addScan(e.target.value); }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addScan(e.target.value);
+        }
+      });
+      barcodeInput.addEventListener('input', function () {
+        if (scanDebounce) clearTimeout(scanDebounce);
+        var val = barcodeInput.value;
+        if (!val || val.length < 3) return;
+        scanDebounce = setTimeout(function () {
+          var cleaned = sanitizeScanInput(val);
+          if (cleaned.length >= 3 && (cleaned.length >= 6 || /[\r\n\t]/.test(val))) {
+            addScan(cleaned);
+          }
+        }, 150);
+      });
+      barcodeInput.addEventListener('paste', function (e) {
+        var pasted = (e.clipboardData && e.clipboardData.getData('text')) || '';
+        if (pasted.trim()) {
+          e.preventDefault();
+          addScan(pasted);
+        }
       });
     }
     var scannedList = $d('dispenseScannedList');

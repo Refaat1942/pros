@@ -330,7 +330,7 @@ return [
             [
                 'label' => 'الرقابة والنظام',
                 'icon' => '⚙️',
-                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'branding-settings', 'costing-settings', 'pathway-settings', 'notification-settings'],
+                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'documents-hub', 'branding-settings', 'costing-settings', 'pathway-settings', 'notification-settings'],
             ],
         ],
         'pages' => [
@@ -379,6 +379,8 @@ return [
             'military-debts' => ['title' => 'مديونيات الجهات العسكرية', 'icon' => '🪖', 'label' => 'مديونيات عسكرية', 'hidden' => true],
             // ── الرقابة ────────────────────────────────────────────────────────
             'audit' => ['title' => 'سجل الرقابة الحصين — Immutable Audit Log', 'icon' => '🔒', 'label' => 'سجل الرقابة'],
+            'documents-hub' => ['title' => 'مركز الوثائق والطباعة', 'icon' => '📄', 'label' => 'مركز الوثائق'],
+            'document-template-edit' => ['title' => 'تخصيص وثيقة', 'icon' => '✏️', 'label' => 'تخصيص وثيقة', 'hidden' => true],
             // ── إدارة النظام ───────────────────────────────────────────────────
             'employees' => ['title' => 'إدارة الموظفين ', 'icon' => '👥', 'label' => 'الموظفون'],
             'permissions' => ['title' => 'مصفوفة الصلاحيات', 'icon' => '🛡️', 'label' => 'الصلاحيات'],

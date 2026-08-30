@@ -112,7 +112,7 @@
     if (badge) badge.textContent = String(openLines.length);
 
     if (!openLines.length) {
-      body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد طلبات مفتوحة.</td></tr>';
+      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد طلبات مفتوحة.</td></tr>';
       return;
     }
 
@@ -132,6 +132,8 @@
         '<td class="col-qty">' + line.qty + '</td>' +
         '<td>' + esc(line.uom || '—') + '</td>' +
         '<td>' + esc(line.status_label) + '</td>' +
+        '<td>' + esc(line.requested_at || '—') + '</td>' +
+        '<td>' + esc(line.received_at || '—') + '</td>' +
         '<td>' + action + '</td>' +
         '</tr>';
     }).join('');
@@ -302,5 +304,13 @@
   bindLineTypeRadios();
   bindCreateForm();
   bindResolveActions();
+
+  var printBtn = document.getElementById('btnPrintSupplyRequests');
+  if (printBtn && api.print) {
+    printBtn.addEventListener('click', function () {
+      window.open(api.print, '_blank', 'noopener');
+    });
+  }
+
   loadOpenLines();
 })();

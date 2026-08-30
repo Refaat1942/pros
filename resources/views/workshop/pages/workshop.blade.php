@@ -54,8 +54,13 @@
                     @forelse ($assignmentCases as $case)
                         @php
                             $isMil = $case->isMilitary();
-                            $voucherUrl = route('workshop.work-order.print', $case);
-                            $awaitingApprove = $case->workshop_section_id && $case->assigned_technician_id && ! $case->isWorkshopAssignmentApproved();
+                            $workOrderUrl = route('workshop.work-order.print', $case);
+                            $issueVoucherUrl = $case->bom ? route('workshop.issue-voucher.print', $case) : null;
+                            $awaitingApprove = ($case->workshop_section_id && $case->assigned_technician_id || $case->workshopAssignments->isNotEmpty())
+                                && ! $case->isWorkshopAssignmentApproved();
+                            $assignmentLines = $case->workshopAssignments->isNotEmpty()
+                                ? $case->workshopAssignments
+                                : collect([$case])->filter(fn ($c) => $c->workshop_section_id);
                         @endphp
                         <tr class="assignment-row hover:bg-slate-50" data-case-id="{{ $case->id }}"
                             data-search="{{ $case->work_order_no }} {{ $case->case_no }} {{ $case->patient?->name }}">
@@ -70,8 +75,14 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-xs">
-                                <div class="font-semibold text-slate-700">{{ $case->workshopSection?->name ?? '—' }}</div>
-                                <div class="text-slate-400 mt-0.5">{{ $case->assignedTechnician?->name ?? '—' }}</div>
+                                @forelse ($assignmentLines as $assignment)
+                                    <div class="mb-1">
+                                        <div class="font-semibold text-slate-700">{{ $assignment->workshopSection?->name ?? $case->workshopSection?->name ?? '—' }}</div>
+                                        <div class="text-slate-400">{{ $assignment->assignedTechnician?->name ?? $case->assignedTechnician?->name ?? '—' }}</div>
+                                    </div>
+                                @empty
+                                    <span class="text-slate-400">—</span>
+                                @endforelse
                             </td>
                             <td class="px-4 py-3">
                                 @if ($case->isWorkshopAssignmentApproved())
@@ -83,8 +94,12 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3">
-                                <a href="{{ $voucherUrl }}" target="_blank" rel="noopener"
+                                <a href="{{ $workOrderUrl }}" target="_blank" rel="noopener"
                                    class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">🖨️ إذن شغل</a>
+                                @if ($issueVoucherUrl)
+                                    <a href="{{ $issueVoucherUrl }}" target="_blank" rel="noopener"
+                                       class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">🖨️ إذن استلام</a>
+                                @endif
                                 @if ($awaitingApprove)
                                     <button type="button" class="btn-approve-assignment text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700 inline-block mb-1" data-case-id="{{ $case->id }}">✓ اعتماد</button>
                                 @endif
@@ -111,17 +126,13 @@
                 <input type="text" id="workshopSelectedOrder" readonly placeholder="— اختر من الجدول —"
                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono">
             </div>
-            <div class="min-w-[200px]">
-                <label class="block text-xs font-bold text-slate-600 mb-1">قسم الإنتاج</label>
-                <select id="workshopAssignSection" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                    <option value="">— بدون —</option>
-                </select>
-            </div>
-            <div class="min-w-[200px]">
-                <label class="block text-xs font-bold text-slate-600 mb-1">الفني</label>
-                <select id="workshopAssignTechnician" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                    <option value="">— بدون —</option>
-                </select>
+            <div class="w-full">
+                <label class="block text-xs font-bold text-slate-600 mb-2">أقسام الإنتاج والفنيين (يمكن إضافة أكثر من قسم وفني)</label>
+                <div id="workshopAssignmentRows" class="space-y-3"></div>
+                <button type="button" id="btnAddWorkshopAssignmentRow"
+                        class="mt-2 rounded-xl border border-violet-300 text-violet-800 px-4 py-2 text-sm font-bold hover:bg-violet-50">
+                    + إضافة قسم / فني
+                </button>
             </div>
             <button type="button" id="btnSaveWorkshopAssignment"
                     class="rounded-xl bg-violet-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-violet-700 transition-colors">
@@ -130,6 +141,10 @@
             <button type="button" id="btnApproveWorkshopAssignment"
                     class="rounded-xl bg-emerald-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-emerald-700 transition-colors">
                 ✓ حفظ واعتماد التخصيص
+            </button>
+            <button type="button" id="btnPrintIssueVoucher"
+                    class="rounded-xl border border-cyan-600 text-cyan-800 px-5 py-2.5 text-sm font-bold hover:bg-cyan-50 transition-colors hidden">
+                🖨️ طباعة إذن استلام
             </button>
         </div>
     </div>
@@ -238,6 +253,12 @@
                                    class="text-xs font-bold rounded-lg border border-violet-700 text-violet-800 px-3 py-1.5 hover:bg-violet-50 inline-block mb-1">
                                     🖨️ طباعة إذن شغل
                                 </a>
+                                @if ($case->bom)
+                                    <a href="{{ route('workshop.issue-voucher.print', $case) }}" target="_blank" rel="noopener"
+                                       class="text-xs font-bold rounded-lg border border-cyan-700 text-cyan-800 px-3 py-1.5 hover:bg-cyan-50 inline-block mb-1">
+                                        🖨️ إذن استلام
+                                    </a>
+                                @endif
                                 <button type="button" class="btn-complete-manufacturing text-xs font-bold rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700"
                                         data-case-id="{{ $case->id }}">
                                     ✓ تم التصنيع

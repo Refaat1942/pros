@@ -16,6 +16,7 @@ use App\Models\TechOrderSpec;
 use App\Models\TechOrderSpecItem;
 use App\Models\User;
 use App\Services\Notifications\NotificationService;
+use App\Services\WorkshopAssignmentService;
 use App\Support\ClinicTime;
 use App\Support\SpecEditRequestItemDiff;
 use Illuminate\Support\Facades\DB;
@@ -528,13 +529,9 @@ class SpecEditRequestService
                 }
             } else {
                 $this->bomService->releaseBomReservation($bom);
+                app(WorkshopAssignmentService::class)->clearAssignments($case);
                 $case->update([
                     'work_order_no' => null,
-                    'workshop_section_id' => null,
-                    'assigned_technician_id' => null,
-                    'workshop_assigned_at' => null,
-                    'workshop_assignment_approved_at' => null,
-                    'workshop_progress_pct' => 0,
                     'manufacturing_stage' => null,
                 ]);
                 $this->workflowService->advance($case->fresh(), WorkflowEvent::SpecEditPostWoRollback->value);
