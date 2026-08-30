@@ -9,6 +9,7 @@ use App\Models\StockItem;
 use App\Models\StockItemPrice;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Support\ClinicTime;
 use App\Support\StockCatalogPicker;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -544,7 +545,7 @@ class StockCatalogService
     /**
      * تجميع أرصدة دفعات الشراء حسب مستوى السعر (لعرض الكمية أمام كل سعر في الكتالوج).
      *
-     * @return list<array{amount: float, qty: float, from_supply: bool, id: int|null}>
+     * @return list<array{amount: float, qty: float, from_supply: bool, id: int|null, first_received: string|null}>
      */
     public function aggregatePriceTiers(StockItem $item): array
     {
@@ -608,6 +609,9 @@ class StockCatalogService
             'qty' => $tier['qty'],
             'from_supply' => $tier['from_supply'],
             'id' => $tier['id'],
+            'first_received' => $tier['first_received_at']
+                ? ClinicTime::format($tier['first_received_at'], 'd/m/Y')
+                : null,
         ], $tiers);
     }
 

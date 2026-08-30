@@ -49,6 +49,7 @@ class AdminReportsHubService
         private readonly InventoryFinancialReconciliationService $reconciliationService,
         private readonly ItemPricingAnalyticsService $itemPricingAnalytics,
         private readonly AdminReportsScopeService $reportsScope,
+        private readonly PriceTierReportService $priceTierReports,
     ) {}
 
     /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
@@ -123,6 +124,8 @@ class AdminReportsHubService
             ['id' => 'inventory', 'label' => 'تحليلات المخزون', 'icon' => '📦', 'group' => 'رؤية عامة', 'description' => 'الأصناف الراكدة والشغالة ومنخفضة المخزون'],
             ['id' => 'inventory-valuation', 'label' => 'تقييم المخزون', 'icon' => '💎', 'group' => 'المخزون والتوريد', 'description' => 'رصيد كل صنف وكمياته وأسعاره وقيمته بالمخزن'],
             ['id' => 'item-margins', 'label' => 'هامش الربح بالأصناف', 'icon' => '📊', 'group' => 'المخزون والتوريد', 'description' => 'WAC مقابل أعلى سعر شراء — هامش الوحدة ونسبته لكل صنف'],
+            ['id' => 'price-tier-balances', 'label' => 'أرصدة مستويات السعر', 'icon' => '🏷️', 'group' => 'المخزون والتوريد', 'description' => 'كل سعر شراء ورصيد دفعته في المخزن (دفعات FIFO)'],
+            ['id' => 'multi-price-items', 'label' => 'أصناف بأسعار متعددة', 'icon' => '⚠️', 'group' => 'المخزون والتوريد', 'description' => 'أصناف لها أكثر من مستوى سعر نشط — للتنبيه قبل الصرف'],
             ['id' => 'inventory-reconciliation', 'label' => 'تسوية مخزون ↔ مالية', 'icon' => '🔗', 'group' => 'التعاقد والمالية', 'description' => 'ربط صرف المخزن (WAC) بالإيرادات والتكلفة المُسلَّمة'],
             ['id' => 'operations', 'label' => 'التشغيل والأوامر', 'icon' => '🎯', 'group' => 'رؤية عامة', 'description' => 'أوامر التحضير وقسم الإنتاج'],
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
@@ -178,6 +181,8 @@ class AdminReportsHubService
             'inventory-overview' => $this->buildInventoryMovements($from, $to),
             'inventory-valuation' => $this->buildInventoryValuation($from, $to),
             'item-margins' => $this->buildItemMargins($from, $to),
+            'price-tier-balances' => $this->buildPriceTierBalances($from, $to),
+            'multi-price-items' => $this->buildMultiPriceItems($from, $to),
             'inventory-reconciliation' => $this->buildInventoryReconciliation($from, $to),
             'suppliers' => $this->buildSuppliers($from, $to),
             'returns' => $this->buildReturns($from, $to),
@@ -653,7 +658,10 @@ class AdminReportsHubService
     private function buildInventoryMovements(?Carbon $from, ?Carbon $to): array
     {
         $movements = $this->constrainDateRange(
-            StockMovement::query()->with('stockItem:id,code,name'),
+            StockMovement::query()->with([
+                'stockItem:id,code,name',
+                'stockItemPrice:id,amount,supply_request_line_id',
+            ]),
             'moved_at',
             $from,
             $to,
@@ -662,24 +670,97 @@ class AdminReportsHubService
             ->limit(500)
             ->get();
 
-        $rows = $movements->map(fn (StockMovement $m) => [
-            ClinicTime::format($m->moved_at, 'd/m/Y H:i'),
-            $this->movementTypeLabel($m),
-            $m->stockItem?->code ?? '—',
-            $m->stockItem?->name ?? '—',
-            (string) $this->signedMovementQuantity($m),
-            number_format((float) ($m->unit_cost ?? 0), 4).' ج.م',
-            number_format(abs((int) $m->quantity) * (float) ($m->unit_cost ?? 0), 2).' ج.م',
-            $this->movementReferenceLabel($m),
-        ])->values()->all();
+        $rows = $movements->map(function (StockMovement $m) {
+            $batchPrice = $m->stockItemPrice
+                ? number_format((float) $m->stockItemPrice->amount, 2).' ج.م'
+                : '—';
+            $fromSupply = $m->stockItemPrice && $m->stockItemPrice->supply_request_line_id !== null
+                ? 'نعم'
+                : '—';
+
+            return [
+                ClinicTime::format($m->moved_at, 'd/m/Y H:i'),
+                $this->movementTypeLabel($m),
+                $m->stockItem?->code ?? '—',
+                $m->stockItem?->name ?? '—',
+                (string) $this->signedMovementQuantity($m),
+                number_format((float) ($m->unit_cost ?? 0), 4).' ج.م',
+                $batchPrice,
+                number_format(abs((float) $m->quantity) * (float) ($m->unit_cost ?? 0), 2).' ج.م',
+                $this->movementReferenceLabel($m),
+                $fromSupply,
+            ];
+        })->values()->all();
 
         return [
             'title' => 'متابعة حركة الأصناف',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [],
-            'headers' => ['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الكمية', 'WAC/تكلفة', 'قيمة الحركة', 'المرجع'],
+            'headers' => ['التاريخ', 'النوع', 'رقم الصنف', 'اسم الصنف', 'الكمية', 'تكلفة الوحدة', 'سعر الدفعة', 'قيمة الحركة', 'المرجع', 'طلب توريد'],
             'rows' => $rows,
         ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildPriceTierBalances(?Carbon $from, ?Carbon $to): array
+    {
+        $tierRows = $this->priceTierReports->tierBalanceRows();
+        $multiCount = count($this->priceTierReports->multiPriceItemRows());
+        $totalQty = array_sum(array_column($tierRows, 'qty'));
+
+        $rows = array_map(fn (array $row) => [
+            $row['code'],
+            $row['name'],
+            number_format($row['amount'], 2).' ج.م',
+            $this->formatTierQtyForReport($row['qty']),
+            $row['from_supply'] ? 'نعم' : '—',
+            $row['first_received'],
+        ], $tierRows);
+
+        return [
+            'title' => 'أرصدة مستويات السعر',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [
+                ['label' => 'مستويات سعر نشطة', 'value' => (string) count($tierRows)],
+                ['label' => 'أصناف بأسعار متعددة', 'value' => (string) $multiCount],
+                ['label' => 'إجمالي قطع بالدفعات', 'value' => $this->formatTierQtyForReport($totalQty)],
+            ],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'سعر الشراء', 'رصيد الدفعة', 'طلب توريد', 'أول استلام'],
+            'rows' => $rows,
+        ];
+    }
+
+    /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
+    private function buildMultiPriceItems(?Carbon $from, ?Carbon $to): array
+    {
+        $items = $this->priceTierReports->multiPriceItemRows();
+
+        $rows = array_map(fn (array $row) => [
+            $row['code'],
+            $row['name'],
+            (string) $row['tier_count'],
+            $row['tiers_summary'],
+            (string) $row['warehouse_qty'],
+        ], $items);
+
+        return [
+            'title' => 'أصناف بأسعار متعددة',
+            'period_label' => $this->periodLabel($from, $to),
+            'summary' => [
+                ['label' => 'عدد الأصناف', 'value' => (string) count($items)],
+            ],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'عدد الأسعار', 'الأسعار والأرصدة', 'رصيد المخزن'],
+            'rows' => $rows,
+        ];
+    }
+
+    private function formatTierQtyForReport(float $qty): string
+    {
+        if (abs($qty - round($qty)) < 0.0001) {
+            return (string) (int) round($qty);
+        }
+
+        return rtrim(rtrim(number_format($qty, 4, '.', ''), '0'), '.');
     }
 
     private function movementTypeLabel(StockMovement $movement): string
