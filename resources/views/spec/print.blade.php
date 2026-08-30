@@ -18,8 +18,8 @@
     $dateDisplay = $submittedAt->format('d/m/Y');
     $minRows = $compact ? max($spec->items->count(), 3) : max($spec->items->count(), 6);
     $emptyRows = $minRows - $spec->items->count();
+    $sheetClass = \App\Support\DocumentTemplateSheet::sheetClass($tpl);
 @endphp
-@include('prints.partials.document-template-vars', ['documentTemplate' => $tpl])
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>

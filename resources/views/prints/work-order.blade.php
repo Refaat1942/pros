@@ -14,8 +14,8 @@
         $printCtx->department,
         $printCtx->stage,
     );
+    $sheetClass = \App\Support\DocumentTemplateSheet::sheetClass($tpl);
 @endphp
-@include('prints.partials.document-template-vars')
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>

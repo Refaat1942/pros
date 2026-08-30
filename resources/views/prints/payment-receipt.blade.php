@@ -72,12 +72,8 @@
         $printCtx->department,
         $printCtx->stage,
     );
+    $sheetClass = \App\Support\DocumentTemplateSheet::sheetClass($tpl);
 @endphp
-@include('prints.partials.document-template-vars')
-
-<div class="no-print">
-    <button type="button" onclick="window.print()">🖨️ طباعة</button>
-</div>
 
 <div class="{{ $sheetClass }}">
     @include('prints.partials.org-header', [

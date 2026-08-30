@@ -16,6 +16,7 @@
     $sig2        = $tpl['signature_2'] ?? 'يعتمد ،،،';
     $showLogo    = (bool) ($tpl['show_logo'] ?? true);
     $showSeal    = (bool) ($tpl['show_seal'] ?? true);
+    $sheetClass  = \App\Support\DocumentTemplateSheet::sheetClass($tpl);
     $quoteDate   = $quote->quote_date ?? now();
     $totals      = $printTotals ?? ['display_total' => (float) $quote->total, 'has_discount' => false, 'discount_percent' => 0, 'discount_amount' => 0, 'gross_total' => (float) $quote->total];
     $totalFmt    = ArabicAmount::splitFormatted((float) $totals['display_total']);
@@ -54,7 +55,6 @@
     $emptyRows   = $minRows - $displayRows->count();
     $dateDisplay = $quoteDate->format('d/m/Y');
 @endphp
-@include('prints.partials.document-template-vars', ['documentTemplate' => $tpl])
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>

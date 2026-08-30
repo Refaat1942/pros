@@ -9,7 +9,6 @@
     $companyName = $voucher['company_name'] ?? '—';
     $specGroups  = $voucher['spec_groups'] ?? [];
     $items       = collect($voucher['items'] ?? []);
-@php
     $uomMap = [];
     try {
         $uomMap = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->filter()->all());
@@ -23,8 +22,8 @@
     $printCtx = \App\Support\DocumentPrintContext::fromRequest(request());
     $tpl = $documentTemplate ?? $tplService->for('issue_voucher', $printCtx->department, $printCtx->stage);
     $docTitle = $tplService->renderText($tpl['doc_title'] ?? 'إذن صرف مواد — رقم ( {no} )', ['no' => $voucherNo]);
+    $sheetClass = \App\Support\DocumentTemplateSheet::sheetClass($tpl);
 @endphp
-@include('prints.partials.document-template-vars')
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
