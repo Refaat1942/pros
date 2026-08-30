@@ -149,6 +149,8 @@ ensure_storage_dirs
 fix_storage_permissions
 log "Rebuilding caches"
 run_artisan config:clear
+run_artisan route:clear
+run_artisan view:clear
 run_artisan config:cache
 run_artisan route:cache
 run_artisan view:cache

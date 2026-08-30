@@ -9,7 +9,15 @@
     window.FIREBASE_WEB = @json($fbEnabled ? $fb : null);
 </script>
 @if ($fbEnabled)
-    <script src="{{ asset('assets/vendor/firebase-app-compat.js') }}?v={{ filemtime(public_path('assets/vendor/firebase-app-compat.js')) }}"></script>
-    <script src="{{ asset('assets/vendor/firebase-messaging-compat.js') }}?v={{ filemtime(public_path('assets/vendor/firebase-messaging-compat.js')) }}"></script>
+    @php
+        $fbAppJs = public_path('assets/vendor/firebase-app-compat.js');
+        $fbMsgJs = public_path('assets/vendor/firebase-messaging-compat.js');
+    @endphp
+    @if (is_file($fbAppJs))
+        <script src="{{ asset('assets/vendor/firebase-app-compat.js') }}?v={{ filemtime($fbAppJs) }}"></script>
+    @endif
+    @if (is_file($fbMsgJs))
+        <script src="{{ asset('assets/vendor/firebase-messaging-compat.js') }}?v={{ filemtime($fbMsgJs) }}"></script>
+    @endif
     <script src="{{ asset('assets/js/shared/firebase-init.js') }}"></script>
 @endif

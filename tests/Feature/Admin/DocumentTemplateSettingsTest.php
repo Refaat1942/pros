@@ -112,6 +112,27 @@ class DocumentTemplateSettingsTest extends TestCase
             ->assertSee('صرف مواد — DEMO-001', false);
     }
 
+    public function test_preview_returns_html_not_500_when_view_data_invalid(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        $this->actingAs($super)
+            ->get(route('admin.documents-hub.preview', 'payment_receipt'))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8');
+    }
+
+    public function test_edit_document_template_returns_html(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        $this->actingAs($super)
+            ->get(route('admin.documents-hub.edit', 'quote'))
+            ->assertOk()
+            ->assertSee('تخصيص وثيقة', false)
+            ->assertSee('scope_department', false);
+    }
+
     public function test_preview_quote_and_work_order_return_ok(): void
     {
         $super = $this->userWithRole('super_admin');

@@ -24,7 +24,7 @@
 php artisan migrate --force
 php artisan view:clear
 php artisan config:clear</pre>
-    <p><a href="{{ route('admin.documents-hub') }}">← العودة لمركز الوثائق</a></p>
+    <p><a href="{{ url('/admin/documents-hub') }}">← العودة لمركز الوثائق</a></p>
 </div>
 </body>
 </html>

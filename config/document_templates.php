@@ -179,7 +179,7 @@ return [
             'group' => 'الإنتاج والتصنيع',
             'title' => 'تقرير التوصيف',
             'description' => 'طباعة التوصيف الفني',
-            'view' => null,
+            'view' => 'spec.print',
             'print_route' => null,
             'fields' => [
                 ['key' => 'doc_title', 'label' => 'عنوان الوثيقة', 'type' => 'text'],
