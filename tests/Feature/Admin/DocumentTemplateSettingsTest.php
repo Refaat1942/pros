@@ -48,4 +48,41 @@ class DocumentTemplateSettingsTest extends TestCase
             ->assertOk()
             ->assertSee('صرف مواد — DEMO-001', false);
     }
+
+    public function test_preview_quote_and_work_order_return_ok(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        $this->actingAs($super)
+            ->get(route('admin.documents-hub.preview', 'quote'))
+            ->assertOk()
+            ->assertSee('عرض سعر', false);
+
+        $this->actingAs($super)
+            ->get(route('admin.documents-hub.preview', 'work_order'))
+            ->assertOk()
+            ->assertSee('إذن شغل', false);
+    }
+
+    public function test_super_admin_can_create_custom_document_with_preview(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        $response = $this->actingAs($super)
+            ->postJson(route('admin.documents-hub.custom.store'), [
+                'title' => 'خطاب موافقة',
+                'group_label' => 'وثائق مخصصة',
+                'description' => 'نموذج تجريبي',
+                'body_html' => '<p>محتوى تجريبي للوثيقة</p>',
+            ]);
+
+        $response->assertCreated();
+        $key = $response->json('document.key');
+        $this->assertStringStartsWith('custom_', $key);
+
+        $this->actingAs($super)
+            ->get(route('admin.documents-hub.preview', $key))
+            ->assertOk()
+            ->assertSee('محتوى تجريبي للوثيقة', false);
+    }
 }

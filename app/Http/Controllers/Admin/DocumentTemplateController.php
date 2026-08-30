@@ -5,14 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateDocumentTemplateRequest;
 use App\Models\CaseRecord;
+use App\Models\CustomDocument;
 use App\Services\AuditService;
+use App\Services\CustomDocumentService;
 use App\Services\DocumentTemplateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 class DocumentTemplateController extends Controller
 {
-    public function __construct(private readonly DocumentTemplateService $templates) {}
+    public function __construct(
+        private readonly DocumentTemplateService $templates,
+        private readonly CustomDocumentService $customDocuments,
+    ) {}
 
     public function edit(string $document): View
     {
@@ -21,6 +26,7 @@ class DocumentTemplateController extends Controller
         $def = $this->templates->definition($document);
         $values = $this->templates->for($document);
         $pages = config('dashboards.admin.pages', []);
+        $custom = $this->customDocuments->findByKey($document);
 
         return view('dashboard.show', [
             'dashboardKey' => 'admin',
@@ -34,6 +40,10 @@ class DocumentTemplateController extends Controller
             'values' => $values,
             'previewUrl' => route('admin.documents-hub.preview', $document),
             'hubUrl' => route('admin.documents-hub'),
+            'isCustomDocument' => $custom instanceof CustomDocument,
+            'customDocumentId' => $custom?->id,
+            'referenceUrl' => $custom?->referenceUrl(),
+            'referenceIsImage' => $custom?->referenceIsImage() ?? false,
         ]);
     }
 
@@ -65,6 +75,15 @@ class DocumentTemplateController extends Controller
         $tpl = $this->templates->for($document);
         $autoPrint = false;
 
+        if ($this->templates->isCustom($document)) {
+            $custom = $this->customDocuments->findByKey($document);
+
+            return view('admin.print.custom-document-preview', [
+                'documentTemplate' => $tpl,
+                'customDocument' => $custom,
+            ]);
+        }
+
         return match ($document) {
             'issue_voucher' => view('prints.issue-voucher', [
                 'voucher' => $this->sampleIssueVoucher(),
@@ -86,6 +105,7 @@ class DocumentTemplateController extends Controller
                 'case' => $this->sampleWorkOrderCase(),
                 'autoPrint' => $autoPrint,
                 'documentTemplate' => $tpl,
+                'previewValueDisplay' => '15,000',
             ]),
             'quote' => view('admin.print.document-template-quote-preview', [
                 'documentTemplate' => $tpl,
@@ -97,7 +117,7 @@ class DocumentTemplateController extends Controller
         };
     }
 
-  /** @return array<string, mixed> */
+    /** @return array<string, mixed> */
     private function sampleIssueVoucher(): array
     {
         return [
@@ -119,10 +139,10 @@ class DocumentTemplateController extends Controller
                     ],
                 ],
             ],
-            'items' => collect([
+            'items' => [
                 ['stock_item_code' => 'RM-001', 'name' => 'صنف تجريبي 1', 'qty' => 2],
                 ['stock_item_code' => 'RM-002', 'name' => 'صنف تجريبي 2', 'qty' => 1],
-            ]),
+            ],
         ];
     }
 
@@ -180,6 +200,7 @@ class DocumentTemplateController extends Controller
             'quote_no' => 'QT-DEMO',
             'approval_date' => now(),
             'patient_type' => 'civilian',
+            'quote_total' => 15000,
         ]);
         $case->id = 0;
 
