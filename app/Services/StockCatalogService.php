@@ -131,7 +131,7 @@ class StockCatalogService
         return StockItem::query()
             ->with([
                 'category:id,name',
-                'prices:id,stock_item_id,label,amount',
+                'prices:id,stock_item_id,label,amount,qty,supply_request_line_id,received_at',
                 'attributeValues.field',
                 'suppliers:id,name',
             ])
@@ -194,7 +194,14 @@ class StockCatalogService
 
     public function formatItem(StockItem $item): array
     {
-        $item->loadMissing(['category:id,name', 'prices:id,stock_item_id,label,amount', 'attributeValues.field', 'suppliers:id,name']);
+        $item->loadMissing([
+            'category:id,name',
+            'prices:id,stock_item_id,label,amount,qty,supply_request_line_id',
+            'attributeValues.field',
+            'suppliers:id,name',
+        ]);
+
+        $priceTiers = $this->aggregatePriceTiers($item);
 
         return [
             'id' => $item->id,
@@ -229,6 +236,7 @@ class StockCatalogService
             'min_qty' => (int) ($item->min_qty ?? 0),
             'price' => (float) $item->price,
             'highest_price' => $this->highestPrice($item),
+            'price_tiers' => $priceTiers,
             'expiry_date' => $item->expiry_date?->toDateString(),
             'wac' => (float) $item->wac,
             'status' => $item->status,
@@ -533,6 +541,76 @@ class StockCatalogService
         return $uom !== '' ? $uom : StockUom::Piece->value;
     }
 
+    /**
+     * تجميع أرصدة دفعات الشراء حسب مستوى السعر (لعرض الكمية أمام كل سعر في الكتالوج).
+     *
+     * @return list<array{amount: float, qty: float, from_supply: bool, id: int|null}>
+     */
+    public function aggregatePriceTiers(StockItem $item): array
+    {
+        $item->loadMissing('prices:id,stock_item_id,label,amount,qty,supply_request_line_id,received_at');
+
+        $byAmount = [];
+
+        foreach ($item->prices as $batch) {
+            $amount = round((float) $batch->amount, 2);
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $qty = (float) $batch->qty;
+            if ($qty <= 0 && $batch->supply_request_line_id === null) {
+                continue;
+            }
+
+            if (! isset($byAmount[$amount])) {
+                $byAmount[$amount] = [
+                    'amount' => $amount,
+                    'qty' => 0.0,
+                    'from_supply' => false,
+                    'id' => null,
+                    'first_received_at' => $batch->received_at,
+                ];
+            }
+
+            $byAmount[$amount]['qty'] += $qty;
+
+            if ($batch->supply_request_line_id !== null) {
+                $byAmount[$amount]['from_supply'] = true;
+            }
+
+            if ($byAmount[$amount]['id'] === null) {
+                $byAmount[$amount]['id'] = (int) $batch->id;
+            }
+
+            if ($batch->received_at !== null
+                && ($byAmount[$amount]['first_received_at'] === null
+                    || $batch->received_at->lt($byAmount[$amount]['first_received_at']))) {
+                $byAmount[$amount]['first_received_at'] = $batch->received_at;
+            }
+        }
+
+        $tiers = array_values($byAmount);
+
+        usort($tiers, function (array $a, array $b) {
+            $aDate = $a['first_received_at']?->format('Y-m-d') ?? '';
+            $bDate = $b['first_received_at']?->format('Y-m-d') ?? '';
+
+            if ($aDate !== $bDate) {
+                return $aDate <=> $bDate;
+            }
+
+            return $a['amount'] <=> $b['amount'];
+        });
+
+        return array_map(fn (array $tier) => [
+            'amount' => $tier['amount'],
+            'qty' => $tier['qty'],
+            'from_supply' => $tier['from_supply'],
+            'id' => $tier['id'],
+        ], $tiers);
+    }
+
     private function deriveStoreClass(?StockCategory $category): string
     {
         return match ($category?->name) {
@@ -563,7 +641,6 @@ class StockCatalogService
             $payload = [
                 'label' => $label !== '' ? $label : null,
                 'amount' => $amount,
-                'qty' => 1,
             ];
 
             if ($priceId && $existing = $item->prices()->whereKey($priceId)->first()) {
@@ -575,6 +652,7 @@ class StockCatalogService
 
             $created = $item->prices()->create(array_merge($payload, [
                 'price_ref' => sprintf('PR-%s-%d', $item->code, $index + 1),
+                'qty' => 0,
             ]));
             $keepIds[] = $created->id;
         }

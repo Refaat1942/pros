@@ -252,7 +252,10 @@
                 </div>
                 <div>
                     <label class="catalog-form-label">السعر الأساسي</label>
-                    <input type="number" id="slimPrice" min="0" step="0.01" value="0" class="catalog-form-input">
+                    <div class="catalog-price-with-qty">
+                        <input type="number" id="slimPrice" min="0" step="0.01" value="0" class="catalog-form-input">
+                        <span id="slimBasePriceQty" class="slim-price-qty-badge" hidden></span>
+                    </div>
                 </div>
                 <div class="catalog-form-grid__full">
                     <label class="catalog-quick-dispense-label">
@@ -633,6 +636,38 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+    }
+    .catalog-price-with-qty {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .catalog-price-with-qty .catalog-form-input {
+        flex: 1;
+        min-width: 0;
+    }
+    .slim-price-qty-badge {
+        flex-shrink: 0;
+        font-size: 12px;
+        font-weight: 700;
+        color: #0369a1;
+        background: #e0f2fe;
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+        padding: 6px 10px;
+        white-space: nowrap;
+    }
+    .slim-price-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .slim-price-row .slim-price-amount {
+        flex: 1;
+        min-width: 0;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
     }
     .catalog-form-error {
         margin-top: 10px;
@@ -1053,17 +1088,74 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         window.applySlimCatalogFilters();
     };
 
-    window.addSlimPriceRow = function (amount) {
+    window.addSlimPriceRow = function (amount, qty, priceId) {
         var box = document.getElementById('slimExtraPrices');
         var row = document.createElement('div');
         row.className = 'slim-price-row';
-        row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+        var qtyText = formatTierQtyDisplay(
+            qty != null ? qty : tierQtyForAmount(amount, window.__catalogPriceTiers || [])
+        );
         row.innerHTML =
-            '<input type="number" min="0" step="0.01" class="slim-price-amount" placeholder="السعر" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;">' +
+            '<span class="slim-price-qty-badge" title="رصيد هذا السعر في المخزن">رصيد: ' + qtyText + '</span>' +
+            '<input type="number" min="0" step="0.01" class="slim-price-amount" placeholder="السعر (ج.م)">' +
             '<button type="button" class="btn-action danger" onclick="this.closest(\'.slim-price-row\').remove()">×</button>';
         box.appendChild(row);
         if (amount != null) row.querySelector('.slim-price-amount').value = amount;
+        if (priceId) row.setAttribute('data-price-id', String(priceId));
     };
+
+    function formatTierQtyDisplay(qty) {
+        var n = parseFloat(qty);
+        if (!isFinite(n)) return '0';
+        if (Math.abs(n - Math.round(n)) < 0.0001) return String(Math.round(n));
+        return String(n).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+    }
+
+    function catalogPriceAmountKey(amount) {
+        return (Math.round(parseFloat(amount) * 100) / 100).toFixed(2);
+    }
+
+    function catalogAmountsEqual(a, b) {
+        return catalogPriceAmountKey(a) === catalogPriceAmountKey(b);
+    }
+
+    function tierQtyForAmount(amount, tiers) {
+        if (!tiers || !tiers.length) return 0;
+        var key = catalogPriceAmountKey(amount);
+        for (var i = 0; i < tiers.length; i++) {
+            if (catalogPriceAmountKey(tiers[i].amount) === key) {
+                return parseFloat(tiers[i].qty) || 0;
+            }
+        }
+        return 0;
+    }
+
+    function updateBasePriceQtyBadge(amount, tiers) {
+        var badge = document.getElementById('slimBasePriceQty');
+        if (!badge) return;
+        var qty = tierQtyForAmount(amount, tiers);
+        badge.textContent = 'رصيد: ' + formatTierQtyDisplay(qty);
+        badge.hidden = false;
+    }
+
+    function buildPriceTiersFromItem(item) {
+        if (item.price_tiers && item.price_tiers.length) {
+            return item.price_tiers;
+        }
+        var tiers = [];
+        var base = parseFloat(item.price) || 0;
+        if (base > 0) {
+            tiers.push({ amount: base, qty: 0, id: null });
+        }
+        (item.prices || []).forEach(function (p) {
+            tiers.push({
+                amount: parseFloat(p.amount) || 0,
+                qty: parseFloat(p.qty) || 0,
+                id: p.id || null,
+            });
+        });
+        return tiers;
+    }
 
     var supplierOptions = @json($catalogSuppliers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values());
 
@@ -1173,6 +1265,10 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         document.getElementById(id)?.addEventListener('input', recalcCatalogBalance);
     });
 
+    document.getElementById('slimPrice')?.addEventListener('input', function () {
+        updateBasePriceQtyBadge(parseFloat(document.getElementById('slimPrice').value || '0'), window.__catalogPriceTiers || []);
+    });
+
     function toggleBarcodeFields(isEdit, item) {
         var wrap = document.getElementById('slimBarcodeWrap');
         var display = document.getElementById('slimBarcodeDisplay');
@@ -1205,7 +1301,13 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         document.getElementById('slimEditId').value = v.id || '';
         document.getElementById('slimEditCode').value = v.code || '';
         document.getElementById('slimExtraPrices').innerHTML = '';
-        (v.prices || []).forEach(function (p) { window.addSlimPriceRow(p.amount); });
+        window.__catalogPriceTiers = buildPriceTiersFromItem(v);
+        updateBasePriceQtyBadge(parseFloat(v.price) || 0, window.__catalogPriceTiers);
+        var baseAmount = parseFloat(v.price) || 0;
+        window.__catalogPriceTiers.forEach(function (t) {
+            if (catalogAmountsEqual(t.amount, baseAmount)) return;
+            window.addSlimPriceRow(t.amount, t.qty, t.id);
+        });
         var quickEl = document.getElementById('slimIsQuickDispense');
         if (quickEl) quickEl.checked = !!v.is_quick_dispense;
         var first = (v.suppliers || [])[0];
@@ -1235,7 +1337,10 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         document.querySelectorAll('#slimExtraPrices .slim-price-row').forEach(function (r) {
             var amount = parseFloat(r.querySelector('.slim-price-amount').value || '0');
             if (amount > 0) {
-                rows.push({ amount: amount });
+                var row = { amount: amount };
+                var priceId = r.getAttribute('data-price-id');
+                if (priceId) row.id = priceId;
+                rows.push(row);
             }
         });
         return rows;
@@ -1307,9 +1412,27 @@ window.__STOCK_CATEGORIES = @json($categories->values());
     }
 
     function itemAllPrices(item) {
-        var rows = [{ label: 'السعر الأساسي', amount: parseFloat(item.price) || 0, primary: true }];
+        var tiers = buildPriceTiersFromItem(item);
+        if (tiers.length) {
+            return tiers.map(function (t, idx) {
+                var isPrimary = catalogAmountsEqual(t.amount, item.price);
+                return {
+                    label: isPrimary ? 'السعر الأساسي' : 'سعر إضافي ' + (idx + 1),
+                    amount: parseFloat(t.amount) || 0,
+                    qty: parseFloat(t.qty) || 0,
+                    primary: isPrimary,
+                };
+            }).filter(function (r) { return r.amount > 0; });
+        }
+
+        var rows = [{ label: 'السعر الأساسي', amount: parseFloat(item.price) || 0, qty: 0, primary: true }];
         (item.prices || []).forEach(function (p, idx) {
-            rows.push({ label: 'سعر إضافي ' + (idx + 1), amount: parseFloat(p.amount) || 0, primary: false });
+            rows.push({
+                label: 'سعر إضافي ' + (idx + 1),
+                amount: parseFloat(p.amount) || 0,
+                qty: parseFloat(p.qty) || 0,
+                primary: false,
+            });
         });
         return rows.filter(function (r) { return r.amount > 0; });
     }
@@ -1359,9 +1482,9 @@ window.__STOCK_CATEGORIES = @json($categories->values());
 
         var prices = itemAllPrices(item);
         var pricesHtml = prices.length
-            ? '<table class="catalog-prices-table"><thead><tr><th>#</th><th>النوع</th><th>القيمة (ج.م)</th></tr></thead><tbody>'
+            ? '<table class="catalog-prices-table"><thead><tr><th>#</th><th>النوع</th><th>القيمة (ج.م)</th><th>الرصيد</th></tr></thead><tbody>'
                 + prices.map(function (p, i) {
-                    return '<tr><td>' + (i + 1) + '</td><td>' + p.label + '</td><td class="price-val">' + formatCatalogPrice(p.amount) + '</td></tr>';
+                    return '<tr><td>' + (i + 1) + '</td><td>' + p.label + '</td><td class="price-val">' + formatCatalogPrice(p.amount) + '</td><td>' + formatTierQtyDisplay(p.qty) + '</td></tr>';
                 }).join('')
                 + '</tbody></table>'
             : '<p style="color:var(--text-muted);text-align:center;">لا توجد أسعار مسجّلة</p>';
@@ -1384,7 +1507,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             + detailBox('المورد', supplierNamesLabel(item))
             + detailBox('خصائص القسم', window.CatalogSections ? window.CatalogSections.formatAttributesSummary(item) : '—')
             + detailBox('صرف سريع', item.is_quick_dispense ? '⚡ نعم (ربح 40%)' : '—')
-            + detailBox('السعر الأساسي', '<span class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</span>')
+            + detailBox('السعر الأساسي', '<span class="catalog-price-cell">' + formatCatalogPrice(item.price) + '</span> · رصيد: ' + formatTierQtyDisplay(tierQtyForAmount(item.price, buildPriceTiersFromItem(item))))
             + detailBox('أعلى سعر', '<span class="catalog-price-cell">' + formatCatalogPrice(itemHighestPrice(item)) + '</span>')
             + '</div>'
             + '<h4 style="font-size:14px;font-weight:800;margin:0 0 10px;color:var(--secondary);">💰 جميع الأسعار</h4>'
