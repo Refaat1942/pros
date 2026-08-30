@@ -9,12 +9,14 @@ use App\Models\CustomDocument;
 use App\Services\AuditService;
 use App\Services\CustomDocumentService;
 use App\Services\DocumentTemplateService;
+use App\Services\DocumentPreviewRenderer;
 use App\Services\QuoteQrService;
 use App\Support\DocumentPreviewSamples;
 use App\Support\DocumentScopeCatalog;
 use App\Support\QuotePrintPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class DocumentTemplateController extends Controller
@@ -22,51 +24,59 @@ class DocumentTemplateController extends Controller
     public function __construct(
         private readonly DocumentTemplateService $templates,
         private readonly CustomDocumentService $customDocuments,
-        private readonly QuoteQrService $quoteQrService,
+        private readonly DocumentPreviewRenderer $previewRenderer,
     ) {}
 
-    public function edit(Request $request, string $document): View
+    public function edit(Request $request, string $document): Response
     {
         abort_unless($this->templates->exists($document), 404);
 
-        $scopeDepartment = $request->query('scope_department');
-        $scopeStage = $request->query('scope_stage');
-        $def = $this->templates->definition($document);
-        $values = $this->templates->for($document, $scopeDepartment, $scopeStage);
-        $pages = config('dashboards.admin.pages', []);
-        $custom = $this->customDocuments->findByKey($document);
+        try {
+            $scopeDepartment = $request->query('scope_department');
+            $scopeStage = $request->query('scope_stage');
+            $def = $this->templates->definition($document);
+            $values = $this->templates->for($document, $scopeDepartment, $scopeStage);
+            $pages = config('dashboards.admin.pages', []);
+            $custom = $this->customDocuments->findByKey($document);
 
-        $previewUrl = route('admin.documents-hub.preview', array_filter([
-            'document' => $document,
-            'scope_department' => $scopeDepartment,
-            'scope_stage' => $scopeStage,
-        ], fn ($v) => $v !== null && $v !== ''));
+            $previewUrl = route('admin.documents-hub.preview', array_filter([
+                'document' => $document,
+                'scope_department' => $scopeDepartment,
+                'scope_stage' => $scopeStage,
+            ], fn ($v) => $v !== null && $v !== ''));
 
-        return view('dashboard.show', [
-            'dashboardKey' => 'admin',
-            'activePage' => 'document-template-edit',
-            'pageTitle' => 'تخصيص: '.$def['title'],
-            'pageLabel' => $pages['document-template-edit']['label'] ?? 'تخصيص وثيقة',
-            'documentKey' => $document,
-            'documentTitle' => $def['title'],
-            'documentDescription' => $def['description'],
-            'fields' => $def['fields'],
-            'values' => $values,
-            'previewUrl' => $previewUrl,
-            'hubUrl' => route('admin.documents-hub'),
-            'isCustomDocument' => $custom instanceof CustomDocument,
-            'customDocumentId' => $custom?->id,
-            'referenceUrl' => $custom?->referenceUrl(),
-            'referenceIsImage' => $custom?->referenceIsImage() ?? false,
-            'scopeDepartment' => $scopeDepartment ?? '',
-            'scopeStage' => $scopeStage ?? '',
-            'scopeLabel' => $values['scope_label'] ?? 'افتراضي عام',
-            'departmentOptions' => DocumentScopeCatalog::departmentOptions(),
-            'stageOptions' => DocumentScopeCatalog::stageOptions(),
-            'configuredScopes' => $this->templates->configuredScopeKeys($document),
-            'sourceView' => $def['view'] ?? null,
-            'customDocumentsTableReady' => $this->customDocuments->tableReady(),
-        ]);
+            $html = view('dashboard.show', [
+                'dashboardKey' => 'admin',
+                'activePage' => 'document-template-edit',
+                'pageTitle' => 'تخصيص: '.$def['title'],
+                'pageLabel' => $pages['document-template-edit']['label'] ?? 'تخصيص وثيقة',
+                'documentKey' => $document,
+                'documentTitle' => $def['title'],
+                'documentDescription' => $def['description'],
+                'fields' => $def['fields'],
+                'values' => $values,
+                'previewUrl' => $previewUrl,
+                'hubUrl' => route('admin.documents-hub'),
+                'isCustomDocument' => $custom instanceof CustomDocument,
+                'customDocumentId' => $custom?->id,
+                'referenceUrl' => $custom?->referenceUrl(),
+                'referenceIsImage' => $custom?->referenceIsImage() ?? false,
+                'scopeDepartment' => $scopeDepartment ?? '',
+                'scopeStage' => $scopeStage ?? '',
+                'scopeLabel' => $values['scope_label'] ?? 'افتراضي عام',
+                'departmentOptions' => DocumentScopeCatalog::departmentOptions(),
+                'stageOptions' => DocumentScopeCatalog::stageOptions(),
+                'configuredScopes' => $this->templates->configuredScopeKeys($document),
+                'sourceView' => $def['view'] ?? null,
+                'customDocumentsTableReady' => $this->customDocuments->tableReady(),
+            ])->render();
+
+            return response($html, 200)->header('Content-Type', 'text/html; charset=UTF-8');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->previewRenderer->errorResponse($document, $e);
+        }
     }
 
     public function update(UpdateDocumentTemplateRequest $request, string $document): JsonResponse
@@ -92,11 +102,11 @@ class DocumentTemplateController extends Controller
         ]);
     }
 
-    public function preview(Request $request, string $document): View
+    public function preview(Request $request, string $document): Response
     {
-        abort_unless($this->templates->exists($document), 404);
-
         try {
+            abort_unless($this->templates->exists($document), 404);
+
             $tpl = $this->templates->for(
                 $document,
                 $request->query('scope_department'),
@@ -107,13 +117,16 @@ class DocumentTemplateController extends Controller
             if ($this->templates->isCustom($document)) {
                 $custom = $this->customDocuments->findByKey($document);
 
-                return view('admin.print.custom-document-preview', [
-                    'documentTemplate' => $tpl,
-                    'customDocument' => $custom,
-                ]);
+                return $this->previewRenderer->html(
+                    view('admin.print.custom-document-preview', [
+                        'documentTemplate' => $tpl,
+                        'customDocument' => $custom,
+                    ]),
+                    $document,
+                );
             }
 
-            return match ($document) {
+            $previewView = match ($document) {
                 'issue_voucher' => view('prints.issue-voucher', [
                     'voucher' => $this->sampleIssueVoucher(),
                     'autoPrint' => $autoPrint,
@@ -136,36 +149,46 @@ class DocumentTemplateController extends Controller
                     'documentTemplate' => $tpl,
                     'previewValueDisplay' => '15,000',
                 ]),
-                'quote' => view('quotes.print', [
-                    'quote' => $sampleQuote = DocumentPreviewSamples::quote(),
-                    'printTotals' => QuotePrintPresenter::fromQuote($sampleQuote),
-                    'quoteQrSvg' => $this->safeQuoteQr($sampleQuote->quote_no),
-                    'embed' => false,
-                    'autoPrint' => $autoPrint,
-                    'documentTemplate' => $tpl,
-                ]),
+                'quote' => $this->quotePreviewView($tpl, $autoPrint),
                 'spec_print' => view('spec.print', [
                     'spec' => DocumentPreviewSamples::techOrderSpec(),
                     'case' => DocumentPreviewSamples::techOrderSpec()->caseRecord,
                     'autoPrint' => $autoPrint,
                     'documentTemplate' => $tpl,
                 ]),
-                default => abort(404),
+                default => null,
             };
+
+            if ($previewView === null) {
+                abort(404);
+            }
+
+            return $this->previewRenderer->html($previewView, $document);
         } catch (\Throwable $e) {
             report($e);
 
-            return view('admin.print.document-preview-error', [
-                'document' => $document,
-                'errorMessage' => config('app.debug') ? $e->getMessage() : null,
-            ]);
+            return $this->previewRenderer->errorResponse($document, $e);
         }
+    }
+
+    private function quotePreviewView(array $tpl, bool $autoPrint): View
+    {
+        $sampleQuote = DocumentPreviewSamples::quote();
+
+        return view('quotes.print', [
+            'quote' => $sampleQuote,
+            'printTotals' => QuotePrintPresenter::fromQuote($sampleQuote),
+            'quoteQrSvg' => $this->safeQuoteQr($sampleQuote->quote_no),
+            'embed' => false,
+            'autoPrint' => $autoPrint,
+            'documentTemplate' => $tpl,
+        ]);
     }
 
     private function safeQuoteQr(string $quoteNo): ?string
     {
         try {
-            return $this->quoteQrService->svg($quoteNo);
+            return app(QuoteQrService::class)->svg($quoteNo);
         } catch (\Throwable $e) {
             report($e);
 

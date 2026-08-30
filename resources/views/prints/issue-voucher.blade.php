@@ -9,7 +9,13 @@
     $companyName = $voucher['company_name'] ?? '—';
     $specGroups  = $voucher['spec_groups'] ?? [];
     $items       = collect($voucher['items'] ?? []);
-    $uomMap      = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->filter()->all());
+@php
+    $uomMap = [];
+    try {
+        $uomMap = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->filter()->all());
+    } catch (\Throwable $e) {
+        report($e);
+    }
     $technician  = $voucher['technician_name'] ?? null;
     $sectionName = $voucher['workshop_section_name'] ?? null;
 
