@@ -51,7 +51,7 @@
     var badge = document.getElementById('slimBasePriceQty');
     if (!badge) return;
     var qty = tierQtyForAmount(amount, tiers);
-    badge.textContent = 'رصيد: ' + formatTierQtyDisplay(qty);
+    badge.textContent = 'مخزن: ' + formatTierQtyDisplay(qty);
     badge.hidden = false;
   }
 
@@ -153,6 +153,24 @@
     }
   }
 
+  function renderWarehouseTierSummary(tiers) {
+    var box = document.getElementById('slimWarehouseTiers');
+    if (!box) return;
+    var active = (tiers || []).filter(function (t) {
+      return (parseFloat(t.qty) || 0) > 0 || t.from_supply;
+    });
+    if (!active.length) {
+      box.innerHTML = '';
+      box.hidden = true;
+      return;
+    }
+    box.hidden = false;
+    box.innerHTML = active.map(function (t) {
+      var amount = parseFloat(t.amount) || 0;
+      return '<span class="slim-price-qty-badge">' + amount.toFixed(2) + ' ج.م × مخزن ' + formatTierQtyDisplay(t.qty) + '</span>';
+    }).join('');
+  }
+
   function setForm(v) {
     document.getElementById('slimCode').value = v.code || '';
     document.getElementById('slimPageNumber').value = v.page_number || '';
@@ -170,10 +188,14 @@
     document.getElementById('slimExtraPrices').innerHTML = '';
     window.__catalogPriceTiers = buildPriceTiersFromItem(v);
     updateBasePriceQtyBadge(parseFloat(v.price) || 0, window.__catalogPriceTiers);
-    var baseAmount = parseFloat(v.price) || 0;
-    window.__catalogPriceTiers.forEach(function (t) {
-      if (catalogAmountsEqual(t.amount, baseAmount)) return;
-      window.addSlimPriceRow(t.amount, t.qty, t.id);
+    renderWarehouseTierSummary(window.__catalogPriceTiers);
+    var extras = v.catalog_extra_prices || [];
+    extras.forEach(function (p) {
+      window.addSlimPriceRow(
+        p.amount,
+        tierQtyForAmount(p.amount, window.__catalogPriceTiers),
+        p.id
+      );
     });
     var quickEl = document.getElementById('slimIsQuickDispense');
     if (quickEl) quickEl.checked = !!v.is_quick_dispense;
@@ -233,7 +255,7 @@
       qty != null ? qty : tierQtyForAmount(amount, window.__catalogPriceTiers || [])
     );
     row.innerHTML =
-      '<span class="slim-price-qty-badge" title="رصيد هذا السعر في المخزن">رصيد: ' + qtyText + '</span>' +
+      '<span class="slim-price-qty-badge" title="رصيد المخزن بهذا السعر (للعرض فقط)">مخزن: ' + qtyText + '</span>' +
       '<input type="number" min="0" step="0.01" class="slim-price-amount" placeholder="السعر (ج.م)">' +
       '<button type="button" class="btn-action danger" onclick="this.closest(\'.slim-price-row\').remove()">×</button>';
     box.appendChild(row);
