@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cashier;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PreparesDocumentPrint;
 use App\Http\Requests\Cashier\ConfirmPaymentRequest;
 use App\Models\CaseRecord;
 use App\Models\Payment;
@@ -21,6 +22,7 @@ use Illuminate\Http\Request;
 class CashierDeskController extends Controller
 {
     use PaginationTrait;
+    use PreparesDocumentPrint;
 
     public function __construct(
         private readonly CashierPaymentService $cashierPaymentService,
@@ -123,6 +125,7 @@ class CashierDeskController extends Controller
         return view('prints.payment-receipt', [
             'receipt' => PaymentReceiptPresenter::fromPayment($payment),
             'autoPrint' => ! $request->boolean('embed'),
+            'documentTemplate' => $this->documentTemplateForPrint('payment_receipt', $payment->caseRecord),
         ]);
     }
 

@@ -71,6 +71,14 @@ body {
     .doc-tpl-compact .items-table tbody tr {
         page-break-inside: avoid;
     }
+    .sheet {
+        max-height: 277mm;
+        overflow: hidden;
+    }
+    .sheet .items-table tbody tr,
+    .sheet .print-table tbody tr {
+        page-break-inside: avoid;
+    }
 }
 
 /* ── رأس المستند ── */

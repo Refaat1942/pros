@@ -4,6 +4,9 @@
             <div>
                 <h3>✏️ تخصيص وثيقة: {{ $documentTitle }}</h3>
                 <p style="margin:6px 0 0;font-size:13px;color:var(--text-muted);">{{ $documentDescription }}</p>
+                <p style="margin:6px 0 0;font-size:12px;color:var(--text-muted);">
+                    النطاق الحالي: <strong>{{ $scopeLabel }}</strong>
+                </p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <a href="{{ $hubUrl }}" class="btn-action">← مركز الوثائق</a>
@@ -39,6 +42,36 @@
 
         <form id="documentTemplateForm" class="panel-body" style="max-width:920px;">
             <input type="hidden" name="document_key" value="{{ $documentKey }}">
+
+            <div class="doc-scope-bar">
+                <div class="doc-scope-field">
+                    <label for="scope_department">القسم</label>
+                    <select id="scope_department" name="scope_department" class="form-control">
+                        @foreach ($departmentOptions as $opt)
+                            <option value="{{ $opt['value'] }}" {{ ($scopeDepartment ?? '') === $opt['value'] ? 'selected' : '' }}>
+                                {{ $opt['label'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="doc-scope-field">
+                    <label for="scope_stage">المرحلة</label>
+                    <select id="scope_stage" name="scope_stage" class="form-control">
+                        @foreach ($stageOptions as $opt)
+                            <option value="{{ $opt['value'] }}" {{ ($scopeStage ?? '') === $opt['value'] ? 'selected' : '' }}>
+                                {{ $opt['label'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="button" class="btn-action" id="btnApplyScope">تطبيق النطاق</button>
+            </div>
+
+            @if (!empty($configuredScopes))
+                <p style="font-size:12px;color:var(--text-muted);margin:0 0 14px;">
+                    نطاقات مخصّصة: {{ count($configuredScopes) }} — اختر القسم والمرحلة أعلاه لتعديل أو إنشاء تخصيص لنطاق محدد.
+                </p>
+            @endif
 
             <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;line-height:1.6;">
                 عدّل العنوان، الترويسة، التوقيعات، وخيارات الشكل لهذه الوثيقة فقط.
@@ -93,6 +126,29 @@
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 14px 16px;
 }
+.doc-scope-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-soft, #f8fafc);
+}
+.doc-scope-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.doc-scope-field .form-control {
+    min-width: 200px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
 .doc-template-field.full { grid-column: 1 / -1; }
 .doc-template-field label {
     display: block;
@@ -132,10 +188,28 @@
   var msg = document.getElementById('documentTemplateMessage');
   var csrf = document.querySelector('meta[name="csrf-token"]');
   var customDocId = {{ !empty($customDocumentId) ? (int) $customDocumentId : 0 }};
+  var scopeDept = document.getElementById('scope_department');
+  var scopeStage = document.getElementById('scope_stage');
+  var applyScopeBtn = document.getElementById('btnApplyScope');
+
+  function currentScopeQuery() {
+    var q = [];
+    if (scopeDept && scopeDept.value) q.push('scope_department=' + encodeURIComponent(scopeDept.value));
+    if (scopeStage && scopeStage.value) q.push('scope_stage=' + encodeURIComponent(scopeStage.value));
+    return q.length ? '?' + q.join('&') : '';
+  }
+
+  if (applyScopeBtn) {
+    applyScopeBtn.addEventListener('click', function () {
+      window.location.href = '/admin/documents-hub/' + encodeURIComponent(key) + '/edit' + currentScopeQuery();
+    });
+  }
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var payload = {};
+    if (scopeDept) payload.scope_department = scopeDept.value;
+    if (scopeStage) payload.scope_stage = scopeStage.value;
     form.querySelectorAll('input[name], textarea[name]').forEach(function (el) {
       if (el.name === 'document_key') return;
       if (el.type === 'checkbox') {

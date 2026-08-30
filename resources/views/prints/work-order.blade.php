@@ -8,7 +8,12 @@
     $approvalNo = $case->quote_no ?? '—';
     $approvalDate = $case->approval_date?->format('d/m/Y') ?? '—';
     $valueDisplay = $previewValueDisplay ?? number_format(CaseFinancialSummary::billableAmount($case), 0);
-    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for('work_order');
+    $printCtx = \App\Support\DocumentPrintContext::fromRequest(request(), $case);
+    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for(
+        'work_order',
+        $printCtx->department,
+        $printCtx->stage,
+    );
 @endphp
 @include('prints.partials.document-template-vars')
 <!DOCTYPE html>

@@ -1,8 +1,21 @@
 @php
     use App\Models\BomItem;
     use App\Support\ArabicAmount;
+    use App\Services\DocumentTemplateService;
+    use App\Support\DocumentPrintContext;
 
     $case        = $quote->caseRecord;
+    $tplService  = app(DocumentTemplateService::class);
+    $printCtx    = DocumentPrintContext::fromRequest(request(), $case);
+    $tpl         = $documentTemplate ?? $tplService->for('quote', $printCtx->department, $printCtx->stage);
+    $compact     = (bool) ($tpl['compact_layout'] ?? true);
+    $docTitle    = $tpl['doc_title'] ?? 'عرض سعر';
+    $deptLabel   = $tpl['dept_label'] ?? 'القسم المالي';
+    $footerNote  = trim((string) ($tpl['footer_note'] ?? ''));
+    $sig1        = $tpl['signature_1'] ?? 'المختص';
+    $sig2        = $tpl['signature_2'] ?? 'يعتمد ،،،';
+    $showLogo    = (bool) ($tpl['show_logo'] ?? true);
+    $showSeal    = (bool) ($tpl['show_seal'] ?? true);
     $quoteDate   = $quote->quote_date ?? now();
     $totals      = $printTotals ?? ['display_total' => (float) $quote->total, 'has_discount' => false, 'discount_percent' => 0, 'discount_amount' => 0, 'gross_total' => (float) $quote->total];
     $totalFmt    = ArabicAmount::splitFormatted((float) $totals['display_total']);
@@ -37,10 +50,11 @@
         ]);
     }
 
-    $minRows     = max($displayRows->count(), 4);
+    $minRows     = $compact ? max($displayRows->count(), 2) : max($displayRows->count(), 4);
     $emptyRows   = $minRows - $displayRows->count();
     $dateDisplay = $quoteDate->format('d/m/Y');
 @endphp
+@include('prints.partials.document-template-vars', ['documentTemplate' => $tpl])
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -513,6 +527,8 @@
                 max-width: none;
                 border: none;
                 padding: 0;
+                max-height: 277mm;
+                overflow: hidden;
             }
 
             .pricing-table thead {
@@ -537,11 +553,13 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet">
+<div class="{{ $sheetClass }}">
 
     <header class="doc-header">
         <div class="header-aside">
-            @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
+            @if ($showLogo || $showSeal)
+                @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => $showSeal, 'showLogo' => $showLogo])
+            @endif
             <div class="header-meta" dir="rtl">
                 <div class="header-meta__row">
                     <span class="header-meta__label">التاريخ</span>
@@ -561,7 +579,7 @@
                 <div class="header-org__line">وعلاج الروماتيزم ق.م</div>
                 <div class="header-org__line">مصنع الأجهزة التعويضية</div>
                 <div class="header-org__tail">
-                    <div class="header-org__dept">القسم المالي</div>
+                    <div class="header-org__dept">{{ $deptLabel }}</div>
                     @if (!empty($quoteQrSvg))
                         <div class="header-org__qr">
                             <div class="quote-qr-box" aria-label="QR عرض السعر — {{ $refNo }}">
@@ -575,7 +593,7 @@
     </header>
 
     <div class="doc-title-wrap">
-        <h1 class="doc-title">عرض سعر</h1>
+        <h1 class="doc-title">{{ $docTitle }}</h1>
     </div>
 
     <section class="info-panel">
@@ -675,12 +693,16 @@
 
     <div class="disclaimer">
         <div class="disclaimer__title">ملحوظة</div>
-        رجاء موافاتنا بالقيمة الموضحة بعاليه نقداً أو بشيك باسم ولى الأمر مركز الطب الطبيعي والتأهيلي وعلاج الروماتيزم للقوات المسلحة بالعجوزة. هذا العرض ساري لمدة ١٥ يوم. وتفضلوا بقبول فائق الإحترام.
+        @if ($footerNote !== '')
+            {{ $footerNote }}
+        @else
+            رجاء موافاتنا بالقيمة الموضحة بعاليه نقداً أو بشيك باسم ولى الأمر مركز الطب الطبيعي والتأهيلي وعلاج الروماتيزم للقوات المسلحة بالعجوزة. هذا العرض ساري لمدة ١٥ يوم. وتفضلوا بقبول فائق الإحترام.
+        @endif
     </div>
 
     <footer class="signatures">
         <div class="sig-block">
-            <div class="sig-label">المختص</div>
+            <div class="sig-label">{{ $sig1 }}</div>
             <div class="sig-space">&nbsp;</div>
             <div class="sig-title">التوقيع</div>
         </div>
@@ -690,9 +712,9 @@
             <div class="sig-title">التوقيع</div>
         </div>
         <div class="sig-block sig-block--approve">
-            <div class="sig-label">يعتمد ،،،</div>
+            <div class="sig-label">{{ $sig2 }}</div>
             <div class="sig-space">&nbsp;</div>
-            <div class="sig-title">رئيس القسم المالي</div>
+            <div class="sig-title">التوقيع</div>
         </div>
     </footer>
 

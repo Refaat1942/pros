@@ -5,6 +5,7 @@ namespace App\Http\Controllers\TechOrderSpec;
 use App\Enums\WorkflowEvent;
 use App\Exceptions\InvalidSpecItemException;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PreparesDocumentPrint;
 use App\Http\Requests\TechOrderSpec\StoreTechOrderSpecRequest;
 use App\Http\Requests\TechOrderSpec\UpdateTechOrderSpecRequest;
 use App\Models\Appointment;
@@ -28,6 +29,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class TechOrderSpecController extends Controller
 {
     use PaginationTrait;
+    use PreparesDocumentPrint;
 
     public function __construct(
         private readonly SpecService $specService,
@@ -209,6 +211,7 @@ class TechOrderSpecController extends Controller
             'spec' => $spec,
             'case' => $spec->caseRecord,
             'autoPrint' => ! $request->boolean('embed'),
+            'documentTemplate' => $this->documentTemplateForPrint('spec_print', $spec->caseRecord),
         ]);
     }
 

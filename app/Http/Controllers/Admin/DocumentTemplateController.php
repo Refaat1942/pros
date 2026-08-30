@@ -9,7 +9,9 @@ use App\Models\CustomDocument;
 use App\Services\AuditService;
 use App\Services\CustomDocumentService;
 use App\Services\DocumentTemplateService;
+use App\Support\DocumentScopeCatalog;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DocumentTemplateController extends Controller
@@ -19,14 +21,22 @@ class DocumentTemplateController extends Controller
         private readonly CustomDocumentService $customDocuments,
     ) {}
 
-    public function edit(string $document): View
+    public function edit(Request $request, string $document): View
     {
         abort_unless($this->templates->exists($document), 404);
 
+        $scopeDepartment = $request->query('scope_department');
+        $scopeStage = $request->query('scope_stage');
         $def = $this->templates->definition($document);
-        $values = $this->templates->for($document);
+        $values = $this->templates->for($document, $scopeDepartment, $scopeStage);
         $pages = config('dashboards.admin.pages', []);
         $custom = $this->customDocuments->findByKey($document);
+
+        $previewUrl = route('admin.documents-hub.preview', array_filter([
+            'document' => $document,
+            'scope_department' => $scopeDepartment,
+            'scope_stage' => $scopeStage,
+        ], fn ($v) => $v !== null && $v !== ''));
 
         return view('dashboard.show', [
             'dashboardKey' => 'admin',
@@ -38,12 +48,18 @@ class DocumentTemplateController extends Controller
             'documentDescription' => $def['description'],
             'fields' => $def['fields'],
             'values' => $values,
-            'previewUrl' => route('admin.documents-hub.preview', $document),
+            'previewUrl' => $previewUrl,
             'hubUrl' => route('admin.documents-hub'),
             'isCustomDocument' => $custom instanceof CustomDocument,
             'customDocumentId' => $custom?->id,
             'referenceUrl' => $custom?->referenceUrl(),
             'referenceIsImage' => $custom?->referenceIsImage() ?? false,
+            'scopeDepartment' => $scopeDepartment ?? '',
+            'scopeStage' => $scopeStage ?? '',
+            'scopeLabel' => $values['scope_label'] ?? 'افتراضي عام',
+            'departmentOptions' => DocumentScopeCatalog::departmentOptions(),
+            'stageOptions' => DocumentScopeCatalog::stageOptions(),
+            'configuredScopes' => $this->templates->configuredScopeKeys($document),
         ]);
     }
 
@@ -51,8 +67,10 @@ class DocumentTemplateController extends Controller
     {
         abort_unless($this->templates->exists($document), 404);
 
-        $before = $this->templates->for($document);
-        $after = $this->templates->update($document, $request->validated());
+        $scopeDepartment = $request->input('scope_department');
+        $scopeStage = $request->input('scope_stage');
+        $before = $this->templates->for($document, $scopeDepartment, $scopeStage);
+        $after = $this->templates->update($document, $request->validated(), $scopeDepartment, $scopeStage);
 
         AuditService::log(
             action: 'update',
@@ -68,12 +86,16 @@ class DocumentTemplateController extends Controller
         ]);
     }
 
-    public function preview(string $document): View
+    public function preview(Request $request, string $document): View
     {
         abort_unless($this->templates->exists($document), 404);
 
         try {
-            $tpl = $this->templates->for($document);
+            $tpl = $this->templates->for(
+                $document,
+                $request->query('scope_department'),
+                $request->query('scope_stage'),
+            );
             $autoPrint = false;
 
             if ($this->templates->isCustom($document)) {

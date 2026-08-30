@@ -31,6 +31,48 @@ class DocumentTemplateSettingsTest extends TestCase
         $this->assertSame('مخزن تجريبي', $tpl['dept_label']);
     }
 
+    public function test_scoped_template_overrides_global_for_department(): void
+    {
+        Setting::updateOrCreate(
+            ['key' => DocumentTemplateService::SETTING_KEY],
+            ['value' => json_encode([
+                'quote' => [
+                    'doc_title' => 'عرض سعر عام',
+                    '_scopes' => [
+                        'cashier:*' => ['doc_title' => 'عرض سعر — الخزنة'],
+                    ],
+                ],
+            ], JSON_UNESCAPED_UNICODE)],
+        );
+        \Illuminate\Support\Facades\Cache::forget('settings.document_templates');
+
+        $service = app(DocumentTemplateService::class);
+
+        $this->assertSame('عرض سعر عام', $service->for('quote')['doc_title']);
+        $this->assertSame('عرض سعر — الخزنة', $service->for('quote', 'cashier', null)['doc_title']);
+        $this->assertSame('عرض سعر — الخزنة', $service->for('quote', 'cashier', 'cashier')['doc_title']);
+    }
+
+    public function test_scoped_template_update_persists_under_scope_key(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        $this->actingAs($super)
+            ->putJson(route('admin.documents-hub.update', 'quote'), [
+                'doc_title' => 'عرض خاص للاستقبال',
+                'scope_department' => 'reception',
+                'scope_stage' => '',
+            ])
+            ->assertOk()
+            ->assertJsonPath('values.doc_title', 'عرض خاص للاستقبال');
+
+        $global = app(DocumentTemplateService::class)->for('quote');
+        $scoped = app(DocumentTemplateService::class)->for('quote', 'reception', null);
+
+        $this->assertNotSame('عرض خاص للاستقبال', $global['doc_title']);
+        $this->assertSame('عرض خاص للاستقبال', $scoped['doc_title']);
+    }
+
     public function test_preview_issue_voucher_uses_custom_title(): void
     {
         Setting::updateOrCreate(

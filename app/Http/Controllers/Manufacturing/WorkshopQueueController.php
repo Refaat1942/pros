@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Manufacturing;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PreparesDocumentPrint;
 use App\Http\Requests\Manufacturing\AdvanceManufacturingStageRequest;
 use App\Models\Bom;
 use App\Models\CaseRecord;
@@ -21,6 +22,7 @@ use Illuminate\View\View;
 class WorkshopQueueController extends Controller
 {
     use PaginationTrait;
+    use PreparesDocumentPrint;
 
     public function __construct(
         private readonly BomService $bomService,
@@ -268,6 +270,7 @@ class WorkshopQueueController extends Controller
         return view('prints.issue-voucher', [
             'voucher' => IssueVoucherPresenter::fromBom($case->bom),
             'autoPrint' => true,
+            'documentTemplate' => $this->documentTemplateForPrint('issue_voucher', $case),
         ]);
     }
 
@@ -285,6 +288,7 @@ class WorkshopQueueController extends Controller
         return view('prints.work-order', [
             'case' => $case,
             'autoPrint' => true,
+            'documentTemplate' => $this->documentTemplateForPrint('work_order', $case),
         ]);
     }
 }

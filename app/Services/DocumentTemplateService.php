@@ -3,14 +3,16 @@
 namespace App\Services;
 
 use App\Models\CustomDocument;
-use App\Models\CustomDocument;
 use App\Models\Setting;
+use App\Support\DocumentScopeCatalog;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class DocumentTemplateService
 {
     public const SETTING_KEY = 'document_templates';
+
+    public const SCOPES_KEY = '_scopes';
 
     /** @return array<string, array<string, mixed>> */
     public function catalog(): array
@@ -52,17 +54,17 @@ class DocumentTemplateService
     }
 
     /** @return array<string, mixed> */
-    public function for(string $key): array
+    public function for(string $key, ?string $department = null, ?string $stage = null): array
     {
         $custom = $this->findCustomByKey($key);
         if ($custom) {
-            return $this->mergeCustomTemplate($custom);
+            return $this->mergeCustomTemplate($custom, $department, $stage);
         }
 
         $def = $this->definition($key);
         $stored = $this->storedRaw();
 
-        return $this->mergeDefinition($key, $def, $stored[$key] ?? []);
+        return $this->mergeDefinition($key, $def, $stored[$key] ?? [], $department, $stage);
     }
 
     /**
@@ -99,12 +101,25 @@ class DocumentTemplateService
             && $this->findCustomByKey($key) instanceof CustomDocument;
     }
 
+    /** @return list<string> */
+    public function configuredScopeKeys(string $key): array
+    {
+        $stored = $this->storedRaw();
+        $scopes = $stored[$key][self::SCOPES_KEY] ?? [];
+
+        if (! is_array($scopes)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_keys($scopes), fn (string $k) => $k !== ''));
+    }
+
     /** @param  array<string, mixed>  $payload */
-    public function update(string $key, array $payload): array
+    public function update(string $key, array $payload, ?string $department = null, ?string $stage = null): array
     {
         $custom = $this->findCustomByKey($key);
         if ($custom) {
-            return $this->updateCustomTemplate($custom, $payload);
+            return $this->updateCustomTemplate($custom, $payload, $department, $stage);
         }
 
         $def = $this->definition($key);
@@ -126,7 +141,21 @@ class DocumentTemplateService
         }
 
         $stored = $this->storedRaw();
-        $stored[$key] = array_merge($stored[$key] ?? [], $clean);
+        $scopeKey = DocumentScopeCatalog::scopeKey($department, $stage);
+
+        if ($scopeKey === null) {
+            $entry = $stored[$key] ?? [];
+            $scopes = is_array($entry[self::SCOPES_KEY] ?? null) ? $entry[self::SCOPES_KEY] : [];
+            $stored[$key] = array_merge($this->globalFields($entry), $clean);
+            if ($scopes !== []) {
+                $stored[$key][self::SCOPES_KEY] = $scopes;
+            }
+        } else {
+            $entry = $stored[$key] ?? [];
+            $scopes = is_array($entry[self::SCOPES_KEY] ?? null) ? $entry[self::SCOPES_KEY] : [];
+            $scopes[$scopeKey] = array_merge($scopes[$scopeKey] ?? [], $clean);
+            $stored[$key] = array_merge($this->globalFields($entry), [self::SCOPES_KEY => $scopes]);
+        }
 
         Setting::updateOrCreate(
             ['key' => self::SETTING_KEY],
@@ -135,7 +164,7 @@ class DocumentTemplateService
 
         Cache::forget(self::cacheKey());
 
-        return $this->for($key);
+        return $this->for($key, $department, $stage);
     }
 
     /**
@@ -204,22 +233,43 @@ class DocumentTemplateService
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    private function mergeDefinition(string $key, array $def, array $stored): array
-    {
+    private function mergeDefinition(
+        string $key,
+        array $def,
+        array $stored,
+        ?string $department = null,
+        ?string $stage = null,
+    ): array {
         $defaults = $def['defaults'] ?? [];
-        $merged = array_merge($defaults, $stored);
+        $global = $this->globalFields($stored);
+        $scoped = $this->scopedOverrides($stored, $department, $stage);
+        $merged = array_merge($defaults, $global, $scoped);
         $merged['document_key'] = $key;
+        $merged['scope_department'] = trim((string) $department) ?: null;
+        $merged['scope_stage'] = trim((string) $stage) ?: null;
+        $merged['scope_key'] = DocumentScopeCatalog::scopeKey($department, $stage);
+        $merged['scope_label'] = DocumentScopeCatalog::scopeLabel($merged['scope_key']);
 
         return $merged;
     }
 
     /** @return array<string, mixed> */
-    private function mergeCustomTemplate(CustomDocument $custom): array
-    {
+    private function mergeCustomTemplate(
+        CustomDocument $custom,
+        ?string $department = null,
+        ?string $stage = null,
+    ): array {
         $defaults = CustomDocumentService::defaultTemplateValues($custom->title);
-        $merged = array_merge($defaults, $custom->template_values ?? []);
+        $template = $custom->template_values ?? [];
+        $global = $this->globalFields($template);
+        $scoped = $this->scopedOverrides($template, $department, $stage);
+        $merged = array_merge($defaults, $global, $scoped);
         $merged['document_key'] = $custom->key;
         $merged['body_html'] = $custom->body_html;
+        $merged['scope_department'] = trim((string) $department) ?: null;
+        $merged['scope_stage'] = trim((string) $stage) ?: null;
+        $merged['scope_key'] = DocumentScopeCatalog::scopeKey($department, $stage);
+        $merged['scope_label'] = DocumentScopeCatalog::scopeLabel($merged['scope_key']);
 
         return $merged;
     }
@@ -249,33 +299,106 @@ class DocumentTemplateService
     }
 
     /** @param  array<string, mixed>  $payload */
-    private function updateCustomTemplate(CustomDocument $custom, array $payload): array
-    {
+    private function updateCustomTemplate(
+        CustomDocument $custom,
+        array $payload,
+        ?string $department = null,
+        ?string $stage = null,
+    ): array {
         $allowed = collect(CustomDocumentService::fieldDefinitions())->pluck('key')->all();
         $defaults = CustomDocumentService::defaultTemplateValues($custom->title);
         $template = $custom->template_values ?? [];
 
+        $clean = [];
         foreach ($allowed as $fieldKey) {
             if (! array_key_exists($fieldKey, $payload)) {
                 continue;
             }
             $type = collect(CustomDocumentService::fieldDefinitions())->firstWhere('key', $fieldKey)['type'] ?? 'text';
-            $template[$fieldKey] = $this->castField($type, $payload[$fieldKey], $defaults[$fieldKey] ?? null);
+            $clean[$fieldKey] = $this->castField($type, $payload[$fieldKey], $defaults[$fieldKey] ?? null);
         }
 
         if (isset($payload['font_scale'])) {
             $scale = (string) $payload['font_scale'];
-            $template['font_scale'] = in_array($scale, ['compact', 'normal'], true) ? $scale : 'compact';
+            $clean['font_scale'] = in_array($scale, ['compact', 'normal'], true) ? $scale : 'compact';
         }
 
         if (array_key_exists('body_html', $payload)) {
             $custom->body_html = trim((string) $payload['body_html']) ?: null;
         }
 
+        $scopeKey = DocumentScopeCatalog::scopeKey($department, $stage);
+
+        if ($scopeKey === null) {
+            $scopes = is_array($template[self::SCOPES_KEY] ?? null) ? $template[self::SCOPES_KEY] : [];
+            $template = array_merge($this->globalFields($template), $clean);
+            if ($scopes !== []) {
+                $template[self::SCOPES_KEY] = $scopes;
+            }
+        } else {
+            $scopes = is_array($template[self::SCOPES_KEY] ?? null) ? $template[self::SCOPES_KEY] : [];
+            $scopes[$scopeKey] = array_merge($scopes[$scopeKey] ?? [], $clean);
+            $template = array_merge($this->globalFields($template), [self::SCOPES_KEY => $scopes]);
+        }
+
         $custom->template_values = $template;
         $custom->save();
 
-        return $this->mergeCustomTemplate($custom->fresh());
+        return $this->mergeCustomTemplate($custom->fresh(), $department, $stage);
+    }
+
+    /**
+     * @param  array<string, mixed>  $stored
+     * @return array<string, mixed>
+     */
+    private function scopedOverrides(array $stored, ?string $department, ?string $stage): array
+    {
+        $scopes = $stored[self::SCOPES_KEY] ?? [];
+        if (! is_array($scopes) || $scopes === []) {
+            return [];
+        }
+
+        $overrides = [];
+        foreach ($this->scopeApplyOrder($department, $stage) as $scopeKey) {
+            if (! isset($scopes[$scopeKey]) || ! is_array($scopes[$scopeKey])) {
+                continue;
+            }
+            $overrides = array_merge($overrides, $scopes[$scopeKey]);
+        }
+
+        return $overrides;
+    }
+
+    /** @return list<string> */
+    private function scopeApplyOrder(?string $department, ?string $stage): array
+    {
+        $dept = trim((string) $department);
+        $stage = trim((string) $stage);
+        $order = [];
+
+        if ($stage !== '') {
+            $order[] = '*:'.$stage;
+        }
+        if ($dept !== '' && $stage !== '') {
+            $order[] = $dept.':*';
+            $order[] = $dept.':'.$stage;
+        } elseif ($dept !== '') {
+            $order[] = $dept.':*';
+        }
+
+        return $order;
+    }
+
+    /**
+     * @param  array<string, mixed>  $entry
+     * @return array<string, mixed>
+     */
+    private function globalFields(array $entry): array
+    {
+        $global = $entry;
+        unset($global[self::SCOPES_KEY]);
+
+        return $global;
     }
 
     private function castField(string $type, mixed $value, mixed $default): mixed

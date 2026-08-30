@@ -6,6 +6,7 @@ use App\Enums\WorkflowEvent;
 use App\Exceptions\BarcodeDispenseMismatchException;
 use App\Exceptions\InvalidWorkflowTransitionException;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PreparesDocumentPrint;
 use App\Http\Requests\Bom\DispenseBomRequest;
 use App\Http\Requests\Bom\StoreBomRequest;
 use App\Models\Bom;
@@ -30,6 +31,8 @@ use Illuminate\View\View;
 
 class BomController extends Controller
 {
+    use PaginationTrait;
+    use PreparesDocumentPrint;
     use PaginationTrait;
 
     public function __construct(
@@ -162,9 +165,12 @@ class BomController extends Controller
     {
         abort_unless($bom->case_id, 404, 'لا توجد حالة مرتبطة بهذه القائمة.');
 
+        $bom->load('caseRecord');
+
         return view('prints.issue-voucher', [
             'voucher' => IssueVoucherPresenter::fromBom($bom),
             'autoPrint' => true,
+            'documentTemplate' => $this->documentTemplateForPrint('issue_voucher', $bom->caseRecord),
         ]);
     }
 
