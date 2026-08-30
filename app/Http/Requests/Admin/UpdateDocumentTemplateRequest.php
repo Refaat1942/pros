@@ -26,6 +26,8 @@ class UpdateDocumentTemplateRequest extends FormRequest
             $key = $field['key'];
             if ($field['type'] === 'bool') {
                 $rules[$key] = ['sometimes', 'boolean'];
+            } elseif ($field['type'] === 'html') {
+                $rules[$key] = ['nullable', 'string', 'max:50000'];
             } else {
                 $rules[$key] = ['nullable', 'string', 'max:2000'];
             }

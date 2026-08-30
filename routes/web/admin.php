@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BrandingSettingsController;
+use App\Http\Controllers\Admin\CustomDocumentController;
 use App\Http\Controllers\Admin\DocumentsHubController;
 use App\Http\Controllers\Admin\DocumentTemplateController;
 use App\Http\Controllers\Admin\CatalogListSettingsController;
@@ -69,6 +70,13 @@ Route::prefix('admin')
                 ->name('documents-hub.update');
             Route::get('documents-hub/{document}/preview', [DocumentTemplateController::class, 'preview'])
                 ->name('documents-hub.preview');
+
+            Route::post('documents-hub/custom', [CustomDocumentController::class, 'store'])
+                ->name('documents-hub.custom.store');
+            Route::post('documents-hub/custom/{customDocument}/reference', [CustomDocumentController::class, 'uploadReference'])
+                ->name('documents-hub.custom.reference');
+            Route::delete('documents-hub/custom/{customDocument}', [CustomDocumentController::class, 'destroy'])
+                ->name('documents-hub.custom.destroy');
         });
 
         Route::middleware('dashboard.page:admin,reports')->group(function () {

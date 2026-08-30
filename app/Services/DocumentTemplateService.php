@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CustomDocument;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 
@@ -26,6 +27,22 @@ class DocumentTemplateService
                 'print_route' => $def['print_route'] ?? null,
                 'fields' => $def['fields'],
                 'values' => $merged,
+                'is_custom' => false,
+            ];
+        }
+
+        foreach (app(CustomDocumentService::class)->activeList() as $custom) {
+            $def = $this->customDefinition($custom);
+            $merged = $this->mergeCustomTemplate($custom);
+            $out[$custom->key] = [
+                'key' => $custom->key,
+                'group' => $custom->group_label,
+                'title' => $custom->title,
+                'description' => $custom->description ?? '',
+                'print_route' => null,
+                'fields' => $def['fields'],
+                'values' => $merged,
+                'is_custom' => true,
             ];
         }
 
@@ -35,15 +52,27 @@ class DocumentTemplateService
     /** @return array<string, mixed> */
     public function for(string $key): array
     {
+        $custom = app(CustomDocumentService::class)->findByKey($key);
+        if ($custom) {
+            return $this->mergeCustomTemplate($custom);
+        }
+
         $def = $this->definition($key);
         $stored = $this->storedRaw();
 
         return $this->mergeDefinition($key, $def, $stored[$key] ?? []);
     }
 
-    /** @return array{group: string, title: string, description: string, view: ?string, print_route: ?string, fields: array, defaults: array} */
+    /**
+     * @return array{group: string, title: string, description: string, view: ?string, print_route: ?string, fields: array, defaults: array}
+     */
     public function definition(string $key): array
     {
+        $custom = app(CustomDocumentService::class)->findByKey($key);
+        if ($custom) {
+            return $this->customDefinition($custom);
+        }
+
         $def = config("document_templates.definitions.{$key}");
 
         if (! is_array($def)) {
@@ -55,12 +84,27 @@ class DocumentTemplateService
 
     public function exists(string $key): bool
     {
-        return is_array(config("document_templates.definitions.{$key}"));
+        if (is_array(config("document_templates.definitions.{$key}"))) {
+            return true;
+        }
+
+        return app(CustomDocumentService::class)->findByKey($key) instanceof CustomDocument;
+    }
+
+    public function isCustom(string $key): bool
+    {
+        return str_starts_with($key, 'custom_')
+            && app(CustomDocumentService::class)->findByKey($key) instanceof CustomDocument;
     }
 
     /** @param  array<string, mixed>  $payload */
     public function update(string $key, array $payload): array
     {
+        $custom = app(CustomDocumentService::class)->findByKey($key);
+        if ($custom) {
+            return $this->updateCustomTemplate($custom, $payload);
+        }
+
         $def = $this->definition($key);
         $allowed = collect($def['fields'])->pluck('key')->all();
         $defaults = $def['defaults'];
@@ -131,6 +175,7 @@ class DocumentTemplateService
                 'print_url' => $printUrl,
                 'edit_url' => route('admin.documents-hub.edit', $key),
                 'preview_url' => route('admin.documents-hub.preview', $key),
+                'is_custom' => (bool) ($entry['is_custom'] ?? false),
             ];
         }
 
@@ -166,16 +211,82 @@ class DocumentTemplateService
         return $merged;
     }
 
+    /** @return array<string, mixed> */
+    private function mergeCustomTemplate(CustomDocument $custom): array
+    {
+        $defaults = CustomDocumentService::defaultTemplateValues($custom->title);
+        $merged = array_merge($defaults, $custom->template_values ?? []);
+        $merged['document_key'] = $custom->key;
+        $merged['body_html'] = $custom->body_html;
+
+        return $merged;
+    }
+
+    /**
+     * @return array{group: string, title: string, description: string, view: null, print_route: null, fields: array, defaults: array}
+     */
+    private function customDefinition(CustomDocument $custom): array
+    {
+        $fields = CustomDocumentService::fieldDefinitions();
+        $fields[] = [
+            'key' => 'body_html',
+            'label' => 'محتوى الوثيقة (HTML)',
+            'type' => 'html',
+            'help' => 'يمكنك نسخ التنسيق من النموذج المرفوع وتعديله هنا.',
+        ];
+
+        return [
+            'group' => $custom->group_label,
+            'title' => $custom->title,
+            'description' => $custom->description ?? '',
+            'view' => null,
+            'print_route' => null,
+            'fields' => $fields,
+            'defaults' => CustomDocumentService::defaultTemplateValues($custom->title),
+        ];
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    private function updateCustomTemplate(CustomDocument $custom, array $payload): array
+    {
+        $allowed = collect(CustomDocumentService::fieldDefinitions())->pluck('key')->all();
+        $defaults = CustomDocumentService::defaultTemplateValues($custom->title);
+        $template = $custom->template_values ?? [];
+
+        foreach ($allowed as $fieldKey) {
+            if (! array_key_exists($fieldKey, $payload)) {
+                continue;
+            }
+            $type = collect(CustomDocumentService::fieldDefinitions())->firstWhere('key', $fieldKey)['type'] ?? 'text';
+            $template[$fieldKey] = $this->castField($type, $payload[$fieldKey], $defaults[$fieldKey] ?? null);
+        }
+
+        if (isset($payload['font_scale'])) {
+            $scale = (string) $payload['font_scale'];
+            $template['font_scale'] = in_array($scale, ['compact', 'normal'], true) ? $scale : 'compact';
+        }
+
+        if (array_key_exists('body_html', $payload)) {
+            $custom->body_html = trim((string) $payload['body_html']) ?: null;
+        }
+
+        $custom->template_values = $template;
+        $custom->save();
+
+        return $this->mergeCustomTemplate($custom->fresh());
+    }
+
     private function castField(string $type, mixed $value, mixed $default): mixed
     {
         if ($type === 'bool') {
             return filter_var($value, FILTER_VALIDATE_BOOLEAN);
         }
 
-        if ($type === 'textarea' || $type === 'text') {
+        if ($type === 'textarea' || $type === 'text' || $type === 'html') {
             $text = trim((string) $value);
+            $limit = $type === 'html' ? 50000 : 2000;
 
-            return $text === '' ? (is_string($default) ? $default : '') : mb_substr($text, 0, 2000);
+            return $text === '' ? (is_string($default) ? $default : '') : mb_substr($text, 0, $limit);
         }
 
         return $value;
