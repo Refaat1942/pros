@@ -3,7 +3,8 @@
         <div class="panel-header">
             <h3>📄 مركز الوثائق والطباعة</h3>
             <p style="margin:8px 0 0;font-size:13px;color:var(--text-muted);">
-                معاينة وطباعة الوثائق الرسمية — لتعديل الترويسة والشعار استخدم «تعديل القالب».
+                اختر وثيقة للطباعة أو لتخصيص شكلها ومحتواها الثابت (عنوان، ترويسة، توقيعات).
+                الشعار وأسطر الجهة من <a href="{{ url('/admin/branding-settings') }}">الهوية البصرية</a>.
             </p>
         </div>
         <div class="panel-body" style="display:grid;gap:20px;">
@@ -18,11 +19,14 @@
                                     <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">{{ $doc['description'] }}</p>
                                 </div>
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                    @if ($doc['print_url'])
+                                    @if (!empty($doc['preview_url']))
+                                        <a href="{{ $doc['preview_url'] }}" target="_blank" rel="noopener" class="btn-action">👁️ معاينة</a>
+                                    @endif
+                                    @if (!empty($doc['print_url']))
                                         <a href="{{ $doc['print_url'] }}" target="_blank" rel="noopener" class="btn-action primary">🖨️ طباعة</a>
                                     @endif
-                                    @if ($doc['edit_url'])
-                                        <a href="{{ $doc['edit_url'] }}" class="btn-action">✏️ تعديل القالب / الإعدادات</a>
+                                    @if (!empty($doc['edit_url']))
+                                        <a href="{{ $doc['edit_url'] }}" class="btn-action success">✏️ تخصيص الشكل والمحتوى</a>
                                     @endif
                                 </div>
                             </div>

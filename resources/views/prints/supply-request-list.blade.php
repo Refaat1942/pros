@@ -11,15 +11,23 @@
     </style>
 </head>
 <body @if($autoPrint ?? true) onload="window.print()" @endif>
+@php
+    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for('supply_request_list');
+@endphp
+@include('prints.partials.document-template-vars')
 <div class="no-print">
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet supply-sheet">
-    @include('prints.partials.org-header', ['dept' => 'قسم المخازن'])
+<div class="{{ $sheetClass }} supply-sheet">
+    @include('prints.partials.org-header', [
+        'dept' => $tpl['dept_label'] ?? 'قسم المخازن',
+        'seal' => (bool) ($tpl['show_seal'] ?? true),
+        'showLogo' => (bool) ($tpl['show_logo'] ?? true),
+    ])
 
-    <h1 class="doc-title">طلبات التوريد المفتوحة</h1>
-    <p class="meta-note">تاريخ الطباعة: {{ $generatedAt->format('d/m/Y H:i') }} — البنود بانتظار التوريد أو جاهزة للاستلام</p>
+    <h1 class="doc-title">{{ $tpl['doc_title'] ?? 'طلبات التوريد المفتوحة' }}</h1>
+    <p class="meta-note">{{ $tpl['subtitle'] ?? 'تاريخ الطباعة: '.$generatedAt->format('d/m/Y H:i')) }}</p>
 
     <table class="print-table items-table">
         <thead>
@@ -51,9 +59,12 @@
     </table>
 
     <footer class="sign-footer" style="margin-top:24px;text-align:left;font-weight:700;">
+        @if (!empty($tpl['footer_note']))
+            <p style="font-size:10pt;margin-bottom:12px;">{{ $tpl['footer_note'] }}</p>
+        @endif
         <div>يعتمد ،،</div>
         <div style="margin-top:20mm;border-top:1.5px solid #000;width:55mm;">&nbsp;</div>
-        <div style="margin-top:4px;font-size:11pt;">رئيس المخازن</div>
+        <div style="margin-top:4px;font-size:11pt;">{{ $tpl['signature_1'] ?? 'رئيس المخازن' }}</div>
     </footer>
 </div>
 </body>

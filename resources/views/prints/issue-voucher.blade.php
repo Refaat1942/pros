@@ -1,5 +1,6 @@
 @php
     use App\Support\StockItemUomLookup;
+    use App\Services\DocumentTemplateService;
 
     $voucherNo   = $voucher['voucher_no'] ?? '—';
     $workOrderNo = $voucher['work_order_no'] ?? '—';
@@ -11,7 +12,12 @@
     $uomMap      = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->filter()->all());
     $technician  = $voucher['technician_name'] ?? null;
     $sectionName = $voucher['workshop_section_name'] ?? null;
+
+    $tplService = app(DocumentTemplateService::class);
+    $tpl = $documentTemplate ?? $tplService->for('issue_voucher');
+    $docTitle = $tplService->renderText($tpl['doc_title'] ?? 'إذن صرف مواد — رقم ( {no} )', ['no' => $voucherNo]);
 @endphp
+@include('prints.partials.document-template-vars')
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -95,10 +101,14 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet issue-voucher-sheet compact-voucher">
-    @include('prints.partials.org-header', ['dept' => 'قسم المخازن'])
+<div class="{{ $sheetClass }} issue-voucher-sheet compact-voucher">
+    @include('prints.partials.org-header', [
+        'dept' => $tpl['dept_label'] ?? 'قسم المخازن',
+        'seal' => (bool) ($tpl['show_seal'] ?? true),
+        'showLogo' => (bool) ($tpl['show_logo'] ?? true),
+    ])
 
-    <h1 class="doc-title issue-voucher-title">إذن صرف مواد — رقم ( <span class="fill">{{ $voucherNo }}</span> )</h1>
+    <h1 class="doc-title issue-voucher-title">{{ $docTitle }}</h1>
 
     <table class="meta-table print-table" style="margin-bottom: 14px;">
         <tbody>
@@ -121,8 +131,9 @@
         </tbody>
     </table>
 
+    @if (!empty($tpl['show_spec_section']))
     <section class="spec-section avoid-break">
-        <div class="spec-title">الطرف الصناعي — التوصيف (غير منفصل عن إذن الصرف)</div>
+        <div class="spec-title">{{ $tpl['spec_section_title'] ?? 'الطرف الصناعي — التوصيف' }}</div>
         @forelse ($specGroups as $group)
             @if (count($specGroups) > 1)
                 <div class="spec-group-label">{{ $group['label'] }}</div>
@@ -162,8 +173,9 @@
             </div>
         @endif
     </section>
+    @endif
 
-    <p class="line" style="font-weight:800;margin-bottom:8px;">مواد الصرف لقسم الإنتاج (مطابقة التوصيف أعلاه):</p>
+    <p class="line" style="font-weight:800;margin-bottom:8px;">{{ $tpl['intro_line'] ?? 'مواد الصرف لقسم الإنتاج:' }}</p>
 
     <table class="print-table items-table">
         <thead>
@@ -194,7 +206,7 @@
 
     <footer class="voucher-signatures avoid-break">
         <div class="sig-block">
-            <div>الفني المختص</div>
+            <div>{{ $tpl['signature_1'] ?? 'الفني المختص' }}</div>
             @if ($technician || $sectionName)
                 <div class="sig-meta">
                     @if ($technician){{ $technician }}@endif
@@ -205,18 +217,21 @@
             <div class="sig-line">التوقيع</div>
         </div>
         <div class="sig-block">
-            <div>مدير الإنتاج</div>
+            <div>{{ $tpl['signature_2'] ?? 'مدير الإنتاج' }}</div>
             <div class="sig-line">التوقيع</div>
         </div>
         <div class="sig-block">
-            <div>قائد المصنع</div>
+            <div>{{ $tpl['signature_3'] ?? 'قائد المصنع' }}</div>
             <div class="sig-line">التوقيع</div>
         </div>
         <div class="sig-block">
-            <div>رئيس المخازن</div>
+            <div>{{ $tpl['signature_4'] ?? 'رئيس المخازن' }}</div>
             <div class="sig-line">التوقيع — يعتمد</div>
         </div>
     </footer>
+    @if (!empty($tpl['footer_note']))
+        <p style="margin-top:10px;font-size:10pt;font-weight:600;">{{ $tpl['footer_note'] }}</p>
+    @endif
 </div>
 
 </body>

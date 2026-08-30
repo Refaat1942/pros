@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BrandingSettingsController;
 use App\Http\Controllers\Admin\DocumentsHubController;
+use App\Http\Controllers\Admin\DocumentTemplateController;
 use App\Http\Controllers\Admin\CatalogListSettingsController;
 use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\FormFieldSettingsController;
@@ -61,6 +62,15 @@ Route::prefix('admin')
         Route::get('documents-hub', [DocumentsHubController::class, 'index'])
             ->middleware('dashboard.page:admin,documents-hub')->name('documents-hub');
 
+        Route::middleware('dashboard.page:admin,documents-hub')->group(function () {
+            Route::get('documents-hub/{document}/edit', [DocumentTemplateController::class, 'edit'])
+                ->name('documents-hub.edit');
+            Route::put('documents-hub/{document}', [DocumentTemplateController::class, 'update'])
+                ->name('documents-hub.update');
+            Route::get('documents-hub/{document}/preview', [DocumentTemplateController::class, 'preview'])
+                ->name('documents-hub.preview');
+        });
+
         Route::middleware('dashboard.page:admin,reports')->group(function () {
             Route::get('reports', [AdminReportsHubController::class, 'index'])->name('reports');
             Route::get('reports/{section}/export', [AdminReportsHubController::class, 'export'])->name('reports.export');
@@ -80,7 +90,7 @@ registerDashboardPages(
     'admin.',
     AdminDashboardController::class,
     'admin',
-    except: ['overview', 'bi', 'audit', 'documents-hub', 'reports', 'reports-section', 'general-view'],
+    except: ['overview', 'bi', 'audit', 'documents-hub', 'document-template-edit', 'reports', 'reports-section', 'general-view'],
 );
 
 /*

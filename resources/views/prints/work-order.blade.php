@@ -8,7 +8,9 @@
     $approvalNo = $case->quote_no ?? '—';
     $approvalDate = $case->approval_date?->format('d/m/Y') ?? '—';
     $valueDisplay = number_format(CaseFinancialSummary::billableAmount($case), 0);
+    $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for('work_order');
 @endphp
+@include('prints.partials.document-template-vars')
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -72,16 +74,18 @@
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 
-<div class="sheet compact-work-order">
+<div class="{{ $sheetClass }} compact-work-order">
     <header class="doc-header">
         <div class="header-right">
             @foreach (app(\App\Services\SettingService::class)->branding()['lines'] as $line)
                 <div>{{ $line }}</div>
             @endforeach
-            <div class="dept">قسم الإنتاج — إذن شغل</div>
+            <div class="dept">{{ $tpl['dept_label'] ?? 'قسم الإنتاج — إذن شغل' }}</div>
         </div>
         <div class="header-left">
-            @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => true])
+            @if (!empty($tpl['show_logo']))
+                @include('prints.partials.org-logo', ['logoSize' => '30mm', 'seal' => (bool) ($tpl['show_seal'] ?? true)])
+            @endif
             <div class="header-meta">
                 <div class="serial-red">{{ $case->order_ref }}</div>
                 <div>إذن شغل رقم: <span class="fill">{{ $case->work_order_no ?? '—' }}</span></div>
@@ -91,7 +95,7 @@
         </div>
     </header>
 
-    <div class="wo-title">إذن شغل</div>
+    <div class="wo-title">{{ $tpl['doc_title'] ?? 'إذن شغل' }}</div>
 
     <table class="print-table meta-table avoid-break">
         <tbody>
@@ -119,7 +123,7 @@
     </table>
 
     <table class="print-table items-table avoid-break" style="margin-top:14px;">
-        <caption>المواصفات / بنود العمل</caption>
+        <caption>{{ $tpl['items_section_title'] ?? 'المواصفات / بنود العمل' }}</caption>
         <thead>
             <tr>
                 <th style="width:18%">الكود</th>
@@ -144,9 +148,9 @@
     </table>
 
     <div class="staff-row">
-        <span>الموظف المختص: <span class="fill">&nbsp;</span></span>
-        <span>رئيس القسم: <span class="fill">&nbsp;</span></span>
-        <span>مدير الإنتاج: <span class="fill">&nbsp;</span></span>
+        <span>{{ $tpl['signature_1'] ?? 'الموظف المختص' }}: <span class="fill">&nbsp;</span></span>
+        <span>{{ $tpl['signature_2'] ?? 'رئيس القسم' }}: <span class="fill">&nbsp;</span></span>
+        <span>{{ $tpl['signature_3'] ?? 'مدير الإنتاج' }}: <span class="fill">&nbsp;</span></span>
     </div>
 
     <div class="trial-row">
@@ -181,7 +185,7 @@
     </table>
 
     <div class="footer-note">
-        <span>ملاحظة المصنع: <span class="fill">&nbsp;</span></span>
+        <span>ملاحظة المصنع: <span class="fill">{{ $tpl['footer_note'] ?? '' }}</span></span>
         <span>مجموعة ساعات العمل: <span class="fill">&nbsp;</span></span>
     </div>
 
