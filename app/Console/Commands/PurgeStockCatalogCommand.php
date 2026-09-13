@@ -29,7 +29,7 @@ class PurgeStockCatalogCommand extends Command
         }
 
         if (! $this->option('force') && ! $this->confirm(
-            'سيتم حذف: كل الأصناف — أسعارها — حركات المخزن — ربط الموردين. محفوظ: الفئات — الموردون — المستخدمون — الإعدادات. متابعة؟',
+            'سيتم حذف: كل الأصناف — أسعارها — حركات المخزن — طلبات التوريد — ربط الموردين. محفوظ: الفئات — الموردون — المستخدمون — الإعدادات. متابعة؟',
             false
         )) {
             $this->warn('تم الإلغاء.');
@@ -47,6 +47,7 @@ class PurgeStockCatalogCommand extends Command
 
         $this->newLine();
         $this->line('✅ جاهز لرفع/import الأصناف الجديدة من صفحة الأصناف والأسعار.');
+        $this->line('💡 لمسح الحالات والأصناف معاً: php artisan prosthetics:reset-offline --force');
 
         return self::SUCCESS;
     }

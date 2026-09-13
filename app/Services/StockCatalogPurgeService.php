@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\StockCatalogPicker;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,8 +29,10 @@ class StockCatalogPurgeService
 
         DB::transaction(function () use (&$counts) {
             $counts['stock_movements'] = DB::table('stock_movements')->delete();
-            $counts['supplier_stock_item'] = DB::table('supplier_stock_item')->delete();
             $counts['stock_item_prices'] = DB::table('stock_item_prices')->delete();
+            $counts['supply_request_lines'] = DB::table('supply_request_lines')->delete();
+            $counts['supply_requests'] = DB::table('supply_requests')->delete();
+            $counts['supplier_stock_item'] = DB::table('supplier_stock_item')->delete();
             $counts['stock_item_attribute_values'] = DB::table('stock_item_attribute_values')->delete();
             $counts['stock_items'] = DB::table('stock_items')->delete();
 
@@ -39,6 +42,8 @@ class StockCatalogPurgeService
                 tag: 'admin',
             );
         });
+
+        StockCatalogPicker::forgetCachedRows();
 
         return $counts;
     }
