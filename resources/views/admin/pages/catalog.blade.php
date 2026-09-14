@@ -308,14 +308,7 @@
                             <h4 class="catalog-form-card__title catalog-form-card__title--inline">💰 أسعار إضافية</h4>
                             <button type="button" class="btn-action" onclick="addSlimPriceRow()">+ سعر إضافي</button>
                         </div>
-                        <div class="catalog-tier-hint catalog-tier-hint--steps">
-                            <p><strong>كيف أضيف أسعار بكمياتها؟</strong></p>
-                            <ol style="margin:6px 0 0;padding-right:18px;line-height:1.55;">
-                                <li>هنا: أضف <strong>سعر إضافي</strong> (تعريف السعر في الكتالوج فقط).</li>
-                                <li>في <strong>المخزن → استلام وارد</strong>: اختر الصنف، الكمية، و<strong>سعر الوحدة</strong> لكل فاتورة — كل سعر يُنشئ دفعة مخزن.</li>
-                                <li>«مخزن: X» أمام كل سعر = قراءة فقط من الاستلام — لا يُعدَّل من هنا.</li>
-                            </ol>
-                        </div>
+                        <p class="catalog-tier-hint">«رصيد المخزن» أمام كل سعر للعرض فقط (من الاستلام) — لتعديل الرصيد استخدم المخزن أو رصيد أول المدة/الإضافة/الخصم.</p>
                         <div id="slimWarehouseTiers" class="catalog-warehouse-tiers" hidden></div>
                         <div id="slimExtraPrices" class="catalog-extra-prices__list"></div>
                     </div>
@@ -1613,32 +1606,30 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         var err = document.getElementById('slimCatalogError');
         var name = document.getElementById('slimName').value.trim();
 
-        function showCatalogFormError(message) {
-            err.textContent = message;
-            err.style.display = 'block';
-            err.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-
         if (window.CatalogSections) {
             var catErr = window.CatalogSections.validateBeforeSave();
             if (catErr) {
-                showCatalogFormError(catErr);
+                err.textContent = catErr;
+                err.style.display = 'block';
                 return;
             }
         }
 
         if (!name) {
-            showCatalogFormError('يرجى إدخال اسم الصنف.');
+            err.textContent = 'يرجى إدخال اسم الصنف.';
+            err.style.display = 'block';
             return;
         }
 
         var supplierIds = collectSupplierIds();
         if (!supplierIds.length) {
-            showCatalogFormError('يرجى اختيار مورد واحد لهذا الصنف.');
+            err.textContent = 'يرجى اختيار مورد واحد لهذا الصنف.';
+            err.style.display = 'block';
             return;
         }
         if (supplierIds.length > 1) {
-            showCatalogFormError('يُسمح بمورد واحد فقط لكل صنف.');
+            err.textContent = 'يُسمح بمورد واحد فقط لكل صنف.';
+            err.style.display = 'block';
             return;
         }
 
@@ -1689,7 +1680,8 @@ window.__STOCK_CATEGORIES = @json($categories->values());
                 var first = Object.values(e.errors)[0];
                 if (Array.isArray(first) && first[0]) msg = first[0];
             }
-            showCatalogFormError(msg);
+            err.textContent = msg;
+            err.style.display = 'block';
         });
     };
 
