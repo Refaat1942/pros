@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\StockCatalogPicker;
 use Illuminate\Support\Facades\DB;
 
 /**

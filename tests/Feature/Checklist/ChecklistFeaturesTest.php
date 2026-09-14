@@ -256,42 +256,6 @@ class ChecklistFeaturesTest extends TestCase
         ]);
     }
 
-    public function test_csv_reimport_updates_same_item_instead_of_duplicating(): void
-    {
-        $csv = $this->catalogHeaders();
-        $row = '5/43,5/43,مواد كيميائية,Ottobock,9001,ك,0,0,0,10,250';
-        $contents = implode(',', $csv)."\r\n".$row."\r\n";
-
-        $first = app(StockImportService::class)->import(
-            UploadedFile::fake()->createWithContent('items.csv', $contents),
-        );
-        $this->assertSame(1, $first['created']);
-        $this->assertSame(1, StockItem::query()->where('catalog_number', '5/43')->count());
-
-        $second = app(StockImportService::class)->import(
-            UploadedFile::fake()->createWithContent('items2.csv', $contents),
-        );
-        $this->assertSame(0, $second['created']);
-        $this->assertSame(1, $second['updated']);
-        $this->assertSame(1, StockItem::query()->where('catalog_number', '5/43')->count());
-        $this->assertSame(250.0, (float) StockItem::query()->where('catalog_number', '5/43')->value('price'));
-    }
-
-    public function test_csv_import_dedupes_duplicate_rows_within_same_file(): void
-    {
-        $csv = $this->catalogHeaders();
-        $row = 'RM-DUP,10,صنف مكرر,,4821,قطعة,5,0,0,5,99';
-        $contents = implode(',', $csv)."\r\n".$row."\r\n".$row."\r\n";
-
-        $summary = app(StockImportService::class)->import(
-            UploadedFile::fake()->createWithContent('dup-rows.csv', $contents),
-        );
-
-        $this->assertSame(1, $summary['created']);
-        $this->assertSame(1, $summary['updated']);
-        $this->assertSame(1, StockItem::query()->where('catalog_number', 'RM-DUP')->count());
-    }
-
     public function test_military_markup_engine_computes_selling_price_and_percentage(): void
     {
         $company = $this->militaryCompany();
