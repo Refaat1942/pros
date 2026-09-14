@@ -72,10 +72,7 @@
                         </div>
                         <div>
                             <label class="catalog-form-label">السعر الأساسي</label>
-                            <div class="catalog-price-with-qty">
-                                <input type="number" id="slimPrice" min="0" step="0.01" value="0" class="catalog-form-input">
-                                <span id="slimBasePriceQty" class="slim-price-qty-badge" hidden></span>
-                            </div>
+                            <input type="number" id="slimPrice" min="0" step="0.01" value="0" class="catalog-form-input">
                         </div>
                         <div class="catalog-form-grid__full">
                             <label class="catalog-quick-dispense-label">

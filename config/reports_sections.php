@@ -40,12 +40,6 @@ return [
         'item-margins' => [
             'inherits' => 'inventory-valuation',
         ],
-        'price-tier-balances' => [
-            'inherits' => 'inventory-valuation',
-        ],
-        'multi-price-items' => [
-            'inherits' => 'inventory-valuation',
-        ],
         'inventory-reconciliation' => [
             'all_of' => [
                 ['permissions' => ['view-costs']],
