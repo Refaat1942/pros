@@ -238,15 +238,6 @@ class StockCatalogService
             'price' => (float) $item->price,
             'highest_price' => $this->highestPrice($item),
             'price_tiers' => $priceTiers,
-            'catalog_extra_prices' => $item->prices
-                ->filter(fn (StockItemPrice $p) => $this->isCatalogOnlyPriceStub($p))
-                ->map(fn (StockItemPrice $p) => [
-                    'id' => (string) $p->id,
-                    'label' => $p->label,
-                    'amount' => (float) $p->amount,
-                ])
-                ->values()
-                ->all(),
             'expiry_date' => $item->expiry_date?->toDateString(),
             'wac' => (float) $item->wac,
             'status' => $item->status,
@@ -634,13 +625,13 @@ class StockCatalogService
     }
 
     /**
-     * مزامنة أسعار الكتالوج الإضافية فقط — لا تُحذف ولا تُعدَّل دفعات الاستلام/المخزن.
+     * مزامنة الأسعار الإضافية للصنف (صنف بأكثر من سعر) — سعر + تسمية اختيارية.
      *
      * @param  array<int, array{id?:mixed, label?:string, amount?:mixed}>  $prices
      */
     private function syncPrices(StockItem $item, array $prices): void
     {
-        $keepIds = $this->warehouseProtectedPriceIds($item);
+        $keepIds = [];
 
         foreach ($prices as $index => $row) {
             $amount = (float) ($row['amount'] ?? 0);
@@ -657,57 +648,24 @@ class StockCatalogService
             ];
 
             if ($priceId && $existing = $item->prices()->whereKey($priceId)->first()) {
-                if ($this->isWarehousePriceBatch($existing)) {
-                    $keepIds[] = (int) $existing->id;
-
-                    continue;
-                }
-
                 $existing->update($payload);
-                $keepIds[] = (int) $existing->id;
+                $keepIds[] = $existing->id;
 
                 continue;
             }
 
             $created = $item->prices()->create(array_merge($payload, [
-                'price_ref' => sprintf('PR-%s-CAT-%d', $item->code, $index + 1),
+                'price_ref' => sprintf('PR-%s-%d', $item->code, $index + 1),
                 'qty' => 0,
             ]));
-            $keepIds[] = (int) $created->id;
+            $keepIds[] = $created->id;
         }
 
-        $item->prices()
-            ->whereNotIn('id', $keepIds)
-            ->whereNull('supplier_id')
-            ->whereNull('supply_request_line_id')
-            ->where('qty', '<=', 0)
-            ->delete();
-    }
-
-    public function isWarehousePriceBatch(StockItemPrice $batch): bool
-    {
-        return $batch->supplier_id !== null
-            || $batch->supply_request_line_id !== null
-            || (float) $batch->qty > 0;
-    }
-
-    public function isCatalogOnlyPriceStub(StockItemPrice $batch): bool
-    {
-        return ! $this->isWarehousePriceBatch($batch);
-    }
-
-    /** @return list<int> */
-    private function warehouseProtectedPriceIds(StockItem $item): array
-    {
-        return $item->prices()
-            ->where(function ($query) {
-                $query->whereNotNull('supplier_id')
-                    ->orWhereNotNull('supply_request_line_id')
-                    ->orWhere('qty', '>', 0);
-            })
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+        if ($keepIds) {
+            $item->prices()->whereNotIn('id', $keepIds)->delete();
+        } else {
+            $item->prices()->delete();
+        }
     }
 
     private function syncStatus(StockItem $item): void

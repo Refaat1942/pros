@@ -308,8 +308,6 @@
                             <h4 class="catalog-form-card__title catalog-form-card__title--inline">💰 أسعار إضافية</h4>
                             <button type="button" class="btn-action" onclick="addSlimPriceRow()">+ سعر إضافي</button>
                         </div>
-                        <p class="catalog-tier-hint">«رصيد المخزن» أمام كل سعر للعرض فقط (من الاستلام) — لتعديل الرصيد استخدم المخزن أو رصيد أول المدة/الإضافة/الخصم.</p>
-                        <div id="slimWarehouseTiers" class="catalog-warehouse-tiers" hidden></div>
                         <div id="slimExtraPrices" class="catalog-extra-prices__list"></div>
                     </div>
                 </section>
@@ -670,18 +668,6 @@
         padding: 8px;
         border: 1px solid var(--border);
         border-radius: 8px;
-    }
-    .catalog-tier-hint {
-        font-size: 12px;
-        color: var(--text-muted, #64748b);
-        margin: 0 0 10px;
-        line-height: 1.5;
-    }
-    .catalog-warehouse-tiers {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 10px;
     }
     .catalog-form-error {
         margin-top: 10px;
@@ -1110,7 +1096,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             qty != null ? qty : tierQtyForAmount(amount, window.__catalogPriceTiers || [])
         );
         row.innerHTML =
-            '<span class="slim-price-qty-badge" title="رصيد المخزن بهذا السعر (للعرض فقط)">مخزن: ' + qtyText + '</span>' +
+            '<span class="slim-price-qty-badge" title="رصيد هذا السعر في المخزن">رصيد: ' + qtyText + '</span>' +
             '<input type="number" min="0" step="0.01" class="slim-price-amount" placeholder="السعر (ج.م)">' +
             '<button type="button" class="btn-action danger" onclick="this.closest(\'.slim-price-row\').remove()">×</button>';
         box.appendChild(row);
@@ -1148,7 +1134,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         var badge = document.getElementById('slimBasePriceQty');
         if (!badge) return;
         var qty = tierQtyForAmount(amount, tiers);
-        badge.textContent = 'مخزن: ' + formatTierQtyDisplay(qty);
+        badge.textContent = 'رصيد: ' + formatTierQtyDisplay(qty);
         badge.hidden = false;
     }
 
@@ -1300,23 +1286,6 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         }
     }
 
-    function renderWarehouseTierSummary(tiers) {
-        var box = document.getElementById('slimWarehouseTiers');
-        if (!box) return;
-        var active = (tiers || []).filter(function (t) {
-            return (parseFloat(t.qty) || 0) > 0 || t.from_supply;
-        });
-        if (!active.length) {
-            box.innerHTML = '';
-            box.hidden = true;
-            return;
-        }
-        box.hidden = false;
-        box.innerHTML = active.map(function (t) {
-            return '<span class="slim-price-qty-badge">' + formatCatalogPrice(t.amount) + ' ج.م × مخزن ' + formatTierQtyDisplay(t.qty) + '</span>';
-        }).join('');
-    }
-
     function setForm(v) {
         document.getElementById('slimCode').value = v.code || '';
         document.getElementById('slimPageNumber').value = v.page_number || '';
@@ -1334,14 +1303,10 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         document.getElementById('slimExtraPrices').innerHTML = '';
         window.__catalogPriceTiers = buildPriceTiersFromItem(v);
         updateBasePriceQtyBadge(parseFloat(v.price) || 0, window.__catalogPriceTiers);
-        renderWarehouseTierSummary(window.__catalogPriceTiers);
-        var extras = v.catalog_extra_prices || [];
-        extras.forEach(function (p) {
-            window.addSlimPriceRow(
-                p.amount,
-                tierQtyForAmount(p.amount, window.__catalogPriceTiers),
-                p.id
-            );
+        var baseAmount = parseFloat(v.price) || 0;
+        window.__catalogPriceTiers.forEach(function (t) {
+            if (catalogAmountsEqual(t.amount, baseAmount)) return;
+            window.addSlimPriceRow(t.amount, t.qty, t.id);
         });
         var quickEl = document.getElementById('slimIsQuickDispense');
         if (quickEl) quickEl.checked = !!v.is_quick_dispense;
@@ -1667,15 +1632,11 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             credentials: 'same-origin',
             body: JSON.stringify(payload),
         })
-        .then(function (res) { return res.json().then(function (j) { if (!res.ok) throw j; return j; }); })
+        .then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
         .then(function () { window.location.reload(); })
         .catch(function (e) {
-            var msg = 'تعذّر الحفظ.';
-            if (e && e.message) msg = e.message;
-            if (e && e.errors) {
-                var first = Object.values(e.errors)[0];
-                if (Array.isArray(first) && first[0]) msg = first[0];
-            }
+            var msg = (e && e.message) ? e.message : 'تعذّر الحفظ.';
+            if (e && e.errors) { msg = Object.values(e.errors)[0][0]; }
             err.textContent = msg;
             err.style.display = 'block';
         });
