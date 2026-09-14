@@ -15,10 +15,6 @@ use Illuminate\Support\Facades\DB;
  */
 class StockItemSalesStatsService
 {
-    public function __construct(
-        private readonly StockCatalogService $catalogService,
-    ) {}
-
     /** @return array{from: Carbon|null, to: Carbon|null} */
     public function parseDateRange(?string $from, ?string $to): array
     {
@@ -49,8 +45,7 @@ class StockItemSalesStatsService
 
         $salesByPrice = $this->salesAggregates($from, $to, $item->code);
         $registered = $this->registeredPriceAmounts($item);
-        $warehouseQtyByPrice = $this->warehouseQtyByPrice($item);
-        $rows = $this->mergePriceRows($registered, $salesByPrice, $warehouseQtyByPrice);
+        $rows = $this->mergePriceRows($registered, $salesByPrice);
 
         return [
             'item_code' => $item->code,
@@ -118,24 +113,12 @@ class StockItemSalesStatsService
             ->count('cases.id');
     }
 
-    /** @return array<string, float> */
-    private function warehouseQtyByPrice(StockItem $item): array
-    {
-        $map = [];
-        foreach ($this->catalogService->aggregatePriceTiers($item) as $tier) {
-            $map[$this->priceKey((float) $tier['amount'])] = (float) $tier['qty'];
-        }
-
-        return $map;
-    }
-
     /**
      * @param  list<float>  $registered
      * @param  Collection<string, object>  $salesByPrice
-     * @param  array<string, float>  $warehouseQtyByPrice
-     * @return Collection<int, array{unit_price: float, registered: bool, sale_times: int, sold_qty: int, warehouse_qty: float}>
+     * @return Collection<int, array{unit_price: float, registered: bool, sale_times: int, sold_qty: int}>
      */
-    private function mergePriceRows(array $registered, Collection $salesByPrice, array $warehouseQtyByPrice): Collection
+    private function mergePriceRows(array $registered, Collection $salesByPrice): Collection
     {
         $rows = collect();
         $seen = [];
@@ -148,7 +131,6 @@ class StockItemSalesStatsService
                 'registered' => true,
                 'sale_times' => (int) ($sale->sale_times ?? 0),
                 'sold_qty' => (int) ($sale->sold_qty ?? 0),
-                'warehouse_qty' => (float) ($warehouseQtyByPrice[$key] ?? 0),
             ]);
             $seen[$key] = true;
         }
@@ -163,7 +145,6 @@ class StockItemSalesStatsService
                 'registered' => false,
                 'sale_times' => (int) $sale->sale_times,
                 'sold_qty' => (int) $sale->sold_qty,
-                'warehouse_qty' => (float) ($warehouseQtyByPrice[$key] ?? 0),
             ]);
         }
 
