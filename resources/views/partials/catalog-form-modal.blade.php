@@ -38,10 +38,11 @@
                             <input type="hidden" id="slimAltCodes">
                         </div>
                         <div>
-                            <label class="catalog-form-label">الوحدة</label>
-                            <input type="text" id="slimUom" list="slimUomOptions" value="قطعة" class="catalog-form-input" placeholder="قطعة / متر / طقم">
+                            <label class="catalog-form-label">وحدة المخزن (الصرف)</label>
+                            <input type="text" id="slimUom" list="slimUomOptions" value="قطعة" class="catalog-form-input" placeholder="قطعة / سم² / متر">
                             <datalist id="slimUomOptions">
                                 <option value="قطعة"></option>
+                                <option value="سم²"></option>
                                 <option value="متر"></option>
                                 <option value="طقم"></option>
                                 <option value="لفة"></option>
@@ -49,6 +50,20 @@
                                 <option value="جرام"></option>
                                 <option value="لتر"></option>
                             </datalist>
+                        </div>
+                        <div>
+                            <label class="catalog-form-label">قالب تحويل التوريد</label>
+                            <select id="slimUomProfile" class="catalog-form-input"><option value="">— يدوي / 1:1 —</option></select>
+                        </div>
+                        <div>
+                            <label class="catalog-form-label">وحدة التوريد</label>
+                            <input type="text" id="slimSupplyUom" list="slimSupplyUomOptions" class="catalog-form-input">
+                            <datalist id="slimSupplyUomOptions"></datalist>
+                        </div>
+                        <div>
+                            <label class="catalog-form-label">وحدات المخزن / توريد</label>
+                            <input type="number" id="slimUnitsPerSupply" min="0.000001" step="any" value="1" class="catalog-form-input">
+                            <p id="slimSupplyHint" style="margin:4px 0 0;font-size:12px;color:var(--text-muted);"></p>
                         </div>
                         <div>
                             <label class="catalog-form-label">رصيد أول المده</label>

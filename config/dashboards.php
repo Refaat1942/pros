@@ -320,7 +320,7 @@ return [
             [
                 'label' => 'المخزون والتوريد',
                 'icon' => '📦',
-                'pages' => ['stock-categories', 'catalog', 'add-catalog-item', 'supply-request', 'receive-inbound', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings'],
+                'pages' => ['stock-categories', 'catalog', 'add-catalog-item', 'supply-request', 'receive-inbound', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings', 'stock-uom-settings'],
             ],
             [
                 'label' => 'التعاقد والمالية',
@@ -389,6 +389,7 @@ return [
             'branding-settings' => ['title' => 'الهوية البصرية — الشعار والترويسة', 'icon' => '🎨', 'label' => 'الهوية البصرية'],
             'pathway-settings' => ['title' => 'مصمم مسار العمل — مدني / عسكري / جهات', 'icon' => '🧭', 'label' => 'مصمم المسار'],
             'catalog-list-settings' => ['title' => 'عرض قوائم الأصناف — الأدوار والأعمدة', 'icon' => '📋', 'label' => 'عرض قوائم الأصناف'],
+            'stock-uom-settings' => ['title' => 'وحدات التوريد والمخزن — قوالب التحويل', 'icon' => '📐', 'label' => 'وحدات القياس'],
             'notification-settings' => ['title' => 'إعدادات التنبيه الصوتي — الإشعارات', 'icon' => '🔔', 'label' => 'تنبيه الإشعارات'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],

@@ -196,7 +196,7 @@ class CatalogListVisibilityService
     /** حقول تُمرَّر للواجهة لدعم الفلترة والبحث حتى لو العمود غير معروض في الجدول. */
     private function clientFilterMetaFields(string $profile): array
     {
-        return match ($profile) {
+        $base = match ($profile) {
             'admin_catalog' => [
                 'category_id',
                 'category',
@@ -206,9 +206,20 @@ class CatalogListVisibilityService
                 'display_barcode',
                 'has_scannable_barcode',
                 'min_qty',
+                'supply_uom',
+                'units_per_supply_unit',
+                'receive_in_supply_uom',
+                'supply_conversion_hint',
             ],
             default => [],
         };
+
+        return array_merge($base, [
+            'supply_uom',
+            'units_per_supply_unit',
+            'receive_in_supply_uom',
+            'supply_conversion_hint',
+        ]);
     }
 
     /**

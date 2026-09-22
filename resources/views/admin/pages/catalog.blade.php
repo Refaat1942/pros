@@ -218,10 +218,11 @@
                     <input type="hidden" id="slimAltCodes">
                 </div>
                 <div>
-                    <label class="catalog-form-label">الوحدة</label>
-                    <input type="text" id="slimUom" list="slimUomOptions" value="قطعة" class="catalog-form-input" placeholder="قطعة / متر / طقم">
+                    <label class="catalog-form-label">وحدة المخزن (الصرف والارتجاع)</label>
+                    <input type="text" id="slimUom" list="slimUomOptions" value="قطعة" class="catalog-form-input" placeholder="قطعة / سم² / متر">
                     <datalist id="slimUomOptions">
                         <option value="قطعة"></option>
+                        <option value="سم²"></option>
                         <option value="متر"></option>
                         <option value="طقم"></option>
                         <option value="لفة"></option>
@@ -229,6 +230,22 @@
                         <option value="جرام"></option>
                         <option value="لتر"></option>
                     </datalist>
+                </div>
+                <div>
+                    <label class="catalog-form-label">قالب تحويل التوريد</label>
+                    <select id="slimUomProfile" class="catalog-form-input">
+                        <option value="">— يدوي / 1:1 —</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="catalog-form-label">وحدة التوريد (الفاتورة)</label>
+                    <input type="text" id="slimSupplyUom" list="slimSupplyUomOptions" class="catalog-form-input" placeholder="ورقة / علبة / لفة">
+                    <datalist id="slimSupplyUomOptions"></datalist>
+                </div>
+                <div>
+                    <label class="catalog-form-label">وحدات المخزن لكل 1 توريد</label>
+                    <input type="number" id="slimUnitsPerSupply" min="0.000001" step="any" value="1" class="catalog-form-input">
+                    <p id="slimSupplyHint" style="margin:4px 0 0;font-size:12px;color:var(--text-muted);"></p>
                 </div>
                 <div>
                     <label class="catalog-form-label">رصيد أول المده</label>
@@ -1179,6 +1196,59 @@ window.__STOCK_CATEGORIES = @json($categories->values());
     }
 
     var supplierOptions = @json($catalogSuppliers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values());
+    window.__STOCK_UOM_PROFILES = @json($stock_uom_profiles ?? []);
+    window.__SUPPLY_UOM_SUGGESTIONS = @json($supply_unit_suggestions ?? []);
+
+    function initSupplyUomUi() {
+        var profileSel = document.getElementById('slimUomProfile');
+        var datalist = document.getElementById('slimSupplyUomOptions');
+        if (datalist) {
+            datalist.innerHTML = '';
+            (window.__SUPPLY_UOM_SUGGESTIONS || []).forEach(function (u) {
+                var opt = document.createElement('option');
+                opt.value = u;
+                datalist.appendChild(opt);
+            });
+        }
+        if (profileSel) {
+            profileSel.innerHTML = '<option value="">— يدوي / 1:1 —</option>';
+            Object.keys(window.__STOCK_UOM_PROFILES || {}).forEach(function (key) {
+                var p = window.__STOCK_UOM_PROFILES[key];
+                var opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = (p.label || key);
+                profileSel.appendChild(opt);
+            });
+            profileSel.addEventListener('change', function () {
+                var key = profileSel.value;
+                if (!key) return;
+                var p = (window.__STOCK_UOM_PROFILES || {})[key];
+                if (!p) return;
+                if (p.supply_uom) document.getElementById('slimSupplyUom').value = p.supply_uom;
+                if (p.units_per_supply_unit) document.getElementById('slimUnitsPerSupply').value = p.units_per_supply_unit;
+                if (p.base_uom_hint) document.getElementById('slimUom').value = p.base_uom_hint;
+                updateSupplyHint();
+            });
+        }
+        ['slimUom', 'slimSupplyUom', 'slimUnitsPerSupply'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('input', updateSupplyHint);
+        });
+        updateSupplyHint();
+    }
+
+    function updateSupplyHint() {
+        var hint = document.getElementById('slimSupplyHint');
+        if (!hint) return;
+        var base = (document.getElementById('slimUom').value || 'قطعة').trim();
+        var supply = (document.getElementById('slimSupplyUom').value || '').trim();
+        var factor = parseFloat(document.getElementById('slimUnitsPerSupply').value || '1');
+        if (!supply || factor === 1) {
+            hint.textContent = 'الاستلام والصرف بوحدة المخزن: ' + base;
+            return;
+        }
+        hint.textContent = '1 ' + supply + ' = ' + factor + ' ' + base + ' (يُحوَّل تلقائياً عند الاستلام)';
+    }
 
     function escapeHtml(text) {
         var div = document.createElement('div');
@@ -1330,6 +1400,16 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         document.getElementById('slimName').value = v.name || '';
         document.getElementById('slimBrand').value = v.brand || '';
         document.getElementById('slimUom').value = v.uom || 'قطعة';
+        if (document.getElementById('slimSupplyUom')) {
+            document.getElementById('slimSupplyUom').value = v.supply_uom || '';
+        }
+        if (document.getElementById('slimUnitsPerSupply')) {
+            document.getElementById('slimUnitsPerSupply').value = v.units_per_supply_unit != null ? v.units_per_supply_unit : 1;
+        }
+        if (document.getElementById('slimUomProfile')) {
+            document.getElementById('slimUomProfile').value = '';
+        }
+        updateSupplyHint();
         document.getElementById('slimOpeningQty').value = v.opening_qty != null ? v.opening_qty : 0;
         document.getElementById('slimAddition').value = v.addition != null ? v.addition : 0;
         document.getElementById('slimDiscount').value = v.discount != null ? v.discount : 0;
@@ -1647,6 +1727,9 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             brand: (document.getElementById('slimBrand').value || '').trim() || null,
             page_number: (document.getElementById('slimPageNumber').value || '').trim() || null,
             uom: (document.getElementById('slimUom').value || '').trim() || 'قطعة',
+            supply_uom: (document.getElementById('slimSupplyUom') && document.getElementById('slimSupplyUom').value || '').trim() || null,
+            units_per_supply_unit: parseFloat((document.getElementById('slimUnitsPerSupply') || {}).value || '1'),
+            uom_profile: (document.getElementById('slimUomProfile') && document.getElementById('slimUomProfile').value || '').trim() || null,
             opening_qty: parseInt(document.getElementById('slimOpeningQty').value || '0', 10),
             addition: parseInt(document.getElementById('slimAddition').value || '0', 10),
             discount: parseInt(document.getElementById('slimDiscount').value || '0', 10),
@@ -1920,6 +2003,7 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         if (window.CatalogSections && window.__STOCK_CATEGORIES) {
             window.CatalogSections.init(window.__STOCK_CATEGORIES);
         }
+        initSupplyUomUi();
 
         populateBrandFilter();
         window.applySlimCatalogFilters();

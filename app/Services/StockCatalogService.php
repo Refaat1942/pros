@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\StockStoreClass;
 use App\Enums\StockUom;
+use App\Support\StockSupplyUom;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
@@ -89,6 +90,10 @@ class StockCatalogService
             'brand' => $item->brand ?? '',
             'spec' => $item->spec ?? '',
             'uom' => $item->uom ?? '',
+            'supply_uom' => $item->supply_uom ?? '',
+            'units_per_supply_unit' => (float) ($item->units_per_supply_unit ?? 1),
+            'receive_in_supply_uom' => StockSupplyUom::receivesInSupplyUom($item),
+            'supply_conversion_hint' => StockSupplyUom::conversionHint($item),
             'category' => $item->category?->name ?? '',
             'category_id' => $item->category_id,
             'qty' => (int) $item->qty,
@@ -222,6 +227,10 @@ class StockCatalogService
             'category' => $item->category?->name ?? '',
             'is_quick_dispense' => (bool) $item->is_quick_dispense,
             'uom' => $item->uom,
+            'supply_uom' => $item->supply_uom ?? '',
+            'units_per_supply_unit' => (float) ($item->units_per_supply_unit ?? 1),
+            'receive_in_supply_uom' => StockSupplyUom::receivesInSupplyUom($item),
+            'supply_conversion_hint' => StockSupplyUom::conversionHint($item),
             'attributes' => $this->categorySchema->formatItemAttributes($item),
             'attributes_map' => collect($this->categorySchema->formatItemAttributes($item))
                 ->mapWithKeys(fn (array $row) => [$row['field_key'] => $row['value']])
@@ -298,6 +307,7 @@ class StockCatalogService
                 'store_class' => $this->deriveStoreClass($category),
                 'is_quick_dispense' => (bool) ($data['is_quick_dispense'] ?? false),
                 'uom' => $this->normalizeUom($data['uom'] ?? null),
+                ...$this->supplyUomAttributes($data),
                 'barcode' => $this->barcodeForOperational($operationalCode),
                 'alt_codes' => $operationalCode,
                 'qty' => $qty,
@@ -377,6 +387,7 @@ class StockCatalogService
                 'uom' => array_key_exists('uom', $data) && trim((string) $data['uom']) !== ''
                     ? $this->normalizeUom($data['uom'])
                     : $item->uom,
+                ...$this->supplyUomAttributes($data, $item),
                 'alt_codes' => $operationalCode,
                 'barcode' => $this->barcodeForOperational($operationalCode),
                 'qty' => $qty,
@@ -549,6 +560,55 @@ class StockCatalogService
         $uom = trim((string) $uom);
 
         return $uom !== '' ? $uom : StockUom::Piece->value;
+    }
+
+    /**
+     * @return array{supply_uom: ?string, units_per_supply_unit: float}
+     */
+    private function supplyUomAttributes(array $data, ?StockItem $existing = null): array
+    {
+        $profileKey = trim((string) ($data['uom_profile'] ?? ''));
+        if (
+            $existing
+            && $profileKey === ''
+            && ! array_key_exists('supply_uom', $data)
+            && ! array_key_exists('units_per_supply_unit', $data)
+        ) {
+            return [];
+        }
+
+        $supplyUom = array_key_exists('supply_uom', $data)
+            ? $this->nullableString($data['supply_uom'])
+            : ($existing?->supply_uom);
+        $factor = array_key_exists('units_per_supply_unit', $data)
+            ? (float) $data['units_per_supply_unit']
+            : (float) ($existing?->units_per_supply_unit ?? 1);
+
+        if ($profileKey !== '') {
+            $profile = app(StockUomProfileService::class)->allProfiles()[$profileKey] ?? null;
+            if ($profile) {
+                if (! array_key_exists('supply_uom', $data) && isset($profile['supply_uom'])) {
+                    $supplyUom = $profile['supply_uom'] !== null
+                        ? trim((string) $profile['supply_uom'])
+                        : null;
+                }
+                if (! array_key_exists('units_per_supply_unit', $data)) {
+                    $factor = (float) ($profile['units_per_supply_unit'] ?? 1);
+                }
+                if (! array_key_exists('uom', $data) && ! empty($profile['base_uom_hint'])) {
+                    // لا يُفرض تلقائياً على التحديث — فقط عند الإنشاء إن لم تُحدَّد الوحدة.
+                }
+            }
+        }
+
+        if ($factor <= 0) {
+            $factor = 1.0;
+        }
+
+        return [
+            'supply_uom' => $supplyUom,
+            'units_per_supply_unit' => $factor,
+        ];
     }
 
     /**

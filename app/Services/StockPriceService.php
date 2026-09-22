@@ -22,7 +22,7 @@ class StockPriceService
      */
     public function createPriceBatch(
         StockItem $item,
-        int $qty,
+        float $qty,
         float $unitPrice,
         Supplier $supplier,
         string $invoiceNo,
@@ -51,7 +51,7 @@ class StockPriceService
      */
     public function addBatch(
         StockItem $item,
-        int $qty,
+        float $qty,
         float $unitPrice,
         Supplier $supplier,
         string $invoiceNo,
@@ -122,7 +122,7 @@ class StockPriceService
      * الصيغة قيمة WAC سالبة أو مشوّهة. النتيجة: WAC لا يصبح سالباً أبداً، ويبقى
      * متوسطاً مرجحاً صحيحاً للمخزون الفعلي المستلم.
      */
-    public function recalcWac(StockItem $item, int $inQty, float $inPrice): void
+    public function recalcWac(StockItem $item, float $inQty, float $inPrice): void
     {
         if ($inQty <= 0) {
             // لا كمية داخلة موجبة — لا تحديث (استلام غير صالح للترجيح).

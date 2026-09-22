@@ -12,6 +12,7 @@ use App\Services\CatalogListVisibilityService;
 use App\Services\StockCatalogService;
 use App\Models\SupplyRequestLine;
 use App\Services\StockReceiveService;
+use App\Support\StockSupplyUom;
 use App\Services\SupplyRequestService;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
@@ -61,10 +62,17 @@ class StockReceiveController extends Controller
         $movement = DB::transaction(function () use ($request, $item, $supplier, $user) {
             $lineId = $request->validated('supply_request_line_id');
 
+            $resolved = StockSupplyUom::resolveReceiveQuantities(
+                $item,
+                (float) $request->validated('qty'),
+                (float) $request->validated('unit_price'),
+                $request->validated('quantity_basis') ?? 'auto',
+            );
+
             $movement = $this->stockReceiveService->receive(
                 item: $item,
-                qty: (int) $request->validated('qty'),
-                unitPrice: (float) $request->validated('unit_price'),
+                qty: $resolved['base_qty'],
+                unitPrice: $resolved['base_unit_price'],
                 supplier: $supplier,
                 invoiceNo: $request->validated('invoice_no'),
                 movedAt: Carbon::parse($request->validated('moved_at')),
@@ -73,6 +81,8 @@ class StockReceiveController extends Controller
                 documentOriginalName: $request->file('document')?->getClientOriginalName(),
                 documentMime: $request->file('document')?->getClientMimeType(),
                 supplyRequestLineId: $lineId ? (int) $lineId : null,
+                supplyQuantity: $resolved['supply_qty'],
+                supplyUnitCost: $resolved['supply_unit_price'],
             );
 
             if ($lineId) {

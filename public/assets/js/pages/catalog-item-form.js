@@ -6,6 +6,57 @@
 
   var supplierOptions = window.__CATALOG_SUPPLIERS || [];
 
+  function initSupplyUomUi() {
+    var profileSel = document.getElementById('slimUomProfile');
+    var datalist = document.getElementById('slimSupplyUomOptions');
+    if (datalist) {
+      datalist.innerHTML = '';
+      (window.__SUPPLY_UOM_SUGGESTIONS || []).forEach(function (u) {
+        var opt = document.createElement('option');
+        opt.value = u;
+        datalist.appendChild(opt);
+      });
+    }
+    if (profileSel) {
+      profileSel.innerHTML = '<option value="">— يدوي / 1:1 —</option>';
+      Object.keys(window.__STOCK_UOM_PROFILES || {}).forEach(function (key) {
+        var p = window.__STOCK_UOM_PROFILES[key];
+        var opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = (p.label || key);
+        profileSel.appendChild(opt);
+      });
+      profileSel.addEventListener('change', function () {
+        var key = profileSel.value;
+        if (!key) return;
+        var p = (window.__STOCK_UOM_PROFILES || {})[key];
+        if (!p) return;
+        if (p.supply_uom) document.getElementById('slimSupplyUom').value = p.supply_uom;
+        if (p.units_per_supply_unit) document.getElementById('slimUnitsPerSupply').value = p.units_per_supply_unit;
+        if (p.base_uom_hint) document.getElementById('slimUom').value = p.base_uom_hint;
+        updateSupplyHint();
+      });
+    }
+    ['slimUom', 'slimSupplyUom', 'slimUnitsPerSupply'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateSupplyHint);
+    });
+    updateSupplyHint();
+  }
+
+  function updateSupplyHint() {
+    var hint = document.getElementById('slimSupplyHint');
+    if (!hint) return;
+    var base = (document.getElementById('slimUom').value || 'قطعة').trim();
+    var supply = (document.getElementById('slimSupplyUom').value || '').trim();
+    var factor = parseFloat(document.getElementById('slimUnitsPerSupply').value || '1');
+    if (!supply || factor === 1) {
+      hint.textContent = 'الاستلام والصرف بوحدة المخزن: ' + base;
+      return;
+    }
+    hint.textContent = '1 ' + supply + ' = ' + factor + ' ' + base;
+  }
+
   function csrf() {
     var m = document.querySelector('meta[name="csrf-token"]');
     return m ? m.getAttribute('content') : '';
@@ -177,6 +228,16 @@
     document.getElementById('slimName').value = v.name || '';
     document.getElementById('slimBrand').value = v.brand || '';
     document.getElementById('slimUom').value = v.uom || 'قطعة';
+    if (document.getElementById('slimSupplyUom')) {
+      document.getElementById('slimSupplyUom').value = v.supply_uom || '';
+    }
+    if (document.getElementById('slimUnitsPerSupply')) {
+      document.getElementById('slimUnitsPerSupply').value = v.units_per_supply_unit != null ? v.units_per_supply_unit : 1;
+    }
+    if (document.getElementById('slimUomProfile')) {
+      document.getElementById('slimUomProfile').value = '';
+    }
+    updateSupplyHint();
     document.getElementById('slimOpeningQty').value = v.opening_qty != null ? v.opening_qty : 0;
     document.getElementById('slimAddition').value = v.addition != null ? v.addition : 0;
     document.getElementById('slimDiscount').value = v.discount != null ? v.discount : 0;
@@ -306,6 +367,9 @@
       brand: (document.getElementById('slimBrand').value || '').trim() || null,
       page_number: (document.getElementById('slimPageNumber').value || '').trim() || null,
       uom: (document.getElementById('slimUom').value || '').trim() || 'قطعة',
+      supply_uom: (document.getElementById('slimSupplyUom') && document.getElementById('slimSupplyUom').value || '').trim() || null,
+      units_per_supply_unit: parseFloat((document.getElementById('slimUnitsPerSupply') || {}).value || '1'),
+      uom_profile: (document.getElementById('slimUomProfile') && document.getElementById('slimUomProfile').value || '').trim() || null,
       opening_qty: parseInt(document.getElementById('slimOpeningQty').value || '0', 10),
       addition: parseInt(document.getElementById('slimAddition').value || '0', 10),
       discount: parseInt(document.getElementById('slimDiscount').value || '0', 10),
@@ -396,6 +460,7 @@
   });
 
   function bootEntryPage() {
+    initSupplyUomUi();
     if (window.CatalogSections && window.__STOCK_CATEGORIES) {
       window.CatalogSections.init(window.__STOCK_CATEGORIES);
     }

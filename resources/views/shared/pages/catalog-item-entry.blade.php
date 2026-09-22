@@ -25,6 +25,8 @@
 
 <script>
 window.__STOCK_CATEGORIES = @json($categories->values());
+window.__STOCK_UOM_PROFILES = @json($stock_uom_profiles ?? []);
+window.__SUPPLY_UOM_SUGGESTIONS = @json($supply_unit_suggestions ?? []);
 window.__CATALOG_SUPPLIERS = @json($catalogSuppliers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values());
 window.__CATALOG_API_BASE = @json($catalogApiBase);
 window.__CATALOG_SUCCESS_REDIRECT = @json($successRedirect);
