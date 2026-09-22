@@ -22,7 +22,9 @@ class StockMovement extends Model
         'stock_item_price_id',
         'movement_type',
         'quantity',
+        'supply_quantity',
         'unit_cost',
+        'supply_unit_cost',
         'balance_after',
         'invoice_no',
         'document_path',
@@ -37,7 +39,9 @@ class StockMovement extends Model
 
     protected $casts = [
         'quantity' => 'decimal:4',
+        'supply_quantity' => 'decimal:4',
         'unit_cost' => 'decimal:2',
+        'supply_unit_cost' => 'decimal:4',
         'balance_after' => 'decimal:4',
         'moved_at' => 'datetime',
     ];

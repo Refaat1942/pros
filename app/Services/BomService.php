@@ -13,6 +13,7 @@ use App\Models\PricingRequest;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Support\BomItemAggregator;
+use App\Support\StockQtyMath;
 use App\Support\StockQuantity;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -873,7 +874,7 @@ class BomService
 
         foreach ($expectedByCode as $code => $expected) {
             $got = $dispensedByCode[$code] ?? 0.0;
-            if (abs($got - $expected) > 0.0001) {
+            if (! StockQtyMath::eq($got, $expected)) {
                 throw BarcodeDispenseMismatchException::forItem($code);
             }
         }

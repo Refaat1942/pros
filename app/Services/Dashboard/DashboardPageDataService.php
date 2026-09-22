@@ -49,6 +49,8 @@ use App\Services\SettingService;
 use App\Services\SpecEditRequestService;
 use App\Services\SpecOrdersService;
 use App\Services\StockCatalogService;
+use App\Services\StockUomProfileService;
+use App\Support\StockSupplyUom;
 use App\Services\StockCategorySchemaService;
 use App\Services\StockPriceService;
 use App\Services\SupplierService;
@@ -85,6 +87,7 @@ class DashboardPageDataService
             'admin.notification-settings' => $this->adminNotificationSettings(),
             'admin.pathway-settings' => $this->adminPathwaySettings(),
             'admin.catalog-list-settings' => $this->adminCatalogListSettings(),
+            'admin.stock-uom-settings' => $this->adminStockUomSettings(),
             'admin.stock-categories' => $this->adminStockCategories(),
             'admin.catalog' => $this->adminCatalog(),
             'admin.add-catalog-item' => $this->catalogItemEntry(),
@@ -290,6 +293,28 @@ class DashboardPageDataService
         ];
     }
 
+    private function adminStockUomSettings(): array
+    {
+        $service = app(StockUomProfileService::class);
+        $custom = $service->customProfilesOnly();
+
+        return [
+            'stock_uom_builtin_profiles' => config('stock_uom_profiles.profiles', []),
+            'stock_uom_custom_profiles' => array_map(
+                fn (string $key, array $profile) => [
+                    'key' => $key,
+                    'label' => $profile['label'] ?? $key,
+                    'supply_uom' => $profile['supply_uom'] ?? '',
+                    'units_per_supply_unit' => $profile['units_per_supply_unit'] ?? 1,
+                    'base_uom_hint' => $profile['base_uom_hint'] ?? '',
+                ],
+                array_keys($custom),
+                array_values($custom),
+            ),
+            'supply_unit_suggestions' => $service->supplyUnitSuggestions(),
+        ];
+    }
+
     private function adminCatalog(): array
     {
         $catalogService = app(StockCatalogService::class);
@@ -306,7 +331,11 @@ class DashboardPageDataService
             );
         }
 
+        $uomProfiles = app(StockUomProfileService::class);
+
         return [
+            'stock_uom_profiles' => $uomProfiles->allProfiles(),
+            'supply_unit_suggestions' => $uomProfiles->supplyUnitSuggestions(),
             'stock_categories' => StockCategory::query()
                 ->with('fields')
                 ->orderBy('name')
@@ -909,8 +938,11 @@ class DashboardPageDataService
     private function catalogItemEntry(): array
     {
         $schema = app(StockCategorySchemaService::class);
+        $uomProfiles = app(StockUomProfileService::class);
 
         return [
+            'stock_uom_profiles' => $uomProfiles->allProfiles(),
+            'supply_unit_suggestions' => $uomProfiles->supplyUnitSuggestions(),
             'stock_categories' => StockCategory::query()
                 ->with('fields')
                 ->orderBy('name')
@@ -938,11 +970,32 @@ class DashboardPageDataService
 
         return [
             'inventory_items' => $catalogService->allItemsForUnifiedLists(),
+            'receive_stock_meta' => $this->receiveStockMetaMap($catalogService),
             'inventory_suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'inbound_document_upload' => config('inventory.inbound_document_upload', true),
         ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function receiveStockMetaMap(StockCatalogService $catalogService): array
+    {
+        return $catalogService->allItemsForUnifiedLists()
+            ->mapWithKeys(function (StockItem $item) {
+                return [
+                    $item->id => [
+                        'uom' => $item->uom,
+                        'supply_uom' => $item->supply_uom,
+                        'units_per_supply_unit' => (float) ($item->units_per_supply_unit ?? 1),
+                        'receive_in_supply_uom' => StockSupplyUom::receivesInSupplyUom($item),
+                        'hint' => StockSupplyUom::conversionHint($item),
+                        'receive_quantity_basis' => StockSupplyUom::configuredReceiveBasis($item),
+                        'accounting_uom_summary' => StockSupplyUom::accountingSummary($item),
+                    ],
+                ];
+            })
+            ->all();
     }
 
     /** إحصائيات المخزن للعرض — بدون بيانات استلام وارد. */
@@ -995,6 +1048,7 @@ class DashboardPageDataService
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
 
         return [
+            'receive_stock_meta' => $this->receiveStockMetaMap($catalogService),
             'inventory_suppliers' => Supplier::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),

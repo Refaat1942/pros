@@ -53,9 +53,9 @@
     if (gram && /كيلو|kg|kilo/i.test(String(item.uom || ''))) {
       return parseFloat(gram[1]) / 1000;
     }
-    var cm = s.match(/^(\d+(?:\.\d+)?)\s*(?:سم|cm|سنتي)$/i);
+    var cm = s.match(/^(\d+(?:[.,]\d+)?)\s*(?:سم|cm|سنتي)$/i);
     if (cm && /متر|meter|m$/i.test(String(item.uom || ''))) {
-      return parseFloat(cm[1]) / 100;
+      return parseFloat(cm[1].replace(',', '.')) / 100;
     }
     if (/^\d+(?:\.\d+)?$/.test(s.replace(',', '.'))) {
       return parseQtyNumber(s);
@@ -443,6 +443,9 @@
         row.qty = line.qtyRaw;
       } else if (line.qty !== 1) {
         row.qty = line.qty;
+      }
+      if (line.uom && line.qtyRaw && !/\s/.test(String(line.qtyRaw))) {
+        row.qty_uom = line.uom;
       }
       return row;
     });

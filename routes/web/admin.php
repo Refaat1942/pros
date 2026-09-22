@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CustomDocumentController;
 use App\Http\Controllers\Admin\DocumentsHubController;
 use App\Http\Controllers\Admin\DocumentTemplateController;
 use App\Http\Controllers\Admin\CatalogListSettingsController;
+use App\Http\Controllers\Admin\StockUomSettingsController;
 use App\Http\Controllers\Admin\CostingSettingsController;
 use App\Http\Controllers\Admin\FormFieldSettingsController;
 use App\Http\Controllers\Admin\MilitaryRankController;
@@ -318,6 +319,11 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,catalog-list-settings')->group(function () {
             Route::put('catalog-list-settings', [CatalogListSettingsController::class, 'update'])
                 ->name('catalog-list-settings.update');
+        });
+
+        Route::middleware('dashboard.page:admin,stock-uom-settings')->group(function () {
+            Route::put('stock-uom-settings', [StockUomSettingsController::class, 'update'])
+                ->name('stock-uom-settings.update');
         });
 
         Route::middleware('dashboard.page:admin,pathway-settings')->group(function () {

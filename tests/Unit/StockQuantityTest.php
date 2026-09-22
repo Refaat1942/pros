@@ -23,6 +23,13 @@ class StockQuantityTest extends TestCase
         $this->assertEquals(0.1, $kg);
     }
 
+    public function test_to_item_uom_centimeters_to_meters(): void
+    {
+        $meters = StockQuantity::toItemUom('0.92 سم', null, 'متر');
+
+        $this->assertEqualsWithDelta(0.0092, $meters, 0.00001);
+    }
+
     public function test_line_cost_fractional(): void
     {
         $cost = StockQuantity::lineCost(0.1, 1000.0);

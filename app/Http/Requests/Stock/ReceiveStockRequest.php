@@ -10,8 +10,9 @@ class ReceiveStockRequest extends BaseRequest
     {
         return [
             'stock_item_id' => ['required', 'integer', 'exists:stock_items,id'],
-            'qty' => ['required', 'integer', 'min:1'],
+            'qty' => ['required', 'numeric', 'min:0.0001'],
             'unit_price' => ['required', 'numeric', 'min:0.01'],
+            'quantity_basis' => ['nullable', 'string', 'in:auto,supply,base'],
             'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
             'invoice_no' => ['required', 'string', 'max:100'],
             'moved_at' => ['required', 'date', 'before_or_equal:today'],

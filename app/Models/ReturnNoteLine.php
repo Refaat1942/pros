@@ -20,8 +20,8 @@ class ReturnNoteLine extends Model
     ];
 
     protected $casts = [
-        'qty_requested' => 'integer',
-        'qty_returned' => 'integer',
+        'qty_requested' => 'decimal:4',
+        'qty_returned' => 'decimal:4',
     ];
 
     public function returnNote(): BelongsTo

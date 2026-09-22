@@ -50,12 +50,15 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>الكمية</label>
-                <input type="number" min="1" id="receiveQty" class="form-control" required>
+                <label for="receiveQty">الكمية</label>
+                <input type="number" min="0.0001" step="any" id="receiveQty" class="form-control" required>
             </div>
             <div class="form-group">
                 <label>سعر الوحدة</label>
                 <input type="number" min="0.01" step="0.01" id="receiveUnitPrice" class="form-control" required>
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+                <p id="receiveUomHint" style="display:none;margin:0;font-size:13px;color:var(--text-muted);"></p>
             </div>
             <div class="form-group">
                 <label>المورد</label>
@@ -90,6 +93,7 @@
 <script>
 window.__INBOUND_RECEIVE_ENABLED = @json($inbound_document_upload ?? true);
 window.__INVENTORY_RECEIVE_URL = @json($receiveUrl);
+window.__RECEIVE_STOCK_META = @json($receive_stock_meta ?? []);
 window.__RECEIVE_PENDING_LINES_URL = @json($pendingLinesUrl);
 </script>
 @include('partials.inventory-receive-form-script')

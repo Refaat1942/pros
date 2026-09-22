@@ -10,6 +10,8 @@ use App\Models\ReturnNoteLine;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Support\StockQtyMath;
+use App\Support\StockQuantity;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -27,7 +29,7 @@ class ReturnNoteService
     /**
      * إنشاء إذن ارتجاع مع بنوده.
      *
-     * @param  list<array{stock_item_code: string, qty: int, name?: string}>  $lines
+     * @param  list<array{stock_item_code: string, qty: mixed, qty_uom?: string, name?: string}>  $lines
      */
     public function create(Bom $bom, array $lines, string $reason, User $createdBy): ReturnNote
     {
@@ -55,16 +57,29 @@ class ReturnNoteService
 
             foreach ($lines as $row) {
                 $code = $row['stock_item_code'];
-                $qty = (int) $row['qty'];
+                $stockItem = StockItem::findByOperationalCode($code, true)
+                    ?? abort(422, "الصنف غير موجود: {$code}");
+                $uom = $stockItem->uom ?? 'قطعة';
+
+                try {
+                    $qty = StockQuantity::toItemUom($row['qty'], $row['qty_uom'] ?? null, $uom);
+                } catch (\InvalidArgumentException $e) {
+                    abort(422, $e->getMessage());
+                }
+
+                if (! StockQtyMath::isPositive($qty)) {
+                    abort(422, 'الكمية يجب أن تكون أكبر من صفر.');
+                }
+
                 $bomItem = $bom->items->firstWhere('stock_item_code', $code);
 
                 if (! $bomItem) {
                     abort(422, "الصنف {$code} غير موجود في BOM.");
                 }
 
-                if ($qty > $bomItem->returnRequestMaxQty(null, $bom->stage)) {
-                    $max = $bomItem->returnRequestMaxQty(null, $bom->stage);
-                    abort(422, $max === 0
+                $max = $bomItem->returnRequestMaxQty(null, $bom->stage);
+                if ($qty > $max + StockQtyMath::EPSILON) {
+                    abort(422, $max <= 0
                         ? "لا يمكن ارتجاع المزيد من الصنف {$code} — الكمية محجوزة في طلب ارتجاع أو يجب الإبقاء على وحدة في قسم الإنتاج."
                         : "لا يمكن ارتجاع كامل الكمية للصنف {$code} — الحد الأقصى {$max}.");
                 }
@@ -73,7 +88,7 @@ class ReturnNoteService
                     'return_note_id' => $note->id,
                     'stock_item_code' => $code,
                     'name' => $row['name'] ?? $bomItem->name,
-                    'qty_requested' => $qty,
+                    'qty_requested' => round($qty, 4),
                     'qty_returned' => 0,
                     'reason' => $reason,
                 ]);
@@ -93,8 +108,8 @@ class ReturnNoteService
     /**
      * إتمام الارتجاع — مسح باركود وإرجاع الكميات للمخزون.
      *
-     * @param  list<array{line_id: int, barcode: string, qty_returned: int}>  $scannedLines
-     * @return array{note: ReturnNote, stock_updates: list<array{stock_item_code: string, name: string, qty_returned: int, qty_before: int, qty_after: int, unit_cost: float, line_value: float}>}
+     * @param  list<array{line_id: int, barcode: string, qty_returned: mixed, qty_uom?: string}>  $scannedLines
+     * @return array{note: ReturnNote, stock_updates: list<array{stock_item_code: string, name: string, qty_returned: float, qty_before: float, qty_after: float, unit_cost: float, line_value: float}>}
      */
     public function complete(ReturnNote $note, array $scannedLines): array
     {
@@ -122,21 +137,33 @@ class ReturnNoteService
                     abort(422, 'بند الارتجاع غير موجود.');
                 }
 
-                $qtyReturned = (int) $scan['qty_returned'];
-                $remaining = $line->qty_requested - $line->qty_returned;
+                $stockItem = StockItem::whereKey(
+                    StockItem::findByOperationalCode($line->stock_item_code, true)?->id
+                )->lockForUpdate()->first()
+                    ?? abort(422, "الصنف غير موجود: {$line->stock_item_code}");
 
-                if ($qtyReturned < 1 || $qtyReturned > $remaining) {
-                    abort(422, "كمية غير صالحة للصنف {$line->stock_item_code}.");
+                $uom = $stockItem->uom ?? 'قطعة';
+
+                try {
+                    $qtyReturned = StockQuantity::toItemUom(
+                        $scan['qty_returned'],
+                        $scan['qty_uom'] ?? null,
+                        $uom,
+                    );
+                } catch (\InvalidArgumentException $e) {
+                    abort(422, $e->getMessage());
+                }
+
+                $qtyReturned = round($qtyReturned, 4);
+                $remaining = round((float) $line->qty_requested - (float) $line->qty_returned, 4);
+
+                if (! StockQtyMath::isPositive($qtyReturned) || $qtyReturned > $remaining + StockQtyMath::EPSILON) {
+                    abort(422, "كمية غير صالحة للصنف {$line->stock_item_code}. المتبقي: {$remaining}.");
                 }
 
                 if (! $this->barcodeValidation->validateBarcodeForCode($scan['barcode'], $line->stock_item_code)) {
                     abort(422, "باركود غير مطابق للصنف {$line->stock_item_code}.");
                 }
-
-                $stockItem = StockItem::whereKey(
-                    StockItem::findByOperationalCode($line->stock_item_code, true)?->id
-                )->lockForUpdate()->first()
-                    ?? abort(422, "الصنف غير موجود: {$line->stock_item_code}");
 
                 if (! isset($stockBefore[$stockItem->code])) {
                     $stockBefore[$stockItem->code] = [
@@ -224,8 +251,8 @@ class ReturnNoteService
                     'stock_item_code' => $line->stock_item_code,
                     'name' => $line->name,
                     'qty_returned' => $qtyReturned,
-                    'qty_before' => (int) $qtyBefore,
-                    'qty_after' => (int) $runningBalance,
+                    'qty_before' => round($qtyBefore, 4),
+                    'qty_after' => round($runningBalance, 4),
                     'unit_cost' => $unitCostForLine,
                     'line_value' => round($lineValue, 2),
                 ];
@@ -240,7 +267,7 @@ class ReturnNoteService
             $note->refresh()->load('lines');
 
             $allComplete = $note->lines->every(
-                fn (ReturnNoteLine $l) => $l->qty_returned >= $l->qty_requested
+                fn (ReturnNoteLine $l) => StockQtyMath::gte((float) $l->qty_returned, (float) $l->qty_requested)
             );
 
             $note->update([

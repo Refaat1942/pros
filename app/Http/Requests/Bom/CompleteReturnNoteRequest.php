@@ -12,7 +12,8 @@ class CompleteReturnNoteRequest extends BaseRequest
             'scanned_lines' => ['required', 'array', 'min:1'],
             'scanned_lines.*.line_id' => ['required', 'integer', 'exists:return_note_lines,id'],
             'scanned_lines.*.barcode' => ['required', 'string', 'max:100'],
-            'scanned_lines.*.qty_returned' => ['required', 'integer', 'min:1'],
+            'scanned_lines.*.qty_returned' => ['required'],
+            'scanned_lines.*.qty_uom' => ['nullable', 'string', 'max:50'],
         ];
     }
 
