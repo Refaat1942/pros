@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Adjustments\AdjustmentEditRequestController;
+use App\Http\Controllers\Adjustments\AdjustmentItemGroupController;
 use App\Http\Controllers\Adjustments\AdjustmentsController;
 use App\Http\Controllers\Adjustments\AdjustmentsHistoryController;
 use App\Http\Controllers\Dashboard\AdjustmentsDashboardController;
@@ -70,6 +71,17 @@ Route::prefix('adjustments')
 
             Route::post('adjustments/{case}/edit-request', [AdjustmentEditRequestController::class, 'store'])
                 ->name('adjustments.edit-request.store');
+
+            Route::get('item-groups/search-items', [AdjustmentItemGroupController::class, 'searchItems'])
+                ->name('item-groups.search-items');
+            Route::get('item-groups', [AdjustmentItemGroupController::class, 'index'])
+                ->name('item-groups.index');
+            Route::post('item-groups', [AdjustmentItemGroupController::class, 'store'])
+                ->name('item-groups.store');
+            Route::put('item-groups/{adjustmentItemGroup}', [AdjustmentItemGroupController::class, 'update'])
+                ->name('item-groups.update');
+            Route::delete('item-groups/{adjustmentItemGroup}', [AdjustmentItemGroupController::class, 'destroy'])
+                ->name('item-groups.destroy');
         });
 
         Route::middleware('dashboard.page:adjustments,adjustments')->group(function () {
