@@ -56,20 +56,28 @@ class StockImportService
      */
     public function import(UploadedFile $file): array
     {
+        @set_time_limit(0);
+
         $created = 0;
         $updated = 0;
         $skipped = 0;
         $errors = [];
+        $rowsProcessed = 0;
 
         ['map' => $columnMap, 'rows' => $rows] = $this->readRowsWithColumnMap($file);
 
-        DB::transaction(function () use ($rows, $columnMap, &$created, &$updated, &$skipped, &$errors) {
+        DB::transaction(function () use ($rows, $columnMap, &$created, &$updated, &$skipped, &$errors, &$rowsProcessed) {
+            /** @var array<string, int> $batchResolved */
+            $batchResolved = [];
+
             foreach ($rows as $lineNo => $cols) {
                 $parsed = $this->parseRowColumns($cols, $columnMap);
+                $parsed = $this->normalizeParsedImportRow($parsed);
 
                 if ($parsed['catalog_number'] === '' && $parsed['name'] === '') {
                     continue;
                 }
+                $rowsProcessed++;
                 if ($parsed['name'] === '') {
                     $skipped++;
                     $errors[] = "السطر {$lineNo}: اسم الصنف مفقود.";
@@ -98,6 +106,8 @@ class StockImportService
                     }
                 }
 
+                $importPrice = round((float) $this->num($parsed['price_raw'] ?? '0'), 2);
+
                 $payload = [
                     'catalog_number' => $parsed['catalog_number'] !== '' ? $parsed['catalog_number'] : null,
                     'page_number' => $parsed['page_number'] !== '' ? $parsed['page_number'] : null,
@@ -110,17 +120,27 @@ class StockImportService
                     'discount' => $discount,
                     'balance' => $balance,
                     'qty' => $balance,
-                    'price' => round((float) $this->num($parsed['price_raw'] ?? '0'), 2),
                 ];
+                if ($importPrice > 0) {
+                    $payload['price'] = $importPrice;
+                }
 
-                $existing = $this->findExistingForImport($parsed);
+                $identityKey = $this->importIdentityKey($parsed);
+                $existing = isset($batchResolved[$identityKey])
+                    ? StockItem::query()->find($batchResolved[$identityKey])
+                    : $this->findExistingForImport($parsed);
 
                 try {
                     if ($existing) {
                         $this->catalogService->update($existing, $payload);
+                        $batchResolved[$identityKey] = (int) $existing->id;
                         $updated++;
                     } else {
-                        $this->catalogService->create($payload);
+                        $item = $this->catalogService->create(array_merge(
+                            $payload,
+                            ['price' => $importPrice],
+                        ));
+                        $batchResolved[$identityKey] = (int) $item->id;
                         $created++;
                     }
                 } catch (\InvalidArgumentException $e) {
@@ -142,7 +162,10 @@ class StockImportService
 
         StockCatalogPicker::forgetCachedRows();
 
-        return compact('created', 'updated', 'skipped', 'errors');
+        return compact('created', 'updated', 'skipped', 'errors') + [
+            'rows_processed' => $rowsProcessed,
+            'rows_in_file' => count($rows),
+        ];
     }
 
     /**
@@ -245,6 +268,10 @@ class StockImportService
             if ($columnMap === null && $this->isHeaderRow($cols)) {
                 $columnMap = $this->buildColumnMap($cols);
 
+                continue;
+            }
+
+            if ($columnMap !== null && $this->isHeaderRow($cols)) {
                 continue;
             }
 
@@ -352,10 +379,21 @@ class StockImportService
      */
     private function findExistingForImport(array $parsed): ?StockItem
     {
-        $pageNumber = trim((string) ($parsed['page_number'] ?? ''));
-        $altCodes = trim((string) ($parsed['alt_codes'] ?? ''));
-        $catalogNumber = trim((string) ($parsed['catalog_number'] ?? ''));
-        $name = trim((string) ($parsed['name'] ?? ''));
+        $parsed = $this->normalizeParsedImportRow($parsed);
+        $pageNumber = $parsed['page_number'];
+        $altCodes = $parsed['alt_codes'];
+        $catalogNumber = $parsed['catalog_number'];
+        $name = $parsed['name'];
+
+        if ($catalogNumber !== '' && $pageNumber !== '') {
+            $byCatalogPage = StockItem::query()
+                ->where('catalog_number', $catalogNumber)
+                ->where('page_number', $pageNumber)
+                ->first();
+            if ($byCatalogPage !== null) {
+                return $byCatalogPage;
+            }
+        }
 
         if ($altCodes !== '') {
             $byAlt = StockItem::query()->where('alt_codes', $altCodes)->first();
@@ -365,14 +403,9 @@ class StockImportService
         }
 
         if ($catalogNumber !== '') {
-            if ($pageNumber !== '') {
-                $byCatalogPage = StockItem::query()
-                    ->where('catalog_number', $catalogNumber)
-                    ->where('page_number', $pageNumber)
-                    ->first();
-                if ($byCatalogPage !== null) {
-                    return $byCatalogPage;
-                }
+            $byCode = StockItem::query()->where('code', $catalogNumber)->first();
+            if ($byCode !== null) {
+                return $byCode;
             }
 
             if ($name !== '') {
@@ -385,7 +418,6 @@ class StockImportService
                 }
             }
 
-            // توافق خلفي: صنف قديم مُعرَّف برقم الصنف في code فقط.
             $legacy = StockItem::query()
                 ->where('code', $catalogNumber)
                 ->where(function ($q) {
@@ -397,7 +429,70 @@ class StockImportService
             }
         }
 
+        if ($pageNumber !== '' && $catalogNumber === '') {
+            $byPage = StockItem::query()->where('page_number', $pageNumber)->first();
+            if ($byPage !== null) {
+                return $byPage;
+            }
+
+            $byPageCode = StockItem::query()->where('code', $pageNumber)->first();
+            if ($byPageCode !== null) {
+                return $byPageCode;
+            }
+        }
+
         return null;
+    }
+
+    /**
+     * @param  array<string, string>  $parsed
+     * @return array<string, string>
+     */
+    private function normalizeParsedImportRow(array $parsed): array
+    {
+        foreach (['catalog_number', 'page_number', 'name', 'brand', 'alt_codes', 'uom', 'price_raw'] as $field) {
+            $parsed[$field] = $this->normalizeImportIdentifier((string) ($parsed[$field] ?? ''));
+        }
+
+        return $parsed;
+    }
+
+    private function normalizeImportIdentifier(string $value): string
+    {
+        $value = trim($value);
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, string>  $parsed
+     */
+    private function importIdentityKey(array $parsed): string
+    {
+        $parsed = $this->normalizeParsedImportRow($parsed);
+
+        if ($parsed['catalog_number'] !== '' && $parsed['page_number'] !== '') {
+            return 'cat-page:'.$parsed['catalog_number'].'|'.$parsed['page_number'];
+        }
+
+        if ($parsed['alt_codes'] !== '') {
+            return 'alt:'.$parsed['alt_codes'];
+        }
+
+        if ($parsed['catalog_number'] !== '' && $parsed['name'] !== '') {
+            return 'cat-name:'.$parsed['catalog_number'].'|'.$parsed['name'];
+        }
+
+        if ($parsed['catalog_number'] !== '') {
+            return 'cat:'.$parsed['catalog_number'];
+        }
+
+        if ($parsed['page_number'] !== '') {
+            return 'page:'.$parsed['page_number'];
+        }
+
+        return 'name:'.$parsed['name'];
     }
 
     /**
