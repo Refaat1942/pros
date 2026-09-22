@@ -59,15 +59,36 @@ final class StockSupplyUom
     /**
      * @return array{base_qty: float, base_unit_price: float, supply_qty: float|null, supply_unit_price: float|null}
      */
+    public static function configuredReceiveBasis(StockItem $item): string
+    {
+        $raw = trim((string) ($item->receive_quantity_basis ?? ''));
+
+        return in_array($raw, [StockItem::RECEIVE_BASIS_SUPPLY, StockItem::RECEIVE_BASIS_BASE], true)
+            ? $raw
+            : StockItem::RECEIVE_BASIS_AUTO;
+    }
+
+    public static function effectiveReceiveBasis(StockItem $item, string $requestBasis = 'auto'): string
+    {
+        $configured = self::configuredReceiveBasis($item);
+        if ($configured !== StockItem::RECEIVE_BASIS_AUTO) {
+            return $configured;
+        }
+
+        if ($requestBasis === StockItem::RECEIVE_BASIS_SUPPLY || $requestBasis === StockItem::RECEIVE_BASIS_BASE) {
+            return $requestBasis;
+        }
+
+        return self::receivesInSupplyUom($item) ? StockItem::RECEIVE_BASIS_SUPPLY : StockItem::RECEIVE_BASIS_BASE;
+    }
+
     public static function resolveReceiveQuantities(
         StockItem $item,
         float $qty,
         float $unitPrice,
         string $quantityBasis,
     ): array {
-        $basis = $quantityBasis === 'auto'
-            ? (self::receivesInSupplyUom($item) ? 'supply' : 'base')
-            : $quantityBasis;
+        $basis = self::effectiveReceiveBasis($item, $quantityBasis);
 
         if ($basis === 'supply') {
             return [
@@ -99,5 +120,21 @@ final class StockSupplyUom
         $base = $item->uom ?? 'وحدة';
 
         return "1 {$supply} = ".rtrim(rtrim(number_format($factor, 4, '.', ''), '0'), '.')." {$base}";
+    }
+
+    /** ملخص محاسبي للعرض في كارت الصنف. */
+    public static function accountingSummary(StockItem $item): string
+    {
+        $base = $item->uom ?? 'قطعة';
+
+        if (! self::receivesInSupplyUom($item)) {
+            return "الرصيد والـ WAC والصرف بوحدة المخزن ({$base}). قيمة الفاتورة = الكمية × سعر الوحدة.";
+        }
+
+        $supply = self::supplyUomLabel($item);
+
+        return "الفاتورة تُسجَّل بـ {$supply}؛ الرصيد والـ WAC والصرف بـ {$base}. "
+            .self::conversionHint($item)
+            .' — مديونية المورد = كمية التوريد × سعر التوريد.';
     }
 }

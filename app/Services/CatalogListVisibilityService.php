@@ -210,6 +210,8 @@ class CatalogListVisibilityService
                 'units_per_supply_unit',
                 'receive_in_supply_uom',
                 'supply_conversion_hint',
+                'receive_quantity_basis',
+                'accounting_uom_summary',
             ],
             default => [],
         };
@@ -219,6 +221,8 @@ class CatalogListVisibilityService
             'units_per_supply_unit',
             'receive_in_supply_uom',
             'supply_conversion_hint',
+            'receive_quantity_basis',
+            'accounting_uom_summary',
         ]);
     }
 

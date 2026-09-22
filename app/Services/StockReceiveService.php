@@ -71,7 +71,10 @@ class StockReceiveService
                 'moved_at' => $movedAt,
             ]);
 
-            $this->supplierDebtService->increaseDue($supplier, round($qty * $unitPrice, 2));
+            $invoiceLineTotal = $supplyQuantity !== null && $supplyUnitCost !== null
+                ? round($supplyQuantity * $supplyUnitCost, 2)
+                : round($qty * $unitPrice, 2);
+            $this->supplierDebtService->increaseDue($supplier, $invoiceLineTotal);
             app(SupplierService::class)->attachStockItem($supplier, $item);
 
             $this->stockPriceService->recalcWac($item, $qty, $unitPrice);

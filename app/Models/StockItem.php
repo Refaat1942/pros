@@ -32,6 +32,7 @@ class StockItem extends Model
         'uom',
         'supply_uom',
         'units_per_supply_unit',
+        'receive_quantity_basis',
         'barcode',
         'alt_codes',
         'qty',
@@ -89,23 +90,32 @@ class StockItem extends Model
             ->withTimestamps();
     }
 
-    /** الرصيد المحاسبي = رصيد أول المدة + الإضافة − الخصم. */
-    public function catalogBalance(): int
+    public const RECEIVE_BASIS_AUTO = 'auto';
+
+    public const RECEIVE_BASIS_SUPPLY = 'supply';
+
+    public const RECEIVE_BASIS_BASE = 'base';
+
+    /** الرصيد المحاسبي = رصيد أول المدة + الإضافة − الخصم (بوحدة المخزن). */
+    public function catalogBalance(): float
     {
-        return (int) ($this->opening_qty ?? 0)
-            + (int) ($this->addition ?? 0)
-            - (int) ($this->discount ?? 0);
+        return round(
+            (float) ($this->opening_qty ?? 0)
+            + (float) ($this->addition ?? 0)
+            - (float) ($this->discount ?? 0),
+            4,
+        );
     }
 
-    public function availableQty(): int
+    public function availableQty(): float
     {
-        return $this->qty - $this->reserved;
+        return round((float) $this->qty - (float) $this->reserved, 4);
     }
 
     /** كمية العجز المطلوب توريدها (حجز يتجاوز الرصيد الفعلي). */
-    public function backorderQty(): int
+    public function backorderQty(): float
     {
-        return max(0, $this->reserved - $this->qty);
+        return max(0.0, round((float) $this->reserved - (float) $this->qty, 4));
     }
 
     public function isBackorder(): bool

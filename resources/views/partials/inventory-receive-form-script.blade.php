@@ -44,11 +44,15 @@
     fd.append('stock_item_id', document.getElementById('receiveStockItemId').value);
     fd.append('qty', document.getElementById('receiveQty').value);
     fd.append('unit_price', document.getElementById('receiveUnitPrice').value);
-    if (m && m.receive_in_supply_uom) {
-      fd.append('quantity_basis', 'supply');
-    } else {
-      fd.append('quantity_basis', 'base');
+    var basis = 'auto';
+    if (m && m.receive_quantity_basis && m.receive_quantity_basis !== 'auto') {
+      basis = m.receive_quantity_basis;
+    } else if (m && m.receive_in_supply_uom) {
+      basis = 'supply';
+    } else if (m) {
+      basis = 'base';
     }
+    fd.append('quantity_basis', basis);
     fd.append('supplier_id', document.getElementById('receiveSupplierId').value);
     fd.append('invoice_no', document.getElementById('receiveInvoiceNo').value);
     fd.append('moved_at', document.getElementById('receiveMovedAt').value);

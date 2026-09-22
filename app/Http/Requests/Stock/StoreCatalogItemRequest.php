@@ -22,6 +22,7 @@ class StoreCatalogItemRequest extends BaseRequest
             'supply_uom' => ['nullable', 'string', 'max:50'],
             'units_per_supply_unit' => ['nullable', 'numeric', 'min:0.000001'],
             'uom_profile' => ['nullable', 'string', 'max:80'],
+            'receive_quantity_basis' => ['nullable', 'string', 'in:auto,supply,base'],
             'qty' => ['nullable', 'integer', 'min:0'],
             'opening_qty' => ['nullable', 'integer', 'min:0'],
             'addition' => ['nullable', 'integer', 'min:0'],

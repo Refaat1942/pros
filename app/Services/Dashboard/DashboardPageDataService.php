@@ -990,6 +990,8 @@ class DashboardPageDataService
                         'units_per_supply_unit' => (float) ($item->units_per_supply_unit ?? 1),
                         'receive_in_supply_uom' => StockSupplyUom::receivesInSupplyUom($item),
                         'hint' => StockSupplyUom::conversionHint($item),
+                        'receive_quantity_basis' => StockSupplyUom::configuredReceiveBasis($item),
+                        'accounting_uom_summary' => StockSupplyUom::accountingSummary($item),
                     ],
                 ];
             })

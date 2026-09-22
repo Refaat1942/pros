@@ -94,6 +94,8 @@ class StockCatalogService
             'units_per_supply_unit' => (float) ($item->units_per_supply_unit ?? 1),
             'receive_in_supply_uom' => StockSupplyUom::receivesInSupplyUom($item),
             'supply_conversion_hint' => StockSupplyUom::conversionHint($item),
+            'receive_quantity_basis' => $item->receive_quantity_basis ?? StockItem::RECEIVE_BASIS_AUTO,
+            'accounting_uom_summary' => StockSupplyUom::accountingSummary($item),
             'category' => $item->category?->name ?? '',
             'category_id' => $item->category_id,
             'qty' => (int) $item->qty,
@@ -231,6 +233,8 @@ class StockCatalogService
             'units_per_supply_unit' => (float) ($item->units_per_supply_unit ?? 1),
             'receive_in_supply_uom' => StockSupplyUom::receivesInSupplyUom($item),
             'supply_conversion_hint' => StockSupplyUom::conversionHint($item),
+            'receive_quantity_basis' => $item->receive_quantity_basis ?? StockItem::RECEIVE_BASIS_AUTO,
+            'accounting_uom_summary' => StockSupplyUom::accountingSummary($item),
             'attributes' => $this->categorySchema->formatItemAttributes($item),
             'attributes_map' => collect($this->categorySchema->formatItemAttributes($item))
                 ->mapWithKeys(fn (array $row) => [$row['field_key'] => $row['value']])
@@ -288,12 +292,12 @@ class StockCatalogService
             $code = $this->resolveInternalItemCode($requestedCode, $catalogNumber, $data['page_number'] ?? null);
             $operationalCode = $this->resolveOperationalCode($data['alt_codes'] ?? null);
             $category = ! empty($data['category_id']) ? StockCategory::find($data['category_id']) : null;
-            $openingQty = (int) ($data['opening_qty'] ?? $data['qty'] ?? 0);
-            $addition = (int) ($data['addition'] ?? 0);
-            $discount = (int) ($data['discount'] ?? 0);
+            $openingQty = $this->ledgerQty($data['opening_qty'] ?? $data['qty'] ?? 0);
+            $addition = $this->ledgerQty($data['addition'] ?? 0);
+            $discount = $this->ledgerQty($data['discount'] ?? 0);
             $qty = array_key_exists('balance', $data)
-                ? (int) $data['balance']
-                : (array_key_exists('qty', $data) ? (int) $data['qty'] : ($openingQty + $addition - $discount));
+                ? $this->ledgerQty($data['balance'])
+                : (array_key_exists('qty', $data) ? $this->ledgerQty($data['qty']) : ($openingQty + $addition - $discount));
             $price = (float) ($data['price'] ?? 0);
 
             $item = StockItem::create([
@@ -358,14 +362,14 @@ class StockCatalogService
             $before = $this->formatItem($item);
             $price = array_key_exists('price', $data) ? (float) $data['price'] : (float) $item->price;
             $openingQty = array_key_exists('opening_qty', $data)
-                ? (int) $data['opening_qty']
-                : (int) ($item->opening_qty ?? 0);
-            $addition = array_key_exists('addition', $data) ? (int) $data['addition'] : (int) ($item->addition ?? 0);
-            $discount = array_key_exists('discount', $data) ? (int) $data['discount'] : (int) ($item->discount ?? 0);
+                ? $this->ledgerQty($data['opening_qty'])
+                : (float) ($item->opening_qty ?? 0);
+            $addition = array_key_exists('addition', $data) ? $this->ledgerQty($data['addition']) : (float) ($item->addition ?? 0);
+            $discount = array_key_exists('discount', $data) ? $this->ledgerQty($data['discount']) : (float) ($item->discount ?? 0);
             $qty = array_key_exists('balance', $data)
-                ? (int) $data['balance']
+                ? $this->ledgerQty($data['balance'])
                 : (array_key_exists('qty', $data)
-                    ? (int) $data['qty']
+                    ? $this->ledgerQty($data['qty'])
                     : ($openingQty + $addition - $discount));
 
             $operationalCode = array_key_exists('alt_codes', $data)
@@ -573,6 +577,7 @@ class StockCatalogService
             && $profileKey === ''
             && ! array_key_exists('supply_uom', $data)
             && ! array_key_exists('units_per_supply_unit', $data)
+            && ! array_key_exists('receive_quantity_basis', $data)
         ) {
             return [];
         }
@@ -605,10 +610,40 @@ class StockCatalogService
             $factor = 1.0;
         }
 
+        if ($supplyUom === null || $supplyUom === '') {
+            $supplyUom = null;
+            $factor = 1.0;
+        }
+
+        $basis = null;
+        if (array_key_exists('receive_quantity_basis', $data)) {
+            $basis = $this->normalizeReceiveBasis($data['receive_quantity_basis']);
+        } elseif ($existing) {
+            $basis = $existing->receive_quantity_basis;
+        }
+
         return [
             'supply_uom' => $supplyUom,
             'units_per_supply_unit' => $factor,
+            'receive_quantity_basis' => $basis,
         ];
+    }
+
+    private function normalizeReceiveBasis(mixed $value): ?string
+    {
+        $v = trim((string) $value);
+        if ($v === '' || $v === StockItem::RECEIVE_BASIS_AUTO) {
+            return null;
+        }
+
+        return in_array($v, [StockItem::RECEIVE_BASIS_SUPPLY, StockItem::RECEIVE_BASIS_BASE], true)
+            ? $v
+            : null;
+    }
+
+    private function ledgerQty(mixed $value): float
+    {
+        return round(max(0, (float) $value), 4);
     }
 
     /**

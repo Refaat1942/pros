@@ -248,7 +248,18 @@
                     <p id="slimSupplyHint" style="margin:4px 0 0;font-size:12px;color:var(--text-muted);"></p>
                 </div>
                 <div>
-                    <label class="catalog-form-label">رصيد أول المده</label>
+                    <label class="catalog-form-label">إدخال الاستلام (الفاتورة)</label>
+                    <select id="slimReceiveBasis" class="catalog-form-input">
+                        <option value="auto">تلقائي — توريد إن وُجد تحويل</option>
+                        <option value="supply">دائماً بوحدة التوريد</option>
+                        <option value="base">دائماً بوحدة المخزن</option>
+                    </select>
+                </div>
+                <div class="catalog-form-grid__full">
+                    <p id="slimAccountingUomNote" class="catalog-form-label" style="font-weight:500;line-height:1.6;color:var(--text-muted);margin:0;"></p>
+                </div>
+                <div>
+                    <label class="catalog-form-label">رصيد أول المده (وحدة المخزن)</label>
                     <input type="number" id="slimOpeningQty" min="0" value="0" class="catalog-form-input">
                 </div>
                 <div>
@@ -268,7 +279,7 @@
                     <input type="number" id="slimMinQty" min="0" value="0" class="catalog-form-input" placeholder="مثال: 10">
                 </div>
                 <div>
-                    <label class="catalog-form-label">السعر الأساسي</label>
+                    <label class="catalog-form-label">السعر الأساسي (ج.م / وحدة المخزن)</label>
                     <div class="catalog-price-with-qty">
                         <input type="number" id="slimPrice" min="0" step="0.01" value="0" class="catalog-form-input">
                         <span id="slimBasePriceQty" class="slim-price-qty-badge" hidden></span>
@@ -1239,15 +1250,21 @@ window.__STOCK_CATEGORIES = @json($categories->values());
 
     function updateSupplyHint() {
         var hint = document.getElementById('slimSupplyHint');
+        var note = document.getElementById('slimAccountingUomNote');
         if (!hint) return;
         var base = (document.getElementById('slimUom').value || 'قطعة').trim();
         var supply = (document.getElementById('slimSupplyUom').value || '').trim();
         var factor = parseFloat(document.getElementById('slimUnitsPerSupply').value || '1');
         if (!supply || factor === 1) {
             hint.textContent = 'الاستلام والصرف بوحدة المخزن: ' + base;
+            if (note) note.textContent = 'محاسبياً: الرصيد والـ WAC والصرف والارتجاع بـ ' + base + '. قيمة فاتورة المورد = الكمية × السعر (نفس الوحدة).';
             return;
         }
         hint.textContent = '1 ' + supply + ' = ' + factor + ' ' + base + ' (يُحوَّل تلقائياً عند الاستلام)';
+        if (note) {
+            note.textContent = 'محاسبياً: تسجّل الفاتورة بـ ' + supply + ' والسعر/الورقة؛ الرصيد والـ WAC والصرف بـ ' + base
+                + '. مديونية المورد = كمية التوريد × سعر التوريد (مثال: 2 ورقة × 500 ج.م = 1000 ج.م).';
+        }
     }
 
     function escapeHtml(text) {
@@ -1408,6 +1425,9 @@ window.__STOCK_CATEGORIES = @json($categories->values());
         }
         if (document.getElementById('slimUomProfile')) {
             document.getElementById('slimUomProfile').value = '';
+        }
+        if (document.getElementById('slimReceiveBasis')) {
+            document.getElementById('slimReceiveBasis').value = v.receive_quantity_basis || 'auto';
         }
         updateSupplyHint();
         document.getElementById('slimOpeningQty').value = v.opening_qty != null ? v.opening_qty : 0;
@@ -1621,7 +1641,11 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             + detailBox('رقم الصفحة', item.page_number || '—')
             + detailBox('الماركة', item.brand || '—')
             + detailBox('الأكواد', item.alt_codes || item.barcode || '—')
-            + detailBox('الوحدة', item.uom || 'قطعة')
+            + detailBox('وحدة المخزن', item.uom || 'قطعة')
+            + detailBox('وحدة التوريد', item.supply_uom || '—')
+            + detailBox('تحويل التوريد', item.supply_conversion_hint || '1:1')
+            + detailBox('إدخال الاستلام', item.receive_quantity_basis === 'supply' ? 'وحدة التوريد' : (item.receive_quantity_basis === 'base' ? 'وحدة المخزن' : 'تلقائي'))
+            + detailBox('محاسبة الوحدات', item.accounting_uom_summary || '—')
             + detailBox('رصيد أول المده', String(parseInt(item.opening_qty, 10) || 0))
             + detailBox('الاضافة', String(parseInt(item.addition, 10) || 0))
             + detailBox('الخصم', String(parseInt(item.discount, 10) || 0))
@@ -1730,7 +1754,8 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             supply_uom: (document.getElementById('slimSupplyUom') && document.getElementById('slimSupplyUom').value || '').trim() || null,
             units_per_supply_unit: parseFloat((document.getElementById('slimUnitsPerSupply') || {}).value || '1'),
             uom_profile: (document.getElementById('slimUomProfile') && document.getElementById('slimUomProfile').value || '').trim() || null,
-            opening_qty: parseInt(document.getElementById('slimOpeningQty').value || '0', 10),
+            receive_quantity_basis: (document.getElementById('slimReceiveBasis') && document.getElementById('slimReceiveBasis').value) || 'auto',
+            opening_qty: parseFloat(document.getElementById('slimOpeningQty').value || '0'),
             addition: parseInt(document.getElementById('slimAddition').value || '0', 10),
             discount: parseInt(document.getElementById('slimDiscount').value || '0', 10),
             balance: parseInt(document.getElementById('slimBalance').value || '0', 10),

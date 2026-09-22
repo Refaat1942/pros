@@ -66,7 +66,18 @@
                             <p id="slimSupplyHint" style="margin:4px 0 0;font-size:12px;color:var(--text-muted);"></p>
                         </div>
                         <div>
-                            <label class="catalog-form-label">رصيد أول المده</label>
+                            <label class="catalog-form-label">إدخال الاستلام (الفاتورة)</label>
+                            <select id="slimReceiveBasis" class="catalog-form-input">
+                                <option value="auto">تلقائي</option>
+                                <option value="supply">وحدة التوريد</option>
+                                <option value="base">وحدة المخزن</option>
+                            </select>
+                        </div>
+                        <div class="catalog-form-grid__full">
+                            <p id="slimAccountingUomNote" style="margin:0;font-size:12px;color:var(--text-muted);line-height:1.6;"></p>
+                        </div>
+                        <div>
+                            <label class="catalog-form-label">رصيد أول المده (وحدة المخزن)</label>
                             <input type="number" id="slimOpeningQty" min="0" value="0" class="catalog-form-input">
                         </div>
                         <div>

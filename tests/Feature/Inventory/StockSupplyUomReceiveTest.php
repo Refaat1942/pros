@@ -3,6 +3,7 @@
 namespace Tests\Feature\Inventory;
 
 use App\Models\StockMovement;
+use App\Models\SupplierDebt;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -45,5 +46,8 @@ class StockSupplyUomReceiveTest extends TestCase
         $this->assertEquals(2, (float) $movement->supply_quantity);
         $this->assertEquals(0.05, (float) $movement->unit_cost);
         $this->assertEquals(500, (float) $movement->supply_unit_cost);
+
+        $debt = (float) (SupplierDebt::query()->where('supplier_id', $supplier->id)->value('due') ?? 0);
+        $this->assertEquals(1000.0, $debt);
     }
 }
