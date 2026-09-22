@@ -19,8 +19,14 @@
   var UPDATE_QTY_URL = function (caseId, itemId) { return '/adjustments/adjustments/' + caseId + '/items/' + itemId; };
   var COMPLETE_URL = function (id) { return '/adjustments/adjustments/' + id + '/complete'; };
   var EDIT_REQUEST_URL = function (id) { return '/adjustments/adjustments/' + id + '/edit-request'; };
+  var GROUPS_URL = '/adjustments/item-groups';
+  var GROUPS_SEARCH_URL = '/adjustments/item-groups/search-items';
 
   var casesCache = [];
+  var savedGroupsCache = [];
+  var groupEditorId = null;
+  var groupEditorLines = [];
+  var groupSearchTimer = null;
   var catalogCache = [];
   var specGroupMatcher = [];
   var activeCase = null;
@@ -847,6 +853,324 @@
     applyModalMode();
   }
 
+  function linesFromSavedGroup(group, qtyMultiplier) {
+    var mult = qtyMultiplier > 0 ? qtyMultiplier : 1;
+    var label = group && group.name ? group.name : null;
+    return (group.items || []).map(function (line) {
+      var cat = findCatalogItem(line.stock_item_code);
+      return {
+        stock_item_code: line.stock_item_code,
+        name: cat ? cat.name : line.stock_item_code,
+        qty: normalizePickerQty((parseFloat(line.qty) || 1) * mult, 0.001),
+        group_label: label,
+      };
+    });
+  }
+
+  function postAdjustmentLines(items, successMsg) {
+    if (!activeCase || !window.axios || !items.length) return;
+
+    var backorder = false;
+    items.forEach(function (line) {
+      var catRow = findCatalogItem(line.stock_item_code);
+      if (catRow && line.qty > maxAddableQty(catRow)) backorder = true;
+    });
+    if (backorder) {
+      toast('⚠️ الكمية تتجاوز المتاح — سيُسجَّل رصيد سالب (طلب توريد).');
+    }
+
+    axios.post(ADD_URL(activeCase.id), { items: items })
+      .then(function (res) {
+        clearFormError();
+        toast(successMsg || 'تمت إضافة البنود');
+        if (activeCase.bom) {
+          activeCase.bom.items = (res.data.bom && res.data.bom.items) || [];
+        }
+        renderBomItems((res.data.bom && res.data.bom.items) || []);
+        if (res.data.price_tier_alerts && res.data.price_tier_alerts.length) {
+          renderPriceTierBanner(collectPriceTierAlertsFromItems((res.data.bom && res.data.bom.items) || []));
+        }
+        refreshItemPicker();
+      })
+      .catch(function (err) {
+        showError(apiMessage(err, 'تعذّر إضافة البنود'));
+      });
+  }
+
+  function applySavedGroup(group) {
+    if (!activeCase || !group || !group.items || !group.items.length) return;
+    if (modalMode === 'edit_request') {
+      linesFromSavedGroup(group, 1).forEach(function (line) {
+        addToEditRequestItems(line, line.qty);
+      });
+      toast('تمت إضافة بنود المجموعة «' + group.name + '»');
+      return;
+    }
+    postAdjustmentLines(linesFromSavedGroup(group, 1), 'تم تطبيق مجموعة «' + group.name + '»');
+  }
+
+  function renderSavedGroupsStrip() {
+    var list = $('adjSavedGroupsList');
+    if (!list) return;
+    if (!savedGroupsCache.length) {
+      list.innerHTML = '<span class="adj-saved-groups-empty">لا توجد مجموعات محفوظة — استخدم «إدارة المجموعات» لإنشاء ثوابت صرف متكررة.</span>';
+      return;
+    }
+    list.innerHTML = savedGroupsCache.map(function (g) {
+      var count = (g.items && g.items.length) || 0;
+      return '<span class="adj-saved-group-chip" data-group-id="' + g.id + '">' +
+        '<span>' + esc(g.name) + ' <span style="font-weight:500;color:#7c3aed;">(' + count + ')</span></span>' +
+        '<button type="button" class="btn-apply-adj-group" data-group-id="' + g.id + '">تطبيق</button></span>';
+    }).join('');
+  }
+
+  function loadSavedGroups() {
+    if (!window.axios) return;
+    axios.get(GROUPS_URL)
+      .then(function (res) {
+        savedGroupsCache = res.data.data || [];
+        renderSavedGroupsStrip();
+        renderGroupsSidebar();
+      })
+      .catch(function () {
+        var list = $('adjSavedGroupsList');
+        if (list) list.innerHTML = '<span class="adj-saved-groups-empty">تعذّر تحميل المجموعات.</span>';
+      });
+  }
+
+  function setGroupFormError(msg) {
+    var el = $('adjGroupFormError');
+    if (!el) return;
+    if (!msg) {
+      el.textContent = '';
+      el.style.display = 'none';
+      return;
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function renderGroupEditorLines() {
+    var tbody = $('adjGroupLinesBody');
+    if (!tbody) return;
+    if (!groupEditorLines.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">أضف صنفاً واحداً على الأقل.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = groupEditorLines.map(function (line, idx) {
+      return '<tr>' +
+        '<td>' + esc(line.stock_item_code) + '</td>' +
+        '<td>' + esc(line.name || '—') + '</td>' +
+        '<td><input type="number" class="form-control adj-group-line-qty" data-idx="' + idx + '" min="0.001" step="0.001" value="' + esc(line.qty) + '" style="width:88px;padding:4px 8px;"></td>' +
+        '<td><button type="button" class="adj-remove-btn btn-remove-adj-group-line" data-idx="' + idx + '" title="حذف" aria-label="حذف">×</button></td></tr>';
+    }).join('');
+  }
+
+  function renderGroupsSidebar() {
+    var ul = $('adjGroupsSidebarList');
+    if (!ul) return;
+    if (!savedGroupsCache.length) {
+      ul.innerHTML = '<li style="padding:8px;color:#94a3b8;font-size:13px;">لا توجد مجموعات بعد.</li>';
+      return;
+    }
+    ul.innerHTML = savedGroupsCache.map(function (g) {
+      var active = groupEditorId === g.id ? ' is-active' : '';
+      return '<li><button type="button" class="btn-adj-group-select' + active + '" data-group-id="' + g.id + '">' + esc(g.name) + '</button></li>';
+    }).join('');
+  }
+
+  function openGroupEditor(group) {
+    var form = $('adjGroupForm');
+    var empty = $('adjGroupEditorEmpty');
+    var delBtn = $('btnAdjGroupDelete');
+    if (!form || !empty) return;
+
+    if (!group) {
+      groupEditorId = null;
+      groupEditorLines = [];
+      form.hidden = true;
+      empty.hidden = false;
+      if (delBtn) delBtn.hidden = true;
+      renderGroupsSidebar();
+      return;
+    }
+
+    groupEditorId = group.id;
+    $('adjGroupName').value = group.name || '';
+    $('adjGroupNotes').value = group.notes || '';
+    groupEditorLines = (group.items || []).map(function (line) {
+      var cat = findCatalogItem(line.stock_item_code);
+      return {
+        stock_item_code: line.stock_item_code,
+        name: cat ? cat.name : line.stock_item_code,
+        qty: normalizePickerQty(line.qty, 1),
+      };
+    });
+    empty.hidden = true;
+    form.hidden = false;
+    if (delBtn) delBtn.hidden = false;
+    setGroupFormError('');
+    renderGroupEditorLines();
+    renderGroupsSidebar();
+  }
+
+  function startNewGroupEditor() {
+    groupEditorId = 'new';
+    $('adjGroupName').value = '';
+    $('adjGroupNotes').value = '';
+    groupEditorLines = [];
+    var form = $('adjGroupForm');
+    var empty = $('adjGroupEditorEmpty');
+    var delBtn = $('btnAdjGroupDelete');
+    if (empty) empty.hidden = true;
+    if (form) form.hidden = false;
+    if (delBtn) delBtn.hidden = true;
+    setGroupFormError('');
+    renderGroupEditorLines();
+    renderGroupsSidebar();
+  }
+
+  function openGroupsManager(selectId) {
+    var overlay = $('adjGroupsModal');
+    if (!overlay) return;
+    overlay.classList.add('is-open');
+    overlay.hidden = false;
+    document.body.classList.add('adj-groups-open');
+    loadSavedGroups();
+    if (selectId) {
+      var g = savedGroupsCache.filter(function (x) { return x.id === selectId; })[0];
+      if (g) openGroupEditor(g);
+    } else {
+      openGroupEditor(null);
+    }
+  }
+
+  function closeGroupsManager() {
+    var overlay = $('adjGroupsModal');
+    if (!overlay) return;
+    overlay.classList.remove('is-open');
+    overlay.hidden = true;
+    document.body.classList.remove('adj-groups-open');
+    groupEditorId = null;
+    groupEditorLines = [];
+    var searchResults = $('adjGroupItemSearchResults');
+    if (searchResults) searchResults.hidden = true;
+  }
+
+  function addLineToGroupEditor(item) {
+    if (!item || !item.code) return;
+    var existing = groupEditorLines.filter(function (l) { return l.stock_item_code === item.code; })[0];
+    if (existing) {
+      existing.qty = normalizePickerQty((parseFloat(existing.qty) || 0) + 1, 1);
+    } else {
+      groupEditorLines.push({
+        stock_item_code: item.code,
+        name: item.name,
+        qty: 1,
+      });
+    }
+    renderGroupEditorLines();
+  }
+
+  function saveGroupEditor(ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    if (!window.axios) return;
+
+    var name = ($('adjGroupName') && $('adjGroupName').value || '').trim();
+    if (!name) {
+      setGroupFormError('أدخل اسم المجموعة.');
+      return;
+    }
+    if (!groupEditorLines.length) {
+      setGroupFormError('أضف صنفاً واحداً على الأقل.');
+      return;
+    }
+
+    document.querySelectorAll('.adj-group-line-qty').forEach(function (input) {
+      var idx = parseInt(input.getAttribute('data-idx'), 10);
+      if (!isNaN(idx) && groupEditorLines[idx]) {
+        groupEditorLines[idx].qty = normalizePickerQty(input.value, groupEditorLines[idx].qty);
+      }
+    });
+
+    var payload = {
+      name: name,
+      notes: ($('adjGroupNotes') && $('adjGroupNotes').value || '').trim() || null,
+      items: groupEditorLines.map(function (l) {
+        return { stock_item_code: l.stock_item_code, qty: l.qty };
+      }),
+    };
+
+    var saveBtn = $('btnAdjGroupSave');
+    if (saveBtn) saveBtn.disabled = true;
+    setGroupFormError('');
+
+    var req = groupEditorId && groupEditorId !== 'new'
+      ? axios.put(GROUPS_URL + '/' + groupEditorId, payload)
+      : axios.post(GROUPS_URL, payload);
+
+    req.then(function (res) {
+      toast(res.data.message || 'تم الحفظ');
+      loadSavedGroups();
+      var saved = res.data.group;
+      if (saved) {
+        groupEditorId = saved.id;
+        openGroupEditor(saved);
+      }
+    })
+      .catch(function (err) {
+        setGroupFormError(apiMessage(err, 'تعذّر حفظ المجموعة'));
+      })
+      .finally(function () {
+        if (saveBtn) saveBtn.disabled = false;
+      });
+  }
+
+  function deleteCurrentGroup() {
+    if (!window.axios || !groupEditorId || groupEditorId === 'new') return;
+    if (!window.confirm('حذف هذه المجموعة نهائياً؟')) return;
+
+    axios.delete(GROUPS_URL + '/' + groupEditorId)
+      .then(function (res) {
+        toast(res.data.message || 'تم الحذف');
+        groupEditorId = null;
+        loadSavedGroups();
+        openGroupEditor(null);
+      })
+      .catch(function (err) {
+        setGroupFormError(apiMessage(err, 'تعذّر حذف المجموعة'));
+      });
+  }
+
+  function searchGroupCatalogItems(q) {
+    if (!window.axios) return;
+    var results = $('adjGroupItemSearchResults');
+    if (!results) return;
+    var term = (q || '').trim();
+    if (term.length < 1) {
+      results.hidden = true;
+      results.innerHTML = '';
+      return;
+    }
+    axios.get(GROUPS_SEARCH_URL, { params: { q: term, limit: 25 } })
+      .then(function (res) {
+        var rows = res.data.data || [];
+        if (!rows.length) {
+          results.innerHTML = '<li><span style="padding:10px 12px;display:block;color:#94a3b8;">لا نتائج</span></li>';
+          results.hidden = false;
+          return;
+        }
+        results.innerHTML = rows.map(function (row) {
+          return '<li><button type="button" class="btn-adj-group-pick-item" data-code="' + esc(row.code) + '" data-name="' + esc(row.name) + '">' +
+            esc(row.code) + ' — ' + esc(row.name) + '</button></li>';
+        }).join('');
+        results.hidden = false;
+      })
+      .catch(function () {
+        results.hidden = true;
+      });
+  }
+
   function addSelectedItems(closePopup) {
     if (!activeCase || !window.axios) return;
 
@@ -1160,6 +1484,98 @@
       modal.addEventListener('click', function (ev) { if (ev.target === modal) closeModal(); });
     }
 
+    var savedGroupsList = $('adjSavedGroupsList');
+    if (savedGroupsList) {
+      savedGroupsList.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-apply-adj-group');
+        if (!btn) return;
+        var id = parseInt(btn.getAttribute('data-group-id'), 10);
+        var group = savedGroupsCache.filter(function (g) { return g.id === id; })[0];
+        if (group) applySavedGroup(group);
+      });
+    }
+
+    var manageGroupsBtn = $('btnAdjManageGroups');
+    if (manageGroupsBtn) {
+      manageGroupsBtn.addEventListener('click', function () { openGroupsManager(null); });
+    }
+
+    var groupsOverlay = $('adjGroupsModal');
+    var groupsClose = $('adjGroupsClose');
+    if (groupsClose) groupsClose.addEventListener('click', closeGroupsManager);
+    if (groupsOverlay) {
+      groupsOverlay.addEventListener('click', function (e) {
+        if (e.target === groupsOverlay) closeGroupsManager();
+      });
+    }
+
+    var btnGroupNew = $('btnAdjGroupNew');
+    if (btnGroupNew) btnGroupNew.addEventListener('click', startNewGroupEditor);
+
+    var groupForm = $('adjGroupForm');
+    if (groupForm) groupForm.addEventListener('submit', saveGroupEditor);
+
+    var btnGroupCancel = $('btnAdjGroupCancelEdit');
+    if (btnGroupCancel) {
+      btnGroupCancel.addEventListener('click', function () { openGroupEditor(null); });
+    }
+
+    var btnGroupDelete = $('btnAdjGroupDelete');
+    if (btnGroupDelete) btnGroupDelete.addEventListener('click', deleteCurrentGroup);
+
+    var groupsSidebar = $('adjGroupsSidebarList');
+    if (groupsSidebar) {
+      groupsSidebar.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-adj-group-select');
+        if (!btn) return;
+        var id = parseInt(btn.getAttribute('data-group-id'), 10);
+        var group = savedGroupsCache.filter(function (g) { return g.id === id; })[0];
+        if (group) openGroupEditor(group);
+      });
+    }
+
+    var groupLinesBody = $('adjGroupLinesBody');
+    if (groupLinesBody) {
+      groupLinesBody.addEventListener('click', function (e) {
+        var rm = e.target.closest('.btn-remove-adj-group-line');
+        if (!rm) return;
+        var idx = parseInt(rm.getAttribute('data-idx'), 10);
+        if (!isNaN(idx)) {
+          groupEditorLines.splice(idx, 1);
+          renderGroupEditorLines();
+        }
+      });
+    }
+
+    var groupItemSearch = $('adjGroupItemSearch');
+    if (groupItemSearch) {
+      groupItemSearch.addEventListener('input', function () {
+        clearTimeout(groupSearchTimer);
+        var val = groupItemSearch.value || '';
+        groupSearchTimer = setTimeout(function () { searchGroupCatalogItems(val); }, 220);
+      });
+    }
+
+    var groupSearchResults = $('adjGroupItemSearchResults');
+    if (groupSearchResults) {
+      groupSearchResults.addEventListener('click', function (e) {
+        var pick = e.target.closest('.btn-adj-group-pick-item');
+        if (!pick) return;
+        addLineToGroupEditor({ code: pick.getAttribute('data-code'), name: pick.getAttribute('data-name') });
+        if (groupItemSearch) groupItemSearch.value = '';
+        groupSearchResults.hidden = true;
+        groupSearchResults.innerHTML = '';
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && $('adjGroupsModal') && $('adjGroupsModal').classList.contains('is-open')) {
+        e.preventDefault();
+        closeGroupsManager();
+      }
+    });
+
+    loadSavedGroups();
     refreshList();
   });
 })();

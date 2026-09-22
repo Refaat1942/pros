@@ -71,6 +71,16 @@
         </div>
 
         <div id="adjDirectModifySection" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border,#e2e8f0);">
+          <div class="adj-saved-groups-block" id="adjSavedGroupsBlock">
+            <div class="adj-saved-groups-head">
+              <h4 style="margin:0;font-size:14px;color:#0f172a;">📦 مجموعات ثوابت (جاهزة)</h4>
+              <button type="button" class="btn-action" id="btnAdjManageGroups" title="إنشاء أو تعديل المجموعات">⚙️ إدارة المجموعات</button>
+            </div>
+            <p class="adj-saved-groups-hint">احفظ مكوّنات متكررة لأطراف معيّنة ثم طبّقها دفعة واحدة — تُجمَّع البنود تحت اسم المجموعة.</p>
+            <div id="adjSavedGroupsList" class="adj-saved-groups-list">
+              <span class="adj-saved-groups-empty">جاري تحميل المجموعات…</span>
+            </div>
+          </div>
           <div class="adj-add-item-row">
             <div class="form-group adj-item-field">
               <label for="adjItemPickerToggle">الصنف</label>
@@ -96,6 +106,63 @@
           <button type="button" class="btn-view" id="btnCancelAdj">إغلاق النافذة</button>
           <button type="button" class="btn-action success" id="btnCompleteAdj">📤 إرسال إلى الاعتماد</button>
           <button type="button" class="btn-action primary" id="btnSubmitAdjEditRequest" hidden>📨 إرسال طلب التعديل للإدارة</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{-- إدارة مجموعات المعدلات المحفوظة --}}
+  <div class="adj-groups-overlay" id="adjGroupsModal" role="dialog" aria-modal="true"
+       aria-labelledby="adjGroupsTitle" hidden>
+    <div class="adj-groups-dialog" onclick="event.stopPropagation()">
+      <div class="adj-groups-header">
+        <h3 id="adjGroupsTitle">📦 مجموعات ثوابت المعدلات</h3>
+        <button type="button" class="adj-catalog-close" id="adjGroupsClose" aria-label="إغلاق">&times;</button>
+      </div>
+      <div class="adj-groups-body">
+        <div class="adj-groups-sidebar">
+          <button type="button" class="btn-action success" id="btnAdjGroupNew" style="width:100%;margin-bottom:10px;">➕ مجموعة جديدة</button>
+          <ul id="adjGroupsSidebarList" class="adj-groups-sidebar-list"></ul>
+        </div>
+        <div class="adj-groups-editor">
+          <div id="adjGroupEditorEmpty" class="adj-groups-editor-empty">اختر مجموعة من القائمة أو أنشئ مجموعة جديدة.</div>
+          <form id="adjGroupForm" class="adj-group-form" hidden>
+            <div class="form-group">
+              <label for="adjGroupName">اسم المجموعة</label>
+              <input type="text" id="adjGroupName" class="form-control" maxlength="120" required placeholder="مثال: ركبة — ثوابت صرف">
+            </div>
+            <div class="form-group">
+              <label for="adjGroupNotes">ملاحظات (اختياري)</label>
+              <textarea id="adjGroupNotes" class="form-control" rows="2" maxlength="2000" placeholder="وصف مختصر للاستخدام"></textarea>
+            </div>
+            <div class="adj-group-lines-head">
+              <strong>بنود المجموعة</strong>
+              <div class="adj-group-item-search-wrap">
+                <input type="search" id="adjGroupItemSearch" class="form-control" placeholder="بحث صنف للإضافة…" autocomplete="off">
+                <ul id="adjGroupItemSearchResults" class="adj-group-search-results" hidden></ul>
+              </div>
+            </div>
+            <div class="bom-table-wrap" style="max-height:220px;">
+              <table class="bom-table">
+                <thead>
+                  <tr>
+                    <th>الكود</th>
+                    <th>الصنف</th>
+                    <th>الكمية</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="adjGroupLinesBody"></tbody>
+              </table>
+            </div>
+            <div id="adjGroupFormError" class="adj-form-error" style="display:none;" role="alert"></div>
+            <div class="adj-groups-form-actions">
+              <button type="button" class="btn-action danger" id="btnAdjGroupDelete" hidden>🗑 حذف المجموعة</button>
+              <div style="flex:1;"></div>
+              <button type="button" class="btn-action" id="btnAdjGroupCancelEdit">إلغاء</button>
+              <button type="submit" class="btn-action success" id="btnAdjGroupSave">💾 حفظ</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -144,6 +211,221 @@
     #adjModal .bom-table-wrap {
       max-height: min(52vh, 480px);
       overflow: auto;
+    }
+
+    #adjModal .adj-saved-groups-block {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+
+    #adjModal .adj-saved-groups-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    #adjModal .adj-saved-groups-hint {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    #adjModal .adj-saved-groups-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #adjModal .adj-saved-group-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #c4b5fd;
+      background: #f5f3ff;
+      font-size: 13px;
+      font-weight: 700;
+      color: #5b21b6;
+    }
+
+    #adjModal .adj-saved-group-chip button {
+      border: 0;
+      background: #7c3aed;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    #adjModal .adj-saved-group-chip button:hover {
+      background: #6d28d9;
+    }
+
+    #adjModal .adj-saved-groups-empty {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .adj-groups-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.62);
+      backdrop-filter: blur(4px);
+    }
+
+    .adj-groups-overlay.is-open {
+      display: flex;
+    }
+
+    body.adj-groups-open {
+      overflow: hidden;
+    }
+
+    .adj-groups-dialog {
+      width: min(920px, 96vw);
+      max-height: min(90vh, 860px);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 28px 64px rgba(15, 23, 42, 0.28);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .adj-groups-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .adj-groups-header h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .adj-groups-body {
+      display: flex;
+      min-height: 360px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .adj-groups-sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      border-left: 1px solid #e2e8f0;
+      padding: 12px;
+      overflow-y: auto;
+      background: #fafafa;
+    }
+
+    .adj-groups-sidebar-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .adj-groups-sidebar-list li button {
+      width: 100%;
+      text-align: right;
+      border: 0;
+      background: transparent;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .adj-groups-sidebar-list li button.is-active,
+    .adj-groups-sidebar-list li button:hover {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+
+    .adj-groups-editor {
+      flex: 1;
+      padding: 16px 18px;
+      overflow-y: auto;
+    }
+
+    .adj-groups-editor-empty {
+      color: #94a3b8;
+      padding: 40px 12px;
+      text-align: center;
+    }
+
+    .adj-group-lines-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 14px 0 8px;
+    }
+
+    .adj-group-item-search-wrap {
+      position: relative;
+      flex: 1 1 260px;
+      max-width: 360px;
+    }
+
+    .adj-group-search-results {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      left: 0;
+      z-index: 5;
+      list-style: none;
+      margin: 4px 0 0;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    }
+
+    .adj-group-search-results li button {
+      width: 100%;
+      text-align: right;
+      border: 0;
+      background: transparent;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .adj-group-search-results li button:hover {
+      background: #f1f5f9;
+    }
+
+    .adj-groups-form-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 16px;
+      flex-wrap: wrap;
     }
 
     #adjModal .adj-add-item-row {
