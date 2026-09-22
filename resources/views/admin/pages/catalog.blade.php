@@ -1970,8 +1970,20 @@ window.__STOCK_CATEGORIES = @json($categories->values());
             });
         })
         .then(function (data) {
-            showImportStatus(data.message || 'تم الاستيراد بنجاح.', false, data.summary && data.summary.errors);
-            window.renderSlimCatalogTable(data.items || []);
+            var items = data.items || [];
+            var total = data.items_total != null ? data.items_total : items.length;
+            var msg = data.message || 'تم الاستيراد بنجاح.';
+            if (total > items.length) {
+                msg += ' — الجدول يعرض ' + items.length + ' من ' + total + ' صنف في القاعدة.';
+            } else if (total > 0) {
+                msg += ' — إجمالي الكتالوج: ' + total + ' صنف.';
+            }
+            showImportStatus(msg, false, data.summary && data.summary.errors);
+            window.renderSlimCatalogTable(items);
+            var panelBadge = document.querySelector('#section-catalog .panel-header .badge');
+            if (panelBadge) {
+                panelBadge.textContent = total + ' صنف';
+            }
             fileInput.value = '';
         })
         .catch(function (err) {

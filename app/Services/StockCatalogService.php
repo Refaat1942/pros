@@ -132,9 +132,10 @@ class StockCatalogService
             ->all();
     }
 
-    public function listForDashboard(?string $from = null, ?string $to = null): Collection
+    public function listForDashboard(?string $from = null, ?string $to = null, ?int $limitOverride = null): Collection
     {
         $range = $this->parseDateRange($from, $to);
+        $limit = $limitOverride ?? (int) config('catalog.list_limit', 10000);
 
         return StockItem::query()
             ->with([
@@ -146,10 +147,7 @@ class StockCatalogService
             ->when($range['from'], fn ($q, Carbon $start) => $q->where('created_at', '>=', $start))
             ->when($range['to'], fn ($q, Carbon $end) => $q->where('created_at', '<=', $end))
             ->orderByDesc('id')
-            ->when(
-                ($limit = (int) config('catalog.list_limit', 10000)) > 0,
-                fn ($q) => $q->limit($limit),
-            )
+            ->when($limit > 0, fn ($q) => $q->limit($limit))
             ->get()
             ->map(fn (StockItem $item) => $this->formatItem($item));
     }

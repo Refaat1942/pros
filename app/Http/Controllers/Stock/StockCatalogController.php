@@ -193,16 +193,23 @@ class StockCatalogController extends Controller
 
         $summary = $importService->import($uploaded);
 
+        $rowsInFile = (int) ($summary['rows_in_file'] ?? 0);
+        $rowsProcessed = (int) ($summary['rows_processed'] ?? 0);
         $message = "تم الاستيراد: {$summary['created']} صنف جديد، {$summary['updated']} محدَّث، {$summary['skipped']} متخطّى.";
+        if ($rowsInFile > 0) {
+            $message .= " (قُرئ {$rowsProcessed} سطر بيانات من {$rowsInFile} في الملف)";
+        }
 
         if ($request->expectsJson()) {
             $user = $request->user();
             $visibility = app(CatalogListVisibilityService::class);
+            $itemsTotal = $this->catalogService->countAll();
 
             return response()->json([
                 'message' => $message,
                 'summary' => $summary,
-                'items' => $this->catalogService->listForDashboard()
+                'items_total' => $itemsTotal,
+                'items' => $this->catalogService->listForDashboard(limitOverride: 0)
                     ->map(function (array $item) use ($user, $visibility) {
                         return $user
                             ? $visibility->filterItemFields($item, $user, 'admin_catalog')
