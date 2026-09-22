@@ -12,6 +12,7 @@ use App\Models\ReturnNote;
 use App\Models\StockItem;
 use App\Models\User;
 use App\Services\ReturnNoteService;
+use App\Support\StockItemUomLookup;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -91,10 +92,11 @@ class ReturnNoteController extends Controller
 
         $codes = $boms->flatMap(fn (Bom $b) => $b->items->pluck('stock_item_code'))->unique()->filter()->values()->all();
         $barcodes = collect(StockItem::mapByOperationalCodes($codes, 'barcode'));
+        $uomMap = StockItemUomLookup::forCodes($codes);
 
         return response()->json([
             'context' => $postDelivery ? 'post_delivery' : 'wip',
-            'boms' => $boms->map(function (Bom $b) use ($pendingByItem, $barcodes, $postDelivery) {
+            'boms' => $boms->map(function (Bom $b) use ($pendingByItem, $barcodes, $uomMap, $postDelivery) {
                 return [
                     'id' => $b->id,
                     'bom_no' => $b->bom_no,
@@ -109,7 +111,7 @@ class ReturnNoteController extends Controller
 
                             return $i->returnRequestMaxQty($pending, $b->stage) > 0;
                         })
-                        ->map(function ($i) use ($pendingByItem, $barcodes, $b) {
+                        ->map(function ($i) use ($pendingByItem, $barcodes, $uomMap, $b) {
                             $pending = $pendingByItem["{$i->bom_id}.{$i->stock_item_code}"] ?? 0;
 
                             return [
@@ -117,6 +119,7 @@ class ReturnNoteController extends Controller
                                 'name' => $i->name,
                                 'returnable_qty' => $i->returnRequestMaxQty($pending, $b->stage),
                                 'issued_qty' => $i->returnableQty(),
+                                'uom' => $uomMap[$i->stock_item_code] ?? 'قطعة',
                                 'barcode' => $barcodes[$i->stock_item_code] ?? null,
                             ];
                         })->values(),
@@ -176,12 +179,15 @@ class ReturnNoteController extends Controller
     {
         $lines = $note->relationLoaded('lines') ? $note->lines : collect();
 
+        $codes = $lines->pluck('stock_item_code')->unique()->filter()->values()->all();
+
         if ($barcodes === null && $lines->isNotEmpty()) {
-            $barcodes = collect(StockItem::mapByOperationalCodes(
-                $lines->pluck('stock_item_code')->unique()->filter()->values()->all(),
-                'barcode'
-            ));
+            $barcodes = collect(StockItem::mapByOperationalCodes($codes, 'barcode'));
         }
+
+        $uomMap = $lines->isNotEmpty()
+            ? StockItemUomLookup::forCodes($codes)
+            : [];
 
         return $note->only([
             'id', 'return_no', 'bom_id', 'case_id', 'order_ref',
@@ -202,6 +208,7 @@ class ReturnNoteController extends Controller
                 'qty_returned' => $line->qty_returned,
                 'reason' => $line->reason,
                 'barcode' => $barcodes[$line->stock_item_code] ?? null,
+                'uom' => $uomMap[$line->stock_item_code] ?? 'قطعة',
             ])->values()->all(),
             'bom' => $note->relationLoaded('bom') && $note->bom
                 ? $note->bom->only(['id', 'bom_no'])

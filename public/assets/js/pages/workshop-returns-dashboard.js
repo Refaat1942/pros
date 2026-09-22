@@ -211,8 +211,8 @@
       if (qty) {
         qty.addEventListener('click', function (e) { e.stopPropagation(); });
         qty.addEventListener('input', function () {
-          var maxQty = parseInt(qty.getAttribute('data-max') || qty.max, 10) || 1;
-          var val = parseInt(qty.value, 10);
+          var maxQty = parseFloat(qty.getAttribute('data-max') || qty.max) || 1;
+          var val = parseFloat(String(qty.value).replace(',', '.'));
           if (val > maxQty) qty.value = String(maxQty);
         });
       }
@@ -248,11 +248,13 @@
     }
 
     el.innerHTML = bom.items.map(function (it) {
-      var max = it.returnable_qty || 0;
-      var issued = it.issued_qty || max;
+      var max = parseFloat(it.returnable_qty) || 0;
+      var issued = parseFloat(it.issued_qty) || max;
+      var uom = it.uom || 'قطعة';
       var bc = it.barcode || deriveBarcode(it.stock_item_code);
       var code = esc(it.stock_item_code);
       var defaultQty = max > 0 ? max : 1;
+      var keepHint = issued > max && !/متر|كيلو|لتر|سم/i.test(uom) ? ' · يبقى 1 بقسم الإنتاج' : '';
       return '<div class="return-line-card is-checked" role="group">' +
         '<input type="checkbox" class="return-line-chk" data-code="' + code + '" data-name="' + esc(it.name || it.stock_item_code) + '" checked aria-label="' + esc(it.name || it.stock_item_code) + '">' +
         '<span class="return-line-info">' +
@@ -261,8 +263,8 @@
         '</span>' +
         '<span class="return-qty-wrap">' +
           '<label>الكمية</label>' +
-          '<input type="number" class="return-line-qty" data-code="' + code + '" data-max="' + max + '" min="1" max="' + max + '" value="' + defaultQty + '">' +
-          '<span class="return-qty-max">من ' + max + (issued > max ? ' · يبقى 1 بقسم الإنتاج' : '') + '</span>' +
+          '<input type="number" class="return-line-qty" data-code="' + code + '" data-uom="' + esc(uom) + '" data-max="' + max + '" min="0.0001" step="any" max="' + max + '" value="' + defaultQty + '">' +
+          '<span class="return-qty-max">من ' + max + ' ' + esc(uom) + keepHint + '</span>' +
         '</span>' +
       '</div>';
     }).join('');
@@ -296,18 +298,22 @@
     document.querySelectorAll('.return-line-chk:checked').forEach(function (chk) {
       var code = chk.getAttribute('data-code');
       var qtyEl = document.querySelector('.return-line-qty[data-code="' + code + '"]');
-      var qty = qtyEl ? parseInt(qtyEl.value, 10) : 0;
-      var maxQty = qtyEl ? parseInt(qtyEl.getAttribute('data-max') || qtyEl.max, 10) : 0;
+      var qtyRaw = qtyEl ? String(qtyEl.value || '').trim() : '';
+      var uom = qtyEl ? (qtyEl.getAttribute('data-uom') || '') : '';
+      var qty = qtyRaw ? parseFloat(qtyRaw.replace(',', '.')) : 0;
+      var maxQty = qtyEl ? parseFloat(qtyEl.getAttribute('data-max') || qtyEl.max) : 0;
       if (qty > maxQty) {
         invalidQty = true;
         return;
       }
       if (qty > 0) {
-        lines.push({
+        var row = {
           stock_item_code: code,
           name: chk.getAttribute('data-name'),
-          qty: qty,
-        });
+          qty: qtyRaw || qty,
+        };
+        if (uom && qtyRaw && !/\s/.test(qtyRaw)) row.qty_uom = uom;
+        lines.push(row);
       }
     });
 

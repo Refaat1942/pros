@@ -14,7 +14,8 @@ class StoreReturnNoteRequest extends BaseRequest
             'reason' => ['required', 'string', 'max:500'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.stock_item_code' => ['required', 'string', 'max:500', new StockItemPickerCodeExists],
-            'lines.*.qty' => ['required', 'integer', 'min:1'],
+            'lines.*.qty' => ['required'],
+            'lines.*.qty_uom' => ['nullable', 'string', 'max:50'],
             'lines.*.name' => ['nullable', 'string', 'max:255'],
         ];
     }

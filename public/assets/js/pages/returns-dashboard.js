@@ -288,6 +288,19 @@
     }
   }
 
+  function parseReturnQtyInput(raw, uom) {
+    var s = String(raw || '').trim();
+    if (!s) return { qty: 1, qty_uom: null };
+    var cm = s.match(/^(\d+(?:[.,]\d+)?)\s*(?:سم|cm|سنتي)$/i);
+    if (cm && /متر|meter|m$/i.test(String(uom || ''))) {
+      return { qty: cm[1].replace(',', '.'), qty_uom: 'سم' };
+    }
+    if (/^\d+(?:[.,]\d+)?$/.test(s.replace(',', '.'))) {
+      return { qty: s.replace(',', '.'), qty_uom: uom || null };
+    }
+    return { qty: s, qty_uom: null };
+  }
+
   function confirmReturnScan() {
     if (!validateModalFields(['returnBarcodeInput', 'returnQtyInput'])) return;
     if (!activeNoteId) return;
@@ -296,7 +309,6 @@
     if (!note) return;
 
     var barcode = $('returnBarcodeInput').value.trim();
-    var qty = parseInt($('returnQtyInput').value, 10) || 1;
     var normalizedBarcode = barcode.toUpperCase();
 
     var line = (note.lines || []).find(function (ln) {
@@ -310,8 +322,10 @@
       return;
     }
 
-    var remaining = (line.qty_requested || 0) - (line.qty_returned || 0);
-    if (qty < 1 || qty > remaining) {
+    var qtyParsed = parseReturnQtyInput($('returnQtyInput').value, line.uom || null);
+    var qty = parseFloat(String(qtyParsed.qty).replace(',', '.')) || 0;
+    var remaining = (parseFloat(line.qty_requested) || 0) - (parseFloat(line.qty_returned) || 0);
+    if (qty <= 0 || qty > remaining + 0.0001) {
       toast('كمية غير صالحة — المتبقي: ' + remaining, true);
       return;
     }
@@ -319,8 +333,10 @@
     var btn = $('btnReturnScan');
     if (btn) btn.disabled = true;
 
+    var scanRow = { line_id: line.id, barcode: barcode, qty_returned: qtyParsed.qty };
+    if (qtyParsed.qty_uom) scanRow.qty_uom = qtyParsed.qty_uom;
     axios.post('/technical/returns/' + activeNoteId + '/complete', {
-      scanned_lines: [{ line_id: line.id, barcode: barcode, qty_returned: qty }],
+      scanned_lines: [scanRow],
     })
       .then(function (res) {
         if ($('returnScanAlarm')) $('returnScanAlarm').style.display = 'none';

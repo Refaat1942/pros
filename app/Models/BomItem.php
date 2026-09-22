@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\StockQuantity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -43,15 +44,15 @@ class BomItem extends Model
         return $this->belongsTo(StockItem::class, 'stock_item_code', 'code');
     }
 
-    public function returnableQty(): int
+    public function returnableQty(): float
     {
-        return max(0, $this->issued_qty - $this->returned_qty);
+        return max(0.0, (float) $this->issued_qty - (float) $this->returned_qty);
     }
 
     /** كمية مُطلوبة في إذونات ارتجاع لم يُستلمها المخزن بعد. */
-    public function pendingReturnQty(): int
+    public function pendingReturnQty(): float
     {
-        return (int) ReturnNoteLine::query()
+        return (float) ReturnNoteLine::query()
             ->where('stock_item_code', $this->stock_item_code)
             ->whereHas('returnNote', fn ($q) => $q
                 ->where('bom_id', $this->bom_id)
@@ -65,24 +66,30 @@ class BomItem extends Model
      * - بعد التسليم (BOM تام): يُسمح بارتجاع كل الكمية المُصرفة المتبقية.
      * - أثناء التشغيل: بند بكمية واحدة يُرتجع بالكامل؛ بند بكمية أكبر يُبقى وحدة في قسم الإنتاج.
      */
-    public function returnRequestMaxQty(?int $pendingReturnQty = null, ?string $bomStage = null): int
+    public function returnRequestMaxQty(?float $pendingReturnQty = null, ?string $bomStage = null): float
     {
         $pending = $pendingReturnQty ?? $this->pendingReturnQty();
-        $net = max(0, $this->returnableQty() - $pending);
+        $net = max(0.0, $this->returnableQty() - $pending);
 
         if ($net <= 0) {
-            return 0;
+            return 0.0;
         }
 
         if ($bomStage === Bom::STAGE_FINISHED) {
-            return $net;
+            return round($net, 4);
         }
 
-        if ($this->issued_qty <= 1) {
-            return $net;
+        $stockItem = StockItem::findByOperationalCode($this->stock_item_code, true);
+        $uom = $stockItem?->uom ?? 'قطعة';
+        if (StockQuantity::isFractionalUom($uom)) {
+            return round($net, 4);
         }
 
-        return max(0, $net - 1);
+        if ((float) $this->issued_qty <= 1) {
+            return round($net, 4);
+        }
+
+        return round(max(0.0, $net - 1), 4);
     }
 
     /** @param  iterable<int, Bom>  $boms */
@@ -104,7 +111,7 @@ class BomItem extends Model
                 .'SUM(return_note_lines.qty_requested - return_note_lines.qty_returned) as pending'
             )
             ->get()
-            ->mapWithKeys(fn ($row) => ["{$row->bom_id}.{$row->stock_item_code}" => (int) $row->pending])
+            ->mapWithKeys(fn ($row) => ["{$row->bom_id}.{$row->stock_item_code}" => (float) $row->pending])
             ->all();
     }
 }
