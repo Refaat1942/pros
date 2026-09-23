@@ -339,7 +339,11 @@
         refreshTechBoard();
       })
       .catch(function (err) {
-        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر اعتماد التخصيص', true);
+        var msg = (err.response && err.response.data && err.response.data.message)
+          || (err.response && err.response.status === 500
+            ? 'خطأ في السيرفر — راجع سجل Laravel أو تأكد من ربط الفني بالقسم في أقسام الإنتاج.'
+            : 'تعذّر اعتماد التخصيص');
+        toast(msg, true);
       })
       .finally(function () {
         if (triggerBtn) triggerBtn.disabled = false;
@@ -723,7 +727,11 @@
         refreshTechBoard();
       })
       .catch(function (err) {
-        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر حفظ التخصيص', true);
+        var msg = (err.response && err.response.data && err.response.data.message)
+          || (err.response && err.response.status === 500
+            ? 'خطأ في السيرفر — تأكد أن القسم والفني مربوطين في «أقسام الإنتاج».'
+            : 'تعذّر حفظ التخصيص');
+        toast(msg, true);
       })
       .finally(function () { if (btn) btn.disabled = false; });
   }
