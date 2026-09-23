@@ -25,6 +25,8 @@ class WorkshopAssignmentService
             abort(422, 'أضف قسم إنتاج وفني واحد على الأقل.');
         }
 
+        $assignments = $this->normalizeAssignmentRows($assignments);
+
         foreach ($assignments as $row) {
             $this->validateAssignmentTargets(
                 (int) $row['workshop_section_id'],
@@ -67,12 +69,13 @@ class WorkshopAssignmentService
                 description: "تخصيص أمر شغل {$case->work_order_no} — {$case->case_no} (".count($assignments).' أقسام/فنيين)',
                 tag: 'workshop',
                 before: $before,
-                after: $case->only([
-                    'workshop_section_id',
-                    'assigned_technician_id',
-                    'workshop_assigned_at',
-                    'workshop_assignment_approved_at',
-                ]) + ['assignments_count' => count($assignments)],
+                after: [
+                    'workshop_section_id' => $case->workshop_section_id,
+                    'assigned_technician_id' => $case->assigned_technician_id,
+                    'workshop_assigned_at' => $case->workshop_assigned_at?->toIso8601String(),
+                    'workshop_assignment_approved_at' => $case->workshop_assignment_approved_at?->toIso8601String(),
+                    'assignments_count' => count($assignments),
+                ],
             );
 
             return $case->fresh()->load(['workshopAssignments.workshopSection', 'workshopAssignments.assignedTechnician']);
@@ -131,20 +134,59 @@ class WorkshopAssignmentService
                 description: "اعتماد تخصيص الإنتاج — {$case->work_order_no} — {$case->case_no}",
                 tag: 'workshop',
                 before: $before,
-                after: $case->only([
-                    'workshop_section_id',
-                    'assigned_technician_id',
-                    'workshop_assignment_approved_at',
-                ]),
+                after: [
+                    'workshop_section_id' => $case->workshop_section_id,
+                    'assigned_technician_id' => $case->assigned_technician_id,
+                    'workshop_assignment_approved_at' => $case->workshop_assignment_approved_at?->toIso8601String(),
+                ],
             );
 
             return $case->fresh();
         });
 
         $approved->loadMissing('patient:id,name');
-        $this->notifyWarehouseDispenseReady($approved);
+
+        try {
+            $this->notifyWarehouseDispenseReady($approved);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return $approved;
+    }
+
+    /**
+     * @param  list<array{workshop_section_id: int, assigned_technician_id: int}>  $assignments
+     * @return list<array{workshop_section_id: int, assigned_technician_id: int}>
+     */
+    private function normalizeAssignmentRows(array $assignments): array
+    {
+        $seen = [];
+        $normalized = [];
+
+        foreach ($assignments as $row) {
+            $sectionId = (int) ($row['workshop_section_id'] ?? 0);
+            $techId = (int) ($row['assigned_technician_id'] ?? 0);
+            if ($sectionId <= 0 || $techId <= 0) {
+                continue;
+            }
+
+            $key = $sectionId.'|'.$techId;
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $normalized[] = [
+                'workshop_section_id' => $sectionId,
+                'assigned_technician_id' => $techId,
+            ];
+        }
+
+        if ($normalized === []) {
+            abort(422, 'أضف قسم إنتاج وفني واحد على الأقل.');
+        }
+
+        return $normalized;
     }
 
     private function hasCompleteAssignments(CaseRecord $case): bool
