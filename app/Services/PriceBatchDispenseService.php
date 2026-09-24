@@ -24,6 +24,8 @@ class PriceBatchDispenseService
             return [];
         }
 
+        $this->syncOpeningLayer($item);
+
         $remaining = $qtyNeeded;
         $allocations = [];
 
@@ -256,6 +258,70 @@ class PriceBatchDispenseService
     }
 
     /**
+     * طبقة «رصيد أول المدة» — الرصيد الذي لا تغطيه دفعات استلام (شيت الأصناف / تعديل الكتالوج)
+     * يُصرف أولاً (الأقدم) بالسعر الأساسي للصنف، بدل السقوط على أعلى دفعة.
+     * الكمية = رصيد الصنف − مجموع الدفعات الموجبة الأخرى (idempotent).
+     */
+    public function syncOpeningLayer(StockItem $item): ?StockItemPrice
+    {
+        $batches = StockItemPrice::query()
+            ->where('stock_item_id', $item->id)
+            ->get();
+
+        $opening = $batches->first(fn (StockItemPrice $b) => $b->isOpeningLayer());
+        $others = $batches->reject(fn (StockItemPrice $b) => $b->isOpeningLayer());
+
+        $covered = $others->sum(fn (StockItemPrice $b) => max(0.0, (float) $b->qty));
+        $uncovered = round(max(0.0, (float) $item->qty - $covered), 4);
+
+        if ($uncovered <= 0) {
+            if ($opening && (float) $opening->qty > 0) {
+                $opening->update(['qty' => 0]);
+            }
+
+            return $opening;
+        }
+
+        $amount = self::openingUnitCost($item);
+        if ($amount <= 0 && ! $opening) {
+            return null;
+        }
+
+        $created = ($item->created_at ?? now())->copy()->startOfDay();
+        $earliest = $others->pluck('received_at')->filter()->min();
+        $receivedAt = $earliest !== null && $earliest->lte($created)
+            ? $earliest->copy()->subDay()
+            : $created;
+
+        if ($opening) {
+            $opening->update([
+                'qty' => $uncovered,
+                'amount' => $amount > 0 ? $amount : (float) $opening->amount,
+                'received_at' => $receivedAt->toDateString(),
+            ]);
+
+            return $opening;
+        }
+
+        return StockItemPrice::create([
+            'stock_item_id' => $item->id,
+            'price_ref' => StockItemPrice::openingRefFor($item),
+            'label' => StockItemPrice::OPENING_LABEL,
+            'amount' => $amount,
+            'qty' => $uncovered,
+            'received_at' => $receivedAt->toDateString(),
+        ]);
+    }
+
+    /** تكلفة وحدة رصيد أول المدة: السعر الأساسي للصنف، وإلا WAC المخزّن. */
+    public static function openingUnitCost(StockItem $item): float
+    {
+        $price = (float) $item->price;
+
+        return $price > 0 ? $price : max(0.0, (float) $item->wac);
+    }
+
+    /**
      * ترتيب الدفعات: طلب التوريد أولاً، ثم مستويات السعر بأول تاريخ استلام لكل سعر،
      * ثم FIFO داخل نفس السعر حتى ينفد رصيده قبل الانتقال للسعر التالي.
      *
@@ -269,6 +335,17 @@ class PriceBatchDispenseService
             ->lockForUpdate()
             ->get();
 
+        return self::consumptionOrder($batches);
+    }
+
+    /**
+     * ترتيب استهلاك الدفعات (بدون قفل) — يُستخدم للصرف ولتقييم المخزون المتبقي.
+     *
+     * @param  Collection<int, StockItemPrice>  $batches
+     * @return Collection<int, StockItemPrice>
+     */
+    public static function consumptionOrder(Collection $batches): Collection
+    {
         $supplyBatches = $batches
             ->filter(fn (StockItemPrice $batch) => $batch->supply_request_line_id !== null)
             ->sortBy(fn (StockItemPrice $batch) => [$batch->received_at, $batch->id])

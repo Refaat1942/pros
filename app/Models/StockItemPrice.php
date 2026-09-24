@@ -10,6 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class StockItemPrice extends Model
 {
+    /** طبقة رصيد أول المدة — الرصيد غير المغطّى بدفعات استلام (شيت الأصناف / الكتالوج). */
+    public const OPENING_REF_SUFFIX = '-OPEN';
+
+    public const OPENING_LABEL = 'رصيد أول المدة';
+
     protected $fillable = [
         'stock_item_id',
         'price_ref',
@@ -26,9 +31,19 @@ class StockItemPrice extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
-        'qty' => 'integer',
+        'qty' => 'float',
         'received_at' => 'date',
     ];
+
+    public static function openingRefFor(StockItem $item): string
+    {
+        return 'PR-'.$item->code.self::OPENING_REF_SUFFIX;
+    }
+
+    public function isOpeningLayer(): bool
+    {
+        return str_ends_with((string) $this->price_ref, self::OPENING_REF_SUFFIX);
+    }
 
     public function stockItem(): BelongsTo
     {

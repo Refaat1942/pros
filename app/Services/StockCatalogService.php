@@ -140,7 +140,7 @@ class StockCatalogService
         return StockItem::query()
             ->with([
                 'category:id,name',
-                'prices:id,stock_item_id,label,amount,qty,supply_request_line_id,received_at',
+                'prices:id,stock_item_id,price_ref,supplier_id,label,amount,qty,supply_request_line_id,received_at',
                 'attributeValues.field',
                 'suppliers:id,name',
             ])
@@ -202,7 +202,7 @@ class StockCatalogService
     {
         $item->loadMissing([
             'category:id,name',
-            'prices:id,stock_item_id,label,amount,qty,supply_request_line_id',
+            'prices:id,stock_item_id,price_ref,supplier_id,label,amount,qty,supply_request_line_id,received_at',
             'attributeValues.field',
             'suppliers:id,name',
         ]);
@@ -430,6 +430,8 @@ class StockCatalogService
                 $this->syncSuppliers($item, $data['supplier_ids'] ?? []);
             }
 
+            app(InventoryValuationService::class)->refreshStoredWac($item->fresh());
+
             $this->syncStatus($item->fresh());
 
             AuditService::log(
@@ -651,7 +653,7 @@ class StockCatalogService
      */
     public function aggregatePriceTiers(StockItem $item): array
     {
-        $item->loadMissing('prices:id,stock_item_id,label,amount,qty,supply_request_line_id,received_at');
+        $item->loadMissing('prices:id,stock_item_id,price_ref,supplier_id,label,amount,qty,supply_request_line_id,received_at');
 
         $byAmount = [];
 
@@ -782,6 +784,8 @@ class StockCatalogService
             ->whereNull('supplier_id')
             ->whereNull('supply_request_line_id')
             ->where('qty', '<=', 0)
+            ->where(fn ($q) => $q->whereNull('price_ref')
+                ->orWhere('price_ref', 'not like', '%'.StockItemPrice::OPENING_REF_SUFFIX))
             ->delete();
     }
 
@@ -789,7 +793,8 @@ class StockCatalogService
     {
         return $batch->supplier_id !== null
             || $batch->supply_request_line_id !== null
-            || (float) $batch->qty > 0;
+            || (float) $batch->qty > 0
+            || $batch->isOpeningLayer();
     }
 
     public function isCatalogOnlyPriceStub(StockItemPrice $batch): bool
