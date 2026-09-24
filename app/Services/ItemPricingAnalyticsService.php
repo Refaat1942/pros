@@ -48,7 +48,7 @@ class ItemPricingAnalyticsService
         $wac = round($this->stockPriceService->wacUnitPrice($item->code), 4);
         $highest = round($this->stockPriceService->highestUnitPrice($item->code), 4);
         $lowest = round($this->lowestUnitPrice($item->code), 4);
-        $qty = max(0, (int) $item->qty);
+        $qty = max(0.0, (float) $item->qty);
         $unitMargin = round($highest - $wac, 4);
         $marginPct = $wac > 0 ? round(($unitMargin / $wac) * 100, 2) : 0.0;
 

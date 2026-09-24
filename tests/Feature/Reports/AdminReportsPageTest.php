@@ -856,7 +856,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $reports['inventory']['issues_this_month']);
     }
 
-    public function test_inventory_valuation_report_lists_qty_prices_and_wac_value(): void
+    public function test_inventory_valuation_report_lists_fifo_cost_and_selling_value(): void
     {
         $admin = $this->userWithRole('admin');
         $item = $this->stockItem('RM-VAL-01', qty: 15, wac: 120.50);
@@ -865,8 +865,7 @@ class AdminReportsPageTest extends TestCase
         app(StockPriceService::class)->addBatch($item, 10, 115.00, $supplier, 'INV-V1', now());
         app(StockPriceService::class)->addBatch($item->fresh(), 5, 125.00, $supplier, 'INV-V2', now());
 
-        $item->refresh();
-        $expectedValue = number_format(round((int) $item->qty * (float) StockItem::find($item->id)->wac, 2), 2);
+        $expectedCost = number_format(10 * 115 + 5 * 125, 2);
 
         $from = now()->startOfMonth()->toDateString();
         $to = now()->toDateString();
@@ -877,23 +876,24 @@ class AdminReportsPageTest extends TestCase
 
         $this->assertSame('تقييم المخزون', $report['title']);
         $this->assertSame('15', $report['summary'][1]['value'] ?? null);
-        $this->assertStringContainsString($expectedValue, $report['summary'][2]['value'] ?? '');
+        $this->assertSame($expectedCost.' ج.م', $report['summary'][2]['value'] ?? null);
 
         $row = collect($report['rows'])->first(fn ($r) => ($r[0] ?? '') === 'RM-VAL-01');
         $this->assertNotNull($row);
         $this->assertSame('ركبة تقييم', $row[1]);
         $this->assertSame('15', $row[2]);
-        $this->assertStringContainsString('ج.م', $row[4]);
-        $this->assertStringContainsString('115.00', $row[5]);
-        $this->assertStringContainsString('ج.م', $row[6]);
-        $this->assertSame($expectedValue.' ج.م', $row[6]);
+        $this->assertStringContainsString('115.00 × 10', $row[3]);
+        $this->assertStringContainsString('125.00 × 5', $row[3]);
+        $this->assertSame($expectedCost.' ج.م', $row[5]);
+        $this->assertSame('125.00 ج.م', $row[6]);
 
         $this->actingAs($admin)
             ->get('/admin/reports/inventory-valuation?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('تقييم المخزون', false)
             ->assertSee('RM-VAL-01', false)
-            ->assertSee('قيمة المخزون (WAC)', false);
+            ->assertSee('قيمة المخزون — التكلفة (FIFO)', false)
+            ->assertSee('قيمة المخزون — سعر البيع', false);
     }
 
     private function seedStockForReturnsReport(): void

@@ -17,7 +17,8 @@
     <div class="bi-card">
         <div class="bi-card-head"><span>📦</span><h4>2. المخازن وسلاسل الإمداد</h4></div>
         <div class="bi-card-body">
-            <div class="bi-row"><span>القيمة المالية الإجمالية — متوسط التكلفة المرجح</span><strong style="color:#0e7490">0 ج.م</strong></div>
+            <div class="bi-row"><span>قيمة المخزون — التكلفة (FIFO)</span><strong style="color:#0e7490">0 ج.م</strong></div>
+            <div class="bi-row"><span>قيمة المخزون — سعر البيع</span><strong style="color:#7c3aed">0 ج.م</strong></div>
             <div class="bi-row"><span>عدد الأصناف</span><strong>0</strong></div>
             <div class="bi-row"><span>🚨 أصناف ناقصة (قرب حد الأمان)</span><strong style="color:#b91c1c">0</strong></div>
             <div class="bi-sub">🐌 أصناف راكدة (&gt;180 يوم):

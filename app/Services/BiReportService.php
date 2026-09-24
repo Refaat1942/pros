@@ -20,6 +20,7 @@ class BiReportService
     public function __construct(
         private readonly StockPriceService $stockPriceService,
         private readonly ItemPricingAnalyticsService $itemPricingAnalytics,
+        private readonly InventoryValuationService $inventoryValuation,
     ) {}
 
     /**
@@ -74,9 +75,7 @@ class BiReportService
     {
         $stagnantCutoff = now()->subDays(180)->toDateString();
 
-        $valuation = $this->stockPriceService->inventoryValuation();
-        $totalValue = $valuation['wac_value'];
-        $highestValue = $valuation['highest_value'];
+        $valuation = $this->inventoryValuation->summary();
 
         $stagnantItems = StockItem::query()
             ->whereNotNull('last_moved_at')
@@ -93,9 +92,14 @@ class BiReportService
             ->all();
 
         return [
-            'total_value' => round($totalValue, 2),
-            'highest_price_value' => round($highestValue, 2),
-            'valuation_spread' => round($highestValue - $totalValue, 2),
+            'total_value' => $valuation['cost_value'],
+            'cost_value' => $valuation['cost_value'],
+            'selling_value' => $valuation['selling_value'],
+            'expected_margin' => $valuation['expected_margin'],
+            'stocked_items' => $valuation['stocked_items'],
+            'wac_value' => $valuation['wac_value'],
+            'highest_price_value' => $valuation['highest_value'],
+            'valuation_spread' => round($valuation['highest_value'] - $valuation['cost_value'], 2),
             'item_count' => StockItem::count(),
             'low_stock' => StockItem::where('status', StockItem::STATUS_LOW)->count(),
             'stagnant_items' => $stagnantItems,

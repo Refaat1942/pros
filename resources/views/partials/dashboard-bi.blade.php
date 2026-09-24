@@ -135,11 +135,17 @@
                 </div>
                 <div class="bi-inventory-hero__meta">
                     <div class="bi-inventory-hero__value bi-tone-cyan">
-                        {{ $fmt($b2['total_value'] ?? 0) }} <small>ج.م</small>
+                        {{ $fmt($b2['cost_value'] ?? $b2['total_value'] ?? 0) }} <small>ج.م</small>
                     </div>
-                    <p>القيمة المالية الإجمالية — متوسط التكلفة المرجح</p>
+                    <p>قيمة المخزون بالتكلفة — FIFO (نفس تكلفة الصرف)</p>
+                    <div class="bi-inventory-hero__value bi-tone-purple" style="font-size:1.25rem;margin-top:6px;">
+                        {{ $fmt($b2['selling_value'] ?? 0) }} <small>ج.م</small>
+                    </div>
+                    <p>قيمة المخزون بسعر البيع — نفس محرك عرض السعر</p>
                     <div class="bi-inventory-tags">
                         <span>{{ $itemCount }} صنف</span>
+                        <span>{{ (int) ($b2['stocked_items'] ?? 0) }} برصيد</span>
+                        <span>هامش متوقع {{ $fmt($b2['expected_margin'] ?? 0) }} ج.م</span>
                     </div>
                 </div>
             </div>
