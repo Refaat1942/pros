@@ -135,7 +135,7 @@
                 </div>
                 <div class="bi-inventory-hero__meta">
                     <div class="bi-inventory-hero__value bi-tone-cyan">
-                        {{ $fmtMoney($b2['total_value'] ?? 0) }} <small>ج.م</small>
+                        {{ $fmt($b2['total_value'] ?? 0) }} <small>ج.م</small>
                     </div>
                     <p>القيمة المالية الإجمالية — متوسط التكلفة المرجح</p>
                     <div class="bi-inventory-tags">

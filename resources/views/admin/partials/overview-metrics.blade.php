@@ -67,7 +67,7 @@
                 <div class="overview-metric-hint">
                     {{ (int) ($inventory['item_count'] ?? 0) }} صنف ·
                     {{ (int) ($inventory['low_stock'] ?? 0) }} منخفض ·
-                    WAC: <strong>{{ number_format((float) ($inventory['total_value'] ?? 0), 2) }} ج.م</strong>
+                    WAC: <strong>{{ number_format((float) ($inventory['total_value'] ?? 0), 0) }} ج.م</strong>
                 </div>
             </div>
         </div>

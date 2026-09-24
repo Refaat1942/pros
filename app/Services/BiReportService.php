@@ -74,13 +74,9 @@ class BiReportService
     {
         $stagnantCutoff = now()->subDays(180)->toDateString();
 
-        $totalValue = StockItem::query()
-            ->get(['code', 'qty', 'wac'])
-            ->sum(fn (StockItem $i) => (int) $i->qty * $this->stockPriceService->wacUnitPrice($i->code));
-
-        $highestValue = StockItem::query()
-            ->get(['code', 'name', 'qty', 'wac'])
-            ->sum(fn (StockItem $i) => (int) $i->qty * $this->stockPriceService->highestUnitPrice($i->code));
+        $valuation = $this->stockPriceService->inventoryValuation();
+        $totalValue = $valuation['wac_value'];
+        $highestValue = $valuation['highest_value'];
 
         $stagnantItems = StockItem::query()
             ->whereNotNull('last_moved_at')

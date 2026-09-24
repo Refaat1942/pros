@@ -358,9 +358,7 @@ class DashboardPageDataService
 
         $items = $catalogService->allItemsForInventoryOverview();
 
-        $totalValue = $items->sum(
-            fn (StockItem $i) => max(0, (int) $i->qty) * $priceService->wacUnitPrice($i->code)
-        );
+        $totalValue = $priceService->inventoryValuation()['wac_value'];
 
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
         $totalCount = $catalogService->countAll();
@@ -372,7 +370,7 @@ class DashboardPageDataService
                 ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $totalCount, 'bg' => 'rgba(37,99,235,0.1)'],
                 ['icon' => '🔻', 'label' => 'أصناف منخفضة', 'value' => (string) $items->where('status', StockItem::STATUS_LOW)->count(), 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
                 ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
-                ['icon' => '💰', 'label' => 'قيمة المخزون', 'value' => number_format($totalValue, 2), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '💰', 'label' => 'قيمة المخزون', 'value' => number_format(round($totalValue)), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
             ],
         ];
     }
