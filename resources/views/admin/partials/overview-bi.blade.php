@@ -29,8 +29,12 @@
             @endif
             @if ($b2 !== null)
                 <div class="bi-hero-kpi bi-hero-kpi--cyan">
-                    <span class="bi-hero-kpi__label">قيمة المخزون — متوسط التكلفة</span>
-                    <strong class="bi-hero-kpi__value">{{ number_format((float) ($b2['total_value'] ?? 0), 0) }} <small>ج.م</small></strong>
+                    <span class="bi-hero-kpi__label">قيمة المخزون — التكلفة (FIFO)</span>
+                    <strong class="bi-hero-kpi__value">{{ number_format((float) ($b2['cost_value'] ?? $b2['total_value'] ?? 0), 0) }} <small>ج.م</small></strong>
+                </div>
+                <div class="bi-hero-kpi bi-hero-kpi--purple">
+                    <span class="bi-hero-kpi__label">قيمة المخزون — سعر البيع</span>
+                    <strong class="bi-hero-kpi__value">{{ number_format((float) ($b2['selling_value'] ?? 0), 0) }} <small>ج.م</small></strong>
                 </div>
             @endif
             @if ($b3 !== null)

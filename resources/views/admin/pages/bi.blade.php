@@ -16,7 +16,7 @@
           <span class="bi-hero__eyebrow">📡 مركز القيادة</span>
           <h2 class="bi-hero__title">لوحات ذكاء الأعمال</h2>
           <p class="bi-hero__desc">
-            مؤشرات لحظية من قاعدة البيانات: توزيع المسارات، الموعد المتفق للتسليم، قيمة المخزون بمتوسط التكلفة المرجح، خط الإنتاج، تكاليف الجهات، ومقارنة أسعار الشراء.
+            مؤشرات لحظية من قاعدة البيانات: توزيع المسارات، الموعد المتفق للتسليم، قيمة المخزون بالتكلفة (FIFO) وبسعر البيع، خط الإنتاج، تكاليف الجهات، ومقارنة أسعار الشراء.
           </p>
         </div>
         @if ($hasBoards)
@@ -26,8 +26,12 @@
               <strong class="bi-hero-kpi__value">{{ number_format($b1['total_cases'] ?? 0) }}</strong>
             </div>
             <div class="bi-hero-kpi bi-hero-kpi--cyan">
-              <span class="bi-hero-kpi__label">قيمة المخزون — متوسط التكلفة</span>
-              <strong class="bi-hero-kpi__value">{{ number_format((float) ($b2['total_value'] ?? 0), 0) }} <small>ج.م</small></strong>
+              <span class="bi-hero-kpi__label">قيمة المخزون — التكلفة (FIFO)</span>
+              <strong class="bi-hero-kpi__value">{{ number_format((float) ($b2['cost_value'] ?? $b2['total_value'] ?? 0), 0) }} <small>ج.م</small></strong>
+            </div>
+            <div class="bi-hero-kpi bi-hero-kpi--purple">
+              <span class="bi-hero-kpi__label">قيمة المخزون — سعر البيع</span>
+              <strong class="bi-hero-kpi__value">{{ number_format((float) ($b2['selling_value'] ?? 0), 0) }} <small>ج.م</small></strong>
             </div>
             <div class="bi-hero-kpi bi-hero-kpi--purple">
               <span class="bi-hero-kpi__label">أوامر تشغيل مفتوحة</span>

@@ -68,7 +68,8 @@
             <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">
               {{ (int) ($inventory['item_count'] ?? 0) }} صنف —
               {{ (int) ($inventory['low_stock'] ?? 0) }} منخفض —
-              قيمة WAC: <strong>{{ number_format((float) ($inventory['total_value'] ?? 0), 0) }} ج.م</strong>
+              التكلفة (FIFO): <strong>{{ number_format((float) ($inventory['cost_value'] ?? $inventory['total_value'] ?? 0), 0) }} ج.م</strong> —
+              سعر البيع: <strong>{{ number_format((float) ($inventory['selling_value'] ?? 0), 0) }} ج.م</strong>
             </div>
           </div>
         </div>

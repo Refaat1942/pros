@@ -149,9 +149,11 @@ class FinancialBalanceService
     /** @return array{opening: float, movement: float, closing: float} */
     private function inventoryValue(Carbon $from, Carbon $to, float $override): array
     {
-        /** @var array<int, float> $wac */
-        $wac = StockItem::query()->pluck('wac', 'id')
-            ->map(fn ($value) => (float) $value)
+        /** @var array<int, float> $wac تكلفة الوحدة الحالية (FIFO) — نفس تقييم لوحة القيادة */
+        $wac = collect(app(InventoryValuationService::class)->rows())
+            ->mapWithKeys(fn (array $row) => [
+                $row['id'] => $row['qty'] > 0 ? (float) $row['unit_cost'] : (float) $row['wac_unit'],
+            ])
             ->all();
 
         $openingQty = [];
@@ -165,7 +167,7 @@ class FinancialBalanceService
             ->get(['stock_item_id', 'balance_after', 'moved_at'])
             ->each(function (StockMovement $movement) use ($from, &$openingQty, &$closingQty) {
                 $id = (int) $movement->stock_item_id;
-                $balance = (int) $movement->balance_after;
+                $balance = max(0.0, (float) $movement->balance_after);
 
                 if ($movement->moved_at < $from) {
                     $openingQty[$id] = $balance;
@@ -187,7 +189,7 @@ class FinancialBalanceService
     }
 
     /**
-     * @param  array<int, int>  $qtyMap
+     * @param  array<int, float>  $qtyMap
      * @param  array<int, float>  $wac
      */
     private function valueOf(array $qtyMap, array $wac): float

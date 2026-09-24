@@ -50,7 +50,8 @@ class AdminOverviewScopingTest extends TestCase
 
         $response->assertSee('id="bi-board-4"', false);
         $response->assertSee('مديونيات جهات التعاقد', false);
-        $response->assertDontSee('قيمة المخزون — متوسط التكلفة', false);
+        $response->assertDontSee('قيمة المخزون — التكلفة (FIFO)', false);
+        $response->assertDontSee('قيمة المخزون — سعر البيع', false);
         $response->assertDontSee('id="bi-board-2"', false);
         $response->assertDontSee('id="bi-board-3"', false);
         $response->assertDontSee('محصّل نقدي — الخزنة', false);

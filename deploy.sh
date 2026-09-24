@@ -143,6 +143,10 @@ if ! php artisan migrate --force; then
     die "فشلت الهجرات — التطبيق مُبقىً في وضع الصيانة. راجع الخطأ أعلاه، أصلِح قاعدة البيانات، ثم أعد تشغيل deploy.sh."
 fi
 
+log "Refreshing stored WAC from actual stock layers (FIFO)"
+php artisan prosthetics:inventory-valuation --sync-wac --top=0 \
+    || warn "تعذّر تحديث WAC — شغّل يدوياً: php artisan prosthetics:inventory-valuation --sync-wac"
+
 # ── 7) Rebuild caches ───────────────────────────────────────────────────────
 # Recreate dirs after migrate/backup; rebuild caches as www-data when running as root.
 ensure_storage_dirs

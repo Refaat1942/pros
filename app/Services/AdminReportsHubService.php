@@ -599,44 +599,32 @@ class AdminReportsHubService
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
     private function buildInventoryValuation(?Carbon $from, ?Carbon $to): array
     {
-        $items = StockItem::query()
-            ->with(['prices' => fn ($q) => $q->orderByDesc('received_at')->orderByDesc('id')])
-            ->orderBy('code')
-            ->get();
-
-        $totalQty = 0;
-        $totalValue = 0.0;
-        $totalHighestValue = 0.0;
+        $valuation = app(InventoryValuationService::class);
+        $summary = $valuation->summary();
+        $fmtQty = fn (float $q) => rtrim(rtrim(number_format($q, 4, '.', ','), '0'), '.');
         $rows = [];
 
-        foreach ($items as $item) {
-            $analytics = $this->itemPricingAnalytics->rowForItem($item);
-            $qty = (int) ($analytics['qty'] ?? 0);
-            $wac = (float) ($analytics['wac'] ?? 0);
-            $lineValue = (float) ($analytics['wac_inventory_value'] ?? 0);
-            $highestLineValue = (float) ($analytics['highest_inventory_value'] ?? 0);
-            $totalQty += $qty;
-            $totalValue += $lineValue;
-            $totalHighestValue += $highestLineValue;
-
-            $priceLabels = $item->prices
-                ->map(fn (StockItemPrice $p) => number_format((float) $p->amount, 2).' ج.م'
-                    .($p->qty ? ' ×'.$p->qty : '')
-                    .($p->received_at ? ' ('.ClinicTime::format($p->received_at, 'd/m/Y').')' : ''))
-                ->values()
-                ->all();
+        foreach ($valuation->rows() as $row) {
+            $layers = array_map(
+                fn (array $l) => ($l['opening'] ? 'أول المدة ' : '')
+                    .number_format($l['amount'], 2).' × '.$fmtQty($l['qty']),
+                $row['layers'],
+            );
+            if ($row['opening_qty'] > 0) {
+                $layers[] = 'أول المدة '.number_format($row['opening_unit_cost'], 2).' × '.$fmtQty($row['opening_qty']);
+            }
 
             $rows[] = [
-                $item->code ?? '—',
-                $item->name ?? '—',
-                (string) $qty,
-                (string) $item->catalogBalance(),
-                number_format($wac, 4).' ج.م',
-                number_format((float) ($analytics['highest_purchase_price'] ?? 0), 4).' ج.م',
-                number_format((float) ($analytics['unit_margin'] ?? 0), 4).' ج.م',
-                $priceLabels !== [] ? implode(' · ', $priceLabels) : '—',
-                number_format($lineValue, 2).' ج.م',
-                number_format($highestLineValue, 2).' ج.م',
+                $row['code'] !== '' ? $row['code'] : '—',
+                $row['name'] !== '' ? $row['name'] : '—',
+                $fmtQty($row['qty']),
+                $layers !== [] ? implode(' · ', $layers) : '—',
+                number_format($row['unit_cost'], 2).' ج.م',
+                number_format($row['cost_value'], 2).' ج.م',
+                number_format($row['highest_unit'], 2).' ج.م',
+                number_format($row['selling_value'], 2).' ج.م',
+                number_format($row['selling_value'] - $row['cost_value'], 2).' ج.م',
+                number_format($row['wac_value'], 2).' ج.م',
             ];
         }
 
@@ -644,12 +632,15 @@ class AdminReportsHubService
             'title' => 'تقييم المخزون',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [
-                ['label' => 'عدد الأصناف', 'value' => (string) $items->count()],
-                ['label' => 'إجمالي الكميات', 'value' => (string) $totalQty],
-                ['label' => 'قيمة المخزون (WAC)', 'value' => number_format($totalValue, 2).' ج.م'],
-                ['label' => 'قيمة المخزون (أعلى سعر)', 'value' => number_format($totalHighestValue, 2).' ج.م'],
+                ['label' => 'عدد الأصناف', 'value' => (string) $summary['item_count']],
+                ['label' => 'إجمالي الكميات', 'value' => $fmtQty($summary['total_qty'])],
+                ['label' => 'قيمة المخزون — التكلفة (FIFO)', 'value' => number_format($summary['cost_value'], 2).' ج.م'],
+                ['label' => 'قيمة المخزون — سعر البيع', 'value' => number_format($summary['selling_value'], 2).' ج.م'],
+                ['label' => 'الهامش المتوقع', 'value' => number_format($summary['expected_margin'], 2).' ج.م'],
+                ['label' => 'منها رصيد أول المدة (تكلفة)', 'value' => number_format($summary['opening_cost_value'], 2).' ج.م'],
+                ['label' => 'قيمة المخزون (WAC)', 'value' => number_format($summary['wac_value'], 2).' ج.م'],
             ],
-            'headers' => ['رقم الصنف', 'اسم الصنف', 'رصيد المخزن', 'رصيد كتالوج', 'WAC', 'أعلى سعر', 'هامش الوحدة', 'أسعار الشراء', 'قيمة WAC', 'قيمة أعلى سعر'],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'رصيد المخزن', 'طبقات التكلفة (FIFO)', 'متوسط تكلفة الوحدة', 'قيمة التكلفة', 'أعلى سعر شراء', 'قيمة البيع', 'الهامش المتوقع', 'قيمة WAC'],
             'rows' => $rows,
         ];
     }

@@ -48,11 +48,11 @@ use App\Services\ReceptionAnalyticsService;
 use App\Services\SettingService;
 use App\Services\SpecEditRequestService;
 use App\Services\SpecOrdersService;
+use App\Services\InventoryValuationService;
 use App\Services\StockCatalogService;
 use App\Services\StockUomProfileService;
 use App\Support\StockSupplyUom;
 use App\Services\StockCategorySchemaService;
-use App\Services\StockPriceService;
 use App\Services\SupplierService;
 use App\Services\WorkshopAnalyticsService;
 use App\Services\WorkshopSectionService;
@@ -353,12 +353,11 @@ class DashboardPageDataService
 
     private function adminInventoryOverview(): array
     {
-        $priceService = app(StockPriceService::class);
         $catalogService = app(StockCatalogService::class);
 
         $items = $catalogService->allItemsForInventoryOverview();
 
-        $totalValue = $priceService->inventoryValuation()['wac_value'];
+        $valuation = app(InventoryValuationService::class)->summary();
 
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
         $totalCount = $catalogService->countAll();
@@ -370,7 +369,8 @@ class DashboardPageDataService
                 ['icon' => '📦', 'label' => 'إجمالي الأصناف', 'value' => (string) $totalCount, 'bg' => 'rgba(37,99,235,0.1)'],
                 ['icon' => '🔻', 'label' => 'أصناف منخفضة', 'value' => (string) $items->where('status', StockItem::STATUS_LOW)->count(), 'color' => '#dc2626', 'bg' => 'rgba(220,38,38,0.1)'],
                 ['icon' => '🛒', 'label' => 'طلبات توريد', 'value' => (string) $backorderCount, 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.12)'],
-                ['icon' => '💰', 'label' => 'قيمة المخزون', 'value' => number_format(round($totalValue)), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '💰', 'label' => 'قيمة المخزون — التكلفة (FIFO)', 'value' => number_format(round($valuation['cost_value'])), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '🏷️', 'label' => 'قيمة المخزون — سعر البيع', 'value' => number_format(round($valuation['selling_value'])), 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
             ],
         ];
     }
