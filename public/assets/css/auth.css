@@ -152,6 +152,87 @@ body {
   margin-top: 6px;
 }
 
+.auth-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.6;
+  animation: authAlertShake 0.35s ease;
+}
+
+.auth-alert--success {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+  animation: none;
+}
+
+.auth-alert__icon {
+  flex-shrink: 0;
+  line-height: 1.6;
+}
+
+@keyframes authAlertShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-left: 46px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: var(--auth-primary);
+  background: rgba(15, 23, 42, 0.05);
+  outline: none;
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.password-toggle .password-toggle__hide,
+.password-toggle[aria-pressed="true"] .password-toggle__show {
+  display: none;
+}
+
+.password-toggle[aria-pressed="true"] .password-toggle__hide {
+  display: block;
+}
+
 /* ── Submit ── */
 .btn-login {
   width: 100%;

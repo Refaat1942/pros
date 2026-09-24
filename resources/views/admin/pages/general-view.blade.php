@@ -68,7 +68,7 @@
             <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">
               {{ (int) ($inventory['item_count'] ?? 0) }} صنف —
               {{ (int) ($inventory['low_stock'] ?? 0) }} منخفض —
-              قيمة WAC: <strong>{{ number_format((float) ($inventory['total_value'] ?? 0), 2) }} ج.م</strong>
+              قيمة WAC: <strong>{{ number_format((float) ($inventory['total_value'] ?? 0), 0) }} ج.م</strong>
             </div>
           </div>
         </div>

@@ -51,7 +51,13 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('login', function (Request $request) {
             $key = UsernameRules::normalize((string) $request->input('username')).'|'.$request->ip();
 
-            return Limit::perMinute(5)->by($key);
+            return Limit::perMinute(5)->by($key)->response(function (Request $request, array $headers) {
+                $seconds = (int) ($headers['Retry-After'] ?? 60);
+
+                return redirect()->route('home')
+                    ->withInput($request->only('username'))
+                    ->withErrors(['username' => "محاولات دخول كثيرة — انتظر {$seconds} ثانية ثم حاول مرة أخرى."]);
+            });
         });
 
         // نقاط النهاية العامة (بدون مصادقة): تمنع تعداد رموز QR / معرّفات التتبّع.

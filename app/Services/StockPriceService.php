@@ -109,6 +109,50 @@ class StockPriceService
     }
 
     /**
+     * تقييم المخزون الفعلي — كل صنف بتكلفته هو (بدون إعادة بحث بالكود).
+     *
+     * الكمية: الرصيد الفعلي بالكسور (متر/كيلو)، والرصيد السالب (طلب توريد) = صفر
+     * لأنه لا يمثّل مخزوناً له قيمة. سعر الوحدة: WAC، وإن لم يُحتسب بعد فأعلى سعر
+     * (السعر الأساسي أو أعلى دفعة شراء متاحة).
+     *
+     * @return array{wac_value: float, highest_value: float}
+     */
+    public function inventoryValuation(): array
+    {
+        $maxBatchByItem = StockItemPrice::query()
+            ->where('qty', '>', 0)
+            ->groupBy('stock_item_id')
+            ->selectRaw('stock_item_id, MAX(amount) as max_amount')
+            ->pluck('max_amount', 'stock_item_id');
+
+        $wacValue = 0.0;
+        $highestValue = 0.0;
+
+        StockItem::query()
+            ->select(['id', 'qty', 'wac', 'price'])
+            ->chunkById(500, function ($items) use ($maxBatchByItem, &$wacValue, &$highestValue) {
+                foreach ($items as $item) {
+                    $qty = max(0.0, (float) $item->qty);
+                    if ($qty <= 0) {
+                        continue;
+                    }
+
+                    $highest = max((float) $item->price, (float) ($maxBatchByItem[$item->id] ?? 0));
+                    $wac = (float) ($item->wac ?? 0);
+                    $unitWac = $wac > 0 ? $wac : $highest;
+
+                    $wacValue += $qty * $unitWac;
+                    $highestValue += $qty * $highest;
+                }
+            });
+
+        return [
+            'wac_value' => round($wacValue, 2),
+            'highest_value' => round($highestValue, 2),
+        ];
+    }
+
+    /**
      * إعادة حساب WAC وتخزينه في stock_items.
      *
      * Formula: (prior_qty × prior_wac + in_qty × in_price) / (prior_qty + in_qty)

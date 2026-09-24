@@ -4,6 +4,7 @@ namespace Tests\Feature\Inventory;
 
 use App\Models\StockItemPrice;
 use App\Services\Dashboard\DashboardPageDataService;
+use App\Services\StockPriceService;
 use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
@@ -30,6 +31,19 @@ class AdminInventoryOverviewValueTest extends TestCase
         $valueStat = $stats->firstWhere('label', 'قيمة المخزون');
 
         $this->assertNotNull($valueStat);
-        $this->assertSame('2,500.00', $valueStat['value']);
+        $this->assertSame('2,500', $valueStat['value']);
+    }
+
+    public function test_inventory_value_counts_fractional_qty_and_ignores_backorders(): void
+    {
+        $meters = $this->stockItem('RM-M01', qty: 10, wac: 100);
+        $meters->update(['qty' => 2.5]);
+
+        $backorder = $this->stockItem('RM-B01', qty: 1, wac: 400);
+        $backorder->update(['qty' => -3]);
+
+        $valuation = app(StockPriceService::class)->inventoryValuation();
+
+        $this->assertEqualsWithDelta(250.0, $valuation['wac_value'], 0.01);
     }
 }

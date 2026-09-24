@@ -24,41 +24,20 @@
         <form method="POST" action="{{ route('login.submit') }}" novalidate id="dashboardLoginForm">
             @csrf
 
-            @include('partials.flash-messages')
+            @if (session('success'))
+                <div class="auth-alert auth-alert--success" role="status">{{ session('success') }}</div>
+            @endif
+            @if (session('error') && ! $errors->any())
+                <div class="auth-alert" role="alert">
+                    <span class="auth-alert__icon" aria-hidden="true">⚠️</span>
+                    <div class="auth-alert__body">{{ session('error') }}</div>
+                </div>
+            @endif
 
             <input type="hidden" name="device_id" id="device_id" value="">
             <input type="hidden" name="device_type" id="device_type" value="web">
 
-            <div class="form-group">
-                <label for="username">اسم المستخدم</label>
-                <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    value="{{ old('username') }}"
-                    autocomplete="username"
-                    class="{{ $errors->has('username') ? 'is-invalid' : '' }}"
-                    autofocus
-                >
-                @error('username')
-                    <div class="field-error">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="password">كلمة المرور</label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    placeholder="••••••••"
-                    autocomplete="current-password"
-                    class="{{ $errors->has('password') ? 'is-invalid' : '' }}"
-                >
-                @error('password')
-                    <div class="field-error">{{ $message }}</div>
-                @enderror
-            </div>
+            @include('auth.partials.login-fields')
 
             <button type="submit" class="btn-login" id="loginSubmitBtn">دخول</button>
         </form>
@@ -72,7 +51,7 @@
                 }).catch(function () { /* صامت */ });
             })();
         </script>
-        <script src="{{ asset('assets/js/shared/auth-login.js') }}"></script>
+        <script src="{{ asset('assets/js/shared/auth-login.js') }}?v={{ filemtime(public_path('assets/js/shared/auth-login.js')) }}"></script>
 
         <div class="auth-footer auth-footer--home">
             <span>للمساعدة تواصل مع مسؤول النظام</span>
