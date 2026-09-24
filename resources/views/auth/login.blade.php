@@ -6,7 +6,7 @@
     <meta name="prosthetics-assets" content="{{ config('assets.use_local') ? 'local' : 'cdn' }}">
     <title>تسجيل الدخول — {{ $dashboardConfig['sidebar']['title'] ?? $dashboardConfig['title'] }}</title>
     @include('partials.web-fonts')
-    <link rel="stylesheet" href="{{ asset('assets/css/auth.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/auth.css') }}?v={{ filemtime(public_path('assets/css/auth.css')) }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body class="auth-dashboard auth-{{ $dashboard }}">
@@ -30,38 +30,7 @@
             <input type="hidden" name="device_id" id="device_id" value="">
             <input type="hidden" name="device_type" id="device_type" value="web">
 
-            {{-- Username --}}
-            <div class="form-group">
-                <label for="username">اسم المستخدم</label>
-                <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    value="{{ old('username') }}"
-                    autocomplete="username"
-                    class="{{ $errors->has('username') ? 'is-invalid' : '' }}"
-                    autofocus
-                >
-                @error('username')
-                    <div class="field-error">{{ $message }}</div>
-                @enderror
-            </div>
-
-            {{-- Password --}}
-            <div class="form-group">
-                <label for="password">كلمة المرور</label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    placeholder="••••••••"
-                    autocomplete="current-password"
-                    class="{{ $errors->has('password') ? 'is-invalid' : '' }}"
-                >
-                @error('password')
-                    <div class="field-error">{{ $message }}</div>
-                @enderror
-            </div>
+            @include('auth.partials.login-fields')
 
             <button type="submit" class="btn-login" id="loginSubmitBtn">دخول</button>
         </form>
@@ -76,7 +45,7 @@
                 }).catch(function () { /* صامت */ });
             })();
         </script>
-        <script src="{{ asset('assets/js/shared/auth-login.js') }}"></script>
+        <script src="{{ asset('assets/js/shared/auth-login.js') }}?v={{ filemtime(public_path('assets/js/shared/auth-login.js')) }}"></script>
 
         <div class="auth-footer">
             <a href="/" class="back-link">← العودة للصفحة الرئيسية</a>
