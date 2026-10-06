@@ -132,8 +132,7 @@ class ContractCompanyDiscountTest extends TestCase
         $this->actingAs($ops)
             ->get(route('operations.quote.print', $quote))
             ->assertOk()
-            ->assertSee('خصم جهة التعاقد', false)
-            ->assertSee('10%', false)
+            ->assertSee('نسبة الخصم (10%)', false)
             ->assertSee('3,600', false)
             ->assertSee('4,000', false);
     }

@@ -1,3 +1,15 @@
+<div class="panel" id="stockKitSuggestionsPanel" hidden>
+    <div class="panel-header">
+        <h3>💡 اقتراحات تجميع تلقائي</h3>
+        <span class="toolbar-count" id="stockKitSuggestionsCount"></span>
+    </div>
+    <p class="catalog-table-hint" style="margin:12px 16px 0;">
+        خامات اتعملت مع بعض في <strong>أكتر من حالة</strong> — تحب نعملها مجموعة (طقم) جاهزة؟
+        «نعم» تفتح نافذة الطقم بالمكوّنات والكميات المعتادة لتراجعها قبل الحفظ، و«لا» تخفي الاقتراح نهائياً.
+    </p>
+    <div class="panel-body" id="stockKitSuggestionsList"></div>
+</div>
+
 <div class="panel" id="stockKitsPanel">
     <div class="panel-header">
         <h3>🧩 أطقم جاهزة ومخصصات</h3>
@@ -572,3 +584,30 @@
 <script>
     window.__STOCK_KIT_GROUPS__ = @json($stock_kit_groups ?? []);
 </script>
+
+<style>
+    #stockKitSuggestionsPanel { margin-bottom: 16px; border: 1px solid #fde68a; }
+    #stockKitSuggestionsPanel .panel-header { background: #fffbeb; }
+    .kit-suggestion {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px 16px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .kit-suggestion:last-child { border-bottom: none; }
+    .kit-suggestion__main { flex: 1 1 320px; min-width: 0; }
+    .kit-suggestion__title { font-weight: 800; color: #1e293b; }
+    .kit-suggestion__meta { font-size: 12px; color: #92400e; margin-top: 2px; }
+    .kit-suggestion__items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .kit-suggestion__chip {
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        font-size: 12px;
+        color: #334155;
+    }
+    .kit-suggestion__actions { display: flex; gap: 8px; }
+</style>

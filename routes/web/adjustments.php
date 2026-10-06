@@ -74,6 +74,10 @@ Route::prefix('adjustments')
 
             Route::get('item-groups/search-items', [AdjustmentItemGroupController::class, 'searchItems'])
                 ->name('item-groups.search-items');
+            Route::get('item-groups/suggestions', [AdjustmentItemGroupController::class, 'suggestions'])
+                ->name('item-groups.suggestions');
+            Route::post('item-groups/suggestions/dismiss', [AdjustmentItemGroupController::class, 'dismissSuggestion'])
+                ->name('item-groups.suggestions.dismiss');
             Route::get('item-groups', [AdjustmentItemGroupController::class, 'index'])
                 ->name('item-groups.index');
             Route::post('item-groups', [AdjustmentItemGroupController::class, 'store'])

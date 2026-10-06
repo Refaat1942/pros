@@ -53,7 +53,7 @@ class UnifiedCatalogListTest extends TestCase
 
     public function test_bulk_import_refreshes_picker_cache(): void
     {
-        Cache::put('stock_catalog_picker_rows_v2', [['code' => 'stale', 'name' => 'قديم']], 300);
+        Cache::put('stock_catalog_picker_rows_v3', [['code' => 'stale', 'name' => 'قديم']], 300);
 
         $csv = StockImportService::headers();
         $contents = implode(',', $csv)."\r\n"
@@ -63,7 +63,7 @@ class UnifiedCatalogListTest extends TestCase
             UploadedFile::fake()->createWithContent('new.csv', $contents),
         );
 
-        $this->assertFalse(Cache::has('stock_catalog_picker_rows_v2'));
+        $this->assertFalse(Cache::has('stock_catalog_picker_rows_v3'));
         $rows = StockCatalogPicker::rows();
         $this->assertNotEmpty($rows);
         $this->assertSame('RM-NEW', collect($rows)->firstWhere('name', 'صنف جديد')['catalog_code'] ?? null);

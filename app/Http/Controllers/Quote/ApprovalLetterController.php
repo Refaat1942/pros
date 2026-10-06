@@ -75,6 +75,8 @@ class ApprovalLetterController extends Controller
         if ($quote->status !== Quote::STATUS_ISSUED) {
             return response()->json(['message' => 'يجب أن يكون العرض صادراً للجهة قبل رفع خطاب الموافقة.'], 422);
         }
+
+        $file = $request->file('letter_file');
         $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
         $path = $file->storeAs('approval_letters', $filename, 'local');
 

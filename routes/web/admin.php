@@ -201,6 +201,10 @@ Route::prefix('admin')
                 ->name('stock-kits.search-items');
             Route::get('stock-kits/list', [\App\Http\Controllers\Admin\StockKitController::class, 'index'])
                 ->name('stock-kits.list');
+            Route::get('stock-kits/suggestions', [\App\Http\Controllers\Admin\StockKitController::class, 'suggestions'])
+                ->name('stock-kits.suggestions');
+            Route::post('stock-kits/suggestions/dismiss', [\App\Http\Controllers\Admin\StockKitController::class, 'dismissSuggestion'])
+                ->name('stock-kits.suggestions.dismiss');
             Route::get('stock-kits/expand/{code}', [\App\Http\Controllers\Admin\StockKitController::class, 'expand'])
                 ->name('stock-kits.expand');
             Route::post('stock-kits', [\App\Http\Controllers\Admin\StockKitController::class, 'store'])

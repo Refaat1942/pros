@@ -47,9 +47,11 @@ class OfficialPrintDocumentsTest extends TestCase
             ->get(route('operations.quote.print', $quote))
             ->assertOk()
             ->assertSee($quote->quote_no, false)
-            ->assertSee('عرض سعر', false)
+            ->assertSee('عرض أسعار', false)
             ->assertSee(Quote::SERIAL_LABEL, false)
-            ->assertSee('الكمية', false)
+            ->assertSee('المواصفات التفصيلية', false)
+            ->assertSee('مدة سريان عرض السعر', false)
+            ->assertSee('بيانات المريض', false)
             ->assertSee($specItem->name, false)
             ->assertSee('<svg', false)
             ->assertSee('onload="window.print()"', false);

@@ -94,6 +94,32 @@ class DocumentTemplateSettingsTest extends TestCase
         $this->assertSame('عرض خاص للاستقبال', $scoped['doc_title']);
     }
 
+    public function test_quote_form_texts_are_edited_from_documents_hub(): void
+    {
+        $super = $this->userWithRole('super_admin');
+
+        $this->actingAs($super)
+            ->putJson(route('admin.documents-hub.update', 'quote'), [
+                'signatory_name' => 'رائد / اختبار الموقّع',
+                'supply_period' => 'التوريد خلال شهرين من تاريخ العرض',
+                'scope_department' => '',
+                'scope_stage' => '',
+            ])
+            ->assertOk()
+            ->assertJsonPath('values.signatory_name', 'رائد / اختبار الموقّع');
+
+        $this->actingAs($super)
+            ->get(route('admin.documents-hub.preview', 'quote'))
+            ->assertOk()
+            ->assertSee('عرض أسعار', false)
+            ->assertSee('رائد / اختبار الموقّع', false)
+            ->assertSee('التوريد خلال شهرين من تاريخ العرض', false)
+            ->assertSee('مدة سريان عرض السعر', false)
+            // الوصف الحر «المكوّن: التفاصيل» يُقسَّم على العمودين.
+            ->assertSee('السوكيت والاينر', false)
+            ->assertSee('سوكيت خارجي كربون فيبر - سوكيت داخلي جيل لاينر', false);
+    }
+
     public function test_preview_issue_voucher_uses_custom_title(): void
     {
         Setting::updateOrCreate(

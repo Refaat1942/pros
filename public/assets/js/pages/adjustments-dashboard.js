@@ -21,6 +21,7 @@
   var EDIT_REQUEST_URL = function (id) { return '/adjustments/adjustments/' + id + '/edit-request'; };
   var GROUPS_URL = '/adjustments/item-groups';
   var GROUPS_SEARCH_URL = '/adjustments/item-groups/search-items';
+  var GROUP_SUGGESTIONS_URL = '/adjustments/item-groups/suggestions';
 
   var casesCache = [];
   var savedGroupsCache = [];
@@ -931,11 +932,92 @@
         savedGroupsCache = res.data.data || [];
         renderSavedGroupsStrip();
         renderGroupsSidebar();
+        loadGroupSuggestions();
       })
       .catch(function () {
         var list = $('adjSavedGroupsList');
         if (list) list.innerHTML = '<span class="adj-saved-groups-empty">تعذّر تحميل المجموعات.</span>';
       });
+  }
+
+  // ── التجميع التلقائي: بنود اتضافت مع بعض في أكثر من حالة → «نعملها مجموعة؟» ──
+  var groupSuggestionsCache = [];
+
+  function loadGroupSuggestions() {
+    if (!window.axios) return;
+    axios.get(GROUP_SUGGESTIONS_URL)
+      .then(function (res) {
+        groupSuggestionsCache = res.data.data || [];
+        renderGroupSuggestions();
+      })
+      .catch(function () { /* اقتراحات اختيارية — لا نعطل المكتب */ });
+  }
+
+  function renderGroupSuggestions() {
+    var box = $('adjGroupSuggestions');
+    if (!box) return;
+    var rows = groupSuggestionsCache.slice(0, 3);
+    if (!rows.length) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    box.hidden = false;
+    box.innerHTML = rows.map(function (s, idx) {
+      var names = (s.items || []).map(function (i) {
+        return esc(i.name) + ' ×' + esc(i.qty);
+      }).join('، ');
+      return '<div class="adj-group-suggestion" data-idx="' + idx + '">' +
+        '<div class="adj-group-suggestion__text">💡 <strong>' + names + '</strong>' +
+          '<span> — اتضافوا مع بعض في ' + esc(s.case_count) + ' حالات. نعملهم مجموعة؟</span></div>' +
+        '<div class="adj-group-suggestion__actions">' +
+          '<button type="button" class="btn-action success btn-accept-adj-group-suggestion">✓ نعم</button>' +
+          '<button type="button" class="btn-action btn-dismiss-adj-group-suggestion">✕ لا</button>' +
+        '</div></div>';
+    }).join('');
+
+    box.querySelectorAll('.btn-accept-adj-group-suggestion').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var s = groupSuggestionsCache[parseInt(btn.closest('.adj-group-suggestion').dataset.idx, 10)];
+        if (s) openGroupEditorFromSuggestion(s);
+      });
+    });
+
+    box.querySelectorAll('.btn-dismiss-adj-group-suggestion').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var s = groupSuggestionsCache[parseInt(btn.closest('.adj-group-suggestion').dataset.idx, 10)];
+        if (!s || !window.confirm('تجاهل هذا الاقتراح نهائياً؟')) return;
+        btn.disabled = true;
+        axios.post(GROUP_SUGGESTIONS_URL + '/dismiss', {
+          codes: (s.items || []).map(function (i) { return i.code; }),
+          case_count: s.case_count,
+        })
+          .then(function (res) {
+            toast(res.data.message || 'تم تجاهل الاقتراح');
+            loadGroupSuggestions();
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            toast(apiMessage(err, 'تعذّر تجاهل الاقتراح'));
+          });
+      });
+    });
+  }
+
+  /** «نعم» → نافذة إدارة المجموعات بمجموعة جديدة معبأة للمراجعة قبل الحفظ. */
+  function openGroupEditorFromSuggestion(s) {
+    openGroupsManager(null);
+    startNewGroupEditor();
+    $('adjGroupName').value = s.suggested_name || '';
+    $('adjGroupNotes').value = 'اقتراح تلقائي — اتضافت مع بعض في ' + s.case_count + ' حالات';
+    groupEditorLines = (s.items || []).map(function (item) {
+      return {
+        stock_item_code: item.code,
+        name: item.name || item.code,
+        qty: normalizePickerQty(item.qty, 1),
+      };
+    });
+    renderGroupEditorLines();
   }
 
   function setGroupFormError(msg) {

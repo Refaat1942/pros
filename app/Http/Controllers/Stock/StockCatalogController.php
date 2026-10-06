@@ -195,7 +195,8 @@ class StockCatalogController extends Controller
 
         $rowsInFile = (int) ($summary['rows_in_file'] ?? 0);
         $rowsProcessed = (int) ($summary['rows_processed'] ?? 0);
-        $message = "تم الاستيراد: {$summary['created']} صنف جديد، {$summary['updated']} محدَّث، {$summary['skipped']} متخطّى.";
+        $message = "تم الاستيراد: {$summary['created']} صنف جديد، {$summary['updated']} محدَّث، "
+            ."{$summary['unchanged']} بدون تغيير، {$summary['skipped']} متخطّى — لم يُحذف أي صنف موجود.";
         if ($rowsInFile > 0) {
             $message .= " (قُرئ {$rowsProcessed} سطر بيانات من {$rowsInFile} في الملف)";
         }

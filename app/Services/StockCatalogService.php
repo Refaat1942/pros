@@ -238,9 +238,10 @@ class StockCatalogService
                 ->mapWithKeys(fn (array $row) => [$row['field_key'] => $row['value']])
                 ->all(),
             'qty' => (int) $item->qty,
-            'opening_qty' => (int) ($item->opening_qty ?? 0),
-            'addition' => (int) ($item->addition ?? 0),
-            'discount' => (int) ($item->discount ?? 0),
+            // أرصدة عشرية: (int) كان يقطع 2.5 ← 2 في الشاشة والتصدير (ثم يُكتب خطأً عند إعادة الرفع).
+            'opening_qty' => $this->ledgerDisplayQty($item->opening_qty),
+            'addition' => $this->ledgerDisplayQty($item->addition),
+            'discount' => $this->ledgerDisplayQty($item->discount),
             'catalog_balance' => $item->catalogBalance(),
             'warehouse_qty' => (int) $item->qty,
             'balance' => $item->catalogBalance(),
@@ -879,5 +880,13 @@ class StockCatalogService
             });
 
         return compact('synced', 'skipped');
+    }
+
+    /** عدد صحيح إن لم يكن هناك كسر (نفس العرض السابق)، وإلا القيمة العشرية كما هي. */
+    private function ledgerDisplayQty(mixed $value): int|float
+    {
+        $qty = round((float) ($value ?? 0), 4);
+
+        return abs($qty - round($qty)) < 0.00005 ? (int) round($qty) : $qty;
     }
 }

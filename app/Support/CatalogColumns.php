@@ -59,11 +59,18 @@ final class CatalogColumns
             'opening_qty_raw' => ['رصيد أول المده', 'رصيد أول المدة', 'رصيد اول المدة', 'رصيد أول', 'opening', 'opening qty'],
             'addition_raw' => ['الاضافة', 'الإضافة', 'اضافة', 'addition'],
             'discount_raw' => ['الخصم', 'خصم', 'discount'],
-            'balance_raw' => ['الرصيد', 'رصيد', 'balance', 'الرصيد النهائي'],
+            'balance_raw' => ['الرصيد', 'رصيد', 'balance', 'الرصيد النهائي', 'الكمية', 'الكميه', 'كمية', 'qty', 'quantity'],
             'price_raw' => ['السعر الأساسي', 'السعر', 'سعر التكلفة', 'أعلى سعر', 'price', 'cost'],
         ];
 
         return array_merge($defaults, config('catalog.import_aliases', []));
+    }
+
+    private static function quantityForExport(mixed $value): string
+    {
+        $formatted = rtrim(rtrim(number_format(round((float) $value, 4), 4, '.', ''), '0'), '.');
+
+        return $formatted === '-0' || $formatted === '' ? '0' : $formatted;
     }
 
     /**
@@ -78,10 +85,11 @@ final class CatalogColumns
             'brand' => (string) ($item['brand'] ?? ''),
             'alt_codes' => self::operationalCodeForExport($item),
             'uom' => (string) ($item['uom'] ?? ''),
-            'opening_qty' => (string) ((int) ($item['opening_qty'] ?? 0)),
-            'addition' => (string) ((int) ($item['addition'] ?? 0)),
-            'discount' => (string) ((int) ($item['discount'] ?? 0)),
-            'balance' => (string) ((int) ($item['catalog_balance'] ?? $item['balance'] ?? $item['qty'] ?? 0)),
+            // الأرصدة عشرية — (int) كان يقطع 2.5 إلى 2 فيُكتب الرقم الخطأ عند إعادة رفع الملف المُصدَّر.
+            'opening_qty' => self::quantityForExport($item['opening_qty'] ?? 0),
+            'addition' => self::quantityForExport($item['addition'] ?? 0),
+            'discount' => self::quantityForExport($item['discount'] ?? 0),
+            'balance' => self::quantityForExport($item['catalog_balance'] ?? $item['balance'] ?? $item['qty'] ?? 0),
             'price' => (string) round((float) ($item['price'] ?? 0), 2),
             default => (string) ($item[self::definitions()[$key]['field'] ?? $key] ?? ''),
         };

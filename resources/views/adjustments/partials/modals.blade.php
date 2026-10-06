@@ -80,6 +80,7 @@
             <div id="adjSavedGroupsList" class="adj-saved-groups-list">
               <span class="adj-saved-groups-empty">جاري تحميل المجموعات…</span>
             </div>
+            <div id="adjGroupSuggestions" class="adj-group-suggestions" hidden></div>
           </div>
           <div class="adj-add-item-row">
             <div class="form-group adj-item-field">
@@ -271,6 +272,26 @@
       background: #6d28d9;
     }
 
+    #adjModal .adj-group-suggestions {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    #adjModal .adj-group-suggestion {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      padding: 8px 12px;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      background: #fffbeb;
+      font-size: 13px;
+      color: #78350f;
+    }
+    #adjModal .adj-group-suggestion__text { flex: 1 1 260px; min-width: 0; line-height: 1.6; }
+    #adjModal .adj-group-suggestion__actions { display: flex; gap: 6px; }
     #adjModal .adj-saved-groups-empty {
       font-size: 13px;
       color: #94a3b8;
