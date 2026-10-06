@@ -149,7 +149,9 @@ class ChecklistFeaturesTest extends TestCase
         );
 
         $this->assertSame(1, $summary['created']);
-        $this->assertSame(1, $summary['updated']);
+        // السطر المكرر مطابق تماماً ← «بدون تغيير» وليس تحديثاً (الرفع دمج: يُطبَّق الجديد فقط).
+        $this->assertSame(0, $summary['updated']);
+        $this->assertSame(1, $summary['unchanged']);
         $this->assertSame(1, StockItem::query()->where('catalog_number', 'RM-DUP')->count());
     }
 
@@ -168,7 +170,9 @@ class ChecklistFeaturesTest extends TestCase
             UploadedFile::fake()->createWithContent('items2.csv', $contents),
         );
         $this->assertSame(0, $second['created']);
-        $this->assertSame(1, $second['updated']);
+        // إعادة رفع نفس الملف بلا اختلاف ← لا شيء يُكتب فوق المسجَّل.
+        $this->assertSame(0, $second['updated']);
+        $this->assertSame(1, $second['unchanged']);
         $this->assertSame(1, StockItem::query()->where('catalog_number', '5/43')->count());
         $this->assertSame(250.0, (float) StockItem::query()->where('catalog_number', '5/43')->value('price'));
     }
