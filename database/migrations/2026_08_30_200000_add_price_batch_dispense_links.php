@@ -25,7 +25,14 @@ return new class extends Migration
                 ->nullOnDelete();
         });
 
-        DB::statement('ALTER TABLE stock_item_prices MODIFY qty DECIMAL(12,4) NOT NULL DEFAULT 0');
+        // MODIFY صيغة MySQL فقط — على PostgreSQL/SQLite نستخدم change() (doctrine/dbal).
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE stock_item_prices MODIFY qty DECIMAL(12,4) NOT NULL DEFAULT 0');
+        } else {
+            Schema::table('stock_item_prices', function (Blueprint $table) {
+                $table->decimal('qty', 12, 4)->default(0)->change();
+            });
+        }
     }
 
     public function down(): void
@@ -38,6 +45,12 @@ return new class extends Migration
             $table->dropConstrainedForeignId('supply_request_line_id');
         });
 
-        DB::statement('ALTER TABLE stock_item_prices MODIFY qty INT UNSIGNED NULL');
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE stock_item_prices MODIFY qty INT UNSIGNED NULL');
+        } else {
+            Schema::table('stock_item_prices', function (Blueprint $table) {
+                $table->unsignedInteger('qty')->nullable()->change();
+            });
+        }
     }
 };
