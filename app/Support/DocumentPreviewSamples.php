@@ -22,6 +22,17 @@ final class DocumentPreviewSamples
             'stage_key' => CaseRecord::STAGE_QUOTE,
         ]);
         $case->id = 0;
+        $case->setRelation('patient', new Patient([
+            'name' => 'مريض تجريبي — معاينة القالب',
+            'national_id' => '28001010100000',
+        ]));
+        $case->setRelation('techOrderSpec', new TechOrderSpec([
+            'written_items' => "السوكيت والاينر: سوكيت خارجي كربون فيبر - سوكيت داخلي جيل لاينر\n"
+                ."القدم: قدم ديناميك موشن\n"
+                .'الوصلات: عدد 2 وصلة ماسورة',
+        ]));
+        $case->setRelation('medicalRecords', collect());
+        $case->setRelation('bom', null);
 
         $quote = new Quote([
             'quote_no' => 'QT-DEMO-001',

@@ -333,8 +333,8 @@ class OperationsPendingDeskTest extends TestCase
             ->assertSee('عرض سعر', false)
             ->assertSee('وزارة الدفاع', false)
             ->assertSee('مصنع الأجهزة التعويضية', false)
-            ->assertSee('المواصفات', false)
-            ->assertSee('فقط ', false)
+            ->assertSee('المواصفات التفصيلية', false)
+            ->assertSee('إجمالي السعر', false)
             ->assertSee('<svg', false);
     }
 
