@@ -7,6 +7,7 @@ use App\Models\StockItem;
 use App\Models\StockKit;
 use App\Services\CatalogListVisibilityService;
 use App\Services\StockKitService;
+use App\Services\StockKitSuggestionService;
 use App\Support\StockKitGroups;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,38 @@ class StockKitController extends Controller
     public function __construct(
         private readonly StockKitService $kits,
     ) {}
+
+    /**
+     * اقتراحات التجميع التلقائي — خامات اتعملت مع بعض في أكثر من حالة.
+     */
+    public function suggestions(StockKitSuggestionService $suggestions): JsonResponse
+    {
+        return response()->json([
+            'data' => $suggestions->suggestions(StockKitSuggestionService::SCOPE_KITS),
+            'min_cases' => StockKitSuggestionService::MIN_CASES,
+        ]);
+    }
+
+    /**
+     * «لا» على اقتراح تجميع — لا يُقترح مرة أخرى.
+     */
+    public function dismissSuggestion(Request $request, StockKitSuggestionService $suggestions): JsonResponse
+    {
+        $validated = $request->validate([
+            'codes' => ['required', 'array', 'min:2', 'max:20'],
+            'codes.*' => ['required', 'string', 'max:100'],
+            'case_count' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $suggestions->dismiss(
+            StockKitSuggestionService::SCOPE_KITS,
+            $validated['codes'],
+            $request->user(),
+            (int) ($validated['case_count'] ?? 0),
+        );
+
+        return response()->json(['message' => 'تم تجاهل الاقتراح — لن يظهر مرة أخرى.']);
+    }
 
     public function index(): JsonResponse
     {

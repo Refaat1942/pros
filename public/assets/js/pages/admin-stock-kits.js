@@ -366,7 +366,7 @@
     var req = id
       ? jsonFetch('/admin/stock-kits/' + id, { method: 'PUT', body: payload })
       : jsonFetch('/admin/stock-kits', { method: 'POST', body: payload });
-    req.then(function () { closeModal(); load(); })
+    req.then(function () { closeModal(); load(); loadSuggestions(); })
       .catch(function (e) {
         err.textContent = (e.response && e.response.data && e.response.data.message) || e.message || 'تعذّر الحفظ';
         err.style.display = 'block';
@@ -514,5 +514,102 @@
     }
   });
 
+  // ── التجميع التلقائي: خامات اتعملت مع بعض في أكثر من حالة ──
+  var suggestions = [];
+
+  function loadSuggestions() {
+    jsonFetch('/admin/stock-kits/suggestions')
+      .then(function (res) {
+        suggestions = res.data || [];
+        renderSuggestions();
+      })
+      .catch(function () { /* اقتراحات اختيارية — لا نعطل الصفحة */ });
+  }
+
+  function renderSuggestions() {
+    var panel = $('stockKitSuggestionsPanel');
+    var list = $('stockKitSuggestionsList');
+    if (!panel || !list) return;
+
+    if (!suggestions.length) {
+      panel.setAttribute('hidden', '');
+      list.innerHTML = '';
+      return;
+    }
+
+    panel.removeAttribute('hidden');
+    if ($('stockKitSuggestionsCount')) $('stockKitSuggestionsCount').textContent = suggestions.length + ' اقتراح';
+
+    list.innerHTML = suggestions.map(function (s, idx) {
+      var chips = (s.items || []).map(function (i) {
+        return '<span class="kit-suggestion__chip">' + esc(i.name) + ' ×' + esc(i.qty) + '</span>';
+      }).join('');
+      var meta = 'اتعملت في ' + s.case_count + ' حالات' +
+        (s.last_used_at ? ' — آخرها ' + esc(s.last_used_at) : '') +
+        (s.spec_group_label ? ' — مجموعة: ' + esc(s.spec_group_label) : '');
+      return '<div class="kit-suggestion" data-idx="' + idx + '">' +
+        '<div class="kit-suggestion__main">' +
+          '<div class="kit-suggestion__title">' + esc(s.suggested_name) + '</div>' +
+          '<div class="kit-suggestion__meta">' + meta + ' — نعملها مجموعة؟</div>' +
+          '<div class="kit-suggestion__items">' + chips + '</div>' +
+        '</div>' +
+        '<div class="kit-suggestion__actions">' +
+          '<button type="button" class="btn-action success kit-suggestion-accept">✓ نعم، اعملها مجموعة</button>' +
+          '<button type="button" class="btn-action kit-suggestion-dismiss">✕ لا</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    list.querySelectorAll('.kit-suggestion-accept').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var s = suggestions[parseInt(btn.closest('.kit-suggestion').dataset.idx, 10)];
+        if (s) openModalFromSuggestion(s);
+      });
+    });
+
+    list.querySelectorAll('.kit-suggestion-dismiss').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var s = suggestions[parseInt(btn.closest('.kit-suggestion').dataset.idx, 10)];
+        if (!s || !confirm('تجاهل هذا الاقتراح نهائياً؟')) return;
+        btn.disabled = true;
+        jsonFetch('/admin/stock-kits/suggestions/dismiss', {
+          method: 'POST',
+          body: {
+            codes: (s.items || []).map(function (i) { return i.code; }),
+            case_count: s.case_count,
+          },
+        }).then(loadSuggestions)
+          .catch(function (e) {
+            btn.disabled = false;
+            alert((e.response && e.response.data && e.response.data.message) || 'تعذّر تجاهل الاقتراح');
+          });
+      });
+    });
+  }
+
+  /** نافذة «طقم جديد» معبأة من الاقتراح — المستخدم يراجع ثم يحفظ. */
+  function openModalFromSuggestion(s) {
+    openModal(null);
+    $('stockKitName').value = s.suggested_name || '';
+    if (s.spec_group && $('stockKitSpecGroup')) {
+      $('stockKitSpecGroup').value = s.spec_group;
+      renderTemplateChips(s.spec_group);
+    }
+    $('stockKitDescription').value = 'اقتراح تلقائي — اتعملت في ' + s.case_count + ' حالات';
+    $('stockKitModalSubtitle').textContent = '💡 من اقتراحات التجميع التلقائي — راجع المكوّنات والكميات ثم احفظ';
+    selectedComponents = (s.items || []).map(function (item) {
+      return {
+        stock_item_id: item.stock_item_id,
+        code: item.code || '—',
+        name: item.name || '',
+        uom: item.uom || 'قطعة',
+        page_number: item.page_number || '',
+        qty: parseInt(item.qty, 10) || 1,
+      };
+    });
+    renderComponentsTable();
+  }
+
   load();
+  loadSuggestions();
 })();

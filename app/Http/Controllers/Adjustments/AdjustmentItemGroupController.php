@@ -8,6 +8,7 @@ use App\Http\Requests\Adjustments\UpdateAdjustmentItemGroupRequest;
 use App\Models\AdjustmentItemGroup;
 use App\Models\StockItem;
 use App\Services\AdjustmentItemGroupService;
+use App\Services\StockKitSuggestionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -56,6 +57,38 @@ class AdjustmentItemGroupController extends Controller
     /**
      * بحث أصناف لبناء مجموعة (نفس منطق الكاتلوج التشغيلي — بدون أطقم).
      */
+    /**
+     * اقتراحات تجميع تلقائي — بنود معدلات اتضافت مع بعض في أكثر من حالة.
+     */
+    public function suggestions(StockKitSuggestionService $suggestions): JsonResponse
+    {
+        return response()->json([
+            'data' => $suggestions->suggestions(StockKitSuggestionService::SCOPE_ADJUSTMENTS),
+            'min_cases' => StockKitSuggestionService::MIN_CASES,
+        ]);
+    }
+
+    /**
+     * «لا» على اقتراح — لا يُقترح مرة أخرى في مكتب المعدلات.
+     */
+    public function dismissSuggestion(Request $request, StockKitSuggestionService $suggestions): JsonResponse
+    {
+        $validated = $request->validate([
+            'codes' => ['required', 'array', 'min:2', 'max:20'],
+            'codes.*' => ['required', 'string', 'max:100'],
+            'case_count' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $suggestions->dismiss(
+            StockKitSuggestionService::SCOPE_ADJUSTMENTS,
+            $validated['codes'],
+            $request->user(),
+            (int) ($validated['case_count'] ?? 0),
+        );
+
+        return response()->json(['message' => 'تم تجاهل الاقتراح — لن يظهر مرة أخرى.']);
+    }
+
     public function searchItems(Request $request): JsonResponse
     {
         $q = trim((string) $request->input('q', ''));
