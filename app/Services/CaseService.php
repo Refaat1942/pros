@@ -6,6 +6,7 @@ use App\Enums\WorkflowEvent;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
 use App\Models\Patient;
+use App\Support\DocumentSequence;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -105,16 +106,11 @@ class CaseService
         $year = now()->year;
         $prefix = "CASE-{$year}-";
 
-        $lastNum = CaseRecord::where('case_no', 'like', $prefix.'%')
-            ->lockForUpdate()
-            ->pluck('case_no')
-            ->map(fn (string $code) => (int) substr($code, strlen($prefix)))
-            ->max();
+        do {
+            $caseNo = $prefix.sprintf('%04d', DocumentSequence::next("CASE-{$year}", fn () => DocumentSequence::maxSuffix(CaseRecord::class, 'case_no', $prefix)));
+        } while (CaseRecord::where('case_no', $caseNo)->exists());
 
-        $num = ($lastNum ?? 0) + 1;
-        $seq = sprintf('%04d', $num);
-
-        return ["CASE-{$year}-{$seq}", $this->orderRefService->generate()];
+        return [$caseNo, $this->orderRefService->generate()];
     }
 
     private function caseAuditSnapshot(CaseRecord $case): array

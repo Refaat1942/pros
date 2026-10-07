@@ -10,6 +10,7 @@ use App\Models\ReturnNoteLine;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Support\DocumentSequence;
 use App\Support\StockQtyMath;
 use App\Support\StockQuantity;
 use Illuminate\Support\Facades\Auth;
@@ -331,14 +332,10 @@ class ReturnNoteService
 
     private function nextReturnNo(): string
     {
-        $last = ReturnNote::lockForUpdate()
-            ->orderByDesc('id')
-            ->value('return_no');
+        do {
+            $returnNo = 'RTN-'.sprintf('%04d', DocumentSequence::next('RTN', fn () => DocumentSequence::maxSuffix(ReturnNote::class, 'return_no', 'RTN-')));
+        } while (ReturnNote::where('return_no', $returnNo)->exists());
 
-        $num = $last && preg_match('/RTN-(\d+)/', $last, $m)
-            ? ((int) $m[1]) + 1
-            : 1;
-
-        return sprintf('RTN-%04d', $num);
+        return $returnNo;
     }
 }

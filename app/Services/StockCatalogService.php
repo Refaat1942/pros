@@ -4,14 +4,15 @@ namespace App\Services;
 
 use App\Enums\StockStoreClass;
 use App\Enums\StockUom;
-use App\Support\StockSupplyUom;
 use App\Models\StockCategory;
 use App\Models\StockItem;
 use App\Models\StockItemPrice;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Support\ClinicTime;
+use App\Support\DocumentSequence;
 use App\Support\StockCatalogPicker;
+use App\Support\StockSupplyUom;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -485,15 +486,11 @@ class StockCatalogService
     /** رقم الصنف في الكatalog (ITM-001) — ليس كود الصنف التشغيلي. */
     private function nextCatalogCode(): string
     {
-        $lastNum = StockItem::query()
-            ->where('code', 'like', 'ITM-%')
-            ->pluck('code')
-            ->map(fn (string $code) => (int) preg_replace('/\D/', '', $code))
-            ->max();
+        do {
+            $code = 'ITM-'.str_pad((string) DocumentSequence::next('ITM', fn () => DocumentSequence::maxSuffix(StockItem::class, 'code', 'ITM-')), 3, '0', STR_PAD_LEFT);
+        } while (StockItem::where('code', $code)->exists());
 
-        $next = ((int) $lastNum) + 1;
-
-        return 'ITM-'.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
+        return $code;
     }
 
     /**

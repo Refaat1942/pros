@@ -13,6 +13,7 @@ use App\Models\PricingRequest;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Support\BomItemAggregator;
+use App\Support\DocumentSequence;
 use App\Support\StockQtyMath;
 use App\Support\StockQuantity;
 use Illuminate\Support\Facades\Auth;
@@ -1211,15 +1212,11 @@ class BomService
 
     private function nextBomNo(): string
     {
-        $last = Bom::lockForUpdate()
-            ->orderByDesc('id')
-            ->value('bom_no');
+        do {
+            $bomNo = 'BOM-'.sprintf('%04d', DocumentSequence::next('BOM', fn () => DocumentSequence::maxSuffix(Bom::class, 'bom_no', 'BOM-')));
+        } while (Bom::where('bom_no', $bomNo)->exists());
 
-        $num = $last && preg_match('/BOM-(\d+)/', $last, $m)
-            ? ((int) $m[1]) + 1
-            : 1;
-
-        return sprintf('BOM-%04d', $num);
+        return $bomNo;
     }
 
     private function normalizeItemQty(mixed $qty): float

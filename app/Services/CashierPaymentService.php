@@ -8,6 +8,7 @@ use App\Models\CaseRecord;
 use App\Models\Payment;
 use App\Models\Quote;
 use App\Support\ContractBillingSplit;
+use App\Support\DocumentSequence;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -122,7 +123,7 @@ class CashierPaymentService
             // H-1: توضيح — التسعير اليدوي (manualDue) يُحدِّد قيمة العرض عند التحصيل
             // (حالة الكاش المباشر بلا عرض مُسعّر). نُعلّمه صراحةً في سجل الرقابة للتتبّع.
             $manualPricingDescription = $manualDue
-                ? " — تسعير يدوي بالخزنة (عرض بلا قيمة مُسبقة)"
+                ? ' — تسعير يدوي بالخزنة (عرض بلا قيمة مُسبقة)'
                 : '';
 
             AuditService::log(
@@ -162,17 +163,8 @@ class CashierPaymentService
         $year = now()->year;
         $prefix = "PAY-{$year}-";
 
-        $last = Payment::where('payment_no', 'like', $prefix.'%')
-            ->lockForUpdate()
-            ->orderByDesc('payment_no')
-            ->value('payment_no');
-
-        $num = $last
-            ? ((int) substr($last, strlen($prefix)) + 1)
-            : 1;
-
         do {
-            $paymentNo = sprintf('%s%04d', $prefix, $num++);
+            $paymentNo = $prefix.sprintf('%04d', DocumentSequence::next("PAY-{$year}", fn () => DocumentSequence::maxSuffix(Payment::class, 'payment_no', $prefix)));
         } while (Payment::where('payment_no', $paymentNo)->exists());
 
         return $paymentNo;

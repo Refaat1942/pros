@@ -7,6 +7,7 @@ use App\Models\ContractCompany;
 use App\Models\CreditNote;
 use App\Models\Patient;
 use App\Models\User;
+use App\Support\DocumentSequence;
 use App\Support\PatientEntityPresenter;
 use Illuminate\Support\Facades\DB;
 
@@ -183,15 +184,11 @@ class CreditNoteService
 
     private function nextCreditNoteNo(): string
     {
-        $last = CreditNote::lockForUpdate()
-            ->orderByDesc('id')
-            ->value('credit_note_no');
+        do {
+            $creditNoteNo = 'CN-'.sprintf('%04d', DocumentSequence::next('CN', fn () => DocumentSequence::maxSuffix(CreditNote::class, 'credit_note_no', 'CN-')));
+        } while (CreditNote::where('credit_note_no', $creditNoteNo)->exists());
 
-        $num = $last && preg_match('/CN-(\d+)/', $last, $m)
-            ? ((int) $m[1]) + 1
-            : 1;
-
-        return sprintf('CN-%04d', $num);
+        return $creditNoteNo;
     }
 
     /**
