@@ -7,7 +7,6 @@ use App\Exceptions\InvalidWorkflowTransitionException;
 use App\Models\CaseRecord;
 use App\Models\Role;
 use App\Services\Notifications\NotificationService;
-use App\Services\PathwayTransitionMessageService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -185,20 +184,24 @@ class WorkflowService
 
         $actingRole = $this->actingRoleForEvent($event, $beforeSnapshot ?? ['stage_key' => $fromStageKey, 'manufacturing_stage' => null]);
 
-        if ($actingRole !== null) {
+        // الإشعارات بعد حفظ العملية كلها: لو اعتُمدت الحالة داخل عملية أكبر (اعتماد التشغيل/التكلفة)
+        // فتعارض كتابة إشعار مع جهاز آخر كان يُلغي العملية كلها على MySQL — الآن لا يمسّها.
+        DB::afterCommit(function () use ($updated, $event, $fromStageKey, $actingRole) {
+            if ($actingRole !== null) {
+                try {
+                    $this->notifications->markCaseReadForRole($updated->id, $actingRole);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+
+            // إشعار اللوحة التالية بعد نجاح الانتقال — لا يُعطّل التدفق إن فشل الإرسال.
             try {
-                $this->notifications->markCaseReadForRole($updated->id, $actingRole);
+                $this->notifications->notifyTransition($updated, $event, $fromStageKey);
             } catch (\Throwable $e) {
                 report($e);
             }
-        }
-
-        // إشعار اللوحة التالية بعد نجاح الانتقال — لا يُعطّل التدفق إن فشل الإرسال.
-        try {
-            $this->notifications->notifyTransition($updated, $event, $fromStageKey);
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        });
     }
 
     /**

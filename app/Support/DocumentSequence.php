@@ -22,26 +22,28 @@ final class DocumentSequence
     public static function next(string $key, callable $currentMax): int
     {
         return DB::transaction(function () use ($key, $currentMax) {
-            $row = DB::table('document_sequences')->where('key', $key)->lockForUpdate()->first();
+            $table = DB::table('document_sequences');
 
-            if ($row === null) {
-                DB::table('document_sequences')->insertOrIgnore([
-                    'key' => $key,
-                    'value' => max(0, (int) $currentMax()),
-                    'created_at' => now(),
+            // زيادة ذرّية بأمر واحد بدل «اقفل ثم أضف»: على MySQL كان قفل صف غير موجود بعد
+            // (أول رقم في يوم/سنة جديدة) يقفل فجوة في الفهرس فيتعارض جهازان (deadlock).
+            if ($table->clone()->where('key', $key)->exists()) {
+                $table->clone()->where('key', $key)->update([
+                    'value' => DB::raw(DB::getQueryGrammar()->wrap('value').' + 1'),
                     'updated_at' => now(),
                 ]);
-                $row = DB::table('document_sequences')->where('key', $key)->lockForUpdate()->first();
+            } else {
+                $table->clone()->upsert([[
+                    'key' => $key,
+                    'value' => max(0, (int) $currentMax()) + 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]], ['key'], [
+                    'value' => DB::raw(DB::getQueryGrammar()->wrap('document_sequences.value').' + 1'),
+                    'updated_at' => now(),
+                ]);
             }
 
-            $next = (int) $row->value + 1;
-
-            DB::table('document_sequences')->where('key', $key)->update([
-                'value' => $next,
-                'updated_at' => now(),
-            ]);
-
-            return $next;
+            return (int) $table->clone()->where('key', $key)->lockForUpdate()->value('value');
         });
     }
 

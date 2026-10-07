@@ -6,6 +6,7 @@ use App\Models\ApprovalContract;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\Quote;
+use App\Support\DocumentSequence;
 use App\Support\QuotePrintPresenter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -84,17 +85,15 @@ class ApprovalLetterService
             $year = now()->year;
             $prefix = "CNT-{$year}-";
 
-            $last = ApprovalContract::where('contract_no', 'like', $prefix.'%')
-                ->lockForUpdate()
-                ->orderByDesc('contract_no')
-                ->value('contract_no');
-
-            $num = $last
-                ? ((int) substr($last, strlen($prefix)) + 1)
-                : 1;
+            do {
+                $contractNo = $prefix.sprintf('%04d', DocumentSequence::next(
+                    "CNT-{$year}",
+                    fn () => DocumentSequence::maxSuffix(ApprovalContract::class, 'contract_no', $prefix),
+                ));
+            } while (ApprovalContract::where('contract_no', $contractNo)->exists());
 
             ApprovalContract::create([
-                'contract_no' => sprintf('%s%04d', $prefix, $num),
+                'contract_no' => $contractNo,
                 'case_id' => $case->id,
                 'quote_id' => $quote->id,
                 'patient_name' => $payload['patient_name'] ?? $quote->patient_name,

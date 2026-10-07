@@ -58,6 +58,9 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            // نفس عزل PostgreSQL: الافتراضي في MySQL (REPEATABLE READ) يقفل «فجوات» الفهارس
+            // فيتعارض جهازان يكتبان في نفس اللحظة (deadlock) — جُرِّب: 8 مسارات متوازية فشلت.
+            'isolation_level' => env('DB_ISOLATION_LEVEL', 'READ COMMITTED'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

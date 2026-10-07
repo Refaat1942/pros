@@ -28,6 +28,15 @@ use Illuminate\Support\Facades\DB;
  */
 class PatientDataPurgeService
 {
+    /**
+     * عدّادات الترقيم (حالة، عرض سعر، دور…) تبدأ من جديد — كل عدّاد يُعاد بناؤه من أعلى رقم باقٍ.
+     * عدّادات المخزن (كود الصنف، طلبات التوريد) تبقى لأن الأصناف لا تُمسح هنا.
+     */
+    public function resetNumbering(): int
+    {
+        return DB::table('document_sequences')->where('key', '<>', 'ITM')->where('key', 'not like', 'SR-%')->delete();
+    }
+
     /** @return array<string, int> */
     public function purge(bool $resetContractDebts = true, bool $syncStock = true): array
     {
@@ -73,6 +82,7 @@ class PatientDataPurgeService
             $counts['cases'] = DB::table('cases')->delete();
             $counts['appointments'] = DB::table('appointments')->delete();
             $counts['patients'] = DB::table('patients')->delete();
+            $this->resetNumbering();
 
             // C-5: سجل الرقابة يُحفَظ دائماً (append-only) — لا يُحذف في المسح.
             $counts['audit_logs_preserved'] = (int) DB::table('audit_logs')->count();
