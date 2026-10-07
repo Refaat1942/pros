@@ -30,20 +30,22 @@ class BiReportService
     {
         $slaDays = config('erp.sla_days', 21);
 
-        $avgTurnaround = CaseRecord::query()
+        // يُحسب في PHP: DATEDIFF/CURDATE دوال MySQL فقط — كانت تُسقط «نظرة عامة» على PostgreSQL.
+        $turnaroundDays = CaseRecord::query()
             ->where('patient_type', Patient::TYPE_CIVILIAN)
             ->where('stage_key', CaseRecord::STAGE_DELIVERED)
             ->whereNotNull('quote_date')
             ->whereNotNull('delivered_at')
-            ->selectRaw('AVG(DATEDIFF(delivered_at, quote_date)) as avg_days')
-            ->value('avg_days');
+            ->get(['quote_date', 'delivered_at'])
+            ->map(fn (CaseRecord $c) => $c->quote_date->copy()->startOfDay()->diffInDays($c->delivered_at->copy()->startOfDay(), false));
+        $avgTurnaround = $turnaroundDays->isEmpty() ? null : $turnaroundDays->avg();
 
         $slaBreachedCases = CaseRecord::query()
             ->with('patient:id,name')
             ->where('patient_type', Patient::TYPE_CIVILIAN)
             ->where('stage_key', '!=', CaseRecord::STAGE_DELIVERED)
             ->whereNotNull('quote_date')
-            ->whereRaw('DATEDIFF(CURDATE(), quote_date) > ?', [$slaDays])
+            ->whereDate('quote_date', '<', now()->subDays($slaDays)->toDateString())
             ->orderByDesc('quote_date')
             ->limit(20)
             ->get(['id', 'case_no', 'order_ref', 'quote_date', 'stage_key', 'patient_id'])
