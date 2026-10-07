@@ -77,16 +77,9 @@ class MilitaryQueryChainE2eTest extends TestCase
             'items' => [['stock_item_code' => $this->itemCode, 'name' => 'صنف RM-001', 'qty' => 1]],
         ])->assertCreated();
 
-        // المسار العسكري: الإرسال → المعدلات → التكاليف → تأكيد → اعتماد تلقائي → مخزن.
+        // المسار العسكري الافتراضي: الإرسال → (تخطي المعدلات تلقائياً — PathwayDefaultSteps::military)
+        // → التكاليف → تأكيد → اعتماد تلقائي → مخزن.
         $this->postJson('/spec/spec/'.$specRes->json('id').'/submit')->assertOk();
-
-        $case->refresh();
-        $this->assertEquals(CaseRecord::STAGE_ADJUSTMENTS, $case->stage_key);
-
-        $adjustments = $this->userWithRole('adjustments');
-        $this->actingAs($adjustments)
-            ->postJson("/adjustments/adjustments/{$case->id}/complete")
-            ->assertOk();
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_COST_CALC, $case->stage_key);
@@ -115,9 +108,20 @@ class MilitaryQueryChainE2eTest extends TestCase
             'company_name' => $company->name,
         ])->assertStatus(422);
 
+        // قسم الإنتاج يخصّص القسم/الفني ويعتمد التخصيص — شرط صرف المخزن.
+        $this->seedWorkshopAssignmentApproved($case);
+
         $this->actingAs($tech);
         $bom = Bom::where('case_id', $case->id)->firstOrFail();
-        $this->postJson("/technical/bom/{$bom->id}/dispense", ['scanned_barcodes' => [$this->itemBarcode]])->assertOk();
+        // الصرف يحتاج اعتماد الإدارة افتراضياً (inventory.dispense_requires_approval):
+        // المخزن يرفع طلب صرف (202) ثم الإدارة تعتمده فيُنفَّذ الخصم.
+        $requestId = $this->postJson("/technical/bom/{$bom->id}/dispense", ['scanned_barcodes' => [$this->itemBarcode]])
+            ->assertStatus(202)
+            ->json('dispense_request.id');
+
+        $this->actingAs($this->userWithRole('admin'))
+            ->postJson(route('admin.dispense-approvals.approve', $requestId))
+            ->assertOk();
 
         $debtBefore = (float) $company->debt()->first()->due;
 

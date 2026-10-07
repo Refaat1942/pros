@@ -98,7 +98,8 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->actingAs($spec);
         $specPage = $this->get('/spec/orders');
         $specPage->assertOk();
-        $specPage->assertSee('عمى مالي ومخزني', false);
+        // الفني يرى أرصدة المخزن المتاحة لكن لا يرى الأسعار (تحديث 2026-08-03).
+        $specPage->assertSee('عمى مالي — تظهر أرصدة المخزن المتاحة دون الأسعار', false);
 
         $specDetail = $this->getJson("/spec/spec/{$case->id}");
         $specDetail->assertOk();
@@ -201,6 +202,9 @@ class CivilianQueryChainE2eTest extends TestCase
         $this->assertNotContains($case->id, $queues->operationsManufacturingCaseIds());
 
         // ── Step 6: Warehouse — barcode dispense + debt ──────────────────────
+        // قسم الإنتاج يخصّص القسم/الفني ويعتمد التخصيص — شرط صرف المخزن.
+        $this->seedWorkshopAssignmentApproved($case);
+
         $this->actingAs($tech);
         $bom = Bom::where('case_id', $case->id)->firstOrFail();
         $this->assertContains($bom->id, $queues->technicalBomRawIds());
@@ -211,10 +215,16 @@ class CivilianQueryChainE2eTest extends TestCase
         $mismatch->assertStatus(422)->assertJsonPath('blocked', true);
 
         // qty=2 يتطلب مسحتين لنفس الباركود (مطابقة كود + صنف + كمية).
-        $dispense = $this->postJson("/technical/bom/{$bom->id}/dispense", [
+        // الصرف يحتاج اعتماد الإدارة افتراضياً: طلب صرف (202) ثم اعتماد يُنفّذ الخصم.
+        $requestId = $this->postJson("/technical/bom/{$bom->id}/dispense", [
             'scanned_barcodes' => [$this->itemBarcode, $this->itemBarcode],
-        ]);
-        $dispense->assertOk();
+        ])->assertStatus(202)->json('dispense_request.id');
+        $this->assertEquals(Bom::STAGE_RAW, $bom->fresh()->stage);
+
+        $this->actingAs($this->userWithRole('admin'))
+            ->postJson(route('admin.dispense-approvals.approve', $requestId))
+            ->assertOk();
+        $this->actingAs($tech);
         $this->assertEquals(Bom::STAGE_WIP, $bom->fresh()->stage);
         $this->assertContains($case->id, $queues->operationsManufacturingCaseIds());
 

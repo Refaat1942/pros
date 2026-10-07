@@ -91,6 +91,7 @@ class StorePatientValidationTest extends TestCase
             'military_number' => 'MIL-12345',
             'seniority_number' => 'SEN-9876',
             'military_weapon' => 'المشاة',
+            'military_beneficiary_category' => Patient::BENEFICIARY_OFFICER,
             'visit_type_id' => $visitType->id,
         ]);
 
@@ -115,6 +116,14 @@ class StorePatientValidationTest extends TestCase
         $rank = MilitaryRank::create(['name' => 'رائد', 'rank_code' => 'MAJ', 'sort_order' => 2]);
         $visitType = VisitType::create(['name' => 'كشف عسكري']);
 
+        // رقم الأقدمية اختياري افتراضياً — يصبح إجبارياً إذا فعّلته الإدارة من «الحقول الإجبارية».
+        app(\App\Services\FormFieldPolicyService::class)->update(['reception' => [
+            'military_number' => true,
+            'seniority_number' => true,
+            'military_weapon' => true,
+            'contract_company_id' => true,
+        ]]);
+
         $response = $this->actingAs($user)->post(route('reception.patients.store'), [
             'form' => 'patient',
             'name' => 'ضابط بدون بيانات',
@@ -123,6 +132,11 @@ class StorePatientValidationTest extends TestCase
             'visit_type_id' => $visitType->id,
         ]);
 
-        $response->assertSessionHasErrors(['military_number', 'seniority_number', 'military_weapon']);
+        $response->assertSessionHasErrors([
+            'military_number',
+            'seniority_number',
+            'military_weapon',
+            'military_beneficiary_category',
+        ]);
     }
 }
