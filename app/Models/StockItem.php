@@ -232,6 +232,27 @@ class StockItem extends Model
         return $ascii !== '' ? $ascii : null;
     }
 
+    /**
+     * يقفل أصناف عملية واحدة دفعة واحدة بترتيب id ثابت — قبل أي قفل صنف آخر في نفس المعاملة.
+     * عمليتان متزامنتان على نفس الأصناف كانتا تقفلانها بترتيب البنود (مختلف) فيحدث deadlock.
+     *
+     * @param  iterable<int, string|null>  $codes
+     */
+    public static function lockForCodes(iterable $codes): void
+    {
+        $ids = collect($codes)
+            ->filter(fn ($code) => trim((string) $code) !== '')
+            ->map(fn ($code) => static::findByOperationalCode((string) $code)?->id)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($ids->isNotEmpty()) {
+            static::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get(['id']);
+        }
+    }
+
     public static function findByOperationalCode(string $code, bool $lockForUpdate = false): ?self
     {
         $code = trim($code);

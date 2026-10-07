@@ -56,6 +56,8 @@ class ReturnNoteService
                 'authorized_at' => now(),
             ]);
 
+            StockItem::lockForCodes(collect($lines)->pluck('stock_item_code'));
+
             foreach ($lines as $row) {
                 $code = $row['stock_item_code'];
                 $stockItem = StockItem::findByOperationalCode($code, true)
@@ -130,6 +132,8 @@ class ReturnNoteService
             $stockBefore = [];
             $stockUpdates = [];
             $performedById = Auth::id();
+
+            StockItem::lockForCodes($note->lines->pluck('stock_item_code'));
 
             foreach ($scannedLines as $scan) {
                 $line = $note->lines->firstWhere('id', $scan['line_id']);
