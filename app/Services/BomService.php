@@ -797,7 +797,7 @@ class BomService
 
         foreach ($this->normalizeDispenseInput($dispenseInput) as $line) {
             $stockItem = $this->barcodeValidation->resolveStockItem($line['barcode']);
-            $code = $stockItem?->operationalCode() ?? trim((string) ($line['stock_item_code'] ?? ''));
+            $code = $stockItem?->operationalCode() ?? $stockItem?->code ?? trim((string) ($line['stock_item_code'] ?? ''));
             $uom = $stockItem?->uom ?? 'قطعة';
             $qtyInUom = StockQuantity::toItemUom($line['qty'] ?? null, $line['qty_uom'] ?? null, $uom);
 
@@ -833,8 +833,17 @@ class BomService
 
         $groups = BomItemAggregator::groupModels($bom->items);
         $expectedByCode = [];
+        // بنود BOM قد تشير للصنف بكود الصنف (alt_codes) أو بالرقم الداخلي (بيانات قديمة /
+        // صنف بلا كود صنف) — نطابق المسح بالصنف نفسه (id) وليس بنص الكود، وإلا رُفض
+        // الصرف بباركود صحيح «كود الصنف غير مطابق للمطلوب».
+        $groupCodeByItemId = [];
         foreach ($groups as $code => $rows) {
             $expectedByCode[$code] = (float) $rows->sum('qty');
+
+            $groupItem = StockItem::findByOperationalCode((string) $code);
+            if ($groupItem !== null) {
+                $groupCodeByItemId[$groupItem->id] ??= (string) $code;
+            }
         }
 
         $dispensedByCode = [];
@@ -847,11 +856,11 @@ class BomService
                 throw BarcodeDispenseMismatchException::forItem($barcode);
             }
 
-            $code = $stockItem->operationalCode();
-            $representative = $groups->get($code)?->first();
+            $code = $groupCodeByItemId[$stockItem->id] ?? null;
+            $representative = $code !== null ? $groups->get($code)?->first() : null;
 
             if ($representative === null || ! $this->barcodeValidation->validateScan($barcode, $representative)) {
-                throw BarcodeDispenseMismatchException::forItem($code ?: $barcode);
+                throw BarcodeDispenseMismatchException::forItem($stockItem->operationalCode() ?: $barcode);
             }
 
             $uom = $stockItem->uom ?? 'قطعة';
