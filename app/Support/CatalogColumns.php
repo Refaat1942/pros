@@ -55,12 +55,18 @@ final class CatalogColumns
             'name' => ['اسم الصنف', 'الصنف', 'item name', 'name'],
             'brand' => ['الماركة', 'ماركة', 'البراند', 'brand'],
             'alt_codes' => ['الأكواد', 'أكواد', 'اكواد', 'الاكواد', 'codes', 'code', 'كود', 'الكود'],
-            'uom' => ['الوحدة', 'وحدة', 'uom', 'unit'],
+            // «وحدة الصرف» (وحدة خصم الرصيد) أولى من «وحدة التوريد» إن وُجد العمودان.
+            'uom' => ['الوحدة', 'وحدة', 'uom', 'unit', 'وحدة الصرف', 'base uom'],
             'opening_qty_raw' => ['رصيد أول المده', 'رصيد أول المدة', 'رصيد اول المدة', 'رصيد أول', 'opening', 'opening qty'],
             'addition_raw' => ['الاضافة', 'الإضافة', 'اضافة', 'addition'],
             'discount_raw' => ['الخصم', 'خصم', 'discount'],
             'balance_raw' => ['الرصيد', 'رصيد', 'balance', 'الرصيد النهائي', 'الكمية', 'الكميه', 'كمية', 'qty', 'quantity'],
-            'price_raw' => ['السعر الأساسي', 'السعر', 'سعر التكلفة', 'أعلى سعر', 'price', 'cost'],
+            // سعر الصنف = تكلفة وحدة الصرف؛ «سعر وحدة التوريد» يُقرأ فقط إن لم يوجد غيره.
+            'price_raw' => [
+                'السعر الأساسي', 'السعر', 'سعر التكلفة', 'أعلى سعر', 'price', 'cost',
+                'سعر تكلفة وحدة الصرف', 'تكلفة وحدة الصرف', 'سعر وحدة الصرف', 'سعر الوحدة',
+                'سعر وحدة التوريد', 'سعر الشراء', 'التكلفة', 'سعر',
+            ],
         ];
 
         return array_merge($defaults, config('catalog.import_aliases', []));
@@ -90,7 +96,7 @@ final class CatalogColumns
             'addition' => self::quantityForExport($item['addition'] ?? 0),
             'discount' => self::quantityForExport($item['discount'] ?? 0),
             'balance' => self::quantityForExport($item['catalog_balance'] ?? $item['balance'] ?? $item['qty'] ?? 0),
-            'price' => (string) round((float) ($item['price'] ?? 0), 2),
+            'price' => (string) round((float) ($item['price'] ?? 0), 4),
             default => (string) ($item[self::definitions()[$key]['field'] ?? $key] ?? ''),
         };
     }
@@ -168,8 +174,12 @@ final class CatalogColumns
         }
 
         if ($key === 'price') {
+            $price = (float) ($item['price'] ?? 0);
+            // تكلفة السم²/الجرام أقل من قرش — تُعرض بأربع خانات بدل تقريبها.
+            $decimals = abs($price - round($price, 2)) >= 0.00005 ? 4 : 2;
+
             return [
-                'html' => number_format((float) ($item['price'] ?? 0), 2),
+                'html' => number_format($price, $decimals),
                 'class' => 'text-align:center;',
                 'cell_class' => 'catalog-price-cell',
             ];

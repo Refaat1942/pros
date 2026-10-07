@@ -193,7 +193,7 @@ class StockImportService
             'discount' => $discount,
             'balance' => $balance,
             'qty' => $balance,
-            'price' => round($this->num($parsed['price_raw']), 2),
+            'price' => round($this->num($parsed['price_raw']), 4),
         ]);
 
         return 'created';
@@ -253,8 +253,8 @@ class StockImportService
         }
 
         if ($parsed['price_raw'] !== '') {
-            $price = round($this->num($parsed['price_raw']), 2);
-            if ($price > 0 && abs($price - (float) $existing->price) >= 0.005) {
+            $price = round($this->num($parsed['price_raw']), 4);
+            if ($price > 0 && abs($price - (float) $existing->price) >= 0.00005) {
                 $changes['price'] = $price;
             }
         }
@@ -408,7 +408,10 @@ class StockImportService
     private function buildColumnMap(array $headerCells): array
     {
         $aliases = CatalogColumns::importAliases();
-        $map = [];
+
+        // كل (عمود، حقل) بدرجة تطابقه، ثم التوزيع من الأعلى درجة — حتى لا يأخذ عمود مبكر
+        // حقلاً عمودٌ لاحق أدق له (مثال: «سعر وحدة التوريد» قبل «سعر تكلفة وحدة الصرف»).
+        $candidates = [];
 
         foreach ($headerCells as $index => $cell) {
             $normalized = $this->normalizeHeaderLabel((string) $cell);
@@ -416,13 +419,8 @@ class StockImportService
                 continue;
             }
 
-            $bestField = null;
-            $bestScore = 0;
-
             foreach ($aliases as $field => $labels) {
-                if (array_key_exists($field, $map)) {
-                    continue;
-                }
+                $best = 0;
 
                 foreach ($labels as $label) {
                     $labelNorm = $this->normalizeHeaderLabel($label);
@@ -439,16 +437,27 @@ class StockImportService
                         $score = 60 + strlen($normalized);
                     }
 
-                    if ($score > $bestScore) {
-                        $bestScore = $score;
-                        $bestField = $field;
-                    }
+                    $best = max($best, $score);
+                }
+
+                if ($best > 0) {
+                    $candidates[] = ['score' => $best, 'index' => $index, 'field' => $field];
                 }
             }
+        }
 
-            if ($bestField !== null && $bestScore > 0) {
-                $map[$bestField] = $index;
+        usort($candidates, fn (array $a, array $b) => [$b['score'], $a['index']] <=> [$a['score'], $b['index']]);
+
+        $map = [];
+        $usedColumns = [];
+
+        foreach ($candidates as $candidate) {
+            if (array_key_exists($candidate['field'], $map) || isset($usedColumns[$candidate['index']])) {
+                continue;
             }
+
+            $map[$candidate['field']] = $candidate['index'];
+            $usedColumns[$candidate['index']] = true;
         }
 
         return $map;
@@ -527,7 +536,7 @@ class StockImportService
         // وإلا يختفي صنف من الملف ويبدو أن الرفع «لم يقرأ كل الأصناف».
         if ($catalogNumber !== '') {
             $byCode = StockItem::query()->where('code', $catalogNumber)->first();
-            if ($byCode !== null && ! $this->contradictsRow($byCode, $pageNumber, $altCodes)) {
+            if ($byCode !== null && ! $this->contradictsRow($byCode, $pageNumber, $altCodes, $name)) {
                 return $byCode;
             }
 
@@ -547,7 +556,7 @@ class StockImportService
                     $q->whereNull('catalog_number')->orWhere('catalog_number', '');
                 })
                 ->first();
-            if ($legacy !== null && ! $this->contradictsRow($legacy, $pageNumber, $altCodes)) {
+            if ($legacy !== null && ! $this->contradictsRow($legacy, $pageNumber, $altCodes, $name)) {
                 return $legacy;
             }
         }
@@ -569,12 +578,19 @@ class StockImportService
     }
 
     /**
-     * الصنف المرشَّح صنف آخر إن كان له رقم صفحة أو كود صنف مختلف عن السطر.
+     * الصنف المرشَّح صنف آخر إن كان له رقم صفحة أو كود صنف أو اسم مختلف عن السطر.
+     * الاسم مهم لملفات يتكرر فيها ترقيم «رقم الصنف» لكل قسم (1، 2، 3… ثم 1، 2…)
+     * بلا رقم صفحة ولا كود — وإلا يُدمج صنف القسم الثاني فوق صنف القسم الأول.
      */
-    private function contradictsRow(StockItem $candidate, string $pageNumber, string $altCodes): bool
+    private function contradictsRow(StockItem $candidate, string $pageNumber, string $altCodes, string $name = ''): bool
     {
         $candidatePage = trim((string) $candidate->page_number);
         if ($pageNumber !== '' && $candidatePage !== '' && $candidatePage !== $pageNumber) {
+            return true;
+        }
+
+        $candidateName = $this->normalizeImportIdentifier((string) $candidate->name);
+        if ($name !== '' && $candidateName !== '' && $candidateName !== $name) {
             return true;
         }
 
@@ -985,8 +1001,17 @@ class StockImportService
         return abs($a - $b) < 0.00005;
     }
 
+    /** رقم من خلية: أرقام عربية/فارسية، فواصل آلاف، ونص عملة («7,250 جنية») — أول رقم في الخلية. */
     private function num(mixed $value): float
     {
-        return (float) str_replace([',', ' '], '', (string) $value);
+        $s = strtr((string) $value, [
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٫' => '.', '٬' => '', ',' => '', ' ' => '', "\u{00A0}" => '',
+        ]);
+
+        return preg_match('/-?\d+(?:\.\d+)?/', $s, $m) ? (float) $m[0] : 0.0;
     }
 }
