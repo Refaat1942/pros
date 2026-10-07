@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AccountingPeriod;
 use App\Models\ContractCompanyDebt;
+use App\Models\ContractDebtAccrual;
 use App\Models\DebtCollectionEntry;
 use App\Models\MilitaryDebt;
 use App\Models\Payment;
@@ -15,9 +16,9 @@ use Carbon\Carbon;
  * حساب أرصدة أول/آخر المدة لكل مجال مالي على مدى زمني محدد.
  *
  * ملاحظات تقريبية (موثّقة):
- *  - المديونية المدنية: لا يوجد تاريخ لتسجيل «المستحق» في contract_company_debts،
- *    لذا نعتبر إجمالي المستحق الحالي رصيداً افتتاحياً، والحركة = ما تم تحصيله في الفترة.
- *  - قيمة المخزون: نعيد بناء الكمية عند لحظة القطع من stock_movements.balance_after،
+ *  - المديونية المدنية: المستحق بتاريخه من contract_debt_accruals (ترحيل حالة / إشعار دائن)؛
+ *    المستحق القديم بلا قيود (قبل إضافة الجدول) يُعتبر رصيداً افتتاحياً.
+ *  - قيمة المخزون: الكمية عند لحظة القطع = الرصيد الحالي − صافي الحركات بعدها،
  *    ونضربها في متوسط التكلفة الحالي (WAC) — تقريب لعدم تخزين WAC تاريخياً.
  */
 class FinancialBalanceService
@@ -83,6 +84,10 @@ class FinancialBalanceService
     {
         $alias = (new ContractCompanyDebt)->getMorphClass();
         $totalDue = (float) ContractCompanyDebt::query()->sum('due');
+        $accrued = (float) ContractDebtAccrual::query()->sum('amount');
+        $legacyDue = max(0.0, $totalDue - $accrued);
+        $dueBefore = $legacyDue + (float) ContractDebtAccrual::query()->where('accrued_at', '<', $from)->sum('amount');
+        $dueWithin = (float) ContractDebtAccrual::query()->whereBetween('accrued_at', [$from, $to])->sum('amount');
 
         $collectedBefore = (float) DebtCollectionEntry::query()
             ->where('payable_type', $alias)
@@ -94,14 +99,14 @@ class FinancialBalanceService
             ->whereBetween('collected_at', [$from, $to])
             ->sum('amount');
 
-        $opening = $this->round($totalDue - $collectedBefore + $override);
-        $movement = $this->round(-$collectedWithin);
+        $opening = $this->round($dueBefore - $collectedBefore + $override);
+        $movement = $this->round($dueWithin - $collectedWithin);
 
         return [
             'opening' => $opening,
             'movement' => $movement,
             'closing' => $this->round($opening + $movement),
-            'due' => $this->round($totalDue),
+            'due' => $this->round($dueWithin),
             'collected' => $this->round($collectedWithin),
         ];
     }
@@ -156,25 +161,39 @@ class FinancialBalanceService
             ])
             ->all();
 
+        // الرصيد عند لحظة القطع = الرصيد الحالي − صافي الحركات بعدها (والصنف المضاف بعدها = صفر).
+        // كان يُعاد بناؤه من الحركات فقط، فالأصناف المرفوعة من الشيت بلا حركات تُحسب صفراً.
+        $netAfter = fn (Carbon $cut) => StockMovement::query()
+            ->where('moved_at', '>', $cut)
+            ->selectRaw('stock_item_id, SUM(quantity) as net')
+            ->groupBy('stock_item_id')
+            ->pluck('net', 'stock_item_id')
+            ->all();
+        $afterFrom = $netAfter($from);
+        $afterTo = $netAfter($to);
+        $movedBy = fn (Carbon $cut) => array_flip(StockMovement::query()
+            ->where('moved_at', '<=', $cut)
+            ->distinct()
+            ->pluck('stock_item_id')
+            ->all());
+        $movedByFrom = $movedBy($from);
+        $movedByTo = $movedBy($to);
+
         $openingQty = [];
         $closingQty = [];
 
-        StockMovement::query()
-            ->where('moved_at', '<=', $to)
-            ->orderBy('stock_item_id')
-            ->orderBy('moved_at')
-            ->orderBy('id')
-            ->get(['stock_item_id', 'balance_after', 'moved_at'])
-            ->each(function (StockMovement $movement) use ($from, &$openingQty, &$closingQty) {
-                $id = (int) $movement->stock_item_id;
-                $balance = max(0.0, (float) $movement->balance_after);
+        StockItem::query()->get(['id', 'qty', 'created_at'])->each(
+            function (StockItem $item) use ($from, $to, $afterFrom, $afterTo, $movedByFrom, $movedByTo, &$openingQty, &$closingQty) {
+                $qty = (float) $item->qty;
+                $createdAt = $item->created_at;
+                // موجود عند القطع: أُنشئ قبله أو له حركة قبله.
+                $existedAtFrom = ! $createdAt || $createdAt->lt($from) || isset($movedByFrom[$item->id]);
+                $existedAtTo = ! $createdAt || $createdAt->lte($to) || isset($movedByTo[$item->id]);
 
-                if ($movement->moved_at < $from) {
-                    $openingQty[$id] = $balance;
-                }
-
-                $closingQty[$id] = $balance;
-            });
+                $openingQty[$item->id] = $existedAtFrom ? max(0.0, $qty - (float) ($afterFrom[$item->id] ?? 0)) : 0.0;
+                $closingQty[$item->id] = $existedAtTo ? max(0.0, $qty - (float) ($afterTo[$item->id] ?? 0)) : 0.0;
+            }
+        );
 
         $openingValue = $this->valueOf($openingQty, $wac);
         $closingValue = $this->valueOf($closingQty, $wac);

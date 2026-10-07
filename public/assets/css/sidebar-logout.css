@@ -116,8 +116,8 @@ aside.sidebar .sidebar-brand {
 }
 
 aside.sidebar .sidebar-brand__logo {
-  width: 64px;
-  height: 64px;
+  width: 84px;
+  height: 84px;
   max-width: calc(100% - 8px);
   margin: 0 auto 10px;
   display: block;
@@ -136,6 +136,12 @@ aside.sidebar .sidebar-brand h2 {
   font-size: 15px;
   line-height: 1.45;
   word-break: break-word;
+}
+
+aside.sidebar .sidebar-brand h2.sidebar-brand__center {
+  font-size: 16px;
+  font-weight: 800;
+  opacity: 1;
 }
 
 aside.sidebar .sidebar-brand span {

@@ -15,7 +15,7 @@
 @if ($logoExists)
     <div class="{{ $logoClass }}" style="--org-logo-size: {{ $logoSize }};" aria-hidden="true">
         <div class="org-logo-thermal__inner">
-            <img src="{{ asset($logoRel) }}"
+            <img src="{{ app(\App\Services\SettingService::class)->brandingLogoUrl($logoRel) }}"
                  alt="{{ $branding['center_name'] }}"
                  width="340"
                  height="340"

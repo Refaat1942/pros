@@ -115,7 +115,7 @@ class AdminReportsService
             ->map(fn (StockItem $i) => [
                 'code' => $i->code,
                 'name' => $i->name,
-                'qty' => (int) $i->qty,
+                'qty' => round((float) $i->qty, 4),
             ])
             ->all();
 
@@ -136,7 +136,7 @@ class AdminReportsService
                     'code' => $p->stockItem?->code ?? '—',
                     'name' => $p->stockItem?->name ?? '—',
                     'amount' => (float) $p->amount,
-                    'qty' => (int) $p->qty,
+                    'qty' => round((float) $p->qty, 4),
                 ])
                 ->all(),
         ];

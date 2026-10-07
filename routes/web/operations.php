@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Bom\ReturnNoteController;
 use App\Http\Controllers\Contracts\ContractController;
 use App\Http\Controllers\Dashboard\OperationsDashboardController;
 use App\Http\Controllers\Manufacturing\ManufacturingStageController;
@@ -60,16 +59,4 @@ Route::prefix('operations')
 
         Route::redirect('operations', '/reception/delivery');
         Route::redirect('operations/operations', '/reception/delivery');
-
-        // ── Return requests (طلب ارتجاع مواد → المخزن) ─────────────────────
-        Route::middleware('dashboard.page:operations,returns')->group(function () {
-            Route::get('returns/list', [ReturnNoteController::class, 'index'])
-                ->name('returns.list');
-
-            Route::get('returns/create', [ReturnNoteController::class, 'create'])
-                ->name('returns.create');
-
-            Route::post('returns', [ReturnNoteController::class, 'store'])
-                ->name('returns.store');
-        });
     });

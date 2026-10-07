@@ -85,7 +85,7 @@ class InventoryFinancialReconciliationService
             ->where('movement_type', $type)
             ->whereBetween('moved_at', [$from, $to])
             ->get(['quantity', 'unit_cost'])
-            ->sum(fn (StockMovement $m) => abs((int) $m->quantity) * (float) $m->unit_cost), 2);
+            ->sum(fn (StockMovement $m) => abs((float) $m->quantity) * (float) $m->unit_cost), 2);
     }
 
     private function resolvedIssueCost(CaseRecord $case): float

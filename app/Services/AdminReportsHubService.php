@@ -12,6 +12,7 @@ use App\Models\Bom;
 use App\Models\CaseRecord;
 use App\Models\ContractCompany;
 use App\Models\ContractCompanyDebt;
+use App\Models\ContractDebtAccrual;
 use App\Models\DebtCollectionEntry;
 use App\Models\Patient;
 use App\Models\Payment;
@@ -28,6 +29,7 @@ use App\Models\Supplier;
 use App\Models\WorkshopSection;
 use App\Support\CaseFinancialSummary;
 use App\Support\ClinicTime;
+use App\Support\StockQuantity;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -66,6 +68,42 @@ class AdminReportsHubService
             fn (array $card) => $this->reportsScope->canSeeSection($user, $card['id']),
         ));
     }
+
+    /** كل تقرير له دالة بناء في build() — مصدر واحد لبطاقات مركز التقارير. */
+    private const REPORT_IDS = [
+        'cash-income',
+        'financial',
+        'inventory',
+        'operations',
+        'bom',
+        'patient-tracks',
+        'cases',
+        'spec-edit-requests',
+        'visit-types',
+        'stock-categories',
+        'catalog',
+        'inventory-overview',
+        'inventory-valuation',
+        'item-margins',
+        'price-tier-balances',
+        'multi-price-items',
+        'inventory-reconciliation',
+        'suppliers',
+        'returns',
+        'companies',
+        'contracts',
+        'civilian-debts',
+        'audit',
+        'services-approvals',
+        'workshop-sections',
+        'workshop-tracking',
+        'dispense-approvals',
+        'authorizations',
+        'production-assignment',
+        'opening-balance',
+        'closing-balance',
+        'profitability',
+    ];
 
     /** @return list<array{id: string, label: string, icon: string, group: string, description: string}> */
     private function allSectionCards(): array
@@ -107,7 +145,8 @@ class AdminReportsHubService
         ];
 
         foreach ($pages as $slug => $meta) {
-            if (in_array($slug, $skip, true) || ! empty($meta['hidden'])) {
+            // بطاقة فقط لصفحة لها تقرير فعلي — صفحات الإجراءات/الإعدادات كانت تفتح «تقرير غير معروف».
+            if (in_array($slug, $skip, true) || ! empty($meta['hidden']) || ! in_array($slug, self::REPORT_IDS, true)) {
                 continue;
             }
 
@@ -121,6 +160,8 @@ class AdminReportsHubService
         }
 
         foreach ([
+            // صفحة «مسار المرضى» مدمجة في «متابعة المرضى» — تقريرها (يشمل مرضى الاستقبال بلا حالة) باقٍ.
+            ['id' => 'patient-tracks', 'label' => 'مسار المرضى', 'icon' => '📍', 'group' => 'مسار المرضى والحالات', 'description' => 'كل مريض ومرحلته الحالية — من الاستقبال حتى التسليم'],
             ['id' => 'cash-income', 'label' => 'التحصيل النقدي — الخزنة', 'icon' => '💵', 'group' => 'التعاقد والمالية', 'description' => 'المبالغ النقدية المُحصّلة من الخزنة (كاش / إنستاباي / فودافون كاش)'],
             ['id' => 'financial', 'label' => 'الإيرادات والمالية', 'icon' => '💰', 'group' => 'رؤية عامة', 'description' => 'إيرادات التسليم وأوامر التشغيل'],
             ['id' => 'inventory', 'label' => 'تحليلات المخزون', 'icon' => '📦', 'group' => 'رؤية عامة', 'description' => 'الأصناف الراكدة والشغالة ومنخفضة المخزون'],
@@ -293,7 +334,7 @@ class AdminReportsHubService
             return [
                 $item->code ?? '—',
                 $item->name ?? '—',
-                (string) ($item->qty ?? 0),
+                StockQuantity::format((float) ($item->qty ?? 0), null),
                 $item->last_moved_at ? ClinicTime::format($item->last_moved_at, 'd/m/Y') : '—',
                 $status,
             ];
@@ -474,15 +515,9 @@ class AdminReportsHubService
     {
         $appointments = Appointment::query()
             ->with('visitTypeRecord:id,name')
-            ->when($from || $to, function ($q) use ($from, $to) {
-                if ($from && $to) {
-                    $q->whereBetween('appointment_date', [$from->toDateString(), $to->toDateString()]);
-                } elseif ($from) {
-                    $q->where('appointment_date', '>=', $from->toDateString());
-                } else {
-                    $q->where('appointment_date', '<=', $to->toDateString());
-                }
-            })
+            // whereDate: العمود قد يُخزَّن بوقت (00:00:00) فتسقط مقارنة النص زيارات اليوم الأخير.
+            ->when($from, fn ($q) => $q->whereDate('appointment_date', '>=', $from->toDateString()))
+            ->when($to, fn ($q) => $q->whereDate('appointment_date', '<=', $to->toDateString()))
             ->get();
 
         $grouped = $appointments->groupBy(fn (Appointment $a) => $a->displayVisitType());
@@ -529,42 +564,61 @@ class AdminReportsHubService
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
     private function buildCatalog(?Carbon $from, ?Carbon $to): array
     {
-        $batches = $this->priceBatchesInDateRange($from, $to)
-            ->with(['stockItem' => fn ($q) => $q->select('id', 'code', 'name')->withCount('prices')])
-            ->orderByRaw('COALESCE(received_at, DATE(created_at)) DESC')
-            ->orderByDesc('id')
-            ->limit(500)
+        // صنف لكل سطر: أُضيف أو استُلم له سعر في الفترة. كان التقرير يعرض دفعات الشراء فقط،
+        // فالأصناف المرفوعة من الشيت (سعر أساسي بلا دفعات) لا تظهر إطلاقاً.
+        $batchItemIds = $this->priceBatchesInDateRange($from, $to)->select('stock_item_id');
+
+        $items = StockItem::query()
+            ->with(['prices' => fn ($q) => $q->orderBy('received_at')->orderBy('id')])
+            ->where(function ($q) use ($from, $to, $batchItemIds) {
+                $q->whereIn('id', $batchItemIds);
+                $q->orWhere(fn ($added) => $this->constrainDateRange($added, 'created_at', $from, $to));
+            })
+            ->orderBy('name')
+            ->limit(5000)
             ->get();
 
         $rowActions = [];
 
-        $rows = $batches->map(function (StockItemPrice $p) use (&$rowActions) {
-            $priceCount = (int) ($p->stockItem?->prices_count ?? 0);
-            $multiPrice = $priceCount > 1;
-            $receivedAt = $p->received_at ?? $p->created_at;
+        $rows = $items->map(function (StockItem $item) use (&$rowActions) {
+            $amounts = $item->prices
+                ->map(fn (StockItemPrice $p) => round((float) $p->amount, 4))
+                ->filter(fn (float $a) => $a > 0)
+                ->unique()
+                ->values();
+            $lastReceived = $item->prices->map(fn (StockItemPrice $p) => $p->received_at ?? $p->created_at)->filter()->max();
 
-            $rowActions[] = [
-                'stock_item_id' => (int) $p->stock_item_id,
-            ];
+            $rowActions[] = ['stock_item_id' => (int) $item->id];
 
             return [
-                $p->stockItem?->code ?? '—',
-                $p->stockItem?->name ?? '—',
-                number_format((float) $p->amount, 2).' ج.م',
-                (string) $p->qty,
-                ClinicTime::format($receivedAt, 'd/m/Y'),
-                $multiPrice ? ('نعم ('.$priceCount.' أسعار)') : 'لا',
+                $item->code ?? '—',
+                $item->name ?? '—',
+                $this->unitPrice((float) $item->price),
+                StockQuantity::format((float) $item->qty, $item->uom),
+                $lastReceived ? ClinicTime::format($lastReceived, 'd/m/Y') : '—',
+                $amounts->count() > 1 ? ('نعم ('.$amounts->count().' أسعار)') : 'لا',
+                $amounts->isEmpty() ? '—' : $amounts->map(fn (float $a) => $this->unitPrice($a))->implode(' · '),
             ];
         })->values()->all();
 
         return [
             'title' => 'الأصناف والأسعار',
             'period_label' => $this->periodLabel($from, $to),
-            'summary' => [],
-            'headers' => ['رقم الصنف', 'اسم الصنف', 'السعر', 'رصيد أول المده', 'تاريخ الاستلام', 'أسعار متعددة'],
+            'summary' => [
+                ['label' => 'عدد الأصناف', 'value' => (string) count($rows)],
+            ],
+            'headers' => ['رقم الصنف', 'اسم الصنف', 'السعر الأساسي', 'الرصيد', 'آخر استلام', 'أسعار متعددة', 'أسعار الشراء'],
             'rows' => $rows,
             'row_actions' => $rowActions,
         ];
+    }
+
+    /** سعر وحدة — 4 خانات لما دون القرش (تكلفة السم²) وإلا خانتان. */
+    private function unitPrice(float $value): string
+    {
+        $decimals = abs($value - round($value, 2)) >= 0.00005 ? 4 : 2;
+
+        return number_format($value, $decimals).' ج.م';
     }
 
     /** @param Builder<StockItemPrice> $query */
@@ -767,9 +821,9 @@ class AdminReportsHubService
     }
 
     /** كمية موقّعة للعرض: موجب للصرف، سالب للارتجاع من قسم الإنتاج. */
-    private function signedMovementQuantity(StockMovement $movement): int
+    private function signedMovementQuantity(StockMovement $movement): float
     {
-        $qty = (int) $movement->quantity;
+        $qty = round((float) $movement->quantity, 4);
 
         return match ($movement->movement_type) {
             StockMovement::TYPE_ISSUE => abs($qty),
@@ -793,7 +847,7 @@ class AdminReportsHubService
 
         $rowActions = $notes->map(function (ReturnNote $n) {
             $receivedLines = $n->lines
-                ->filter(fn ($line) => (int) $line->qty_returned > 0)
+                ->filter(fn ($line) => (float) $line->qty_returned > 0)
                 ->values();
 
             return [
@@ -805,14 +859,14 @@ class AdminReportsHubService
                 'lines' => $receivedLines->map(fn ($line) => [
                     'code' => $line->stock_item_code,
                     'name' => $line->name ?: $line->stock_item_code,
-                    'qty_returned' => (int) $line->qty_returned,
+                    'qty_returned' => round((float) $line->qty_returned, 4),
                     'reason' => $line->reason ?? '—',
                 ])->values()->all(),
             ];
         })->values()->all();
 
         $rows = $notes->map(function (ReturnNote $n) {
-            $receivedCount = $n->lines->filter(fn ($line) => (int) $line->qty_returned > 0)->count();
+            $receivedCount = $n->lines->filter(fn ($line) => (float) $line->qty_returned > 0)->count();
 
             return [
                 $n->return_no ?? '—',
@@ -969,34 +1023,61 @@ class AdminReportsHubService
     /** @return array{title: string, period_label: string, summary: list<array{label: string, value: string}>, headers: list<string>, rows: list<list<string>>} */
     private function buildCivilianDebts(?Carbon $from, ?Carbon $to): array
     {
-        $entries = $this->constrainDateRange(
-            DebtCollectionEntry::query()
-                ->with(['payable' => fn ($q) => $q->with('contractCompany:id,name,company_code')])
-                ->where('payable_type', ContractCompanyDebt::class),
+        // كان يعرض سطور التحصيل فقط — جهة عليها مستحق لم يُحصَّل منه شيء لا تظهر إطلاقاً.
+        $alias = (new ContractCompanyDebt)->getMorphClass();
+
+        $accruedInPeriod = $this->constrainDateRange(ContractDebtAccrual::query(), 'accrued_at', $from, $to)
+            ->selectRaw('contract_company_debt_id, SUM(amount) as total')
+            ->groupBy('contract_company_debt_id')
+            ->pluck('total', 'contract_company_debt_id');
+
+        $collectedInPeriod = $this->constrainDateRange(
+            DebtCollectionEntry::query()->where('payable_type', $alias),
             'collected_at',
             $from,
             $to,
         )
-            ->orderByDesc('collected_at')
-            ->limit(500)
-            ->get();
+            ->selectRaw('payable_id, SUM(amount) as total')
+            ->groupBy('payable_id')
+            ->pluck('total', 'payable_id');
 
-        $rows = $entries->map(function (DebtCollectionEntry $e) {
-            $debt = $e->payable instanceof ContractCompanyDebt ? $e->payable : null;
-            $company = $debt?->contractCompany;
+        $debts = ContractCompanyDebt::query()
+            ->with('contractCompany:id,name,company_code')
+            ->where(fn ($q) => $q->where('due', '>', 0)->orWhere('collected', '>', 0))
+            ->get()
+            ->sortByDesc(fn (ContractCompanyDebt $d) => (float) $d->due - (float) $d->collected)
+            ->values();
+
+        $totals = ['accrued' => 0.0, 'collected' => 0.0, 'remaining' => 0.0];
+
+        $rows = $debts->map(function (ContractCompanyDebt $debt) use ($accruedInPeriod, $collectedInPeriod, &$totals) {
+            $accrued = (float) ($accruedInPeriod[$debt->id] ?? 0);
+            $collected = (float) ($collectedInPeriod[$debt->id] ?? 0);
+            $remaining = max(0.0, round((float) $debt->due - (float) $debt->collected, 2));
+
+            $totals['accrued'] += $accrued;
+            $totals['collected'] += $collected;
+            $totals['remaining'] += $remaining;
 
             return [
-                ClinicTime::format($e->collected_at, 'd/m/Y'),
-                $company?->name ?? '—',
-                number_format((float) $e->amount, 2).' ج.م',
+                $debt->contractCompany?->name ?? '—',
+                $this->money($accrued),
+                $this->money($collected),
+                $this->money((float) $debt->due),
+                $this->money((float) $debt->collected),
+                $this->money($remaining),
             ];
-        })->values()->all();
+        })->all();
 
         return [
             'title' => 'المديونات',
             'period_label' => $this->periodLabel($from, $to),
-            'summary' => [],
-            'headers' => ['التاريخ', 'الجهة', 'المبلغ'],
+            'summary' => [
+                ['label' => 'مستحق مُرحَّل في الفترة', 'value' => $this->money($totals['accrued'])],
+                ['label' => 'محصَّل في الفترة', 'value' => $this->money($totals['collected'])],
+                ['label' => 'المتبقي على الجهات (الآن)', 'value' => $this->money($totals['remaining'])],
+            ],
+            'headers' => ['الجهة', 'مستحق الفترة', 'محصَّل الفترة', 'إجمالي المستحق', 'إجمالي المحصَّل', 'المتبقي'],
             'rows' => $rows,
         ];
     }

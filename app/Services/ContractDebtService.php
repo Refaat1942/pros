@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\DebtStatus;
 use App\Models\ContractCompany;
 use App\Models\ContractCompanyDebt;
+use App\Models\ContractDebtAccrual;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -58,9 +59,9 @@ class ContractDebtService
     /**
      * يزيد المبلغ المستحق على الجهة (عند تسليم طرف للمريض — Task 10).
      */
-    public function increaseDue(ContractCompany $company, float $amount): void
+    public function increaseDue(ContractCompany $company, float $amount, ?int $caseId = null): void
     {
-        DB::transaction(function () use ($company, $amount) {
+        DB::transaction(function () use ($company, $amount, $caseId) {
             $debt = $this->forCompany($company, lock: true);
 
             $before = $this->snapshot($debt);
@@ -68,6 +69,7 @@ class ContractDebtService
             $debt->due = (float) $debt->due + $amount;
             $debt->status = $this->computeStatus($debt)->value;
             $debt->save();
+            $this->recordAccrual($debt, $amount, $caseId);
 
             AuditService::log(
                 action: 'update',
@@ -132,9 +134,11 @@ class ContractDebtService
 
             $before = $this->snapshot($debt);
 
+            $reduced = min($amount, (float) $debt->due);
             $debt->due = max(0, (float) $debt->due - $amount);
             $debt->status = $this->computeStatus($debt)->value;
             $debt->save();
+            $this->recordAccrual($debt, -$reduced, null);
 
             AuditService::log(
                 action: 'debt',
@@ -147,6 +151,20 @@ class ContractDebtService
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    private function recordAccrual(ContractCompanyDebt $debt, float $amount, ?int $caseId): void
+    {
+        if (abs($amount) < 0.005) {
+            return;
+        }
+
+        ContractDebtAccrual::query()->create([
+            'contract_company_debt_id' => $debt->id,
+            'case_id' => $caseId,
+            'amount' => round($amount, 2),
+            'accrued_at' => now(),
+        ]);
+    }
 
     private function remainingDue(ContractCompanyDebt $debt): float
     {

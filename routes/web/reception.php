@@ -47,7 +47,9 @@ Route::prefix('reception')
         Route::get('screen-hints', [ReceptionHintController::class, 'show'])
             ->name('screen-hints');
 
+        // إضافة جهة جديدة تتم من نموذج تسجيل المريض — بنفس صلاحية صفحة «المرضى».
         Route::post('lookup/companies', [ContractCompanyController::class, 'storeFromReception'])
+            ->middleware('dashboard.page:reception,patients')
             ->name('lookup.companies.store');
 
         // ── Appointments ───────────────────────────────────────────────────
@@ -113,11 +115,9 @@ Route::prefix('reception')
                 ->name('approval-letter.scan-quote');
         });
 
-        // ── Contracts archive (read-only) ──────────────────────────────────
-        Route::middleware('dashboard.page:reception,contracts')->group(function () {
-            Route::get('contracts/list', [ContractController::class, 'index'])
-                ->name('contracts.list');
-
+        // ── خطاب الموافقة المسجَّل — رابطه يُعاد بعد تسجيل الخطاب في «عروض الأسعار».
+        // كان تحت صفحة «contracts» غير الموجودة فيرجع 403 لموظف الاستقبال.
+        Route::middleware('dashboard.page:reception,quote')->group(function () {
             Route::get('contracts/{contract}', [ContractController::class, 'show'])
                 ->name('contracts.show');
 

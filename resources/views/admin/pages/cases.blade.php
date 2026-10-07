@@ -5,6 +5,21 @@
     $dateTo = $case_date_to ?? now()->toDateString();
 @endphp
 <div class="section-view" id="section-cases">
+      {{-- «مسار المرضى» و«متابعة المرضى» صفحة واحدة: مسار كل مريض خطوة بخطوة + طوابير الحالات. --}}
+      @php $caseTab = $case_tab ?? 'cases'; @endphp
+      <div class="cases-tabs" role="tablist" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <button type="button" class="btn-action {{ $caseTab === 'cases' ? 'primary' : '' }}" data-cases-tab="cases" role="tab">📁 متابعة الحالات</button>
+        <button type="button" class="btn-action {{ $caseTab === 'tracks' ? 'primary' : '' }}" data-cases-tab="tracks" role="tab">📍 مسار كل المرضى</button>
+      </div>
+
+      <div id="casesTabTracks" @if ($caseTab !== 'tracks') hidden @endif>
+        @include('partials.admin-patient-track-panel', [
+            'patient_tracks' => $patient_tracks ?? collect(),
+            'track_search'   => $track_search ?? '',
+        ])
+      </div>
+
+      <div id="casesTabCases" @if ($caseTab !== 'cases') hidden @endif>
       <form method="GET" action="{{ route('admin.cases') }}" class="reports-date-filter cases-date-filter">
         <label>
           <span>من</span>
@@ -76,9 +91,23 @@
           </table>
         </div>
       </div>
+      </div>
     </div>
 <script>
 window.__ADMIN_CASE_BUCKETS = @json($buckets);
+document.querySelectorAll('[data-cases-tab]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var tab = btn.getAttribute('data-cases-tab');
+    document.getElementById('casesTabTracks').hidden = tab !== 'tracks';
+    document.getElementById('casesTabCases').hidden = tab !== 'cases';
+    document.querySelectorAll('[data-cases-tab]').forEach(function (b) {
+      b.classList.toggle('primary', b === btn);
+    });
+    var url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url);
+  });
+});
 </script>
 
 @include('partials.contract-letter-modal')

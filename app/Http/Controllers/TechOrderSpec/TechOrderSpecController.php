@@ -11,14 +11,12 @@ use App\Http\Requests\TechOrderSpec\UpdateTechOrderSpecRequest;
 use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\MedicalRecord;
-use App\Models\PricingRequest;
 use App\Support\StockCatalogPicker;
 use App\Models\TechOrderSpec;
 use App\Services\DoctorTransferService;
 use App\Services\PathwayTransitionMessageService;
 use App\Services\SpecOrdersService;
 use App\Services\SpecService;
-use App\Support\CaseDisplayStatus;
 use App\Support\ExportCsvFormat;
 use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
@@ -215,30 +213,6 @@ class TechOrderSpecController extends Controller
         ]);
     }
 
-    /**
-     * حالات أُرسل توصيفها — مع حالة طلب التسعير.
-     */
-    public function pricingStatus(Request $request): JsonResponse
-    {
-        $requests = $this->fetchForDashboard(
-            PricingRequest::with([
-                'caseRecord:id,case_no,order_ref,stage_key,patient_type,manufacturing_stage',
-                'items',
-            ])
-                ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
-                    $q->where('request_no', 'like', "%{$s}%")
-                        ->orWhere('patient_name', 'like', "%{$s}%")
-                        ->orWhere('order_ref', 'like', "%{$s}%");
-                }))
-                ->orderByDesc('request_date')
-        );
-
-        return response()->json([
-            'data' => collect($requests)->map(fn ($r) => $this->formatPricingRequest($r, forSpec: true))->values(),
-            'total' => $requests->count(),
-        ]);
-    }
-
     private function formatCase(CaseRecord $case): array
     {
         return $case->only([
@@ -414,42 +388,5 @@ class TechOrderSpecController extends Controller
         ]));
 
         return $parts === [] ? null : implode("\n\n", $parts);
-    }
-
-    private function formatPricingRequest(PricingRequest $request, bool $forSpec = false): array
-    {
-        $display = CaseDisplayStatus::forPricingRequest($request);
-
-        $data = $request->only([
-            'id',
-            'request_no',
-            'order_ref',
-            'case_id',
-            'patient_name',
-            'company_name',
-            'request_date',
-            'items_count',
-            'doctor_name',
-            'patient_type',
-            'status_key',
-            'step',
-            'status_label',
-            'display_status_label',
-            'display_status_badge_class',
-        ]) + [
-            'display_status' => $display->toArray(),
-            'items' => $request->relationLoaded('items')
-                ? $request->items->map->only(['stock_item_code', 'name', 'qty'])
-                : [],
-            'case' => $request->relationLoaded('caseRecord') && $request->caseRecord
-                ? $request->caseRecord->only(['id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'manufacturing_stage'])
-                : null,
-        ];
-
-        if (! $forSpec) {
-            $data['computed_total'] = $request->computed_total;
-        }
-
-        return $data;
     }
 }

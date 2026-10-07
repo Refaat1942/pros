@@ -9,7 +9,7 @@
 @endphp
 <div class="org-brand-mark org-brand-mark--{{ $size }}" aria-label="{{ $branding['center_name'] }}">
     @if ($logoExists)
-        <img class="org-brand-mark__logo" src="{{ asset($logoRel) }}" alt="{{ $branding['center_name'] }}">
+        <img class="org-brand-mark__logo" src="{{ $settings->brandingLogoUrl($logoRel) }}" alt="{{ $branding['center_name'] }}">
     @else
         <div class="org-brand-mark__placeholder" aria-hidden="true">🦿</div>
     @endif

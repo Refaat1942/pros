@@ -25,7 +25,7 @@
         <div class="card-head">
             <span class="card-brand">
                 @if ($logoExists)
-                    <img class="card-logo" src="{{ asset($logoRel) }}" alt="{{ $branding['center_name'] }}">
+                    <img class="card-logo" src="{{ app(\App\Services\SettingService::class)->brandingLogoUrl($logoRel) }}" alt="{{ $branding['center_name'] }}">
                 @endif
                 <span class="center-name">{{ $branding['center_name'] }}</span>
             </span>

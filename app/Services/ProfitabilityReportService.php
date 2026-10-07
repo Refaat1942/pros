@@ -64,7 +64,10 @@ class ProfitabilityReportService
             'case_no' => $case->case_no ?? '—',
             'patient_name' => $case->patient?->name ?? '—',
             'patient_type' => $case->patient_type,
-            'company' => $case->company_name ?: 'نقدي / بدون جهة',
+            // العسكري بلا جهة تعاقد على الحالة — جهته السيادية وليس «نقدي».
+            'company' => $isMilitary
+                ? ($case->sovereign_entity ?: Patient::MILITARY_SOVEREIGN_ENTITY)
+                : ($case->company_name ?: 'نقدي / بدون جهة'),
             'revenue' => round($revenue, 2),
             'cost' => round($cost, 2),
             'margin' => $margin,

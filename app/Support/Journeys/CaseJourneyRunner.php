@@ -331,7 +331,7 @@ class CaseJourneyRunner
     private function itemPayload(): array
     {
         return collect($this->lines)->map(fn (array $l) => [
-            'stock_item_code' => (string) $l['item']->operationalCode(),
+            'stock_item_code' => (string) ($l['item']->operationalCode() ?: $l['item']->code),
             'name' => $l['item']->name,
             'qty' => $l['qty'],
         ])->all();

@@ -38,6 +38,40 @@ class PermissionCatalogService
     }
 
     /**
+     * يضيف الصلاحيات الجديدة فقط (صفحة أو إجراء أُضيف بعد آخر مزامنة) ويمنح كل جديد
+     * للأدوار التي يتبعها افتراضياً — دون إعادة صلاحية سحبها المدير عمداً من دور.
+     * كانت الصفحات الجديدة بلا صف صلاحية حتى تُشغَّل هجرة مزامنة، فلا يراها إلا السوبر أدمن
+     * ولا تظهر في المصفوفة (مثال: «طلب التوريد» و«استلام الوارد» لأمين المخزن).
+     *
+     * @return list<string> slugs الصلاحيات المضافة
+     */
+    public function syncNewPermissions(): array
+    {
+        $existing = Permission::query()->pluck('slug')->all();
+        $this->syncToDatabase();
+
+        $new = array_values(array_diff(array_keys(Permission::catalog()), $existing));
+        if ($new === []) {
+            return [];
+        }
+
+        $newIds = Permission::query()->whereIn('slug', $new)->pluck('id');
+
+        Role::query()->each(function (Role $role) use ($newIds) {
+            if ($role->slug === Role::SLUG_SUPER_ADMIN) {
+                return;
+            }
+
+            $grant = $this->defaultPermissionIdsForRole($role->slug)->intersect($newIds);
+            if ($grant->isNotEmpty()) {
+                $role->permissions()->syncWithoutDetaching($grant->all());
+            }
+        });
+
+        return $new;
+    }
+
+    /**
      * يُسنِد لكل دور صلاحيات لوحته فقط + الإجراءات الافتراضية من config/permissions.php.
      *
      * @param  bool  $fullSync  true = استبدال كامل، false = إضافة بدون حذف الموجود

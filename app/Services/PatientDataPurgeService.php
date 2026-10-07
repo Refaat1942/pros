@@ -84,6 +84,7 @@ class PatientDataPurgeService
                     'status' => 'pending',
                 ]);
                 $counts['debt_collection_entries'] = DB::table('debt_collection_entries')->delete();
+                $counts['contract_debt_accruals'] = DB::table('contract_debt_accruals')->delete();
             }
 
             if ($syncStock) {

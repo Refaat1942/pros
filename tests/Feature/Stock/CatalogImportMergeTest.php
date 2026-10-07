@@ -158,6 +158,11 @@ class CatalogImportMergeTest extends TestCase
         $this->assertEqualsWithDelta(7250, (float) StockItem::query()->where('alt_codes', 'K100')->value('price'), 0.0001);
         $this->assertEqualsWithDelta(1200, (float) StockItem::query()->where('name', 'ركبة اختبار')->value('price'), 0.0001);
 
+        // بلا «كود صنف» ← باركود من الرقم الداخلي (يُطبع ويُصرف بالمسح).
+        $noCode = StockItem::query()->where('name', 'ركبة اختبار')->firstOrFail();
+        $this->assertSame(StockItem::internalBarcode($noCode->code), $noCode->barcode);
+        $this->assertSame(0, StockItem::query()->whereNull('barcode')->count());
+
         $sheet = StockItem::query()->where('name', 'فرخ اختبار 3مم')->firstOrFail();
         $this->assertSame('سم2', $sheet->uom);
         $this->assertEqualsWithDelta(30000, (float) $sheet->qty, 0.0001);

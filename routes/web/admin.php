@@ -54,7 +54,9 @@ Route::prefix('admin')
             Route::get('overview/export', [AdminOverviewController::class, 'export'])->name('overview.export');
         });
 
-        Route::middleware('dashboard.page:admin,patient-tracks')->group(function () {
+        // «مسار المرضى» دُمج في «متابعة المرضى» (تبويب مسار كل المرضى).
+        Route::redirect('patient-tracks', '/admin/cases?tab=tracks')->name('patient-tracks');
+        Route::middleware('dashboard.page:admin,cases')->group(function () {
             Route::get('patient-tracks/list', [AdminOverviewController::class, 'patientTracksApi'])->name('patient-tracks.list');
         });
 
@@ -99,7 +101,7 @@ registerDashboardPages(
     'admin.',
     AdminDashboardController::class,
     'admin',
-    except: ['overview', 'bi', 'audit', 'documents-hub', 'document-template-edit', 'reports', 'reports-section', 'general-view'],
+    except: ['overview', 'bi', 'audit', 'documents-hub', 'document-template-edit', 'reports', 'reports-section', 'general-view', 'patient-tracks'],
 );
 
 /*

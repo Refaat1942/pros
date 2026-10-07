@@ -301,36 +301,52 @@ return [
         'layout' => 'layouts.admin',
         'default_page' => 'overview',
         'sidebar' => ['icon' => '⚙️', 'title' => 'لوحة إدارة النظام'],
+        // مجموعات القائمة: العمل اليومي أولاً، ثم البيانات الأساسية، ثم الإعدادات والرقابة.
         'nav_groups' => [
             [
-                'label' => 'التقارير والمؤشرات',
+                'label' => 'لوحة المتابعة والتقارير',
                 'icon' => '📊',
                 'pages' => ['overview', 'reports'],
             ],
             [
                 'label' => 'المرضى والحالات',
                 'icon' => '🧭',
-                'pages' => ['patient-tracks', 'cases', 'spec-edit-requests', 'services-approvals', 'visit-types'],
+                'pages' => ['cases', 'spec-edit-requests', 'services-approvals'],
             ],
             [
                 'label' => 'قسم الإنتاج',
                 'icon' => '🏭',
-                'pages' => ['workshop-sections', 'workshop-tracking'],
+                'pages' => ['workshop-tracking', 'workshop-sections'],
             ],
             [
-                'label' => 'المخزون والتوريد',
+                'label' => 'المخزن — العمل اليومي',
                 'icon' => '📦',
-                'pages' => ['stock-categories', 'catalog', 'add-catalog-item', 'supply-request', 'receive-inbound', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings', 'stock-uom-settings'],
+                'pages' => ['catalog', 'receive-inbound', 'supply-request', 'dispense-approvals', 'returns', 'inventory-overview'],
+            ],
+            [
+                'label' => 'المخزن — بيانات أساسية',
+                'icon' => '🗂️',
+                'pages' => ['stock-categories', 'stock-kits', 'suppliers', 'stock-uom-settings', 'catalog-list-settings'],
             ],
             [
                 'label' => 'التعاقد والمالية',
                 'icon' => '💼',
-                'pages' => ['companies', 'contracts', 'civilian-debts'],
+                'pages' => ['companies', 'contracts', 'civilian-debts', 'costing-settings'],
             ],
             [
-                'label' => 'الرقابة والنظام',
+                'label' => 'الموظفون والصلاحيات',
+                'icon' => '👥',
+                'pages' => ['employees', 'permissions'],
+            ],
+            [
+                'label' => 'إعدادات النظام',
                 'icon' => '⚙️',
-                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'documents-hub', 'branding-settings', 'costing-settings', 'pathway-settings', 'notification-settings'],
+                'pages' => ['pathway-settings', 'visit-types', 'military-ranks', 'documents-hub', 'branding-settings', 'notification-settings'],
+            ],
+            [
+                'label' => 'الرقابة',
+                'icon' => '🔒',
+                'pages' => ['audit'],
             ],
         ],
         'pages' => [
@@ -341,17 +357,18 @@ return [
             'reports' => ['title' => 'التقارير — تصدير وفلترة بالتاريخ', 'icon' => '📋', 'label' => 'التقارير'],
             'reports-section' => ['title' => 'تفاصيل التقرير', 'icon' => '📄', 'label' => 'تفاصيل التقرير', 'hidden' => true],
             // ── مسار المرضى والحالات ───────────────────────────────────────────
-            'patient-tracks' => ['title' => 'مسار المرضى — تتبع المراحل', 'icon' => '📍', 'label' => 'مسار المرضى'],
+            'patient-tracks' => ['title' => 'مسار المرضى — تتبع المراحل', 'icon' => '📍', 'label' => 'مسار المرضى', 'hidden' => true],
             'spec-edit-requests' => ['title' => 'طلبات تعديل التوصيف والمعدلات', 'icon' => '✏️', 'label' => 'تعديل التوصيف والمعدلات'],
             'services-approvals' => ['title' => 'تصديقات إدارة الخدمات — مسار عسكري', 'icon' => '🪖', 'label' => 'تصديقات الخدمات'],
             'workshop-sections' => ['title' => 'أقسام الإنتاج — الفنيين والتخصيص', 'icon' => '🏭', 'label' => 'أقسام الإنتاج'],
             'workshop-tracking' => ['title' => 'تتبع الإنتاج — تخصيص وتحت التشغيل', 'icon' => '📍', 'label' => 'تتبع الإنتاج'],
-            'cases' => ['title' => 'متابعة المرضى', 'icon' => '📁', 'label' => 'متابعة المرضى'],
+            'cases' => ['title' => 'متابعة المرضى — المسار والحالات', 'icon' => '📁', 'label' => 'متابعة المرضى'],
             'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
             // ── المخزون والتوريد ───────────────────────────────────────────────
-            'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'الأقسام'],
+            'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'أقسام الأصناف'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
-            'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد'],
+            // مكرر لزر «➕ إضافة صنف» في صفحة الأصناف والأسعار.
+            'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد', 'hidden' => true],
             'supply-request' => ['title' => 'طلب التوريد', 'icon' => '🛒', 'label' => 'طلب التوريد'],
             'receive-inbound' => ['title' => 'استلام الوارد — تسجيل فاتورة توريد', 'icon' => '📥', 'label' => 'استلام الوارد'],
             'stock-kits' => [
