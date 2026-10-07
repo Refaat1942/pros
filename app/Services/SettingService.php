@@ -191,6 +191,23 @@ class SettingService
         return is_file(public_path($path));
     }
 
+    /** رابط عرض الشعار (مع رقم نسخة حتى يظهر الشعار الجديد فور رفعه)، أو null إن لم يوجد ملف. */
+    public function brandingLogoUrl(?string $path): ?string
+    {
+        if (! $this->brandingLogoExists($path)) {
+            return null;
+        }
+
+        $path = trim((string) $path);
+        if (str_starts_with($path, 'storage/')) {
+            $version = Storage::disk('public')->lastModified(substr($path, strlen('storage/')));
+
+            return route('branding.logo', ['v' => $version]);
+        }
+
+        return asset($path).'?v='.filemtime(public_path($path));
+    }
+
     public function storeUploadedLogo(UploadedFile $file): string
     {
         $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'png');

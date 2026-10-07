@@ -16,13 +16,14 @@
         @endphp
         @if ($hasSidebarLogo)
             <img class="sidebar-brand__logo"
-                 src="{{ asset($sidebarLogo) }}"
+                 src="{{ $settings->brandingLogoUrl($sidebarLogo) }}"
                  alt="{{ $orgBranding['center_name'] }}">
         @else
             <div class="icon">{{ $sidebar['icon'] ?? '📊' }}</div>
         @endif
-        <h2>{{ $sidebar['title'] ?? $cfg['title'] }}</h2>
-        <span>{{ $sidebar['subtitle'] ?? '' }}</span>
+        {{-- اسم المركز أعلى القائمة، واسم اللوحة تحته. --}}
+        <h2 class="sidebar-brand__center">{{ $orgBranding['center_name'] }}</h2>
+        <span>{{ $sidebar['title'] ?? $cfg['title'] }}</span>
     </div>
     <div class="sidebar-nav-scroll">
         <ul class="nav-menu{{ $navGroups ? ' nav-menu--grouped' : '' }}">
