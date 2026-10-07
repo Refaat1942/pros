@@ -13,7 +13,6 @@ use App\Http\Controllers\Patient\ReceptionSelfServiceController;
 use App\Http\Controllers\Quote\ApprovalLetterController;
 use App\Http\Controllers\Quote\ApprovalScanController;
 use App\Http\Controllers\Quote\QuoteController;
-use App\Http\Controllers\Reception\ReceptionHintController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -43,9 +42,6 @@ Route::prefix('reception')
 
         Route::get('lookup/companies', [ContractCompanyController::class, 'index'])
             ->name('lookup.companies');
-
-        Route::get('screen-hints', [ReceptionHintController::class, 'show'])
-            ->name('screen-hints');
 
         // إضافة جهة جديدة تتم من نموذج تسجيل المريض — بنفس صلاحية صفحة «المرضى».
         Route::post('lookup/companies', [ContractCompanyController::class, 'storeFromReception'])
