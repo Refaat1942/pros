@@ -155,7 +155,7 @@
 
   function sanitizeScanInput(raw) {
     var s = String(raw || '').replace(/[\x00-\x1F\x7F]/g, '').trim();
-    s = s.replace(/^[^A-Za-z0-9]+/, '').replace(/[^A-Za-z0-9\-_]+$/, '');
+    s = s.replace(/^[^A-Za-z0-9]+/, '').replace(/[^\x21-\x7E]+$/, '');
     return s.trim().toUpperCase();
   }
 
@@ -315,7 +315,7 @@
   }
 
   function isValidBarcode(code) {
-    return /^[A-Za-z0-9\-_]{1,100}$/.test(String(code || '').trim());
+    return /^[\x20-\x7E]{1,100}$/.test(String(code || '').trim());
   }
 
   function clearQtyInputError() {
