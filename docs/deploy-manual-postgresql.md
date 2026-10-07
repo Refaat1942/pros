@@ -311,6 +311,7 @@ cd C:\laragon\www\prosthetics
 git pull
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
+php artisan prosthetics:sync-permissions
 php artisan config:clear
 php artisan view:clear
 php artisan config:cache

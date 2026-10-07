@@ -143,6 +143,10 @@ if ! php artisan migrate --force; then
     die "فشلت الهجرات — التطبيق مُبقىً في وضع الصيانة. راجع الخطأ أعلاه، أصلِح قاعدة البيانات، ثم أعد تشغيل deploy.sh."
 fi
 
+log "Syncing permissions for new pages/actions"
+php artisan prosthetics:sync-permissions \
+    || warn "تعذّر مزامنة الصلاحيات — شغّل يدوياً: php artisan prosthetics:sync-permissions"
+
 log "Refreshing stored WAC from actual stock layers (FIFO)"
 php artisan prosthetics:inventory-valuation --sync-wac --top=0 \
     || warn "تعذّر تحديث WAC — شغّل يدوياً: php artisan prosthetics:inventory-valuation --sync-wac"
