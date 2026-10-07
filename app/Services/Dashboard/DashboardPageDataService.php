@@ -418,7 +418,8 @@ class DashboardPageDataService
 
         $buckets = app(AdminCaseTrackingService::class)->buckets($from, $to);
 
-        return [
+        return $this->adminPatientTracks() + [
+            'case_tab' => request()->query('tab') === 'tracks' ? 'tracks' : 'cases',
             'admin_case_buckets' => [
                 'waiting_return' => $buckets['waiting_return']->all(),
                 'awaiting_cashier' => $buckets['awaiting_cashier']->all(),

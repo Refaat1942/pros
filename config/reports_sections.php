@@ -81,7 +81,7 @@ return [
         ],
         'patient-tracks' => [
             'any_of' => [
-                ['admin_pages' => ['patient-tracks']],
+                ['admin_pages' => ['cases']],
             ],
         ],
         'cases' => [

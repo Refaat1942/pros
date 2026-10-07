@@ -310,7 +310,7 @@ return [
             [
                 'label' => 'المرضى والحالات',
                 'icon' => '🧭',
-                'pages' => ['patient-tracks', 'cases', 'spec-edit-requests', 'services-approvals', 'visit-types'],
+                'pages' => ['cases', 'spec-edit-requests', 'services-approvals', 'visit-types'],
             ],
             [
                 'label' => 'قسم الإنتاج',
@@ -341,12 +341,12 @@ return [
             'reports' => ['title' => 'التقارير — تصدير وفلترة بالتاريخ', 'icon' => '📋', 'label' => 'التقارير'],
             'reports-section' => ['title' => 'تفاصيل التقرير', 'icon' => '📄', 'label' => 'تفاصيل التقرير', 'hidden' => true],
             // ── مسار المرضى والحالات ───────────────────────────────────────────
-            'patient-tracks' => ['title' => 'مسار المرضى — تتبع المراحل', 'icon' => '📍', 'label' => 'مسار المرضى'],
+            'patient-tracks' => ['title' => 'مسار المرضى — تتبع المراحل', 'icon' => '📍', 'label' => 'مسار المرضى', 'hidden' => true],
             'spec-edit-requests' => ['title' => 'طلبات تعديل التوصيف والمعدلات', 'icon' => '✏️', 'label' => 'تعديل التوصيف والمعدلات'],
             'services-approvals' => ['title' => 'تصديقات إدارة الخدمات — مسار عسكري', 'icon' => '🪖', 'label' => 'تصديقات الخدمات'],
             'workshop-sections' => ['title' => 'أقسام الإنتاج — الفنيين والتخصيص', 'icon' => '🏭', 'label' => 'أقسام الإنتاج'],
             'workshop-tracking' => ['title' => 'تتبع الإنتاج — تخصيص وتحت التشغيل', 'icon' => '📍', 'label' => 'تتبع الإنتاج'],
-            'cases' => ['title' => 'متابعة المرضى', 'icon' => '📁', 'label' => 'متابعة المرضى'],
+            'cases' => ['title' => 'متابعة المرضى — المسار والحالات', 'icon' => '📁', 'label' => 'متابعة المرضى'],
             'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
             // ── المخزون والتوريد ───────────────────────────────────────────────
             'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'الأقسام'],

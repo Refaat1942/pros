@@ -84,19 +84,19 @@ class SuperAdminPermissionsTest extends TestCase
         $this->actingAs($user)->getJson(route('admin.workshop-tracking.list'))->assertOk();
     }
 
-    public function test_patient_tracks_list_requires_patient_tracks_page_not_overview(): void
+    public function test_patient_tracks_list_requires_cases_page_not_overview(): void
     {
         app(PermissionCatalogService::class)->syncToDatabase();
 
         $adminRole = $this->makeRole(Role::SLUG_ADMIN);
         $adminRole->permissions()->sync(
-            Permission::query()->where('slug', Permission::viewSlug('admin', 'patient-tracks'))->pluck('id')
+            Permission::query()->where('slug', Permission::viewSlug('admin', 'cases'))->pluck('id')
         );
 
         $user = User::updateOrCreate(
             ['username' => 'admin-patient-tracks-only'],
             [
-                'name' => 'أدمن مسار المرضى',
+                'name' => 'أدمن متابعة المرضى',
                 'password' => UserFactory::TEST_PASSWORD,
                 'role_id' => $adminRole->id,
                 'status' => User::STATUS_ACTIVE,

@@ -41,7 +41,7 @@ class AdminPatientTrackTest extends TestCase
         $admin = $this->userWithRole('admin');
 
         $this->actingAs($admin)
-            ->get('/admin/patient-tracks')
+            ->get('/admin/cases?tab=tracks')
             ->assertOk()
             ->assertSee('id="patientTrackTableBody"', false)
             ->assertSee('عرض المسار', false)
@@ -326,7 +326,7 @@ class AdminPatientTrackTest extends TestCase
         $admin = $this->userWithRole('admin');
 
         $this->actingAs($admin)
-            ->get('/admin/patient-tracks?visit_type='.$examVisit->id)
+            ->get('/admin/cases?tab=tracks&visit_type='.$examVisit->id)
             ->assertOk()
             ->assertSee('id="patientTrackVisitFilter"', false)
             ->assertSee($patientWithExam->name, false)
