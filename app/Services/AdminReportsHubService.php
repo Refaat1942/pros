@@ -71,7 +71,9 @@ class AdminReportsHubService
     private function allSectionCards(): array
     {
         $pages = config('dashboards.admin.pages', []);
-        $skip = ['overview', 'bi', 'general-view', 'reports', 'reports-section', 'permissions', 'employees', 'notifications', 'military-ranks', 'military-debts', 'costing-settings', 'branding-settings', 'pathway-settings', 'notification-settings'];
+        $skip = ['overview', 'bi', 'general-view', 'reports', 'reports-section', 'permissions', 'employees', 'notifications', 'military-ranks', 'military-debts', 'costing-settings', 'branding-settings', 'pathway-settings', 'notification-settings',
+            // صفحات إجراءات/إعدادات بلا تقرير — بطاقتها كانت تفتح «تقرير غير معروف».
+            'add-catalog-item', 'supply-request', 'receive-inbound', 'documents-hub', 'stock-uom-settings'];
 
         $cards = [];
         $groups = [
