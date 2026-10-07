@@ -111,11 +111,12 @@ class BomLifecycleTest extends TestCase
             ->latest('id')
             ->first();
 
+        // FIFO بترتيب الاستلام: دفعة prepareCase (INV-001 @200) هي الأقدم فتُصرف أولاً — ليس الأرخص ولا WAC.
         $this->assertNotNull($movement);
-        $this->assertEqualsWithDelta(100.0, (float) $movement->unit_cost, 0.01);
+        $this->assertEqualsWithDelta(200.0, (float) $movement->unit_cost, 0.01);
 
         $case->refresh();
-        $this->assertSame(200.0, (float) $case->issue_cost);
+        $this->assertSame(400.0, (float) $case->issue_cost);
     }
 
     /** المشهد الدرامي: الإنذار الحاد */
@@ -316,7 +317,8 @@ class BomLifecycleTest extends TestCase
         $priceService->addBatch($item->fresh(), 10, 100.00, $supplier, 'INV-RET-A', now());
         $priceService->addBatch($item->fresh(), 10, 250.00, $supplier, 'INV-RET-B', now());
         $item->refresh();
-        $lowBatchPrice = 100.0;
+        // FIFO بترتيب الاستلام: الأقدم دفعة prepareCase (INV-001 @200).
+        $firstBatchPrice = 200.0;
 
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
@@ -324,7 +326,7 @@ class BomLifecycleTest extends TestCase
         $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']);
 
         $case->refresh();
-        $this->assertSame(round($lowBatchPrice * 2, 2), (float) $case->issue_cost);
+        $this->assertSame(round($firstBatchPrice * 2, 2), (float) $case->issue_cost);
 
         $returnNote = app(ReturnNoteService::class)->create($bom->fresh(), [
             ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
@@ -354,11 +356,11 @@ class BomLifecycleTest extends TestCase
         $this->assertEqualsWithDelta(1, (float) $returnMovement->quantity, 0.0001);
 
         $case->refresh();
-        $this->assertSame(100.0, (float) $case->issue_cost,
+        $this->assertSame($firstBatchPrice, (float) $case->issue_cost,
             'issue_cost must drop by the FIFO batch value of returned units');
 
         $bom->refresh()->load('items');
-        $this->assertSame(1, $bom->items->first()->returned_qty);
+        $this->assertEqualsWithDelta(1, (float) $bom->items->first()->returned_qty, 0.0001);
     }
 
     public function test_can_return_single_dispensed_unit(): void

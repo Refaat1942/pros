@@ -53,8 +53,11 @@ class CatalogUpdateWarehouseBatchTest extends ProstheticTestCase
         $formatted = app(StockCatalogService::class)->formatItem($item->fresh(['prices', 'suppliers', 'category']));
 
         $this->assertEmpty($formatted['catalog_extra_prices']);
-        $this->assertCount(1, $formatted['price_tiers']);
-        $this->assertEqualsWithDelta(150.0, (float) $formatted['price_tiers'][0]['amount'], 0.01);
-        $this->assertEqualsWithDelta(8.0, (float) $formatted['price_tiers'][0]['qty'], 0.01);
+
+        // دفعة التوريد تغطي الرصيد كله؛ السعر الأساسي للصنف (100) يظهر كمستوى بكمية 0.
+        $tiers = collect($formatted['price_tiers']);
+        $this->assertCount(2, $tiers);
+        $this->assertEqualsWithDelta(8.0, (float) $tiers->firstWhere('amount', 150.0)['qty'], 0.01);
+        $this->assertEqualsWithDelta(0.0, (float) $tiers->firstWhere('amount', 100.0)['qty'], 0.01);
     }
 }
