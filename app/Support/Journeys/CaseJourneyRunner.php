@@ -9,12 +9,14 @@ use App\Models\CaseRecord;
 use App\Models\ContractCompany;
 use App\Models\MilitaryRank;
 use App\Models\Patient;
+use App\Models\Payment;
 use App\Models\Quote;
 use App\Models\Role;
 use App\Models\StockItem;
+use App\Models\TechOrderSpec;
 use App\Models\User;
 use App\Models\VisitType;
-use App\Models\WorkshopSection;
+use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\Concerns\InteractsWithAuthentication;
 use Illuminate\Foundation\Testing\Concerns\MakesHttpRequests;
 use Illuminate\Support\Str;
@@ -41,7 +43,7 @@ class CaseJourneyRunner
 
     public const JOURNEY_MILITARY_SERVICES = 'military_services';
 
-    /** @var \Illuminate\Foundation\Application */
+    /** @var Application */
     protected $app;
 
     /** @var list<array{journey: string, step: string, ok: bool, detail: string}> */
@@ -205,6 +207,41 @@ class CaseJourneyRunner
         $this->expectStage($journey, $case, CaseRecord::STAGE_DELIVERED);
 
         return $case->fresh();
+    }
+
+    /**
+     * كل مستندات الطباعة الخاصة بالحالة — يفتح كل صفحة طباعة بمستخدم القسم ويتأكد أنها تعمل.
+     *
+     * @return list<array{label: string, path: string, ok: bool, detail: string}>
+     */
+    public function printDocuments(CaseRecord $case): array
+    {
+        $spec = TechOrderSpec::query()->where('case_id', $case->id)->latest('id')->first();
+        $quote = Quote::query()->where('case_id', $case->id)->latest('id')->first();
+        $bom = Bom::query()->where('case_id', $case->id)->latest('id')->first();
+        $payment = Payment::query()->where('case_id', $case->id)->latest('id')->first();
+
+        $documents = array_filter([
+            $spec ? ['spec', 'أمر التوصيف الفني', "/spec/spec/{$spec->id}/print"] : null,
+            $quote ? ['reception', 'عرض السعر', "/reception/quote/{$quote->id}/print"] : null,
+            ['operations', 'أمر الشغل', "/operations/case/{$case->id}/print-work-order"],
+            ['workshop', 'أمر الشغل — قسم الإنتاج', "/workshop/work-order/{$case->id}/print"],
+            $bom ? ['technical', 'إذن صرف الخامات', "/technical/bom/{$bom->id}/print-issue-voucher"] : null,
+            $payment ? ['cashier', 'إيصال الخزنة', "/cashier/payments/{$payment->id}/receipt"] : null,
+        ]);
+
+        return array_map(function (array $doc) {
+            [$role, $label, $path] = $doc;
+            $response = $this->as($role)->get($path);
+            $ok = $response->status() === 200;
+
+            return [
+                'label' => $label,
+                'path' => $path,
+                'ok' => $ok,
+                'detail' => $ok ? '' : 'HTTP '.$response->status(),
+            ];
+        }, array_values($documents));
     }
 
     private function entityApproval(string $journey, CaseRecord $case): void
