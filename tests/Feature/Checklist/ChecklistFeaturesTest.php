@@ -380,7 +380,8 @@ class ChecklistFeaturesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('BC-RM-LBL');
-        $response->assertSee('data:image/svg+xml;base64,', false);
+        // الباركود مضمَّن كـ SVG مباشرة (أوضح في الطابعة الحرارية) بدلاً من صورة data URI.
+        $response->assertSee('class="barcode-svg-wrap"><svg', false);
     }
 
     public function test_bulk_barcode_labels_render_multiple_items_with_settings(): void
