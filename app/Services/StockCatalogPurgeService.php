@@ -35,6 +35,8 @@ class StockCatalogPurgeService
             $counts['supplier_stock_item'] = DB::table('supplier_stock_item')->delete();
             $counts['stock_item_attribute_values'] = DB::table('stock_item_attribute_values')->delete();
             $counts['stock_items'] = DB::table('stock_items')->delete();
+            // عدّادات أرقام الأصناف الداخلية وطلبات التوريد تبدأ من جديد مع الكتالوج الجديد.
+            DB::table('document_sequences')->where('key', 'ITM')->orWhere('key', 'like', 'SR-%')->delete();
 
             AuditService::log(
                 action: 'purge',
