@@ -87,6 +87,8 @@ trait DashboardQueueAssertions
             'military_number' => 'MIL-'.substr(md5($name), 0, 6),
             'seniority_number' => 'SEN-'.substr(md5($name), 6, 6),
             'military_weapon' => 'المشاة',
+            // «تصنيف المستفيد» إجباري للمريض العسكري.
+            'military_beneficiary_category' => Patient::BENEFICIARY_OFFICER,
             'visit_type_id' => $visitType->id,
             'sovereign_entity' => 'القوات المسلحة',
             'phone' => '01122223333',

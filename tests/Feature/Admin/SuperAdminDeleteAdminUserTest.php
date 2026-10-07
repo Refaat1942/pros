@@ -73,6 +73,11 @@ class SuperAdminDeleteAdminUserTest extends TestCase
     public function test_limited_admin_cannot_delete_another_admin(): void
     {
         $adminRole = $this->makeRole(Role::SLUG_ADMIN);
+        // أدمن محدود «له» صفحة الموظفين — وإلا يُرفض بـ 403 قبل الوصول لقاعدة حذف المسؤولين.
+        app(\App\Services\PermissionCatalogService::class)->syncToDatabase();
+        $adminRole->permissions()->syncWithoutDetaching(
+            \App\Models\Permission::query()->where('slug', \App\Models\Permission::viewSlug('admin', 'employees'))->pluck('id'),
+        );
 
         $admin = User::query()->create([
             'name' => 'أدمن محدود',

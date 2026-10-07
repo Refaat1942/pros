@@ -43,7 +43,7 @@ class FractionalDispenseReturnTest extends TestCase
 
         $this->assertEqualsWithDelta(0.0092, (float) $bom->items->first()->qty, 0.00001);
 
-        $bomService->releaseToWip($bom, [[
+        $this->releaseBomToWip($bom, [[
             'barcode' => $item->barcode,
             'qty' => '0.92 سم',
         ]]);
@@ -63,7 +63,7 @@ class FractionalDispenseReturnTest extends TestCase
             'qty' => 0.0092,
         ]]);
 
-        $bomService->releaseToWip($bom, [['barcode' => $item->barcode, 'qty' => 0.0092]]);
+        $this->releaseBomToWip($bom, [['barcode' => $item->barcode, 'qty' => 0.0092]]);
         $item->refresh();
         $this->assertEqualsWithDelta(9.9908, (float) $item->qty, 0.0001);
 

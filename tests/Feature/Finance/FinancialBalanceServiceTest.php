@@ -70,11 +70,11 @@ class FinancialBalanceServiceTest extends TestCase
         $cPatient = $this->civilianPatient($company);
         $cCase = $this->caseAtStage($cPatient, CaseRecord::STAGE_DELIVERED);
         Payment::create([
-            'payment_no' => 'PAY-BEFORE', 'case_id' => $cCase->id,
+            'payment_no' => 'PAY-BEFORE', 'case_id' => $cCase->id, 'installment_no' => 1,
             'amount' => 400, 'method' => 'cash', 'received_at' => $before,
         ]);
         Payment::create([
-            'payment_no' => 'PAY-WITHIN', 'case_id' => $cCase->id,
+            'payment_no' => 'PAY-WITHIN', 'case_id' => $cCase->id, 'installment_no' => 2,
             'amount' => 1000, 'method' => 'cash', 'received_at' => '2026-06-08 12:00:00',
         ]);
 

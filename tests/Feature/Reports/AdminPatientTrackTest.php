@@ -55,16 +55,19 @@ class AdminPatientTrackTest extends TestCase
 
     public function test_civilian_track_uses_configured_pathway_steps(): void
     {
+        // مريض نقدي = مسار «مدني»؛ مريض جهة تعاقد له مسار «جهات» مستقل (الاختبار التالي).
+        $patient = $this->cashPatient();
+        $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
+
+        $this->assertTrackFollowsConfiguredSteps($patient, \App\Models\PathwayStep::PATHWAY_CIVILIAN);
+    }
+
+    public function test_contract_company_track_uses_entity_pathway_steps(): void
+    {
         $patient = $this->civilianPatient($this->civilianCompany());
         $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
-        $tracks = app(AdminPatientTrackService::class)->list();
-        $track = $tracks->firstWhere('id', $patient->id);
-
-        $this->assertNotNull($track);
-        $this->assertSame('civilian', $track['pathway']);
-        $this->assertCount(10, $track['steps']);
-        $this->assertSame('التوصيف الفني', $track['steps'][2]['label']);
+        $this->assertTrackFollowsConfiguredSteps($patient, \App\Models\PathwayStep::PATHWAY_ENTITY);
     }
 
     public function test_military_track_uses_configured_pathway_steps(): void
@@ -72,13 +75,23 @@ class AdminPatientTrackTest extends TestCase
         $patient = $this->militaryPatient($this->militaryCompany());
         $this->caseAtStage($patient, CaseRecord::STAGE_TECHNICAL);
 
-        $tracks = app(AdminPatientTrackService::class)->list();
-        $track = $tracks->firstWhere('id', $patient->id);
+        $this->assertTrackFollowsConfiguredSteps($patient, \App\Models\PathwayStep::PATHWAY_MILITARY);
+    }
+
+    /** المسار المعروض = خطوات المسار المضبوطة في إعدادات المسار (وليس عدداً ثابتاً). */
+    private function assertTrackFollowsConfiguredSteps(\App\Models\Patient $patient, string $pathway): void
+    {
+        $track = app(AdminPatientTrackService::class)->list()->firstWhere('id', $patient->id);
+        $configured = app(\App\Services\PathwayConfigService::class)->steps($pathway, activeOnly: true);
 
         $this->assertNotNull($track);
-        $this->assertSame('military', $track['pathway']);
-        $this->assertCount(7, $track['steps']);
-        $this->assertSame('التوصيف الفني', $track['steps'][2]['label']);
+        $this->assertSame($pathway, $track['pathway']);
+        $this->assertCount(count($configured), $track['steps']);
+        $this->assertSame(
+            array_column($configured, 'label'),
+            array_column($track['steps'], 'label'),
+        );
+        $this->assertSame('التوصيف', $track['steps'][2]['label']);
     }
 
     public function test_civilian_track_includes_journey_events(): void
@@ -177,7 +190,7 @@ class AdminPatientTrackTest extends TestCase
             ->getJson('/admin/patient-tracks/list')
             ->assertOk()
             ->assertJsonPath('0.id', $patient->id)
-            ->assertJsonPath('0.pathway', 'civilian')
+            ->assertJsonPath('0.pathway', \App\Models\PathwayStep::PATHWAY_ENTITY)
             ->assertJsonStructure([
                 '0' => [
                     'steps',
@@ -217,7 +230,8 @@ class AdminPatientTrackTest extends TestCase
         $this->assertNotNull($track, 'المريض العسكري المُسلَّم يجب أن يبقى ظاهراً في مسار المرضى');
         $this->assertSame('military', $track['pathway']);
         $this->assertSame(CaseRecord::STAGE_DELIVERED, $track['stage_key']);
-        $this->assertSame('تم التسليم', $track['stage_label']);
+        // تسمية المرحلة = تسمية خطوة المسار «القسم — المرحلة».
+        $this->assertSame('الاستقبال — التسليم', $track['stage_label']);
     }
 
     public function test_patient_tracks_filters_by_stage_and_type(): void

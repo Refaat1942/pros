@@ -111,11 +111,12 @@ class BomLifecycleTest extends TestCase
             ->latest('id')
             ->first();
 
+        // FIFO بترتيب الاستلام: دفعة prepareCase (INV-001 @200) هي الأقدم فتُصرف أولاً — ليس الأرخص ولا WAC.
         $this->assertNotNull($movement);
-        $this->assertEqualsWithDelta(100.0, (float) $movement->unit_cost, 0.01);
+        $this->assertEqualsWithDelta(200.0, (float) $movement->unit_cost, 0.01);
 
         $case->refresh();
-        $this->assertSame(200.0, (float) $case->issue_cost);
+        $this->assertSame(400.0, (float) $case->issue_cost);
     }
 
     /** المشهد الدرامي: الإنذار الحاد */
@@ -178,7 +179,7 @@ class BomLifecycleTest extends TestCase
         $bom = app(BomService::class)->create($case, [['stock_item_code' => 'RM-777', 'qty' => 2]]);
         $this->releaseBomToWip($bom->fresh(), ['BC-RM-777', 'BC-RM-777']);
 
-        $this->assertSame(-2, $item->fresh()->qty, 'الصرف من رصيد صفر يُنتج -2');
+        $this->assertEqualsWithDelta(-2, (float) $item->fresh()->qty, 0.0001, 'الصرف من رصيد صفر يُنتج -2');
 
         // توريد 5 عبر مسار الاستلام الفعلي يرفع الرصيد من -2 إلى 3.
         $this->actingAs($user)
@@ -192,7 +193,7 @@ class BomLifecycleTest extends TestCase
             ])
             ->assertCreated();
 
-        $this->assertSame(3, $item->fresh()->qty, 'توريد 5 يرفع الرصيد من -2 إلى 3');
+        $this->assertEqualsWithDelta(3, (float) $item->fresh()->qty, 0.0001, 'توريد 5 يرفع الرصيد من -2 إلى 3');
     }
 
     // ── Manufacturing sub-stages ──────────────────────────────────────────────
@@ -297,7 +298,7 @@ class BomLifecycleTest extends TestCase
         $this->assertCount(1, $result['stock_updates']);
         $update = $result['stock_updates'][0];
         $this->assertSame('RM-001', $update['stock_item_code']);
-        $this->assertSame($qtyAfterDispense, $update['qty_before']);
+        $this->assertEqualsWithDelta((float) $qtyAfterDispense, (float) $update['qty_before'], 0.0001);
         $this->assertSame($qtyAfterDispense + 1, $update['qty_after']);
         $this->assertGreaterThan(0, $update['line_value']);
 
@@ -316,7 +317,8 @@ class BomLifecycleTest extends TestCase
         $priceService->addBatch($item->fresh(), 10, 100.00, $supplier, 'INV-RET-A', now());
         $priceService->addBatch($item->fresh(), 10, 250.00, $supplier, 'INV-RET-B', now());
         $item->refresh();
-        $lowBatchPrice = 100.0;
+        // FIFO بترتيب الاستلام: الأقدم دفعة prepareCase (INV-001 @200).
+        $firstBatchPrice = 200.0;
 
         $bom = app(BomService::class)->create($case, [
             ['stock_item_code' => 'RM-001', 'qty' => 2],
@@ -324,7 +326,7 @@ class BomLifecycleTest extends TestCase
         $this->releaseBomToWip($bom, ['BC-RM-001', 'BC-RM-001']);
 
         $case->refresh();
-        $this->assertSame(round($lowBatchPrice * 2, 2), (float) $case->issue_cost);
+        $this->assertSame(round($firstBatchPrice * 2, 2), (float) $case->issue_cost);
 
         $returnNote = app(ReturnNoteService::class)->create($bom->fresh(), [
             ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
@@ -351,14 +353,14 @@ class BomLifecycleTest extends TestCase
         $this->assertSame((float) $issueMovement->unit_cost, (float) $returnMovement->unit_cost);
         $this->assertSame('return_note', $returnMovement->reference_type);
         $this->assertSame($returnNote->id, $returnMovement->reference_id);
-        $this->assertSame(1, $returnMovement->quantity);
+        $this->assertEqualsWithDelta(1, (float) $returnMovement->quantity, 0.0001);
 
         $case->refresh();
-        $this->assertSame(100.0, (float) $case->issue_cost,
+        $this->assertSame($firstBatchPrice, (float) $case->issue_cost,
             'issue_cost must drop by the FIFO batch value of returned units');
 
         $bom->refresh()->load('items');
-        $this->assertSame(1, $bom->items->first()->returned_qty);
+        $this->assertEqualsWithDelta(1, (float) $bom->items->first()->returned_qty, 0.0001);
     }
 
     public function test_can_return_single_dispensed_unit(): void
@@ -375,7 +377,7 @@ class BomLifecycleTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 1, 'name' => 'صنف RM-001'],
         ], 'ارتجاع وحدة واحدة', $user);
 
-        $this->assertSame(1, $note->lines->first()->qty_requested);
+        $this->assertEqualsWithDelta(1, (float) $note->lines->first()->qty_requested, 0.0001);
     }
 
     public function test_cannot_request_second_return_when_pending_covers_single_unit(): void
@@ -416,7 +418,7 @@ class BomLifecycleTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 3, 'name' => 'صنف RM-001'],
         ], 'فائض جزئي', $user);
 
-        $this->assertSame(3, $note->lines->first()->qty_requested);
+        $this->assertEqualsWithDelta(3, (float) $note->lines->first()->qty_requested, 0.0001);
 
         try {
             app(ReturnNoteService::class)->create($bom->fresh(), [
@@ -451,7 +453,7 @@ class BomLifecycleTest extends TestCase
             ['stock_item_code' => 'RM-001', 'qty' => 4, 'name' => 'صنف RM-001'],
         ], 'إرجاع من المريض بعد التسليم', $reception);
 
-        $this->assertSame(4, $note->lines->first()->qty_requested);
+        $this->assertEqualsWithDelta(4, (float) $note->lines->first()->qty_requested, 0.0001);
 
         $qtyBeforeReturn = $item->fresh()->qty;
         $lineId = $note->lines()->first()->id;
@@ -492,7 +494,8 @@ class BomLifecycleTest extends TestCase
             ['stock_item_code' => $op, 'qty' => 0.1],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, [
+        // releaseBomToWip يعتمد تخصيص قسم الإنتاج أولاً — شرط الصرف من المخزن.
+        $this->releaseBomToWip($bom, [
             ['barcode' => $item->barcode, 'qty' => '100 جرام'],
         ]);
 

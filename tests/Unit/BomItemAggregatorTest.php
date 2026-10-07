@@ -31,6 +31,6 @@ class BomItemAggregatorTest extends TestCase
 
         $this->assertCount(1, $merged);
         $this->assertSame('ITM-010', $merged[0]['stock_item_code']);
-        $this->assertSame(2, $merged[0]['qty']);
+        $this->assertEqualsWithDelta(2, (float) $merged[0]['qty'], 0.0001);
     }
 }

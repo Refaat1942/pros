@@ -301,8 +301,10 @@ class NotificationService
             data: $data,
         );
 
-        $requesterRole = $request->requestedBy?->role?->slug;
-        if ($requesterRole && $requesterRole !== $departmentRole) {
+        // لوحة مقدّم الطلب وليس slug دوره: السوبر أدمن يقرأ إشعاراته على لوحة «admin»،
+        // ولا توجد لوحة تعرض إشعارات «super_admin» فكان الإشعار لا يظهر له إطلاقاً.
+        $requesterRole = $request->requestedBy?->dashboardSlug();
+        if ($requesterRole && $requesterRole !== 'home' && $requesterRole !== $departmentRole) {
             $this->push(
                 roleSlug: $requesterRole,
                 title: $title,

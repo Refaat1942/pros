@@ -98,7 +98,10 @@ class BarcodeValidationService
         }
 
         $byOperational = StockItem::findByOperationalCode($scan);
-        if ($byOperational !== null) {
+        // «رقم الصنف» الداخلي المكتوب يدوياً ليس معرّفاً تشغيلياً: يُقبل فقط لصنف قديم بلا
+        // كود صنف (alt_codes). أما الصنف الذي له كود فيُمسح بباركوده أو كوده فقط.
+        if ($byOperational !== null
+            && ($byOperational->operationalCode() === $scan || $byOperational->operationalCode() === null)) {
             return $byOperational;
         }
 

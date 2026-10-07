@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Models\CaseRecord;
 use App\Models\StockItemPrice;
 use App\Models\StockMovement;
 use App\Models\SupplyRequestLine;
@@ -16,6 +17,25 @@ use Tests\Support\ProstheticTestCase;
 
 class PriceBatchFifoDispenseTest extends ProstheticTestCase
 {
+    /**
+     * صنف RM-001 برصيد 20 بلا دفعات — كل اختبار يضيف دفعتين (10 + 10) تغطيان الرصيد كاملاً،
+     * فلا تنشأ طبقة «رصيد أول المدة» ويكون الصرف من الدفعات المضافة فقط.
+     *
+     * @return array{item: \App\Models\StockItem, case: \App\Models\CaseRecord, user: \App\Models\User}
+     */
+    private function prepareCase(): array
+    {
+        $item = $this->stockItem('RM-001', qty: 20);
+        $this->makeSupplier();
+
+        $patient = $this->civilianPatient($this->civilianCompany());
+        $user = $this->userWithRole('technical');
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING, CaseRecord::MFG_WAREHOUSE);
+        $case->update(['work_order_no' => 'WO-2026-0001']);
+
+        return compact('item', 'case', 'user');
+    }
+
     public function test_dispense_exhausts_each_price_tier_in_receive_order(): void
     {
         $supplier = $this->makeSupplier();

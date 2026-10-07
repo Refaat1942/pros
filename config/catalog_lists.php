@@ -256,7 +256,7 @@ return [
             'brand' => ['brand'],
             'uom' => ['uom'],
             'available' => ['available'],
-            'status' => ['status'],
+            'status' => ['status', 'backorder'], // خلية الحالة تعرض «طلب توريد (الكمية)» من backorder
             'qty' => ['qty'],
             'reserved' => ['reserved'],
             'category' => ['category'],
@@ -267,7 +267,7 @@ return [
             'brand' => ['brand'],
             'uom' => ['uom'],
             'available' => ['available'],
-            'status' => ['status'],
+            'status' => ['status', 'backorder'], // خلية الحالة تعرض «طلب توريد (الكمية)» من backorder
             'qty' => ['qty'],
             'reserved' => ['reserved'],
             'category' => ['category'],
@@ -278,7 +278,7 @@ return [
             'brand' => ['brand'],
             'uom' => ['uom'],
             'available' => ['available'],
-            'status' => ['status'],
+            'status' => ['status', 'backorder'], // خلية الحالة تعرض «طلب توريد (الكمية)» من backorder
         ],
         'workshop_catalog' => [
             'code' => ['code', 'catalog_number', 'internal_code'],
@@ -286,7 +286,7 @@ return [
             'brand' => ['brand'],
             'uom' => ['uom'],
             'available' => ['available'],
-            'status' => ['status'],
+            'status' => ['status', 'backorder'], // خلية الحالة تعرض «طلب توريد (الكمية)» من backorder
         ],
         'technical_bom_items' => [
             'code' => ['stock_item_code', 'code', 'catalog_number'],

@@ -176,9 +176,11 @@ class SpecOrdersSubmitTest extends TestCase
             ],
         ])->assertOk();
 
+        // المسار العسكري الافتراضي يتخطى المعدلات تلقائياً (PathwayDefaultSteps::military — قابل
+        // للتغيير من إعدادات المسار) فتنتقل الحالة لتأكيد التكاليف، وتظل ظاهرة في مكتب المعدلات.
         $this->postJson("/spec/spec/{$draft->id}/submit")
             ->assertOk()
-            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS);
+            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_COST_CALC);
 
         $this->actingAs($this->userWithRole('adjustments'))
             ->getJson('/adjustments/adjustments/list')
@@ -259,9 +261,9 @@ class SpecOrdersSubmitTest extends TestCase
             ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS);
 
         $stock = StockItem::where('code', 'ITM-003')->first();
-        $this->assertSame(2, $stock->reserved);
-        $this->assertSame(-2, $stock->availableQty());
-        $this->assertSame(2, $stock->backorderQty());
+        $this->assertEqualsWithDelta(2, (float) $stock->reserved, 0.0001);
+        $this->assertEqualsWithDelta(-2, (float) $stock->availableQty(), 0.0001);
+        $this->assertEqualsWithDelta(2, (float) $stock->backorderQty(), 0.0001);
     }
 
     public function test_spec_rejects_negative_item_quantity(): void

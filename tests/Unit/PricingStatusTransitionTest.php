@@ -203,7 +203,7 @@ class PricingStatusTransitionTest extends TestCase
 
         // الإنشاء ينجح ويُسجَّل رصيد سالب بدل وسم «نقص المخزون».
         $this->assertSame(5, (int) $bom->items()->where('stock_item_code', 'RM-001')->value('qty'));
-        $this->assertSame(-4, $item->fresh()->availableQty());
+        $this->assertEqualsWithDelta(-4, (float) $item->fresh()->availableQty(), 0.0001);
         $this->assertDatabaseHas('pricing_requests', [
             'id' => $request->id,
             'status_key' => PricingRequestStatus::SentToReception->value,

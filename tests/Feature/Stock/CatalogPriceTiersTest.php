@@ -27,8 +27,9 @@ class CatalogPriceTiersTest extends ProstheticTestCase
         $tier10 = $tiers->firstWhere('amount', 10.0);
         $tier20 = $tiers->firstWhere('amount', 20.0);
 
+        // 8 من دفعتي التوريد بسعر 10 + 10 «رصيد أول المدة» (رصيد 25 − 15 مغطاة بدفعات) بالسعر الأساسي 10.
         $this->assertNotNull($tier10);
-        $this->assertEqualsWithDelta(8.0, (float) $tier10['qty'], 0.0001);
+        $this->assertEqualsWithDelta(18.0, (float) $tier10['qty'], 0.0001);
         $this->assertNotNull($tier20);
         $this->assertEqualsWithDelta(7.0, (float) $tier20['qty'], 0.0001);
     }

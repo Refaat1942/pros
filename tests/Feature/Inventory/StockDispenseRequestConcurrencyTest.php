@@ -126,7 +126,7 @@ class StockDispenseRequestConcurrencyTest extends TestCase
                 ->count(),
         );
         $stockBefore->refresh();
-        $this->assertSame(19, $stockBefore->qty);
+        $this->assertEqualsWithDelta(19, (float) $stockBefore->qty, 0.0001);
     }
 
     public function test_reject_twice_rejected(): void

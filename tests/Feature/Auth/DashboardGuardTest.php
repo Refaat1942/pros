@@ -10,9 +10,9 @@ use Tests\TestCase;
 /**
  * Feature — Dashboard guard & role isolation.
  *
- * Rule from system design: each employee logs in only at their
- * designated dashboard URL. Wrong-role login must be rejected.
- * Cross-dashboard access after login must be blocked by DashboardGuardMiddleware.
+ * تسجيل الدخول موحّد (POST /login) ويوجّه كل موظف للوحة دوره؛ صفحات
+ * /{dashboard}/login القديمة تُحوَّل للصفحة الرئيسية.
+ * الوصول بين اللوحات بعد الدخول يحرسه DashboardGuardMiddleware ومصفوفة الصلاحيات.
  */
 class DashboardGuardTest extends TestCase
 {
@@ -24,7 +24,7 @@ class DashboardGuardTest extends TestCase
     {
         $user = $this->userWithRole('reception');
 
-        $response = $this->post('/reception/login', [
+        $response = $this->post('/login', [
             'username' => $user->username,
             'password' => 'password',
         ]);
@@ -37,7 +37,7 @@ class DashboardGuardTest extends TestCase
     {
         $user = $this->userWithRole('admin');
 
-        $response = $this->post('/admin/login', [
+        $response = $this->post('/login', [
             'username' => $user->username,
             'password' => 'password',
         ]);
@@ -45,40 +45,38 @@ class DashboardGuardTest extends TestCase
         $response->assertRedirect(route('admin.dashboard'));
     }
 
-    /** Admin with cross-dashboard permissions can login at reception */
-    public function test_admin_user_can_login_at_reception_dashboard(): void
+    /** الأدمن بصلاحيات الاستقبال يدخل لوحته ثم يفتح الاستقبال */
+    public function test_admin_user_can_open_reception_after_login(): void
     {
         $user = $this->userWithRole('admin');
 
-        $response = $this->post('/reception/login', [
+        $this->post('/login', [
             'username' => $user->username,
             'password' => 'password',
-        ]);
+        ])->assertRedirect(route('admin.dashboard'));
 
-        $response->assertRedirect(route('reception.dashboard'));
         $this->assertAuthenticatedAs($user);
+        $this->get(route('reception.appointments'))->assertOk();
     }
 
-    /** Reception user must NOT be allowed in at the admin login page */
-    public function test_reception_user_rejected_at_admin_login(): void
+    /** موظف الاستقبال يُوجَّه للاستقبال حتى لو حاول من رابط لوحة الإدارة */
+    public function test_reception_user_lands_on_reception_not_admin(): void
     {
         $user = $this->userWithRole('reception');
 
-        $response = $this->post('/admin/login', [
+        $this->post('/login', [
             'username' => $user->username,
             'password' => 'password',
-        ]);
+        ])->assertRedirect(route('reception.dashboard'));
 
-        $response->assertRedirect();
-        $response->assertSessionHasErrors('username');
-        $this->assertGuest();
+        $this->get('/admin/overview')->assertStatus(403);
     }
 
     public function test_wrong_password_is_rejected(): void
     {
         $user = $this->userWithRole('doctor');
 
-        $response = $this->post('/doctor/login', [
+        $response = $this->post('/login', [
             'username' => $user->username,
             'password' => 'wrong-password',
         ]);
@@ -92,7 +90,7 @@ class DashboardGuardTest extends TestCase
         $user = $this->userWithRole('reception');
         $user->update(['status' => User::STATUS_INACTIVE]);
 
-        $response = $this->post('/reception/login', [
+        $response = $this->post('/login', [
             'username' => $user->username,
             'password' => 'password',
         ]);
@@ -158,7 +156,7 @@ class DashboardGuardTest extends TestCase
     /** Admin with partial reception access cannot open blocked pages */
     public function test_admin_without_quote_permission_blocked_from_quote_page(): void
     {
-        $admin = $this->userWithRole('admin');
+        $admin = $this->limitedAdmin();
         $appointmentsId = Permission::where('slug', 'reception.appointments.view')->value('id');
         $admin->role->permissions()->sync([$appointmentsId]);
         $this->actingAs($admin->fresh());
@@ -171,7 +169,7 @@ class DashboardGuardTest extends TestCase
     /** Admin without reception permissions is blocked */
     public function test_admin_without_permissions_blocked_from_reception(): void
     {
-        $admin = $this->userWithRole('admin');
+        $admin = $this->limitedAdmin();
         $admin->role->permissions()->detach();
         $this->actingAs($admin->fresh());
 
@@ -218,14 +216,31 @@ class DashboardGuardTest extends TestCase
         $response->assertRedirect();
     }
 
-    // ── All 7 login pages exist ───────────────────────────────────────────────
+    // ── روابط الدخول القديمة لكل لوحة تُحوَّل لصفحة الدخول الموحّدة ──────────
 
     /** @dataProvider dashboardSlugProvider */
-    public function test_login_page_exists_for_each_dashboard(string $slug): void
+    public function test_legacy_dashboard_login_url_redirects_to_unified_login(string $slug): void
     {
-        $response = $this->get("/{$slug}/login");
+        $this->get("/{$slug}/login")->assertRedirect('/');
+        $this->get('/')->assertOk();
+    }
 
-        $response->assertOk();
+    /** أدمن محدود حقيقي (userWithRole('admin') يرجع سوبر أدمن يتجاوز كل الصلاحيات). */
+    private function limitedAdmin(): User
+    {
+        $role = $this->makeRole(\App\Models\Role::SLUG_ADMIN);
+        app(\App\Services\PermissionCatalogService::class)->syncToDatabase();
+        $role->permissions()->sync(Permission::query()->where('dashboard', '!=', 'admin')->pluck('id'));
+
+        return User::query()->updateOrCreate(
+            ['username' => 'limited-admin'],
+            [
+                'role_id' => $role->id,
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'status' => User::STATUS_ACTIVE,
+                'name' => 'أدمن محدود',
+            ],
+        );
     }
 
     public static function dashboardSlugProvider(): array
