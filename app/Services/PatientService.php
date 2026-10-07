@@ -64,6 +64,10 @@ class PatientService
                 'military_number' => $data['military_number'] ?? null,
                 'seniority_number' => $data['seniority_number'] ?? null,
                 'military_weapon' => $data['military_weapon'] ?? null,
+                // تصنيف المستفيد يحدد مسار «تصديق إدارة الخدمات» — كان يُتحقق منه ولا يُحفظ.
+                'military_beneficiary_category' => $type === Patient::TYPE_MILITARY
+                    ? ($data['military_beneficiary_category'] ?? null)
+                    : null,
                 'rank' => $rankName,
                 'sovereign_entity' => $sovereignEntity,
                 'contract_company_id' => $contractCompanyId,
