@@ -46,4 +46,21 @@ class DemoJourneysCommandTest extends ProstheticTestCase
             CaseRecord::query()->where('stage_key', CaseRecord::STAGE_DELIVERED)->count(),
         );
     }
+
+    public function test_seed_adds_sections_and_technicians_once_and_print_pages_open(): void
+    {
+        WorkshopSection::query()->delete();
+
+        foreach ([1, 2] as $run) {
+            $this->artisan('prosthetics:demo-journeys', ['--items' => '1101:1,1102:0.5', '--seed' => true, '--print' => true])
+                ->expectsOutputToContain('5 من 5 حالات وصلت للتسليم')
+                ->expectsOutputToContain('إذن صرف الخامات')
+                ->expectsOutputToContain('إيصال الخزنة')
+                ->assertSuccessful();
+        }
+
+        $this->assertSame(3, WorkshopSection::query()->count());
+        $this->assertSame(6, WorkshopSection::query()->withCount('technicians')->get()->sum('technicians_count'));
+        $this->assertSame(10, CaseRecord::query()->where('stage_key', CaseRecord::STAGE_DELIVERED)->count());
+    }
 }

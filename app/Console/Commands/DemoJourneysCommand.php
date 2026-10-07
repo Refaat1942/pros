@@ -9,6 +9,8 @@ use App\Models\WorkshopSection;
 use App\Support\Journeys\CaseJourneyRunner;
 use App\Support\Journeys\JourneyStepFailed;
 use App\Support\StockQuantity;
+use Database\Seeders\MilitaryRankSeeder;
+use Database\Seeders\VisitTypeSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,7 +23,10 @@ class DemoJourneysCommand extends Command
 {
     protected $signature = 'prosthetics:demo-journeys
                             {--items= : أكواد الأصناف بالكمية، مثال: 1S101:1,617S7=3:0.5 (افتراضياً يُختار صنف بالعدد وصنف بالكسر من المخزن)}
-                            {--dry-run : تجربة كاملة ثم التراجع عن كل شيء — لا يبقى أي أثر في قاعدة البيانات}';
+                            {--dry-run : تجربة كاملة ثم التراجع عن كل شيء — لا يبقى أي أثر في قاعدة البيانات}
+                            {--seed : يضيف ما ينقص من البيانات الأساسية: أقسام إنتاج بفنييها، الرتب، أنواع الزيارات}
+                            {--print : يفتح كل مستندات الطباعة لكل حالة ويطبع روابطها}
+                            {--times=1 : عدد مرات تكرار المسارات الخمسة}';
 
     protected $description = 'Run one demo case per patient pathway from reception to delivery and report where any step fails';
 
@@ -40,25 +45,45 @@ class DemoJourneysCommand extends Command
         $dryRun = (bool) $this->option('dry-run');
         if ($dryRun) {
             DB::beginTransaction();
+        }
+        if ($this->option('seed')) {
+            $this->seedMasterData();
+        }
+        if ($dryRun) {
             $this->ensureTemporaryWorkshopSection();
         }
 
         $runner = new CaseJourneyRunner($lines);
+        $times = max(1, (int) $this->option('times'));
         $failed = 0;
+        $delivered = [];
 
         try {
-            foreach (CaseJourneyRunner::journeys() as $journey) {
-                $label = CaseJourneyRunner::label($journey);
-                $this->newLine();
-                $this->info("▶ {$label}");
+            for ($round = 1; $round <= $times; $round++) {
+                foreach (CaseJourneyRunner::journeys() as $journey) {
+                    $label = CaseJourneyRunner::label($journey);
+                    $this->newLine();
+                    $this->info("▶ {$label}".($times > 1 ? " ({$round}/{$times})" : ''));
+                    $logStart = count($runner->log());
 
-                try {
-                    $case = $runner->run($journey, 'حالة تجريبية — '.$label);
-                    $this->printSteps($runner, $journey);
-                    $this->info("  ✔ تم التسليم — الحالة {$case->case_no}");
-                } catch (JourneyStepFailed $e) {
-                    $failed++;
-                    $this->printSteps($runner, $journey);
+                    try {
+                        $case = $runner->run($journey, 'حالة تجريبية — '.$label);
+                        $this->printSteps($runner, $logStart);
+                        $this->info("  ✔ تم التسليم — الحالة {$case->case_no}");
+                        $delivered[] = $case;
+
+                        if ($this->option('print')) {
+                            foreach ($runner->printDocuments($case) as $doc) {
+                                $doc['ok']
+                                    ? $this->line("    🖨 {$doc['label']}: ".url($doc['path']))
+                                    : $this->error("    ✗ {$doc['label']}: {$doc['detail']} — ".url($doc['path']));
+                                $failed += $doc['ok'] ? 0 : 1;
+                            }
+                        }
+                    } catch (JourneyStepFailed $e) {
+                        $failed++;
+                        $this->printSteps($runner, $logStart);
+                    }
                 }
             }
         } finally {
@@ -68,8 +93,8 @@ class DemoJourneysCommand extends Command
         }
 
         $this->newLine();
-        $total = count(CaseJourneyRunner::journeys());
-        $summary = ($total - $failed)." من {$total} حالات وصلت للتسليم".($dryRun ? ' — تجربة فقط، لم يُحفظ شيء.' : '.');
+        $total = count(CaseJourneyRunner::journeys()) * $times;
+        $summary = count($delivered)." من {$total} حالات وصلت للتسليم".($dryRun ? ' — تجربة فقط، لم يُحفظ شيء.' : '.');
         $failed === 0 ? $this->info($summary) : $this->error($summary);
 
         if (! $dryRun) {
@@ -77,6 +102,44 @@ class DemoJourneysCommand extends Command
         }
 
         return $failed === 0 ? self::SUCCESS : self::FAILURE;
+    }
+
+    /** بيانات أساسية لا تُكرَّر: يُضاف فقط ما ليس موجوداً. */
+    private function seedMasterData(): void
+    {
+        app(MilitaryRankSeeder::class)->run();
+        app(VisitTypeSeeder::class)->run();
+
+        $sections = [
+            ['code' => 'lower', 'name' => 'قسم الأطراف السفلية', 'technicians' => ['فني أطراف سفلية 1', 'فني أطراف سفلية 2']],
+            ['code' => 'upper', 'name' => 'قسم الأطراف العلوية', 'technicians' => ['فني أطراف علوية 1', 'فني أطراف علوية 2']],
+            ['code' => 'orthotics', 'name' => 'قسم الجبائر والأحزمة', 'technicians' => ['فني جبائر 1', 'فني جبائر 2']],
+        ];
+        $workshopRoleId = Role::query()->where('slug', Role::SLUG_WORKSHOP)->value('id');
+
+        foreach ($sections as $index => $data) {
+            $section = WorkshopSection::query()->firstOrCreate(
+                ['code' => $data['code']],
+                ['name' => $data['name'], 'sort' => ($index + 1) * 10, 'active' => true],
+            );
+
+            foreach ($data['technicians'] as $n => $name) {
+                $technician = User::query()->firstOrCreate(
+                    ['username' => "tech-{$data['code']}-".($n + 1)],
+                    [
+                        'name' => $name,
+                        // الفني يظهر في قوائم التخصيص فقط — كلمة سر عشوائية، يغيّرها المدير لو احتاج دخوله.
+                        'password' => Str::random(32),
+                        'role_id' => $workshopRoleId,
+                        'status' => User::STATUS_ACTIVE,
+                    ],
+                );
+                $section->technicians()->syncWithoutDetaching([$technician->id]);
+            }
+        }
+
+        $this->info('البيانات الأساسية جاهزة: '.WorkshopSection::query()->where('active', true)->count().' قسم إنتاج، '
+            .User::query()->where('role_id', $workshopRoleId)->count().' فني، الرتب وأنواع الزيارات.');
     }
 
     /** التجربة فقط: قسم وفني مؤقتان إن لم يوجد قسم به فني — يُتراجع عنهما مع باقي التجربة. */
@@ -101,9 +164,9 @@ class DemoJourneysCommand extends Command
         $this->warn('لا يوجد قسم إنتاج به فني — أُضيف قسم وفني مؤقتان للتجربة فقط.');
     }
 
-    private function printSteps(CaseJourneyRunner $runner, string $journey): void
+    private function printSteps(CaseJourneyRunner $runner, int $from): void
     {
-        foreach (collect($runner->log())->where('journey', $journey) as $step) {
+        foreach (array_slice($runner->log(), $from) as $step) {
             $step['ok']
                 ? $this->line("  ✓ {$step['step']}")
                 : $this->error("  ✗ {$step['step']} — {$step['detail']}");
