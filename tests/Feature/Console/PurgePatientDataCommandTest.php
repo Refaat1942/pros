@@ -29,17 +29,15 @@ class PurgePatientDataCommandTest extends TestCase
 
     public function test_purge_clears_admin_bi_boards_cache(): void
     {
-        \Illuminate\Support\Facades\Cache::put(AdminOverviewService::BI_BOARDS_CACHE_KEY, [
-            'board1' => ['total_cases' => 999],
-        ], 300);
+        // ذاكرة كل لوحة مستقلة (admin_overview_bi_board_{board}_{version}).
+        $boardKey = AdminOverviewService::BI_BOARD_CACHE_PREFIX.'board1_'.AdminOverviewService::BI_BOARD_CACHE_VERSION;
+        \Illuminate\Support\Facades\Cache::put($boardKey, ['total_cases' => 999], 300);
 
         $this->artisan('prosthetics:purge-patient-data --force')
             ->assertSuccessful()
             ->expectsOutputToContain('تم تحديث ذاكرة لوحات القيادة');
 
-        $this->assertNull(
-            \Illuminate\Support\Facades\Cache::get(AdminOverviewService::BI_BOARDS_CACHE_KEY),
-        );
+        $this->assertNull(\Illuminate\Support\Facades\Cache::get($boardKey));
     }
 
     /** C-5: المسح يحفظ سجل الرقابة بالكامل (append-only) ولا يحذف أي صف. */

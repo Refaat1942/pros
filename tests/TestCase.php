@@ -17,4 +17,13 @@ abstract class TestCase extends BaseTestCase
      * work correctly on empty tables.
      */
     protected bool $seed = false;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // سجل الـ seeders ثابت (static) ويبقى بين الاختبارات في نفس العملية — بدون تصفيره
+        // تتخطى الـ seeders بياناتها في اختبار لاحق فتصبح الجداول فارغة حسب ترتيب التشغيل.
+        \Database\Seeders\Support\SeedRegistry::reset();
+    }
 }
