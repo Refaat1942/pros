@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exceptions\BarcodeDispenseMismatchException;
 use App\Http\Controllers\Controller;
 use App\Models\StockDispenseRequest;
 use App\Services\StockDispenseRequestService;
@@ -54,7 +55,15 @@ class StockDispenseApprovalController extends Controller
 
     public function approve(StockDispenseRequest $stockDispenseRequest): JsonResponse
     {
-        $request = $this->dispenseRequests->approve($stockDispenseRequest, Auth::user());
+        try {
+            $request = $this->dispenseRequests->approve($stockDispenseRequest, Auth::user());
+        } catch (BarcodeDispenseMismatchException $e) {
+            // تغيّرت بنود BOM بعد رفع الطلب — رسالة واضحة بدل خطأ 500.
+            return response()->json([
+                'message' => $e->getMessage().' — بنود قائمة المواد تغيّرت بعد طلب الصرف؛ ارفض الطلب واطلب صرفاً جديداً.',
+                'blocked' => true,
+            ], 422);
+        }
 
         return response()->json([
             'message' => 'تم اعتماد الصرف — تم خصم المخزون.',

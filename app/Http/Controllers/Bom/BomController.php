@@ -124,21 +124,23 @@ class BomController extends Controller
         $fromStage = $case?->stage_key ?? CaseRecord::STAGE_MANUFACTURING;
         $payload = $request->dispensePayload();
 
-        if (config('inventory.dispense_requires_approval', true)) {
-            $dispenseRequest = app(\App\Services\StockDispenseRequestService::class)->submit(
-                $bom,
-                $payload,
-                $request->user(),
-            );
-
-            return response()->json([
-                'message' => 'تم إرسال طلب الصرف — بانتظار اعتماد الإدارة.',
-                'pending_approval' => true,
-                'dispense_request' => $dispenseRequest->only(['id', 'status', 'work_order_no']),
-            ], 202);
-        }
-
+        // باركود/كمية غير مطابقة ← 422 + إنذار في الحالتين (مع اعتماد الإدارة وبدونه).
+        // كان مسار الاعتماد (الافتراضي) يترك الاستثناء يصل كخطأ 500.
         try {
+            if (config('inventory.dispense_requires_approval', true)) {
+                $dispenseRequest = app(\App\Services\StockDispenseRequestService::class)->submit(
+                    $bom,
+                    $payload,
+                    $request->user(),
+                );
+
+                return response()->json([
+                    'message' => 'تم إرسال طلب الصرف — بانتظار اعتماد الإدارة.',
+                    'pending_approval' => true,
+                    'dispense_request' => $dispenseRequest->only(['id', 'status', 'work_order_no']),
+                ], 202);
+            }
+
             $bom = $this->bomService->releaseToWip($bom, $payload);
         } catch (BarcodeDispenseMismatchException $e) {
             return response()->json([
