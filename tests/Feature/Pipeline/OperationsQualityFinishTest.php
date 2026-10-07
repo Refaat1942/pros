@@ -55,6 +55,7 @@ class OperationsQualityFinishTest extends TestCase
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_READY_DELIVERY, $case->stage_key);
-        $this->assertEquals(CaseRecord::MFG_CLOSED, $case->manufacturing_stage);
+        // WorkflowService يصفّر المرحلة الفرعية عند الخروج من التصنيع (لا مرحلة فرعية خارج التصنيع).
+        $this->assertNull($case->manufacturing_stage);
     }
 }
