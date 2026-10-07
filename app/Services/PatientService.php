@@ -85,10 +85,8 @@ class PatientService
             );
 
             $clinicDay = ClinicTime::clinicDayDateString();
-            $nextQueue = (int) Appointment::query()
-                ->whereDate('clinic_day', $clinicDay)
-                ->lockForUpdate()
-                ->max('queue_number');
+            // MAX(...) FOR UPDATE مرفوض على PostgreSQL (كان يُسقط تسجيل كل مريض) — عدّاد اليوم بدلاً منه.
+            $nextQueue = Appointment::nextQueueNumber($clinicDay) - 1;
 
             $this->appointmentService->book([
                 'patient_id' => $patient->id,

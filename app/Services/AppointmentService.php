@@ -245,13 +245,8 @@ class AppointmentService
 
         $clinicDay = ClinicTime::clinicDayDateString();
 
-        $next = (int) Appointment::query()
-            ->whereDate('clinic_day', $clinicDay)
-            ->lockForUpdate()
-            ->max('queue_number');
-
         $payload['clinic_day'] = $clinicDay;
-        $payload['queue_number'] = $next + 1;
+        $payload['queue_number'] = Appointment::nextQueueNumber($clinicDay);
 
         if (empty($payload['appointment_date'])) {
             $payload['appointment_date'] = $clinicDay;
