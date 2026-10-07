@@ -2036,8 +2036,8 @@
       }
 
       function rowHtml(track) {
-        var pathway = track.pathway === 'military' ? 'military' : 'civilian';
-        var pathwayLabel = track.pathway === 'military' ? '🪖 عسكري' : '🌐 مدني';
+        var pathway = track.patient_type === 'military' ? 'military' : 'civilian';
+        var pathwayLabel = track.patient_type === 'military' ? '🪖 عسكري' : '🌐 مدني';
         var subLines = '';
         if (track.case_no) subLines += '<div class="patient-track-cell-sub">' + escHtml(track.case_no) + '</div>';
         if (track.company_name || track.entity) {
@@ -2064,8 +2064,8 @@
         var titleEl = document.getElementById('patientDetailsModalTitle');
         var metaEl = document.getElementById('patientDetailsModalMeta');
         var bodyEl = document.getElementById('patientDetailsModalBody');
-        var pathway = track.pathway === 'military' ? 'military' : 'civilian';
-        var pathwayLabel = track.pathway === 'military' ? '🪖 عسكري' : '🌐 مدني';
+        var pathway = track.patient_type === 'military' ? 'military' : 'civilian';
+        var pathwayLabel = track.patient_type === 'military' ? '🪖 عسكري' : '🌐 مدني';
         var patientName = details.name || track.name || '—';
         var stageLabel = details.current_stage_label || track.stage_label || '—';
 
@@ -2231,8 +2231,8 @@
       function openTrackModal(track) {
         if (!modal || !track) return;
 
-        var pathway = track.pathway === 'military' ? 'military' : 'civilian';
-        var pathwayLabel = track.pathway === 'military' ? '🪖 عسكري' : '🌐 مدني';
+        var pathway = track.patient_type === 'military' ? 'military' : 'civilian';
+        var pathwayLabel = track.patient_type === 'military' ? '🪖 عسكري' : '🌐 مدني';
         var metaParts = [];
         if (track.case_no) metaParts.push(track.case_no);
         if (track.company_name) metaParts.push(track.company_name);

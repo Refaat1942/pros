@@ -57,7 +57,7 @@
                     <tr class="patient-track-row"
                         data-search="{{ $track['search_hay'] ?? '' }}"
                         data-stage-key="{{ $track['stage_key'] ?? '' }}"
-                        data-pathway="{{ $track['pathway'] ?? '' }}"
+                        data-pathway="{{ ($track['patient_type'] ?? '') === 'military' ? 'military' : 'civilian' }}"
                         data-visit-type-id="{{ $track['visit_type_id'] ?? '' }}">
                         <td>
                             <strong>{{ $track['name'] }}</strong>
@@ -71,8 +71,8 @@
                             @endif
                         </td>
                         <td>
-                            <span class="patient-type-badge {{ $track['pathway'] === 'military' ? 'military' : 'civilian' }}">
-                                {{ $track['pathway'] === 'military' ? '🪖 عسكري' : '🌐 مدني' }}
+                            <span class="patient-type-badge {{ ($track['patient_type'] ?? '') === 'military' ? 'military' : 'civilian' }}">
+                                {{ ($track['patient_type'] ?? '') === 'military' ? '🪖 عسكري' : '🌐 مدني' }}
                             </span>
                         </td>
                         <td class="patient-track-contact">
