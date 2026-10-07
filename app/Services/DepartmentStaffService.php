@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Role;
+use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -35,7 +36,11 @@ class DepartmentStaffService
             return true;
         }
 
-        return $this->isDepartmentManager($user) && $user->role?->slug === $dashboardKey;
+        // مدير القسم يحتاج أيضاً صلاحية «موظفي القسم» من مصفوفة الصلاحيات — وإلا كان
+        // إلغاؤها من المصفوفة بلا أثر، ودورٌ أُلغيت كل صلاحياته يظل يدخل عبر هذه الصفحة.
+        return $this->isDepartmentManager($user)
+            && $user->role?->slug === $dashboardKey
+            && ($user->role?->loadMissing('permissions')->hasPermission(Permission::viewSlug($dashboardKey, 'staff')) ?? false);
     }
 
     /** @return Builder<User> */
