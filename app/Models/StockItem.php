@@ -196,6 +196,12 @@ class StockItem extends Model
         return 'BC-'.trim($code);
     }
 
+    /** باركود صنف بلا كود صنف — من الرقم الداخلي الفريد، ببادئة مختلفة حتى لا يتعارض مع BC-{كود}. */
+    public static function internalBarcode(string $code): string
+    {
+        return 'BCI-'.trim($code);
+    }
+
     /** الباركود الفعلي للمسح/الطباعة — عمود barcode أو BC-{operationalCode}. */
     public function displayBarcode(): ?string
     {

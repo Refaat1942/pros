@@ -98,9 +98,9 @@ class StockCatalogService
             'accounting_uom_summary' => StockSupplyUom::accountingSummary($item),
             'category' => $item->category?->name ?? '',
             'category_id' => $item->category_id,
-            'qty' => (int) $item->qty,
-            'reserved' => (int) $item->reserved,
-            'min_qty' => (int) ($item->min_qty ?? 0),
+            'qty' => round((float) $item->qty, 4),
+            'reserved' => round((float) $item->reserved, 4),
+            'min_qty' => round((float) ($item->min_qty ?? 0), 4),
             'available' => $item->availableQty(),
             'backorder' => $item->backorderQty(),
             'status' => $item->isBackorder() ? 'backorder' : $item->status,
@@ -237,16 +237,16 @@ class StockCatalogService
             'attributes_map' => collect($this->categorySchema->formatItemAttributes($item))
                 ->mapWithKeys(fn (array $row) => [$row['field_key'] => $row['value']])
                 ->all(),
-            'qty' => (int) $item->qty,
+            'qty' => round((float) $item->qty, 4),
             // أرصدة عشرية: (int) كان يقطع 2.5 ← 2 في الشاشة والتصدير (ثم يُكتب خطأً عند إعادة الرفع).
             'opening_qty' => $this->ledgerDisplayQty($item->opening_qty),
             'addition' => $this->ledgerDisplayQty($item->addition),
             'discount' => $this->ledgerDisplayQty($item->discount),
             'catalog_balance' => $item->catalogBalance(),
-            'warehouse_qty' => (int) $item->qty,
+            'warehouse_qty' => round((float) $item->qty, 4),
             'balance' => $item->catalogBalance(),
-            'reserved' => (int) $item->reserved,
-            'min_qty' => (int) ($item->min_qty ?? 0),
+            'reserved' => round((float) $item->reserved, 4),
+            'min_qty' => round((float) ($item->min_qty ?? 0), 4),
             'price' => (float) $item->price,
             'highest_price' => $this->highestPrice($item),
             'price_tiers' => $priceTiers,
@@ -311,7 +311,7 @@ class StockCatalogService
                 'is_quick_dispense' => (bool) ($data['is_quick_dispense'] ?? false),
                 'uom' => $this->normalizeUom($data['uom'] ?? null),
                 ...$this->supplyUomAttributes($data),
-                'barcode' => $this->barcodeForOperational($operationalCode),
+                'barcode' => $this->barcodeForItem($operationalCode, $code),
                 'alt_codes' => $operationalCode,
                 'qty' => $qty,
                 'opening_qty' => $openingQty,
@@ -392,7 +392,7 @@ class StockCatalogService
                     : $item->uom,
                 ...$this->supplyUomAttributes($data, $item),
                 'alt_codes' => $operationalCode,
-                'barcode' => $this->barcodeForOperational($operationalCode),
+                'barcode' => $this->barcodeForItem($operationalCode, (string) $item->code),
                 'qty' => $qty,
                 'opening_qty' => $openingQty,
                 'addition' => $addition,
@@ -543,6 +543,13 @@ class StockCatalogService
         }
 
         return $this->nextCatalogCode();
+    }
+
+    /** صنف بلا «كود صنف» يأخذ باركوداً من رقمه الداخلي (BCI-…) — كان بلا باركود فلا يُطبع ولا يُصرف. */
+    private function barcodeForItem(?string $operationalCode, string $code): ?string
+    {
+        return $this->barcodeForOperational($operationalCode)
+            ?? ($code !== '' ? StockItem::internalBarcode($code) : null);
     }
 
     private function barcodeForOperational(?string $operationalCode): ?string
@@ -863,13 +870,13 @@ class StockCatalogService
                         continue;
                     }
 
-                    if ($item->catalogBalance() === (int) $item->qty) {
+                    if (abs((float) $item->catalogBalance() - (float) $item->qty) < 0.00005) {
                         $skipped++;
 
                         continue;
                     }
 
-                    $qty = max(0, (int) $item->qty);
+                    $qty = max(0.0, round((float) $item->qty, 4));
                     $item->update([
                         'opening_qty' => $qty,
                         'addition' => 0,

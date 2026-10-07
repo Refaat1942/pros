@@ -34,7 +34,7 @@ class DemoJourneysCommand extends Command
 
         $this->info('الأصناف المستخدمة:');
         foreach ($lines as $line) {
-            $this->line('  • '.$line['item']->operationalCode().' — '.$line['item']->name.' × '.StockQuantity::format($line['qty'], $line['item']->uom));
+            $this->line('  • '.$line['item']->pickerCode().' — '.$line['item']->name.' × '.StockQuantity::format($line['qty'], $line['item']->uom));
         }
 
         $dryRun = (bool) $this->option('dry-run');
@@ -136,7 +136,6 @@ class DemoJourneysCommand extends Command
         }
 
         $candidates = StockItem::query()
-            ->whereNotNull('alt_codes')->where('alt_codes', '!=', '')
             ->whereNotNull('barcode')
             ->where('price', '>', 0)
             ->whereRaw('qty - reserved >= ?', [10])
@@ -153,7 +152,7 @@ class DemoJourneysCommand extends Command
         ]));
 
         if ($lines === []) {
-            $this->error('لا يوجد صنف بكود وسعر ورصيد كافٍ (10 على الأقل) — حدّد الأصناف بـ --items=الكود:الكمية');
+            $this->error('لا يوجد صنف بباركود وسعر ورصيد كافٍ (10 على الأقل) — حدّد الأصناف بـ --items=الكود:الكمية');
 
             return null;
         }
