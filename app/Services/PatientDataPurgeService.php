@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AppNotification;
 use App\Models\StockItem;
+use App\Models\StockItemPrice;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -44,9 +45,22 @@ class PatientDataPurgeService
             $counts['military_debts'] = DB::table('military_debts')->delete();
             $counts['spec_edit_requests'] = DB::table('spec_edit_requests')->delete();
 
-            $counts['stock_movements_case'] = DB::table('stock_movements')
-                ->whereIn('reference_type', ['bom', 'return_note'])
-                ->delete();
+            $caseMovements = fn () => DB::table('stock_movements')->whereIn('reference_type', ['bom', 'return_note']);
+
+            // صافي حركات الحالات لكل صنف ولكل دفعة سعر — يُعكَس بعد الحذف ليعود الرصيد كما كان قبل الصرف.
+            $netByItem = $caseMovements()
+                ->selectRaw('stock_item_id, SUM(quantity) as net')
+                ->groupBy('stock_item_id')
+                ->pluck('net', 'stock_item_id')
+                ->all();
+            $netByBatch = $caseMovements()
+                ->whereNotNull('stock_item_price_id')
+                ->selectRaw('stock_item_price_id, SUM(quantity) as net')
+                ->groupBy('stock_item_price_id')
+                ->pluck('net', 'stock_item_price_id')
+                ->all();
+
+            $counts['stock_movements_case'] = $caseMovements()->delete();
 
             $counts['return_notes'] = DB::table('return_notes')->delete();
             $counts['bom_items'] = DB::table('bom_items')->delete();
@@ -73,7 +87,7 @@ class PatientDataPurgeService
             }
 
             if ($syncStock) {
-                $counts['stock_items_synced'] = $this->syncStockFromMovements();
+                $counts['stock_items_synced'] = $this->reverseCaseMovements($netByItem, $netByBatch);
             }
         });
 
@@ -97,17 +111,27 @@ class PatientDataPurgeService
             || DB::table('appointments')->exists();
     }
 
-    private function syncStockFromMovements(): int
+    /**
+     * يعكس صافي حركات الصرف/الارتجاع المحذوفة على رصيد الصنف ودفعات الفيفو.
+     * (كان يأخذ رصيد آخر حركة متبقية — فالصنف المرفوع من الشيت بلا حركات لا يسترد ما صُرف منه،
+     * وكان يقطع الكسور: 2.5 متر ← 2.)
+     *
+     * @param  array<int|string, float|string>  $netByItem
+     * @param  array<int|string, float|string>  $netByBatch
+     */
+    private function reverseCaseMovements(array $netByItem, array $netByBatch): int
     {
+        foreach ($netByBatch as $batchId => $net) {
+            $batch = StockItemPrice::query()->find($batchId);
+            if ($batch !== null) {
+                $batch->update(['qty' => round((float) $batch->qty - (float) $net, 4)]);
+            }
+        }
+
         $synced = 0;
 
-        StockItem::query()->each(function (StockItem $item) use (&$synced) {
-            $lastMovement = $item->movements()
-                ->orderByDesc('moved_at')
-                ->orderByDesc('id')
-                ->first();
-
-            $item->qty = $lastMovement ? (int) $lastMovement->balance_after : (int) $item->qty;
+        StockItem::query()->each(function (StockItem $item) use ($netByItem, &$synced) {
+            $item->qty = round((float) $item->qty - (float) ($netByItem[$item->id] ?? 0), 4);
             $item->reserved = 0;
             $item->recalculateAndSaveStatus();
             $item->save();
