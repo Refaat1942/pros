@@ -106,7 +106,7 @@ class DoctorTransferService
         return $items->map(fn ($item) => [
             'name' => $item->name,
             'code' => $item->stock_item_code,
-            'qty' => (int) ($item->qty ?? 1),
+            'qty' => round((float) ($item->qty ?? 1), 4),
         ])->values()->all();
     }
 

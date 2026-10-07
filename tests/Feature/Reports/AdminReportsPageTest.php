@@ -188,7 +188,8 @@ class AdminReportsPageTest extends TestCase
         $report = $hub->build('civilian-debts', $dates['from'], $dates['to'], $admin);
 
         $this->assertSame('المديونات', $report['title']);
-        $this->assertSame(['التاريخ', 'الجهة', 'المبلغ'], $report['headers']);
+        // مستحق كل جهة (المُرحَّل والمحصَّل في الفترة والمتبقي) — لا سطور التحصيل فقط.
+        $this->assertSame(['الجهة', 'مستحق الفترة', 'محصَّل الفترة', 'إجمالي المستحق', 'إجمالي المحصَّل', 'المتبقي'], $report['headers']);
         $this->assertNull($hub->sectionMeta('military-debts', $admin));
 
         $this->actingAs($admin)
@@ -200,6 +201,39 @@ class AdminReportsPageTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/reports/military-debts?from='.$from.'&to='.$to)
             ->assertNotFound();
+    }
+
+    public function test_debt_posted_this_period_is_movement_not_opening_balance(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $this->actingAs($admin);
+        $company = $this->civilianCompany();
+        app(\App\Services\ContractDebtService::class)->increaseDue($company, 1200.0);
+
+        $hub = app(AdminReportsHubService::class);
+        $dates = $hub->parseDateRange(now()->startOfMonth()->toDateString(), now()->toDateString());
+
+        $debts = $hub->build('civilian-debts', $dates['from'], $dates['to'], $admin);
+        $row = collect($debts['rows'])->firstWhere(0, $company->name);
+        $this->assertNotNull($row, 'جهة عليها مستحق لم يُحصَّل يجب أن تظهر في تقرير المديونات.');
+        $this->assertSame('1,200.00 ج.م', $row[1]);
+        $this->assertSame('1,200.00 ج.م', $row[5]);
+
+        $closing = collect($hub->build('closing-balance', $dates['from'], $dates['to'], $admin)['rows'])
+            ->firstWhere(0, 'مديونية الجهات المدنية');
+        $this->assertSame(['مديونية الجهات المدنية', '0.00 ج.م', '1,200.00 ج.م', '1,200.00 ج.م'], $closing);
+    }
+
+    public function test_every_report_card_builds(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $hub = app(AdminReportsHubService::class);
+        $dates = $hub->parseDateRange(now()->startOfMonth()->toDateString(), now()->toDateString());
+
+        foreach ($hub->sections($admin) as $section) {
+            $report = $hub->build($section['id'], $dates['from'], $dates['to'], $admin);
+            $this->assertArrayHasKey('rows', $report, $section['id']);
+        }
     }
 
     public function test_reports_section_supports_date_filter_and_export(): void
@@ -620,7 +654,7 @@ class AdminReportsPageTest extends TestCase
         $this->assertNotEmpty($report['row_actions']);
         $this->assertTrue($report['row_actions'][0]['can_view_items'] ?? false);
         $this->assertSame('RM-001', $report['row_actions'][0]['lines'][0]['code'] ?? null);
-        $this->assertSame(2, $report['row_actions'][0]['lines'][0]['qty_returned'] ?? null);
+        $this->assertEqualsWithDelta(2, $report['row_actions'][0]['lines'][0]['qty_returned'] ?? null, 0.0001);
 
         $this->actingAs($admin)
             ->get('/admin/reports/returns?from='.$from.'&to='.$to)

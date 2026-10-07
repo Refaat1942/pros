@@ -125,7 +125,7 @@ class IssueVoucherPresenter
             $groups[$label][] = [
                 'stock_item_code' => $code,
                 'name' => $item->name ?? $code,
-                'qty' => (int) ($item->qty ?? 0),
+                'qty' => round((float) ($item->qty ?? 0), 4),
             ];
         }
 
@@ -145,7 +145,7 @@ class IssueVoucherPresenter
                 $groups[$label][] = [
                     'stock_item_code' => $code,
                     'name' => $item->name ?? $code,
-                    'qty' => (int) $item->qty,
+                    'qty' => round((float) $item->qty, 4),
                 ];
             }
         }

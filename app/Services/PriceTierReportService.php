@@ -47,7 +47,7 @@ class PriceTierReportService
                         'name' => $item->name ?? '—',
                         'tier_count' => count($tiers),
                         'tiers_summary' => implode(' · ', $parts),
-                        'warehouse_qty' => (int) $item->qty,
+                        'warehouse_qty' => round((float) $item->qty, 4),
                     ];
                 }
             });

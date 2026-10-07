@@ -115,7 +115,7 @@ class FinancialPostingService
         $company = ContractCompany::findOrFail($case->contract_company_id);
         $before = ['amount' => $amount];
 
-        $this->contractDebtService->increaseDue($company, $amount);
+        $this->contractDebtService->increaseDue($company, $amount, $case->id);
 
         AuditService::log(
             action: 'post',
