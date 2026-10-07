@@ -52,7 +52,6 @@ return [
             'assets/js/pages/reception-dashboard.js',
             'assets/js/pages/reception-statistics.js',
             'assets/js/pages/reception-delivery-dashboard.js',
-            'assets/js/shared/reception-screen-hints.js',
             'assets/js/pages/employee-page-access.js',
             'assets/js/pages/employee-catalog-visibility.js',
             'assets/js/pages/department-staff.js',

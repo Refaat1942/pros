@@ -106,25 +106,6 @@
 </div>
 
 <div class="space-y-6" id="deliveryRoot">
-    <div class="rounded-2xl border border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50 p-5">
-        <div class="flex flex-col sm:flex-row sm:items-start gap-4">
-            <div class="text-4xl shrink-0">📦</div>
-            <div>
-                <h2 class="font-bold text-emerald-900 text-lg mb-2">التسليم النهائي — من الاستقبال</h2>
-                <p class="text-sm text-emerald-900 leading-relaxed">
-                    هذه الشاشة <strong>الخطوة الأخيرة</strong> في مسار المريض.
-                    بعد اكتمال التصنيع (<strong>BOM تام</strong>) تظهر الحالة هنا.
-                    اختر المريض واضغط <strong>تأكيد التسليم</strong> لإغلاق الملف.
-                </p>
-                <ol class="mt-3 text-xs text-emerald-800 space-y-1 list-decimal list-inside">
-                    <li>اختر المريض من قائمة «جاهز للتسليم»</li>
-                    <li>راجع تفاصيل الحالة وأمر الشغل</li>
-                    <li>اضغط «تأكيد التسليم» — يُغلق الملف ويُصدر مرجع الفاتورة (مدني)</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {{-- قائمة جاهزة للتسليم --}}
         <div class="xl:col-span-5 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[520px]">
