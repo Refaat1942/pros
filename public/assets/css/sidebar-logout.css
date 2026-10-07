@@ -113,6 +113,8 @@ aside.sidebar .sidebar-footer .btn-sidebar-logout .nav-icon {
 aside.sidebar .sidebar-brand {
   text-align: center;
   overflow: hidden;
+  /* الشعار واسم المركز ثابتان — كانا ينضغطان ويختفيان لما تتفتح مجموعة في القائمة. */
+  flex-shrink: 0;
 }
 
 aside.sidebar .sidebar-brand__logo {
