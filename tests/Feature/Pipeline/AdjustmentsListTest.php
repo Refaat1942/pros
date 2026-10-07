@@ -478,7 +478,8 @@ class AdjustmentsListTest extends TestCase
     {
         $this->seedStockWithPriceBatch();
         $stock = StockItem::findByOperationalCode('RM-001');
-        $stock->update(['price' => 100.00]);
+        // وحدة كسرية (متر) — الأصناف المعدودة بالقطعة تمنع كميات مثل 1.5 منذ تحديث الصرف الكسري.
+        $stock->update(['price' => 100.00, 'uom' => 'متر']);
 
         $company = $this->civilianCompany();
         $patient = $this->civilianPatient($company);

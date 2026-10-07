@@ -492,7 +492,8 @@ class BomLifecycleTest extends TestCase
             ['stock_item_code' => $op, 'qty' => 0.1],
         ]);
 
-        app(BomService::class)->releaseToWip($bom, [
+        // releaseBomToWip يعتمد تخصيص قسم الإنتاج أولاً — شرط الصرف من المخزن.
+        $this->releaseBomToWip($bom, [
             ['barcode' => $item->barcode, 'qty' => '100 جرام'],
         ]);
 
