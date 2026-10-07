@@ -187,7 +187,8 @@ class BaseRequest extends FormRequest
     {
         $rules = $required ? ['required'] : ['nullable'];
 
-        return array_merge($rules, ['string', 'min:1', 'max:100', 'regex:/^[A-Za-z0-9\-_]+$/']);
+        // أكواد الأصناف فيها = / . + * ومسافة (617S3=H5) — كلها مقبولة في Code128؛ المرفوض فقط غير القابل للطباعة.
+        return array_merge($rules, ['string', 'min:1', 'max:100', 'regex:/^[\x20-\x7E]+$/']);
     }
 
     /** @return list<string> */

@@ -19,7 +19,7 @@ class StoreSpecEditRequestRequest extends FormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.stock_item_code' => ['required', 'string', 'max:64'],
             'items.*.name' => ['required', 'string', 'max:255'],
-            'items.*.qty' => ['required', 'integer', 'min:1'],
+            'items.*.qty' => ['required', 'numeric', 'min:0.001', 'max:999999', 'regex:/^\d+(\.\d{1,3})?$/'],
         ];
     }
 
@@ -28,7 +28,8 @@ class StoreSpecEditRequestRequest extends FormRequest
     {
         return [
             'items.required' => 'يجب إضافة بند واحد على الأقل.',
-            'items.*.qty.min' => 'الكمية يجب أن تكون 1 على الأقل لكل بند.',
+            'items.*.qty.min' => 'الكمية يجب أن تكون أكبر من صفر (مثال: 1 أو 0.5 متر).',
+            'items.*.qty.regex' => 'الكمية تقبل حتى 3 أرقام عشرية.',
         ];
     }
 }

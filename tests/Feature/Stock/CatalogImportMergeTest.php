@@ -131,6 +131,45 @@ class CatalogImportMergeTest extends TestCase
         $this->assertSame(3, StockItem::query()->count());
     }
 
+    public function test_erp_sheet_with_restarting_numbers_reads_every_item_and_unit_cost(): void
+    {
+        $this->actingAs($this->userWithRole('admin'));
+
+        $path = tempnam(sys_get_temp_dir(), 'erp').'.xlsx';
+        $writer = new XlsxWriter;
+        $writer->openToFile($path);
+        $writer->addRow(Row::fromValues([
+            'رقم الصنف', 'كود الصنف', 'اسم الصنف', 'الماركة / الفئة', 'المورد', 'رصيد الدفتر',
+            'وحدة التوريد / المخزن', 'سعر وحدة التوريد (جنية)', 'طريقة التحويل والمعامل',
+            'وحدة الصرف للسيستم (ERP Base UOM)', 'سعر تكلفة وحدة الصرف (جنية)',
+        ]));
+        // ترقيم «رقم الصنف» يبدأ من 1 في كل قسم، وأغلب الأصناف بلا كود.
+        $writer->addRow(Row::fromValues([1, 'K100', 'قدم اختبار', 'X', 'مورد', 22, 'عدد', 7250, '1:1 (مباشر)', 'عدد', 7250]));
+        $writer->addRow(Row::fromValues([2, '', 'ركبة اختبار', 'X', 'مورد', 5, 'عدد', '1,200', '1:1 (مباشر)', 'عدد', '1,200']));
+        $writer->addRow(Row::fromValues([1, '', 'فرخ اختبار 3مم', 'X', 'مورد', 30000, 'سم2', 561.1457, '100*100', 'سم2', 0.05611457]));
+        $writer->addRow(Row::fromValues([2, '', 'شريط اختبار', 'X', 'مورد', 12.5, 'متر', 40, '1:1 (مباشر)', 'متر', 40]));
+        $writer->close();
+
+        $summary = app(StockImportService::class)->import(new UploadedFile($path, 'erp.xlsx', null, null, true));
+
+        $this->assertSame(4, $summary['created']);
+        $this->assertSame(4, StockItem::query()->count());
+
+        $this->assertEqualsWithDelta(7250, (float) StockItem::query()->where('alt_codes', 'K100')->value('price'), 0.0001);
+        $this->assertEqualsWithDelta(1200, (float) StockItem::query()->where('name', 'ركبة اختبار')->value('price'), 0.0001);
+
+        $sheet = StockItem::query()->where('name', 'فرخ اختبار 3مم')->firstOrFail();
+        $this->assertSame('سم2', $sheet->uom);
+        $this->assertEqualsWithDelta(30000, (float) $sheet->qty, 0.0001);
+        $this->assertEqualsWithDelta(0.0561, (float) $sheet->price, 0.00001);
+
+        // إعادة رفع نفس الملف لا تغيّر شيئاً.
+        $again = app(StockImportService::class)->import(new UploadedFile($path, 'erp.xlsx', null, null, true));
+        @unlink($path);
+
+        $this->assertSame(['created' => 0, 'updated' => 0, 'unchanged' => 4], array_intersect_key($again, ['created' => 0, 'updated' => 0, 'unchanged' => 0]));
+    }
+
     /**
      * @param  list<list<string>>  $rows
      * @return array<string, mixed>

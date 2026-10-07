@@ -230,7 +230,7 @@ class PriceBatchDispenseService
         $seenAmounts = [];
 
         foreach ($batches as $batch) {
-            $amount = round((float) $batch->amount, 2);
+            $amount = round((float) $batch->amount, 4);
             $qty = (float) $batch->qty;
 
             if ($qty <= 0 && $batch->supply_request_line_id === null) {
@@ -355,7 +355,7 @@ class PriceBatchDispenseService
             ->filter(fn (StockItemPrice $batch) => $batch->supply_request_line_id === null);
 
         $tierGroups = $regularBatches->groupBy(
-            fn (StockItemPrice $batch) => round((float) $batch->amount, 2)
+            fn (StockItemPrice $batch) => round((float) $batch->amount, 4)
         );
 
         $sortedTiers = $tierGroups->sortBy(function (Collection $group) {

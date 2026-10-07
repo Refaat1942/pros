@@ -75,6 +75,8 @@ trait DashboardQueueAssertions
         ContractCompany $company,
         MilitaryRank $rank,
         string $name = 'مريض E2E عسكري',
+        // صف/جندي = مسار عسكري مباشر؛ ضابط/مدني/عائلات = تصديق إدارة الخدمات.
+        string $beneficiaryCategory = Patient::BENEFICIARY_ENLISTED,
     ): Patient {
         $this->actingAs($reception);
         $visitType = $this->defaultVisitType();
@@ -88,7 +90,7 @@ trait DashboardQueueAssertions
             'seniority_number' => 'SEN-'.substr(md5($name), 6, 6),
             'military_weapon' => 'المشاة',
             // «تصنيف المستفيد» إجباري للمريض العسكري.
-            'military_beneficiary_category' => Patient::BENEFICIARY_OFFICER,
+            'military_beneficiary_category' => $beneficiaryCategory,
             'visit_type_id' => $visitType->id,
             'sovereign_entity' => 'القوات المسلحة',
             'phone' => '01122223333',

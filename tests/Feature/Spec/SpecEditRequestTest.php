@@ -10,6 +10,7 @@ use App\Models\MedicalRecord;
 use App\Models\MedicalRecordItem;
 use App\Models\Role;
 use App\Models\SpecEditRequest;
+use App\Models\StockItem;
 use App\Models\TechOrderSpec;
 use App\Models\TechOrderSpecItem;
 use App\Services\MedicalRecordService;
@@ -142,6 +143,35 @@ class SpecEditRequestTest extends TestCase
             1,
             AppNotification::forRole(Role::SLUG_SPEC)->where('event', 'spec_edit_approved')->count()
         );
+    }
+
+    public function test_approved_edit_keeps_decimal_qty_for_meter_items(): void
+    {
+        ['case' => $case, 'draft' => $draft, 'spec' => $specUser] = $this->submitSpecToAdjustments();
+        StockItem::findByOperationalCode('RM-EDIT-A')->update(['uom' => 'متر']);
+
+        $this->actingAs($specUser)
+            ->postJson(route('spec.spec.edit-request.store', $draft), [
+                'items' => [
+                    ['stock_item_code' => 'RM-EDIT-A', 'name' => 'صنف A', 'qty' => 1.75],
+                ],
+            ])
+            ->assertCreated();
+
+        $request = SpecEditRequest::where('tech_order_spec_id', $draft->id)->firstOrFail();
+
+        $this->actingAs($this->userWithRole('admin'))
+            ->postJson(route('admin.spec-edit-requests.approve', $request))
+            ->assertOk();
+
+        $draft->refresh()->load('items');
+        $this->assertEqualsWithDelta(1.75, (float) $draft->items->firstWhere('stock_item_code', 'RM-EDIT-A')->qty, 0.0001);
+
+        $bomSpecQty = BomItem::whereHas('bom', fn ($q) => $q->where('case_id', $case->id))
+            ->where('source', BomItem::SOURCE_SPEC)
+            ->where('stock_item_code', 'RM-EDIT-A')
+            ->value('qty');
+        $this->assertEqualsWithDelta(1.75, (float) $bomSpecQty, 0.0001);
     }
 
     public function test_admin_reject_without_reason_and_notifies_spec(): void

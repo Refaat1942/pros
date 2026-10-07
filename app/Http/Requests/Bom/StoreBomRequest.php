@@ -13,7 +13,7 @@ class StoreBomRequest extends BaseRequest
             'case_id' => ['required', 'integer', 'exists:cases,id'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.stock_item_code' => ['required', 'string', 'max:500', new StockItemPickerCodeExists],
-            'items.*.qty' => ['required', 'integer', 'min:1'],
+            'items.*.qty' => $this->decimalQtyRules(),
             'items.*.name' => ['nullable', 'string', 'max:255'],
         ];
     }
@@ -24,7 +24,8 @@ class StoreBomRequest extends BaseRequest
             'case_id.exists' => 'الحالة غير موجودة.',
             'items.min' => 'يجب إضافة بند واحد على الأقل.',
             'items.*.stock_item_code.exists' => 'كود الصنف غير مسجَّل في المخزون.',
-            'items.*.qty.min' => 'الكمية يجب أن تكون 1 على الأقل.',
+            'items.*.qty.min' => 'الكمية يجب أن تكون أكبر من صفر (مثال: 1 أو 0.5 متر).',
+            'items.*.qty.regex' => 'الكمية تقبل حتى 3 أرقام عشرية.',
         ];
     }
 }

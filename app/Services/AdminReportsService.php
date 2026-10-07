@@ -226,7 +226,7 @@ class AdminReportsService
         $total = 0.0;
 
         foreach ($mergedItems as $item) {
-            $qty = (int) ($item['qty'] ?? 0);
+            $qty = (float) ($item['qty'] ?? 0);
             if ($qty <= 0) {
                 continue;
             }

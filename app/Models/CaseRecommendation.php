@@ -18,7 +18,7 @@ class CaseRecommendation extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'float',
     ];
 
     public function caseRecord(): BelongsTo

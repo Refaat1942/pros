@@ -17,7 +17,7 @@ class StoreMedicalRecordRequest extends BaseRequest
             'items' => ['nullable', 'array'],
             'items.*.stock_item_code' => ['required_with:items', 'string', 'max:50'],
             'items.*.name' => ['required_with:items', 'string', 'max:255'],
-            'items.*.qty' => $this->positiveQtyRules(),
+            'items.*.qty' => $this->decimalQtyRules(),
         ];
     }
 
@@ -25,7 +25,8 @@ class StoreMedicalRecordRequest extends BaseRequest
     {
         return [
             'diagnosis.required' => 'التشخيص مطلوب.',
-            'items.*.qty.min' => 'الكمية يجب أن تكون 1 على الأقل.',
+            'items.*.qty.min' => 'الكمية يجب أن تكون أكبر من صفر (مثال: 1 أو 0.5 متر).',
+            'items.*.qty.regex' => 'الكمية تقبل حتى 3 أرقام عشرية.',
         ];
     }
 }

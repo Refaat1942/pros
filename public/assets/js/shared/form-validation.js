@@ -105,7 +105,7 @@
     },
     barcode: function (value) {
       if (!trim(value)) return true;
-      return /^[A-Za-z0-9\-_]{1,100}$/.test(trim(value));
+      return /^[\x20-\x7E]{1,100}$/.test(trim(value));
     },
     integer: function (value) {
       if (value === '' || value === null || value === undefined) return true;

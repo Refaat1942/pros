@@ -44,8 +44,8 @@ final class CatalogListCells
                     .($attrSummary ? '<div style="font-size:11px;margin-top:4px;">'.e($attrSummary).'</div>' : ''),
                 'class' => 'font-size:12px;color:var(--text-muted);',
             ],
-            'qty' => ['html' => (string) ((int) $item->qty), 'class' => 'text-align:center;font-weight:700;'],
-            'reserved' => ['html' => (string) ((int) $item->reserved), 'class' => 'text-align:center;color:#d97706;'],
+            'qty' => ['html' => StockQuantity::format((float) $item->qty, null), 'class' => 'text-align:center;font-weight:700;'],
+            'reserved' => ['html' => StockQuantity::format((float) $item->reserved, null), 'class' => 'text-align:center;color:#d97706;'],
             'available' => [
                 'html' => (string) $available,
                 'class' => 'text-align:center;font-weight:700;color:'.$availColor.';',
@@ -109,8 +109,8 @@ final class CatalogListCells
                 'html' => '<span class="stock-status '.$statusClass.'"><span class="status-dot"></span>'.$statusLabel.'</span>',
                 'class' => 'status-cell',
             ],
-            'qty' => ['html' => (string) ((int) ($item['qty'] ?? 0)), 'class' => 'text-align:center;'],
-            'reserved' => ['html' => (string) ((int) ($item['reserved'] ?? 0)), 'class' => 'text-align:center;'],
+            'qty' => ['html' => StockQuantity::format((float) ($item['qty'] ?? 0), null), 'class' => 'text-align:center;'],
+            'reserved' => ['html' => StockQuantity::format((float) ($item['reserved'] ?? 0), null), 'class' => 'text-align:center;'],
             'category' => [
                 'html' => e($item['category'] ?? '—'),
                 'class' => 'color:var(--text-muted);font-size:12px;',
