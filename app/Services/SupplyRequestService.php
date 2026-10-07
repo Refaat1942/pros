@@ -7,6 +7,8 @@ use App\Models\StockMovement;
 use App\Models\SupplyRequest;
 use App\Models\SupplyRequestLine;
 use App\Models\User;
+use App\Support\DocumentSequence;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SupplyRequestService
@@ -58,8 +60,8 @@ class SupplyRequestService
         });
     }
 
-    /** @return \Illuminate\Support\Collection<int, SupplyRequestLine> */
-    public function listOpenLines(): \Illuminate\Support\Collection
+    /** @return Collection<int, SupplyRequestLine> */
+    public function listOpenLines(): Collection
     {
         return SupplyRequestLine::query()
             ->with([
@@ -230,15 +232,11 @@ class SupplyRequestService
     {
         $prefix = 'SR-'.now()->format('ym');
 
-        $last = SupplyRequest::query()
-            ->where('request_no', 'like', $prefix.'%')
-            ->orderByDesc('request_no')
-            ->lockForUpdate()
-            ->value('request_no');
+        do {
+            $requestNo = $prefix.str_pad((string) DocumentSequence::next($prefix, fn () => DocumentSequence::maxSuffix(SupplyRequest::class, 'request_no', $prefix)), 4, '0', STR_PAD_LEFT);
+        } while (SupplyRequest::where('request_no', $requestNo)->exists());
 
-        $seq = $last ? (int) substr($last, -4) + 1 : 1;
-
-        return $prefix.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+        return $requestNo;
     }
 
     private function nullableString(?string $value): ?string

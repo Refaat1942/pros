@@ -7,6 +7,7 @@ use App\Models\CaseRecord;
 use App\Models\PricingRequest;
 use App\Models\Quote;
 use App\Models\QuoteItem;
+use App\Support\DocumentSequence;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -227,17 +228,8 @@ class QuoteService
         $year = now()->year;
         $prefix = "QT-{$year}-";
 
-        $last = Quote::where('quote_no', 'like', $prefix.'%')
-            ->lockForUpdate()
-            ->orderByDesc('quote_no')
-            ->value('quote_no');
-
-        $num = $last
-            ? ((int) substr($last, strlen($prefix)) + 1)
-            : 1;
-
         do {
-            $quoteNo = sprintf('%s%04d', $prefix, $num++);
+            $quoteNo = $prefix.sprintf('%04d', DocumentSequence::next("QT-{$year}", fn () => DocumentSequence::maxSuffix(Quote::class, 'quote_no', $prefix)));
         } while (Quote::where('quote_no', $quoteNo)->exists());
 
         return $quoteNo;

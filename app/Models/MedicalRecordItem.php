@@ -18,7 +18,7 @@ class MedicalRecordItem extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'float',
     ];
 
     public function medicalRecord(): BelongsTo

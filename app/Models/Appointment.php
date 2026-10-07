@@ -255,4 +255,16 @@ class Appointment extends Model
             null,
         );
     }
+
+    /**
+     * رقم الدور التالي في يوم العيادة — آمن للتسجيل المتزامن من أكثر من جهاز
+     * (MAX(...) FOR UPDATE غير مسموح على PostgreSQL ولا يمنع تكرار الرقم).
+     */
+    public static function nextQueueNumber(string $clinicDay): int
+    {
+        return \App\Support\DocumentSequence::next(
+            'QUEUE-'.$clinicDay,
+            fn () => (int) static::query()->whereDate('clinic_day', $clinicDay)->max('queue_number'),
+        );
+    }
 }

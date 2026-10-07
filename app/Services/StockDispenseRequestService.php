@@ -90,6 +90,7 @@ class StockDispenseRequestService
 
         $requestId = $request->id;
 
+        // 3 محاولات: يُعاد الاعتماد تلقائياً لو حدث deadlock مع صرف متزامن.
         return DB::transaction(function () use ($requestId, $approver) {
             $request = StockDispenseRequest::lockForUpdate()->findOrFail($requestId);
 
@@ -121,7 +122,7 @@ class StockDispenseRequestService
             );
 
             return $request->fresh(['caseRecord', 'bom', 'requestedBy', 'approvedBy']);
-        });
+        }, 3);
     }
 
     /**

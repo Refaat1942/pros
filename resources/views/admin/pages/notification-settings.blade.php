@@ -7,10 +7,6 @@
             <h3>🔔 إعدادات التنبيه الصوتي</h3>
         </div>
 
-        <p class="notification-settings-hint">
-            يتحكم السوبر أدمن في <strong>التنبيه الصوتي</strong> لجميع المستخدمين: صوت عند وصول إشعار جديد،
-            و<strong>تكرار التنبيه</strong> كل عدد دقائق محدد ما دامت هناك إشعارات غير مقروءة ولم يفتح المستخدم صفحة الإشعارات.
-        </p>
 
         <form id="notificationSettingsForm" class="notification-settings-form">
             <label class="notification-settings-field notification-settings-toggle">
@@ -30,7 +26,6 @@
                            required>
                     <span>د</span>
                 </div>
-                <small class="notification-settings-note">من 1 إلى 60 دقيقة — يتوقف التكرار عند فتح صفحة الإشعارات أو قراءة الكل.</small>
             </label>
 
             <div id="notificationSettingsError" class="notification-settings-error" style="display:none;"></div>

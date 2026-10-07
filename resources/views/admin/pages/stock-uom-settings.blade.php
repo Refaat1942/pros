@@ -3,10 +3,6 @@
         <div class="panel-header">
             <h3>📐 وحدات التوريد والمخزن — قوالب التحويل</h3>
         </div>
-        <p class="stock-uom-settings-hint">
-            القوالب الافتراضية (ورقة → سم²، علبة → قطع، …) مدمجة في النظام. يمكنك إضافة قوالب مخصصة بمفتاح لاتيني (مثل <code>sheet_custom</code>) وتُستخدم في بطاقة الصنف.
-            <strong>وحدة المخزن</strong> في الكتالوج = وحدة الصرف والارتجاع وWAC؛ <strong>وحدة التوريد</strong> = ما يُسجَّل في فاتورة الاستلام.
-        </p>
         <div id="stockUomSettingsWrap" class="stock-uom-settings-wrap"></div>
         <div id="stockUomSettingsError" class="stock-uom-settings-error" style="display:none;"></div>
         <div class="stock-uom-settings-actions">

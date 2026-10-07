@@ -7,6 +7,7 @@ use App\Models\ContractCompany;
 use App\Models\MilitaryRank;
 use App\Models\Patient;
 use App\Support\ClinicTime;
+use App\Support\DocumentSequence;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -84,10 +85,8 @@ class PatientService
             );
 
             $clinicDay = ClinicTime::clinicDayDateString();
-            $nextQueue = (int) Appointment::query()
-                ->whereDate('clinic_day', $clinicDay)
-                ->lockForUpdate()
-                ->max('queue_number');
+            // MAX(...) FOR UPDATE مرفوض على PostgreSQL (كان يُسقط تسجيل كل مريض) — عدّاد اليوم بدلاً منه.
+            $nextQueue = Appointment::nextQueueNumber($clinicDay) - 1;
 
             $this->appointmentService->book([
                 'patient_id' => $patient->id,
@@ -154,17 +153,8 @@ class PatientService
         $year = now()->year;
         $prefix = "PT-{$year}-";
 
-        $last = Patient::where('patient_serial', 'like', $prefix.'%')
-            ->lockForUpdate()
-            ->orderByDesc('patient_serial')
-            ->value('patient_serial');
-
-        $num = $last
-            ? ((int) substr($last, strlen($prefix)) + 1)
-            : 1;
-
         do {
-            $serial = sprintf('%s%04d', $prefix, $num++);
+            $serial = $prefix.sprintf('%04d', DocumentSequence::next("PT-{$year}", fn () => DocumentSequence::maxSuffix(Patient::class, 'patient_serial', $prefix)));
         } while (Patient::where('patient_serial', $serial)->exists());
 
         return $serial;

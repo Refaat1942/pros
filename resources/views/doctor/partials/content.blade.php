@@ -122,7 +122,6 @@
                 </div>
                 <div class="sms-dropdown"></div>
               </div>
-              <p class="field-hint">اختيار متعدد من المخزون — حدّد <strong>الكمية</strong> لكل صنف (بحد أقصى المتوفر)</p>
             </div>
 
             <div class="form-group">

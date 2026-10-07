@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Support\CaseFinancialSummary;
+use App\Support\DocumentSequence;
 
 /**
  * إصدار الفاتورة التجارية الختامية عند التسليم — مدني فقط.
@@ -67,15 +68,10 @@ class InvoiceService
         $year = now()->year;
         $prefix = "INV-{$year}-";
 
-        $last = CaseRecord::where('invoice_no', 'like', $prefix.'%')
-            ->lockForUpdate()
-            ->orderByDesc('invoice_no')
-            ->value('invoice_no');
+        do {
+            $invoiceNo = $prefix.sprintf('%04d', DocumentSequence::next("INV-{$year}", fn () => DocumentSequence::maxSuffix(CaseRecord::class, 'invoice_no', $prefix)));
+        } while (CaseRecord::where('invoice_no', $invoiceNo)->exists());
 
-        $num = $last
-            ? ((int) substr($last, strlen($prefix)) + 1)
-            : 1;
-
-        return sprintf('%s%04d', $prefix, $num);
+        return $invoiceNo;
     }
 }

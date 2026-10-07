@@ -23,12 +23,6 @@
 
   {{-- تبويب الأقسام --}}
   <div id="wsTabSections" class="ws-tab-panel" role="tabpanel">
-    <div class="panel-hint panel-hint--workshop">
-      <div class="panel-hint__label">🏭 إدارة أقسام الإنتاج</div>
-      <p class="panel-hint__text">
-        أنشئ الأقسام وعدّلها أو احذفها. ربط الفنيين بالأقسام يتم من تبويب <strong>«الفنيون»</strong>.
-      </p>
-    </div>
 
     <div class="panel">
       <div class="panel-header">
@@ -60,10 +54,6 @@
 
   {{-- تبويب الفنيون --}}
   <div id="wsTabTechnicians" class="ws-tab-panel" role="tabpanel" hidden>
-    <div class="panel-hint panel-hint--workshop">
-      <div class="panel-hint__label">👷 إدارة فنيي الإنتاج</div>
-      <p class="panel-hint__text">أضف فنيين جدد أو عدّل بياناتهم واربطهم بالأقسام المناسبة.</p>
-    </div>
 
     <div class="panel">
       <div class="panel-header">

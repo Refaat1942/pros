@@ -13,6 +13,7 @@ use App\Models\PricingRequest;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Support\BomItemAggregator;
+use App\Support\DocumentSequence;
 use App\Support\StockQtyMath;
 use App\Support\StockQuantity;
 use Illuminate\Support\Facades\Auth;
@@ -88,6 +89,8 @@ class BomService
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             $existing = Bom::where('case_id', $case->id)->first();
+            StockItem::lockForCodes(collect($items)->pluck('stock_item_code')
+                ->merge($existing?->items()->pluck('stock_item_code') ?? []));
 
             if ($existing) {
                 if ($existing->stock_reserved_at) {
@@ -152,6 +155,7 @@ class BomService
     public function reserveBackorderForBom(Bom $bom): void
     {
         $bom->loadMissing('items');
+        StockItem::lockForCodes($bom->items->pluck('stock_item_code'));
 
         foreach ($bom->items as $bomItem) {
             $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true);
@@ -193,6 +197,7 @@ class BomService
     public function releaseBomReservation(Bom $bom): void
     {
         $bom->loadMissing('items');
+        StockItem::lockForCodes($bom->items->pluck('stock_item_code'));
 
         foreach ($bom->items as $bomItem) {
             $stockItem = StockItem::findByOperationalCode($bomItem->stock_item_code, true);
@@ -224,6 +229,8 @@ class BomService
             if (! $bom) {
                 abort(422, 'لا توجد قائمة مواد لهذه الحالة.');
             }
+
+            StockItem::lockForCodes($bom->items()->pluck('stock_item_code')->merge(collect($items)->pluck('stock_item_code')));
 
             if ($bom->stage !== Bom::STAGE_RAW) {
                 abort(422, 'لا يمكن تعديل بنود التوصيف — قائمة المواد لم تعد في مرحلة الإعداد.');
@@ -310,6 +317,8 @@ class BomService
                 abort(422, 'لا توجد قائمة مواد لهذه الحالة بعد.');
             }
 
+            StockItem::lockForCodes($bom->items()->pluck('stock_item_code')->merge(collect($items)->pluck('stock_item_code')));
+
             if ($bom->stage !== Bom::STAGE_RAW) {
                 abort(422, 'لا يمكن إضافة بنود — قائمة المواد لم تعد في مرحلة الإعداد.');
             }
@@ -375,6 +384,8 @@ class BomService
             if (! $bom) {
                 abort(422, 'لا توجد قائمة مواد لهذه الحالة.');
             }
+
+            StockItem::lockForCodes($bom->items()->pluck('stock_item_code')->merge(collect($items)->pluck('stock_item_code')));
 
             if ($bom->stage !== Bom::STAGE_RAW) {
                 abort(422, 'لا يمكن تعديل بنود المعدلات — قائمة المواد لم تعد في مرحلة الإعداد.');
@@ -532,6 +543,8 @@ class BomService
             abort(422, 'لا توجد قائمة مواد لحجزها.');
         }
 
+        StockItem::lockForCodes($bom->items->pluck('stock_item_code'));
+
         if ($bom->stock_reserved_at) {
             $this->ensureUnitCosts($bom);
 
@@ -566,6 +579,7 @@ class BomService
     {
         return DB::transaction(function () use ($case, $items) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
+            StockItem::lockForCodes(collect($items)->pluck('stock_item_code'));
 
             if ($case->stage_key !== CaseRecord::STAGE_MANUFACTURING) {
                 abort(422, 'الحالة ليست في مرحلة التصنيع.');
@@ -616,6 +630,7 @@ class BomService
     private function activateSpecRawBom(Bom $bom, CaseRecord $case): Bom
     {
         $bom->load('items');
+        StockItem::lockForCodes($bom->items->pluck('stock_item_code'));
 
         // BOM القادم من التوصيف يكون قد حجز المواد مسبقاً (reserveBackorderForBom)؛
         // لا نُعيد الحجز حتى لا تُضاعَف الكمية المحجوزة.
@@ -910,6 +925,7 @@ class BomService
      */
     public function releaseToWip(Bom $bom, array $dispenseInput): Bom
     {
+        // attempts: يُعاد تلقائياً لو اكتشفت قاعدة البيانات deadlock (عند كونها المعاملة الخارجية).
         return DB::transaction(function () use ($bom, $dispenseInput) {
             $bom = Bom::lockForUpdate()->with(['items', 'caseRecord'])->findOrFail($bom->id);
 
@@ -925,6 +941,8 @@ class BomService
             $groups = BomItemAggregator::groupModels($bom->items);
             $stockBefore = [];
             $performedById = Auth::id();
+
+            StockItem::lockForCodes($groups->keys());
 
             foreach ($groups as $code => $rows) {
                 $stockItem = StockItem::findByOperationalCode($code, true)
@@ -1024,7 +1042,7 @@ class BomService
             }
 
             return $bom->fresh()->load('items');
-        });
+        }, 3);
     }
 
     /**
@@ -1211,15 +1229,11 @@ class BomService
 
     private function nextBomNo(): string
     {
-        $last = Bom::lockForUpdate()
-            ->orderByDesc('id')
-            ->value('bom_no');
+        do {
+            $bomNo = 'BOM-'.sprintf('%04d', DocumentSequence::next('BOM', fn () => DocumentSequence::maxSuffix(Bom::class, 'bom_no', 'BOM-')));
+        } while (Bom::where('bom_no', $bomNo)->exists());
 
-        $num = $last && preg_match('/BOM-(\d+)/', $last, $m)
-            ? ((int) $m[1]) + 1
-            : 1;
-
-        return sprintf('BOM-%04d', $num);
+        return $bomNo;
     }
 
     private function normalizeItemQty(mixed $qty): float

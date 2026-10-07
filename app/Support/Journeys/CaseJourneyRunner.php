@@ -292,9 +292,10 @@ class CaseJourneyRunner
             ],
         };
 
-        $this->expectOk($this->as('reception')->postJson('/reception/patients', $body));
+        $response = $this->expectOk($this->as('reception')->postJson('/reception/patients', $body));
 
-        return Patient::query()->where('name', $name)->latest('id')->firstOrFail();
+        // بالمعرّف من رد التسجيل — بالاسم قد يلتقط مريضاً بنفس الاسم من جهاز آخر.
+        return Patient::query()->findOrFail((int) $response->json('id'));
     }
 
     private function company(bool $contracted): ContractCompany

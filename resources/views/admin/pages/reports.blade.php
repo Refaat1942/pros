@@ -4,7 +4,6 @@
 <div class="section-view" id="section-reports">
     <div class="reports-hub-intro">
         <h3>📋 التقارير</h3>
-        <p>اختر قسمًا لعرض بياناته ضمن فترة زمنية وتصديرها Excel.</p>
     </div>
 
     @foreach ($sections as $group => $cards)

@@ -40,11 +40,6 @@
 
 
 
-                <p style="font-size:12px;color:var(--text-muted);margin:14px 0 0;padding:10px;background:var(--surface-2,#f8fafc);border-radius:8px;">
-
-                    💡 يتم ربط الأصناف بالمورد من شاشة <strong>الأصناف والأسعار</strong> عند إضافة أو تعديل كل صنف.
-
-                </p>
 
             </div>
 

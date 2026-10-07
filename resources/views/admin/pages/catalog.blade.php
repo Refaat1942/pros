@@ -106,16 +106,6 @@
             <span class="toolbar-count" id="catalogSlimCount">{{ $items->count() }} صنف</span>
         </div>
 
-        <p class="catalog-table-hint">
-            💡 <strong>رصيد كتالوج</strong> = رصيد أول المدة + الإضافة − الخصم.
-            <strong>رصيد المخزن</strong> = الكمية الفعلية (توريد / صرف / ارتجاع).
-            لو مختلفين يظهر رصيد المخزن بالبرتقالي.
-        </p>
-        <p class="catalog-table-hint" style="margin-top:6px;">
-            قالب الأصناف — {{ count($catalogTemplateHeaders) }} أعمدة:
-            <strong>{{ implode(' | ', $catalogTemplateHeaders) }}</strong>.
-            يشمل <strong>الماركة</strong> بعد اسم الصنف، و<strong>السعر الأساسي</strong> — الموردون والأقسام تُدار من نموذج الصنف. <strong>رقم الصنف قد يتكرر</strong> — التمييز برقم الصفحة. الأكواد والباركود من Excel. لا توليد تلقائي للأكواد. لترتيب الأعمدة عدّل <code>config/catalog.php</code>.
-        </p>
 
         <div class="panel-body" style="overflow-x:auto;">
             @unless ($catalogListEnabled)

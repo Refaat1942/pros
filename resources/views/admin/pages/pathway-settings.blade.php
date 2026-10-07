@@ -21,14 +21,6 @@
             <h3>🧭 مصمم مسار العمل</h3>
         </div>
 
-        <p class="pathway-designer-intro">
-            <strong>ثلاثة مسارات — نفس ترتيب جدول العميل:</strong><br>
-            🌐 <strong>مدني (نقدي)</strong> — 11 خطوة · 🪖 <strong>عسكري</strong> — 11 خطوة · 🏢 <strong>جهات</strong> — 13 خطوة.<br>
-            اضغط على أي خلية في الجدول — التعديل يظهر <strong>فوراً</strong> في الجدول ومعاينة المسار.
-            لما تغيّر «بعد الإكمال — ينتقل إلى»، <strong>الجدول يعيد ترتيب الصفوف</strong> ليطابق المسار (مثلاً الخزنة تنزل تحت التشغيل مباشرة).
-            <strong>صف «التكاليف»</strong> منفصل لكل مسار — اضغط خلية <strong>🪖 عسكري</strong> أو <strong>🏢 جهات</strong> (مش الخلية المدمجة فقط).
-            <strong>كل خطوة</strong> يمكنك جعلها إلزامية أو اختيارية (تخطي يدوي / تخطي تلقائي) حسب نوع الحالة.
-        </p>
 
         <div class="pathway-designer-toolbar">
             <span class="pathway-designer-toolbar__hint" id="pathwayEditHint">اختر خلية من الجدول للتعديل</span>
@@ -54,9 +46,6 @@
         <div class="panel-header">
             <h3>📝 إلزامية حقول النماذج</h3>
         </div>
-        <p class="pathway-designer-intro">
-            حدّد أي حقول إلزامية وأيها اختياري في كل شاشة — يُطبَّق على الاستقبال والتوصيف والمواعيد.
-        </p>
         <div id="formFieldSettingsWrap" class="form-field-settings-wrap"></div>
         <div id="formFieldSettingsError" class="pathway-designer-error" style="display:none;"></div>
         <div class="pathway-designer-actions">
