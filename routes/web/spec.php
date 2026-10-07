@@ -68,9 +68,4 @@ Route::prefix('spec')
             Route::post('spec/{spec}/edit-request', [SpecEditRequestController::class, 'store'])
                 ->name('spec.edit-request.store');
         });
-
-        // ── Pricing status (إرسال للتسعير) ────────────────────────────────
-        Route::get('pricing/list', [TechOrderSpecController::class, 'pricingStatus'])
-            ->middleware('dashboard.page:spec,pricing')
-            ->name('pricing.list');
     });
