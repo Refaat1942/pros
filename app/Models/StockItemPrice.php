@@ -30,7 +30,7 @@ class StockItemPrice extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount' => 'decimal:4',
         'qty' => 'float',
         'received_at' => 'date',
     ];

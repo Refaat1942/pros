@@ -659,7 +659,7 @@ class StockCatalogService
         $byAmount = [];
 
         foreach ($item->prices as $batch) {
-            $amount = round((float) $batch->amount, 2);
+            $amount = round((float) $batch->amount, 4);
             if ($amount <= 0) {
                 continue;
             }
@@ -687,7 +687,7 @@ class StockCatalogService
             }
         }
 
-        $baseAmount = round((float) $item->price, 2);
+        $baseAmount = round((float) $item->price, 4);
         if ($baseAmount > 0 && ! isset($byAmount[$baseAmount])) {
             $byAmount[$baseAmount] = [
                 'amount' => $baseAmount,

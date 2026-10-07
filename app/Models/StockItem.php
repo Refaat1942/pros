@@ -58,7 +58,7 @@ class StockItem extends Model
         'min_qty' => 'decimal:4',
         'units_per_supply_unit' => 'decimal:6',
         'is_quick_dispense' => 'boolean',
-        'price' => 'decimal:2',
+        'price' => 'decimal:4',
         'expiry_date' => 'date',
         'wac' => 'decimal:4',
         'last_moved_at' => 'date',
