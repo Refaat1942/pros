@@ -21,6 +21,7 @@ class PurgePatientDataCommand extends Command
     public function handle(PatientDataPurgeService $purge): int
     {
         if (! $purge->hasPatientRelatedData()) {
+            $purge->resetNumbering();
             AdminOverviewService::clearBiBoardsCache();
             $this->info('لا توجد بيانات مرتبطة بالمرضى للحذف.');
             $this->line('تم تحديث ذاكرة لوحات القيادة في نظرة عامة الإدارة.');
