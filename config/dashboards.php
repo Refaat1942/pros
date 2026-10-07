@@ -301,36 +301,52 @@ return [
         'layout' => 'layouts.admin',
         'default_page' => 'overview',
         'sidebar' => ['icon' => '⚙️', 'title' => 'لوحة إدارة النظام'],
+        // مجموعات القائمة: العمل اليومي أولاً، ثم البيانات الأساسية، ثم الإعدادات والرقابة.
         'nav_groups' => [
             [
-                'label' => 'التقارير والمؤشرات',
+                'label' => 'لوحة المتابعة والتقارير',
                 'icon' => '📊',
                 'pages' => ['overview', 'reports'],
             ],
             [
                 'label' => 'المرضى والحالات',
                 'icon' => '🧭',
-                'pages' => ['cases', 'spec-edit-requests', 'services-approvals', 'visit-types'],
+                'pages' => ['cases', 'spec-edit-requests', 'services-approvals'],
             ],
             [
                 'label' => 'قسم الإنتاج',
                 'icon' => '🏭',
-                'pages' => ['workshop-sections', 'workshop-tracking'],
+                'pages' => ['workshop-tracking', 'workshop-sections'],
             ],
             [
-                'label' => 'المخزون والتوريد',
+                'label' => 'المخزن — العمل اليومي',
                 'icon' => '📦',
-                'pages' => ['stock-categories', 'catalog', 'add-catalog-item', 'supply-request', 'receive-inbound', 'stock-kits', 'inventory-overview', 'dispense-approvals', 'suppliers', 'returns', 'catalog-list-settings', 'stock-uom-settings'],
+                'pages' => ['catalog', 'receive-inbound', 'supply-request', 'dispense-approvals', 'returns', 'inventory-overview'],
+            ],
+            [
+                'label' => 'المخزن — بيانات أساسية',
+                'icon' => '🗂️',
+                'pages' => ['stock-categories', 'stock-kits', 'suppliers', 'stock-uom-settings', 'catalog-list-settings'],
             ],
             [
                 'label' => 'التعاقد والمالية',
                 'icon' => '💼',
-                'pages' => ['companies', 'contracts', 'civilian-debts'],
+                'pages' => ['companies', 'contracts', 'civilian-debts', 'costing-settings'],
             ],
             [
-                'label' => 'الرقابة والنظام',
+                'label' => 'الموظفون والصلاحيات',
+                'icon' => '👥',
+                'pages' => ['employees', 'permissions'],
+            ],
+            [
+                'label' => 'إعدادات النظام',
                 'icon' => '⚙️',
-                'pages' => ['audit', 'employees', 'permissions', 'military-ranks', 'documents-hub', 'branding-settings', 'costing-settings', 'pathway-settings', 'notification-settings'],
+                'pages' => ['pathway-settings', 'visit-types', 'military-ranks', 'documents-hub', 'branding-settings', 'notification-settings'],
+            ],
+            [
+                'label' => 'الرقابة',
+                'icon' => '🔒',
+                'pages' => ['audit'],
             ],
         ],
         'pages' => [
@@ -349,9 +365,10 @@ return [
             'cases' => ['title' => 'متابعة المرضى — المسار والحالات', 'icon' => '📁', 'label' => 'متابعة المرضى'],
             'visit-types' => ['title' => 'أنواع الزيارات', 'icon' => '📋', 'label' => 'أنواع الزيارات'],
             // ── المخزون والتوريد ───────────────────────────────────────────────
-            'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'الأقسام'],
+            'stock-categories' => ['title' => 'أقسام الأصناف', 'icon' => '🏷️', 'label' => 'أقسام الأصناف'],
             'catalog' => ['title' => 'الأصناف والأسعار', 'icon' => '📦', 'label' => 'الأصناف والأسعار'],
-            'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد'],
+            // مكرر لزر «➕ إضافة صنف» في صفحة الأصناف والأسعار.
+            'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد', 'hidden' => true],
             'supply-request' => ['title' => 'طلب التوريد', 'icon' => '🛒', 'label' => 'طلب التوريد'],
             'receive-inbound' => ['title' => 'استلام الوارد — تسجيل فاتورة توريد', 'icon' => '📥', 'label' => 'استلام الوارد'],
             'stock-kits' => [
