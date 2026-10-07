@@ -19,7 +19,6 @@
                 بما في ذلك حسابات «مسؤول النظام (محدود)» التي تُنشأ من صفحة الموظفين.
                 السوبر أدمن نفسه لا يظهر في المصفوفة لأنه يملك كل الصلاحيات تلقائياً.
                 <br>
-                <span class="perm-role-banner-hint">تفعيل «عرض الصفحة» يكفي لتشغيل الشاشة — لا حاجة لتفعيل إجراء منفصل لنفس الشاشة.</span>
             </p>
         </div>
         <div class="perm-header-actions">
@@ -42,7 +41,6 @@
 
     <div class="perm-role-banner" id="permRoleBanner">
         تعدّل صلاحيات: <strong id="permRoleBannerName">{{ $roles->first()?->label_ar }}</strong>
-        <span class="perm-role-banner-hint">— التغييرات تُطبَّق على هذا الدور فقط عند الحفظ</span>
     </div>
 
     @if (session('success') || session('status'))
@@ -66,11 +64,6 @@
     </div>
 
     @if (auth()->user()?->isSuperAdmin())
-        <div class="perm-test-hint">
-            <strong>لاختبار الصلاحيات:</strong> بعد الحفظ سجّل خروجاً ثم ادخل بحساب الدور نفسه
-            (مثلاً <code>reception</code> / <code>123456</code>).
-            السوبر أدمن يرى <em>كل</em> الصفحات دائماً — شريط «تنقّل بين الأقسام» لا يُ simulates دور الاستقبال.
-        </div>
     @else
         <div class="perm-flash-error">
             ⚠️ أنت تتصفّح كـ «{{ auth()->user()?->role?->label_ar }}» — <strong>الحفظ متاح لـ superadmin فقط</strong>.

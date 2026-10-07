@@ -6,7 +6,6 @@
             <h3 id="calMonthLabel"></h3>
             <button type="button" class="cal-nav-btn" id="calNext" aria-label="الشهر التالي">‹</button>
           </div>
-          <p class="calendar-hint">اختر يوماً من اليوم أو ما قبله (حتى سنة) — الأيام المستقبلية غير متاحة</p>
           <button type="button" class="calendar-today-btn" id="calToday">📅 مواعيد اليوم</button>
         </div>
         <div class="calendar-body">

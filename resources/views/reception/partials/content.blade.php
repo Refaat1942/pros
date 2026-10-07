@@ -35,7 +35,6 @@
             <h3 id="calMonthLabel"></h3>
             <button type="button" class="cal-nav-btn" id="calNext" aria-label="الشهر التالي">‹</button>
           </div>
-          <p class="calendar-hint">اضغط على أي يوم لعرض مواعيده في الجدول أدناه</p>
           <button type="button" class="calendar-today-btn" id="calToday">📅 مواعيد اليوم</button>
         </div>
         <div class="calendar-body">

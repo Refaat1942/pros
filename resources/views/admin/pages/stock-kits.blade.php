@@ -4,8 +4,7 @@
         <span class="toolbar-count" id="stockKitSuggestionsCount"></span>
     </div>
     <p class="catalog-table-hint" style="margin:12px 16px 0;">
-        خامات اتعملت مع بعض في <strong>أكتر من حالة</strong> — تحب نعملها مجموعة (طقم) جاهزة؟
-        «نعم» تفتح نافذة الطقم بالمكوّنات والكميات المعتادة لتراجعها قبل الحفظ، و«لا» تخفي الاقتراح نهائياً.
+        خامات اتعملت مع بعض في <strong>أكتر من حالة</strong> — تحب نعملها طقم؟
     </p>
     <div class="panel-body" id="stockKitSuggestionsList"></div>
 </div>
@@ -15,9 +14,6 @@
         <h3>🧩 أطقم جاهزة ومخصصات</h3>
         <button type="button" class="btn-add-rank" id="btnAddStockKit">➕ إضافة طقم</button>
     </div>
-    <p class="catalog-table-hint" style="margin:12px 16px 0;">
-        حدّد <strong>مجموعة التوصيف</strong> (مثل ركبة) — عند اختيارها في التوصيف تظهر مخصصاتها فقط في المعدلات تحت نفس المجموعة.
-    </p>
     <div class="data-toolbar">
         <input type="text" id="stockKitSearch" placeholder="🔍 بحث في الأطقم...">
         <span class="toolbar-count" id="stockKitCount">0 طقم</span>
@@ -45,9 +41,6 @@
         <h3>🏷️ مجموعات التوصيف (قوالب الجروبينج)</h3>
         <button type="button" class="btn-add-rank" id="btnAddSpecGroup">➕ مجموعة جديدة</button>
     </div>
-    <p class="catalog-table-hint" style="margin:12px 16px 0;">
-        المجموعات تربط التشخيص (مثل ركبة) بالأطقم والمخصصات في التوصيف والمعدلات. لا تحذف مجموعة مرتبطة بأطقم.
-    </p>
     <div class="panel-body">
         <table>
             <thead>
@@ -100,7 +93,6 @@
                 <div class="stock-kit-group-field">
                     <label class="stock-kit-group-label" for="stockKitGroupKeywords">كلمات التعرف (مفصولة بفاصلة)</label>
                     <input type="text" id="stockKitGroupKeywords" class="stock-kit-group-input" placeholder="ركبة, ركبه, knee, فخذ">
-                    <p class="stock-kit-group-hint">تُستخدم لمطابقة التشخيص تلقائياً مع المجموعة في التوصيف.</p>
                 </div>
             </div>
             <div id="stockKitGroupError" class="catalog-form-error" style="display:none;"></div>

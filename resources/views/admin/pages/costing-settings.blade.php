@@ -10,10 +10,6 @@
             <span class="badge" id="costingSettingsSumBadge">{{ rtrim(rtrim(number_format((float) $ratesSum, 2, '.', ''), '0'), '.') }}%</span>
         </div>
 
-        <p class="costing-settings-hint">
-            النسب التالية تُطبَّق على <strong>إجمالي المواد (أعلى سعر شراء)</strong> — بنود التوصيف والمعدلات معاً — لتوزيع سعر العرض قبل خصم جهة التعاقد.
-            مجموع النسب يجب أن يساوي <strong>100%</strong>.
-        </p>
 
         <form id="costingSettingsForm" class="costing-settings-form">
             @foreach ($rateRows as $row)
@@ -46,11 +42,6 @@
             <button type="button" class="btn-action" id="btnAddCostingMode">➕ إضافة نمط</button>
         </div>
 
-        <p class="costing-settings-hint">
-            لكل نمط <strong>نسبة ربح</strong> تُضاف على إجمالي التكلفة. أنماط ذات مكوّنات (كالطرف الصناعي):
-            كل مكوّن نسبة من إجمالي المواد، ثم تُجمَع المكوّنات على المواد لتُشكّل التكلفة، ثم يُضاف الربح.
-            أنماط بلا مكوّنات (كالصرف السريع): الربح مباشرة على المواد. سعر البيع الناتج هو <strong>عرض السعر</strong>.
-        </p>
 
         <div id="costingModesEditor" class="costing-modes-editor"></div>
 

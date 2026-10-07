@@ -181,9 +181,6 @@
           </div>
         </div>
 
-        <div class="pricing-info-banner">
-          📋 بعد إرسال التوصيف تمر الحالة بالمعدلات ثم تتوقف عند <strong>التكاليف</strong> للمراجعة قبل إصدار عرض السعر.
-        </div>
 
         <div class="pricing-toolbar">
           <input type="text" id="pricingSearch" placeholder="بحث برقم الطلب أو اسم المريض...">

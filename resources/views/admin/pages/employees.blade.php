@@ -144,7 +144,6 @@
                 @unless ($isAdminEdit)
                 <div class="form-group form-group-full employee-access-tier-block" id="employeeAccessTierBlock" style="display:none;">
                     <label style="display:block;font-size:13px;font-weight:800;margin-bottom:8px;">🔐 مستوى الصلاحية في القسم</label>
-                    <p class="employee-catalog-visibility-hint">مدير القسم يرى كل الصفحات. الموظف يرى الصفحات التي تختارها فقط.</p>
                     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
                         <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;">
                             <input type="radio" name="access_tier" value="department_admin"
@@ -164,10 +163,6 @@
                     <label style="display:block;font-size:13px;font-weight:800;margin-bottom:8px;">
                         📋 قوائم الأصناف — ماذا يرى هذا الموظف؟
                     </label>
-                    <p class="employee-catalog-visibility-hint">
-                        اختر الدور أولاً، ثم فعّل القوائم والأعمدة قبل الحفظ. هذه الإعدادات خاصة بهذا الموظف —
-                        مستقلة عن باقي نفس الدور.
-                    </p>
                     <input type="hidden" name="catalog_list_visibility" id="employeeCatalogVisibilityInput" value="">
                     <div id="employeeCatalogVisibilityWrap" class="employee-catalog-visibility-wrap"></div>
                     <div id="employeeCatalogVisibilityLoading" class="employee-catalog-visibility-loading" style="display:none;">

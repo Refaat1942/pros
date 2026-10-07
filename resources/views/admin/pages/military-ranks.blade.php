@@ -57,7 +57,7 @@
                 @endforelse
             </tbody>
         </table>
-        <p class="rank-reorder-hint">💡 اسحب الصف من ⋮⋮ لأعلى أو لأسفل لتغيير الترتيب — يُحفظ تلقائياً.</p>
+        <p class="rank-reorder-hint" hidden></p>
     </div>
 </div>
 
@@ -347,10 +347,12 @@
             search.addEventListener('input', function () {
                 if (!hint) return;
                 if (canReorderRanks()) {
-                    hint.textContent = '💡 اسحب الصف من ⋮⋮ لأعلى أو لأسفل لتغيير الترتيب — يُحفظ تلقائياً.';
+                    hint.textContent = '';
+                    hint.hidden = true;
                     hint.classList.remove('is-disabled');
                 } else {
                     hint.textContent = '⚠️ أوقف البحث أولاً لتغيير ترتيب الرتب بالسحب.';
+                    hint.hidden = false;
                     hint.classList.add('is-disabled');
                 }
             });

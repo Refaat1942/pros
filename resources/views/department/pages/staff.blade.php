@@ -15,9 +15,6 @@
 <div class="dept-staff-page">
   <div class="dept-staff-intro">
     <span class="dept-staff-intro__badge">👥 موظفي القسم — {{ $role?->label_ar ?? '—' }}</span>
-    <p class="dept-staff-intro__text">
-      أضف موظفين تحت إشرافك، حدّد الصفحات التي يرونها، غيّر كلمات المرور، وفعّل أو عطّل الحسابات.
-    </p>
   </div>
 
 <div class="panel dept-staff-panel">

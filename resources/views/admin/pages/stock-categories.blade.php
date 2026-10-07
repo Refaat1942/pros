@@ -11,10 +11,6 @@
     </div>
 </div>
 
-        <p class="stock-categories-intro">
-            عرّف لكل قسم الحقول الخاصة به (نص، رقم، قائمة، …). عند إضافة صنف في
-            <a href="{{ route('admin.catalog') }}">الأصناف والأسعار</a> يختار المستخدم القسم وتظهر حقوله تلقائياً.
-        </p>
 
         <div class="stock-categories-layout">
             <div class="stock-categories-list-wrap">
@@ -37,7 +33,6 @@
                             <div class="stock-categories-fields-head">
                                 <div>
                                     <strong class="stock-categories-fields-title">حقول القسم</strong>
-                                    <p class="stock-categories-fields-hint">حدّد الخصائص التي تظهر عند إضافة صنف لهذا القسم</p>
                 </div>
                                 <button type="button" class="btn-action primary" id="btnAddCategoryField">+ حقل جديد</button>
             </div>

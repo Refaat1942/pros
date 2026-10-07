@@ -57,7 +57,7 @@
                 @endforelse
             </tbody>
         </table>
-        <p class="visit-type-reorder-hint">💡 اسحب الصف من ⋮⋮ لأعلى أو لأسفل لتغيير الترتيب — يُحفظ تلقائياً ويظهر في الاستقبال.</p>
+        <p class="visit-type-reorder-hint" hidden></p>
     </div>
 </div>
 
@@ -376,10 +376,12 @@
             search.addEventListener('input', function () {
                 if (!hint) return;
                 if (canReorderVisitTypes()) {
-                    hint.textContent = '💡 اسحب الصف من ⋮⋮ لأعلى أو لأسفل لتغيير الترتيب — يُحفظ تلقائياً ويظهر في الاستقبال.';
+                    hint.textContent = '';
+                    hint.hidden = true;
                     hint.classList.remove('is-disabled');
                 } else {
                     hint.textContent = '⚠️ أوقف البحث أولاً لتغيير ترتيب أنواع الزيارات بالسحب.';
+                    hint.hidden = false;
                     hint.classList.add('is-disabled');
                 }
             });

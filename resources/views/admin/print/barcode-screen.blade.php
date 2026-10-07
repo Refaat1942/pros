@@ -83,11 +83,6 @@
             <img src="{{ $svg_data_uri }}" alt="{{ $barcode }}" decoding="sync">
         </div>
         <div class="code">{{ $barcode }}</div>
-        <p class="hint">
-            <strong>وجّه ماسح الباركود USB</strong> نحو منتصف الشاشة ثم امسح.<br>
-            لا تحتاج طابعة — يعمل على شاشة الكمبيوتر أو التابلت.<br>
-            للوضوح: Scale = 100%، إضاءة جيدة، وابتعد 15–25 سم من الشاشة.
-        </p>
     </div>
 </body>
 </html>
