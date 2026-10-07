@@ -176,9 +176,11 @@ class SpecOrdersSubmitTest extends TestCase
             ],
         ])->assertOk();
 
+        // المسار العسكري الافتراضي يتخطى المعدلات تلقائياً (PathwayDefaultSteps::military — قابل
+        // للتغيير من إعدادات المسار) فتنتقل الحالة لتأكيد التكاليف، وتظل ظاهرة في مكتب المعدلات.
         $this->postJson("/spec/spec/{$draft->id}/submit")
             ->assertOk()
-            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS);
+            ->assertJsonPath('case.stage_key', CaseRecord::STAGE_COST_CALC);
 
         $this->actingAs($this->userWithRole('adjustments'))
             ->getJson('/adjustments/adjustments/list')
