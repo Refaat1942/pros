@@ -242,7 +242,8 @@ class AdminReportsPageTest extends TestCase
 
         $this->assertSame('الإيرادات والمالية', $report['title']);
         $this->assertSame(
-            ['رقم الحالة', 'المريض', 'أمر التشغيل', 'الفاتورة', 'الإجمالي'],
+            // الإيراد مقابل تكلفة الصرف بـ WAC (تقرير المالية الموسّع 2026-08-17).
+            ['رقم الحالة', 'المريض', 'أمر التشغيل', 'الفاتورة', 'الإيراد', 'تكلفة WAC (صرف)'],
             $report['headers'],
         );
         $this->assertSame([], $report['summary']);
@@ -474,7 +475,8 @@ class AdminReportsPageTest extends TestCase
             ->assertSee('اسم الصنف', false)
             ->assertSee('ركبة تجريبية', false)
             ->assertSee('سعر الدفعة', false)
-            ->assertDontSee('>المرجع<', false);
+            // عمود «المرجع» مقصود منذ إضافة تقارير مستويات السعر.
+            ->assertSee('>المرجع<', false);
     }
 
     public function test_price_tier_balance_report_lists_tiers_with_quantities(): void
