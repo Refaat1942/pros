@@ -36,8 +36,20 @@ class SpecEditRequestItemDiffTest extends TestCase
 
         $this->assertCount(2, $modified);
         $this->assertSame('updated', $modified[0]['change']);
-        $this->assertSame(2, $modified[0]['qty']);
-        $this->assertSame(1, $modified[0]['previous_qty']);
+        $this->assertEqualsWithDelta(2, $modified[0]['qty'], 0.0001);
+        $this->assertEqualsWithDelta(1, $modified[0]['previous_qty'], 0.0001);
         $this->assertSame('added', $modified[1]['change']);
+    }
+
+    public function test_decimal_quantities_are_kept_not_truncated(): void
+    {
+        $modified = SpecEditRequestItemDiff::modifiedItems(
+            [['stock_item_code' => 'ITM-002', 'name' => 'شريط', 'qty' => 1.5]],
+            [['stock_item_code' => 'ITM-002', 'name' => 'شريط', 'qty' => 1.75]],
+        );
+
+        $this->assertCount(1, $modified);
+        $this->assertEqualsWithDelta(1.75, $modified[0]['qty'], 0.0001);
+        $this->assertSame('شريط × 1.75 (كان ×1.5)', SpecEditRequestItemDiff::summaryLine($modified[0]));
     }
 }

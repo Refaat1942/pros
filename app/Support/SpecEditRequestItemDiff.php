@@ -8,9 +8,9 @@ namespace App\Support;
 final class SpecEditRequestItemDiff
 {
     /**
-     * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $original
-     * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $proposed
-     * @return list<array{stock_item_code: string, name: string, qty: int, change: string, previous_qty?: int}>
+     * @param  list<array{stock_item_code: string, name?: string, qty: float}>  $original
+     * @param  list<array{stock_item_code: string, name?: string, qty: float}>  $proposed
+     * @return list<array{stock_item_code: string, name: string, qty: float, change: string, previous_qty?: float}>
      */
     public static function modifiedItems(array $original, array $proposed): array
     {
@@ -25,7 +25,7 @@ final class SpecEditRequestItemDiff
             }
 
             $name = (string) ($item['name'] ?? $code);
-            $prev = (int) ($item['qty'] ?? 0);
+            $prev = round((float) ($item['qty'] ?? 0), 4);
             $next = $propByCode->get($code);
 
             if ($next === null) {
@@ -39,8 +39,8 @@ final class SpecEditRequestItemDiff
                 continue;
             }
 
-            $newQty = (int) ($next['qty'] ?? 0);
-            if ($newQty !== $prev) {
+            $newQty = round((float) ($next['qty'] ?? 0), 4);
+            if (abs($newQty - $prev) >= 0.00005) {
                 $changes[] = [
                     'stock_item_code' => $code,
                     'name' => (string) ($next['name'] ?? $name),
@@ -60,7 +60,7 @@ final class SpecEditRequestItemDiff
             $changes[] = [
                 'stock_item_code' => $code,
                 'name' => (string) ($item['name'] ?? $code),
-                'qty' => (int) ($item['qty'] ?? 0),
+                'qty' => round((float) ($item['qty'] ?? 0), 4),
                 'change' => 'added',
             ];
         }
@@ -68,21 +68,21 @@ final class SpecEditRequestItemDiff
         return $changes;
     }
 
-    /** @param array{stock_item_code?: string, name?: string, qty?: int, change?: string, previous_qty?: int} $item */
+    /** @param array{stock_item_code?: string, name?: string, qty?: float, change?: string, previous_qty?: float} $item */
     public static function summaryLine(array $item): string
     {
         $name = $item['name'] ?? $item['stock_item_code'] ?? '—';
 
         return match ($item['change'] ?? '') {
-            'removed' => 'حذف: '.$name.' (×'.(int) ($item['qty'] ?? 0).')',
-            'updated' => $name.' × '.(int) ($item['qty'] ?? 0)
-                .' (كان ×'.(int) ($item['previous_qty'] ?? 0).')',
-            default => $name.' × '.(int) ($item['qty'] ?? 0),
+            'removed' => 'حذف: '.$name.' (×'.StockQuantity::format((float) ($item['qty'] ?? 0), null).')',
+            'updated' => $name.' × '.StockQuantity::format((float) ($item['qty'] ?? 0), null)
+                .' (كان ×'.StockQuantity::format((float) ($item['previous_qty'] ?? 0), null).')',
+            default => $name.' × '.StockQuantity::format((float) ($item['qty'] ?? 0), null),
         };
     }
 
     /**
-     * @param  list<array{stock_item_code: string, name?: string, qty: int, change?: string, previous_qty?: int}>  $items
+     * @param  list<array{stock_item_code: string, name?: string, qty: float, change?: string, previous_qty?: float}>  $items
      */
     public static function summaryText(array $items): string
     {

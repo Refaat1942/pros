@@ -337,7 +337,7 @@ class SpecEditRequestService
                     'tech_order_spec_id' => $spec->id,
                     'stock_item_code' => $row['stock_item_code'],
                     'name' => $row['name'],
-                    'qty' => (int) $row['qty'],
+                    'qty' => round((float) $row['qty'], 4),
                 ]);
             }
 
@@ -497,13 +497,13 @@ class SpecEditRequestService
                             return [[
                                 'stock_item_code' => $row['stock_item_code'],
                                 'name' => $row['name'] ?? $row['stock_item_code'],
-                                'qty' => (int) ($row['qty'] ?? 0),
+                                'qty' => round((float) ($row['qty'] ?? 0), 4),
                             ]];
                         }
 
                         if (($row['change'] ?? '') === 'updated') {
-                            $prev = (int) ($row['previous_qty'] ?? 0);
-                            $next = (int) ($row['qty'] ?? 0);
+                            $prev = round((float) ($row['previous_qty'] ?? 0), 4);
+                            $next = round((float) ($row['qty'] ?? 0), 4);
                             if ($prev > $next) {
                                 return [[
                                     'stock_item_code' => $row['stock_item_code'],
@@ -548,7 +548,7 @@ class SpecEditRequestService
                         'tech_order_spec_id' => $spec->id,
                         'stock_item_code' => $row['stock_item_code'],
                         'name' => $row['name'],
-                        'qty' => (int) $row['qty'],
+                        'qty' => round((float) $row['qty'], 4),
                     ]);
                 }
             }
@@ -615,7 +615,7 @@ class SpecEditRequestService
             return [
                 'stock_item_code' => $code,
                 'name' => $item['name'] ?? $stock?->name ?? $code,
-                'qty' => (int) ($item['qty'] ?? 0),
+                'qty' => round((float) ($item['qty'] ?? 0), 4),
             ];
         })->values()->all();
     }
@@ -631,14 +631,14 @@ class SpecEditRequestService
 
         foreach ($items as $item) {
             $code = $item['stock_item_code'] ?? '';
-            $qty = (int) ($item['qty'] ?? 0);
+            $qty = round((float) ($item['qty'] ?? 0), 4);
 
             if (! StockItem::findByOperationalCode($code)) {
                 throw new InvalidSpecItemException($code);
             }
 
-            if ($qty < 1) {
-                abort(422, 'الكمية يجب أن تكون 1 على الأقل لكل بند.');
+            if ($qty <= 0) {
+                abort(422, 'الكمية يجب أن تكون أكبر من صفر لكل بند.');
             }
         }
     }

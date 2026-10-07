@@ -148,26 +148,26 @@ final class CatalogColumns
         }
 
         if (in_array($key, ['opening_qty', 'addition', 'discount'], true)) {
-            return ['html' => (string) ((int) ($item[$key] ?? 0)), 'class' => 'text-align:center;'];
+            return ['html' => StockQuantity::format((float) ($item[$key] ?? 0), null), 'class' => 'text-align:center;'];
         }
 
         if ($key === 'catalog_balance') {
-            $catalogBal = (int) ($item['catalog_balance'] ?? $item['balance'] ?? 0);
+            $catalogBal = (float) ($item['catalog_balance'] ?? $item['balance'] ?? 0);
 
-            return ['html' => (string) $catalogBal, 'class' => 'text-align:center;color:var(--text-muted);'];
+            return ['html' => StockQuantity::format($catalogBal, null), 'class' => 'text-align:center;color:var(--text-muted);'];
         }
 
         if ($key === 'warehouse_qty') {
-            $catalogBal = (int) ($item['catalog_balance'] ?? $item['balance'] ?? 0);
-            $warehouseQty = (int) ($item['warehouse_qty'] ?? $item['qty'] ?? 0);
-            $qtyMismatch = $catalogBal !== $warehouseQty;
+            $catalogBal = (float) ($item['catalog_balance'] ?? $item['balance'] ?? 0);
+            $warehouseQty = (float) ($item['warehouse_qty'] ?? $item['qty'] ?? 0);
+            $qtyMismatch = abs($catalogBal - $warehouseQty) >= 0.00005;
             $style = $qtyMismatch ? 'color:#b45309;font-weight:700;' : 'color:#059669;font-weight:700;';
             $title = $qtyMismatch
                 ? 'رصيد الكتالوج ≠ رصيد المخزن — راجع الحركات أو عدّل بيانات الاستيراد'
                 : 'رصيد المخزن الفعلي';
 
             return [
-                'html' => (string) $warehouseQty,
+                'html' => StockQuantity::format($warehouseQty, null),
                 'class' => 'text-align:center;'.$style,
                 'title' => $title,
             ];
