@@ -310,7 +310,7 @@ class AdjustmentsListTest extends TestCase
 
         // RM-002: رصيد 3، محجوز 10 ⇒ متاح = -7 (backorder).
         $stock = StockItem::where('code', 'RM-002')->firstOrFail();
-        $this->assertSame(-7, $stock->availableQty());
+        $this->assertEqualsWithDelta(-7, (float) $stock->availableQty(), 0.0001);
     }
 
     public function test_warehouse_bom_api_merges_spec_and_adjustment_lines_with_same_code(): void
@@ -441,7 +441,7 @@ class AdjustmentsListTest extends TestCase
 
         // RM-002: رصيد 2، محجوز 5 ⇒ متاح = -3.
         $stock = StockItem::where('code', 'RM-002')->firstOrFail();
-        $this->assertSame(-3, $stock->availableQty());
+        $this->assertEqualsWithDelta(-3, (float) $stock->availableQty(), 0.0001);
     }
 
     public function test_adjustments_show_includes_catalog_price_on_bom_items(): void

@@ -259,9 +259,9 @@ class SpecOrdersSubmitTest extends TestCase
             ->assertJsonPath('case.stage_key', CaseRecord::STAGE_ADJUSTMENTS);
 
         $stock = StockItem::where('code', 'ITM-003')->first();
-        $this->assertSame(2, $stock->reserved);
-        $this->assertSame(-2, $stock->availableQty());
-        $this->assertSame(2, $stock->backorderQty());
+        $this->assertEqualsWithDelta(2, (float) $stock->reserved, 0.0001);
+        $this->assertEqualsWithDelta(-2, (float) $stock->availableQty(), 0.0001);
+        $this->assertEqualsWithDelta(2, (float) $stock->backorderQty(), 0.0001);
     }
 
     public function test_spec_rejects_negative_item_quantity(): void

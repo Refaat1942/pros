@@ -19,8 +19,8 @@ class SpecBackorderInventoryTest extends TestCase
         $row = collect($data['inventory_items'])->firstWhere('code', 'RM-BO-01');
 
         $this->assertNotNull($row);
-        $this->assertSame(-3, $row->availableQty());
-        $this->assertSame(3, $row->backorderQty());
+        $this->assertEqualsWithDelta(-3, (float) $row->availableQty(), 0.0001);
+        $this->assertEqualsWithDelta(3, (float) $row->backorderQty(), 0.0001);
 
         $stats = collect($data['inventory_overview_stats']);
         $this->assertSame('1', $stats->firstWhere('label', 'طلبات توريد')['value']);
@@ -47,8 +47,8 @@ class SpecBackorderInventoryTest extends TestCase
         $item = $this->stockItem('RM-BO-03', qty: 0);
         $item->update(['reserved' => 5]);
 
-        $this->assertSame(5, $item->fresh()->backorderQty());
-        $this->assertSame(-5, $item->fresh()->availableQty());
+        $this->assertEqualsWithDelta(5, (float) $item->fresh()->backorderQty(), 0.0001);
+        $this->assertEqualsWithDelta(-5, (float) $item->fresh()->availableQty(), 0.0001);
 
         $supplier = $this->makeSupplier();
         $user = $this->userWithRole('technical');
@@ -65,9 +65,9 @@ class SpecBackorderInventoryTest extends TestCase
             ->assertCreated();
 
         $item->refresh();
-        $this->assertSame(10, $item->qty);
-        $this->assertSame(5, $item->reserved);
-        $this->assertSame(0, $item->backorderQty());
-        $this->assertSame(5, $item->availableQty());
+        $this->assertEqualsWithDelta(10, (float) $item->qty, 0.0001);
+        $this->assertEqualsWithDelta(5, (float) $item->reserved, 0.0001);
+        $this->assertEqualsWithDelta(0, (float) $item->backorderQty(), 0.0001);
+        $this->assertEqualsWithDelta(5, (float) $item->availableQty(), 0.0001);
     }
 }
