@@ -213,6 +213,13 @@ class CatalogListVisibilityService
                 'receive_quantity_basis',
                 'accounting_uom_summary',
             ],
+            // شاشة الصرف تحتاجها لتعمل — ليست أعمدة عرض: بدون fractional_uom يُعامل
+            // صنف المتر/الكيلو كقطعة (كل مسح = 1) فيستحيل صرف 0.5 كيلو مثلاً.
+            'technical_bom_items' => [
+                'stock_item_code',
+                'fractional_uom',
+                'expected_barcode',
+            ],
             default => [],
         };
 

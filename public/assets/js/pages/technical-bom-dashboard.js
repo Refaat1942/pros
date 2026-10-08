@@ -413,6 +413,8 @@
       return;
     }
     var qty = item.fractional_uom ? clientQty : 1;
+    // للقطعة: كل مسح = وحدة — لا تُرسل كمية مكتوبة للسيرفر بينما الشاشة تعدّ 1.
+    if (!item.fractional_uom) qtyRaw = '';
     var barcode = expectedBarcodeFor(item);
     if (rawBarcode !== String(item.stock_item_code || '').toUpperCase() && rawBarcode !== barcode) {
       barcode = rawBarcode;
