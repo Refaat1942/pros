@@ -458,9 +458,20 @@
 
   function hookPagination() {
     if (!global.TablePagination || global.TablePagination._sortFilterHooked) return;
+    // applyFilters() نفسها تستدعي repaginate — بدون هذا الحارس تدور refresh ↔ repaginate بلا نهاية.
+    var refreshing = false;
+    function refreshOnce(el) {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        refresh(el);
+      } finally {
+        refreshing = false;
+      }
+    }
     var origRefresh = global.TablePagination.refresh;
     global.TablePagination.refresh = function (el) {
-      refresh(el);
+      refreshOnce(el);
       return origRefresh.call(global.TablePagination, el);
     };
     if (global.TablePagination.repaginate) {
@@ -470,7 +481,7 @@
         if (table && shouldSkipTable(table)) {
           return origRepaginate.call(global.TablePagination, el);
         }
-        refresh(el);
+        refreshOnce(el);
         return origRepaginate.call(global.TablePagination, el);
       };
     }
