@@ -109,8 +109,8 @@
                             data-status-label="{{ $statusLabel($note->status) }}"
                             data-created-by="{{ $note->createdByUser?->name ?? $note->created_by ?? '—' }}"
                             data-reason="{{ $reason }}"
-                            data-authorized-at="{{ $note->authorized_at?->format('d/m/Y H:i') ?? '—' }}"
-                            data-completed-at="{{ $note->completed_at?->format('d/m/Y H:i') ?? '—' }}">
+                            data-authorized-at="{{ \App\Support\ClinicTime::format($note->authorized_at) }}"
+                            data-completed-at="{{ \App\Support\ClinicTime::format($note->completed_at) }}">
                             <td><strong style="font-family:monospace;">{{ $note->return_no }}</strong></td>
                             <td>{{ $note->bom?->bom_no ?? '—' }}</td>
                             <td><span style="font-family:monospace;font-size:12px;color:#4f46e5;">{{ $note->work_order_no ?? '—' }}</span></td>
@@ -123,8 +123,8 @@
                                 </span>
                             </td>
                             <td>{{ $note->createdByUser?->name ?? $note->created_by ?? '—' }}</td>
-                            <td>{{ $note->authorized_at?->format('d/m/Y H:i') ?? $note->created_at->format('d/m/Y H:i') }}</td>
-                            <td>{{ $note->completed_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td>{{ \App\Support\ClinicTime::format($note->authorized_at ?? $note->created_at) }}</td>
+                            <td>{{ \App\Support\ClinicTime::format($note->completed_at) }}</td>
                             <td class="col-actions">
                                 <div class="table-actions">
                                     <button type="button"

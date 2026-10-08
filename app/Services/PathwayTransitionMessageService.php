@@ -172,7 +172,15 @@ class PathwayTransitionMessageService
             }
 
             if ($case->isMilitary()) {
-                return CaseRecord::STAGE_OPERATIONS;
+                // العسكري يُعتمد أمر شغله تلقائياً بعد الاعتماد — يصل لقسم الإنتاج مباشرة.
+                return $case->stage_key === CaseRecord::STAGE_MANUFACTURING
+                    ? CaseRecord::STAGE_MANUFACTURING
+                    : CaseRecord::STAGE_OPERATIONS;
+            }
+
+            // الكاش: الاعتماد يُصدر العرض ويحوّل للخزنة مباشرة — الرسالة تتبع المرحلة الفعلية.
+            if ($case->isCashCivilian() && $case->stage_key === CaseRecord::STAGE_CASHIER) {
+                return CaseRecord::STAGE_CASHIER;
             }
 
             if ($this->pathwayConfig->resolvePathway($case->patient, $case) === PathwayStep::PATHWAY_ENTITY) {
@@ -354,7 +362,8 @@ class PathwayTransitionMessageService
             WorkflowEvent::AdjustmentsCompleted->value => 'cost_calc',
             WorkflowEvent::CostingCompleted->value => match (true) {
                 $case->needsServicesApproval() => 'services_approval',
-                $case->isMilitary() => 'operations_wo',
+                $case->isMilitary() => $case->stage_key === CaseRecord::STAGE_MANUFACTURING ? 'workshop' : 'operations_wo',
+                $case->isCashCivilian() && $case->stage_key === CaseRecord::STAGE_CASHIER => 'cashier',
                 $pathway === PathwayStep::PATHWAY_ENTITY => 'quote',
                 default => 'operations_wo',
             },

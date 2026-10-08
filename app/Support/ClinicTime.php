@@ -61,6 +61,12 @@ final class ClinicTime
         return $value->copy()->timezone(self::zone())->format($pattern);
     }
 
+    /** مثل format() لكن يُرجع null للقيمة الفارغة — يحافظ على سلاسل «?? بديل». */
+    public static function formatOrNull(?CarbonInterface $value, string $pattern = 'd/m/Y H:i'): ?string
+    {
+        return $value ? self::format($value, $pattern) : null;
+    }
+
     /**
      * @return array{from: ?Carbon, to: ?Carbon}
      */

@@ -44,7 +44,7 @@
                 {{ $employee->status === \App\Models\User::STATUS_ACTIVE ? 'نشط' : 'غير نشط' }}
             </span>
         </td>
-        <td>{{ $employee->last_login_at?->format('Y-m-d H:i') ?? '—' }}</td>
+        <td>{{ \App\Support\ClinicTime::format($employee->last_login_at, 'Y-m-d H:i') }}</td>
         <td>
             <div class="table-actions">
                 @if ($staffMode === 'department')

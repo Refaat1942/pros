@@ -34,24 +34,10 @@ final class CostingEngine
     {
         $materials = round(max(0, $materialsTotal), 2);
 
-        $components = [];
-        $componentsTotal = 0.0;
-
-        if ($mode !== null && ($mode['has_components'] ?? false)) {
-            foreach ($mode['components'] ?? [] as $component) {
-                $rate = round((float) ($component['rate'] ?? 0), 2);
-                $amount = round($materials * ($rate / 100), 2);
-                $componentsTotal += $amount;
-
-                $components[] = [
-                    'label' => (string) ($component['label'] ?? ''),
-                    'rate' => $rate,
-                    'amount' => $amount,
-                ];
-            }
-        }
-
-        $componentsTotal = round($componentsTotal, 2);
+        $components = $mode !== null && ($mode['has_components'] ?? false)
+            ? $this->allocateComponents($materials, $mode['components'] ?? [])
+            : [];
+        $componentsTotal = round(array_sum(array_column($components, 'amount')), 2);
         $totalCost = round($materials + $componentsTotal, 2);
 
         $profitRate = $mode !== null ? round((float) ($mode['profit_rate'] ?? 0), 2) : 0.0;
@@ -103,22 +89,10 @@ final class CostingEngine
         $quick = round(max(0, $quickMaterials), 2);
 
         // مكوّنات الطرف الصناعي — تُحسب على مواد الطرف فقط (لا تُطبَّق على الصرف السريع).
-        $components = [];
-        $componentsTotal = 0.0;
-        if ($base > 0 && $limbProfile !== null && ($limbProfile['has_components'] ?? false)) {
-            foreach ($limbProfile['components'] ?? [] as $component) {
-                $rate = round((float) ($component['rate'] ?? 0), 2);
-                $amount = round($base * ($rate / 100), 2);
-                $componentsTotal += $amount;
-
-                $components[] = [
-                    'label' => (string) ($component['label'] ?? ''),
-                    'rate' => $rate,
-                    'amount' => $amount,
-                ];
-            }
-        }
-        $componentsTotal = round($componentsTotal, 2);
+        $components = $base > 0 && $limbProfile !== null && ($limbProfile['has_components'] ?? false)
+            ? $this->allocateComponents($base, $limbProfile['components'] ?? [])
+            : [];
+        $componentsTotal = round(array_sum(array_column($components, 'amount')), 2);
 
         $baseProfitRate = $base > 0 && $limbProfile !== null ? round((float) ($limbProfile['profit_rate'] ?? 0), 2) : 0.0;
         $baseTotalCost = round($base + $componentsTotal, 2);
@@ -153,5 +127,49 @@ final class CostingEngine
             'profit_amount' => $profitAmount,
             'selling_price' => $sellingPrice,
         ];
+    }
+
+    /**
+     * مبالغ المكوّنات بالقرش — الإجمالي = round(المواد × مجموع النسب) ويُوزَّع فرق التقريب
+     * على البنود ذات أكبر كسر. تقريب كل بند منفرداً كان يزيد الإجمالي قرشاً أو أكثر
+     * (مثال: 2.72 × 100% = 2.73) فيرتفع سعر البيع دون سبب.
+     *
+     * @param  list<array{label?:string, rate?:float}>  $definitions
+     * @return list<array{label:string, rate:float, amount:float}>
+     */
+    private function allocateComponents(float $materials, array $definitions): array
+    {
+        $rows = [];
+        $rateSum = 0.0;
+        foreach ($definitions as $component) {
+            $rate = round((float) ($component['rate'] ?? 0), 2);
+            $rateSum += $rate;
+            $exactCents = $materials * $rate;   // = materials × rate/100 × 100
+            $rows[] = [
+                'label' => (string) ($component['label'] ?? ''),
+                'rate' => $rate,
+                'cents' => (int) floor($exactCents + 1e-9),
+                'fraction' => $exactCents - floor($exactCents + 1e-9),
+            ];
+        }
+
+        $targetCents = (int) round($materials * $rateSum);
+        $leftover = $targetCents - array_sum(array_column($rows, 'cents'));
+
+        $order = array_keys($rows);
+        usort($order, fn ($a, $b) => $rows[$b]['fraction'] <=> $rows[$a]['fraction'] ?: $a <=> $b);
+        foreach ($order as $i) {
+            if ($leftover <= 0) {
+                break;
+            }
+            $rows[$i]['cents']++;
+            $leftover--;
+        }
+
+        return array_map(fn (array $r) => [
+            'label' => $r['label'],
+            'rate' => $r['rate'],
+            'amount' => round($r['cents'] / 100, 2),
+        ], $rows);
     }
 }

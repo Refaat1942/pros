@@ -29,6 +29,16 @@ class FinancialPostingService
             return;
         }
 
+        // نفس مطالبة الصرف: بدونها يُرحَّل المستحق عند التسليم دون تعليم الحالة كمُرحَّلة
+        // فتغيب عن تقرير المطابقة ولا يمنع شيء ترحيلاً ثانياً.
+        $claimed = CaseRecord::where('id', $case->id)
+            ->whereNull('ledger_posted_at')
+            ->update(['ledger_posted_at' => now()]);
+
+        if ($claimed === 0) {
+            return;
+        }
+
         $this->postCivilianAmount(
             $case,
             ContractBillingSplit::companyDue($case, (float) ($case->quote_total ?? 0))

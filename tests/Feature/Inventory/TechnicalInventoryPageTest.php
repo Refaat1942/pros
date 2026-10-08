@@ -96,6 +96,9 @@ class TechnicalInventoryPageTest extends TestCase
             $this->assertArrayNotHasKey('unit_cost', $row);
             $this->assertArrayNotHasKey('price', $row);
             $this->assertArrayNotHasKey('wac', $row);
+            // شاشة الصرف تعتمد عليها — لا يحذفها فلتر الأعمدة.
+            $this->assertArrayHasKey('fractional_uom', $row);
+            $this->assertArrayHasKey('expected_barcode', $row);
         }
     }
 

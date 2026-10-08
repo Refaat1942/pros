@@ -79,9 +79,9 @@
                                 <div class="text-xs text-slate-400">{{ $case->patient?->phone ?? '' }}</div>
                             </td>
                             <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ $quote?->quote_no ?? $case->quote_no ?? '—' }}</td>
-                            <td class="px-4 py-3 font-bold text-emerald-700">{{ number_format($amountDue, 0) }} ج.م</td>
-                            <td class="px-4 py-3 font-semibold text-slate-700">{{ number_format($paid, 0) }} ج.م</td>
-                            <td class="px-4 py-3 font-bold {{ $remaining > 0 ? 'text-amber-700' : 'text-emerald-700' }}">{{ number_format($remaining, 0) }} ج.م</td>
+                            <td class="px-4 py-3 font-bold text-emerald-700">{{ number_format($amountDue, 2) }} ج.م</td>
+                            <td class="px-4 py-3 font-semibold text-slate-700">{{ number_format($paid, 2) }} ج.م</td>
+                            <td class="px-4 py-3 font-bold {{ $remaining > 0 ? 'text-amber-700' : 'text-emerald-700' }}">{{ number_format($remaining, 2) }} ج.م</td>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if ($quote)
                                     <a href="{{ route('cashier.quote.print', $quote) }}" target="_blank" rel="noopener"

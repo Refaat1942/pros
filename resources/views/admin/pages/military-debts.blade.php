@@ -82,7 +82,7 @@
                         $collectionSummary = $collectionPkg['collection_summary'];
                         $collectionEntries = $collectionPkg['collection_entries'];
                         $lastCollectedAt = $collectionSummary['last_collected_at']
-                            ?? $debt->collected_at?->format('d/m/Y H:i');
+                            ?? \App\Support\ClinicTime::formatOrNull($debt->collected_at);
                     @endphp
                     <tr class="mil-debt-row"
                         data-id="{{ $debt->id }}"
@@ -117,8 +117,9 @@
                         </td>
                         <td><strong>{{ $debt->patient_name }}</strong></td>
                         <td>
+                            {{-- العمود «الرقم العسكري» — السجل يحفظ القومي فقط، فيُقرأ العسكري من ملف المريض. --}}
                             <span style="font-family:monospace;font-size:12px;color:#64748b;">
-                                {{ $debt->patient_national_id ?? '—' }}
+                                {{ $debt->caseRecord?->patient?->military_number ?: ($debt->patient_national_id ?? '—') }}
                             </span>
                         </td>
                         <td>

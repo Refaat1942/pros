@@ -55,7 +55,7 @@
                         <td><strong>{{ $contract->patient_name }}</strong></td>
                         <td class="contract-company">{{ $contract->company_name }}</td>
                         <td class="contract-amount">
-                            <strong>{{ number_format((float)$contract->approved_amount, 0) }} ج.م</strong>
+                            <strong>{{ number_format((float)$contract->approved_amount, 2) }} ج.م</strong>
                         </td>
                         <td>{{ $contract->approval_date?->format('d/m/Y') ?? '—' }}</td>
                         <td><span class="font-mono text-xs">{{ $contract->work_order_no ?? '—' }}</span></td>
