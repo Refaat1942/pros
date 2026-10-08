@@ -7,7 +7,7 @@
     $dateDisplay = now()->format('d/m/Y');
     $approvalNo = $case->quote_no ?? '—';
     $approvalDate = $case->approval_date?->format('d/m/Y') ?? '—';
-    $valueDisplay = $previewValueDisplay ?? number_format(CaseFinancialSummary::billableAmount($case), 0);
+    $valueDisplay = $previewValueDisplay ?? number_format(CaseFinancialSummary::billableAmount($case), 2);
     $printCtx = \App\Support\DocumentPrintContext::fromRequest(request(), $case);
     $tpl = $documentTemplate ?? app(\App\Services\DocumentTemplateService::class)->for(
         'work_order',

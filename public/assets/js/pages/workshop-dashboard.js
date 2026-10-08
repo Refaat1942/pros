@@ -407,10 +407,13 @@
       avg_progress: summary.avg_progress != null ? summary.avg_progress + '%' : null,
     };
 
-    analytics.querySelectorAll('[data-stat-key]').forEach(function (el) {
+    var keyed = analytics.querySelectorAll('[data-stat-key]');
+    keyed.forEach(function (el) {
       var key = el.getAttribute('data-stat-key');
       if (statMap[key] != null) el.textContent = statMap[key];
     });
+    // البطاقات المفتاحية تُحدَّث بالمفتاح — الترتيب بالموضع يخص البطاقات القديمة فقط (أولها «بانتظار التخصيص» الآن).
+    if (keyed.length) return;
 
     var values = analytics.querySelectorAll('.ck-stat-value');
     if (values.length >= 4) {

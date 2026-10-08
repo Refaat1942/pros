@@ -734,6 +734,8 @@
       barcodeInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
           e.preventDefault();
+          // الماسح يكتب الكود ثم Enter — بدون إلغاء المؤقّت يُضاف نفس الصنف مرة ثانية بعد 150ms.
+          if (scanDebounce) { clearTimeout(scanDebounce); scanDebounce = null; }
           var qtyInput = $('dispenseQtyInput');
           var item = findItemForScan(e.target.value);
           if (item && item.fractional_uom && qtyInput && !String(qtyInput.value || '').trim()) {
@@ -764,6 +766,7 @@
         var pasted = (e.clipboardData && e.clipboardData.getData('text')) || '';
         if (pasted.trim()) {
           e.preventDefault();
+          if (scanDebounce) { clearTimeout(scanDebounce); scanDebounce = null; }
           barcodeInput.value = sanitizeScanInput(pasted);
           var qtyInput = $('dispenseQtyInput');
           var item = findItemForScan(barcodeInput.value);

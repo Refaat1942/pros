@@ -6,6 +6,12 @@
   // M-15: قراءة رمز CSRF بأمان حتى لو غاب الـ meta (يمنع خطأ JS صريحاً).
   function csrfToken() { return csrf ? csrf.getAttribute('content') : ''; }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  // التواريخ تصل بتوقيت UTC — تُعرض بتوقيت العيادة.
+  function fmtDate(iso) {
+    var d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) return String(iso || '').slice(0, 16).replace('T', ' ');
+    return d.toLocaleString('sv-SE', { timeZone: 'Africa/Cairo', hour12: false }).slice(0, 16);
+  }
 
   function countScansByCode(lines, bomItems) {
     var counts = {};
@@ -75,7 +81,7 @@
           return '<tr><td>' + esc(row.case && row.case.case_no) + '</td><td>' + esc(row.work_order_no) + '</td><td>' +
             esc(row.patient_name) + '</td><td>' + esc(row.bom && row.bom.bom_no) + '</td><td>' +
             esc(row.lines_count || 0) + '</td><td>' +
-            esc(row.requested_by && row.requested_by.name) + '</td><td>' + esc((row.created_at || '').slice(0, 16).replace('T', ' ')) +
+            esc(row.requested_by && row.requested_by.name) + '</td><td>' + esc(fmtDate(row.created_at)) +
             '</td><td style="white-space:nowrap;">' +
             '<button type="button" class="btn-action btn-view-dispense" data-id="' + row.id + '">👁️ عرض</button> ' +
             '<button type="button" class="btn-action success btn-approve-dispense" data-id="' + row.id + '">✅ اعتماد</button> ' +

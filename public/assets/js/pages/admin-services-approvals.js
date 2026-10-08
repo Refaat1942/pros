@@ -6,6 +6,12 @@
   var labels = window.__BENEFICIARY_LABELS || {};
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  // التواريخ تصل بتوقيت UTC — تُعرض بتوقيت العيادة.
+  function fmtDate(iso) {
+    var d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) return String(iso || '').slice(0, 16).replace('T', ' ');
+    return d.toLocaleString('sv-SE', { timeZone: 'Africa/Cairo', hour12: false }).slice(0, 16);
+  }
 
   function load() {
     fetch('/admin/services-approvals/list', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
@@ -20,7 +26,7 @@
         tbody.innerHTML = data.map(function (row) {
           var cat = row.patient && row.patient.military_beneficiary_category;
           return '<tr><td>' + esc(row.case && row.case.case_no) + '</td><td>' + esc(row.patient && row.patient.name) + '</td><td>' +
-            esc(labels[cat] || cat || '—') + '</td><td>' + esc((row.created_at || '').slice(0, 16).replace('T', ' ')) +
+            esc(labels[cat] || cat || '—') + '</td><td>' + esc(fmtDate(row.created_at)) +
             '</td><td><button type="button" class="btn-action success btn-approve-services" data-case-id="' +
             (row.case && row.case.id) + '">✅ تصديق</button></td></tr>';
         }).join('');

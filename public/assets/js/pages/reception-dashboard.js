@@ -72,6 +72,8 @@
               status:      q.status,
               statusLabel: q.status_label,
               approvalLetter: q.approval_letter || null,
+              // عرض الكاش يُحصَّل في الخزنة — لا خطاب موافقة جهة.
+              isCash:      !q.company_name,
               items:       (q.items || []).map(function (i) {
                 return { name: i.name, qty: i.qty, amount: parseFloat(i.amount) || 0 };
               })
@@ -394,7 +396,7 @@
         var issueBtn = q.status === 'pending' && q._dbId
           ? ' <button type="button" class="btn btn-primary" style="padding:6px 14px;font-size:12px;margin-right:4px;" onclick="issueQuoteToEntity(' + q._dbId + ')">إصدار للجهة</button>'
           : '';
-        var ocrBtn = q.status === 'issued'
+        var ocrBtn = q.status === 'issued' && !q.isCash
           ? ' <button type="button" class="btn" style="padding:6px 14px;font-size:12px;margin-right:4px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="openOcrApprovalModal(quotations.find(function(x){return x.id===\'' + q.id + '\';}))">📄 رفع خطاب الموافقة</button>'
           : '';
         var letterBtn = (q.approvalLetter && q.approvalLetter.has_letter && q.approvalLetter.letter_url)
