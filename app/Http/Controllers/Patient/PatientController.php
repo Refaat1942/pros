@@ -63,14 +63,21 @@ class PatientController extends Controller
     public function store(StorePatientRequest $request): RedirectResponse|JsonResponse
     {
         $patient = $this->patientService->register($request->validated());
+        $returning = ! $patient->wasRecentlyCreated;
+        $message = $returning
+            ? "المريض «{$patient->name}» مسجّل مسبقاً برقم {$patient->patient_code} — أُضيف للجدولة بنفس رقمه."
+            : "تم تسجيل المريض «{$patient->name}» — {$patient->patient_code}.";
 
         if ($request->expectsJson()) {
-            return response()->json($this->formatPatientCard($patient), 201);
+            return response()->json($this->formatPatientCard($patient) + [
+                'already_registered' => $returning,
+                'message' => $message,
+            ], 201);
         }
 
         return redirect()
             ->back()
-            ->with('success', "تم تسجيل المريض «{$patient->name}» — {$patient->patient_code}.");
+            ->with('success', $message);
     }
 
     /**

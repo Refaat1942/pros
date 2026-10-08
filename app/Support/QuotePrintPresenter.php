@@ -139,6 +139,7 @@ final class QuotePrintPresenter
             'entity' => trim((string) ($quote->company_name ?: $case?->company_name ?: $case?->sovereign_entity ?: 'نقدي')),
             'patient_name' => $rank !== '' && ! str_starts_with($name, $rank) ? "{$rank} / {$name}" : $name,
             'age' => self::ageFromNationalId((string) ($patient?->national_id ?? ''), $date),
+            'patient_code' => (string) ($patient?->patient_code ?? ''),
             'injury' => trim((string) ($record?->diagnosis ?? '')),
             'injury_year' => '',
             'spec_rows' => $specRows,

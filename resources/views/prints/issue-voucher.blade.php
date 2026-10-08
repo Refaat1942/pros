@@ -131,8 +131,10 @@
                 <td>{{ $caseNo }}</td>
             </tr>
             <tr>
+                <th>رقم المريض</th>
+                <td class="mono">{{ $voucher['patient_code'] ?? '—' }}</td>
                 <th>التاريخ</th>
-                <td colspan="3">{{ now()->format('d/m/Y') }}</td>
+                <td>{{ now()->format('d/m/Y') }}</td>
             </tr>
         </tbody>
     </table>

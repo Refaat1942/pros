@@ -487,6 +487,10 @@
             <td class="value value--narrow">{{ $doc['age'] !== null ? $doc['age'].' عام' : '' }}</td>
         </tr>
         <tr>
+            <td class="label">رقم المريض</td>
+            <td class="value" colspan="3">{{ $doc['patient_code'] ?? '' }}</td>
+        </tr>
+        <tr>
             <td class="label">نوع الإصابة</td>
             <td class="value">{{ $doc['injury'] }}</td>
             <td class="label label--narrow">تاريخها</td>

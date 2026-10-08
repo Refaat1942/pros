@@ -47,6 +47,7 @@ class IssueVoucherPresenter
             'voucher_no' => $quote?->order_ref ?: ($bom->order_ref ?: ($case?->order_ref ?? '—')),
             'work_order_no' => $case?->work_order_no,
             'case_no' => $case?->case_no,
+            'patient_code' => $case?->patient?->patient_code,
             'patient_name' => $quote?->patient_name ?: ($bom->patient_name ?: ($case?->patient?->name ?? '—')),
             'company_name' => $quote?->company_name ?: ($case?->displayEntity() ?? '—'),
             'written_items' => $spec?->written_items,

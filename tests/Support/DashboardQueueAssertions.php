@@ -45,12 +45,13 @@ trait DashboardQueueAssertions
             'contract_company_id' => $company->id,
             'visit_type_id' => $visitType->id,
             'phone' => '01011112222',
-            'national_id' => '29901010100999',
+            // رقم قومي مختلف لكل مريض — نفس الرقم القومي يعني نفس المريض (ملف ورقم واحد).
+            'national_id' => '2990101'.str_pad((string) (crc32($name) % 10_000_000), 7, '0', STR_PAD_LEFT),
         ]);
 
         $response->assertCreated();
 
-        return Patient::where('name', $name)->firstOrFail();
+        return Patient::findOrFail((int) $response->json('id'));
     }
 
     protected function registerCashPatientHttp(User $reception, string $name = 'مريض نقدي'): Patient

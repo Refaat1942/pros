@@ -61,16 +61,8 @@ final class ContractBillingSplit
             return self::patientPaysAll($gross);
         }
 
-        if ($discountPct >= 100) {
-            return [
-                'gross_total' => $gross,
-                'patient_share' => 0.0,
-                'company_share' => $gross,
-                'company_share_percent' => 100.0,
-                'patient_share_percent' => 0.0,
-            ];
-        }
-
+        // النسبة كما يحدّدها السوبر أدمن تُطبَّق كما هي حتى 100% (الصافي صفر) —
+        // كان 100% يُرحِّل الإجمالي كاملاً على الجهة بينما عرض السعر يُظهر صفراً.
         $patientShare = round($gross * (1 - $discountPct / 100), 2);
 
         return [
@@ -102,7 +94,7 @@ final class ContractBillingSplit
         $case->loadMissing('contractCompany');
         $discountPct = min(100, max(0, (float) ($case->contractCompany?->discount_percent ?? 0)));
 
-        if ($discountPct <= 0 || $discountPct >= 100) {
+        if ($discountPct <= 0) {
             return $gross;
         }
 
