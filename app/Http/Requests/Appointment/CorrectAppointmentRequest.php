@@ -18,7 +18,13 @@ class CorrectAppointmentRequest extends BaseRequest
         return [
             'name' => $this->personNameRules(),
             'phone' => $this->egyptianMobileRules(required: $policy->isRequired('appointment', 'phone')),
-            'national_id' => $this->egyptianNationalIdRules(required: $policy->isRequired('reception', 'national_id')),
+            // الرقم القومي لشخص واحد فقط — لا يُنقل لملف مريض آخر بالتصحيح.
+            'national_id' => [
+                ...$this->egyptianNationalIdRules(required: $policy->isRequired('reception', 'national_id')),
+                Rule::unique('patients', 'national_id')->ignore(
+                    $this->route('appointment') instanceof Appointment ? $this->route('appointment')->patient_id : null
+                ),
+            ],
             'visit_type_id' => ['required', 'integer', Rule::exists('visit_types', 'id')],
             'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
             'military_rank_id' => ['nullable', 'integer', 'exists:military_ranks,id'],
@@ -63,5 +69,12 @@ class CorrectAppointmentRequest extends BaseRequest
                 $validator->errors()->add('military_weapon', 'السلاح / الفرع مطلوب.');
             }
         });
+    }
+
+    public function messages(): array
+    {
+        return [
+            'national_id.unique' => 'هذا الرقم القومي مسجّل لمريض آخر — لكل مريض رقم قومي واحد.',
+        ];
     }
 }

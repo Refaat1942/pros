@@ -48,6 +48,59 @@ class PatientUniqueNumberTest extends TestCase
         $this->assertSame($company->id, Patient::find($first->json('id'))->contract_company_id);
     }
 
+    public function test_correction_cannot_give_a_patient_another_patients_national_id(): void
+    {
+        $user = $this->userWithRole('reception');
+        $visitType = VisitType::create(['name' => 'كشف أولي']);
+
+        $this->actingAs($user)->postJson('/reception/patients', [
+            'name' => 'مريض أول',
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'national_id' => '29901011234567',
+            'visit_type_id' => $visitType->id,
+        ])->assertCreated();
+
+        $second = $this->actingAs($user)->postJson('/reception/patients', [
+            'name' => 'مريض ثاني',
+            'patient_type' => Patient::TYPE_CIVILIAN,
+            'national_id' => '29901017654321',
+            'visit_type_id' => $visitType->id,
+        ])->assertCreated();
+
+        $appointment = Appointment::where('patient_id', $second->json('id'))->firstOrFail();
+
+        $this->actingAs($user)
+            ->patchJson("/reception/appointments/{$appointment->id}/correct", [
+                'name' => 'مريض ثاني',
+                'phone' => '01099998888',
+                'national_id' => '29901011234567',
+                'visit_type_id' => $visitType->id,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('national_id')
+            ->assertJsonMissingValidationErrors(['name', 'phone', 'visit_type_id']);
+
+        // تصحيح الملف بنفس رقمه القومي مسموح.
+        $this->actingAs($user)
+            ->patchJson("/reception/appointments/{$appointment->id}/correct", [
+                'name' => 'مريض ثاني مصحح',
+                'phone' => '01099998888',
+                'national_id' => '29901017654321',
+                'visit_type_id' => $visitType->id,
+            ])
+            ->assertOk();
+
+        $this->assertSame(1, Patient::where('national_id', '29901011234567')->count());
+    }
+
+    public function test_database_rejects_two_patients_with_same_national_id(): void
+    {
+        $this->civilianPatient($this->civilianCompany())->update(['national_id' => '29901015555555']);
+
+        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->civilianPatient($this->civilianCompany())->update(['national_id' => '29901015555555']);
+    }
+
     public function test_patient_codes_order_refs_and_pricing_numbers_never_overlap(): void
     {
         // كل الأرقام المرشحة نفس الرقم — الثاني والثالث يجب أن يرفضا ويأخذا رقماً آخر.
