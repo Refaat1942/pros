@@ -190,6 +190,25 @@ class ContractCompanyDiscountTest extends TestCase
         $this->assertSame(3600.0, ContractBillingSplit::companyDue($case->fresh(['contractCompany']), 4000));
     }
 
+    /** النسبة كما يحدّدها السوبر أدمن — العرض والمديونية متطابقان عند كل نسبة حتى 100%. */
+    public function test_admin_discount_applies_consistently_to_quote_and_debt_at_every_percent(): void
+    {
+        $company = $this->civilianCompany('تأمين متغيّر');
+        $patient = $this->civilianPatient($company);
+        $case = $this->caseAtStage($patient, CaseRecord::STAGE_MANUFACTURING);
+        $case->update(['contract_company_id' => $company->id, 'quote_total' => 1000]);
+
+        foreach ([[5, 950.0], [15, 850.0], [33.33, 666.7], [99, 10.0], [100, 0.0]] as [$pct, $expectedNet]) {
+            $company->update(['discount_percent' => $pct]);
+            $fresh = $case->fresh(['contractCompany']);
+
+            $split = ContractBillingSplit::forCase($fresh, 1000);
+            $this->assertSame($expectedNet, $split['patient_share'], "{$pct}% net");
+            $this->assertSame($expectedNet, $split['company_share'], "{$pct}% company share");
+            $this->assertSame($expectedNet, ContractBillingSplit::companyDue($fresh, 1000), "{$pct}% posted debt");
+        }
+    }
+
     public function test_work_order_print_shows_net_amount_after_contract_discount(): void
     {
         $company = $this->civilianCompany('التأمين الصحي');
@@ -218,6 +237,8 @@ class ContractCompanyDiscountTest extends TestCase
             ->get(route('operations.work-order.print', $case))
             ->assertOk()
             ->assertSee('3,600', false)
-            ->assertSee('WO-2026-0001', false);
+            ->assertSee('WO-2026-0001', false)
+            ->assertSee('رقم المريض', false)
+            ->assertSee((string) $patient->patient_code, false);
     }
 }

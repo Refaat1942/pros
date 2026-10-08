@@ -27,6 +27,20 @@ class PatientService
     public function register(array $data): Patient
     {
         return DB::transaction(function () use ($data) {
+            // نفس الرقم القومي = نفس المريض: لا ملف ولا رقم مريض ثانٍ — زيارة جديدة على ملفه.
+            $nationalId = trim((string) ($data['national_id'] ?? ''));
+            if ($nationalId !== '') {
+                $existing = Patient::query()
+                    ->where('national_id', $nationalId)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existing) {
+                    return $this->registerReturningPatient($existing, $data);
+                }
+            }
+
             $type = $data['patient_type'];
             $patientCode = $this->nextPatientCode($type);
             $patientSerial = $this->nextPatientSerial();
@@ -103,6 +117,68 @@ class PatientService
     }
 
     /**
+     * مريض عائد سُجِّل مرة أخرى من الاستقبال: يبقى رقمه وملفه، تُحدَّث بيانات الفوترة الحالية
+     * (التصنيف/الجهة/البيانات العسكرية كما أدخلها الاستقبال الآن) ويُضاف للجدولة.
+     */
+    private function registerReturningPatient(Patient $patient, array $data): Patient
+    {
+        $before = $this->auditSnapshot($patient);
+        $type = $data['patient_type'];
+
+        $updates = [
+            'patient_type' => $type,
+            'last_visit_at' => ClinicTime::todayDateString(),
+        ];
+        if (! empty($data['phone'])) {
+            $updates['phone'] = $data['phone'];
+        }
+
+        if ($type === Patient::TYPE_MILITARY) {
+            $updates += [
+                'sovereign_entity' => Patient::MILITARY_SOVEREIGN_ENTITY,
+                'military_rank_id' => $data['military_rank_id'] ?? $patient->military_rank_id,
+                'military_number' => $data['military_number'] ?? $patient->military_number,
+                'seniority_number' => $data['seniority_number'] ?? $patient->seniority_number,
+                'military_weapon' => $data['military_weapon'] ?? $patient->military_weapon,
+                'military_beneficiary_category' => $data['military_beneficiary_category'] ?? $patient->military_beneficiary_category,
+            ];
+            if (! empty($updates['military_rank_id'])) {
+                $updates['rank'] = MilitaryRank::where('id', $updates['military_rank_id'])->value('name');
+            }
+        } else {
+            $companyId = $data['contract_company_id'] ?? null;
+            $updates += [
+                'contract_company_id' => $companyId,
+                'company_name' => $companyId ? ContractCompany::where('id', $companyId)->value('name') : null,
+                'sovereign_entity' => null,
+                'military_beneficiary_category' => null,
+            ];
+        }
+
+        $patient->update($updates);
+
+        AuditService::log(
+            action: 'update',
+            description: "مريض مسجّل مسبقاً {$patient->patient_code} — زيارة جديدة بنفس الرقم",
+            tag: 'patients',
+            before: $before,
+            after: $this->auditSnapshot($patient->fresh()),
+        );
+
+        $clinicDay = ClinicTime::clinicDayDateString();
+        $this->appointmentService->book([
+            'patient_id' => $patient->id,
+            'appointment_date' => ClinicTime::todayDateString(),
+            'visit_type_id' => $data['visit_type_id'],
+            'clinic_day' => $clinicDay,
+            'queue_number' => Appointment::nextQueueNumber($clinicDay),
+        ]);
+
+        // wasRecentlyCreated = false هنا — المتحكم يميّز به المريض العائد.
+        return $patient->fresh()->load('contractCompany');
+    }
+
+    /**
      * تحديث الحقول غير الثابتة (الهاتف، جهة التعاقد).
      * patient_code و patient_qr لا يُعدَّلان أبداً.
      */
@@ -137,11 +213,12 @@ class PatientService
     {
         unset($type);
 
-        do {
-            $code = (string) random_int(100000, 999999);
-        } while (Patient::where('patient_code', $code)->exists());
-
-        return $code;
+        // رقم المريض فريد في كل الأنواع — لا يُعاد استخدامه كرقم طلب أو طلب تسعير.
+        return \App\Support\ReservedNumber::claim(
+            \App\Support\ReservedNumber::KIND_PATIENT,
+            fn () => (string) random_int(100000, 999999),
+            fn (string $code) => Patient::where('patient_code', $code)->exists(),
+        );
     }
 
     /**

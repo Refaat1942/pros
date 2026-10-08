@@ -107,12 +107,10 @@
                 <th>استلمنا من السيد/ة</th>
                 <td class="txt-right">{{ $receipt['patient_name'] }}</td>
             </tr>
-            @if(!empty($receipt['patient_serial']))
             <tr>
-                <th>سيريال ملف المريض</th>
-                <td class="txt-right">{{ $receipt['patient_serial'] }}</td>
+                <th>رقم المريض</th>
+                <td class="txt-right">{{ $receipt['patient_code'] ?? '—' }}</td>
             </tr>
-            @endif
             <tr>
                 <th>الجهة</th>
                 <td class="txt-right">{{ $receipt['entity'] }}</td>

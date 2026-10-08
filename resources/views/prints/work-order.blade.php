@@ -96,6 +96,7 @@
                 <div>إذن شغل رقم: <span class="fill">{{ $case->work_order_no ?? '—' }}</span></div>
                 <div>التاريخ: <span class="fill">{{ $dateDisplay }}</span> م</div>
                 <div>رقم الحالة: <span class="fill">{{ $case->case_no }}</span></div>
+                <div>رقم المريض: <span class="fill">{{ $patient?->patient_code ?? '—' }}</span></div>
             </div>
         </div>
     </header>

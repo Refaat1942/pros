@@ -108,6 +108,7 @@
             <div class="header-meta">
                 <div class="serial-red">{{ $spec->order_ref }}</div>
                 <div>رقم الحالة: <span class="fill" style="min-width:16mm;">{{ $case?->case_no ?? '—' }}</span></div>
+                <div>رقم المريض: <span class="fill" style="min-width:16mm;">{{ $case?->patient?->patient_code ?? '—' }}</span></div>
                 <div>تاريخ الإرسال: <span class="fill" style="min-width:22mm;">{{ $dateDisplay }}</span>م</div>
             </div>
         </div>

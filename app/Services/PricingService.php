@@ -243,10 +243,10 @@ class PricingService
 
     public function nextRequestNo(): string
     {
-        do {
-            $requestNo = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
-        } while (PricingRequest::where('request_no', $requestNo)->lockForUpdate()->exists());
-
-        return $requestNo;
+        return \App\Support\ReservedNumber::claim(
+            \App\Support\ReservedNumber::KIND_PRICING_REQUEST,
+            fn () => str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT),
+            fn (string $no) => PricingRequest::where('request_no', $no)->exists(),
+        );
     }
 }

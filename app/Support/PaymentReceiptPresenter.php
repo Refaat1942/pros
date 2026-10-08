@@ -56,6 +56,8 @@ class PaymentReceiptPresenter
             'case_no' => $case?->case_no,
             'order_ref' => $case?->order_ref,
             'patient_serial' => $payment->patient?->patient_serial,
+            // نفس رقم المريض المطبوع على كل مستنداته (عرض السعر، التوصيف، أمر الشغل، إذن الصرف).
+            'patient_code' => $payment->patient?->patient_code,
             'patient_name' => $payment->patient_name ?: ($payment->patient?->name ?? '—'),
             'entity' => $case?->displayEntity() ?? '—',
             'amount' => $amount,
