@@ -107,7 +107,7 @@ class CashierDeskController extends Controller
                 'amount' => (float) $p->amount,
                 'method' => $p->method,
                 'method_label' => $p->methodLabel(),
-                'received_at' => $p->received_at?->format('d/m/Y H:i'),
+                'received_at' => \App\Support\ClinicTime::formatOrNull($p->received_at),
                 'receipt_url' => route('cashier.payments.receipt', $p),
             ])->values(),
         ]);

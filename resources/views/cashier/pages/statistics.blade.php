@@ -27,7 +27,7 @@
                 <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
                     <span class="font-semibold text-slate-700">{{ $row['method'] }}</span>
                     <span class="text-xs text-slate-400">{{ $row['count'] }} دفعة</span>
-                    <span class="font-bold text-emerald-700">{{ number_format($row['total'], 0) }} ج.م</span>
+                    <span class="font-bold text-emerald-700">{{ number_format($row['total'], 2) }} ج.م</span>
                 </div>
             @empty
                 <p class="text-center text-slate-400 py-6">لا توجد دفعات بعد.</p>
@@ -61,7 +61,7 @@
                             <td class="px-4 py-3">
                                 <span class="text-xs font-bold px-2 py-1 rounded-lg bg-cyan-100 text-cyan-800">{{ $payment->methodLabel() }}</span>
                             </td>
-                            <td class="px-4 py-3 font-bold text-emerald-700">{{ number_format((float) $payment->amount, 0) }} ج.م</td>
+                            <td class="px-4 py-3 font-bold text-emerald-700">{{ number_format((float) $payment->amount, 2) }} ج.م</td>
                             <td class="px-4 py-3 text-xs text-slate-500">{{ \App\Support\ClinicTime::format($payment->received_at, 'd/m/Y H:i') }}</td>
                             <td class="px-4 py-3">
                                 <a href="{{ route('cashier.payments.receipt', $payment) }}" target="_blank" rel="noopener"

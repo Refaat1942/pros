@@ -82,7 +82,7 @@
                         $collectionSummary = $collectionPkg['collection_summary'];
                         $collectionEntries = $collectionPkg['collection_entries'];
                         $lastCollectedAt = $collectionSummary['last_collected_at']
-                            ?? $debt->collected_at?->format('d/m/Y H:i');
+                            ?? \App\Support\ClinicTime::formatOrNull($debt->collected_at);
                     @endphp
                     <tr class="mil-debt-row"
                         data-id="{{ $debt->id }}"

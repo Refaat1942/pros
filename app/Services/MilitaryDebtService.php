@@ -17,12 +17,18 @@ class MilitaryDebtService
 
     public function recordPayment(MilitaryDebt $debt, float $amount): MilitaryDebt
     {
-        if ($debt->isCollected()) {
-            throw new \InvalidArgumentException('السجل مجمَّد — تم اعتماد التحصيل مسبقاً.');
+        // نفس قواعد تحصيل الجهات المدنية: المبلغ بالقرش ولا يقبل صفراً أو سالباً.
+        $amount = round($amount, 2);
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('قيمة المبلغ غير صالحة.');
         }
 
         return DB::transaction(function () use ($debt, $amount) {
             $locked = MilitaryDebt::query()->whereKey($debt->id)->lockForUpdate()->firstOrFail();
+            // الفحص بعد القفل — تحصيلان متزامنان لا يمرّان معاً من فحص «مجمَّد».
+            if ($locked->isCollected()) {
+                throw new \InvalidArgumentException('السجل مجمَّد — تم اعتماد التحصيل مسبقاً.');
+            }
             $before = $this->snapshot($locked);
 
             $remaining = $this->remaining($locked);
@@ -72,9 +78,9 @@ class MilitaryDebtService
             ['icon' => '📋', 'label' => 'إجمالي السجلات', 'value' => (string) $debts->count(), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5', 'key' => 'total'],
             ['icon' => '🔴', 'label' => 'سجلات بمتبقٍ', 'value' => (string) $outstanding, 'bg' => 'rgba(220,38,38,0.1)', 'color' => '#dc2626', 'key' => 'outstanding_count'],
             ['icon' => '🟢', 'label' => 'تم التحصيل بالكامل', 'value' => (string) $fullyCollected, 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'collected_count'],
-            ['icon' => '💰', 'label' => 'إجمالي المستحق', 'value' => number_format($totalDue, 0), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5', 'key' => 'total_due'],
-            ['icon' => '✅', 'label' => 'إجمالي المحصّل', 'value' => number_format($totalCollected, 0), 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'total_collected'],
-            ['icon' => '⏳', 'label' => 'المتبقي للتحصيل', 'value' => number_format($totalRemaining, 0), 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706', 'key' => 'total_remaining'],
+            ['icon' => '💰', 'label' => 'إجمالي المستحق', 'value' => number_format($totalDue, 2), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5', 'key' => 'total_due'],
+            ['icon' => '✅', 'label' => 'إجمالي المحصّل', 'value' => number_format($totalCollected, 2), 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'total_collected'],
+            ['icon' => '⏳', 'label' => 'المتبقي للتحصيل', 'value' => number_format($totalRemaining, 2), 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706', 'key' => 'total_remaining'],
         ];
     }
 
@@ -85,7 +91,7 @@ class MilitaryDebtService
         $remaining = $this->remaining($debt);
         $collectionPkg = $this->collectionEntryService->packageForPayable($debt, $due, $collected);
         $lastCollectedAt = $collectionPkg['collection_summary']['last_collected_at']
-            ?? $debt->collected_at?->format('d/m/Y H:i');
+            ?? \App\Support\ClinicTime::formatOrNull($debt->collected_at);
 
         return [
             'id' => $debt->id,
@@ -101,7 +107,7 @@ class MilitaryDebtService
             'delivered_at' => $debt->delivered_at ? (string) $debt->delivered_at : null,
             'status' => $debt->status,
             'status_label' => $this->statusLabel($debt),
-            'collected_at' => $debt->collected_at?->format('d/m/Y H:i'),
+            'collected_at' => \App\Support\ClinicTime::formatOrNull($debt->collected_at),
             'last_collected_at' => $lastCollectedAt,
             'is_frozen' => $debt->isCollected(),
             'balance' => $remaining > 0 ? 'outstanding' : 'settled',

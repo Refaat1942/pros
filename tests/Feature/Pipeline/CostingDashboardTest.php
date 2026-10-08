@@ -385,7 +385,8 @@ class CostingDashboardTest extends TestCase
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_CASHIER, $case->stage_key);
-        $this->assertStringContainsString('التشغيل', (string) $response->json('message'));
+        // الرسالة تذكر وجهة الحالة الفعلية — الخزنة وليس مكتب التشغيل.
+        $this->assertStringContainsString('الخزنة', (string) $response->json('message'));
         $this->assertNotNull(Quote::where('case_id', $case->id)->first());
     }
 

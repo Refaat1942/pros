@@ -211,9 +211,9 @@ class SupplyRequestService
             'needs_link' => $line->isNonCatalog() && $line->resolved_stock_item_id === null,
             'stock_item' => $line->stockItem?->only(['id', 'code', 'name', 'uom', 'barcode']),
             'resolved_stock_item' => $line->resolvedStockItem?->only(['id', 'code', 'name', 'uom', 'barcode']),
-            'requested_at' => $line->supplyRequest?->created_at?->format('d/m/Y H:i'),
+            'requested_at' => \App\Support\ClinicTime::formatOrNull($line->supplyRequest?->created_at),
             'created_at' => $line->created_at?->toDateTimeString(),
-            'received_at' => $line->received_at?->format('d/m/Y H:i'),
+            'received_at' => \App\Support\ClinicTime::formatOrNull($line->received_at),
         ];
     }
 

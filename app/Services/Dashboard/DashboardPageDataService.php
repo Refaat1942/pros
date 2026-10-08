@@ -812,9 +812,9 @@ class DashboardPageDataService
                 ->all(),
             'cashier_stats' => [
                 ['icon' => '💵', 'label' => 'بانتظار الدفع', 'value' => (string) $cases->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
-                ['icon' => '⏳', 'label' => 'قيمة بانتظار التحصيل', 'value' => number_format($awaitingAmount, 0).' ج.م', 'color' => '#b45309', 'bg' => 'rgba(217,119,6,0.08)'],
+                ['icon' => '⏳', 'label' => 'قيمة بانتظار التحصيل', 'value' => number_format($awaitingAmount, 2).' ج.م', 'color' => '#b45309', 'bg' => 'rgba(217,119,6,0.08)'],
                 ['icon' => '✅', 'label' => 'دفعات اليوم', 'value' => (string) $todayCount, 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '💰', 'label' => 'محصّل اليوم', 'value' => number_format($todayAmount, 0).' ج.م', 'color' => '#047857', 'bg' => 'rgba(5,150,105,0.08)'],
+                ['icon' => '💰', 'label' => 'محصّل اليوم', 'value' => number_format($todayAmount, 2).' ج.م', 'color' => '#047857', 'bg' => 'rgba(5,150,105,0.08)'],
             ],
         ];
     }
@@ -848,8 +848,8 @@ class DashboardPageDataService
             'cashier_payments' => $payments,
             'cashier_by_method' => $byMethod,
             'cashier_stats_totals' => [
-                ['icon' => '📅', 'label' => 'محصّل اليوم', 'value' => number_format($todayAmount, 0).' ج.م', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
-                ['icon' => '🗓️', 'label' => 'محصّل هذا الشهر', 'value' => number_format($monthAmount, 0).' ج.م', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
+                ['icon' => '📅', 'label' => 'محصّل اليوم', 'value' => number_format($todayAmount, 2).' ج.م', 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
+                ['icon' => '🗓️', 'label' => 'محصّل هذا الشهر', 'value' => number_format($monthAmount, 2).' ج.م', 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
                 ['icon' => '🧾', 'label' => 'عدد الدفعات (الشهر)', 'value' => (string) $monthPayments->count(), 'color' => '#7c3aed', 'bg' => 'rgba(124,58,237,0.1)'],
                 ['icon' => '💰', 'label' => 'إجمالي الدفعات', 'value' => (string) $payments->count(), 'color' => '#d97706', 'bg' => 'rgba(217,119,6,0.1)'],
             ],
@@ -1183,8 +1183,8 @@ class DashboardPageDataService
                     'qty_pending' => max(0, $line->qty_requested - $line->qty_returned),
                     'reason' => $line->reason ?? '—',
                     'sent_by' => $note->createdByUser?->name ?? $note->created_by ?? '—',
-                    'sent_at' => $note->authorized_at?->format('d/m/Y H:i') ?? '—',
-                    'received_at' => $note->completed_at?->format('d/m/Y H:i') ?? '—',
+                    'sent_at' => \App\Support\ClinicTime::format($note->authorized_at),
+                    'received_at' => \App\Support\ClinicTime::format($note->completed_at),
                 ];
             }
         }

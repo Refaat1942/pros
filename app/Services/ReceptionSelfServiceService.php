@@ -119,7 +119,7 @@ class ReceptionSelfServiceService
             'bom_stage_label' => $this->bomStageLabel($case->bom?->stage),
             'path' => $case->path,
             'delivered_at' => $case->delivered_at?->format('Y-m-d'),
-            'created_at' => $case->created_at?->format('Y-m-d H:i'),
+            'created_at' => \App\Support\ClinicTime::formatOrNull($case->created_at, 'Y-m-d H:i'),
         ];
     }
 

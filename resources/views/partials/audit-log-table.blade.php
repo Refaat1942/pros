@@ -55,7 +55,7 @@
              data-action="{{ $log->action }}"
              data-date="{{ $log->logged_at?->format('Y-m-d') }}"
              data-search="{{ mb_strtolower(($log->user_name ?? '') . ' ' . ($log->description ?? '')) }}">
-            <span class="audit-time">{{ $log->logged_at?->format('Y-m-d H:i:s') }}</span>
+            <span class="audit-time">{{ \App\Support\ClinicTime::formatOrNull($log->logged_at, 'Y-m-d H:i:s') }}</span>
             <div class="audit-desc">
                 <strong>{{ $log->user_name ?? '—' }}</strong> — {{ $log->description }}
                 @if($log->ip_address)

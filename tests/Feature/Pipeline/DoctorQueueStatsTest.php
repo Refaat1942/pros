@@ -129,7 +129,7 @@ class DoctorQueueStatsTest extends TestCase
             ->assertSee('متعاقد', false);
     }
 
-    public function test_doctor_queue_shows_dash_for_cash_civilian_without_contract_entity(): void
+    public function test_doctor_queue_shows_cash_badge_like_reception_for_cash_civilian(): void
     {
         $recep = $this->userWithRole('reception');
         $doctor = $this->userWithRole('doctor');
@@ -139,8 +139,9 @@ class DoctorQueueStatsTest extends TestCase
 
         $response = $this->actingAs($doctor)->get('/doctor/queue');
 
+        // نفس عرض الاستقبال: شارة «💵 نقدي» بدل «—».
         $response->assertOk()
-            ->assertSee('entity-cell__label', false)
-            ->assertDontSee('entity-badge--cash', false);
+            ->assertSee('entity-badge--cash', false)
+            ->assertSee('💵 نقدي', false);
     }
 }

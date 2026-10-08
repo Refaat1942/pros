@@ -49,9 +49,9 @@ class AdminCivilianDebtService
 
         return [
             ['icon' => '🏢', 'label' => 'جهات مدنية', 'value' => (string) $debts->count(), 'bg' => 'rgba(14,116,144,0.1)', 'color' => '#0e7490', 'key' => 'entities'],
-            ['icon' => '💰', 'label' => 'إجمالي المستحق', 'value' => number_format($totalDue, 0), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5', 'key' => 'total_due'],
-            ['icon' => '✅', 'label' => 'إجمالي المحصّل', 'value' => number_format($totalCollected, 0), 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'total_collected'],
-            ['icon' => '⏳', 'label' => 'المتبقي للتحصيل', 'value' => number_format($totalRemaining, 0), 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706', 'key' => 'total_remaining'],
+            ['icon' => '💰', 'label' => 'إجمالي المستحق', 'value' => number_format($totalDue, 2), 'bg' => 'rgba(79,70,229,0.1)', 'color' => '#4f46e5', 'key' => 'total_due'],
+            ['icon' => '✅', 'label' => 'إجمالي المحصّل', 'value' => number_format($totalCollected, 2), 'bg' => 'rgba(5,150,105,0.1)', 'color' => '#059669', 'key' => 'total_collected'],
+            ['icon' => '⏳', 'label' => 'المتبقي للتحصيل', 'value' => number_format($totalRemaining, 2), 'bg' => 'rgba(217,119,6,0.1)', 'color' => '#d97706', 'key' => 'total_remaining'],
             ['icon' => '🔴', 'label' => 'جهات بمتبقٍ', 'value' => (string) $outstanding, 'bg' => 'rgba(220,38,38,0.1)', 'color' => '#dc2626', 'key' => 'outstanding_count'],
         ];
     }

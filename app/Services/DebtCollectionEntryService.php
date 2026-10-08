@@ -68,8 +68,8 @@ class DebtCollectionEntryService
             'payment_count' => $count,
             'mode' => $mode,
             'mode_label' => $modeLabel,
-            'first_collected_at' => $first?->collected_at?->format('d/m/Y H:i'),
-            'last_collected_at' => $last?->collected_at?->format('d/m/Y H:i'),
+            'first_collected_at' => \App\Support\ClinicTime::formatOrNull($first?->collected_at),
+            'last_collected_at' => \App\Support\ClinicTime::formatOrNull($last?->collected_at),
         ];
     }
 
@@ -84,7 +84,7 @@ class DebtCollectionEntryService
             'running_collected' => (float) $e->running_collected,
             'remaining_after' => (float) $e->remaining_after,
             'recorded_by_name' => $e->recorded_by_name ?? '—',
-            'collected_at' => $e->collected_at?->format('d/m/Y H:i'),
+            'collected_at' => \App\Support\ClinicTime::formatOrNull($e->collected_at),
         ])->all();
     }
 
