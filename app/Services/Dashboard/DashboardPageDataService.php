@@ -1131,7 +1131,7 @@ class DashboardPageDataService
     private function adminMilitaryDebts(): array
     {
         $debts = MilitaryDebt::query()
-            ->with('collectionEntries')
+            ->with(['collectionEntries', 'caseRecord:id,patient_id', 'caseRecord.patient:id,military_number'])
             ->latestFirst()
             ->get();
         $service = app(MilitaryDebtService::class);
