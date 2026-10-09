@@ -17,11 +17,31 @@ class InvoiceService
      */
     public function issueFinalInvoice(CaseRecord $case): array
     {
-        if ($case->patient_type === Patient::TYPE_MILITARY || $case->isMilitary()) {
+        if ($case->invoice_no) {
             return [
-                'invoice_no' => null,
-                'invoice_total' => (float) ($case->total_cost ?? 0),
+                'invoice_no' => $case->invoice_no,
+                'invoice_total' => (float) $case->invoice_total,
             ];
+        }
+
+        // العسكري: فاتورة ختامية برقم بالتكلفة السيادية — لا تُغيّر التكلفة ولا المديونية.
+        if ($case->patient_type === Patient::TYPE_MILITARY || $case->isMilitary()) {
+            $total = round((float) ($case->total_cost ?? 0), 2);
+            $invoiceNo = $this->nextInvoiceNo();
+
+            CaseRecord::where('id', $case->id)->update([
+                'invoice_no' => $invoiceNo,
+                'invoice_total' => $total,
+            ]);
+
+            AuditService::log(
+                action: 'invoice',
+                description: "إصدار فاتورة ختامية عسكرية — {$invoiceNo}",
+                tag: 'financial',
+                after: ['case_id' => $case->id, 'invoice_no' => $invoiceNo, 'invoice_total' => $total],
+            );
+
+            return ['invoice_no' => $invoiceNo, 'invoice_total' => $total];
         }
 
         if ($case->invoice_no) {

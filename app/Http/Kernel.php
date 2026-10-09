@@ -65,6 +65,7 @@ class Kernel extends HttpKernel
             VerifyCsrfToken::class,
             SubstituteBindings::class,
             AuditContextMiddleware::class,
+            \App\Http\Middleware\TriggerDailyBackup::class,
         ],
 
         'api' => [

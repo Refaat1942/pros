@@ -84,7 +84,7 @@
                 </div>
                 <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">اسم المستخدم <span style="color:#dc2626">*</span></label>
-                    <input type="text" name="username" class="form-control"
+                    <input type="text" name="username" autocomplete="off" class="form-control"
                            data-v-rules="required,username,max:50" maxlength="50"
                            value="{{ old('username', $editUser?->username) }}"
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
@@ -96,13 +96,13 @@
                         <span id="employeePasswordRequired" style="color:#dc2626;{{ $editUser ? 'display:none;' : '' }}">*</span>
                         <small id="employeePasswordHint" style="font-weight:400;color:var(--text-muted);{{ $editUser ? '' : 'display:none;' }}">(اتركها فارغة للإبقاء)</small>
                     </label>
-                    <input type="password" name="password" class="form-control"
+                    <input type="password" name="password" autocomplete="new-password" class="form-control"
                            data-v-rules="{{ $editUser ? 'password' : 'required,password' }}"
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
                 </div>
                 <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">تأكيد كلمة المرور</label>
-                    <input type="password" name="password_confirmation" class="form-control"
+                    <input type="password" name="password_confirmation" autocomplete="new-password" class="form-control"
                            data-v-rules="password"
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
                 </div>
@@ -210,12 +210,12 @@
                 <p id="employeePasswordResetHint" style="margin:0 0 16px;font-size:13px;color:var(--text-muted);"></p>
                 <div class="form-group" style="margin-bottom:14px;">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">كلمة المرور الجديدة <span style="color:#dc2626">*</span></label>
-                    <input type="password" name="password" class="form-control" data-v-rules="required,password"
+                    <input type="password" name="password" autocomplete="new-password" class="form-control" data-v-rules="required,password"
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
                 </div>
                 <div class="form-group">
                     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">تأكيد كلمة المرور <span style="color:#dc2626">*</span></label>
-                    <input type="password" name="password_confirmation" class="form-control" data-v-rules="required,password"
+                    <input type="password" name="password_confirmation" autocomplete="new-password" class="form-control" data-v-rules="required,password"
                            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
                 </div>
             </div>

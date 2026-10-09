@@ -10,6 +10,9 @@ use App\Models\Patient;
 use App\Models\Quote;
 use App\Services\AdminCaseDetailService;
 use App\Services\CaseWorkflowSkipService;
+use App\Services\InvoiceService;
+use App\Support\InvoicePrintPresenter;
+use Illuminate\Support\Facades\DB;
 use App\Services\QuoteQrService;
 use App\Services\WorkflowPolicyService;
 use Illuminate\Http\JsonResponse;
@@ -57,6 +60,35 @@ class AdminCaseController extends Controller
             'autoPrint' => ! $embed,
             'printTotals' => \App\Support\QuotePrintPresenter::fromQuote($quote),
             'documentTemplate' => $this->documentTemplateForPrint('quote', $case),
+        ]);
+    }
+
+    /**
+     * الفاتورة الختامية — للحالات المسلَّمة فقط (مدني وعسكري).
+     * حالة مسلَّمة قبل إصدار الفواتير للعسكري تأخذ رقمها عند أول فتح (مرة واحدة).
+     */
+    public function invoicePrint(Request $request, CaseRecord $case, InvoiceService $invoices): View
+    {
+        abort_unless($case->stage_key === CaseRecord::STAGE_DELIVERED, 404);
+
+        if (! $case->invoice_no) {
+            DB::transaction(function () use ($case, $invoices) {
+                $locked = CaseRecord::query()->lockForUpdate()->findOrFail($case->id);
+                $invoices->issueFinalInvoice($locked);
+            });
+            $case->refresh();
+        }
+
+        $embed = $request->boolean('embed');
+        $template = $this->documentTemplateForPrint('quote', $case);
+
+        return view('quotes.print', [
+            'invoiceCase' => $case,
+            'invoiceDoc' => InvoicePrintPresenter::document($case, $template),
+            'quoteQrSvg' => $case->invoice_no ? $this->quoteQrService->svg($case->invoice_no) : null,
+            'embed' => $embed,
+            'autoPrint' => ! $embed,
+            'documentTemplate' => $template,
         ]);
     }
 
