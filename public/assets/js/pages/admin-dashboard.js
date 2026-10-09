@@ -647,6 +647,7 @@
       var c = data.case || {};
       var p = data.patient || {};
       var q = data.quote;
+      var inv = data.invoice;
       var pay = data.payment;
       var a = data.approval;
 
@@ -696,9 +697,11 @@
           (pay && pay.received_at ? caseDetailBox('تاريخ التحصيل', escapeHtml(pay.received_at)) : '') +
           '</div>' +
           '<div class="case-detail-actions">' +
-          '<a href="' + escapeHtml(q.print_url) + '" target="_blank" rel="noopener" class="btn-case-doc">🖨️ فتح للطباعة / PDF</a>' +
+          '<a href="' + escapeHtml(q.print_url) + '" target="_blank" rel="noopener" class="btn-case-doc' + (inv ? ' btn-case-doc--muted' : '') + '">🖨️ ' +
+            (inv ? 'عرض السعر الأصلي' : 'فتح للطباعة / PDF') + '</a>' +
           '</div>' +
-          caseDocPanel('معاينة عرض السعر', '<iframe src="' + escapeHtml(q.print_url) + '" title="عرض السعر"></iframe>') +
+          // بعد التسليم تُعرض الفاتورة الختامية — معاينة عرض السعر للحالات المفتوحة فقط.
+          (inv ? '' : caseDocPanel('معاينة عرض السعر', '<iframe src="' + escapeHtml(q.print_url) + '" title="عرض السعر"></iframe>')) +
           (itemsRows
             ? '<div class="case-detail-table-wrap"><table class="case-detail-table" data-paginate="6"><thead><tr>' +
               '<th>البند</th><th>الكود</th><th class="num">الكمية</th><th class="num">المبلغ</th></tr></thead><tbody>' +
@@ -741,7 +744,24 @@
         approvalSection = '<div class="case-detail-empty">لا يوجد عقد موافقة مسجّل بعد (يُنشأ عند مسح OCR).</div>';
       }
 
-      body.innerHTML = metaGrid + quoteSection + approvalSection;
+      var invoiceSection = '';
+      if (inv) {
+        invoiceSection =
+          '<div class="case-detail-section">' +
+          '<h4 class="catalog-modal-section-title">🧾 الفاتورة' + (inv.invoice_no ? ' — ' + escapeHtml(inv.invoice_no) : '') + '</h4>' +
+          '<div class="catalog-detail-grid">' +
+          caseDetailBox('رقم الفاتورة', escapeHtml(inv.invoice_no || 'يُصدر عند الفتح')) +
+          caseDetailBox('تاريخ التسليم', escapeHtml(inv.delivered_at)) +
+          caseDetailBox('إجمالي الفاتورة', inv.invoice_total != null ? CasesWorkflow.formatMoney(inv.invoice_total) : '—') +
+          '</div>' +
+          '<div class="case-detail-actions">' +
+          '<a href="' + escapeHtml(inv.print_url) + '" target="_blank" rel="noopener" class="btn-case-doc">🖨️ طباعة الفاتورة / PDF</a>' +
+          '</div>' +
+          caseDocPanel('معاينة الفاتورة', '<iframe src="' + escapeHtml(inv.embed_url) + '" title="الفاتورة"></iframe>') +
+          '</div>';
+      }
+
+      body.innerHTML = metaGrid + invoiceSection + quoteSection + approvalSection;
       if (window.TablePagination) TablePagination.refresh(body);
     }
 

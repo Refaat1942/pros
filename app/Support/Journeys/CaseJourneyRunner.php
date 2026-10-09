@@ -228,6 +228,7 @@ class CaseJourneyRunner
             ['workshop', 'أمر الشغل — قسم الإنتاج', "/workshop/work-order/{$case->id}/print"],
             $bom ? ['technical', 'إذن صرف الخامات', "/technical/bom/{$bom->id}/print-issue-voucher"] : null,
             $payment ? ['cashier', 'إيصال الخزنة', "/cashier/payments/{$payment->id}/receipt"] : null,
+            $case->stage_key === CaseRecord::STAGE_DELIVERED ? ['admin', 'الفاتورة', "/admin/cases/{$case->id}/invoice"] : null,
         ]);
 
         return array_map(function (array $doc) {

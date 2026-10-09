@@ -5,14 +5,17 @@
 
     // النموذج الرسمي المعتمد لعرض الأسعار — docs/forms/quote-form.jpg
     // النصوص (السريان/التوريد/الضمان/الموقّع/التذييل) من مركز الوثائق ← «عرض سعر».
-    $printCtx = DocumentPrintContext::fromRequest(request(), $quote->caseRecord);
+    // نفس النموذج يُستخدم للفاتورة الختامية بعد التسليم ($invoiceDoc + $invoiceCase).
+    $isInvoice = isset($invoiceDoc);
+    $printCtx = DocumentPrintContext::fromRequest(request(), $isInvoice ? $invoiceCase : $quote->caseRecord);
     $tpl      = $documentTemplate ?? app(DocumentTemplateService::class)->for('quote', $printCtx->department, $printCtx->stage);
-    $doc      = QuotePrintPresenter::document($quote, $tpl);
-    $totals   = $printTotals ?? $doc['totals'];
+    $doc      = $isInvoice ? $invoiceDoc : QuotePrintPresenter::document($quote, $tpl);
+    $totals   = $isInvoice ? $doc['totals'] : ($printTotals ?? $doc['totals']);
     $settings = $doc['settings'];
     $branding = app(\App\Services\SettingService::class)->branding();
-    $refNo    = $quote->quote_no;
-    $docTitle = trim((string) ($tpl['doc_title'] ?? '')) ?: 'عرض أسعار';
+    $refNo    = $isInvoice ? ($doc['invoice_no'] ?: $doc['case_no']) : $quote->quote_no;
+    $refLabel = $isInvoice ? 'رقم الفاتورة' : \App\Models\Quote::SERIAL_LABEL;
+    $docTitle = $isInvoice ? 'فاتورة' : (trim((string) ($tpl['doc_title'] ?? '')) ?: 'عرض أسعار');
     $showLogo = (bool) ($tpl['show_logo'] ?? true);
     $showSeal = (bool) ($tpl['show_seal'] ?? true);
     $footerNote = trim((string) ($tpl['footer_note'] ?? ''));
@@ -25,7 +28,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عرض سعر — {{ $refNo }}</title>
+    <title>{{ $isInvoice ? 'فاتورة' : 'عرض سعر' }} — {{ $refNo }}</title>
     @include('prints.partials.a4-base')
     <style>
         @page {
@@ -444,14 +447,14 @@
         </div>
         <div class="header-side">
             @if (!empty($quoteQrSvg))
-                <div class="quote-ref" aria-label="QR عرض السعر — {{ $refNo }}">
+                <div class="quote-ref" aria-label="QR {{ $refLabel }} — {{ $refNo }}">
                     <div class="quote-ref__qr">{!! $quoteQrSvg !!}</div>
-                    <div>{{ \App\Models\Quote::SERIAL_LABEL }}</div>
+                    <div>{{ $refLabel }}</div>
                     <div class="quote-ref__no">{{ $refNo }}</div>
                 </div>
             @else
                 <div class="quote-ref">
-                    <div>{{ \App\Models\Quote::SERIAL_LABEL }}</div>
+                    <div>{{ $refLabel }}</div>
                     <div class="quote-ref__no">{{ $refNo }}</div>
                 </div>
             @endif
@@ -464,18 +467,37 @@
     <h1 class="doc-title">{{ $docTitle }}</h1>
 
     <table class="grid info-table">
-        <tr>
-            <td class="label">تاريخ عرض السعر</td>
-            <td class="value">{{ $doc['date'] }}</td>
-        </tr>
-        <tr>
-            <td class="label">مدة سريان عرض السعر</td>
-            <td class="value">{{ $doc['validity'] }}</td>
-        </tr>
-        <tr>
-            <td class="label">الجهة</td>
-            <td class="value">{{ $doc['entity'] }}</td>
-        </tr>
+        @if ($isInvoice)
+            <tr>
+                <td class="label">تاريخ الفاتورة (التسليم)</td>
+                <td class="value">{{ $doc['delivered_at'] }}</td>
+            </tr>
+            <tr>
+                <td class="label">رقم الحالة / أمر الشغل</td>
+                <td class="value">{{ $doc['case_no'] ?: '—' }} · {{ $doc['work_order_no'] ?: '—' }}@if ($doc['quote_no'] !== '') · عرض السعر {{ $doc['quote_no'] }}@endif</td>
+            </tr>
+            <tr>
+                <td class="label">الجهة</td>
+                <td class="value">{{ $doc['entity'] }}</td>
+            </tr>
+            <tr>
+                <td class="label">المسؤول عن السداد</td>
+                <td class="value">{{ $doc['payer'] }}</td>
+            </tr>
+        @else
+            <tr>
+                <td class="label">تاريخ عرض السعر</td>
+                <td class="value">{{ $doc['date'] }}</td>
+            </tr>
+            <tr>
+                <td class="label">مدة سريان عرض السعر</td>
+                <td class="value">{{ $doc['validity'] }}</td>
+            </tr>
+            <tr>
+                <td class="label">الجهة</td>
+                <td class="value">{{ $doc['entity'] }}</td>
+            </tr>
+        @endif
     </table>
 
     <div class="section-title">بيانات المريض :</div>
@@ -537,13 +559,23 @@
             </tr>
         @else
             <tr class="t-net">
-                <td class="t-label">إجمالي السعر</td>
+                <td class="t-label">{{ $isInvoice ? 'إجمالي الفاتورة' : 'إجمالي السعر' }}</td>
                 <td class="t-value">ج.م. <span class="num">{{ QuotePrintPresenter::money((float) $totals['display_total']) }}</span></td>
+            </tr>
+        @endif
+        @if ($isInvoice && $doc['paid'] !== null)
+            <tr>
+                <td class="t-label">المدفوع بالخزنة</td>
+                <td class="t-value">ج.م. <span class="num">{{ QuotePrintPresenter::money((float) $doc['paid']) }}</span></td>
+            </tr>
+            <tr class="t-net">
+                <td class="t-label">المتبقي</td>
+                <td class="t-value">ج.م. <span class="num">{{ QuotePrintPresenter::money((float) $doc['remaining']) }}</span></td>
             </tr>
         @endif
     </table>
 
-    @if ($footerNote !== '')
+    @if (! $isInvoice && $footerNote !== '')
         <div class="footer-note">{{ $footerNote }}</div>
     @endif
 

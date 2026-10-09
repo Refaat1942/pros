@@ -85,6 +85,14 @@ class AdminCaseDetailService
                 'items' => $this->mapQuoteItems($case, $quote),
                 'print_url' => route('admin.cases.quote', $case),
             ] : null,
+            // الحالة المسلَّمة تُعرض بفاتورتها الختامية بدل عرض السعر.
+            'invoice' => $case->stage_key === CaseRecord::STAGE_DELIVERED ? [
+                'invoice_no' => $case->invoice_no,
+                'invoice_total' => $case->invoice_total !== null ? (float) $case->invoice_total : null,
+                'delivered_at' => $case->delivered_at ? ClinicTime::format($case->delivered_at, 'd/m/Y H:i') : null,
+                'print_url' => route('admin.cases.invoice', $case),
+                'embed_url' => route('admin.cases.invoice', ['case' => $case, 'embed' => 1]),
+            ] : null,
             'payment' => $payment,
             'approval' => $contract ? [
                 'contract_no' => $contract->contract_no,

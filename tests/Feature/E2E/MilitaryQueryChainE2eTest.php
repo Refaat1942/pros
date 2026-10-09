@@ -137,7 +137,9 @@ class MilitaryQueryChainE2eTest extends TestCase
 
         $case->refresh();
         $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);
-        $this->assertNull($case->invoice_no);
+        // فاتورة ختامية برقم للعسكري أيضاً — بالتكلفة السيادية، دون أي مديونية مدنية.
+        $this->assertMatchesRegularExpression('/^INV-\d{4}-\d{4}$/', (string) $case->invoice_no);
+        $this->assertEquals((float) $case->total_cost, (float) $case->invoice_total);
 
         $company->debt()->first()->refresh();
         $this->assertEquals($debtBefore, (float) $company->debt()->first()->due, 'Military must not post civilian debt');

@@ -30,7 +30,8 @@
         <button type="button" class="btn-add-rank" id="btnAddWorkshopSection">➕ إضافة قسم</button>
       </div>
       <div class="data-toolbar">
-        <input type="text" id="workshopSectionSearch" placeholder="🔍 بحث باسم القسم أو الكود...">
+        {{-- type=search + autocomplete=off: كان متصفح الموظف يملأ اسم دخوله المحفوظ هنا فيُخفي كل الأقسام. --}}
+        <input type="search" id="workshopSectionSearch" name="workshop_section_search" autocomplete="off" placeholder="🔍 بحث باسم القسم أو الكود...">
         <span class="toolbar-count" id="workshopSectionCount">{{ $sectionCount }} قسم</span>
       </div>
       <div class="panel-body">
@@ -61,7 +62,7 @@
         <button type="button" class="btn-add-rank" id="btnAddWorkshopTechnician">➕ إضافة فني</button>
       </div>
       <div class="data-toolbar">
-        <input type="text" id="workshopTechnicianSearch" placeholder="🔍 بحث بالاسم أو اسم المستخدم...">
+        <input type="search" id="workshopTechnicianSearch" name="workshop_technician_search" autocomplete="off" placeholder="🔍 بحث بالاسم أو اسم المستخدم...">
         <span class="toolbar-count" id="workshopTechnicianCount">{{ $technicianCount }} فني</span>
       </div>
       <div class="panel-body">
@@ -139,12 +140,12 @@
       </div>
       <div class="form-group" style="margin-bottom:14px;">
         <label for="workshopTechnicianUsername">اسم المستخدم <span style="color:#dc2626">*</span></label>
-        <input type="text" id="workshopTechnicianUsername" class="form-control" maxlength="50" placeholder="ahmed_m" dir="ltr">
+        <input type="text" id="workshopTechnicianUsername" autocomplete="off" class="form-control" maxlength="50" placeholder="ahmed_m" dir="ltr">
         <small style="display:block;margin-top:4px;color:#64748b;font-size:12px;">حروف إنجليزية وأرقام و _ و - فقط</small>
       </div>
       <div class="form-group" style="margin-bottom:14px;" id="workshopTechnicianPasswordGroup">
         <label for="workshopTechnicianPassword">كلمة المرور <span style="color:#dc2626" id="workshopTechnicianPasswordRequired">*</span></label>
-        <input type="password" id="workshopTechnicianPassword" class="form-control" minlength="6" placeholder="6 أحرف على الأقل">
+        <input type="password" id="workshopTechnicianPassword" autocomplete="new-password" class="form-control" minlength="6" placeholder="6 أحرف على الأقل">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
         <label for="workshopTechnicianSections">🏭 ربط بالأقسام</label>

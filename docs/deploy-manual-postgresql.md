@@ -247,35 +247,27 @@ php artisan prosthetics:backup
 - الملفات: `C:\laragon\www\prosthetics\storage\backups`  
 - يحتفظ بـ **7 أيام** تلقائياً
 
-## الخطوة 16 — جدولة يومية (2:00 AM)
+## الخطوة 16 — النسخة اليومية تلقائية (لا تحتاج أي إعداد)
 
-1. Task Scheduler → Create Basic Task  
-2. Daily · 2:00 AM  
-3. Action: Start a program  
+- أول استخدام للنظام كل يوم يبدأ نسخة اليوم **في الخلفية** — الموظف لا يشعر بشيء.
+- النسخة تشمل التطبيق كله: **قاعدة البيانات** + **كل الملفات المرفوعة** (خطابات الموافقة، المستندات، الشعار) + إعدادات **.env**.
+- الملفات: `C:\laragon\www\prosthetics\storage\backups` (`db-*.sql.gz` و `files-*.zip`).
+- يحتفظ بآخر **7 أيام** تلقائياً (`BACKUP_KEEP_DAYS` في `.env` لتغييرها).
+- السجل: `storage\logs\backup.log`.
+- لو فشلت النسخة (مثلاً `pg_dump` غير موجود) يعيد المحاولة تلقائياً بعد ساعة في نفس اليوم.
+- لإيقافها: `BACKUP_AUTO_DAILY=false` في `.env`.
 
-**Program:**
+> تأكد فقط أن امتداد **zip** مفعّل في PHP (Laragon: Menu → PHP → Extensions → zip) — مفعّل افتراضياً.
 
-```
-C:\laragon\bin\php\php-8.x.x\php.exe
-```
+## الخطوة 17 — نسخة ثانية تلقائية على قرص آخر (اختياري)
 
-(استبدل `php-8.x.x` بمجلد PHP الفعلي في Laragon)
-
-**Arguments:**
-
-```
-C:\laragon\www\prosthetics\artisan prosthetics:backup
-```
-
-**Start in:**
+أضف في `.env` مساراً على قرص آخر أو فلاشة متصلة دائماً:
 
 ```
-C:\laragon\www\prosthetics
+BACKUP_MIRROR_PATH=D:\prosthetics-backups
 ```
 
-## الخطوة 17 — نسخ خارجي (أسبوعياً)
-
-انسخ مجلد `storage\backups` إلى قرص USB أو جهاز آخر — **مرة أسبوعياً**
+كل نسخة يومية تُنسخ إليه تلقائياً (بنفس مدة الاحتفاظ). خصّص مجلداً لهذا الغرض فقط.
 
 ---
 

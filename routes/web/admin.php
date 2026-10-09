@@ -91,6 +91,7 @@ Route::prefix('admin')
         Route::middleware('dashboard.page:admin,cases')->group(function () {
             Route::get('cases/{case}/detail', [AdminCaseController::class, 'show'])->name('cases.detail');
             Route::get('cases/{case}/quote', [AdminCaseController::class, 'quotePrint'])->name('cases.quote');
+            Route::get('cases/{case}/invoice', [AdminCaseController::class, 'invoicePrint'])->name('cases.invoice');
             Route::post('cases/{case}/workflow/skip', [AdminCaseController::class, 'skipStage'])
                 ->name('cases.workflow.skip');
         });
