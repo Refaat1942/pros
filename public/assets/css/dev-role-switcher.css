@@ -279,3 +279,9 @@
         font-size: 11px;
     }
 }
+
+/* الشريط ثابت أسفل الشاشة — كان يغطي آخر أزرار الصفحة (مثل «حفظ التخصيص»).
+   مساحة إضافية أسفل الصفحة ما دام ظاهراً في مكانه الافتراضي حتى يمكن التمرير فوقه. */
+body:has(.dev-role-switcher:not(.is-hidden):not(.is-positioned)) {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}

@@ -47,6 +47,12 @@
                         @error('national_id')<div class="v-error-msg" role="alert">{{ $message }}</div>@enderror
                     </div>
                     <div class="form-group">
+                        <label>السن <span class="field-optional">(اختياري — يُحسب من الرقم القومي إن وُجد)</span></label>
+                        <input type="number" class="form-control @error('age') v-invalid @enderror" name="age" id="newPatientAge"
+                               min="0" max="120" step="1" inputmode="numeric" placeholder="بالسنوات" value="{{ old('age') }}">
+                        @error('age')<div class="v-error-msg" role="alert">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="form-group">
                         <label>تصنيف المريض <span style="color:red">*</span></label>
                         @php
                             $classification = old('patient_classification');

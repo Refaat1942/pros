@@ -661,6 +661,7 @@
         caseDetailBox('كود المريض', escapeHtml(p.patient_code)) +
         caseDetailBox('الهاتف', escapeHtml(p.phone)) +
         caseDetailBox('الرقم القومي', escapeHtml(p.national_id)) +
+        caseDetailBox('السن', p.age != null ? escapeHtml(p.age) + ' عام' : '—') +
         caseDetailBox('المسار', escapeHtml(p.type_label)) +
         (data.is_military
           ? caseDetailBox('الرتبة العسكرية', escapeHtml(p.rank)) +

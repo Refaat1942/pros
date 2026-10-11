@@ -25,6 +25,7 @@ class CorrectAppointmentRequest extends BaseRequest
                     $this->route('appointment') instanceof Appointment ? $this->route('appointment')->patient_id : null
                 ),
             ],
+            'age' => ['nullable', 'integer', 'min:0', 'max:120'],
             'visit_type_id' => ['required', 'integer', Rule::exists('visit_types', 'id')],
             'contract_company_id' => ['nullable', 'integer', 'exists:contract_companies,id'],
             'military_rank_id' => ['nullable', 'integer', 'exists:military_ranks,id'],

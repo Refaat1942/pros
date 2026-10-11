@@ -74,6 +74,7 @@ class PatientService
                 'name' => $data['name'],
                 'phone' => $data['phone'] ?? null,
                 'national_id' => $data['national_id'] ?? null,
+                'age' => isset($data['age']) && $data['age'] !== '' ? (int) $data['age'] : null,
                 'patient_type' => $type,
                 'military_rank_id' => $data['military_rank_id'] ?? null,
                 'military_number' => $data['military_number'] ?? null,
@@ -131,6 +132,9 @@ class PatientService
         ];
         if (! empty($data['phone'])) {
             $updates['phone'] = $data['phone'];
+        }
+        if (isset($data['age']) && $data['age'] !== '') {
+            $updates['age'] = (int) $data['age'];
         }
 
         if ($type === Patient::TYPE_MILITARY) {

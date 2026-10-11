@@ -117,7 +117,7 @@
     <h1 class="doc-title">{{ $docTitle }}</h1>
 
     <section class="meta-grid">
-        <div class="line">اسم المريض: <span class="fill fill-wide">{{ $spec->patient_name ?? '—' }}</span></div>
+        <div class="line">اسم المريض: <span class="fill fill-wide">{{ $spec->patient_name ?? '—' }}</span>@if ($case?->patient?->ageYears() !== null) — السن: {{ $case->patient->ageYears() }} عام @endif</div>
         <div class="line">الجهة / التعاقد: <span class="fill fill-wide">{{ $spec->company_name ?? $case?->displayEntity() ?? '—' }}</span></div>
         <div class="line">الطبيب المعالج: <span class="fill fill-wide">{{ $spec->doctor_name ?? '—' }}</span></div>
         <div class="line">مرجع الطلب: <span class="fill" style="min-width:36mm;">{{ $spec->order_ref }}</span></div>

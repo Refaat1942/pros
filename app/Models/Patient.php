@@ -62,6 +62,7 @@ class Patient extends Model
         'name',
         'phone',
         'national_id',
+        'age',
         'patient_type',
         'military_rank_id',
         'military_number',
@@ -79,6 +80,7 @@ class Patient extends Model
     ];
 
     protected $casts = [
+        'age' => 'integer',
         'registered_at' => 'date',
         'last_visit_at' => 'date',
         'archived_at' => 'datetime',
@@ -112,6 +114,21 @@ class Patient extends Model
     public function isMilitary(): bool
     {
         return $this->patient_type === self::TYPE_MILITARY;
+    }
+
+    /**
+     * سن المريض بالسنوات — من الرقم القومي إن كان صالحاً، وإلا السن الذي أدخله الاستقبال.
+     */
+    public function ageYears(?\DateTimeInterface $at = null): ?int
+    {
+        $fromId = \App\Support\QuotePrintPresenter::ageFromNationalId((string) ($this->national_id ?? ''), $at);
+        if ($fromId !== null) {
+            return $fromId;
+        }
+
+        $age = $this->age !== null ? (int) $this->age : null;
+
+        return $age !== null && $age >= 0 && $age <= 120 ? $age : null;
     }
 
     /** مدني بدون جهة تعاقد — فوترة نقدية على حساب المريض. */

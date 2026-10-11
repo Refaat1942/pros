@@ -268,6 +268,10 @@
                      data-v-digits-only="1" data-v-rules="egyptian-national-id" autocomplete="off">
             </div>
             <div class="form-group">
+              <label>السن <span class="field-optional">(اختياري — يُحسب من الرقم القومي إن وُجد)</span></label>
+              <input type="number" class="form-control" id="editPatientAge" min="0" max="120" step="1" inputmode="numeric" placeholder="بالسنوات">
+            </div>
+            <div class="form-group">
               <label>نوع الزيارة <span style="color:red">*</span></label>
               <select class="form-control" id="editVisitTypeId" required></select>
             </div>
