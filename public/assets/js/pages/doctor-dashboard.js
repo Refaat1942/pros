@@ -644,10 +644,10 @@
             var hay = (row.dataset.search || row.textContent || '').toLowerCase();
             var show = !q || hay.indexOf(q) !== -1;
             if (show) {
-              delete row.dataset.paginationSkip;
+              delete row.dataset.pageFilterHidden;
               visible++;
             } else {
-              row.dataset.paginationSkip = '1';
+              row.dataset.pageFilterHidden = '1';
             }
           });
           var badge = document.getElementById('queueBadge');

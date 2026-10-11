@@ -7,7 +7,6 @@ use App\Models\Appointment;
 use App\Models\CaseRecord;
 use App\Models\Patient;
 use App\Models\User;
-use App\Models\WorkflowStagePolicy;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -136,9 +135,8 @@ class CaseWorkflowSkipService
 
         $patient = Patient::findOrFail($appointment->patient_id);
 
-        $pathway = $patient->isMilitary()
-            ? WorkflowStagePolicy::PATHWAY_MILITARY
-            : WorkflowStagePolicy::PATHWAY_CIVILIAN;
+        // نفس مسار المريض في المصمم (جهات/خدمات عسكرية لهما قواعدهما) — لا مدني/عسكري فقط.
+        $pathway = $this->pathwayConfig->resolvePathway($patient);
 
         abort_unless(
             $this->policies->canSkipStageForPathway($pathway, CaseRecord::STAGE_EXAM, $user),

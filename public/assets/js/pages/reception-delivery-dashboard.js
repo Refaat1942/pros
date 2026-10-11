@@ -362,10 +362,10 @@
       var hay = (li.getAttribute('data-search') || '').toLowerCase();
       var show = !q || hay.indexOf(q) !== -1;
       if (show) {
-        delete li.dataset.paginationSkip;
+        delete li.dataset.pageFilterHidden;
         visible++;
       } else {
-        li.dataset.paginationSkip = '1';
+        li.dataset.pageFilterHidden = '1';
       }
     });
     var count = $('deliveryCount');
