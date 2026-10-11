@@ -227,6 +227,16 @@ class NotificationService
     public function notifyTransition(CaseRecord $case, string $event, ?string $fromStageKey = null): ?AppNotification
     {
         $fromStageKey ??= $case->stage_key;
+
+        // الحالة غادرت المرحلة المستهدفة قبل الإرسال (تخطٍّ تلقائي للمعدلات العسكرية، اعتماد
+        // أمر الشغل التلقائي للعسكري/بعد التصديق) — لا نُشعر قسماً لن يجد الحالة عنده.
+        $target = $this->transitionMessages->resolveTargetStage($case, $event);
+        $current = CaseRecord::query()->whereKey($case->id)->value('stage_key');
+        $desk = fn (?string $stage) => $stage === CaseRecord::STAGE_QUOTE ? CaseRecord::STAGE_OPERATIONS : $stage;
+        if ($target !== null && $current !== null && $desk($target) !== $desk($current)) {
+            return null;
+        }
+
         $payload = $this->transitionMessages->notificationPayload($case, $event, $fromStageKey);
 
         if ($payload === null) {

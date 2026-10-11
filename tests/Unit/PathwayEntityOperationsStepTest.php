@@ -48,12 +48,12 @@ class PathwayEntityOperationsStepTest extends TestCase
         $steps = $service->steps(PathwayStep::PATHWAY_ENTITY);
         $this->assertSame('quote', $steps[$index]['key']);
 
-        $payload = app(PathwayTransitionMessageService::class)->notificationPayload(
-            $case,
-            WorkflowEvent::QuoteIssued->value,
-            CaseRecord::STAGE_QUOTE,
-        );
+        // التشغيل يُشعَر بإصدار العرض عند انتهاء الاعتماد؛ QuoteIssued للجهات لا يُرسل
+        // «أصدر أمر الشغل» قبل وصول خطاب الموافقة.
+        $messages = app(PathwayTransitionMessageService::class);
+        $this->assertNull($messages->notificationPayload($case, WorkflowEvent::QuoteIssued->value, CaseRecord::STAGE_QUOTE));
 
+        $payload = $messages->notificationPayload($case, WorkflowEvent::CostingCompleted->value, CaseRecord::STAGE_COST_CALC);
         $this->assertNotNull($payload);
         $this->assertSame(Role::SLUG_OPERATIONS, $payload['role']);
     }
@@ -83,13 +83,12 @@ class PathwayEntityOperationsStepTest extends TestCase
 
         $this->assertSame('entity_return', $service->entityOperationsStepKey($case));
 
-        $payload = app(PathwayTransitionMessageService::class)->notificationPayload(
-            $case,
-            WorkflowEvent::QuoteIssued->value,
-            CaseRecord::STAGE_QUOTE,
-        );
+        // الاستقبال يُشعَر بإصدار العرض للجهة (entityQuoteReleasedPayload) لا بحدث QuoteIssued.
+        $messages = app(PathwayTransitionMessageService::class);
+        $this->assertNull($messages->notificationPayload($case, WorkflowEvent::QuoteIssued->value, CaseRecord::STAGE_QUOTE));
 
-        $this->assertNotNull($payload);
+        $payload = $messages->entityQuoteReleasedPayload($case);
         $this->assertSame(Role::SLUG_RECEPTION, $payload['role']);
+        $this->assertStringContainsString('خطاب الموافقة', $payload['title']);
     }
 }

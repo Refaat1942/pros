@@ -41,10 +41,49 @@
     osc.stop(start + duration + 0.03);
   }
 
+  // المتصفح يمنع الصوت قبل أول نقرة/ضغطة على الصفحة — إشعار يصل لشاشة لم يلمسها الموظف
+  // كان يمر بصمت. نفتح الصوت عند أول تفاعل، ونشغّل نغمة واحدة إن كان هناك إشعار منتظر.
+  var pendingBeep = false;
+
+  function unlock() {
+    var ctx = getContext();
+    if (!ctx) return;
+    var after = function () {
+      if (ctx.state === 'running') {
+        ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+          document.removeEventListener(ev, unlock, true);
+        });
+        if (pendingBeep) {
+          pendingBeep = false;
+          playNotificationSound();
+        }
+      }
+    };
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(after).catch(function () { /* صامت */ });
+    } else {
+      after();
+    }
+  }
+
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+    document.addEventListener(ev, unlock, true);
+  });
+
   function playNotificationSound() {
     try {
       var ctx = getContext();
       if (!ctx) return;
+      if (ctx.state !== 'running') {
+        pendingBeep = true;
+        ctx.resume().then(function () {
+          if (ctx.state === 'running' && pendingBeep) {
+            pendingBeep = false;
+            playNotificationSound();
+          }
+        }).catch(function () { /* ينتظر أول نقرة */ });
+        return;
+      }
 
       var t = ctx.currentTime;
       var mainVol = 0.78;

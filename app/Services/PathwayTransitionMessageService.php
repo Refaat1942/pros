@@ -87,6 +87,11 @@ class PathwayTransitionMessageService
 
     public function transferMessage(CaseRecord $case, string $event, string $fromStageKey): string
     {
+        // التسليم يغلق الحالة — لا «من التسليم إلى التسليم».
+        if ($event === WorkflowEvent::Delivered->value) {
+            return 'تم تسليم الطرف للمريض وإغلاق الحالة.';
+        }
+
         $targetStage = $this->resolveTargetStage($case, $event);
 
         if ($targetStage === null) {
@@ -130,7 +135,7 @@ class PathwayTransitionMessageService
             default => "{$prefix} حالة جديدة — {$toLabel}",
         };
 
-        $transfer = $this->transferMessage($case, $event, $fromStageKey);
+        $transfer = rtrim($this->transferMessage($case, $event, $fromStageKey), '.');
         $body = "المريض {$patient} (حالة {$caseNo}) — {$transfer}.";
 
         return [
@@ -241,6 +246,12 @@ class PathwayTransitionMessageService
 
         // مسار الكاش: QuoteIssued يُتبع فوراً بـ SentToCashier — إشعار واحد للخزنة يكفي.
         if ($event === WorkflowEvent::QuoteIssued->value && $case->isCashCivilian()) {
+            return true;
+        }
+
+        // مسار الجهات: التشغيل أُشعر بإصدار عرض السعر (CostingCompleted)؛ «أصدر أمر الشغل»
+        // هنا سابق لأوانه — يُرسَل عند تسجيل خطاب موافقة الجهة (ApprovalService).
+        if ($event === WorkflowEvent::QuoteIssued->value && $pathway === PathwayStep::PATHWAY_ENTITY) {
             return true;
         }
 

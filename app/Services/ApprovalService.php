@@ -53,6 +53,22 @@ class ApprovalService
             ]);
         });
 
+        // مكتب التشغيل لم يكن يُشعَر بوصول الموافقة — الحالة كانت تنتظر بلا تنبيه.
+        try {
+            $case->loadMissing('patient:id,name');
+            app(\App\Services\Notifications\NotificationService::class)->push(
+                roleSlug: \App\Models\Role::SLUG_OPERATIONS,
+                title: '✅ موافقة الجهة وصلت — أصدر أمر الشغل',
+                body: "المريض ".($case->patient?->name ?? '—')." (حالة {$case->case_no}) — سُجّل خطاب موافقة "
+                    .($quote->company_name ?: 'الجهة')." على عرض السعر {$quote->quote_no} — بانتظار إصدار أمر الشغل.",
+                case: $case,
+                event: 'entity_approved',
+                data: ['url' => '/operations/pending'],
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         AuditService::log(
             action: 'scan',
             description: "مسح موافقة الجهة — {$quote->quote_no} — بانتظار إصدار أمر الشغل من مكتب التشغيل",
