@@ -69,6 +69,9 @@ class AppointmentService
                     'phone' => $data['phone'] ?? null,
                     'national_id' => $data['national_id'] ?? null,
                 ];
+                if (array_key_exists('age', $data)) {
+                    $patientUpdates['age'] = $data['age'] !== null && $data['age'] !== '' ? (int) $data['age'] : null;
+                }
 
                 if ($appointment->isMilitary()) {
                     $patientUpdates['military_rank_id'] = $data['military_rank_id'] ?? null;
@@ -99,7 +102,7 @@ class AppointmentService
             );
 
             return $appointment->fresh()->load([
-                'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity,national_id,military_rank_id,military_number,seniority_number,military_weapon',
+                'patient:id,patient_code,name,patient_type,rank,created_at,contract_company_id,company_name,sovereign_entity,national_id,age,military_rank_id,military_number,seniority_number,military_weapon',
                 'patient.contractCompany:id,name,is_contracted',
                 'visitTypeRecord:id,name',
             ]);

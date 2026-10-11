@@ -68,6 +68,7 @@ class AdminCaseDetailService
                 'patient_code' => $patient->patient_code,
                 'phone' => $patient->phone,
                 'national_id' => $patient->national_id,
+                'age' => $patient->ageYears(),
                 'type' => $patient->patient_type,
                 'type_label' => $isMil ? 'عسكري' : 'مدني',
                 'company' => $isMil ? null : ($case->company_name ?? $patient->company_name),

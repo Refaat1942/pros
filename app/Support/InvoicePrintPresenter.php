@@ -165,7 +165,7 @@ final class InvoicePrintPresenter
             'validity' => '',
             'entity' => (string) ($case->sovereign_entity ?: 'القوات المسلحة'),
             'patient_name' => $rank !== '' && ! str_starts_with($name, $rank) ? "{$rank} / {$name}" : $name,
-            'age' => QuotePrintPresenter::ageFromNationalId((string) ($patient?->national_id ?? ''), $date),
+            'age' => $patient?->ageYears($date),
             'patient_code' => (string) ($patient?->patient_code ?? ''),
             'injury' => trim((string) ($record?->diagnosis ?? '')),
             'injury_year' => '',

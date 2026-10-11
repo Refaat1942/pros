@@ -70,6 +70,7 @@ class StorePatientRequest extends BaseRequest
             'name' => $this->personNameRules(),
             'phone' => $this->egyptianMobileRules(required: $policy->isRequired('reception', 'phone')),
             'national_id' => $this->egyptianNationalIdRules(required: $policy->isRequired('reception', 'national_id')),
+            'age' => ['nullable', 'integer', 'min:0', 'max:120'],
             'patient_classification' => ['required', 'string', Rule::in([self::CLASS_CASH, self::CLASS_ENTITY, self::CLASS_MILITARY])],
             'patient_type' => ['required', 'string', Rule::in([Patient::TYPE_CIVILIAN, Patient::TYPE_MILITARY])],
             'entity_billing_type' => ['nullable', 'string', Rule::in(['contracted', 'non_contracted'])],

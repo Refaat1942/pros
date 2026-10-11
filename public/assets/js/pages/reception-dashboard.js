@@ -580,6 +580,7 @@
         name: row.patient_name || patient.name || '—',
         phone: row.phone || patient.phone || '—',
         nationalId: patient.national_id || '',
+        age: patient.age != null ? String(patient.age) : '',
         contractCompanyId: patient.contract_company_id || null,
         militaryRankId: patient.military_rank_id || null,
         militaryNumber: patient.military_number || '',
@@ -876,6 +877,7 @@
       document.getElementById('editPatientName').value = appt.name === '—' ? '' : appt.name;
       document.getElementById('editPatientPhone').value = appt.phone === '—' ? '' : appt.phone;
       document.getElementById('editNationalId').value = appt.nationalId || '';
+      if (document.getElementById('editPatientAge')) document.getElementById('editPatientAge').value = appt.age || '';
       document.getElementById('editVisitTypeId').value = appt.visitTypeId ? String(appt.visitTypeId) : '';
 
       var isMilitary = appt.patient_type === 'military';
@@ -913,6 +915,11 @@
         name: (document.getElementById('editPatientName').value || '').trim(),
         phone: (document.getElementById('editPatientPhone').value || '').trim() || null,
         national_id: (document.getElementById('editNationalId').value || '').trim() || null,
+        age: (function () {
+          var el = document.getElementById('editPatientAge');
+          var v = el ? String(el.value || '').trim() : '';
+          return v === '' ? null : parseInt(v, 10);
+        })(),
         visit_type_id: parseInt(document.getElementById('editVisitTypeId').value, 10)
       };
 
