@@ -19,11 +19,15 @@ class WorkflowPolicyService
         return $this->pathway->availableSkipRoles();
     }
 
+    /**
+     * المسار الفعلي للحالة (مدني نقدي / جهات / عسكري / خدمات عسكرية) — كان مدني/عسكري فقط
+     * فتُقرأ قواعد التخطي لحالات الجهات والخدمات من المسار الخطأ.
+     */
     public function pathwayForCase(CaseRecord $case): string
     {
-        return $case->isMilitary()
-            ? PathwayStep::PATHWAY_MILITARY
-            : PathwayStep::PATHWAY_CIVILIAN;
+        $case->loadMissing('patient');
+
+        return $this->pathway->resolvePathway($case->patient, $case);
     }
 
     public function isBusinessLocked(string $pathway, string $stageKey): bool

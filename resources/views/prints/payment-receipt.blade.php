@@ -143,6 +143,8 @@
         <span>{{ $tpl['signature_2'] ?? 'توقيع المستلم' }}: <span class="fill">&nbsp;</span></span>
     </div>
 
+    @include('prints.partials.extra-signatures', ['tpl' => $tpl])
+
     <div class="receipt-note">
         {{ $tpl['footer_note'] ?: 'هذا الإيصال إثبات لاستلام المبلغ الموضح أعلاه — يُحتفظ بنسخة بملف الحالة.' }}
     </div>

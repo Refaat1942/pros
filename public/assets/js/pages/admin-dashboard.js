@@ -230,10 +230,10 @@
           ).toLowerCase();
           var show = !q || hay.indexOf(q) !== -1;
           if (show) {
-            delete row.dataset.paginationSkip;
+            delete row.dataset.pageFilterHidden;
             visible++;
           } else {
-            row.dataset.paginationSkip = '1';
+            row.dataset.pageFilterHidden = '1';
           }
         });
         var countEl = document.getElementById(countId);
@@ -820,10 +820,10 @@
         var name = (row.dataset.name || '').toLowerCase();
         var show = !search || name.indexOf(search) !== -1;
         if (show) {
-          delete row.dataset.paginationSkip;
+          delete row.dataset.pageFilterHidden;
           visible++;
         } else {
-          row.dataset.paginationSkip = '1';
+          row.dataset.pageFilterHidden = '1';
         }
       });
       var countEl = document.getElementById('companiesCount');
@@ -1449,10 +1449,10 @@
           && (role === 'all' || rowRole === role)
           && (status === 'all' || rowStatus === status);
         if (show) {
-          delete row.dataset.paginationSkip;
+          delete row.dataset.pageFilterHidden;
           visible++;
         } else {
-          row.dataset.paginationSkip = '1';
+          row.dataset.pageFilterHidden = '1';
         }
       });
       var ec = document.getElementById('empCount');

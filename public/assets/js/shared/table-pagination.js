@@ -20,7 +20,9 @@
   }
 
   function isFilterHidden(row) {
-    return row.dataset.filterHidden === '1';
+    // pageFilterHidden: فلاتر الصفحة (الدور/الحالة…) — منفصلة عن بحث الجدول العام
+    // حتى لا يمسحها table-sort-filter عند إعادة الترقيم.
+    return row.dataset.filterHidden === '1' || row.dataset.pageFilterHidden === '1';
   }
 
   function isPaginatedRow(row, state) {

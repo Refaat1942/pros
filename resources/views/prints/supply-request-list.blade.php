@@ -32,7 +32,7 @@
     ])
 
     <h1 class="doc-title">{{ $tpl['doc_title'] ?? 'طلبات التوريد المفتوحة' }}</h1>
-    <p class="meta-note">{{ $tpl['subtitle'] ?? 'تاريخ الطباعة: '.$generatedAt->format('d/m/Y H:i')) }}</p>
+    <p class="meta-note">{{ ($tpl['subtitle'] ?? '') !== '' ? $tpl['subtitle'] : 'تاريخ الطباعة: '.$generatedAt->format('d/m/Y H:i') }}</p>
 
     <table class="print-table items-table">
         <thead>
@@ -71,6 +71,7 @@
         <div style="margin-top:20mm;border-top:1.5px solid #000;width:55mm;">&nbsp;</div>
         <div style="margin-top:4px;font-size:11pt;">{{ $tpl['signature_1'] ?? 'رئيس المخازن' }}</div>
     </footer>
+    @include('prints.partials.extra-signatures', ['tpl' => $tpl])
 </div>
 </body>
 </html>

@@ -14,6 +14,31 @@ class DocumentTemplateService
 
     public const SCOPES_KEY = '_scopes';
 
+    /** توقيعات إضافية متاحة في كل وثيقة (نظامية ومخصّصة) — صفة + اسم لكل توقيع. */
+    public const SIGNATURES_KEY = 'extra_signatures';
+
+    public const MAX_EXTRA_SIGNATURES = 8;
+
+    /**
+     * @param  array<string, mixed>  $def
+     * @return array<string, mixed>
+     */
+    private static function withSignaturesField(array $def): array
+    {
+        $keys = array_column($def['fields'] ?? [], 'key');
+        if (! in_array(self::SIGNATURES_KEY, $keys, true)) {
+            $def['fields'][] = [
+                'key' => self::SIGNATURES_KEY,
+                'label' => '✍️ توقيعات إضافية',
+                'type' => 'signatures',
+                'help' => 'أضف ما تحتاجه من توقيعات (الصفة والاسم) — تظهر أسفل الوثيقة المطبوعة.',
+            ];
+        }
+        $def['defaults'][self::SIGNATURES_KEY] ??= [];
+
+        return $def;
+    }
+
     /** @return array<string, array<string, mixed>> */
     public function catalog(): array
     {
@@ -22,6 +47,7 @@ class DocumentTemplateService
         $out = [];
 
         foreach ($definitions as $key => $def) {
+            $def = self::withSignaturesField($def);
             $merged = $this->mergeDefinition($key, $def, $this->normalizeDocumentEntry($stored[$key] ?? []));
             $out[$key] = [
                 'key' => $key,
@@ -83,7 +109,7 @@ class DocumentTemplateService
             abort(404, 'نوع الوثيقة غير معرّف.');
         }
 
-        return $def;
+        return self::withSignaturesField($def);
     }
 
     public function exists(string $key): bool
@@ -261,7 +287,7 @@ class DocumentTemplateService
         ?string $department = null,
         ?string $stage = null,
     ): array {
-        $defaults = CustomDocumentService::defaultTemplateValues($custom->title);
+        $defaults = CustomDocumentService::defaultTemplateValues($custom->title) + [self::SIGNATURES_KEY => []];
         $template = $custom->template_values ?? [];
         $global = $this->globalFields($template);
         $scoped = $this->scopedOverrides($template, $department, $stage);
@@ -289,7 +315,7 @@ class DocumentTemplateService
             'help' => 'يمكنك نسخ التنسيق من النموذج المرفوع وتعديله هنا.',
         ];
 
-        return [
+        return self::withSignaturesField([
             'group' => $custom->group_label,
             'title' => $custom->title,
             'description' => $custom->description ?? '',
@@ -297,7 +323,7 @@ class DocumentTemplateService
             'print_route' => null,
             'fields' => $fields,
             'defaults' => CustomDocumentService::defaultTemplateValues($custom->title),
-        ];
+        ]);
     }
 
     /** @param  array<string, mixed>  $payload */
@@ -323,6 +349,10 @@ class DocumentTemplateService
         if (isset($payload['font_scale'])) {
             $scale = (string) $payload['font_scale'];
             $clean['font_scale'] = in_array($scale, ['compact', 'normal'], true) ? $scale : 'compact';
+        }
+
+        if (array_key_exists(self::SIGNATURES_KEY, $payload)) {
+            $clean[self::SIGNATURES_KEY] = $this->castField('signatures', $payload[self::SIGNATURES_KEY], []);
         }
 
         if (array_key_exists('body_html', $payload)) {
@@ -416,6 +446,20 @@ class DocumentTemplateService
     {
         if ($type === 'bool') {
             return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if ($type === 'signatures') {
+            $rows = [];
+            foreach (is_array($value) ? $value : [] as $row) {
+                $title = mb_substr(trim((string) ($row['title'] ?? '')), 0, 100);
+                $name = mb_substr(trim((string) ($row['name'] ?? '')), 0, 100);
+                if ($title === '' && $name === '') {
+                    continue;
+                }
+                $rows[] = ['title' => $title, 'name' => $name];
+            }
+
+            return array_slice($rows, 0, self::MAX_EXTRA_SIGNATURES);
         }
 
         if ($type === 'textarea' || $type === 'text' || $type === 'html') {

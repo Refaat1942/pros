@@ -96,9 +96,23 @@
                         $val = old($key, $values[$key] ?? '');
                         $type = $field['type'];
                     @endphp
-                    <div class="doc-template-field {{ in_array($type, ['textarea', 'html'], true) ? 'full' : '' }}">
+                    <div class="doc-template-field {{ in_array($type, ['textarea', 'html', 'signatures'], true) ? 'full' : '' }}">
                         <label for="tpl_{{ $key }}">{{ $field['label'] }}</label>
-                        @if ($type === 'bool')
+                        @if ($type === 'signatures')
+                            @php $sigRows = is_array($val) ? $val : []; @endphp
+                            <div class="doc-signatures" data-signatures-field="{{ $key }}" data-max="{{ \App\Services\DocumentTemplateService::MAX_EXTRA_SIGNATURES }}">
+                                <div class="doc-signatures__rows">
+                                    @foreach ($sigRows as $row)
+                                        <div class="doc-signatures__row">
+                                            <input type="text" class="form-control" data-sig="title" maxlength="100" placeholder="الصفة (مثال: مدير المركز)" value="{{ $row['title'] ?? '' }}">
+                                            <input type="text" class="form-control" data-sig="name" maxlength="100" placeholder="الاسم (اختياري)" value="{{ $row['name'] ?? '' }}">
+                                            <button type="button" class="btn-action danger doc-signatures__remove" title="حذف التوقيع">✕</button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <button type="button" class="btn-action doc-signatures__add">➕ إضافة توقيع</button>
+                            </div>
+                        @elseif ($type === 'bool')
                             <label class="doc-template-check">
                                 <input type="checkbox" id="tpl_{{ $key }}" name="{{ $key }}" value="1"
                                     {{ filter_var($val, FILTER_VALIDATE_BOOLEAN) ? 'checked' : '' }}>
@@ -160,6 +174,9 @@
     border-radius: 8px;
 }
 .doc-template-field.full { grid-column: 1 / -1; }
+.doc-signatures__rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.doc-signatures__row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+@media (max-width: 600px) { .doc-signatures__row { grid-template-columns: 1fr; } }
 .doc-template-field label {
     display: block;
     font-size: 13px;
@@ -209,6 +226,27 @@
     return q.length ? '?' + q.join('&') : '';
   }
 
+  // توقيعات إضافية — إضافة/حذف صفوف (صفة + اسم).
+  form.querySelectorAll('[data-signatures-field]').forEach(function (wrap) {
+    var rows = wrap.querySelector('.doc-signatures__rows');
+    var max = parseInt(wrap.getAttribute('data-max') || '8', 10);
+    function rowHtml() {
+      return '<div class="doc-signatures__row">' +
+        '<input type="text" class="form-control" data-sig="title" maxlength="100" placeholder="الصفة (مثال: مدير المركز)">' +
+        '<input type="text" class="form-control" data-sig="name" maxlength="100" placeholder="الاسم (اختياري)">' +
+        '<button type="button" class="btn-action danger doc-signatures__remove" title="حذف التوقيع">✕</button></div>';
+    }
+    wrap.querySelector('.doc-signatures__add').addEventListener('click', function () {
+      if (rows.querySelectorAll('.doc-signatures__row').length >= max) return;
+      rows.insertAdjacentHTML('beforeend', rowHtml());
+      rows.lastElementChild.querySelector('input').focus();
+    });
+    rows.addEventListener('click', function (e) {
+      var btn = e.target.closest('.doc-signatures__remove');
+      if (btn) btn.closest('.doc-signatures__row').remove();
+    });
+  });
+
   if (applyScopeBtn) {
     applyScopeBtn.addEventListener('click', function () {
       window.location.href = '/admin/documents-hub/' + encodeURIComponent(key) + '/edit' + currentScopeQuery();
@@ -227,6 +265,17 @@
       } else {
         payload[el.name] = el.value;
       }
+    });
+    form.querySelectorAll('[data-signatures-field]').forEach(function (wrap) {
+      payload[wrap.getAttribute('data-signatures-field')] = Array.prototype.map.call(
+        wrap.querySelectorAll('.doc-signatures__row'),
+        function (row) {
+          return {
+            title: (row.querySelector('[data-sig="title"]') || {}).value || '',
+            name: (row.querySelector('[data-sig="name"]') || {}).value || '',
+          };
+        }
+      ).filter(function (s) { return s.title.trim() || s.name.trim(); });
     });
 
     var btn = document.getElementById('btnSaveDocumentTemplate');

@@ -46,6 +46,7 @@
         <span>{{ $documentTemplate['signature_1'] ?? 'مسؤول' }}</span>
         <span>{{ $documentTemplate['signature_2'] ?? 'يعتمد' }}</span>
     </div>
+    @include('prints.partials.extra-signatures', ['tpl' => $documentTemplate ?? []])
 </div>
 </body>
 </html>

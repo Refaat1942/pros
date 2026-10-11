@@ -150,6 +150,7 @@ class DocumentTemplateController extends Controller
                     'previewValueDisplay' => '15,000',
                 ]),
                 'quote' => $this->quotePreviewView($tpl, $autoPrint),
+                'invoice' => $this->invoicePreviewView($tpl, $autoPrint),
                 'spec_print' => view('spec.print', [
                     'spec' => DocumentPreviewSamples::techOrderSpec(),
                     'case' => DocumentPreviewSamples::techOrderSpec()->caseRecord,
@@ -179,6 +180,21 @@ class DocumentTemplateController extends Controller
             'quote' => $sampleQuote,
             'printTotals' => QuotePrintPresenter::fromQuote($sampleQuote),
             'quoteQrSvg' => $this->safeQuoteQr($sampleQuote->quote_no),
+            'embed' => false,
+            'autoPrint' => $autoPrint,
+            'documentTemplate' => $tpl,
+        ]);
+    }
+
+    private function invoicePreviewView(array $tpl, bool $autoPrint): View
+    {
+        $sampleQuote = DocumentPreviewSamples::quote();
+        $doc = \App\Support\InvoicePrintPresenter::preview($sampleQuote, $tpl);
+
+        return view('quotes.print', [
+            'invoiceCase' => $sampleQuote->caseRecord,
+            'invoiceDoc' => $doc,
+            'quoteQrSvg' => $this->safeQuoteQr($doc['invoice_no']),
             'embed' => false,
             'autoPrint' => $autoPrint,
             'documentTemplate' => $tpl,

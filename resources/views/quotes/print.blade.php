@@ -8,14 +8,14 @@
     // نفس النموذج يُستخدم للفاتورة الختامية بعد التسليم ($invoiceDoc + $invoiceCase).
     $isInvoice = isset($invoiceDoc);
     $printCtx = DocumentPrintContext::fromRequest(request(), $isInvoice ? $invoiceCase : $quote->caseRecord);
-    $tpl      = $documentTemplate ?? app(DocumentTemplateService::class)->for('quote', $printCtx->department, $printCtx->stage);
+    $tpl      = $documentTemplate ?? app(DocumentTemplateService::class)->for($isInvoice ? 'invoice' : 'quote', $printCtx->department, $printCtx->stage);
     $doc      = $isInvoice ? $invoiceDoc : QuotePrintPresenter::document($quote, $tpl);
     $totals   = $isInvoice ? $doc['totals'] : ($printTotals ?? $doc['totals']);
     $settings = $doc['settings'];
     $branding = app(\App\Services\SettingService::class)->branding();
     $refNo    = $isInvoice ? ($doc['invoice_no'] ?: $doc['case_no']) : $quote->quote_no;
     $refLabel = $isInvoice ? 'رقم الفاتورة' : \App\Models\Quote::SERIAL_LABEL;
-    $docTitle = $isInvoice ? 'فاتورة' : (trim((string) ($tpl['doc_title'] ?? '')) ?: 'عرض أسعار');
+    $docTitle = trim((string) ($tpl['doc_title'] ?? '')) ?: ($isInvoice ? 'فاتورة' : 'عرض أسعار');
     $showLogo = (bool) ($tpl['show_logo'] ?? true);
     $showSeal = (bool) ($tpl['show_seal'] ?? true);
     $footerNote = trim((string) ($tpl['footer_note'] ?? ''));
@@ -575,7 +575,7 @@
         @endif
     </table>
 
-    @if (! $isInvoice && $footerNote !== '')
+    @if ($footerNote !== '')
         <div class="footer-note">{{ $footerNote }}</div>
     @endif
 
@@ -588,6 +588,8 @@
             <div>{{ $setting('signatory_title') }}</div>
         @endif
     </div>
+
+    @include('prints.partials.extra-signatures', ['tpl' => $tpl])
 
     <div class="spacer"></div>
 

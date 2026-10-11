@@ -237,6 +237,7 @@
             <div class="sig-line">التوقيع — يعتمد</div>
         </div>
     </footer>
+    @include('prints.partials.extra-signatures', ['tpl' => $tpl])
     @if (!empty($tpl['footer_note']))
         <p style="margin-top:10px;font-size:10pt;font-weight:600;">{{ $tpl['footer_note'] }}</p>
     @endif

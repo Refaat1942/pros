@@ -159,6 +159,8 @@
         <span>{{ $tpl['signature_3'] ?? 'مدير الإنتاج' }}: <span class="fill">&nbsp;</span></span>
     </div>
 
+    @include('prints.partials.extra-signatures', ['tpl' => $tpl])
+
     <div class="trial-row">
         <span>تاريخ التجربة الأولى: <span class="fill">&nbsp;</span></span>
         <span>توقيع المختص: <span class="fill">&nbsp;</span></span>
