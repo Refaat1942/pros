@@ -24,7 +24,11 @@ class UpdateDocumentTemplateRequest extends FormRequest
 
         foreach ($def['fields'] as $field) {
             $key = $field['key'];
-            if ($field['type'] === 'bool') {
+            if ($field['type'] === 'signatures') {
+                $rules[$key] = ['nullable', 'array', 'max:'.DocumentTemplateService::MAX_EXTRA_SIGNATURES];
+                $rules[$key.'.*.title'] = ['nullable', 'string', 'max:100'];
+                $rules[$key.'.*.name'] = ['nullable', 'string', 'max:100'];
+            } elseif ($field['type'] === 'bool') {
                 $rules[$key] = ['sometimes', 'boolean'];
             } elseif ($field['type'] === 'html') {
                 $rules[$key] = ['nullable', 'string', 'max:50000'];

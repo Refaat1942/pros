@@ -178,6 +178,7 @@
             <div class="sig-line">{{ $sig2 }}</div>
         </div>
     </div>
+    @include('prints.partials.extra-signatures', ['tpl' => $tpl])
 </div>
 
 </body>

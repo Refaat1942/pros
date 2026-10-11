@@ -80,7 +80,8 @@ class AdminCaseController extends Controller
         }
 
         $embed = $request->boolean('embed');
-        $template = $this->documentTemplateForPrint('quote', $case);
+        // قالب «فاتورة» المستقل في مركز الوثائق (العنوان، الضمان، الموقّعون، التوقيعات الإضافية).
+        $template = $this->documentTemplateForPrint('invoice', $case);
 
         return view('quotes.print', [
             'invoiceCase' => $case,

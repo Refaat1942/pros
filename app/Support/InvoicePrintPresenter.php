@@ -101,6 +101,37 @@ final class InvoicePrintPresenter
     }
 
     /**
+     * معاينة مركز الوثائق — فاتورة تجريبية من عرض السعر النموذجي (بدون قاعدة بيانات).
+     *
+     * @param  array<string, mixed>  $template
+     * @return array<string, mixed>
+     */
+    public static function preview(Quote $quote, array $template): array
+    {
+        $base = QuotePrintPresenter::document($quote, $template);
+        $base['spec_rows'] = array_values(array_filter(
+            $base['spec_rows'],
+            fn (array $row) => $row['label'] !== 'مدة التوريد',
+        ));
+        $totals = QuotePrintPresenter::fromQuote($quote);
+
+        return array_merge($base, [
+            'invoice_no' => 'INV-'.now()->year.'-0001',
+            'invoice_date' => now()->format('j/n/Y'),
+            'delivered_at' => now()->format('d/m/Y H:i'),
+            'case_no' => 'CASE-'.now()->year.'-0001',
+            'work_order_no' => 'WO-'.now()->year.'-0001',
+            'quote_no' => (string) $quote->quote_no,
+            'payer' => 'جهة التعاقد — '.($base['entity'] ?? ''),
+            'is_military' => false,
+            'is_cash' => false,
+            'totals' => $totals,
+            'paid' => null,
+            'remaining' => null,
+        ]);
+    }
+
+    /**
      * حالة بلا عرض سعر (العسكري) — البيانات من ملف المريض وقائمة المواد.
      *
      * @param  array<string, mixed>  $settings
