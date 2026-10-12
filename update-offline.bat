@@ -1,42 +1,41 @@
 @echo off
-chcp 65001 >nul
 REM ============================================================
-REM  تحديث السيرفر الأوفلاين بضغطة واحدة (Laragon)
-REM  دبل كليك على الملف ده — يعمل نسخة احتياطية، يسحب آخر كود،
-REM  يحدّث قاعدة البيانات والصلاحيات، ويمسح الكاش.
+REM  One-click update for the offline Laragon server.
+REM  Double-click this file: backup, pull latest code, update the
+REM  database and permissions, clear caches.
 REM ============================================================
 cd /d "%~dp0"
 
-echo [1/6] نسخة احتياطية قبل التحديث...
+echo [1/6] Backup before update...
 php artisan prosthetics:backup
-if errorlevel 1 echo    (تنبيه: النسخة الاحتياطية لم تكتمل — نكمل التحديث)
+if errorlevel 1 echo    WARNING: backup did not finish - continuing.
 
-echo [2/6] سحب آخر نسخة من الكود...
+echo [2/6] Pulling latest code...
 git pull origin master
 if errorlevel 1 goto fail
 
-echo [3/6] مكتبات PHP (لو اتغيّرت)...
+echo [3/6] PHP packages...
 call composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-if errorlevel 1 echo    (تنبيه: composer لم يكتمل — لو ظهر خطأ في البرنامج ابعته)
+if errorlevel 1 echo    WARNING: composer did not finish - send a photo if the app shows an error.
 
-echo [4/6] تحديث قاعدة البيانات...
+echo [4/6] Updating database...
 php artisan migrate --force
 if errorlevel 1 goto fail
 
-echo [5/6] مزامنة الصلاحيات الجديدة...
+echo [5/6] Syncing new permissions...
 php artisan prosthetics:sync-permissions
 if errorlevel 1 goto fail
 
-echo [6/6] مسح الكاش...
+echo [6/6] Clearing caches...
 php artisan optimize:clear
 
 echo.
-echo ✅ تم التحديث بنجاح — اطلب من الموظفين تسجيل خروج ثم دخول.
+echo DONE - update finished. Ask users to log out and log in again.
 pause
 exit /b 0
 
 :fail
 echo.
-echo ❌ التحديث توقف — صوّر الشاشة دي وابعتها.
+echo UPDATE STOPPED - take a photo of this screen and send it.
 pause
-exit /b 1
+exit /b 1
