@@ -175,7 +175,8 @@ class DashboardPageDataService
         $employees = User::query()
             ->with('role:id,slug,label_ar')
             ->orderByDesc('id')
-            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at', 'catalog_list_visibility']);
+            // access_tier/allowed_pages لازمين لنموذج التعديل — بدونهم يظهر «مدير القسم» دائماً ويُحفظ كذلك.
+            ->get(['id', 'name', 'username', 'role_id', 'status', 'last_login_at', 'access_tier', 'allowed_pages', 'catalog_list_visibility']);
 
         $roles = Role::query()
             ->orderBy('label_ar')
