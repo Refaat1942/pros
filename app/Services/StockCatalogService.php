@@ -121,6 +121,11 @@ class StockCatalogService
     {
         $visibility = app(CatalogListVisibilityService::class);
 
+        // قائمة مقفولة للمستخدم → لا صفوف (بدل صفوف فارغة تكسر الواجهة).
+        if ($user instanceof User && ! $visibility->isListEnabledForUser($user, $profile)) {
+            return [];
+        }
+
         return $this->allItemsForUnifiedLists()
             ->map(function (StockItem $item) use ($visibility, $user, $profile) {
                 $row = $this->formatOperationalListRow($item);

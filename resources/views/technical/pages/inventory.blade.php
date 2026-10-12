@@ -68,8 +68,8 @@
             <label>الصنف</label>
             <select id="receiveStockItemId" class="form-control" required>
               <option value="">— اختر —</option>
-              @foreach ($inventory_items ?? [] as $item)
-                <option value="{{ $item['id'] ?? $item->id }}">{{ ($item['code'] ?? $item->code) }} — {{ ($item['name'] ?? $item->name) }}</option>
+              @foreach ($receive_items ?? [] as $item)
+                <option value="{{ $item['id'] }}">{{ $item['code'] }} — {{ $item['name'] }}</option>
               @endforeach
             </select>
           </div>
