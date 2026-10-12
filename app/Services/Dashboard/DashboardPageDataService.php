@@ -1047,6 +1047,11 @@ class DashboardPageDataService
         $backorderCount = $items->filter(fn (StockItem $i) => $i->isBackorder())->count();
 
         return [
+            // نموذج استلام الوارد يحتاج كل الأصناف بغضّ النظر عن أعمدة قائمة العرض.
+            'receive_items' => $items
+                ->map(fn (StockItem $i) => ['id' => $i->id, 'code' => $i->code, 'name' => $i->name])
+                ->values()
+                ->all(),
             'receive_stock_meta' => $this->receiveStockMetaMap($catalogService),
             'inventory_suppliers' => Supplier::query()
                 ->orderBy('name')

@@ -152,28 +152,47 @@ class PermissionCatalogService
 
         foreach ($labels as $key => $meta) {
             $dashPerms = $permissions->where('dashboard', $key);
+            // الصفحات بنفس ترتيب السايد بار (ترتيب config/dashboards.php) لا بترتيب إنشاء الصلاحية.
+            $pageOrder = array_flip(array_keys(config("dashboards.{$key}.pages", [])));
+            $views = $dashPerms->where('type', Permission::TYPE_VIEW)
+                ->sortBy(fn (Permission $p) => [$pageOrder[$p->page] ?? PHP_INT_MAX, $p->id])
+                ->values();
             $entry = [
                 'key' => $key,
                 'label' => $meta['label_ar'] ?? $key,
                 'icon' => $meta['icon'] ?? '📊',
-                'views' => $dashPerms->where('type', Permission::TYPE_VIEW)->values(),
+                'views' => $views,
                 'actions' => $dashPerms->where('type', Permission::TYPE_ACTION)->values(),
                 'groups' => [],
             ];
 
-            if ($key === Role::SLUG_ADMIN) {
-                $adminConfig = config('dashboards.admin', []);
-                foreach ($adminConfig['nav_groups'] ?? [] as $group) {
-                    $pageKeys = $group['pages'] ?? [];
-                    $views = $dashPerms->where('type', Permission::TYPE_VIEW)
-                        ->filter(fn (Permission $p) => in_array($p->page, $pageKeys, true));
-                    if ($views->isNotEmpty()) {
+            $navGroups = config("dashboards.{$key}.nav_groups", []);
+            if ($navGroups !== []) {
+                $grouped = [];
+                foreach ($navGroups as $group) {
+                    $pageKeys = array_values($group['pages'] ?? []);
+                    $groupViews = $views
+                        ->filter(fn (Permission $p) => in_array($p->page, $pageKeys, true))
+                        ->sortBy(fn (Permission $p) => array_search($p->page, $pageKeys, true))
+                        ->values();
+                    if ($groupViews->isNotEmpty()) {
                         $entry['groups'][] = [
                             'label' => $group['label'] ?? '',
                             'icon' => $group['icon'] ?? '📁',
-                            'views' => $views->values(),
+                            'views' => $groupViews,
                         ];
+                        array_push($grouped, ...$groupViews->pluck('id')->all());
                     }
+                }
+
+                // صفحات ليست في أي مجموعة بالسايد بار (فرعية/مخفية) — تظهر في الآخر بدل أن تختفي من المصفوفة.
+                $rest = $views->reject(fn (Permission $p) => in_array($p->id, $grouped, true))->values();
+                if ($rest->isNotEmpty()) {
+                    $entry['groups'][] = [
+                        'label' => 'صفحات فرعية (خارج القائمة الجانبية)',
+                        'icon' => '🗂️',
+                        'views' => $rest,
+                    ];
                 }
             }
 
