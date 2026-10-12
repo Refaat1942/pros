@@ -4,12 +4,12 @@
     $companyList = $companies ?? collect();
     $companyTemplateHeaders = ContractCompanyColumns::templateHeaders();
 
-    function formatCompanyDiscount($value): string
-    {
+    // closure بدل function عامة — إعادة رسم الصفحة في نفس العملية كانت تعطي «Cannot redeclare».
+    $formatCompanyDiscount = static function ($value): string {
         $pct = (float) ($value ?? 0);
 
         return $pct > 0 ? rtrim(rtrim(number_format($pct, 2, '.', ''), '0'), '.') . '%' : '—';
-    }
+    };
 @endphp
 <div class="section-view" id="section-companies">
     <div class="panel">
@@ -90,7 +90,7 @@
                                     <span class="entity-badge entity-badge--non-contracted">🏷️ غير متعاقدة</span>
                                 @endif
                             </td>
-                            <td>{{ formatCompanyDiscount($company->discount_percent) }}</td>
+                            <td>{{ $formatCompanyDiscount($company->discount_percent) }}</td>
                             <td>
                                 <div class="table-actions">
                                     <button type="button"
