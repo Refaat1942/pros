@@ -365,16 +365,17 @@ class StockCatalogController extends Controller
     private function buildLabels(array $items, int $copies, array $settings): array
     {
         $labels = [];
-        $moduleWidth = (float) ($settings['module_width'] ?? 1.0);
-        $widthPct = (float) ($settings['barcode_width_pct'] ?? 65);
+        $preferredDots = max(1, (int) round((float) ($settings['module_width'] ?? 2.0)));
+        $widthPct = (float) ($settings['barcode_width_pct'] ?? 72);
         $heightPct = (float) ($settings['barcode_height_pct'] ?? 42);
         $labelWidthMm = (float) ($settings['label_width_mm'] ?? 38);
         $labelHeightMm = (float) ($settings['label_height_mm'] ?? 25);
-        $dpi = 203;
-        $maxWidthPx = ($labelWidthMm * ($widthPct / 100)) * ($dpi / 25.4);
-        $maxHeightPx = (int) round(($labelHeightMm * ($heightPct / 100)) * ($dpi / 25.4));
-        $barcodeHeight = min((int) ($settings['barcode_height'] ?? 28), max(16, $maxHeightPx));
-        $quietZone = max(8, min(24, (int) config('label-print.quiet_zone_modules', 14)));
+        // ارتفاع الباركود (بكسل شاشة 96dpi) بحد أقصى نسبة الارتفاع من الملصق.
+        $heightMm = min(
+            $labelHeightMm * ($heightPct / 100),
+            max(4.0, (float) ($settings['barcode_height'] ?? 40) * 25.4 / 96),
+        );
+        $quietZone = max(10, min(24, (int) config('label-print.quiet_zone_modules', 14)));
 
         foreach ($items as $item) {
             $barcode = $item->displayBarcode();
@@ -382,11 +383,12 @@ class StockCatalogController extends Controller
                 continue;
             }
 
-            $svg = Code128::svgFit(
+            $svg = Code128::svgForLabel(
                 $barcode,
-                height: $barcodeHeight,
-                moduleWidth: $moduleWidth,
-                maxWidthPx: $maxWidthPx,
+                labelWidthMm: $labelWidthMm,
+                preferredWidthPct: $widthPct,
+                heightMm: $heightMm,
+                preferredDots: $preferredDots,
                 quietZone: $quietZone,
             );
             $dataUri = 'data:image/svg+xml;base64,'.base64_encode($svg);

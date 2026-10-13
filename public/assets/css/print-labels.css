@@ -394,11 +394,12 @@ body.labels-body {
     text-rendering: optimizeLegibility;
 }
 
+/* الباركود بمقاسه الفعلي بالمليمتر من السيرفر (وحدات = نقاط طابعة صحيحة) — أي تصغير/تمطيط
+   من CSS يغيّر نسب الخطوط ويخلّي الماسح ميقراش. */
 .label .barcode {
-    width: calc(var(--label-width) * var(--barcode-width-pct) / 100);
-    max-width: calc(var(--label-width) * var(--barcode-width-pct) / 100);
+    width: auto;
+    max-width: 100%;
     height: auto;
-    max-height: calc(var(--label-height) * var(--barcode-height-pct) / 100);
     flex: 0 0 auto;
     display: flex;
     align-items: center;
@@ -409,17 +410,13 @@ body.labels-body {
 
 .label .barcode-svg-wrap {
     display: block;
-    width: 100%;
-    max-width: 100%;
     line-height: 0;
 }
 
 .label .barcode-svg-wrap svg {
     display: block;
-    width: auto !important;
-    max-width: 100%;
-    height: auto !important;
-    max-height: calc(var(--label-height) * var(--barcode-height-pct) / 100);
+    max-width: none;
+    max-height: none;
     margin: 0 auto;
 }
 
@@ -433,12 +430,6 @@ body.labels-body {
     image-rendering: pixelated;
     image-rendering: -webkit-optimize-contrast;
     filter: contrast(1.75);
-}
-
-.label .barcode svg {
-    width: 100%;
-    height: 100%;
-    display: block;
 }
 
 .label .code {
@@ -534,5 +525,13 @@ body.labels-body {
     .label:last-child {
         page-break-after: auto;
         break-after: auto;
+    }
+}
+
+/* المعاينة على الشاشة بالمقاس الحقيقي (38مم) خطوطها أصغر من بكسل فلا يقرأها الماسح من الشاشة.
+   نكبّرها ×4 على الشاشة فقط — الطباعة بنفس المقاس الفعلي. */
+@media screen {
+    .label {
+        zoom: 4;
     }
 }
