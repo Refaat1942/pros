@@ -37,11 +37,15 @@ final class Code128
      */
     public static function svg(string $data, int $height = 50, float $moduleWidth = 2.0, int $quietZone = 14): string
     {
-        return self::renderSvg($data, $height, $moduleWidth, $quietZone);
+        $px = max(1, (int) round($moduleWidth));
+        $total = self::unitCount($data) + 2 * $quietZone;
+
+        return self::renderSvg($data, $quietZone, (string) ($total * $px), (string) $height, $height);
     }
 
     /**
-     * يولّد SVG لا يتجاوز عرضاً أقصى (بكسل) — يُصغّر moduleWidth تلقائياً.
+     * يولّد SVG لا يتجاوز عرضاً أقصى (بكسل شاشة) — للعرض على الشاشة.
+     * عرض الوحدة رقم صحيح من البكسلات حتى تبقى نسب الخطوط (1:2:3:4) مضبوطة.
      */
     public static function svgFit(
         string $data,
@@ -50,56 +54,93 @@ final class Code128
         float $maxWidthPx,
         int $quietZone = 14,
     ): string {
-        $width = max(20.0, $moduleWidth);
+        $units = self::unitCount($data);
+        [$px, $quiet] = self::pickModule($units, max(1, (int) round($moduleWidth)), $maxWidthPx, $quietZone);
+        $total = $units + 2 * $quiet;
+        $width = $px !== null ? $total * $px : $maxWidthPx;
 
-        while ($width >= 0.85) {
-            if (self::estimatedWidthPx($data, $width, $quietZone) <= $maxWidthPx) {
-                return self::renderSvg($data, $height, $width, $quietZone);
+        return self::renderSvg($data, $quiet, round($width, 2).'', (string) $height, $height);
+    }
+
+    /**
+     * SVG لملصق طابعة حرارية بمقاس فعلي بالمليمتر — كل وحدة = عدد صحيح من نقاط الطابعة
+     * (203dpi افتراضياً). الوحدة الواحدة أقل من نقطتين يصعب على الماسح قراءتها،
+     * لذلك نسمح بتجاوز نسبة العرض المطلوبة حتى 92% من عرض الملصق قبل النزول لنقطة واحدة.
+     */
+    public static function svgForLabel(
+        string $data,
+        float $labelWidthMm,
+        float $preferredWidthPct,
+        float $heightMm,
+        int $preferredDots = 2,
+        int $quietZone = 14,
+        int $dpi = 203,
+    ): string {
+        $dotMm = 25.4 / $dpi;
+        $units = self::unitCount($data);
+        $preferredDots = max(1, $preferredDots);
+
+        $maxDots = ($labelWidthMm * $preferredWidthPct / 100) / $dotMm;
+        [$dots, $quiet] = self::pickModule($units, $preferredDots, $maxDots, $quietZone, minDots: 2);
+        if ($dots === null) {
+            [$dots, $quiet] = self::pickModule($units, $preferredDots, ($labelWidthMm * 0.92) / $dotMm, $quietZone);
+        }
+
+        $total = $units + 2 * $quiet;
+        $widthMm = $dots !== null ? $total * $dots * $dotMm : $labelWidthMm * 0.92;
+        $heightUnits = 100;
+
+        return self::renderSvg($data, $quiet, round($widthMm, 3).'mm', round($heightMm, 2).'mm', $heightUnits);
+    }
+
+    /**
+     * أكبر عرض وحدة صحيح يدخل في العرض المتاح؛ يقلّل هامش السكون حتى 10 وحدات (حد المعيار) قبل تصغير الوحدة.
+     *
+     * @return array{0: int|null, 1: int}
+     */
+    private static function pickModule(int $units, int $preferred, float $maxWidth, int $quietZone, int $minDots = 1): array
+    {
+        $quiets = array_values(array_unique([max(10, $quietZone), 10]));
+        for ($dots = $preferred; $dots >= $minDots; $dots--) {
+            foreach ($quiets as $quiet) {
+                if (($units + 2 * $quiet) * $dots <= $maxWidth) {
+                    return [$dots, $quiet];
+                }
             }
-            $width = round($width - 0.05, 2);
         }
 
-        return self::renderSvg($data, $height, 0.85, $quietZone);
+        return [null, 10];
     }
 
-    private static function estimatedWidthPx(string $data, float $moduleWidth, int $quietZone): float
+    private static function unitCount(string $data): int
     {
-        $modules = self::modules($data);
-        $unitCount = 0;
-        foreach ($modules as [$moduleUnits]) {
-            $unitCount += $moduleUnits;
+        $count = 0;
+        foreach (self::modules($data) as [$moduleUnits]) {
+            $count += $moduleUnits;
         }
 
-        return ($unitCount + ($quietZone * 2)) * $moduleWidth;
+        return $count;
     }
 
-    private static function renderSvg(string $data, int $height, float $moduleWidth, int $quietZone): string
+    /**
+     * الرسم بإحداثيات وحدات صحيحة (وحدة = 1 في viewBox) — التكبير موحّد لكل الخطوط فلا تتشوّه النسب.
+     */
+    private static function renderSvg(string $data, int $quietZone, string $width, string $height, int $heightUnits): string
     {
-        $modules = self::modules($data);
-
-        $unitCount = 0;
-        foreach ($modules as [$width]) {
-            $unitCount += $width;
-        }
-
-        $totalUnits = $unitCount + ($quietZone * 2);
-        $svgWidth = round($totalUnits * $moduleWidth, 2);
-
-        $x = (int) round($quietZone * $moduleWidth);
+        $total = self::unitCount($data) + 2 * $quietZone;
+        $x = $quietZone;
         $rects = '';
 
-        foreach ($modules as [$width, $isBar]) {
-            $w = (int) max(1, round($width * $moduleWidth));
+        foreach (self::modules($data) as [$w, $isBar]) {
             if ($isBar) {
-                $rects .= '<rect x="'.$x.'" y="0" width="'.$w
-                    .'" height="'.$height.'" fill="#000"/>';
+                $rects .= '<rect x="'.$x.'" y="0" width="'.$w.'" height="'.$heightUnits.'" fill="#000"/>';
             }
             $x += $w;
         }
 
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="'.$svgWidth.'" height="'.$height
-            .'" viewBox="0 0 '.$svgWidth.' '.$height.'" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">'
-            .'<rect width="100%" height="100%" fill="#ffffff"/>'
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="'.$width.'" height="'.$height
+            .'" viewBox="0 0 '.$total.' '.$heightUnits.'" preserveAspectRatio="none" shape-rendering="crispEdges">'
+            .'<rect width="'.$total.'" height="'.$heightUnits.'" fill="#ffffff"/>'
             .$rects.'</svg>';
     }
 
