@@ -43,7 +43,8 @@ class UpdateCatalogItemRequest extends BaseRequest
             'spec' => ['nullable', 'string', 'max:500'],
             'category_id' => ['nullable', 'integer', 'exists:stock_categories,id'],
             'attributes' => ['nullable', 'array'],
-            'supplier_ids' => ['required', 'array', 'size:1'],
+            // تعديل صنف لا يجبر على اختيار مورد — بدون مورد يبقى المورد الحالي كما هو.
+            'supplier_ids' => ['nullable', 'array', 'max:1'],
             'supplier_ids.*' => ['integer', 'exists:suppliers,id'],
         ];
     }
@@ -53,7 +54,7 @@ class UpdateCatalogItemRequest extends BaseRequest
         return [
             'name.required' => 'يرجى إدخال اسم الصنف.',
             'supplier_ids.required' => 'يرجى اختيار مورد واحد لهذا الصنف.',
-            'supplier_ids.size' => 'يُسمح بمورد واحد فقط لكل صنف.',
+            'supplier_ids.max' => 'يُسمح بمورد واحد فقط لكل صنف.',
         ];
     }
 }

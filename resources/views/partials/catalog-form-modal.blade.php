@@ -134,9 +134,9 @@
 
                 <section class="catalog-form-card">
                     <h4 class="catalog-form-card__title">📂 القسم</h4>
-                    <label class="catalog-form-label" for="slimCategoryId">القسم *</label>
+                    <label class="catalog-form-label" for="slimCategoryId">القسم (اختياري)</label>
                     <select id="slimCategoryId" class="catalog-form-input">
-                        <option value="">— اختر القسم —</option>
+                        <option value="">— بدون قسم —</option>
                         @foreach ($categoryOptions as $cat)
                             <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
                         @endforeach

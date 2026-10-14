@@ -175,11 +175,14 @@ window.CatalogSections = (function () {
     return out;
   }
 
-  function validateBeforeSave() {
+  // القسم اختياري (السيرفر يقبل بدون قسم) — تعديل اسم صنف لا يجبر على اختيار قسم.
+  // حقول القسم الإلزامية تُطلب عند إضافة صنف جديد فقط، لا عند تعديل صنف موجود.
+  function validateBeforeSave(isEdit) {
     var catId = document.getElementById('slimCategoryId')?.value;
-    if (!catId) return 'يرجى اختيار القسم.';
+    if (!catId) return null;
     var cat = getCategory(catId);
     if (!cat) return 'القسم غير صالح.';
+    if (isEdit) return null;
     var attrs = collectAttributes();
     for (var i = 0; i < (cat.fields || []).length; i++) {
       var f = cat.fields[i];
