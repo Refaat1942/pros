@@ -15,6 +15,7 @@ use App\Services\StockItemSalesStatsService;
 use App\Services\StockPriceService;
 use App\Support\CatalogImportValidator;
 use App\Support\Barcode\Code128;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use App\Traits\PaginationTrait;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StockCatalogController extends Controller
 {
+    private const LABEL_WIDTH_MM = 50.0;
+
+    private const LABEL_HEIGHT_MM = 25.0;
+
     use PaginationTrait;
 
     public function __construct(
@@ -224,7 +229,7 @@ class StockCatalogController extends Controller
     }
 
     /**
-     * صفحة طباعة باركود حراري لصنف واحد — ملصق 25mm × 38mm (ملصق واحد لكل طباعة).
+     * صفحة طباعة باركود حراري لصنف واحد — ملصق ثابت 50 × 25 مم، باركود أو QR.
      */
     public function labels(StockItem $stockItem, Request $request): Response
     {
@@ -294,88 +299,29 @@ class StockCatalogController extends Controller
     }
 
     /**
-     * إعدادات الطباعة القابلة للضبط (بالمليمتر إلا حيث يُذكر).
+     * ملصق ثابت 50 × 25 مم — بدون إعدادات طباعة (كانت تُغيّر مقاس الخطوط وتمنع القراءة).
+     * type=barcode (افتراضي) أو type=qr.
      *
-     * @return array{
-     *     page_margin:float, gap:float, module_width:float, barcode_height:int,
-     *     offset_x:float, offset_y:float, copies:int,
-     *     label_width_mm:float, label_height_mm:float,
-     *     margin_left_mm:float, margin_top_mm:float,
-     *     label_width_in:float, label_height_in:float,
-     *     barcode_width_pct:float, barcode_height_pct:float,
-     *     field_help: array<string, string>
-     * }
+     * @return array{label_width_mm: float, label_height_mm: float, copies: int, type: string}
      */
     private function labelSettings(Request $request): array
     {
-        $defaults = config('label-print', []);
-
-        $widthMm = max(10.0, round((float) $request->query(
-            'label_width_mm',
-            (string) ($defaults['label_width_mm'] ?? 38),
-        ), 2));
-        $heightMm = max(10.0, round((float) $request->query(
-            'label_height_mm',
-            (string) ($defaults['label_height_mm'] ?? 25),
-        ), 2));
-
         return [
-            'page_margin' => round((float) $request->query('page_margin', '0'), 2),
-            'gap' => round((float) $request->query('gap', '0'), 2),
-            'module_width' => max(0.5, min(3.0, round((float) $request->query(
-                'module_width',
-                (string) ($defaults['module_width'] ?? 1.5),
-            ), 2))),
-            'barcode_height' => max(16, min(80, (int) $request->integer(
-                'barcode_height',
-                (int) ($defaults['barcode_height'] ?? 34),
-            ))),
-            'barcode_width_pct' => max(20.0, min(95.0, round((float) $request->query(
-                'barcode_width_pct',
-                (string) ($defaults['barcode_width_pct'] ?? 65),
-            ), 1))),
-            'barcode_height_pct' => max(15.0, min(70.0, round((float) $request->query(
-                'barcode_height_pct',
-                (string) ($defaults['barcode_height_pct'] ?? 42),
-            ), 1))),
-            'offset_x' => round((float) $request->query('offset_x', '0'), 2),
-            'offset_y' => round((float) $request->query('offset_y', '0'), 2),
+            'label_width_mm' => self::LABEL_WIDTH_MM,
+            'label_height_mm' => self::LABEL_HEIGHT_MM,
             'copies' => max(1, min(200, (int) $request->integer('copies', 1))),
-            'label_width_mm' => $widthMm,
-            'label_height_mm' => $heightMm,
-            'margin_left_mm' => round((float) $request->query(
-                'margin_left_mm',
-                (string) ($defaults['margin_left_mm'] ?? 0),
-            ), 2),
-            'margin_top_mm' => round((float) $request->query(
-                'margin_top_mm',
-                (string) ($defaults['margin_top_mm'] ?? 0),
-            ), 2),
-            'label_width_in' => round($widthMm / 25.4, 3),
-            'label_height_in' => round($heightMm / 25.4, 3),
-            'field_help' => (array) ($defaults['field_help'] ?? []),
+            'type' => $request->query('type') === 'qr' ? 'qr' : 'barcode',
         ];
     }
 
     /**
      * @param  list<StockItem>  $items
-     * @param  array<string, mixed>  $settings
-     * @return list<array{name:string, barcode:string, svg:string, svg_data_uri:string}>
+     * @param  array{type: string}  $settings
+     * @return list<array{name:string, barcode:string, svg:string}>
      */
     private function buildLabels(array $items, int $copies, array $settings): array
     {
         $labels = [];
-        $preferredDots = max(1, (int) round((float) ($settings['module_width'] ?? 2.0)));
-        $widthPct = (float) ($settings['barcode_width_pct'] ?? 72);
-        $heightPct = (float) ($settings['barcode_height_pct'] ?? 42);
-        $labelWidthMm = (float) ($settings['label_width_mm'] ?? 38);
-        $labelHeightMm = (float) ($settings['label_height_mm'] ?? 25);
-        // ارتفاع الباركود (بكسل شاشة 96dpi) بحد أقصى نسبة الارتفاع من الملصق.
-        $heightMm = min(
-            $labelHeightMm * ($heightPct / 100),
-            max(4.0, (float) ($settings['barcode_height'] ?? 40) * 25.4 / 96),
-        );
-        $quietZone = max(10, min(24, (int) config('label-print.quiet_zone_modules', 14)));
 
         foreach ($items as $item) {
             $barcode = $item->displayBarcode();
@@ -383,21 +329,23 @@ class StockCatalogController extends Controller
                 continue;
             }
 
-            $svg = Code128::svgForLabel(
-                $barcode,
-                labelWidthMm: $labelWidthMm,
-                preferredWidthPct: $widthPct,
-                heightMm: $heightMm,
-                preferredDots: $preferredDots,
-                quietZone: $quietZone,
-            );
-            $dataUri = 'data:image/svg+xml;base64,'.base64_encode($svg);
+            $svg = $settings['type'] === 'qr'
+                ? (string) QrCode::format('svg')->size(300)->margin(0)->errorCorrection('M')->generate($barcode)
+                // خطوط عريضة زي باركود الشاشة: حتى 3 نقاط طابعة للوحدة، بعرض حتى 92% من الملصق.
+                : Code128::svgForLabel(
+                    $barcode,
+                    labelWidthMm: self::LABEL_WIDTH_MM,
+                    preferredWidthPct: 92,
+                    heightMm: 11,
+                    preferredDots: 3,
+                    quietZone: 12,
+                );
+
             for ($i = 0; $i < $copies; $i++) {
                 $labels[] = [
                     'name' => (string) $item->name,
                     'barcode' => $barcode,
                     'svg' => $svg,
-                    'svg_data_uri' => $dataUri,
                 ];
             }
         }
