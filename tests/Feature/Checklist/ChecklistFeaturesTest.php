@@ -384,23 +384,28 @@ class ChecklistFeaturesTest extends TestCase
         $response->assertSee('class="barcode-svg-wrap"><svg', false);
     }
 
-    public function test_bulk_barcode_labels_render_multiple_items_with_settings(): void
+    public function test_bulk_barcode_labels_render_fixed_50x25_without_settings_and_offer_qr(): void
     {
         $admin = $this->userWithRole('admin');
 
         $a = StockItem::create(['code' => 'RM-A', 'name' => 'صنف أ', 'barcode' => 'BC-RM-A', 'qty' => 3, 'reserved' => 0, 'wac' => 10, 'status' => 'ok']);
         $b = StockItem::create(['code' => 'RM-B', 'name' => 'صنف ب', 'barcode' => 'BC-RM-B', 'qty' => 4, 'reserved' => 0, 'wac' => 10, 'status' => 'ok']);
 
+        // إعدادات قديمة في الرابط تُتجاهل — المقاس ثابت.
         $response = $this->actingAs($admin)->get(
-            route('admin.catalog.labels.bulk').'?ids='.$a->id.','.$b->id.'&offset_x=3&page_margin=6',
+            route('admin.catalog.labels.bulk').'?ids='.$a->id.','.$b->id.'&offset_x=3&label_width_mm=38',
         );
 
         $response->assertOk();
         $response->assertSee('BC-RM-A');
         $response->assertSee('BC-RM-B');
         $response->assertSee('7 ملصق');
-        $response->assertSee('label_width_mm', false);
-        $response->assertSee('margin_left_mm', false);
-        $response->assertSee('--offset-x: 3mm', false);
+        $response->assertSee('size: 50mm 25mm', false);
+        $response->assertDontSee('id="settingsForm"', false);
+        $response->assertDontSee('--offset-x: 3mm', false);
+        $response->assertSee('type=qr', false);
+
+        $qr = $this->actingAs($admin)->get(route('admin.catalog.labels.bulk').'?ids='.$a->id.'&type=qr');
+        $qr->assertOk()->assertSee('label--qr', false)->assertSee('BC-RM-A');
     }
 }

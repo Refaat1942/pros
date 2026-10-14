@@ -1,22 +1,24 @@
+@php
+    $isQr = ($settings['type'] ?? 'barcode') === 'qr';
+    $query = request()->query();
+@endphp
 <!DOCTYPE html>
 <html lang="ar" dir="ltr">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>طباعة باركود — {{ $heading }}</title>
+    <title>طباعة {{ $isQr ? 'QR' : 'باركود' }} — {{ $heading }}</title>
     <link rel="stylesheet" href="{{ asset('assets/css/print-labels.css') }}?v={{ filemtime(public_path('assets/css/print-labels.css')) }}">
     <style>
         :root {
             --label-width: {{ $settings['label_width_mm'] }}mm;
             --label-height: {{ $settings['label_height_mm'] }}mm;
-            --margin-left: {{ $settings['margin_left_mm'] }}mm;
-            --margin-top: {{ $settings['margin_top_mm'] }}mm;
-            --page-margin: {{ $settings['page_margin'] }}mm;
-            --gap: {{ $settings['gap'] }}mm;
-            --offset-x: {{ $settings['offset_x'] }}mm;
-            --offset-y: {{ $settings['offset_y'] }}mm;
-            --barcode-width-pct: {{ $settings['barcode_width_pct'] }};
-            --barcode-height-pct: {{ $settings['barcode_height_pct'] }};
+            --margin-left: 0mm;
+            --margin-top: 0mm;
+            --page-margin: 0mm;
+            --gap: 0mm;
+            --offset-x: 0mm;
+            --offset-y: 0mm;
         }
 
         @media print {
@@ -29,98 +31,38 @@
 </head>
 <body class="labels-body">
     <div class="labels-toolbar" dir="rtl">
-        <h1>🏷️ إعدادات الطباعة — {{ $heading }}</h1>
+        <h1>🏷️ طباعة — {{ $heading }}</h1>
         <p class="labels-toolbar-hint">
-            ملصق <strong>{{ number_format($settings['label_width_mm'], 1) }} × {{ number_format($settings['label_height_mm'], 1) }} مم</strong>
-            (≈ {{ number_format($settings['label_width_in'], 3) }}" × {{ number_format($settings['label_height_in'], 2) }}")
+            ملصق ثابت <strong>50 × 25 مم</strong> — في نافذة الطباعة: المقاس 50×25، الهوامش None، التكبير 100%.
         </p>
-        <form id="settingsForm" onsubmit="applySettings(event)">
-            <div class="fields">
-                <div>
-                    <label>عدد النسخ لكل صنف</label>
-                    <input type="number" name="copies" min="1" max="200" value="{{ $settings['copies'] }}">
-                </div>
-                <div>
-                    <label>عرض الملصق (مم)</label>
-                    <input type="number" name="label_width_mm" step="0.1" min="10" max="300" value="{{ $settings['label_width_mm'] }}">
-                </div>
-                <div>
-                    <label>ارتفاع الملصق (مم)</label>
-                    <input type="number" name="label_height_mm" step="0.1" min="10" max="300" value="{{ $settings['label_height_mm'] }}">
-                </div>
-                <div>
-                    <label>إزاحة يسار (معايرة)</label>
-                    <input type="number" name="margin_left_mm" step="0.5" value="{{ $settings['margin_left_mm'] }}">
-                </div>
-                <div>
-                    <label>إزاحة أعلى (معايرة)</label>
-                    <input type="number" name="margin_top_mm" step="0.5" value="{{ $settings['margin_top_mm'] }}">
-                </div>
-                <div>
-                    <label>عرض الوحدة (كثافة الباركود)</label>
-                    <input type="number" name="module_width" step="0.1" min="0.5" max="3" value="{{ $settings['module_width'] }}">
-                </div>
-                <div>
-                    <label>ارتفاع الباركود (بكسل)</label>
-                    <input type="number" name="barcode_height" step="1" min="16" max="80" value="{{ $settings['barcode_height'] }}">
-                </div>
-                <div>
-                    <label>عرض الباركود (% من الملصق)</label>
-                    <input type="number" name="barcode_width_pct" step="1" min="20" max="95" value="{{ $settings['barcode_width_pct'] }}">
-                </div>
-                <div>
-                    <label>ارتفاع الباركود (% من الملصق)</label>
-                    <input type="number" name="barcode_height_pct" step="1" min="15" max="70" value="{{ $settings['barcode_height_pct'] }}">
-                </div>
-                <div>
-                    <label>إزاحة المحتوى X (مم)</label>
-                    <input type="number" name="offset_x" step="0.5" value="{{ $settings['offset_x'] }}">
-                </div>
-                <div>
-                    <label>إزاحة المحتوى Y (مم)</label>
-                    <input type="number" name="offset_y" step="0.5" value="{{ $settings['offset_y'] }}">
-                </div>
-                <div>
-                    <label>الفجوة بين الملصقات (مم)</label>
-                    <input type="number" name="gap" step="0.5" min="0" value="{{ $settings['gap'] }}">
-                </div>
-                <div>
-                    <label>هامش المعاينة (مم)</label>
-                    <input type="number" name="page_margin" step="0.5" min="0" value="{{ $settings['page_margin'] }}">
-                </div>
-            </div>
-            <div class="actions">
-                <button type="button" class="secondary" onclick="applySettings()">↻ تطبيق</button>
-                <button type="button" onclick="printLabels()">🖨️ طباعة</button>
-                <span class="count">{{ count($labels) }} ملصق</span>
-            </div>
-        </form>
+        <div class="actions">
+            <a class="label-type-btn {{ $isQr ? '' : 'is-active' }}" href="?{{ http_build_query(array_merge($query, ['type' => 'barcode'])) }}">▮▯▮ باركود</a>
+            <a class="label-type-btn {{ $isQr ? 'is-active' : '' }}" href="?{{ http_build_query(array_merge($query, ['type' => 'qr'])) }}">▣ QR code</a>
+            <button type="button" onclick="window.print()">🖨️ طباعة</button>
+            <span class="count">{{ count($labels) }} ملصق</span>
+        </div>
     </div>
 
     <div class="labels-sheet">
         @foreach ($labels as $label)
-            <div class="label">
-                <div class="name">{{ $label['name'] }}</div>
-                <div class="barcode">
-                    <div class="barcode-svg-wrap">{!! $label['svg'] !!}</div>
+            @if ($isQr)
+                <div class="label label--qr">
+                    <div class="qr-wrap">{!! $label['svg'] !!}</div>
+                    <div class="qr-text">
+                        <div class="name">{{ $label['name'] }}</div>
+                        <div class="code">{{ $label['barcode'] }}</div>
+                    </div>
                 </div>
-                <div class="code">{{ $label['barcode'] }}</div>
-            </div>
+            @else
+                <div class="label">
+                    <div class="name">{{ $label['name'] }}</div>
+                    <div class="barcode">
+                        <div class="barcode-svg-wrap">{!! $label['svg'] !!}</div>
+                    </div>
+                    <div class="code">{{ $label['barcode'] }}</div>
+                </div>
+            @endif
         @endforeach
     </div>
-
-    <script>
-        function applySettings(e) {
-            if (e) e.preventDefault();
-            var form = document.getElementById('settingsForm');
-            var params = new URLSearchParams(window.location.search);
-            new FormData(form).forEach(function (value, key) { params.set(key, value); });
-            window.location.search = params.toString();
-        }
-
-        function printLabels() {
-            window.print();
-        }
-    </script>
 </body>
 </html>
