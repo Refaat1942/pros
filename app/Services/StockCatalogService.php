@@ -25,6 +25,29 @@ class StockCatalogService
 {
     public function __construct(private readonly StockCategorySchemaService $categorySchema) {}
 
+    /**
+     * ترتيب دفتر الأسعار: رقم الصفحة ثم رقم الصنف داخل الصفحة (ترتيب طبيعي 2 قبل 10)،
+     * والأصناف بدون رقم صفحة في الآخر بالكود.
+     *
+     * @param  Collection<int, StockItem>  $items
+     * @return Collection<int, StockItem>
+     */
+    public static function sortByBook(Collection $items): Collection
+    {
+        return $items->sort(function (StockItem $a, StockItem $b) {
+            $pa = trim((string) ($a->page_number ?? ''));
+            $pb = trim((string) ($b->page_number ?? ''));
+            if (($pa === '') !== ($pb === '')) {
+                return $pa === '' ? 1 : -1;
+            }
+
+            return strnatcasecmp($pa, $pb)
+                ?: strnatcasecmp((string) ($a->catalog_number ?? ''), (string) ($b->catalog_number ?? ''))
+                ?: strnatcasecmp((string) $a->code, (string) $b->code)
+                ?: $a->id <=> $b->id;
+        })->values();
+    }
+
     /** حد موحّد لقوائم الأصناف في كل اللوحات (رفع السوبر أدمن → نفس القائمة everywhere). */
     public function catalogListLimit(): int
     {
@@ -55,7 +78,7 @@ class StockCatalogService
             $query->limit($limit);
         }
 
-        return $query->get();
+        return self::sortByBook($query->get());
     }
 
     /** @return Collection<int, StockItem> */
@@ -67,7 +90,7 @@ class StockCatalogService
             $query->limit($limit);
         }
 
-        return $query->get();
+        return self::sortByBook($query->get());
     }
 
     public function displayCatalogCode(StockItem $item): string
@@ -155,6 +178,7 @@ class StockCatalogService
             ->orderByDesc('id')
             ->when($limit > 0, fn ($q) => $q->limit($limit))
             ->get()
+            ->pipe(fn (Collection $items) => self::sortByBook($items))
             ->map(fn (StockItem $item) => $this->formatItem($item));
     }
 
@@ -168,6 +192,7 @@ class StockCatalogService
             ->when($range['to'], fn ($q, Carbon $end) => $q->where('created_at', '<=', $end))
             ->orderBy('id')
             ->get()
+            ->pipe(fn (Collection $items) => self::sortByBook($items))
             ->map(fn (StockItem $item) => $this->formatItem($item));
     }
 
@@ -422,10 +447,12 @@ class StockCatalogService
             }
 
             if (array_key_exists('attributes', $data)) {
+                // تعديل صنف موجود (مثلاً الاسم فقط) لا يُرفض بسبب حقل قسم فاضي.
                 $this->categorySchema->syncItemAttributes(
                     $item,
                     (int) ($data['category_id'] ?? $item->category_id),
                     (array) $data['attributes'],
+                    enforceRequired: false,
                 );
             }
 
@@ -433,8 +460,8 @@ class StockCatalogService
                 $this->syncPrices($item, $data['prices'] ?? []);
             }
 
-            if (array_key_exists('supplier_ids', $data)) {
-                $this->syncSuppliers($item, $data['supplier_ids'] ?? []);
+            if (! empty($data['supplier_ids'])) {
+                $this->syncSuppliers($item, $data['supplier_ids']);
             }
 
             app(InventoryValuationService::class)->refreshStoredWac($item->fresh());

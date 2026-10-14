@@ -111,7 +111,7 @@ class StockCategorySchemaService
     /**
      * @param  array<string, mixed>  $attributes
      */
-    public function syncItemAttributes(StockItem $item, ?int $categoryId, array $attributes): void
+    public function syncItemAttributes(StockItem $item, ?int $categoryId, array $attributes, bool $enforceRequired = true): void
     {
         if (! $categoryId) {
             $item->attributeValues()->delete();
@@ -125,7 +125,7 @@ class StockCategorySchemaService
             ->get()
             ->keyBy('field_key');
 
-        $validated = $this->validateAttributes($fields, $attributes);
+        $validated = $this->validateAttributes($fields, $attributes, $enforceRequired);
 
         $keepIds = [];
         foreach ($fields as $fieldKey => $field) {
@@ -158,7 +158,7 @@ class StockCategorySchemaService
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
      */
-    public function validateAttributes($fields, array $attributes): array
+    public function validateAttributes($fields, array $attributes, bool $enforceRequired = true): array
     {
         $out = [];
         $errors = [];
@@ -168,7 +168,7 @@ class StockCategorySchemaService
             $type = StockCategoryFieldType::tryFrom($field->type) ?? StockCategoryFieldType::Text;
 
             if ($this->isEmptyValue($type, $raw)) {
-                if ($field->required) {
+                if ($field->required && $enforceRequired) {
                     $errors[$fieldKey] = "«{$field->label}» مطلوب.";
                 }
 

@@ -347,7 +347,7 @@
     var name = document.getElementById('slimName').value.trim();
 
     if (window.CatalogSections) {
-      var catErr = window.CatalogSections.validateBeforeSave();
+      var catErr = window.CatalogSections.validateBeforeSave(!!id);
       if (catErr) {
         err.textContent = catErr;
         err.style.display = 'block';
@@ -362,7 +362,8 @@
     }
 
     var supplierIds = collectSupplierIds();
-    if (!supplierIds.length) {
+    // المورد مطلوب لصنف جديد فقط — التعديل (مثلاً الاسم) بدون مورد يحتفظ بالمورد الحالي.
+    if (!supplierIds.length && !id) {
       err.textContent = 'يرجى اختيار مورد واحد لهذا الصنف.';
       err.style.display = 'block';
       return;

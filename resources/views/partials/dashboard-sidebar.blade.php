@@ -75,6 +75,56 @@
                 @endforeach
             @endif
         </ul>
+        @php
+            // صفحات مسموحة للمستخدم من أقسام أخرى (مثال: المخزن + «الأصناف والأسعار» من الإدارة) —
+            // كانت تفتح بالرابط فقط ولا تظهر في القائمة.
+            $authUser = auth()->user();
+            $crossPages = [];
+            if ($authUser && ! $authUser->isSuperAdmin()) {
+                foreach (config('dashboards', []) as $otherKey => $otherCfg) {
+                    if ($otherKey === $dashboardKey || $otherKey === 'home' || ! is_array($otherCfg['pages'] ?? null)) {
+                        continue;
+                    }
+                    foreach ($otherCfg['pages'] as $otherSlug => $otherPage) {
+                        if (! empty($otherPage['hidden']) || in_array($otherSlug, ['notifications', 'staff'], true)) {
+                            continue;
+                        }
+                        if (! \Illuminate\Support\Facades\Route::has("{$otherKey}.{$otherSlug}")) {
+                            continue;
+                        }
+                        if ($authUser->canViewDashboardPage($otherKey, $otherSlug)) {
+                            $crossPages[] = [
+                                'url' => route("{$otherKey}.{$otherSlug}"),
+                                'icon' => $otherPage['icon'] ?? '📄',
+                                'label' => $otherPage['label'] ?? $otherSlug,
+                                'section' => $otherCfg['sidebar']['title'] ?? ($otherCfg['title'] ?? $otherKey),
+                            ];
+                        }
+                    }
+                }
+            }
+        @endphp
+        @if ($crossPages !== [])
+            <ul class="nav-menu nav-menu--grouped nav-menu--cross">
+                <li class="nav-group is-open">
+                    <button type="button" class="nav-group-toggle" aria-expanded="true">
+                        <span class="nav-icon">🔗</span>
+                        <span class="nav-group-label">صفحات من أقسام أخرى</span>
+                        <span class="nav-group-caret" aria-hidden="true">▾</span>
+                    </button>
+                    <ul class="nav-group-items">
+                        @foreach ($crossPages as $cross)
+                            <li>
+                                <a href="{{ $cross['url'] }}" title="{{ $cross['section'] }}">
+                                    <span class="nav-icon">{{ $cross['icon'] }}</span>
+                                    <span class="nav-label">{{ $cross['label'] }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </li>
+            </ul>
+        @endif
     </div>
     <div class="sidebar-footer">
         <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
