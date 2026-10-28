@@ -555,7 +555,7 @@
                 <td class="t-value">ج.م. <span class="num">{{ QuotePrintPresenter::money((float) $totals['gross_total']) }}</span></td>
             </tr>
             <tr class="t-discount">
-                <td class="t-label">نسبة الخصم ({{ $discountPct }}%)</td>
+                <td class="t-label">{{ ! empty($totals['discount_is_amount']) ? 'الخصم' : 'نسبة الخصم ('.$discountPct.'%)' }}</td>
                 <td class="t-value">ج.م. <span class="num">{{ QuotePrintPresenter::money((float) $totals['discount_amount']) }}</span></td>
             </tr>
             <tr class="t-net">

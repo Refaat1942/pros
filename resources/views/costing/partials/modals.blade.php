@@ -87,6 +87,29 @@
         </div>
       </div>
 
+      {{-- خصم يدوي — يظهر للعميل المدني الكاش فقط ولمن عنده صلاحية «منح خصم للعميل المدني الكاش». --}}
+      <div id="cashDiscountBox" class="cash-discount-box" hidden>
+        <h4 style="margin:0 0 10px;font-size:15px;">🏷️ خصم للعميل الكاش (اختياري)</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
+          <div class="form-group" style="margin:0;">
+            <label for="cashDiscountType">نوع الخصم</label>
+            <select id="cashDiscountType" class="form-control">
+              <option value="percent">نسبة %</option>
+              <option value="amount">مبلغ ج.م</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label for="cashDiscountValue">القيمة</label>
+            <input type="number" id="cashDiscountValue" class="form-control" min="0" step="0.01" placeholder="0">
+          </div>
+          <div class="form-group" style="margin:0;grid-column:span 2;">
+            <label for="cashDiscountReason">سبب الخصم</label>
+            <input type="text" id="cashDiscountReason" class="form-control" maxlength="255" placeholder="مثال: حالة إنسانية / موافقة المدير">
+          </div>
+        </div>
+        <p id="cashDiscountPreview" style="margin:10px 0 0;font-weight:700;color:#0f766e;"></p>
+      </div>
+
       <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
         <button type="button" class="btn-view" id="btnCancelCosting">إغلاق</button>
         <button type="button" class="btn-action success" id="btnConfirmCosting">✅ تأكيد الاعتماد وإصدار العرض</button>
@@ -250,3 +273,13 @@
 </style>
 
 <div class="toast" id="toast" aria-live="polite"></div>
+
+<style>
+  .cash-discount-box {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px dashed #0f766e;
+    border-radius: 12px;
+    background: rgba(15, 118, 110, 0.05);
+  }
+</style>

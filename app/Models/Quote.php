@@ -34,11 +34,19 @@ class Quote extends Model
         'status',
         'status_label',
         'total',
+        'gross_total',
+        'discount_amount',
+        'discount_percent',
+        'discount_reason',
+        'discount_by',
     ];
 
     protected $casts = [
         'quote_date' => 'date',
         'total' => 'decimal:2',
+        'gross_total' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
     ];
 
     protected $appends = [

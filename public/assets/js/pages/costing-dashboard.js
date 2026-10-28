@@ -192,6 +192,7 @@
         var c = res.data.case || {};
         var pricing = res.data.pricing || {};
         var costing = res.data.costing || null;
+        setupCashDiscount(c);
         canSeeInternal = !!res.data.can_see_internal;
         canSeeRates = !!res.data.can_see_rates;
         currentInternalTotal = pricing.internal_total || 0;
@@ -302,6 +303,53 @@
       .catch(function (err) { toast(apiMessage(err, 'تعذّر فتح التفاصيل'), true); });
   }
 
+  // ── خصم العميل المدني الكاش ─────────────────────────────────────────
+  var discountGross = 0;
+
+  function fmt2(n) {
+    return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function discountAmount() {
+    var v = parseFloat(($('cashDiscountValue') || {}).value || '0') || 0;
+    if (v <= 0) return 0;
+    var isPct = (($('cashDiscountType') || {}).value || 'percent') === 'percent';
+    return Math.round((isPct ? discountGross * v / 100 : v) * 100) / 100;
+  }
+
+  function updateDiscountPreview() {
+    var p = $('cashDiscountPreview');
+    if (!p) return;
+    var amt = discountAmount();
+    p.textContent = amt > 0
+      ? 'الإجمالي ' + fmt2(discountGross) + ' − خصم ' + fmt2(amt) + ' = ' + fmt2(discountGross - amt) + ' ج.م'
+      : '';
+    p.style.color = amt >= discountGross && amt > 0 ? '#b91c1c' : '#0f766e';
+  }
+
+  function setupCashDiscount(c) {
+    var box = $('cashDiscountBox');
+    if (!box) return;
+    box.hidden = !c.can_grant_cash_discount;
+    discountGross = Number(c.selling_price || c.computed_total || 0);
+    if ($('cashDiscountValue')) $('cashDiscountValue').value = '';
+    if ($('cashDiscountReason')) $('cashDiscountReason').value = '';
+    if ($('cashDiscountType')) $('cashDiscountType').value = 'percent';
+    updateDiscountPreview();
+  }
+
+  function discountPayload() {
+    var box = $('cashDiscountBox');
+    if (!box || box.hidden) return {};
+    var v = parseFloat(($('cashDiscountValue') || {}).value || '0') || 0;
+    if (v <= 0) return {};
+    return {
+      discount_type: ($('cashDiscountType') || {}).value || 'percent',
+      discount_value: v,
+      discount_reason: (($('cashDiscountReason') || {}).value || '').trim(),
+    };
+  }
+
   function closeModal() {
     activeCaseId = null;
     var modal = $('costingModal');
@@ -311,10 +359,16 @@
   function confirmCosting() {
     if (!activeCaseId) return;
 
+    var payload = discountPayload();
+    if (payload.discount_value && !payload.discount_reason) {
+      toast('اكتب سبب الخصم.', true);
+      return;
+    }
+
     var btn = $('btnConfirmCosting');
     if (btn) btn.disabled = true;
 
-    axios.post(CONFIRM_URL(activeCaseId))
+    axios.post(CONFIRM_URL(activeCaseId), payload)
       .then(function (res) {
         toast(res.data.message || 'تم التأكيد');
         closeModal();
@@ -331,6 +385,10 @@
     if ($('closeCostingModal')) $('closeCostingModal').addEventListener('click', closeModal);
     if ($('btnCancelCosting')) $('btnCancelCosting').addEventListener('click', closeModal);
     if ($('btnConfirmCosting')) $('btnConfirmCosting').addEventListener('click', confirmCosting);
+    ['cashDiscountValue', 'cashDiscountType'].forEach(function (id) {
+      if ($(id)) $(id).addEventListener('input', updateDiscountPreview);
+      if ($(id)) $(id).addEventListener('change', updateDiscountPreview);
+    });
     var modal = $('costingModal');
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
   });

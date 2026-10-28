@@ -55,6 +55,10 @@ return [
             'label_ar' => 'تأكيد استلام المبلغ في الخزنة',
             'dashboard' => 'cashier',
         ],
+        'grant-cash-discount' => [
+            'label_ar' => 'منح خصم للعميل المدني الكاش (عند الاعتماد)',
+            'dashboard' => 'costing',
+        ],
         'manage-inventory' => [
             'label_ar' => 'إدارة كتالوج الأصناف (إضافة/تعديل/حذف)',
             'dashboard' => 'admin',
