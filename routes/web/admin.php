@@ -193,30 +193,8 @@ Route::prefix('admin')
                 ->name('catalog.sales-stats');
         });
 
-        Route::middleware('dashboard.page:admin,stock-kits')->group(function () {
-            Route::get('stock-kits/templates', [\App\Http\Controllers\Admin\StockKitController::class, 'templates'])
-                ->name('stock-kits.templates');
-            Route::post('stock-kits/groups', [\App\Http\Controllers\Admin\StockKitController::class, 'storeGroup'])
-                ->name('stock-kits.groups.store');
-            Route::delete('stock-kits/groups/{groupKey}', [\App\Http\Controllers\Admin\StockKitController::class, 'destroyGroup'])
-                ->name('stock-kits.groups.destroy');
-            Route::get('stock-kits/search-items', [\App\Http\Controllers\Admin\StockKitController::class, 'searchItems'])
-                ->name('stock-kits.search-items');
-            Route::get('stock-kits/list', [\App\Http\Controllers\Admin\StockKitController::class, 'index'])
-                ->name('stock-kits.list');
-            Route::get('stock-kits/suggestions', [\App\Http\Controllers\Admin\StockKitController::class, 'suggestions'])
-                ->name('stock-kits.suggestions');
-            Route::post('stock-kits/suggestions/dismiss', [\App\Http\Controllers\Admin\StockKitController::class, 'dismissSuggestion'])
-                ->name('stock-kits.suggestions.dismiss');
-            Route::get('stock-kits/expand/{code}', [\App\Http\Controllers\Admin\StockKitController::class, 'expand'])
-                ->name('stock-kits.expand');
-            Route::post('stock-kits', [\App\Http\Controllers\Admin\StockKitController::class, 'store'])
-                ->name('stock-kits.store');
-            Route::put('stock-kits/{stockKit}', [\App\Http\Controllers\Admin\StockKitController::class, 'update'])
-                ->name('stock-kits.update');
-            Route::delete('stock-kits/{stockKit}', [\App\Http\Controllers\Admin\StockKitController::class, 'destroy'])
-                ->name('stock-kits.destroy');
-        });
+        // «عمل المجموعات» — للإدارة هنا، ولباقي الأقسام تحت /shared (انظر آخر الملف).
+        Route::middleware('dashboard.page:admin,stock-kits')->group(fn () => registerStockKitApiRoutes());
 
         // ── طلبات تعديل التوصيف ─────────────────────────────────────────────
         Route::middleware('dashboard.page:admin,spec-edit-requests')->group(function () {
@@ -535,3 +513,13 @@ Route::prefix('admin')
                 ->name('employees.reset-password');
         });
     });
+
+/*
+|--------------------------------------------------------------------------
+| «عمل المجموعات» لأقسام المعدلات والاعتماد والمخزن — نفس الواجهة بدون شرط دخول لوحة الإدارة.
+|--------------------------------------------------------------------------
+*/
+Route::prefix('shared')
+    ->middleware(['auth', 'dashboard.page:admin,stock-kits,adjustments,stock-kits,costing,stock-kits,technical,stock-kits'])
+    ->name('shared.')
+    ->group(fn () => registerStockKitApiRoutes());

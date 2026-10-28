@@ -52,11 +52,41 @@ class StockKitController extends Controller
         return response()->json(['message' => 'تم تجاهل الاقتراح — لن يظهر مرة أخرى.']);
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $withPrices = (bool) $request->user()?->can('view-prices');
+
         return response()->json([
-            'data' => $this->kits->listForAdmin()->values(),
+            'data' => $this->kits->listForAdmin($withPrices)->values(),
+            'with_prices' => $withPrices,
         ]);
+    }
+
+    /** ملف JSON بكل المجموعات وأكواد أصنافها — للنقل من الأونلاين للأوفلاين. */
+    public function export(\App\Services\StockKitTransferService $transfer): \Symfony\Component\HttpFoundation\Response
+    {
+        $json = json_encode($transfer->export(), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        return response($json, 200, [
+            'Content-Type' => 'application/json; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="stock-kits-'.now()->format('Y-m-d_His').'.json"',
+        ]);
+    }
+
+    public function import(Request $request, \App\Services\StockKitTransferService $transfer): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:5120'],
+        ]);
+
+        $data = json_decode((string) file_get_contents($request->file('file')->getRealPath()), true);
+        if (! is_array($data)) {
+            return response()->json(['message' => 'الملف ليس ملف مجموعات صالح (JSON).'], 422);
+        }
+
+        $report = $transfer->import($data);
+
+        return response()->json(['message' => $transfer->summary($report), 'report' => $report]);
     }
 
     public function searchItems(Request $request): JsonResponse

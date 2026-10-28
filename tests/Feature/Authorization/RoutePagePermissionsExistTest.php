@@ -21,13 +21,14 @@ class RoutePagePermissionsExistTest extends TestCase
                     continue;
                 }
 
-                foreach (explode('|', substr($middleware, strlen('dashboard.page:'))) as $pair) {
-                    $parts = explode(',', $pair);
-                    $dashboard = array_shift($parts);
-                    foreach ($parts as $page) {
-                        if (config("dashboards.{$dashboard}.pages.{$page}") === null) {
-                            $missing[] = "{$dashboard},{$page} ← {$route->uri()}";
-                        }
+                // أزواج قسم,صفحة — dashboard.page:admin,stock-kits,technical,stock-kits = أيٌّ منهما يكفي.
+                $parts = explode(',', substr($middleware, strlen('dashboard.page:')));
+                if (count($parts) % 2 !== 0) {
+                    $missing[] = "عدد معاملات فردي ← {$route->uri()}";
+                }
+                foreach (array_chunk($parts, 2) as [$dashboard, $page]) {
+                    if (config("dashboards.{$dashboard}.pages.{$page}") === null) {
+                        $missing[] = "{$dashboard},{$page} ← {$route->uri()}";
                     }
                 }
             }

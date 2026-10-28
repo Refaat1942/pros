@@ -93,7 +93,7 @@ class DashboardPageDataService
             'admin.add-catalog-item' => $this->catalogItemEntry(),
             'admin.supply-request' => $this->supplyRequestDesk(),
             'admin.receive-inbound' => $this->receiveInboundDesk(),
-            'admin.stock-kits' => $this->adminStockKits(),
+            'admin.stock-kits', 'adjustments.stock-kits', 'costing.stock-kits', 'technical.stock-kits' => $this->adminStockKits(),
             'admin.inventory-overview' => $this->adminInventoryOverview(),
             'admin.general-view' => $this->adminGeneralView(),
             'admin.reports' => $this->adminReportsHub(),

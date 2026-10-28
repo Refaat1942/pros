@@ -11,8 +11,13 @@
 
 <div class="panel" id="stockKitsPanel">
     <div class="panel-header">
-        <h3>🧩 أطقم جاهزة ومخصصات</h3>
-        <button type="button" class="btn-add-rank" id="btnAddStockKit">➕ إضافة طقم</button>
+        <h3>🧩 عمل المجموعات — أطقم جاهزة ومخصصات</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn-action" id="btnExportStockKits" title="ملف بكل المجموعات لنقلها لسيرفر تاني (مثلاً الأوفلاين)">⬇️ تصدير المجموعات</button>
+            <button type="button" class="btn-action" id="btnImportStockKits" title="استيراد ملف مجموعات من سيرفر تاني">⬆️ استيراد</button>
+            <input type="file" id="stockKitsImportFile" accept=".json,application/json" hidden>
+            <button type="button" class="btn-add-rank" id="btnAddStockKit">➕ إضافة طقم</button>
+        </div>
     </div>
     <div class="data-toolbar">
         <input type="text" id="stockKitSearch" placeholder="🔍 بحث في الأطقم...">
@@ -27,6 +32,7 @@
                     <th>الكود</th>
                     <th>النوع</th>
                     <th>المكوّنات</th>
+                    <th id="stockKitPriceHead" hidden>سعر المجموعة</th>
                     <th>الحالة</th>
                     <th style="width:160px">إجراء</th>
                 </tr>
@@ -575,6 +581,7 @@
 
 <script>
     window.__STOCK_KIT_GROUPS__ = @json($stock_kit_groups ?? []);
+    window.__STOCK_KITS_BASE__ = @json(($dashboardKey ?? 'admin') === 'admin' ? url('/admin/stock-kits') : url('/shared/stock-kits'));
 </script>
 
 <style>

@@ -125,6 +125,7 @@ return [
             'adjustments' => ['title' => 'المعدلات', 'icon' => '📏', 'label' => 'المعدلات'],
             'catalog' => ['title' => 'قائمة الأصناف', 'icon' => '📦', 'label' => 'قائمة الأصناف'],
             'history' => ['title' => 'المحوّلون للاعتماد', 'icon' => '📤', 'label' => 'سجل المحوّلين', 'hidden' => true],
+            'stock-kits' => ['title' => 'عمل المجموعات — أطقم جاهزة ومخصصات', 'icon' => '🧩', 'label' => 'عمل المجموعات', 'default_off' => true],
             'staff' => ['title' => 'إدارة موظفي القسم', 'icon' => '👥', 'label' => 'موظفي القسم'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
@@ -139,6 +140,7 @@ return [
             'assets/js/pages/employee-page-access.js',
             'assets/js/pages/employee-catalog-visibility.js',
             'assets/js/pages/department-staff.js',
+            'assets/js/pages/admin-stock-kits.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="adjustments"',
@@ -151,6 +153,7 @@ return [
         'sidebar' => ['icon' => '✅', 'title' => 'لوحة الاعتماد', 'subtitle' => 'مراجعة التكلفة واعتماد العرض'],
         'pages' => [
             'costing' => ['title' => 'الاعتماد', 'icon' => '✅', 'label' => 'الاعتماد'],
+            'stock-kits' => ['title' => 'عمل المجموعات — أطقم جاهزة ومخصصات', 'icon' => '🧩', 'label' => 'عمل المجموعات', 'default_off' => true],
             'staff' => ['title' => 'إدارة موظفي القسم', 'icon' => '👥', 'label' => 'موظفي القسم'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
@@ -161,6 +164,7 @@ return [
             'assets/js/pages/employee-page-access.js',
             'assets/js/pages/employee-catalog-visibility.js',
             'assets/js/pages/department-staff.js',
+            'assets/js/pages/admin-stock-kits.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="costing"',
@@ -267,6 +271,7 @@ return [
             'receive-inbound' => ['title' => 'استلام الوارد — تسجيل فاتورة توريد', 'icon' => '📥', 'label' => 'استلام الوارد'],
             'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد لقسم الإنتاج'],
             'returns' => ['title' => 'استلام ارتجاع المواد — من قسم الإنتاج', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
+            'stock-kits' => ['title' => 'عمل المجموعات — أطقم جاهزة ومخصصات', 'icon' => '🧩', 'label' => 'عمل المجموعات', 'default_off' => true],
             'staff' => ['title' => 'إدارة موظفي القسم', 'icon' => '👥', 'label' => 'موظفي القسم'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
@@ -290,6 +295,7 @@ return [
             'assets/js/pages/employee-page-access.js',
             'assets/js/pages/employee-catalog-visibility.js',
             'assets/js/pages/department-staff.js',
+            'assets/js/pages/admin-stock-kits.js',
             'assets/js/shared/dashboard-mobile.js',
         ],
         'body_attributes' => 'data-dashboard="inventory"',
@@ -320,12 +326,12 @@ return [
             [
                 'label' => 'المخزن — العمل اليومي',
                 'icon' => '📦',
-                'pages' => ['catalog', 'receive-inbound', 'supply-request', 'dispense-approvals', 'returns', 'inventory-overview'],
+                'pages' => ['catalog', 'stock-kits', 'receive-inbound', 'supply-request', 'dispense-approvals', 'returns', 'inventory-overview'],
             ],
             [
                 'label' => 'المخزن — بيانات أساسية',
                 'icon' => '🗂️',
-                'pages' => ['stock-categories', 'stock-kits', 'suppliers', 'stock-uom-settings', 'catalog-list-settings'],
+                'pages' => ['stock-categories', 'suppliers', 'stock-uom-settings', 'catalog-list-settings'],
             ],
             [
                 'label' => 'التعاقد والمالية',
@@ -371,11 +377,11 @@ return [
             'supply-request' => ['title' => 'طلب التوريد', 'icon' => '🛒', 'label' => 'طلب التوريد'],
             'receive-inbound' => ['title' => 'استلام الوارد — تسجيل فاتورة توريد', 'icon' => '📥', 'label' => 'استلام الوارد'],
             'stock-kits' => [
-                'title' => 'أطقم جاهزة ومخصصات',
+                'title' => 'عمل المجموعات — أطقم جاهزة ومخصصات',
                 'icon' => '🧩',
-                'label' => 'أطقم / مخصصات',
+                'label' => 'عمل المجموعات (أطقم / مخصصات)',
                 'assistant' => [
-                    'keywords' => ['طقم', 'مخصصات', 'ركبه', 'ركبة', 'تجميع', 'kit'],
+                    'keywords' => ['طقم', 'مخصصات', 'ركبه', 'ركبة', 'تجميع', 'kit', 'مجموعات', 'عمل المجموعات'],
                     'answer' => 'عرّف الأطقم حسب مجموعة التوصيف (ركبة، قدم، …). عند اختيار طقم في التوصيف تظهر مخصصات نفس المجموعة فقط في المعدلات.',
                     'steps' => [
                         'اضغط «إضافة طقم» واختر مجموعة التوصيف (قالب سريع).',

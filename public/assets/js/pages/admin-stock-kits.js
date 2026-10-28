@@ -1,9 +1,13 @@
 (function () {
-  if (document.body.dataset.dashboard !== 'admin' || document.body.dataset.activePage !== 'stock-kits') return;
+  // نفس الصفحة في الإدارة والمعدلات والاعتماد والمخزن.
+  if (document.body.dataset.activePage !== 'stock-kits') return;
 
   var csrf = document.querySelector('meta[name="csrf-token"]');
   var csrfToken = csrf ? csrf.getAttribute('content') : '';
   var kitGroups = window.__STOCK_KIT_GROUPS__ || [];
+  // واجهة الإدارة للسوبر أدمن، والواجهة المشتركة لباقي الأقسام — الرابط يأتي من الصفحة.
+  var KITS = window.__STOCK_KITS_BASE__ || '/admin/stock-kits';
+  var withPrices = false;
 
   var kits = [];
   var selectedComponents = [];
@@ -12,6 +16,41 @@
   var searchRequestId = 0;
 
   function $(id) { return document.getElementById(id); }
+
+  function money(v) {
+    var n = Number(v || 0);
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // نقل المجموعات بين السيرفرات: تصدير ملف JSON ثم استيراده في السيرفر التاني (الأصناف بالكود).
+  function bindTransfer() {
+    var exportBtn = $('btnExportStockKits');
+    if (exportBtn) exportBtn.addEventListener('click', function () { window.location.href = KITS + '/export'; });
+    var importBtn = $('btnImportStockKits');
+    var fileInput = $('stockKitsImportFile');
+    if (!importBtn || !fileInput) return;
+    importBtn.addEventListener('click', function () { fileInput.value = ''; fileInput.click(); });
+    fileInput.addEventListener('change', function () {
+      if (!fileInput.files || !fileInput.files[0]) return;
+      if (!confirm('استيراد المجموعات من الملف؟ المجموعات بنفس الكود هتتحدّث بمكوّنات الملف.')) return;
+      var fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+      jsonFetch(KITS + '/import', { method: 'POST', body: fd })
+        .then(function (res) {
+          var lines = [res.message];
+          ((res.report && res.report.missing_items) || []).slice(0, 15).forEach(function (m) {
+            lines.push('• ' + m.kit + ': ' + (m.name || m.item_code) + ' — غير موجود هنا');
+          });
+          alert(lines.join('\n'));
+          load();
+        })
+        .catch(function (err) {
+          var data = err.response && err.response.data;
+          var msg = (data && (data.message || (data.errors && Object.values(data.errors).flat()[0]))) || 'تعذّر الاستيراد';
+          alert(msg);
+        });
+    });
+  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -80,9 +119,12 @@
   }
 
   function load() {
-    jsonFetch('/admin/stock-kits/list')
+    jsonFetch(KITS + '/list')
       .then(function (res) {
         kits = res.data || [];
+        withPrices = !!res.with_prices;
+        var priceHead = $('stockKitPriceHead');
+        if (priceHead) priceHead.hidden = !withPrices;
         renderTable();
       })
       .catch(function () { alert('تعذّر تحميل الأطقم'); });
@@ -103,11 +145,14 @@
         '<td><span style="font-weight:700;color:#7c3aed;">' + esc(k.spec_group_label || '—') + '</span></td>' +
         '<td dir="ltr">' + esc(k.code) + '</td>' +
         '<td>' + esc(k.type_label) + '</td>' +
-        '<td>' + (k.items || []).map(function (i) { return esc(i.name) + ' ×' + i.qty; }).join('<br>') + '</td>' +
+        '<td>' + (k.items || []).map(function (i) {
+          return esc(i.name) + ' ×' + i.qty + (withPrices ? ' <span style="color:#64748b;">— ' + money(i.line_total) + '</span>' : '');
+        }).join('<br>') + '</td>' +
+        (withPrices ? '<td style="font-weight:800;white-space:nowrap;">' + money(k.total_price) + ' ج.م</td>' : '') +
         '<td>' + (k.is_active ? '✅ نشط' : '⏸️') + '</td>' +
         '<td><button type="button" class="btn-action kit-edit">✏️</button> ' +
         '<button type="button" class="btn-action danger kit-del">🗑️</button></td></tr>';
-    }).join('') || '<tr><td colspan="7" class="empty-cell">لا توجد أطقم — أضف طقماً جديداً.</td></tr>';
+    }).join('') || '<tr><td colspan="' + (withPrices ? 8 : 7) + '" class="empty-cell">لا توجد أطقم — أضف طقماً جديداً.</td></tr>';
 
     tbody.querySelectorAll('.kit-edit').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -120,7 +165,7 @@
       btn.addEventListener('click', function () {
         var id = parseInt(btn.closest('tr').getAttribute('data-id'), 10);
         if (!confirm('حذف هذا الطقم؟')) return;
-        jsonFetch('/admin/stock-kits/' + id, { method: 'DELETE' }).then(load);
+        jsonFetch(KITS + '/' + id, { method: 'DELETE' }).then(load);
       });
     });
   }
@@ -245,7 +290,7 @@
     if (!options.silent) showSearchLoading();
 
     try {
-      jsonFetch('/admin/stock-kits/search-items?q=' + encodeURIComponent(q) + '&limit=50')
+      jsonFetch(KITS + '/search-items?q=' + encodeURIComponent(q) + '&limit=50')
         .then(function (res) {
           if (requestId !== searchRequestId) return;
           renderSearchResults(res.data || [], q);
@@ -364,8 +409,8 @@
       items: items,
     };
     var req = id
-      ? jsonFetch('/admin/stock-kits/' + id, { method: 'PUT', body: payload })
-      : jsonFetch('/admin/stock-kits', { method: 'POST', body: payload });
+      ? jsonFetch(KITS + '/' + id, { method: 'PUT', body: payload })
+      : jsonFetch(KITS, { method: 'POST', body: payload });
     req.then(function () { closeModal(); load(); loadSuggestions(); })
       .catch(function (e) {
         err.textContent = (e.response && e.response.data && e.response.data.message) || e.message || 'تعذّر الحفظ';
@@ -408,7 +453,7 @@
       btn.addEventListener('click', function () {
         var key = btn.closest('tr').getAttribute('data-key');
         if (!confirm('حذف مجموعة «' + key + '»؟')) return;
-        jsonFetch('/admin/stock-kits/groups/' + encodeURIComponent(key), { method: 'DELETE' })
+        jsonFetch(KITS + '/groups/' + encodeURIComponent(key), { method: 'DELETE' })
           .then(function (res) {
             kitGroups = res.groups || [];
             window.__STOCK_KIT_GROUPS__ = kitGroups;
@@ -457,7 +502,7 @@
       err.style.display = 'block';
       return;
     }
-    jsonFetch('/admin/stock-kits/groups', { method: 'POST', body: payload })
+    jsonFetch(KITS + '/groups', { method: 'POST', body: payload })
       .then(function (res) {
         kitGroups = res.groups || [];
         window.__STOCK_KIT_GROUPS__ = kitGroups;
@@ -518,7 +563,7 @@
   var suggestions = [];
 
   function loadSuggestions() {
-    jsonFetch('/admin/stock-kits/suggestions')
+    jsonFetch(KITS + '/suggestions')
       .then(function (res) {
         suggestions = res.data || [];
         renderSuggestions();
@@ -572,7 +617,7 @@
         var s = suggestions[parseInt(btn.closest('.kit-suggestion').dataset.idx, 10)];
         if (!s || !confirm('تجاهل هذا الاقتراح نهائياً؟')) return;
         btn.disabled = true;
-        jsonFetch('/admin/stock-kits/suggestions/dismiss', {
+        jsonFetch(KITS + '/suggestions/dismiss', {
           method: 'POST',
           body: {
             codes: (s.items || []).map(function (i) { return i.code; }),
@@ -610,6 +655,7 @@
     renderComponentsTable();
   }
 
+  bindTransfer();
   load();
   loadSuggestions();
 })();
