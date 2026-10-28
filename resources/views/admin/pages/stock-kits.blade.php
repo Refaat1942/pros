@@ -1,3 +1,6 @@
+<link rel="stylesheet" href="{{ asset('assets/css/stock-kits-page.css') }}?v={{ filemtime(public_path('assets/css/stock-kits-page.css')) }}">
+{{-- غلاف موحّد — نفس الشكل في الإدارة والاعتماد والمعدلات والمخزن. --}}
+<div class="stock-kits-page">
 <div class="panel" id="stockKitSuggestionsPanel" hidden>
     <div class="panel-header">
         <h3>💡 اقتراحات تجميع تلقائي</h3>
@@ -205,6 +208,7 @@
     </div>
 </div>
 
+</div>
 <style>
     /* الـ modal خارج #stockKitsPanel — التنسيق مربوط بـ #stockKitModal مباشرة */
     #stockKitModal.catalog-modal-overlay {

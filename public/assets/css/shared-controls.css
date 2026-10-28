@@ -1,0 +1,103 @@
+/*
+ * أزرار مشتركة بين كل اللوحات — كانت معرّفة في admin-dashboard.css بس، فكانت تظهر من غير تنسيق
+ * في باقي الأقسام («➕ إضافة موظف»، «➕ إضافة قسم»، «+ سعر إضافي»…).
+ * :where() = أولوية صفر، فأي تنسيق موجود في ملف اللوحة نفسها يفضل هو الغالب.
+ */
+:where(.btn-add-rank) {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary, #7c3aed);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+    transition: filter 0.2s, transform 0.15s;
+}
+
+:where(.btn-add-rank):hover { filter: brightness(0.92); transform: translateY(-1px); }
+:where(.btn-add-rank):disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+:where(.btn-action) {
+    padding: 6px 12px;
+    border: 1px solid var(--border, #e2e8f0);
+    background: #fff;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted, #64748b);
+    transition: all 0.2s;
+}
+
+:where(.btn-action):hover { border-color: var(--primary, #7c3aed); color: var(--primary, #7c3aed); }
+:where(.btn-action):disabled { opacity: 0.6; cursor: not-allowed; }
+:where(.btn-action.success) { background: #059669; color: #fff; border-color: #059669; }
+:where(.btn-action.success):hover { background: #047857; color: #fff; }
+:where(.btn-action.danger) { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+:where(.btn-action.danger):hover { background: #fee2e2; border-color: #f87171; color: #b91c1c; }
+:where(.btn-action.primary) { background: var(--primary, #7c3aed); color: #fff; border-color: var(--primary, #7c3aed); }
+
+/* حقول الإدخال المشتركة (نماذج المخزن: استلام الوارد / طلب التوريد) — كانت متنسّقة في لوحة المخزن بس. */
+:where(.form-control) {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text, #0f172a);
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+:where(.form-control):focus {
+    outline: none;
+    border-color: var(--primary, #7c3aed);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+/* شريط بحث وفلاتر المخزن (طلب التوريد) — نفس شكل لوحة المخزن داخل لوحة الإدارة كمان. */
+:where(.inventory-toolbar) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    flex-wrap: wrap;
+}
+
+:where(.inventory-toolbar) :where(input) {
+    flex: 1;
+    min-width: 260px;
+    padding: 10px 16px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fafafa;
+}
+
+:where(.inventory-toolbar) :where(input):focus { outline: none; border-color: var(--primary, #7c3aed); background: #fff; }
+:where(.filter-pills) { display: flex; gap: 8px; flex-wrap: wrap; }
+
+:where(.filter-pill) {
+    padding: 7px 16px;
+    border-radius: 50px;
+    border: 1px solid var(--border, #e2e8f0);
+    background: #fff;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+:where(.filter-pill):hover { border-color: var(--primary, #7c3aed); color: var(--primary, #7c3aed); }
+:where(.filter-pill.active) { background: var(--primary, #7c3aed); border-color: var(--primary, #7c3aed); color: #fff; }
