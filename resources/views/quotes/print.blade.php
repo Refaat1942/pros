@@ -524,20 +524,25 @@
     <table class="grid spec-table">
         <thead>
             <tr>
-                <th>البيان / المكونات</th>
-                <th class="spec-head">المواصفات التفصيلية</th>
+                {{-- بدون عمود «البيان / المكونات» للأصناف — الوصف بعرض الجدول، ومدة التوريد/الضمان بعنوانهم. --}}
+                <th class="spec-head" colspan="2">المواصفات التفصيلية</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($doc['spec_rows'] as $row)
-                <tr>
-                    <td class="label">{{ $row['label'] }}</td>
-                    <td class="value">{{ $row['detail'] }}</td>
-                </tr>
+                @if (! empty($row['meta']) || in_array($row['label'], ['مدة التوريد', 'الضمان'], true))
+                    <tr>
+                        <td class="label">{{ $row['label'] }}</td>
+                        <td class="value">{{ $row['detail'] }}</td>
+                    </tr>
+                @else
+                    <tr>
+                        <td class="value" colspan="2">{{ trim((string) $row['label']) !== '' ? $row['label'].': ' : '' }}{{ $row['detail'] }}</td>
+                    </tr>
+                @endif
             @empty
                 <tr>
-                    <td class="label">&nbsp;</td>
-                    <td class="value">&nbsp;</td>
+                    <td class="value" colspan="2">&nbsp;</td>
                 </tr>
             @endforelse
         </tbody>

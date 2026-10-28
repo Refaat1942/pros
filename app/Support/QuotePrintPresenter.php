@@ -126,11 +126,11 @@ final class QuotePrintPresenter
         $specRows = self::specRows($quote);
 
         if (($settings['supply_period'] ?? '') !== '') {
-            $specRows[] = ['label' => 'مدة التوريد', 'detail' => (string) $settings['supply_period']];
+            $specRows[] = ['label' => 'مدة التوريد', 'detail' => (string) $settings['supply_period'], 'meta' => true];
         }
 
         if (($settings['warranty'] ?? '') !== '') {
-            $specRows[] = ['label' => 'الضمان', 'detail' => (string) $settings['warranty']];
+            $specRows[] = ['label' => 'الضمان', 'detail' => (string) $settings['warranty'], 'meta' => true];
         }
 
         return [
