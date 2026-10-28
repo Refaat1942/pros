@@ -70,13 +70,32 @@ class StockKitService
         return $this->expandedLines($kit);
     }
 
-    public function listForAdmin(): Collection
+    /**
+     * @param  bool  $withPrices  سعر البيع (نفس سعر عرض السعر: الأعلى بين السعر الأساسي ودفعات الأسعار)
+     *                            لمن عنده صلاحية «أسعار البيع» فقط.
+     */
+    public function listForAdmin(bool $withPrices = false): Collection
     {
         return StockKit::query()
-            ->with(['items.stockItem:id,code,catalog_number,name,alt_codes,uom,page_number'])
+            ->with([
+                'items.stockItem:id,code,catalog_number,name,alt_codes,uom,page_number,price',
+                'items.stockItem.prices:id,stock_item_id,amount,qty',
+            ])
             ->orderByDesc('id')
             ->get()
-            ->map(fn (StockKit $kit) => $this->formatAdminRow($kit));
+            ->map(fn (StockKit $kit) => $this->formatAdminRow($kit, $withPrices));
+    }
+
+    /** نفس منطق StockPriceService::highestUnitPrice لكن على العلاقات المحمّلة (بدون استعلام لكل صنف). */
+    public static function quoteUnitPrice(?StockItem $item): float
+    {
+        if (! $item) {
+            return 0.0;
+        }
+
+        $maxBatch = (float) ($item->prices->where('qty', '>', 0)->max('amount') ?? 0.0);
+
+        return round(max((float) $item->price, $maxBatch), 2);
     }
 
     /**
@@ -303,9 +322,9 @@ class StockKitService
     /**
      * @return array<string, mixed>
      */
-    private function formatAdminRow(StockKit $kit): array
+    private function formatAdminRow(StockKit $kit, bool $withPrices = false): array
     {
-        return [
+        $row = [
             'id' => $kit->id,
             'code' => $kit->code,
             'name' => $kit->name,
@@ -327,6 +346,20 @@ class StockKitService
                 'qty' => (int) $line->qty,
             ])->values()->all(),
         ];
+
+        if ($withPrices) {
+            $total = 0.0;
+            foreach ($kit->items as $i => $line) {
+                $unit = self::quoteUnitPrice($line->stockItem);
+                $lineTotal = round($unit * (int) $line->qty, 2);
+                $row['items'][$i]['unit_price'] = $unit;
+                $row['items'][$i]['line_total'] = $lineTotal;
+                $total += $lineTotal;
+            }
+            $row['total_price'] = round($total, 2);
+        }
+
+        return $row;
     }
 
     private function nullableString(mixed $value): ?string

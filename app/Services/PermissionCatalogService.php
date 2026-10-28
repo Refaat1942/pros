@@ -112,7 +112,8 @@ class PermissionCatalogService
                 if ($pageKey === 'notifications') {
                     continue;
                 }
-                if (! empty($pageMeta['hidden'])) {
+                // صفحات تُمنح يدوياً من شاشة الصلاحيات فقط (مثل «عمل المجموعات» للمعدلات والاعتماد والمخزن).
+                if (! empty($pageMeta['hidden']) || ! empty($pageMeta['default_off'])) {
                     continue;
                 }
                 $slugs->push(Permission::viewSlug($roleSlug, $pageKey));
