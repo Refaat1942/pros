@@ -69,9 +69,56 @@
 
   function $(id) { return document.getElementById(id); }
 
+  // ── استمارة التوصيف (زي الإكسل) ⇄ written_items: سطر «الاسم: القيمة» لكل بند متملّي ──
+  function specFormInputs() {
+    return Array.prototype.slice.call(document.querySelectorAll('#specFormSheet [data-spec-field]'));
+  }
+
+  function fillSpecForm(text) {
+    var inputs = specFormInputs();
+    var byLabel = {};
+    inputs.forEach(function (input) { input.value = ''; byLabel[input.getAttribute('data-spec-field')] = input; });
+    var other = [];
+    String(text || '').split(/\r?\n/).forEach(function (line) {
+      var trimmed = line.trim();
+      if (!trimmed) return;
+      var m = trimmed.match(/^([^:：]{1,60})[:：]\s*(.*)$/);
+      var input = m ? byLabel[m[1].trim()] : null;
+      if (input) {
+        input.value = m[2].trim();
+      } else {
+        other.push(trimmed);
+      }
+    });
+    if ($('specFormOther')) $('specFormOther').value = other.join('\n');
+  }
+
+  function serializeSpecForm() {
+    var lines = [];
+    specFormInputs().forEach(function (input) {
+      var v = (input.value || '').trim();
+      if (v) lines.push(input.getAttribute('data-spec-field') + ': ' + v);
+    });
+    String(($('specFormOther') || {}).value || '').split(/\r?\n/).forEach(function (line) {
+      if (line.trim()) lines.push(line.trim());
+    });
+    return lines.join('\n');
+  }
+
+  function syncWrittenFromForm() {
+    var el = $('writtenItems');
+    if (el && $('specFormSheet')) el.value = serializeSpecForm();
+  }
+
+  function setSpecFormLocked(locked) {
+    specFormInputs().forEach(function (input) { input.disabled = !!locked; });
+    if ($('specFormOther')) $('specFormOther').disabled = !!locked;
+  }
+
   function setWrittenItems(value) {
     var el = $('writtenItems');
     if (el) el.value = value || '';
+    if ($('specFormSheet')) fillSpecForm(value || '');
   }
 
   function showToast(msg, isError) {
@@ -150,6 +197,7 @@
     }
     if (addBtn) addBtn.disabled = locked || state.submitting;
     if (notes) notes.disabled = locked;
+    setSpecFormLocked(locked);
   }
 
   function renderMedicalSummary(med) {
@@ -749,6 +797,7 @@
   function saveDraft() {
     if (!state.caseId || state.locked) return Promise.reject();
     var items = payloadItems();
+    syncWrittenFromForm();
     var writtenEl = $('writtenItems');
     var body = {
       case_id: state.caseId,

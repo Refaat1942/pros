@@ -86,6 +86,11 @@ class AdjustmentsService
     {
         $this->editRequestService->assertNoPendingForCase($case);
 
+        // التوصيف بالاستمارة فقط — لازم المعدلات تضيف أصناف المخزن قبل الاعتماد (وإلا العرض بصفر).
+        if (! $case->bom()->whereHas('items')->exists()) {
+            abort(422, 'أضف أصناف المخزن للحالة قبل التحويل للاعتماد — التوصيف مكتوب كاستمارة فقط.');
+        }
+
         $case = $this->costingService->receiveFromAdjustments($case);
         $case->clearReworkNotice();
 

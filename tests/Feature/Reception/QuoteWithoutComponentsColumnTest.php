@@ -21,8 +21,16 @@ class QuoteWithoutComponentsColumnTest extends ProstheticTestCase
 
         $html = $this->actingAs(CaseJourneyRunner::userFor('admin'))->get("/admin/cases/{$case->id}/quote?embed=1")->assertOk()->getContent();
 
-        $this->assertStringNotContainsString('البيان / المكونات', $html);
+        // بند من غير اسم (من الأصناف) — بعرض الجدول ومن غير عمود «البيان / المكونات».
+        $this->assertStringNotContainsString('<th>البيان / المكونات</th>', $html);
         $this->assertMatchesRegularExpression('/<th class="spec-head" colspan="2">/u', $html);
         $this->assertMatchesRegularExpression('/<td class="value" colspan="2">[^<]*'.preg_quote($knee->name, '/').'/u', $html);
+
+        // استمارة التوصيف («الاسم: القيمة») — بعمود «البيان / المكونات» زي الورقة.
+        $case->techOrderSpec()->update(['written_items' => "السوكيت الخارجي: بلاستيك\nنوع القدم: ساش اير يمني مقاس 27\nملاحظة بدون اسم"]);
+        $html = $this->actingAs(CaseJourneyRunner::userFor('admin'))->get("/admin/cases/{$case->id}/quote?embed=1")->assertOk()->getContent();
+        $this->assertStringContainsString('<th>البيان / المكونات</th>', $html);
+        $this->assertMatchesRegularExpression('/<td class="label">السوكيت الخارجي<\/td>\s*<td class="value">بلاستيك<\/td>/u', $html);
+        $this->assertMatchesRegularExpression('/<td class="value" colspan="2">ملاحظة بدون اسم<\/td>/u', $html);
     }
 }

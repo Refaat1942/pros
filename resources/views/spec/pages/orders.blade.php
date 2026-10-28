@@ -157,6 +157,8 @@
                 <p class="text-red-900 mt-2 whitespace-pre-wrap leading-relaxed" id="specReworkReason"></p>
             </div>
 
+            {{-- إضافة أصناف المخزن اتشالت من التوصيف — الأصناف المسعّرة تضيفها «معدلات و تكاليف». --}}
+            <div id="specCatalogItemsBlock" hidden>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h5 class="font-bold text-slate-800">📦 بنود التوصيف</h5>
                 <button type="button" id="btnAddCatalogItem"
@@ -181,13 +183,9 @@
                 </table>
             </div>
 
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-2">📝 بنود مكتوبة (وصف حر — بند في كل سطر)</label>
-                <textarea id="writtenItems" rows="4" placeholder="اكتب البنود المطلوبة يدوياً، كل بند في سطر مستقل..."
-                          data-v-rules="max:5000" maxlength="5000"
-                          class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-spec/40"></textarea>
-                <p class="text-xs text-slate-400 mt-1">بنود وصفية فقط — لا تدخل التسعير ولا حجز المخزون.</p>
             </div>
+
+            @include('spec.partials.spec-form')
 
             <div>
                 <label class="block text-sm font-bold text-slate-700 mb-2">ملاحظات فنية (اختياري)</label>
