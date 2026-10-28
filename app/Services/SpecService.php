@@ -141,8 +141,9 @@ class SpecService
 
         $spec->load('items', 'caseRecord.patient');
 
-        if ($spec->items->isEmpty()) {
-            abort(422, 'يجب إضافة بند واحد على الأقل قبل الإرسال.');
+        // الاستمارة (written_items) تكفي — الأصناف المسعّرة تضيفها المعدلات.
+        if ($spec->items->isEmpty() && trim((string) $spec->written_items) === '') {
+            abort(422, 'املأ استمارة التوصيف (بند واحد على الأقل) قبل الإرسال.');
         }
 
         $this->validateStockCodes($spec);
@@ -159,7 +160,7 @@ class SpecService
                 'name' => $i->name,
                 'qty' => $i->qty,
                 'group_label' => $i->group_label,
-            ])->all());
+            ])->all(), allowEmpty: true);
 
             $spec->update([
                 'locked' => true,

@@ -79,9 +79,10 @@ class BomService
      *
      * @param  list<array{stock_item_code: string, name?: string, qty: int}>  $items
      */
-    public function createSpecRaw(CaseRecord $case, array $items): Bom
+    public function createSpecRaw(CaseRecord $case, array $items, bool $allowEmpty = false): Bom
     {
-        if ($items === []) {
+        // allowEmpty: توصيف بالاستمارة فقط — قائمة مواد فاضية تضيف لها المعدلات الأصناف.
+        if ($items === [] && ! $allowEmpty) {
             abort(422, 'يجب إضافة بند واحد على الأقل.');
         }
 

@@ -62,6 +62,10 @@ class WorkflowPolicyService
 
     public function shouldAutoSkip(CaseRecord $case): bool
     {
+        if ($this->adjustmentsMustAddItems($case)) {
+            return false;
+        }
+
         $step = $this->pathway->currentStepForCase($case);
 
         return $step !== null
@@ -71,7 +75,7 @@ class WorkflowPolicyService
 
     public function canManualSkip(CaseRecord $case, string $stageKey, ?User $user = null): bool
     {
-        if (! $this->isAtSkippableStage($case, $stageKey)) {
+        if (! $this->isAtSkippableStage($case, $stageKey) || $this->adjustmentsMustAddItems($case)) {
             return false;
         }
 
@@ -181,5 +185,21 @@ class WorkflowPolicyService
         }
 
         return false;
+    }
+
+    /**
+     * حالة في المعدلات وقائمة موادها فاضية (توصيف بالاستمارة فقط) — لا تُتخطّى المعدلات
+     * حتى لو المسار بيتخطاها، لأنها اللي بتضيف الأصناف المسعّرة.
+     */
+    public function adjustmentsMustAddItems(CaseRecord $case): bool
+    {
+        if ($case->stage_key !== CaseRecord::STAGE_ADJUSTMENTS) {
+            return false;
+        }
+
+        // قائمة المواد بتتعمل مع إرسال التوصيف — موجودة وفاضية = توصيف بالاستمارة فقط.
+        $bom = $case->bom()->withCount('items')->first();
+
+        return $bom !== null && (int) $bom->items_count === 0;
     }
 }

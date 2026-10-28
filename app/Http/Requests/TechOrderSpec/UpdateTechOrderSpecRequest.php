@@ -16,7 +16,7 @@ class UpdateTechOrderSpecRequest extends BaseRequest
             'written_items' => $policy->isRequired('spec', 'written_items')
                 ? ['required', 'string', 'max:5000']
                 : ['nullable', 'string', 'max:5000'],
-            'items' => ['sometimes', 'array', 'min:1'],
+            'items' => ['sometimes', 'nullable', 'array'],
             'items.*.stock_item_code' => ['required_with:items', 'string', 'max:500'],
             'items.*.name' => ['required_with:items', 'string', 'min:1', 'max:255'],
             'items.*.qty' => ['required_with:items', ...$this->decimalQtyRules()],

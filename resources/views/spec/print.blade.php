@@ -123,6 +123,8 @@
         <div class="line">مرجع الطلب: <span class="fill" style="min-width:36mm;">{{ $spec->order_ref }}</span></div>
     </section>
 
+    {{-- أصناف المخزن (لو موجودة) — التوصيف الجديد استمارة فقط والأصناف بتضيفها المعدلات. --}}
+    @if ($spec->items->isNotEmpty())
     <table class="items-table print-table">
         <thead>
             <tr>
@@ -151,12 +153,35 @@
             @endfor
         </tbody>
     </table>
+    @endif
 
     @if ($spec->written_items)
-        <div class="notes-box">
-            <div class="notes-title">بنود مكتوبة (وصف حر):</div>
-            <div style="white-space: pre-line;">{{ $spec->written_items }}</div>
-        </div>
+        @php
+            // استمارة التوصيف: «الاسم: القيمة» → جدول بعمودين زي الإكسل، والسطور من غير اسم بعرض الجدول.
+            $formRows = collect(preg_split('/\R/u', (string) $spec->written_items) ?: [])
+                ->map(fn ($l) => trim($l))->filter()
+                ->map(fn ($l) => preg_match('/^([^:：]{1,60})[:：]\s*(.+)$/u', $l, $m)
+                    ? ['label' => trim($m[1]), 'value' => trim($m[2])]
+                    : ['label' => '', 'value' => $l])
+                ->values();
+        @endphp
+        <table class="items-table print-table" style="margin-top:10px;">
+            <thead>
+                <tr><th colspan="2">{{ config('spec_form.title', 'استمارة المواصفات') }}</th></tr>
+            </thead>
+            <tbody>
+                @foreach ($formRows as $row)
+                    @if ($row['label'] !== '')
+                        <tr>
+                            <td class="col-name" style="width:38%;font-weight:800;">{{ $row['label'] }}</td>
+                            <td class="col-name">{{ $row['value'] }}</td>
+                        </tr>
+                    @else
+                        <tr><td class="col-name" colspan="2">{{ $row['value'] }}</td></tr>
+                    @endif
+                @endforeach
+            </tbody>
+        </table>
     @endif
 
     <div class="notes-box">

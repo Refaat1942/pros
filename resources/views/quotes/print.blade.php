@@ -519,21 +519,33 @@
     <div class="section-title">المواصفات الفنية والتكلفة :</div>
     <table class="grid spec-table">
         <thead>
+            @php
+                // بنود الاستمارة («السوكيت الخارجي: بلاستيك») بعمود «البيان / المكونات»؛
+                // البند من غير اسم بعرض الجدول (من غير خانة فاضية).
+                $hasLabeledItems = collect($doc['spec_rows'])->contains(
+                    fn ($r) => empty($r['meta']) && trim((string) $r['label']) !== ''
+                        && ! in_array($r['label'], ['مدة التوريد', 'الضمان'], true),
+                );
+            @endphp
             <tr>
-                {{-- بدون عمود «البيان / المكونات» للأصناف — الوصف بعرض الجدول، ومدة التوريد/الضمان بعنوانهم. --}}
-                <th class="spec-head" colspan="2">المواصفات التفصيلية</th>
+                @if ($hasLabeledItems)
+                    <th>البيان / المكونات</th>
+                    <th class="spec-head">المواصفات التفصيلية</th>
+                @else
+                    <th class="spec-head" colspan="2">المواصفات التفصيلية</th>
+                @endif
             </tr>
         </thead>
         <tbody>
             @forelse ($doc['spec_rows'] as $row)
-                @if (! empty($row['meta']) || in_array($row['label'], ['مدة التوريد', 'الضمان'], true))
+                @if (trim((string) $row['label']) !== '')
                     <tr>
                         <td class="label">{{ $row['label'] }}</td>
                         <td class="value">{{ $row['detail'] }}</td>
                     </tr>
                 @else
                     <tr>
-                        <td class="value" colspan="2">{{ trim((string) $row['label']) !== '' ? $row['label'].': ' : '' }}{{ $row['detail'] }}</td>
+                        <td class="value" colspan="2">{{ $row['detail'] }}</td>
                     </tr>
                 @endif
             @empty

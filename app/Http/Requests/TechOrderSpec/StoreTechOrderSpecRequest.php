@@ -18,7 +18,8 @@ class StoreTechOrderSpecRequest extends BaseRequest
             'written_items' => $policy->isRequired('spec', 'written_items')
                 ? ['required', 'string', 'max:5000']
                 : ['nullable', 'string', 'max:5000'],
-            'items' => ['required', 'array', 'min:1'],
+            // التوصيف يكتب الاستمارة فقط — الأصناف المسعّرة تضيفها المعدلات (البنود هنا اختيارية).
+            'items' => ['nullable', 'array'],
             'items.*.stock_item_code' => ['required', 'string', 'max:500'],
             'items.*.name' => ['required', 'string', 'min:1', 'max:255'],
             'items.*.qty' => $this->decimalQtyRules(),
@@ -33,6 +34,10 @@ class StoreTechOrderSpecRequest extends BaseRequest
 
             if (! $caseId) {
                 return;
+            }
+
+            if (empty($this->input('items')) && trim((string) $this->input('written_items')) === '') {
+                $validator->errors()->add('written_items', 'املأ استمارة التوصيف (بند واحد على الأقل).');
             }
 
             $case = CaseRecord::find($caseId);
