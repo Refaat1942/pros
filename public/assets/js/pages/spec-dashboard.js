@@ -997,9 +997,11 @@
     if (submitBtn) submitBtn.addEventListener('click', function () {
       if (state.locked || state.submitting || state.loadingCase) return;
 
+      // التوصيف بقى استمارة — يكفي بند واحد متملّي في الاستمارة (أصناف المخزن بتضيفها المعدلات).
       var items = readItemsFromInputs();
-      if (!items.length) {
-        showError('أضف بنداً واحداً على الأقل');
+      var formText = $('specFormSheet') ? serializeSpecForm() : (($('writtenItems') || {}).value || '');
+      if (!items.length && !String(formText).trim()) {
+        showError('املأ استمارة التوصيف — بند واحد على الأقل.');
         return;
       }
 
