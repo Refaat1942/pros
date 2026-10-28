@@ -9,6 +9,10 @@
 
     @include('partials.web-fonts')
 
+    {{-- أزرار مشتركة + زرار «خط السير» — قبل ملفات اللوحة عشان تنسيق اللوحة يفضل هو الغالب. --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/shared-controls.css') }}?v={{ filemtime(public_path('assets/css/shared-controls.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/workflow-path.css') }}?v={{ filemtime(public_path('assets/css/workflow-path.css')) }}">
+
     @stack('styles')
     @stack('styles-late')
     @auth

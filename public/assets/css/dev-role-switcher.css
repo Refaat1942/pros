@@ -1,7 +1,8 @@
 /* شريط تنقّل الإدارة — قابل للإخفاء والسحب */
 .dev-role-switcher {
     position: fixed;
-    z-index: 9999;
+    /* تحت النوافذ المنبثقة (1000+) — كان 9999 فيغطّي زرار «حفظ» في أسفل النافذة. */
+    z-index: 950;
     left: 50%;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
