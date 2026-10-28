@@ -193,7 +193,13 @@ class WorkflowPolicyService
      */
     public function adjustmentsMustAddItems(CaseRecord $case): bool
     {
-        return $case->stage_key === CaseRecord::STAGE_ADJUSTMENTS
-            && ! $case->bom()->whereHas('items')->exists();
+        if ($case->stage_key !== CaseRecord::STAGE_ADJUSTMENTS) {
+            return false;
+        }
+
+        // قائمة المواد بتتعمل مع إرسال التوصيف — موجودة وفاضية = توصيف بالاستمارة فقط.
+        $bom = $case->bom()->withCount('items')->first();
+
+        return $bom !== null && (int) $bom->items_count === 0;
     }
 }
