@@ -58,16 +58,27 @@ class BackupApplicationCommandTest extends TestCase
         $this->assertArrayNotHasKey('last_success_day', DailyBackupTrigger::readState());
     }
 
-    public function test_old_backups_are_pruned(): void
+    public function test_old_backups_are_pruned_but_the_newest_database_dumps_are_always_kept(): void
     {
         File::ensureDirectoryExists($this->storage.'/backups');
-        $old = $this->storage.'/backups/db-2020-01-01_000000.sql.gz';
-        file_put_contents($old, 'old');
-        touch($old, now()->subDays(30)->getTimestamp());
+        $dumps = [];
+        foreach ([40, 30, 20, 10] as $i => $daysAgo) {
+            $dumps[$daysAgo] = $this->storage."/backups/db-2020-01-0{$i}_000000.sql.gz";
+            file_put_contents($dumps[$daysAgo], 'dump');
+            touch($dumps[$daysAgo], now()->subDays($daysAgo)->getTimestamp());
+        }
+        $oldZip = $this->storage.'/backups/files-2020-01-01_000000.zip';
+        file_put_contents($oldZip, 'zip');
+        touch($oldZip, now()->subDays(30)->getTimestamp());
 
+        // قاعدة البيانات هنا sqlite → النسخة الجديدة تفشل (زي لما كلمة سر قاعدة البيانات اتغيرت على السيرفر).
         $this->artisan('prosthetics:backup', ['--keep' => 7]);
 
-        $this->assertFileDoesNotExist($old);
+        $this->assertFileDoesNotExist($oldZip, 'الملفات القديمة تُحذف');
+        $this->assertFileDoesNotExist($dumps[40], 'أقدم من آخر 3 نسخ قاعدة بيانات');
+        $this->assertFileExists($dumps[30]);
+        $this->assertFileExists($dumps[20]);
+        $this->assertFileExists($dumps[10], 'آخر نسخة سليمة لا تُحذف مهما كان عمرها');
     }
 
     public function test_first_request_of_the_day_starts_one_background_backup(): void
