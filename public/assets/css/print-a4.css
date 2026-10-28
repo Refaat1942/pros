@@ -13,9 +13,10 @@
     font-display: swap;
 }
 
+/* خلوص حوالين الوثيقة: 12مم فوق، 15مم يمين وشمال، 15مم تحت. */
 @page {
     size: A4 portrait;
-    margin: 10mm 12mm 14mm;
+    margin: 12mm 15mm 15mm;
 }
 
 *, *::before, *::after {
@@ -64,15 +65,16 @@ body {
 }
 
 @media print {
+    /* 297 − هوامش @page (12 + 15) = 270مم متاحة — كان 277مم فيقع آخر سطور في ورقة تانية. */
     .doc-tpl-compact {
-        max-height: 277mm;
+        max-height: 270mm;
         overflow: hidden;
     }
     .doc-tpl-compact .items-table tbody tr {
         page-break-inside: avoid;
     }
     .sheet {
-        max-height: 277mm;
+        max-height: 270mm;
         overflow: hidden;
     }
     .sheet .items-table tbody tr,

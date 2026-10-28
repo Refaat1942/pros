@@ -18,6 +18,7 @@ use App\Traits\PaginationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * داشبورد التكاليف (الخطوة 5) — قراءة فقط + تأكيد يدوي.
@@ -133,9 +134,25 @@ class CostingController extends Controller
     /**
      * تأكيد التكاليف وإصدار عرض السعر — تحويل لمكتب التشغيل.
      */
-    public function confirm(CaseRecord $case): JsonResponse
+    public function confirm(Request $request, CaseRecord $case): JsonResponse
     {
-        $case = $this->costingService->confirmAndIssueQuote($case, Auth::user()?->name);
+        $data = $request->validate([
+            'discount_type' => ['nullable', 'in:percent,amount'],
+            'discount_value' => ['nullable', 'numeric', 'min:0'],
+            'discount_reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $discount = null;
+        if ((float) ($data['discount_value'] ?? 0) > 0) {
+            abort_unless(Gate::allows('grant-cash-discount'), 403, 'ليس لديك صلاحية منح خصم.');
+            $discount = [
+                'type' => $data['discount_type'] ?? 'amount',
+                'value' => (float) $data['discount_value'],
+                'reason' => (string) ($data['discount_reason'] ?? ''),
+            ];
+        }
+
+        $case = $this->costingService->confirmAndIssueQuote($case, Auth::user()?->name, $discount);
 
         return response()->json([
             'message' => $this->transitions->transferMessage(
@@ -155,6 +172,9 @@ class CostingController extends Controller
             'id', 'case_no', 'order_ref', 'stage_key', 'patient_type', 'path',
         ]) + [
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
+            // خانة الخصم اليدوي تظهر للمدني الكاش فقط ولمن عنده الصلاحية.
+            'is_cash_civilian' => $case->isCashCivilian(),
+            'can_grant_cash_discount' => $case->isCashCivilian() && Gate::allows('grant-cash-discount'),
             'display_entity' => $case->displayEntity(),
             'tech_notes' => $case->resolvedTechNotes(),
             'computed_total' => $pricing ? (float) $pricing->computed_total : null,

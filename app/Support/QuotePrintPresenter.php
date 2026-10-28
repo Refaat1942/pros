@@ -32,6 +32,26 @@ final class QuotePrintPresenter
             return self::withoutDiscount($gross);
         }
 
+        // خصم يدوي للعميل المدني الكاش: quotes.total هو الصافي، والإجمالي قبل الخصم محفوظ في gross_total.
+        $manual = round((float) ($quote->discount_amount ?? 0), 2);
+        $manualGross = round((float) ($quote->gross_total ?? 0), 2);
+        if ($manual > 0 && $manualGross > 0 && $case->isCashCivilian()) {
+            $percent = $quote->discount_percent !== null
+                ? (float) $quote->discount_percent
+                : round($manual / $manualGross * 100, 2);
+
+            return [
+                'gross_total' => $manualGross,
+                'discount_percent' => $percent,
+                'discount_amount' => $manual,
+                'net_total' => $gross,
+                'display_total' => $gross,
+                'has_discount' => true,
+                // خصم بمبلغ ثابت يُطبع «الخصم» بدل «نسبة الخصم (x%)».
+                'discount_is_amount' => $quote->discount_percent === null,
+            ];
+        }
+
         $split = ContractBillingSplit::forCase($case, $gross);
         $discountAmount = round($gross - $split['patient_share'], 2);
 

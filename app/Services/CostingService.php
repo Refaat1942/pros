@@ -70,13 +70,16 @@ class CostingService
      * تأكيد التكاليف وإصدار عرض السعر — cost_calc → quote → operations.
      * المسار العسكري: بدون عرض سعر، اعتماد صامت تلقائي → المخزن.
      */
-    public function confirmAndIssueQuote(CaseRecord $case, ?string $confirmedBy = null): CaseRecord
+    /**
+     * @param  array{type: string, value: float, reason: string}|null  $cashDiscount  خصم يدوي — للمدني الكاش فقط.
+     */
+    public function confirmAndIssueQuote(CaseRecord $case, ?string $confirmedBy = null, ?array $cashDiscount = null): CaseRecord
     {
         if ($case->stage_key !== CaseRecord::STAGE_COST_CALC) {
             abort(422, 'الحالة ليست في مرحلة التكاليف — لا يمكن التأكيد.');
         }
 
-        DB::transaction(function () use ($case, $confirmedBy) {
+        DB::transaction(function () use ($case, $confirmedBy, $cashDiscount) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             $this->editRequestService->assertNoPendingForCase($case);
@@ -123,10 +126,44 @@ class CostingService
                 return;
             }
 
+            $discount = $this->resolveCashDiscount($case, $quoteAmount, $cashDiscount);
+
             $this->workflowService->advance($case, WorkflowEvent::CostingCompleted->value);
 
             if (! $case->isMilitary()) {
-                $this->quoteService->issue($pricingRequest, $quoteAmount);
+                // العرض يُصدر بالصافي — الخزنة والفاتورة والتقارير تقرأ quotes.total / cases.quote_total.
+                $quote = $this->quoteService->issue($pricingRequest, $quoteAmount - ($discount['amount'] ?? 0.0));
+                $quote->update([
+                    'gross_total' => $discount ? $quoteAmount : null,
+                    'discount_amount' => $discount['amount'] ?? 0,
+                    'discount_percent' => $discount['percent'] ?? null,
+                    'discount_reason' => $discount['reason'] ?? null,
+                    'discount_by' => $discount ? ($confirmedBy ?? 'الاعتماد') : null,
+                ]);
+
+                if ($discount) {
+                    AuditService::log(
+                        action: 'discount',
+                        description: sprintf(
+                            'خصم للعميل الكاش %s ج.م على عرض %s — %s — السبب: %s',
+                            number_format($discount['amount'], 2),
+                            $quote->quote_no,
+                            $case->case_no,
+                            $discount['reason'],
+                        ),
+                        tag: 'pricing',
+                        after: [
+                            'case_id' => $case->id,
+                            'quote_id' => $quote->id,
+                            'gross_total' => $quoteAmount,
+                            'discount_amount' => $discount['amount'],
+                            'discount_percent' => $discount['percent'],
+                            'net_total' => $quoteAmount - $discount['amount'],
+                            'reason' => $discount['reason'],
+                            'by' => $confirmedBy,
+                        ],
+                    );
+                }
             }
 
             $this->workflowService->advance($case->fresh(), WorkflowEvent::QuoteIssued->value);
@@ -158,5 +195,44 @@ class CostingService
         }
 
         return $fresh->load(['patient', 'pricingRequest.items', 'quotes']);
+    }
+
+    /**
+     * يحسب الخصم اليدوي ويتحقق منه — متاح للمريض المدني الكاش فقط (لا جهات ولا عسكري).
+     *
+     * @param  array{type?: string, value?: float|int|string, reason?: string|null}|null  $input
+     * @return array{amount: float, percent: float|null, reason: string}|null
+     */
+    private function resolveCashDiscount(CaseRecord $case, float $gross, ?array $input): ?array
+    {
+        $value = round((float) ($input['value'] ?? 0), 2);
+        if ($input === null || $value <= 0) {
+            return null;
+        }
+
+        if (! $case->isCashCivilian()) {
+            abort(422, 'الخصم اليدوي متاح للعميل المدني الكاش فقط.');
+        }
+
+        $reason = trim((string) ($input['reason'] ?? ''));
+        if ($reason === '') {
+            abort(422, 'اكتب سبب الخصم.');
+        }
+
+        $isPercent = ($input['type'] ?? 'amount') === 'percent';
+        if ($isPercent && $value >= 100) {
+            abort(422, 'نسبة الخصم لازم تكون أقل من 100%.');
+        }
+
+        $amount = $isPercent ? round($gross * $value / 100, 2) : $value;
+        if ($amount >= $gross) {
+            abort(422, 'الخصم لا يمكن أن يساوي أو يتجاوز إجمالي السعر ('.number_format($gross, 2).' ج.م).');
+        }
+
+        return [
+            'amount' => $amount,
+            'percent' => $isPercent ? $value : null,
+            'reason' => mb_substr($reason, 0, 255),
+        ];
     }
 }

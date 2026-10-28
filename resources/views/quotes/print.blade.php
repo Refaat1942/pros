@@ -70,7 +70,7 @@
             max-width: none;
             min-height: 297mm;
             margin: 0 auto;
-            padding: 14mm 17mm 12mm;
+            padding: 14mm 17mm 15mm;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -419,17 +419,13 @@
                 max-height: 296mm;
                 overflow: hidden;
             }
-            /* بدون «تنسيق مضغوط»: يُسمح بالامتداد لأكثر من صفحة إن طالت المواصفات */
-            .sheet:not(.doc-tpl-compact) {
-                max-height: none;
-                overflow: visible;
-            }
+            /* ورقة واحدة دائماً — print-fit.js يصغّر المحتوى لو طال (بدل الامتداد لورقة تانية). */
             .spec-table thead { display: table-header-group; }
             .totals-table, .signature { page-break-inside: avoid; }
         }
     </style>
 </head>
-<body class="@if(!empty($embed)) embed-preview @endif" @if($autoPrint ?? true) onload="window.print()" @endif>
+<body class="@if(!empty($embed)) embed-preview @endif" data-fit-mm="294" data-print-width-mm="210" @if($autoPrint ?? true) onload="window.print()" @endif>
 
 <div class="no-print">
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
@@ -555,7 +551,7 @@
                 <td class="t-value">ج.م. <span class="num">{{ QuotePrintPresenter::money((float) $totals['gross_total']) }}</span></td>
             </tr>
             <tr class="t-discount">
-                <td class="t-label">نسبة الخصم ({{ $discountPct }}%)</td>
+                <td class="t-label">{{ ! empty($totals['discount_is_amount']) ? 'الخصم' : 'نسبة الخصم ('.$discountPct.'%)' }}</td>
                 <td class="t-value">ج.م. <span class="num">{{ QuotePrintPresenter::money((float) $totals['discount_amount']) }}</span></td>
             </tr>
             <tr class="t-net">
