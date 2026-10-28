@@ -40,6 +40,15 @@ class BackupApplicationCommand extends Command
         $this->pruneOldBackups($backupDir, $keep);
 
         if (! $dbOk) {
+            // تنبيه واضح — فشل النسخ الاحتياطي لقاعدة البيانات أيام بدون ما حد يلاحظ (أكتوبر 2026).
+            try {
+                \Illuminate\Support\Facades\Log::channel('telegram')->critical(
+                    'فشل النسخ الاحتياطي لقاعدة البيانات — آخر نسخة سليمة: '.($this->newestDatabaseDump($backupDir) ?? 'لا يوجد'),
+                );
+            } catch (\Throwable) {
+                // لا نكسر الأمر بسبب قناة التنبيه.
+            }
+
             return self::FAILURE;
         }
 
@@ -262,17 +271,40 @@ class BackupApplicationCommand extends Command
         return $dump->getOutput();
     }
 
+    /** عدد آخر نسخ قاعدة بيانات سليمة لا تُحذف أبداً مهما كان عمرها. */
+    private const ALWAYS_KEEP_DB_DUMPS = 3;
+
     private function pruneOldBackups(string $dir, int $keepDays): void
     {
         if ($keepDays <= 0) {
             return;
         }
 
+        // آخر نسخ قاعدة البيانات محمية — لو النسخ الجديدة بتفشل (مثلاً كلمة سر قاعدة البيانات اتغيرت)
+        // ما نمسحش آخر نسخة سليمة بعد 7 أيام ونفضل من غير ولا نسخة.
+        $protected = array_flip($this->databaseDumpsNewestFirst($dir, self::ALWAYS_KEEP_DB_DUMPS));
+
         $cutoff = now()->subDays($keepDays)->getTimestamp();
         foreach (glob($dir.'/*') ?: [] as $file) {
-            if (is_file($file) && filemtime($file) < $cutoff) {
+            if (is_file($file) && filemtime($file) < $cutoff && ! isset($protected[$file])) {
                 unlink($file);
             }
         }
+    }
+
+    /** @return list<string> */
+    private function databaseDumpsNewestFirst(string $dir, int $limit): array
+    {
+        $dumps = array_filter(glob($dir.'/db-*.sql.gz') ?: [], fn (string $f) => is_file($f) && filesize($f) > 0);
+        usort($dumps, fn (string $a, string $b) => filemtime($b) <=> filemtime($a));
+
+        return array_slice(array_values($dumps), 0, $limit);
+    }
+
+    private function newestDatabaseDump(string $dir): ?string
+    {
+        $newest = $this->databaseDumpsNewestFirst($dir, 1)[0] ?? null;
+
+        return $newest !== null ? basename($newest) : null;
     }
 }

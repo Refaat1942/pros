@@ -285,3 +285,8 @@
 body:has(.dev-role-switcher:not(.is-hidden):not(.is-positioned)) {
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
+
+/* شريط الأقسام العائم كان يغطي زرار «تسجيل الخروج» أسفل القائمة الجانبية على الشاشات الأصغر. */
+body:has(.dev-role-switcher:not(.is-hidden):not(.is-positioned)) .sidebar-footer {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
