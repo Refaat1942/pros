@@ -285,8 +285,10 @@
             font-size: 14pt;
         }
 
-        .spec-table td.label {
-            width: 30mm;
+        /* عمود «البيان / المكونات» أعرض — الأسماء زي «وصلة الماسورة» كانت بتتلف سطرين وتطوّل الجدول. */
+        .spec-table td.label,
+        .spec-table thead th:first-child:not(.spec-head) {
+            width: 38mm;
         }
 
         .spec-table td.value {
