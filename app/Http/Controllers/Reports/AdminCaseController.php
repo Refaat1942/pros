@@ -83,7 +83,8 @@ class AdminCaseController extends Controller
         // قالب «فاتورة» المستقل في مركز الوثائق (العنوان، الضمان، الموقّعون، التوقيعات الإضافية).
         $template = $this->documentTemplateForPrint('invoice', $case);
 
-        return view('quotes.print', [
+        // تصميم «الكروت» للفاتورة الختامية.
+        return view('invoices.print', [
             'invoiceCase' => $case,
             'invoiceDoc' => InvoicePrintPresenter::document($case, $template),
             'quoteQrSvg' => $case->invoice_no ? $this->quoteQrService->svg($case->invoice_no) : null,

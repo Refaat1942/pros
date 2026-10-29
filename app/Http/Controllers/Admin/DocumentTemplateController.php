@@ -191,7 +191,7 @@ class DocumentTemplateController extends Controller
         $sampleQuote = DocumentPreviewSamples::quote();
         $doc = \App\Support\InvoicePrintPresenter::preview($sampleQuote, $tpl);
 
-        return view('quotes.print', [
+        return view('invoices.print', [
             'invoiceCase' => $sampleQuote->caseRecord,
             'invoiceDoc' => $doc,
             'quoteQrSvg' => $this->safeQuoteQr($doc['invoice_no']),

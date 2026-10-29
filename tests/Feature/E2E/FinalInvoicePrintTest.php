@@ -74,7 +74,12 @@ class FinalInvoicePrintTest extends ProstheticTestCase
             ->assertOk()
             ->assertSee('المدفوع بالخزنة', false)
             ->assertSee('المتبقي', false)
-            ->assertSee('المريض — نقداً بالخزنة', false);
+            ->assertSee('المريض — نقداً بالخزنة', false)
+            // تصميم الكروت: سجل الدفعات، حالة السداد، والمبلغ بالحروف.
+            ->assertSee('💳 الدفعات', false)
+            ->assertSee((string) \App\Models\Payment::where('case_id', $case->id)->value('payment_no'), false)
+            ->assertSee('✓ مسدّدة بالكامل', false)
+            ->assertSee(\App\Support\ArabicAmountInWords::egp((float) $case->invoice_total), false);
     }
 
     public function test_military_invoice_is_charged_to_sovereign_entity(): void
