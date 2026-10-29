@@ -83,7 +83,25 @@ final class InvoicePrintPresenter
 
         $deliveredAt = $case->delivered_at;
 
+        $remaining = $kind === PatientEntityPresenter::KIND_CASH ? max(0, round($net - $paid, 2)) : null;
+        $contract = \App\Models\ApprovalContract::query()->where('case_id', $case->id)->orderByDesc('id')->first();
+
         return array_merge($base, [
+            // تصميم الفاتورة (الكروت): الدفعات، حالة السداد، مرجع الموافقة، والمبلغ بالحروف.
+            'payments' => \App\Models\Payment::query()
+                ->where('case_id', $case->id)
+                ->orderBy('received_at')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (\App\Models\Payment $p) => [
+                    'no' => (string) $p->payment_no,
+                    'date' => ClinicTime::format($p->received_at, 'd/m/Y'),
+                    'method' => $p->methodLabel(),
+                    'amount' => (float) $p->amount,
+                ])->values()->all(),
+            'approval_ref' => $contract ? trim((string) ($contract->letter_ref ?: $contract->contract_no)) : '',
+            'status' => self::status($isMilitary, $kind, $remaining),
+            'amount_words' => ArabicAmountInWords::egp($net),
             'invoice_no' => (string) ($case->invoice_no ?? ''),
             'invoice_date' => ClinicTime::format($deliveredAt, 'j/n/Y'),
             'delivered_at' => ClinicTime::format($deliveredAt, 'd/m/Y H:i'),
@@ -96,8 +114,20 @@ final class InvoicePrintPresenter
             'is_cash' => $kind === PatientEntityPresenter::KIND_CASH,
             'totals' => $totals,
             'paid' => $kind === PatientEntityPresenter::KIND_CASH ? $paid : null,
-            'remaining' => $kind === PatientEntityPresenter::KIND_CASH ? max(0, round($net - $paid, 2)) : null,
+            'remaining' => $remaining,
         ]);
+    }
+
+    /** @return array{label: string, tone: string} */
+    private static function status(bool $isMilitary, string $kind, ?float $remaining): array
+    {
+        return match (true) {
+            $isMilitary => ['label' => 'على حساب الجهة السيادية', 'tone' => 'slate'],
+            $kind === PatientEntityPresenter::KIND_CASH && ($remaining ?? 0) <= 0.009 => ['label' => '✓ مسدّدة بالكامل', 'tone' => 'paid'],
+            $kind === PatientEntityPresenter::KIND_CASH => ['label' => 'متبقي '.number_format((float) $remaining, 2).' ج.م', 'tone' => 'due'],
+            $kind === PatientEntityPresenter::KIND_CONTRACTED => ['label' => 'على جهة التعاقد', 'tone' => 'entity'],
+            default => ['label' => 'على الجهة', 'tone' => 'entity'],
+        };
     }
 
     /**
@@ -128,6 +158,10 @@ final class InvoicePrintPresenter
             'totals' => $totals,
             'paid' => null,
             'remaining' => null,
+            'payments' => [],
+            'approval_ref' => 'خطاب موافقة رقم 0000',
+            'status' => self::status(false, PatientEntityPresenter::KIND_CONTRACTED, null),
+            'amount_words' => ArabicAmountInWords::egp((float) $totals['display_total']),
         ]);
     }
 
