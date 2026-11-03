@@ -81,7 +81,7 @@ class CostingSnapshotService
         foreach ($request->items as $item) {
             $lineTotal = (float) $item->line_total;
 
-            if ($item->stockItem?->is_quick_dispense) {
+            if (\App\Support\QuickDispense::isQuickItem($item->stockItem, $item->stock_item_code)) {
                 $quick += $lineTotal;
             } else {
                 $base += $lineTotal;

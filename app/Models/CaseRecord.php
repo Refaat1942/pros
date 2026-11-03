@@ -88,6 +88,7 @@ class CaseRecord extends Model
         'assigned_technician_id',
         'workshop_assigned_at',
         'workshop_assignment_approved_at',
+        'quick_dispense_at',
         'workshop_progress_pct',
         'pricing_request_id',
         'quote_no',
@@ -133,6 +134,7 @@ class CaseRecord extends Model
         'rework_returned_at' => 'datetime',
         'workshop_assigned_at' => 'datetime',
         'workshop_assignment_approved_at' => 'datetime',
+        'quick_dispense_at' => 'datetime',
         'workshop_progress_pct' => 'integer',
     ];
 
@@ -334,8 +336,18 @@ class CaseRecord extends Model
             ->whereHas('bom', fn (Builder $b) => $b->where('stage', Bom::STAGE_RAW));
     }
 
+    public function isQuickDispense(): bool
+    {
+        return $this->quick_dispense_at !== null;
+    }
+
     public function isWorkshopAssignmentApproved(): bool
     {
+        // صرف سريع: مالوش قسم إنتاج ولا فني — المخزن يصرف ويسلّم على طول.
+        if ($this->workshop_assignment_approved_at !== null && $this->quick_dispense_at !== null) {
+            return true;
+        }
+
         return $this->workshop_assignment_approved_at !== null
             && $this->workshop_section_id !== null
             && $this->assigned_technician_id !== null;

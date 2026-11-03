@@ -370,7 +370,7 @@ class StockItem extends Model
      */
     public static function pickerCatalogRows(): array
     {
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'price'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'is_quick_dispense', 'alt_codes', 'price'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
@@ -404,6 +404,7 @@ class StockItem extends Model
                     'qty' => (int) $item->qty,
                     'reserved' => (int) $item->reserved,
                     'available_max' => $item->availableQty(),
+                    'is_quick_dispense' => (bool) $item->is_quick_dispense,
                     'price' => (float) $item->price,
                 ];
             })
@@ -429,7 +430,7 @@ class StockItem extends Model
             return [];
         }
 
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'price'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'is_quick_dispense', 'alt_codes', 'price'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
@@ -459,6 +460,7 @@ class StockItem extends Model
                     'qty' => (int) $item->qty,
                     'reserved' => (int) $item->reserved,
                     'available_max' => $item->availableQty(),
+                    'is_quick_dispense' => (bool) $item->is_quick_dispense,
                     'price' => (float) $item->price,
                 ];
             })
@@ -472,21 +474,23 @@ class StockItem extends Model
      *
      * @return list<array{code: string, catalog_code: string, name: string, spec: ?string, uom: string, qty: int, reserved: int, available_max: int}>
      */
-    public static function searchPickerRows(string $q, int $limit = 50): array
+    public static function searchPickerRows(string $q, int $limit = 50, bool $quickOnly = false): array
     {
         $q = trim($q);
-        if ($q === '') {
+        // منتجات الصرف السريع: البحث الفاضي يرجّعها كلها (قائمة صغيرة: عكاكيز، كراسي…).
+        if ($q === '' && ! $quickOnly) {
             return [];
         }
 
         $like = '%'.$q.'%';
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'alt_codes', 'barcode'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'is_quick_dispense', 'alt_codes', 'barcode'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
 
         return static::query()
-            ->where(function ($builder) use ($like, $q) {
+            ->when($quickOnly, fn ($builder) => $builder->where('is_quick_dispense', true))
+            ->when($q !== '', fn ($query) => $query->where(function ($builder) use ($like, $q) {
                 $builder->where('name', 'like', $like)
                     ->orWhere('code', 'like', $like)
                     ->orWhere('alt_codes', 'like', $like)
@@ -500,7 +504,7 @@ class StockItem extends Model
                 if (strlen($q) >= 3) {
                     $builder->orWhere('barcode', $q);
                 }
-            })
+            }))
             ->orderBy('name')
             ->limit(max(10, min(60, $limit)))
             ->get($columns)
@@ -519,6 +523,7 @@ class StockItem extends Model
                     'qty' => (int) $item->qty,
                     'reserved' => (int) $item->reserved,
                     'available_max' => $item->availableQty(),
+                    'is_quick_dispense' => (bool) $item->is_quick_dispense,
                 ];
             })
             ->filter(fn (array $row) => $row['code'] !== '' && $row['name'] !== '')

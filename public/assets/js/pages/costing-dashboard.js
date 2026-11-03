@@ -159,7 +159,10 @@
     if (baseRow) {
       baseRow.style.display = hasBase ? '' : 'none';
       if (hasBase) {
-        if ($('costingBaseSellingLabel')) $('costingBaseSellingLabel').textContent = 'سعر بيع الطرف الصناعي (' + (costing.base_profit_rate || 0) + '%)';
+        if ($('costingBaseSellingLabel')) {
+          $('costingBaseSellingLabel').textContent = '🏭 مواد التصنيع ' + fmt(costing.base_materials) + ' + تكلفة التشغيل ' + fmt(costing.components_total || 0) +
+            ' — ربح ' + (costing.base_profit_rate || 0) + '% ← سعر البيع';
+        }
         if ($('costingBaseSelling')) $('costingBaseSelling').textContent = fmt(costing.base_selling) + ' ج.م';
       }
     }
@@ -170,7 +173,10 @@
     if (quickRow) {
       quickRow.style.display = hasQuick ? '' : 'none';
       if (hasQuick) {
-        if ($('costingQuickLabel')) $('costingQuickLabel').textContent = 'الصرف السريع (' + (costing.quick_profit_rate || 0) + '%)';
+        if ($('costingQuickLabel')) {
+          $('costingQuickLabel').textContent = '🩼 منتجات الصرف السريع ' + fmt(costing.quick_materials) +
+            ' — ربح ' + (costing.quick_profit_rate || 0) + '% (بدون تكلفة تشغيل) ← سعر البيع';
+        }
         if ($('costingQuickSelling')) $('costingQuickSelling').textContent = fmt(costing.quick_selling) + ' ج.م';
       }
     }
@@ -284,10 +290,26 @@
 
         var body = $('costingItemsBody');
         if (body) {
-          body.innerHTML = (pricing.items || []).map(function (it) {
-            return '<tr>' +
+          // مواد التصنيع (عليها تكلفة تشغيل) الأول، وبعدها منتجات الصرف السريع — كل نوع بنسبة ربح مختلفة.
+          var pItems = pricing.items || [];
+          var made = pItems.filter(function (it) { return !it.is_quick_dispense; });
+          var quickOnes = pItems.filter(function (it) { return !!it.is_quick_dispense; });
+          var both = made.length && quickOnes.length;
+          var prevQuick = null;
+          body.innerHTML = made.concat(quickOnes).map(function (it) {
+            var quick = !!it.is_quick_dispense;
+            var head = '';
+            if (both && quick !== prevQuick) {
+              head = '<tr><td colspan="6" style="background:' + (quick ? '#ecfdf5' : '#f8fafc') + ';font-weight:700;padding:8px 10px;">' +
+                (quick ? '🩼 منتجات الصرف السريع — ربح مباشر بدون تكلفة تشغيل' : '🏭 مواد التصنيع — عليها تكلفة تشغيل') + '</td></tr>';
+            }
+            prevQuick = quick;
+            var badge = quick
+              ? ' <span class="badge" style="background:#ecfdf5;color:#047857;font-size:11px;">🩼 صرف سريع</span>'
+              : ' <span class="badge" style="background:#f1f5f9;color:#475569;font-size:11px;">🏭 تصنيع</span>';
+            return head + '<tr>' +
               '<td><code>' + esc(it.stock_item_code) + '</code></td>' +
-              '<td>' + esc(it.name) + '</td>' +
+              '<td>' + esc(it.name) + badge + '</td>' +
               '<td>' + esc(it.qty) + '</td>' +
               '<td class="costing-criteria-cell">' + esc(it.criteria || '—') + '</td>' +
               '<td class="catalog-price-cell" style="text-align:center;">' + fmtCatalogPrice(it.price) + '</td>' +

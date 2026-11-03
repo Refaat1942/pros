@@ -157,13 +157,16 @@
                 <p class="text-red-900 mt-2 whitespace-pre-wrap leading-relaxed" id="specReworkReason"></p>
             </div>
 
-            {{-- إضافة أصناف المخزن اتشالت من التوصيف — الأصناف المسعّرة تضيفها «معدلات و تكاليف». --}}
-            <div id="specCatalogItemsBlock" hidden>
+            {{-- منتجات الصرف السريع (عكاكيز، كراسي، …) تتكتب هنا — أصناف التصنيع المسعّرة تضيفها «معدلات و تكاليف». --}}
+            <div id="specCatalogItemsBlock" class="space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <h5 class="font-bold text-slate-800">📦 بنود التوصيف</h5>
+                <div>
+                    <h5 class="font-bold text-slate-800">🩼 منتجات الصرف السريع</h5>
+                    <p class="text-xs text-slate-500 mt-1">عكاكيز، كراسي متحركة، ووكر… بتتصرف من المخزن مباشرة. لو المريض محتاج صرف سريع بس، يستلم بعد الدفع من غير قسم الإنتاج.</p>
+                </div>
                 <button type="button" id="btnAddCatalogItem"
                         class="inline-flex items-center gap-2 rounded-xl bg-spec hover:bg-spec-dark text-white text-sm font-bold px-4 py-2 transition-colors">
-                    ➕ إضافة صنف
+                    ➕ إضافة منتج صرف سريع
                 </button>
             </div>
 
@@ -213,7 +216,7 @@
 <div id="catalogModal" class="hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="font-bold text-slate-800">🔍 اختيار صنف من الكاتلوج</h3>
+            <h3 class="font-bold text-slate-800">🩼 اختيار منتج صرف سريع</h3>
             <button type="button" id="closeCatalogModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
         </div>
         <div class="p-4 border-b border-slate-100">

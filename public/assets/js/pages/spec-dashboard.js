@@ -280,7 +280,8 @@
 
   function catalogRowsForPicker(filter) {
     var q = (filter || '').trim();
-    if (q.length >= 1 && state.catalogSearchResults !== null) {
+    // نافذة «منتجات الصرف السريع»: النتائج دايماً من السيرفر (حتى من غير كتابة).
+    if (state.catalogSearchResults !== null) {
       return state.catalogSearchResults;
     }
     return state.catalog;
@@ -293,7 +294,7 @@
     }
     state.catalogSearching = true;
     renderCatalogList(q);
-    return axios.get('/spec/catalog/search', { params: { q: q, limit: 40 } })
+    return axios.get('/spec/catalog/search', { params: { q: q, limit: 60, quick: 1 } })
       .then(function (res) {
         state.catalogSearchResults = res.data.data || [];
         mergeCatalogEntries(state.catalogSearchResults);
@@ -310,12 +311,6 @@
   function onCatalogSearchInput(value) {
     var q = (value || '').trim();
     if (state.catalogSearchTimer) clearTimeout(state.catalogSearchTimer);
-
-    if (q.length < 1) {
-      state.catalogSearchResults = null;
-      renderCatalogList('');
-      return;
-    }
 
     state.catalogSearchTimer = setTimeout(function () {
       searchCatalogFromServer(q);
@@ -474,6 +469,9 @@
         '<td class="px-4 py-3 font-mono text-xs">' + item.stock_item_code + '</td>' +
         '<td class="px-4 py-3 font-semibold text-slate-800">' + item.name +
           (item.group_label ? '<span class="block text-xs text-violet-600">📦 ' + item.group_label + '</span>' : '') +
+          (cat && cat.is_quick_dispense
+            ? '<span class="block text-xs font-bold text-emerald-700">🩼 صرف سريع</span>'
+            : (cat ? '<span class="block text-xs font-bold text-slate-500">🏭 تصنيع</span>' : '')) +
         '</td>' +
         '<td class="px-4 py-3 text-slate-500">' + (item.uom || '—') + '</td>' +
         '<td class="px-4 py-3">' + stockCell + '</td>' +
@@ -871,10 +869,9 @@
     if (!list) return;
     var qRaw = (filter || '').trim();
     var q = qRaw.toLowerCase();
-    var activeGroups = qRaw ? [] : activeSpecGroupLabels();
+    var activeGroups = [];
     var source = catalogRowsForPicker(filter);
     var items = source.filter(function (item) {
-      if (!qRaw && !itemMatchesActiveSpecGroups(item)) return false;
       if (!q) return true;
       return (item.code + ' ' + item.name + ' ' + (item.spec || '') + ' ' + (item.spec_group_label || '') + ' ' + (item.barcode || '') + ' ' + (item.alt_codes || '')).toLowerCase().indexOf(q) !== -1;
     });
@@ -951,7 +948,7 @@
         return;
       }
       state.catalogSearchResults = null;
-      renderCatalogList('');
+      searchCatalogFromServer('');
       modal.classList.remove('hidden');
       var searchInput = $('catalogSearch');
       if (searchInput) {

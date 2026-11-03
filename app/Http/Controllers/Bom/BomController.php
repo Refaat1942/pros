@@ -47,7 +47,7 @@ class BomController extends Controller
     {
         $boms = $this->fetchForDashboard(
             Bom::with([
-                'caseRecord:id,case_no,stage_key,manufacturing_stage,work_order_no,patient_type,workshop_section_id,assigned_technician_id,workshop_assignment_approved_at',
+                'caseRecord:id,case_no,stage_key,manufacturing_stage,work_order_no,patient_type,workshop_section_id,assigned_technician_id,workshop_assignment_approved_at,quick_dispense_at',
                 'items',
             ])
                 ->when($request->stage, fn ($q, $s) => $q->where('stage', $s))

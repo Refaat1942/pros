@@ -927,7 +927,7 @@ class BomService
     public function releaseToWip(Bom $bom, array $dispenseInput): Bom
     {
         // attempts: يُعاد تلقائياً لو اكتشفت قاعدة البيانات deadlock (عند كونها المعاملة الخارجية).
-        return DB::transaction(function () use ($bom, $dispenseInput) {
+        $released = DB::transaction(function () use ($bom, $dispenseInput) {
             $bom = Bom::lockForUpdate()->with(['items', 'caseRecord'])->findOrFail($bom->id);
 
             $this->validateDispenseLines($bom, $dispenseInput);
@@ -1044,6 +1044,44 @@ class BomService
 
             return $bom->fresh()->load('items');
         }, 3);
+
+        return $this->closeQuickDispenseAfterIssue($released);
+    }
+
+    /**
+     * منتجات صرف سريع بس (عكاز، كرسي…): بعد الصرف من المخزن الحالة تروح «جاهز للتسليم» على طول
+     * من غير قسم الإنتاج. لو حصل أي مانع الحالة تكمل المسار العادي زي ما هي.
+     */
+    private function closeQuickDispenseAfterIssue(Bom $bom): Bom
+    {
+        $case = $bom->caseRecord()->first();
+        if (! $case
+            || $bom->stage !== Bom::STAGE_WIP
+            || $case->stage_key !== CaseRecord::STAGE_MANUFACTURING
+            || ! $case->isQuickDispense()
+            || ! \App\Support\QuickDispense::caseIsQuickOnly($case)) {
+            return $bom;
+        }
+
+        try {
+            DB::transaction(function () use ($bom, $case) {
+                $case->update([
+                    'manufacturing_stage' => CaseRecord::MFG_CLOSED,
+                    'workshop_progress_pct' => 100,
+                ]);
+                $this->closeFinished($bom);
+            });
+            AuditService::log(
+                action: 'finish',
+                description: "صرف سريع — الحالة {$case->case_no} جاهزة للتسليم مباشرة (بدون قسم الإنتاج)",
+                tag: 'warehouse',
+                after: ['case_id' => $case->id, 'bom_no' => $bom->bom_no],
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $bom->fresh()->load('items');
     }
 
     /**
