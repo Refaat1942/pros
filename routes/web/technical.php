@@ -56,6 +56,9 @@ Route::prefix('technical')
             Route::post('supply/requests', [SupplyRequestController::class, 'store'])
                 ->name('supply.requests.store');
 
+            Route::post('supply/requests/batch', [SupplyRequestController::class, 'storeBatch'])
+                ->name('supply.requests.store-batch');
+
             Route::post('supply/requests/{supplyRequestLine}/resolve', [SupplyRequestController::class, 'resolve'])
                 ->name('supply.requests.resolve');
 

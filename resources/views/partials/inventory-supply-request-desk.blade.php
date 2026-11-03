@@ -68,8 +68,28 @@
                 </div>
             </div>
 
+            {{-- طلب واحد بأكثر من صنف: «أضف للطلب» لكل صنف ثم «تسجيل طلب التوريد» مرة واحدة. --}}
+            <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button type="button" class="btn-action" id="btnAddSupplyCartLine">➕ أضف للطلب</button>
+                <span style="font-size:12px;color:var(--text-muted);">أضف كل الأصناف المطلوبة ثم سجّل الطلب مرة واحدة برقم واحد.</span>
+            </div>
+
+            <div id="supplyCartWrap" style="display:none;margin-top:12px;">
+                <table data-no-paginate class="stock-table" style="width:100%;">
+                    <thead>
+                        <tr><th>#</th><th>الصنف</th><th>الكمية</th><th>الوحدة</th><th>المواصفات</th><th></th></tr>
+                    </thead>
+                    <tbody id="supplyCartBody"></tbody>
+                </table>
+                <div class="form-group" style="margin-top:10px;">
+                    <label for="supplyRequestNotes">ملاحظات الطلب (اختياري)</label>
+                    <input type="text" id="supplyRequestNotes" class="form-control" maxlength="2000" placeholder="مثال: مطلوب خلال أسبوع">
+                </div>
+            </div>
+
             <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                 <button type="submit" class="btn-action success" id="btnSubmitSupplyRequest">💾 تسجيل طلب التوريد</button>
+                <span id="supplyCartCount" style="font-size:13px;font-weight:700;"></span>
                 <span id="supplyRequestFormMessage" style="font-size:13px;"></span>
             </div>
         </form>

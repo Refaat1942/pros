@@ -43,6 +43,22 @@ class SupplyRequestController extends Controller
         ]);
     }
 
+    /** طلب توريد واحد بأكثر من صنف. */
+    public function storeBatch(\App\Http\Requests\Stock\StoreSupplyRequestBatchRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        $data = $request->validated();
+
+        $supplyRequest = $this->supplyRequestService->createRequest($data['lines'], $user, $data['notes'] ?? null);
+
+        return response()->json([
+            'message' => sprintf('تم تسجيل طلب التوريد %s (%d صنف).', $supplyRequest->request_no, $supplyRequest->lines->count()),
+            'request_no' => $supplyRequest->request_no,
+            'lines' => $supplyRequest->lines->map(fn ($line) => $this->supplyRequestService->formatLine($line))->values(),
+        ], 201);
+    }
+
     public function store(StoreSupplyRequestLineRequest $request): JsonResponse
     {
         /** @var User $user */

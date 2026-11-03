@@ -14,49 +14,59 @@ use Illuminate\Support\Facades\DB;
 class SupplyRequestService
 {
     /**
-     * إنشاء بند طلب توريد — بدون تأثير على المخزون أو الكتالوج.
+     * طلب توريد ببند واحد (الطريقة القديمة) — نفس createRequest بسطر واحد.
      *
-     * @param  array{line_type: string, stock_item_id?: int|null, description?: string|null, qty: int, uom?: string|null, spec?: string|null, notes?: string|null}  $data
+     * @param  array<string, mixed>  $data
      */
     public function createLine(array $data, User $user): SupplyRequestLine
     {
-        return DB::transaction(function () use ($data, $user) {
-            $lineType = $data['line_type'];
+        return $this->createRequest([$data], $user)->lines->first()->load(['supplyRequest', 'stockItem']);
+    }
 
-            if ($lineType === SupplyRequestLine::TYPE_CATALOG) {
-                $stockItem = StockItem::query()->findOrFail($data['stock_item_id']);
-            } else {
-                $stockItem = null;
-            }
-
+    /**
+     * طلب توريد واحد (رقم واحد) بأكثر من صنف.
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function createRequest(array $lines, User $user, ?string $notes = null): SupplyRequest
+    {
+        return DB::transaction(function () use ($lines, $user, $notes) {
             $request = SupplyRequest::create([
                 'request_no' => $this->nextRequestNo(),
                 'status' => SupplyRequest::STATUS_OPEN,
+                'notes' => $this->nullableString($notes),
                 'requested_by_user_id' => $user->id,
             ]);
 
-            $line = SupplyRequestLine::create([
-                'supply_request_id' => $request->id,
-                'line_type' => $lineType,
-                'stock_item_id' => $stockItem?->id,
-                'description' => $lineType === SupplyRequestLine::TYPE_NON_CATALOG
-                    ? trim((string) $data['description'])
-                    : null,
-                'qty' => (int) $data['qty'],
-                'uom' => $this->nullableString($data['uom'] ?? null),
-                'spec' => $this->nullableString($data['spec'] ?? null),
-                'notes' => $this->nullableString($data['notes'] ?? null),
-                'status' => SupplyRequestLine::STATUS_PENDING,
-            ]);
+            foreach ($lines as $data) {
+                $lineType = $data['line_type'];
+                $stockItem = $lineType === SupplyRequestLine::TYPE_CATALOG
+                    ? StockItem::query()->findOrFail($data['stock_item_id'])
+                    : null;
 
-            AuditService::log(
-                action: 'create',
-                description: "طلب توريد {$request->request_no} — {$line->displayLabel()}",
-                tag: 'warehouse',
-                after: $line->load('supplyRequest')->toArray(),
-            );
+                $line = SupplyRequestLine::create([
+                    'supply_request_id' => $request->id,
+                    'line_type' => $lineType,
+                    'stock_item_id' => $stockItem?->id,
+                    'description' => $lineType === SupplyRequestLine::TYPE_NON_CATALOG
+                        ? trim((string) $data['description'])
+                        : null,
+                    'qty' => (int) $data['qty'],
+                    'uom' => $this->nullableString($data['uom'] ?? null),
+                    'spec' => $this->nullableString($data['spec'] ?? null),
+                    'notes' => $this->nullableString($data['notes'] ?? null),
+                    'status' => SupplyRequestLine::STATUS_PENDING,
+                ]);
 
-            return $line->load(['supplyRequest', 'stockItem']);
+                AuditService::log(
+                    action: 'create',
+                    description: "طلب توريد {$request->request_no} — {$line->displayLabel()}",
+                    tag: 'warehouse',
+                    after: $line->load('supplyRequest')->toArray(),
+                );
+            }
+
+            return $request->load(['lines.stockItem', 'lines.supplyRequest']);
         });
     }
 
