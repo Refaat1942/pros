@@ -69,6 +69,9 @@ Route::prefix('technical')
                 ->name('supply.requests.print');
         });
 
+        // ── اعتمادات المخزن (توريد + استلام وارد) ──
+        Route::middleware('dashboard.page:technical,stock-approvals')->group(fn () => registerStockApprovalRoutes());
+
         Route::middleware('dashboard.page:technical,receive-inbound')->group(function () {
             Route::post('receive/receive', [StockReceiveController::class, 'receive'])
                 ->name('receive.receive');

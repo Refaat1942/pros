@@ -147,6 +147,9 @@ Route::prefix('admin')
                 ->name('supply.requests.print');
         });
 
+        // ── اعتمادات المخزن (توريد + استلام وارد) ──
+        Route::middleware('dashboard.page:admin,stock-approvals')->group(fn () => registerStockApprovalRoutes());
+
         Route::middleware('dashboard.page:admin,receive-inbound')->group(function () {
             Route::post('receive/receive', [StockReceiveController::class, 'receive'])
                 ->name('receive.receive');

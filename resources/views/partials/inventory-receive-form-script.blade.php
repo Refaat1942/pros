@@ -69,14 +69,15 @@
       .then(function (res) {
         var el = document.getElementById('receiveFormMessage');
         el.style.display = 'block';
-        el.style.color = '#059669';
+        // بانتظار اعتماد أدمن المخازن: الرسالة تفضل ظاهرة (الرصيد لسه ماتضافش).
+        el.style.color = res.pending_approval ? '#b45309' : '#059669';
         el.textContent = res.message || 'تم الاستلام';
         form.reset();
         document.getElementById('receiveMovedAt').value = new Date().toISOString().slice(0, 10);
         var lineHidden = document.getElementById('receiveSupplyRequestLineId');
         if (lineHidden) lineHidden.value = '';
         refreshReceiveLabels();
-        window.location.reload();
+        if (!res.pending_approval) window.location.reload();
       })
       .catch(function (err) {
         var el = document.getElementById('receiveFormMessage');

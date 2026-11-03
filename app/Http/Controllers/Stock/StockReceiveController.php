@@ -53,45 +53,41 @@ class StockReceiveController extends Controller
      */
     public function receive(ReceiveStockRequest $request): JsonResponse
     {
-        $item = StockItem::findOrFail($request->validated('stock_item_id'));
-        $supplier = Supplier::findOrFail($request->validated('supplier_id'));
-
         /** @var User $user */
         $user = Auth::user();
+        $approvals = app(\App\Services\StockApprovalService::class);
 
-        $movement = DB::transaction(function () use ($request, $item, $supplier, $user) {
-            $lineId = $request->validated('supply_request_line_id');
+        $data = [
+            'stock_item_id' => (int) $request->validated('stock_item_id'),
+            'supplier_id' => (int) $request->validated('supplier_id'),
+            'qty' => (float) $request->validated('qty'),
+            'unit_price' => (float) $request->validated('unit_price'),
+            'quantity_basis' => $request->validated('quantity_basis') ?? 'auto',
+            'invoice_no' => (string) $request->validated('invoice_no'),
+            'moved_at' => (string) $request->validated('moved_at'),
+            'supply_request_line_id' => $request->validated('supply_request_line_id') ? (int) $request->validated('supply_request_line_id') : null,
+        ];
+        StockItem::findOrFail($data['stock_item_id']);
+        Supplier::findOrFail($data['supplier_id']);
 
-            $resolved = StockSupplyUom::resolveReceiveQuantities(
-                $item,
-                (float) $request->validated('qty'),
-                (float) $request->validated('unit_price'),
-                $request->validated('quantity_basis') ?? 'auto',
-            );
+        $document = [
+            'path' => $this->storeInboundDocument($request),
+            'name' => $request->file('document')?->getClientOriginalName(),
+            'mime' => $request->file('document')?->getClientMimeType(),
+        ];
 
-            $movement = $this->stockReceiveService->receive(
-                item: $item,
-                qty: $resolved['base_qty'],
-                unitPrice: $resolved['base_unit_price'],
-                supplier: $supplier,
-                invoiceNo: $request->validated('invoice_no'),
-                movedAt: Carbon::parse($request->validated('moved_at')),
-                performedBy: $user,
-                documentPath: $this->storeInboundDocument($request),
-                documentOriginalName: $request->file('document')?->getClientOriginalName(),
-                documentMime: $request->file('document')?->getClientMimeType(),
-                supplyRequestLineId: $lineId ? (int) $lineId : null,
-                supplyQuantity: $resolved['supply_qty'],
-                supplyUnitCost: $resolved['supply_unit_price'],
-            );
+        // من غير صلاحية «اعتماد استلام الوارد»: طلب استلام — الرصيد يتضاف بعد اعتماد أدمن المخازن.
+        if ($approvals->receiptNeedsApproval($user)) {
+            $receipt = $approvals->submitReceipt($data, $user, $document);
 
-            if ($lineId) {
-                $line = SupplyRequestLine::query()->findOrFail($lineId);
-                app(SupplyRequestService::class)->markLineReceived($line, $movement);
-            }
+            return response()->json([
+                'message' => 'تم تسجيل الاستلام وبانتظار اعتماد أدمن المخازن — الرصيد يتضاف بعد الاعتماد.',
+                'pending_approval' => true,
+                'receipt_request_id' => $receipt->id,
+            ], 202);
+        }
 
-            return $movement;
-        });
+        $movement = $approvals->executeReceipt($data, $user, $document);
 
         return response()->json([
             'message' => 'تم استلام البضاعة بنجاح.',

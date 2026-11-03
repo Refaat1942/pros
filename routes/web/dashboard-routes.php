@@ -91,3 +91,17 @@ if (! function_exists('registerStockKitApiRoutes')) {
             ->name('stock-kits.destroy');
     }
 }
+
+if (! function_exists('registerStockApprovalRoutes')) {
+    /** «اعتمادات المخزن» — تحت /admin و /technical (الاعتماد نفسه بصلاحية في الخدمة). */
+    function registerStockApprovalRoutes(): void
+    {
+        $c = \App\Http\Controllers\Stock\StockApprovalController::class;
+
+        Route::get('stock-approvals/pending', [$c, 'index'])->name('stock-approvals.pending');
+        Route::post('stock-approvals/supply/{supplyRequest}/approve', [$c, 'approveSupply'])->name('stock-approvals.supply.approve');
+        Route::post('stock-approvals/supply/{supplyRequest}/reject', [$c, 'rejectSupply'])->name('stock-approvals.supply.reject');
+        Route::post('stock-approvals/receipts/{receiptRequest}/approve', [$c, 'approveReceipt'])->name('stock-approvals.receipts.approve');
+        Route::post('stock-approvals/receipts/{receiptRequest}/reject', [$c, 'rejectReceipt'])->name('stock-approvals.receipts.reject');
+    }
+}
