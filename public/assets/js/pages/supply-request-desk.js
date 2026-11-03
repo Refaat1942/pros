@@ -9,7 +9,6 @@
 
   var openLines = [];
   var resolveLineId = null;
-  var searchTimer = null;
 
   function csrf() {
     var m = document.querySelector('meta[name="csrf-token"]');
@@ -55,23 +54,26 @@
     }
     container.style.display = 'block';
     container.innerHTML = items.map(function (item) {
-      return '<button type="button" data-id="' + item.id + '" data-label="' + esc(item.code + ' — ' + item.name) + '">' +
+      return '<button type="button" data-id="' + item.id + '" data-uom="' + esc(item.uom || '') + '" data-label="' + esc(item.code + ' — ' + item.name) + '">' +
         esc(item.code + ' — ' + item.name) + '</button>';
     }).join('');
     container.querySelectorAll('button').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        onPick(parseInt(btn.getAttribute('data-id'), 10), btn.getAttribute('data-label'));
+        onPick(parseInt(btn.getAttribute('data-id'), 10), btn.getAttribute('data-label'), btn.getAttribute('data-uom') || '');
         container.style.display = 'none';
         container.innerHTML = '';
       });
     });
   }
 
-  function scheduleSearch(input, resultsEl, onPick) {
+  // onClear: الكتابة من جديد بعد اختيار صنف تلغي الاختيار القديم (ما يتبعتش صنف غلط).
+  function scheduleSearch(input, resultsEl, onPick, onClear) {
     if (!input) return;
+    var timer = null;
     input.addEventListener('input', function () {
       var q = input.value.trim();
-      if (searchTimer) clearTimeout(searchTimer);
+      if (onClear) onClear();
+      if (timer) clearTimeout(timer);
       if (q.length < 2) {
         if (resultsEl) {
           resultsEl.style.display = 'none';
@@ -79,7 +81,7 @@
         }
         return;
       }
-      searchTimer = setTimeout(function () {
+      timer = setTimeout(function () {
         fetch(api.search + '?q=' + encodeURIComponent(q) + '&limit=25', {
           headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
           credentials: 'same-origin',
@@ -194,18 +196,35 @@
     scheduleSearch(
       document.getElementById('supplyCatalogSearch'),
       document.getElementById('supplyCatalogSearchResults'),
-      function (id, label) {
+      function (id, label, uom) {
+        // الاسم كامل في خانة البحث + الوحدة تلقائياً (لو فاضية).
+        var searchInput = document.getElementById('supplyCatalogSearch');
+        if (searchInput) searchInput.value = label;
         if (catalogHidden) catalogHidden.value = String(id);
         if (catalogLabel) catalogLabel.textContent = 'المختار: ' + label;
+        var uomInput = document.getElementById('supplyUom');
+        if (uomInput && !uomInput.value.trim() && uom) uomInput.value = uom;
+      },
+      function () {
+        if (catalogHidden && catalogHidden.value) {
+          catalogHidden.value = '';
+          if (catalogLabel) catalogLabel.textContent = 'لم يُختَر صنف بعد.';
+        }
       }
     );
 
     scheduleSearch(
       document.getElementById('supplyResolveSearch'),
       document.getElementById('supplyResolveSearchResults'),
-      function (id) {
+      function (id, label) {
         var hidden = document.getElementById('supplyResolveStockItemId');
         if (hidden) hidden.value = String(id);
+        var searchInput = document.getElementById('supplyResolveSearch');
+        if (searchInput) searchInput.value = label;
+      },
+      function () {
+        var hidden = document.getElementById('supplyResolveStockItemId');
+        if (hidden) hidden.value = '';
       }
     );
 
