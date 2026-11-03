@@ -271,6 +271,7 @@ return [
             'receive-inbound' => ['title' => 'استلام الوارد — تسجيل فاتورة توريد', 'icon' => '📥', 'label' => 'استلام الوارد'],
             'bom' => ['title' => 'قوائم صرف المواد — خام / تشغيل / تام', 'icon' => '📋', 'label' => 'صرف المواد لقسم الإنتاج'],
             'returns' => ['title' => 'استلام ارتجاع المواد — من قسم الإنتاج', 'icon' => '↩️', 'label' => 'استلام الارتجاع'],
+            'stock-approvals' => ['title' => 'اعتمادات المخزن — توريد واستلام وارد', 'icon' => '✅', 'label' => 'اعتمادات المخزن', 'default_off' => true],
             'stock-kits' => ['title' => 'عمل المجموعات — أطقم جاهزة ومخصصات', 'icon' => '🧩', 'label' => 'عمل المجموعات', 'default_off' => true],
             'staff' => ['title' => 'إدارة موظفي القسم', 'icon' => '👥', 'label' => 'موظفي القسم'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
@@ -326,7 +327,7 @@ return [
             [
                 'label' => 'المخزن — العمل اليومي',
                 'icon' => '📦',
-                'pages' => ['catalog', 'stock-kits', 'receive-inbound', 'supply-request', 'dispense-approvals', 'returns', 'inventory-overview'],
+                'pages' => ['catalog', 'stock-kits', 'receive-inbound', 'supply-request', 'stock-approvals', 'dispense-approvals', 'returns', 'inventory-overview'],
             ],
             [
                 'label' => 'المخزن — بيانات أساسية',
@@ -376,6 +377,7 @@ return [
             'add-catalog-item' => ['title' => 'إضافة صنف جديد', 'icon' => '➕', 'label' => 'إضافة صنف جديد', 'hidden' => true],
             'supply-request' => ['title' => 'طلب التوريد', 'icon' => '🛒', 'label' => 'طلب التوريد'],
             'receive-inbound' => ['title' => 'استلام الوارد — تسجيل فاتورة توريد', 'icon' => '📥', 'label' => 'استلام الوارد'],
+            'stock-approvals' => ['title' => 'اعتمادات المخزن — توريد واستلام وارد', 'icon' => '✅', 'label' => 'اعتمادات المخزن'],
             'stock-kits' => [
                 'title' => 'عمل المجموعات — أطقم جاهزة ومخصصات',
                 'icon' => '🧩',

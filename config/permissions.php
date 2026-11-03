@@ -55,6 +55,14 @@ return [
             'label_ar' => 'تأكيد استلام المبلغ في الخزنة',
             'dashboard' => 'cashier',
         ],
+        'approve-supply-requests' => [
+            'label_ar' => 'اعتماد طلبات التوريد (أدمن المخازن)',
+            'dashboard' => 'technical',
+        ],
+        'approve-stock-receipts' => [
+            'label_ar' => 'اعتماد استلام الوارد — إضافة الرصيد (أدمن المخازن)',
+            'dashboard' => 'technical',
+        ],
         'grant-cash-discount' => [
             'label_ar' => 'منح خصم للعميل المدني الكاش (عند الاعتماد)',
             'dashboard' => 'costing',
@@ -154,6 +162,8 @@ return [
             'view-workshop-tracking',
             'approve-dispense',
             'approve-services',
+            'approve-supply-requests',
+            'approve-stock-receipts',
             'super-admin',
         ],
     ],

@@ -30,12 +30,17 @@ class SupplyRequestService
      */
     public function createRequest(array $lines, User $user, ?string $notes = null): SupplyRequest
     {
-        return DB::transaction(function () use ($lines, $user, $notes) {
+        // من غير صلاحية «اعتماد طلبات التوريد» الطلب يفضل بانتظار اعتماد أدمن المخازن.
+        $needsApproval = app(StockApprovalService::class)->supplyNeedsApproval($user);
+
+        $request = DB::transaction(function () use ($lines, $user, $notes, $needsApproval) {
             $request = SupplyRequest::create([
                 'request_no' => $this->nextRequestNo(),
-                'status' => SupplyRequest::STATUS_OPEN,
+                'status' => $needsApproval ? SupplyRequest::STATUS_PENDING_APPROVAL : SupplyRequest::STATUS_OPEN,
                 'notes' => $this->nullableString($notes),
                 'requested_by_user_id' => $user->id,
+                'approved_by_user_id' => $needsApproval ? null : $user->id,
+                'approved_at' => $needsApproval ? null : now(),
             ]);
 
             foreach ($lines as $data) {
@@ -68,6 +73,12 @@ class SupplyRequestService
 
             return $request->load(['lines.stockItem', 'lines.supplyRequest']);
         });
+
+        if ($needsApproval) {
+            app(StockApprovalService::class)->notifySupplyPending($request);
+        }
+
+        return $request;
     }
 
     /** @return Collection<int, SupplyRequestLine> */
@@ -75,7 +86,7 @@ class SupplyRequestService
     {
         return SupplyRequestLine::query()
             ->with([
-                'supplyRequest:id,request_no,requested_by_user_id,created_at',
+                'supplyRequest:id,request_no,status,requested_by_user_id,created_at',
                 'stockItem:id,code,name,uom,barcode',
                 'resolvedStockItem:id,code,name,uom,barcode',
             ])
@@ -129,6 +140,8 @@ class SupplyRequestService
             if ($line->status === SupplyRequestLine::STATUS_RECEIVED) {
                 return $line;
             }
+
+            app(StockApprovalService::class)->assertLineReceivable($line->loadMissing('supplyRequest'));
 
             $receivableId = $line->receivableStockItemId();
             if ($receivableId === null) {
@@ -197,6 +210,7 @@ class SupplyRequestService
     public function formatLine(SupplyRequestLine $line): array
     {
         $receivableId = $line->receivableStockItemId();
+        $awaitingApproval = $line->supplyRequest !== null && ! $line->supplyRequest->isApproved();
 
         return [
             'id' => $line->id,
@@ -210,11 +224,12 @@ class SupplyRequestService
             'spec' => $line->spec,
             'notes' => $line->notes,
             'status' => $line->status,
-            'status_label' => $this->statusLabel($line->status),
+            'status_label' => $awaitingApproval ? 'بانتظار اعتماد الطلب' : $this->statusLabel($line->status),
+            'awaiting_approval' => $awaitingApproval,
             'stock_item_id' => $line->stock_item_id,
             'resolved_stock_item_id' => $line->resolved_stock_item_id,
             'receivable_stock_item_id' => $receivableId,
-            'can_receive' => $receivableId !== null && in_array($line->status, [
+            'can_receive' => ! $awaitingApproval && $receivableId !== null && in_array($line->status, [
                 SupplyRequestLine::STATUS_PENDING,
                 SupplyRequestLine::STATUS_RESOLVED,
             ], true),
