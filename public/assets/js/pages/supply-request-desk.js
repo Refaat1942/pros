@@ -228,32 +228,115 @@
       }
     );
 
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var msg = document.getElementById('supplyRequestFormMessage');
+    // ── سلة الطلب: أكثر من صنف في طلب توريد واحد ──
+    var cart = [];
+    var msg = document.getElementById('supplyRequestFormMessage');
+
+    function showMsg(text, ok) {
+      if (!msg) return;
+      msg.style.color = ok ? '#059669' : '#dc2626';
+      msg.textContent = text;
+    }
+
+    function readLineFromForm() {
       var type = selectedLineType();
-      var payload = {
+      var line = {
         line_type: type,
         qty: parseInt(document.getElementById('supplyQty').value, 10) || 0,
         uom: document.getElementById('supplyUom').value.trim() || null,
         spec: document.getElementById('supplySpec').value.trim() || null,
       };
-
+      if (line.qty < 1) {
+        showMsg('الكمية يجب أن تكون 1 على الأقل.', false);
+        return null;
+      }
       if (type === 'catalog') {
-        payload.stock_item_id = parseInt(catalogHidden && catalogHidden.value, 10) || 0;
-        if (!payload.stock_item_id) {
-          if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'اختر صنفاً من نتائج البحث.'; }
-          return;
+        line.stock_item_id = parseInt(catalogHidden && catalogHidden.value, 10) || 0;
+        if (!line.stock_item_id) {
+          showMsg('اختر صنفاً من نتائج البحث.', false);
+          return null;
         }
+        line.label = (document.getElementById('supplyCatalogSearch') || {}).value || ('#' + line.stock_item_id);
       } else {
-        payload.description = document.getElementById('supplyDescription').value.trim();
-        if (!payload.description) {
-          if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'اسم/وصف الصنف مطلوب.'; }
+        line.description = document.getElementById('supplyDescription').value.trim();
+        if (!line.description) {
+          showMsg('اسم/وصف الصنف مطلوب.', false);
+          return null;
+        }
+        line.label = line.description + ' (غير مكود)';
+      }
+      return line;
+    }
+
+    function clearLineFields() {
+      var search = document.getElementById('supplyCatalogSearch');
+      if (search) search.value = '';
+      if (catalogHidden) catalogHidden.value = '';
+      if (catalogLabel) catalogLabel.textContent = 'لم يُختَر صنف بعد.';
+      ['supplyDescription', 'supplyUom', 'supplySpec'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      var qty = document.getElementById('supplyQty');
+      if (qty) qty.value = '1';
+    }
+
+    function renderCart() {
+      var wrap = document.getElementById('supplyCartWrap');
+      var body = document.getElementById('supplyCartBody');
+      var count = document.getElementById('supplyCartCount');
+      if (wrap) wrap.style.display = cart.length ? 'block' : 'none';
+      if (count) count.textContent = cart.length ? ('في الطلب: ' + cart.length + ' صنف') : '';
+      if (!body) return;
+      body.innerHTML = cart.map(function (line, idx) {
+        return '<tr>' +
+          '<td>' + (idx + 1) + '</td>' +
+          '<td>' + esc(line.label) + '</td>' +
+          '<td>' + esc(line.qty) + '</td>' +
+          '<td>' + esc(line.uom || '—') + '</td>' +
+          '<td>' + esc(line.spec || '—') + '</td>' +
+          '<td><button type="button" class="btn-action danger" data-cart-remove="' + idx + '">✕</button></td>' +
+          '</tr>';
+      }).join('');
+      body.querySelectorAll('[data-cart-remove]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          cart.splice(parseInt(btn.getAttribute('data-cart-remove'), 10), 1);
+          renderCart();
+        });
+      });
+    }
+
+    var addBtn = document.getElementById('btnAddSupplyCartLine');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        var line = readLineFromForm();
+        if (!line) return;
+        cart.push(line);
+        clearLineFields();
+        renderCart();
+        showMsg('اتضاف للطلب — أضف صنف تاني أو سجّل الطلب.', true);
+      });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      // لو السلة فاضية: الصنف المكتوب في الخانات يتسجّل لوحده (زي الأول).
+      var lines = cart.slice();
+      var typedSomething = (catalogHidden && catalogHidden.value) || (document.getElementById('supplyDescription').value.trim() !== '');
+      if (!lines.length || typedSomething) {
+        var current = readLineFromForm();
+        if (!current) {
+          if (lines.length) return;
           return;
         }
+        lines.push(current);
       }
 
-      fetch(api.store, {
+      var submitBtn = document.getElementById('btnSubmitSupplyRequest');
+      if (submitBtn) submitBtn.disabled = true;
+
+      fetch(api.store + '/batch', {
         method: 'POST',
         headers: {
           Accept: 'application/json',
@@ -262,22 +345,31 @@
           'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'same-origin',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          notes: ((document.getElementById('supplyRequestNotes') || {}).value || '').trim() || null,
+          lines: lines.map(function (l) {
+            var copy = Object.assign({}, l);
+            delete copy.label;
+            return copy;
+          }),
+        }),
       }).then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
         .then(function (res) {
-          if (msg) { msg.style.color = '#059669'; msg.textContent = res.message || 'تم التسجيل'; }
+          showMsg(res.message || 'تم التسجيل', true);
+          cart = [];
           form.reset();
-          if (catalogHidden) catalogHidden.value = '';
-          if (catalogLabel) catalogLabel.textContent = 'لم يُختَر صنف بعد.';
+          clearLineFields();
+          var notes = document.getElementById('supplyRequestNotes');
+          if (notes) notes.value = '';
+          renderCart();
           toggleLineTypeFields();
           loadOpenLines();
         })
         .catch(function (err) {
-          if (msg) {
-            msg.style.color = '#dc2626';
-            msg.textContent = (err && err.message) ? err.message : 'فشل تسجيل الطلب';
-          }
-        });
+          var first = err && err.errors ? Object.values(err.errors)[0] : null;
+          showMsg((first && first[0]) || (err && err.message) || 'فشل تسجيل الطلب', false);
+        })
+        .finally(function () { if (submitBtn) submitBtn.disabled = false; });
     });
   }
 
