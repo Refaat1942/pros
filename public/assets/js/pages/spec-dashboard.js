@@ -21,6 +21,7 @@
     catalogSearching: false,
     catalogSearchTimer: null,
     items: [],
+    quickItems: [],
     locked: false,
     submitting: false,
     loadingCase: false,
@@ -453,6 +454,56 @@
     return '<span class="text-xs font-bold text-emerald-700">' + available + '</span>';
   }
 
+  // ── منتجات الصرف السريع: كتابة حرة (اسم + كمية) — من غير اختيار من المخزن ──
+  function escQuick(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+
+  function readQuickItems() {
+    var body = $('specQuickItemsBody');
+    if (body) {
+      state.quickItems = Array.prototype.map.call(body.querySelectorAll('tr[data-quick-idx]'), function (tr) {
+        return {
+          name: (tr.querySelector('.spec-quick-name') || {}).value || '',
+          qty: parseFloat((tr.querySelector('.spec-quick-qty') || {}).value) || 1,
+        };
+      });
+    }
+    return state.quickItems
+      .map(function (q) { return { name: String(q.name || '').trim(), qty: q.qty > 0 ? q.qty : 1 }; })
+      .filter(function (q) { return q.name !== ''; });
+  }
+
+  function renderQuickItems() {
+    var body = $('specQuickItemsBody');
+    if (!body) return;
+    var addBtn = $('btnAddQuickItem');
+    if (addBtn) addBtn.classList.toggle('hidden', !!state.locked);
+    if (!state.quickItems.length) {
+      body.innerHTML = '<tr><td colspan="3" class="px-2 py-4 text-center text-slate-400 text-xs">مفيش منتجات صرف سريع — اضغط «➕ إضافة منتج» لو المريض محتاج عكاز أو كرسي…</td></tr>';
+      return;
+    }
+    var dis = state.locked ? ' disabled' : '';
+    body.innerHTML = state.quickItems.map(function (q, idx) {
+      return '<tr data-quick-idx="' + idx + '">' +
+        '<td class="px-2 py-1"><input type="text" maxlength="255" class="spec-quick-name w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" placeholder="مثال: عكاز إبط ألومنيوم" value="' + escQuick(q.name) + '"' + dis + '></td>' +
+        '<td class="px-2 py-1"><input type="number" min="0.001" step="0.001" class="spec-quick-qty w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-center text-sm" value="' + escQuick(q.qty || 1) + '"' + dis + '></td>' +
+        '<td class="px-2 py-1 text-center">' + (state.locked ? '—' : '<button type="button" data-quick-remove="' + idx + '" class="text-red-500 hover:text-red-700 font-bold">✕</button>') + '</td></tr>';
+    }).join('');
+    body.querySelectorAll('[data-quick-remove]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        readQuickItems();
+        state.quickItems.splice(parseInt(btn.getAttribute('data-quick-remove'), 10), 1);
+        renderQuickItems();
+      });
+    });
+  }
+
+  function setQuickItems(rows) {
+    state.quickItems = (rows || []).map(function (r) { return { name: r.name || '', qty: parseFloat(r.qty) || 1 }; });
+    renderQuickItems();
+  }
+
   function renderItemsTable() {
     var tbody = $('specItemsBody');
     if (!tbody) return;
@@ -520,6 +571,8 @@
     state.specId = null;
     state.patientType = 'civilian';
     state.items = [];
+    state.quickItems = [];
+    renderQuickItems();
     state.locked = false;
     state.submitting = false;
     state.loadingCase = false;
@@ -688,6 +741,8 @@
     state.caseId = caseId;
     state.specId = null;
     state.items = [];
+    state.quickItems = [];
+    renderQuickItems();
     state.locked = false;
     state.submitting = false;
     state.loadingCase = true;
@@ -738,6 +793,7 @@
           renderItemsTable();
           openWorkspace();
           setLockedUI(true);
+          setQuickItems(data.submitted_spec.quick_dispense_items);
           return;
         }
 
@@ -749,6 +805,7 @@
           renderItemsTable();
           openWorkspace();
           setLockedUI(false);
+          setQuickItems(data.submitted_spec.quick_dispense_items);
           return;
         }
 
@@ -767,6 +824,7 @@
         renderItemsTable();
         openWorkspace();
         setLockedUI(false);
+        setQuickItems(data.draft ? data.draft.quick_dispense_items : []);
       })
       .catch(function (err) {
         var msg = err.response?.data?.message || 'تعذّر تحميل بيانات الحالة';
@@ -802,6 +860,7 @@
       tech_notes: $('techNotes').value.trim() || null,
       written_items: writtenEl ? (writtenEl.value.trim() || null) : null,
       items: items,
+      quick_dispense_items: readQuickItems(),
     };
     if (state.specId) {
       return axios.put('/spec/spec/' + state.specId, body);
@@ -990,6 +1049,15 @@
 
   function bindActions() {
     var submitBtn = $('btnSubmitSpec');
+    var addQuick = $('btnAddQuickItem');
+    if (addQuick) addQuick.addEventListener('click', function () {
+      if (state.locked) return;
+      readQuickItems();
+      state.quickItems.push({ name: '', qty: 1 });
+      renderQuickItems();
+      var inputs = document.querySelectorAll('#specQuickItemsBody .spec-quick-name');
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    });
 
     if (submitBtn) submitBtn.addEventListener('click', function () {
       if (state.locked || state.submitting || state.loadingCase) return;
@@ -997,8 +1065,8 @@
       // التوصيف بقى استمارة — يكفي بند واحد متملّي في الاستمارة (أصناف المخزن بتضيفها المعدلات).
       var items = readItemsFromInputs();
       var formText = $('specFormSheet') ? serializeSpecForm() : (($('writtenItems') || {}).value || '');
-      if (!items.length && !String(formText).trim()) {
-        showError('املأ استمارة التوصيف — بند واحد على الأقل.');
+      if (!items.length && !String(formText).trim() && !readQuickItems().length) {
+        showError('املأ استمارة التوصيف أو اكتب منتج صرف سريع — بند واحد على الأقل.');
         return;
       }
 

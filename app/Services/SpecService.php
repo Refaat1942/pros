@@ -77,6 +77,7 @@ class SpecService
                 'doctor_name' => $doctorName,
                 'tech_notes' => $data['tech_notes'] ?? null,
                 'written_items' => $data['written_items'] ?? null,
+                'quick_dispense_items' => self::cleanQuickItems($data['quick_dispense_items'] ?? null),
                 'locked' => false,
             ]);
 
@@ -110,6 +111,9 @@ class SpecService
                 'written_items' => array_key_exists('written_items', $data)
                     ? $data['written_items']
                     : $spec->written_items,
+                'quick_dispense_items' => array_key_exists('quick_dispense_items', $data)
+                    ? self::cleanQuickItems($data['quick_dispense_items'])
+                    : $spec->quick_dispense_items,
             ]);
 
             if (array_key_exists('items', $data)) {
@@ -142,7 +146,7 @@ class SpecService
         $spec->load('items', 'caseRecord.patient');
 
         // الاستمارة (written_items) تكفي — الأصناف المسعّرة تضيفها المعدلات.
-        if ($spec->items->isEmpty() && trim((string) $spec->written_items) === '') {
+        if ($spec->items->isEmpty() && trim((string) $spec->written_items) === '' && empty($spec->quick_dispense_items)) {
             abort(422, 'املأ استمارة التوصيف (بند واحد على الأقل) قبل الإرسال.');
         }
 
@@ -231,6 +235,23 @@ class SpecService
                 throw new InvalidSpecItemException($code);
             }
         }
+    }
+
+    /**
+     * @return list<array{name: string, qty: float}>|null
+     */
+    public static function cleanQuickItems(mixed $rows): ?array
+    {
+        $clean = [];
+        foreach ((array) $rows as $row) {
+            $name = trim((string) ($row['name'] ?? ''));
+            $qty = round((float) ($row['qty'] ?? 0), 3);
+            if ($name !== '' && $qty > 0) {
+                $clean[] = ['name' => mb_substr($name, 0, 255), 'qty' => $qty];
+            }
+        }
+
+        return $clean === [] ? null : $clean;
     }
 
     private function resolveTechnicalCase(int $caseId): CaseRecord

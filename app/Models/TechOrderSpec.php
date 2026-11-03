@@ -22,6 +22,7 @@ class TechOrderSpec extends Model
         'doctor_name',
         'tech_notes',
         'written_items',
+        'quick_dispense_items',
         'submitted_at',
         'locked',
     ];
@@ -29,6 +30,7 @@ class TechOrderSpec extends Model
     protected $casts = [
         'submitted_at' => 'date',
         'locked' => 'boolean',
+        'quick_dispense_items' => 'array',
     ];
 
     public function caseRecord(): BelongsTo

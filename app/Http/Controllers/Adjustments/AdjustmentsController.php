@@ -41,7 +41,7 @@ class AdjustmentsController extends Controller
             CaseRecord::inAdjustmentsDesk()
                 ->with([
                     'patient:id,patient_code,name,patient_type',
-                    'techOrderSpec:id,case_id,tech_notes,written_items',
+                    'techOrderSpec:id,case_id,tech_notes,written_items,quick_dispense_items',
                     'bom:id,case_id,bom_no,stage',
                     'bom.items:id,bom_id,stock_item_code,name,source,qty,group_label',
                     'pendingAdjustmentEditRequest:id,case_id,status,source',
@@ -69,7 +69,7 @@ class AdjustmentsController extends Controller
 
         $case->load([
             'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank',
-            'techOrderSpec:id,case_id,tech_notes,written_items',
+            'techOrderSpec:id,case_id,tech_notes,written_items,quick_dispense_items',
             'bom.items',
             'pendingAdjustmentEditRequest',
         ]);
@@ -131,6 +131,41 @@ class AdjustmentsController extends Controller
         ]);
     }
 
+    /**
+     * المعدلات تحدد الصنف «تصنيع» ولا «صرف سريع» — بيتسجّل على الصنف نفسه في المخزن والكتالوج،
+     * والاعتماد بيحسب نسبة الربح على أساسه.
+     */
+    public function setItemKind(\Illuminate\Http\Request $request, CaseRecord $case, BomItem $bomItem): JsonResponse
+    {
+        $quick = (bool) $request->validate(['quick' => ['required', 'boolean']])['quick'];
+        abort_unless($case->isInAdjustments(), 422, 'تغيير نوع الصنف متاح والحالة في المعدلات بس.');
+        $bom = $case->bom()->with('items')->firstOrFail();
+        abort_unless((int) $bomItem->bom_id === (int) $bom->id, 404);
+
+        $stockItem = StockItem::findByOperationalCode((string) $bomItem->stock_item_code);
+        abort_unless($stockItem, 422, 'الصنف مش موجود في المخزن.');
+
+        if ((bool) $stockItem->is_quick_dispense !== $quick) {
+            $stockItem->update(['is_quick_dispense' => $quick]);
+            \App\Support\StockCatalogPicker::forgetCachedRows();
+            \App\Services\AuditService::log(
+                action: 'update',
+                description: "تغيير نوع الصنف {$stockItem->code} — {$stockItem->name} إلى «".($quick ? 'صرف سريع' : 'تصنيع')."» (من المعدلات — {$case->case_no})",
+                tag: 'admin',
+                before: ['is_quick_dispense' => ! $quick],
+                after: ['is_quick_dispense' => $quick],
+            );
+        }
+
+        return response()->json([
+            'message' => $quick ? 'اتسجّل «صرف سريع» على الصنف في المخزن والكتالوج.' : 'اتسجّل «تصنيع» على الصنف في المخزن والكتالوج.',
+            'bom' => [
+                'id' => $bom->id,
+                'items' => $this->mapBomItems($bom->fresh('items')->items)->values(),
+            ],
+        ]);
+    }
+
     public function removeItem(CaseRecord $case, BomItem $bomItem): JsonResponse
     {
         $bom = $this->adjustmentsService->removeItem($case, $bomItem);
@@ -171,6 +206,7 @@ class AdjustmentsController extends Controller
             'display_entity' => $case->displayEntity(),
             'tech_notes' => $case->resolvedTechNotes(),
             'written_items' => $case->resolvedWrittenItems(),
+            'quick_dispense_items' => $case->relationLoaded('techOrderSpec') ? ($case->techOrderSpec?->quick_dispense_items ?? []) : [],
             'rework' => $case->reworkNoticeFor(CaseRecord::STAGE_ADJUSTMENTS),
             'stage_label' => $isCostCalc ? 'بانتظار الاعتماد' : 'المعدلات',
             'can_modify_directly' => $case->isInAdjustments(),

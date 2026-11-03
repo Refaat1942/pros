@@ -251,6 +251,7 @@ class TechOrderSpecController extends Controller
             'doctor_name',
             'tech_notes',
             'written_items',
+            'quick_dispense_items',
             'submitted_at',
             'locked',
         ]) + [
