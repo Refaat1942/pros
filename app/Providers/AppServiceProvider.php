@@ -34,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
             'return_note' => ReturnNote::class,
             'contract_company_debt' => ContractCompanyDebt::class,
             'military_debt' => MilitaryDebt::class,
+            'stock_swap' => \App\Models\StockSwapRequest::class,
         ]);
 
         View::composer(['partials.dashboard-sidebar', 'partials.dashboard-header-actions'], function ($view) {

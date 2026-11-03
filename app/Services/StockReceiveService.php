@@ -36,8 +36,12 @@ class StockReceiveService
         ?int $supplyRequestLineId = null,
         ?float $supplyQuantity = null,
         ?float $supplyUnitCost = null,
+        // تبديل مع المورد: نوع الحركة swap_in، والمديونية = فرق السعر فقط (null = إجمالي الفاتورة زي الأول).
+        string $movementType = StockMovement::TYPE_RECEIVE,
+        ?float $supplierDebtAmount = null,
+        ?\Illuminate\Database\Eloquent\Model $reference = null,
     ): StockMovement {
-        return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $performedBy, $documentPath, $documentOriginalName, $documentMime, $supplyRequestLineId, $supplyQuantity, $supplyUnitCost) {
+        return DB::transaction(function () use ($item, $qty, $unitPrice, $supplier, $invoiceNo, $movedAt, $performedBy, $documentPath, $documentOriginalName, $documentMime, $supplyRequestLineId, $supplyQuantity, $supplyUnitCost, $movementType, $supplierDebtAmount, $reference) {
             $item = StockItem::lockForUpdate()->findOrFail($item->id);
 
             $before = [
@@ -54,7 +58,7 @@ class StockReceiveService
             $movement = StockMovement::create([
                 'stock_item_id' => $item->id,
                 'stock_item_price_id' => $batch->id,
-                'movement_type' => StockMovement::TYPE_RECEIVE,
+                'movement_type' => $movementType,
                 'quantity' => $qty,
                 'supply_quantity' => $supplyQuantity,
                 'unit_cost' => $unitPrice,
@@ -65,8 +69,8 @@ class StockReceiveService
                 'document_original_name' => $documentOriginalName,
                 'document_mime' => $documentMime,
                 'supplier_id' => $supplier->id,
-                'reference_type' => null,
-                'reference_id' => null,
+                'reference_type' => $reference?->getMorphClass(),
+                'reference_id' => $reference?->getKey(),
                 'performed_by_user_id' => $performedBy->id,
                 'moved_at' => $movedAt,
             ]);
@@ -74,7 +78,10 @@ class StockReceiveService
             $invoiceLineTotal = $supplyQuantity !== null && $supplyUnitCost !== null
                 ? round($supplyQuantity * $supplyUnitCost, 2)
                 : round($qty * $unitPrice, 2);
-            $this->supplierDebtService->increaseDue($supplier, $invoiceLineTotal);
+            $debt = $supplierDebtAmount ?? $invoiceLineTotal;
+            if ($debt > 0) {
+                $this->supplierDebtService->increaseDue($supplier, $debt);
+            }
             app(SupplierService::class)->attachStockItem($supplier, $item);
 
             $this->stockPriceService->recalcWac($item, $qty, $unitPrice);

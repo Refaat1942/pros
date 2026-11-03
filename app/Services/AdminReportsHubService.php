@@ -816,6 +816,8 @@ class AdminReportsHubService
             StockMovement::TYPE_ISSUE => 'صرف / بيع',
             StockMovement::TYPE_RETURN => 'ارتجاع من قسم الإنتاج',
             StockMovement::TYPE_RECEIVE => 'توريد',
+            StockMovement::TYPE_SWAP_OUT => 'تبديل مع المورد — خارج',
+            StockMovement::TYPE_SWAP_IN => 'تبديل مع المورد — داخل',
             default => $movement->movement_type ?? '—',
         };
     }

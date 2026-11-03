@@ -17,6 +17,11 @@ class StockMovement extends Model
 
     public const TYPE_RETURN = 'return';
 
+    /** تبديل صنف مع المورد — خروج الصنف القديم / دخول الصنف البديل (لا شراء ولا صرف). */
+    public const TYPE_SWAP_OUT = 'swap_out';
+
+    public const TYPE_SWAP_IN = 'swap_in';
+
     protected $fillable = [
         'stock_item_id',
         'stock_item_price_id',
