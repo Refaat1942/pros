@@ -246,6 +246,8 @@ class CostingController extends Controller
             'items' => $pricing->relationLoaded('items')
                 ? $pricing->items->map(function ($item) {
                     $stockItem = $item->relationLoaded('stockItem') ? $item->stockItem : null;
+                    // البنود ممكن تتخزن بالكود التشغيلي (alt_codes) — العلاقة بتربط بـ code بس.
+                    $stockItem ??= \App\Models\StockItem::findByOperationalCode((string) $item->stock_item_code);
                     $criteria = $stockItem
                         ? $this->categorySchema->formatCriteriaSummary($stockItem)
                         : '—';
@@ -257,6 +259,7 @@ class CostingController extends Controller
                         'criteria' => $criteria,
                         'price' => $stockItem ? (float) $stockItem->price : 0.0,
                         'line_total' => (float) $item->line_total,
+                        'is_quick_dispense' => (bool) ($stockItem?->is_quick_dispense),
                     ];
                 })->values()
                 : [],

@@ -66,9 +66,12 @@ class CashierDeskController extends Controller
         $result = $this->cashierPaymentService->confirmPayment($case, $request->validated());
         $payment = $result['payment'];
 
-        $message = $result['fully_paid']
+        $quickToWarehouse = $result['fully_paid'] && $case->fresh()?->stage_key === CaseRecord::STAGE_MANUFACTURING;
+        $message = $quickToWarehouse
+            ? 'تم تأكيد استلام المبلغ بالكامل — منتجات صرف سريع: الحالة اتحولت للمخزن للصرف والتسليم على طول (بدون قسم الإنتاج).'
+            : ($result['fully_paid']
             ? 'تم تأكيد استلام المبلغ بالكامل — أُعيدت الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.'
-            : 'تم تسجيل دفعة جزئية — المتبقي '.number_format($result['remaining'], 2).' ج.م على المريض.';
+            : 'تم تسجيل دفعة جزئية — المتبقي '.number_format($result['remaining'], 2).' ج.م على المريض.');
 
         return response()->json([
             'message' => $message,

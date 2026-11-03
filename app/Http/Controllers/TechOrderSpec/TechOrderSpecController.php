@@ -138,9 +138,14 @@ class TechOrderSpecController extends Controller
     public function searchCatalog(Request $request): JsonResponse
     {
         $q = trim((string) $request->input('q', ''));
-        abort_if($q === '', 422, 'أدخل نص البحث.');
-
         $limit = min(60, max(10, (int) $request->input('limit', 40)));
+
+        // «منتجات الصرف السريع» في التوصيف: أصناف الصرف السريع بس (من غير أطقم).
+        if ($request->boolean('quick')) {
+            return response()->json(['data' => \App\Models\StockItem::searchPickerRows($q, $limit, true)]);
+        }
+
+        abort_if($q === '', 422, 'أدخل نص البحث.');
 
         return response()->json([
             'data' => StockCatalogPicker::search($q, $limit),

@@ -454,6 +454,24 @@
       '</tr>';
   }
 
+  // صرف سريع (عكاز/كرسي…) vs مواد تصنيع بتكلفة تشغيل — نسبة ربح مختلفة في الاعتماد.
+  function isQuickItem(it) {
+    if (it && typeof it.is_quick_dispense === 'boolean') return it.is_quick_dispense;
+    var cat = it ? findCatalogItem(it.stock_item_code) : null;
+    return !!(cat && cat.is_quick_dispense);
+  }
+
+  function kindBadge(it) {
+    return isQuickItem(it)
+      ? ' <span class="badge" style="background:#ecfdf5;color:#047857;font-size:11px;">🩼 صرف سريع</span>'
+      : ' <span class="badge" style="background:#f1f5f9;color:#475569;font-size:11px;">🏭 تصنيع</span>';
+  }
+
+  function kindHeaderRow(quick, colspan) {
+    return '<tr class="adj-kind-group"><td colspan="' + colspan + '" style="background:' + (quick ? '#ecfdf5' : '#f8fafc') +
+      ';font-weight:700;padding:8px 10px;">' + (quick ? '🩼 منتجات الصرف السريع — بتتصرف من المخزن مباشرة' : '🏭 مواد التصنيع — عليها تكلفة تشغيل') + '</td></tr>';
+  }
+
   function renderSpecBlock() {
     var tbody = $('adjSpecItems');
     if (!tbody) return;
@@ -480,7 +498,7 @@
       groups[key].forEach(function (it) {
         html += '<tr>' +
           '<td>' + esc(it.stock_item_code) + '</td>' +
-          '<td>' + esc(it.name) + '</td>' +
+          '<td>' + esc(it.name) + kindBadge(it) + '</td>' +
           '<td>' + esc(it.qty) + '</td>' +
           '<td>' + esc(it.uom || 'قطعة') + '</td>' +
           '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td></tr>';
@@ -507,7 +525,7 @@
     editRequestItems.forEach(function (it, idx) {
       rows.push('<tr>' +
         '<td>' + esc(it.stock_item_code) + '</td>' +
-        '<td>' + esc(it.name) + '</td>' +
+        '<td>' + esc(it.name) + kindBadge(it) + '</td>' +
         '<td><input type="number" class="form-control adj-edit-qty" data-idx="' + idx + '" min="0.001" step="0.001" value="' + esc(it.qty) + '"' +
         (activeCase && activeCase.has_pending_edit_request ? ' disabled' : '') + ' style="width:72px;padding:4px 8px;"></td>' +
         '<td>' + esc(it.uom || findCatalogItem(it.stock_item_code)?.uom || 'قطعة') + '</td>' +
@@ -681,7 +699,15 @@
       return;
     }
 
-    var rows = adjItems.map(function (it) {
+    // مواد التصنيع الأول وبعدها منتجات الصرف السريع — كل نوع تحت عنوانه لو الاتنين موجودين.
+    var manufactured = adjItems.filter(function (it) { return !isQuickItem(it); });
+    var quickItems = adjItems.filter(function (it) { return isQuickItem(it); });
+    var bothKinds = manufactured.length && quickItems.length;
+    var lastQuick = null;
+    var rows = manufactured.concat(quickItems).map(function (it) {
+      var quick = isQuickItem(it);
+      var header = bothKinds && quick !== lastQuick ? kindHeaderRow(quick, 7) : '';
+      lastQuick = quick;
       var removeBtn = '<td class="adj-col-action">' +
         '<button type="button" class="adj-remove-btn btn-remove-adj-item" data-item-id="' + esc(it.id) + '"' +
         ' title="حذف البند" aria-label="حذف البند">' +
@@ -689,9 +715,9 @@
         ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
         '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>' +
         '<path d="M10 11v6"/><path d="M14 11v6"/></svg></button></td>';
-      return '<tr data-item-id="' + esc(it.id) + '">' +
+      return header + '<tr data-item-id="' + esc(it.id) + '">' +
         '<td>' + esc(it.stock_item_code) + '</td>' +
-        '<td>' + esc(it.name) + '</td>' +
+        '<td>' + esc(it.name) + kindBadge(it) + '</td>' +
         '<td><input type="number" class="form-control adj-item-qty-input" data-item-id="' + esc(it.id) + '"' +
         ' data-qty="' + esc(it.qty) + '" min="0.001" step="0.001" value="' + esc(it.qty) + '" style="width:82px;padding:4px 8px;"></td>' +
         '<td>' + esc(it.uom || 'قطعة') + '</td>' +

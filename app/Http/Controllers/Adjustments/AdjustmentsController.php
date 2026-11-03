@@ -197,12 +197,13 @@ class AdjustmentsController extends Controller
     {
         $uomMap = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->all());
         $priceMap = StockItem::mapByOperationalCodes($items->pluck('stock_item_code')->all(), 'price');
+        $quickMap = StockItem::mapByOperationalCodes($items->pluck('stock_item_code')->all(), 'is_quick_dispense');
 
-        return $items->map(fn (BomItem $i) => $this->formatBomItem($i, $uomMap, $priceMap));
+        return $items->map(fn (BomItem $i) => $this->formatBomItem($i, $uomMap, $priceMap, $quickMap));
     }
 
-    /** @param  array<string, string>  $uomMap  @param  array<string, mixed>  $priceMap */
-    private function formatBomItem(BomItem $item, array $uomMap = [], array $priceMap = []): array
+    /** @param  array<string, string>  $uomMap  @param  array<string, mixed>  $priceMap  @param  array<string, mixed>  $quickMap */
+    private function formatBomItem(BomItem $item, array $uomMap = [], array $priceMap = [], array $quickMap = []): array
     {
         $alert = $this->priceBatchDispense->multiPriceAlertForCode($item->stock_item_code);
 
@@ -217,6 +218,8 @@ class AdjustmentsController extends Controller
             'group_label' => $item->group_label,
             'read_only' => $item->source === BomItem::SOURCE_SPEC,
             'price_tier_alert' => $alert,
+            // صرف سريع (عكاز/كرسي…) vs تصنيع — نسبة ربح مختلفة في الاعتماد.
+            'is_quick_dispense' => (bool) ($quickMap[$item->stock_item_code] ?? false),
         ];
     }
 

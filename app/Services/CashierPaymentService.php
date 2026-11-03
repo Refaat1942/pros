@@ -45,7 +45,7 @@ class CashierPaymentService
 
         // C-1: كل القراءات المالية (الحالة، المدفوع، المتبقي) تتم داخل المعاملة تحت قفل
         // صف الحالة لمنع التحصيل المزدوج عند تأكيدين متزامنين لنفس الحالة.
-        return DB::transaction(function () use ($caseId, $data, $method, $receivedBy) {
+        $result = DB::transaction(function () use ($caseId, $data, $method, $receivedBy) {
             /** @var CaseRecord $case */
             $case = CaseRecord::lockForUpdate()->findOrFail($caseId);
 
@@ -156,6 +156,46 @@ class CashierPaymentService
                 'remaining' => $remaining,
             ];
         });
+
+        if ($result['fully_paid']) {
+            $this->fastTrackQuickDispense($caseId);
+        }
+
+        return $result;
+    }
+
+    /**
+     * مريض كاش كل طلبه منتجات صرف سريع: بعد الدفع الكامل يتعتمد تلقائياً ويروح المخزن للصرف
+     * (من غير مكتب التشغيل ولا قسم الإنتاج). لو الاعتماد اتعطّل (مثلاً رصيد مش كفاية)
+     * الحالة تفضل في مكتب التشغيل زي المسار العادي — الدفع نفسه اتسجّل خلاص.
+     */
+    private function fastTrackQuickDispense(int $caseId): void
+    {
+        $case = CaseRecord::find($caseId);
+        if (! $case
+            || $case->stage_key !== CaseRecord::STAGE_OPERATIONS
+            || ! $case->isCashCivilian()
+            || ! \App\Support\QuickDispense::caseIsQuickOnly($case)) {
+            return;
+        }
+
+        try {
+            DB::transaction(function () use ($case) {
+                $approved = app(OperationsService::class)->approve($case, 'النظام — صرف سريع بعد الدفع');
+                // مالوش تخصيص قسم إنتاج — المخزن يقدر يصرف على طول.
+                CaseRecord::where('id', $approved->id)->update([
+                    'quick_dispense_at' => now(),
+                    'workshop_assignment_approved_at' => $approved->workshop_assignment_approved_at ?? now(),
+                ]);
+            });
+        } catch (\Throwable $e) {
+            report($e);
+            AuditService::log(
+                action: 'skip',
+                description: "صرف سريع: تعذّر التحويل التلقائي للمخزن — {$case->case_no} — يكمل من مكتب التشغيل ({$e->getMessage()})",
+                tag: 'operations',
+            );
+        }
     }
 
     private function nextPaymentNo(): string
