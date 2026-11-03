@@ -157,8 +157,8 @@
                 <p class="text-red-900 mt-2 whitespace-pre-wrap leading-relaxed" id="specReworkReason"></p>
             </div>
 
-            {{-- منتجات الصرف السريع (عكاكيز، كراسي، …) تتكتب هنا — أصناف التصنيع المسعّرة تضيفها «معدلات و تكاليف». --}}
-            <div id="specCatalogItemsBlock" class="space-y-3">
+            {{-- منتجات الصرف السريع بتتكتب كتابة تحت (specQuickItemsBlock) — اختيار أصناف المخزن للمعدلات. --}}
+            <div id="specCatalogItemsBlock" hidden>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h5 class="font-bold text-slate-800">🩼 منتجات الصرف السريع</h5>
@@ -189,6 +189,30 @@
             </div>
 
             @include('spec.partials.spec-form')
+
+            {{-- منتجات الصرف السريع (عكاز، كرسي، ووكر…) — كتابة حرة زي مواصفات الطرف؛ المعدلات بتحددها من المخزن. --}}
+            <div id="specQuickItemsBlock" class="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h5 class="font-bold text-slate-800">🩼 منتجات الصرف السريع</h5>
+                        <p class="text-xs text-slate-500 mt-1">اكتب اسم المنتج والكمية (عكاز إبط، كرسي متحرك، ووكر…). المعدلات والتكاليف بتحدده من المخزن.</p>
+                    </div>
+                    <button type="button" id="btnAddQuickItem"
+                            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 transition-colors">
+                        ➕ إضافة منتج
+                    </button>
+                </div>
+                <table data-no-paginate class="min-w-full text-sm">
+                    <thead class="text-slate-600">
+                        <tr>
+                            <th class="px-2 py-2 text-right font-bold">المنتج</th>
+                            <th class="px-2 py-2 text-right font-bold w-28">الكمية</th>
+                            <th class="px-2 py-2 text-center font-bold w-16">حذف</th>
+                        </tr>
+                    </thead>
+                    <tbody id="specQuickItemsBody"></tbody>
+                </table>
+            </div>
 
             <div>
                 <label class="block text-sm font-bold text-slate-700 mb-2">ملاحظات فنية (اختياري)</label>

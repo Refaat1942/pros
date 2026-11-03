@@ -71,14 +71,15 @@ class SpecFormOnlyFlowTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('written_items');
     }
 
-    public function test_spec_screen_shows_the_excel_form_and_only_quick_dispense_items(): void
+    public function test_spec_screen_shows_the_excel_form_and_written_quick_dispense_items(): void
     {
         $html = $this->actingAs($this->userWithRole('spec'))->get('/spec/orders')->assertOk()->getContent();
         $this->assertStringContainsString('id="specFormSheet"', $html);
         $this->assertStringContainsString('data-spec-field="السوكيت الخارجي"', $html);
         $this->assertStringContainsString('data-spec-field="الأطواق"', $html);
-        // أصناف التصنيع بتضيفها المعدلات — التوصيف بيضيف منتجات الصرف السريع بس.
-        $this->assertDoesNotMatchRegularExpression('/<div id="specCatalogItemsBlock" hidden>/u', $html);
+        // أصناف المخزن بتضيفها المعدلات — التوصيف بيكتب منتجات الصرف السريع كتابة بس.
+        $this->assertMatchesRegularExpression('/<div id="specCatalogItemsBlock" hidden>/u', $html);
+        $this->assertStringContainsString('id="specQuickItemsBlock"', $html);
         $this->assertStringContainsString('منتجات الصرف السريع', $html);
     }
 }

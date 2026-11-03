@@ -30,6 +30,12 @@
           <div id="adjWrittenItemsText" style="white-space:pre-wrap;line-height:1.7;padding:12px 14px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13px;color:#334155;"></div>
         </div>
 
+        {{-- منتجات الصرف السريع اللي التوصيف كتبها — المعدلات بتحددها من المخزن (إضافة من الكاتلوج + علامة «صرف سريع»). --}}
+        <div id="adjQuickWrittenBlock" hidden style="margin-bottom:16px;padding:12px 14px;border-radius:10px;background:#ecfdf5;border:1px solid #a7f3d0;">
+          <h4 style="margin:0 0 6px;font-size:14px;color:#065f46;">🩼 منتجات الصرف السريع من التوصيف <span style="font-size:12px;color:#047857;font-weight:400;">(مكتوبة — حدّدها من المخزن تحت وعلّمها «صرف سريع»)</span></h4>
+          <ul id="adjQuickWrittenList" style="margin:0;padding-inline-start:18px;font-size:13px;color:#064e3b;line-height:1.8;"></ul>
+        </div>
+
         <div id="adjSpecBlock" class="adj-spec-block" style="margin-bottom:16px;">
           <h4 style="margin:0 0 8px;font-size:14px;color:#0f172a;display:flex;align-items:center;gap:6px;">
             🔒 بنود التوصيف الفني <span style="font-size:12px;color:#64748b;font-weight:400;">(للقراءة فقط)</span>

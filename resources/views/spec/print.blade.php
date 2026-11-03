@@ -184,6 +184,22 @@
         </table>
     @endif
 
+    @if (! empty($spec->quick_dispense_items))
+        <table class="items-table print-table" style="margin-top:10px;">
+            <thead>
+                <tr><th>منتجات الصرف السريع</th><th style="width:18%;">الكمية</th></tr>
+            </thead>
+            <tbody>
+                @foreach ($spec->quick_dispense_items as $row)
+                    <tr>
+                        <td class="col-name">{{ $row['name'] ?? '' }}</td>
+                        <td>{{ rtrim(rtrim(number_format((float) ($row['qty'] ?? 0), 3, '.', ''), '0'), '.') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     <div class="notes-box">
         <div class="notes-title">ملاحظات فنية:</div>
         <div>{{ $spec->tech_notes ?: '—' }}</div>

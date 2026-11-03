@@ -16,9 +16,14 @@ class StoreTechOrderSpecRequest extends BaseRequest
             'case_id' => ['required', 'integer', 'exists:cases,id'],
             'tech_notes' => $this->notesRules(5000, $policy->isRequired('spec', 'tech_notes')),
             'written_items' => $policy->isRequired('spec', 'written_items')
-                ? ['required', 'string', 'max:5000']
+                // مريض صرف سريع بس (عكاز…) مالوش استمارة طرف.
+                ? ['required_without:quick_dispense_items', 'nullable', 'string', 'max:5000']
                 : ['nullable', 'string', 'max:5000'],
             // التوصيف يكتب الاستمارة فقط — الأصناف المسعّرة تضيفها المعدلات (البنود هنا اختيارية).
+            // منتجات الصرف السريع بتتكتب كتابة (اسم + كمية) — المعدلات بتحددها من المخزن.
+            'quick_dispense_items' => ['sometimes', 'nullable', 'array', 'max:50'],
+            'quick_dispense_items.*.name' => ['nullable', 'string', 'max:255'],
+            'quick_dispense_items.*.qty' => ['required', 'numeric', 'min:0.001', 'max:9999'],
             'items' => ['nullable', 'array'],
             'items.*.stock_item_code' => ['required', 'string', 'max:500'],
             'items.*.name' => ['required', 'string', 'min:1', 'max:255'],
@@ -36,7 +41,7 @@ class StoreTechOrderSpecRequest extends BaseRequest
                 return;
             }
 
-            if (empty($this->input('items')) && trim((string) $this->input('written_items')) === '') {
+            if (empty($this->input('items')) && empty($this->input('quick_dispense_items')) && trim((string) $this->input('written_items')) === '') {
                 $validator->errors()->add('written_items', 'املأ استمارة التوصيف (بند واحد على الأقل).');
             }
 

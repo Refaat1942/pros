@@ -265,11 +265,13 @@
           var specList = $('costingSpecItems');
           if (specList) {
             var specItems = (spec && spec.items) || [];
-            specList.innerHTML = specItems.length
-              ? specItems.map(function (it) {
-                  return '<li><span><code>' + esc(it.stock_item_code) + '</code> ' + esc(it.name) + '</span><strong>× ' + esc(it.qty) + '</strong></li>';
-                }).join('')
-              : '<li class="text-slate-400">لا توجد بنود توصيف</li>';
+            var quickWritten = (spec && spec.quick_dispense_items) || [];
+            var specHtml = specItems.map(function (it) {
+              return '<li><span><code>' + esc(it.stock_item_code) + '</code> ' + esc(it.name) + '</span><strong>× ' + esc(it.qty) + '</strong></li>';
+            }).join('') + quickWritten.map(function (it) {
+              return '<li><span>🩼 ' + esc(it.name) + ' <small>(صرف سريع — مكتوب في التوصيف)</small></span><strong>× ' + esc(it.qty) + '</strong></li>';
+            }).join('');
+            specList.innerHTML = specHtml || '<li class="text-slate-400">لا توجد بنود توصيف</li>';
           }
           var notesEl = $('costingSpecNotes');
           if (notesEl) {

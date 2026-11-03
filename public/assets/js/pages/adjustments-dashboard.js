@@ -392,7 +392,19 @@
     syncCompleteButtonLabel();
   }
 
+  function renderQuickWrittenBlock() {
+    var block = $('adjQuickWrittenBlock');
+    var list = $('adjQuickWrittenList');
+    if (!block || !list) return;
+    var rows = (activeCase && activeCase.quick_dispense_items) || [];
+    block.hidden = !rows.length;
+    list.innerHTML = rows.map(function (r) {
+      return '<li><strong>' + esc(r.name) + '</strong> × ' + esc(r.qty) + '</li>';
+    }).join('');
+  }
+
   function renderWrittenItemsBlock() {
+    renderQuickWrittenBlock();
     var block = $('adjWrittenItemsBlock');
     var body = $('adjWrittenItemsText');
     if (!block || !body) return;
@@ -461,11 +473,45 @@
     return !!(cat && cat.is_quick_dispense);
   }
 
+  // المعدلات تقدر تغيّر النوع بضغطة — بيتسجّل على الصنف في المخزن والكتالوج ويتسمّع في نِسَب الاعتماد.
   function kindBadge(it) {
-    return isQuickItem(it)
-      ? ' <span class="badge" style="background:#ecfdf5;color:#047857;font-size:11px;">🩼 صرف سريع</span>'
-      : ' <span class="badge" style="background:#f1f5f9;color:#475569;font-size:11px;">🏭 تصنيع</span>';
+    var quick = isQuickItem(it);
+    var label = quick ? '🩼 صرف سريع' : '🏭 تصنيع';
+    var style = quick ? 'background:#ecfdf5;color:#047857;' : 'background:#f1f5f9;color:#475569;';
+    var editable = it && it.id && activeCase && activeCase.can_modify_directly;
+    if (!editable) {
+      return ' <span class="badge" style="' + style + 'font-size:11px;">' + label + '</span>';
+    }
+    return ' <button type="button" class="badge adj-kind-toggle" data-item-id="' + esc(it.id) + '" data-quick="' + (quick ? '1' : '0') + '"' +
+      ' title="اضغط للتغيير إلى «' + (quick ? 'تصنيع' : 'صرف سريع') + '» — بيتسجّل في المخزن والكتالوج"' +
+      ' style="' + style + 'font-size:11px;border:1px dashed currentColor;cursor:pointer;">' + label + ' ⇄</button>';
   }
+
+  function toggleItemKind(itemId, makeQuick, btn) {
+    if (!activeCase || !window.axios) return;
+    if (btn) btn.disabled = true;
+    axios.post('/adjustments/adjustments/' + activeCase.id + '/items/' + itemId + '/kind', { quick: makeQuick })
+      .then(function (res) {
+        toast(res.data.message || 'تم');
+        var items = (res.data.bom && res.data.bom.items) || [];
+        if (activeCase.bom) activeCase.bom.items = items;
+        catalogCache.forEach(function (c) {
+          items.forEach(function (it) { if (c.code === it.stock_item_code) c.is_quick_dispense = it.is_quick_dispense; });
+        });
+        renderBomItems(items);
+      })
+      .catch(function (err) {
+        toast((err.response && err.response.data && err.response.data.message) || 'تعذّر تغيير النوع', true);
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('.adj-kind-toggle');
+    if (!btn) return;
+    e.preventDefault();
+    toggleItemKind(btn.getAttribute('data-item-id'), btn.getAttribute('data-quick') !== '1', btn);
+  });
 
   function kindHeaderRow(quick, colspan) {
     return '<tr class="adj-kind-group"><td colspan="' + colspan + '" style="background:' + (quick ? '#ecfdf5' : '#f8fafc') +

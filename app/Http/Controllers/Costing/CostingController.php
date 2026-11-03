@@ -74,7 +74,7 @@ class CostingController extends Controller
             'patient:id,patient_code,name,patient_type,company_name,sovereign_entity,rank,contract_company_id',
             'patient.contractCompany:id,name,is_contracted,discount_percent',
             'contractCompany:id,name,is_contracted,discount_percent',
-            'techOrderSpec:id,case_id,tech_notes,written_items',
+            'techOrderSpec:id,case_id,tech_notes,written_items,quick_dispense_items',
             'techOrderSpec.items',
             'bom.items',
             'pricingRequest.items.stockItem.attributeValues.field',
@@ -113,6 +113,7 @@ class CostingController extends Controller
             'spec' => $case->techOrderSpec ? [
                 'tech_notes' => $case->techOrderSpec->tech_notes,
                 'written_items' => $case->techOrderSpec->written_items,
+                'quick_dispense_items' => $case->techOrderSpec->quick_dispense_items ?? [],
                 'items' => $case->techOrderSpec->items->map(fn ($i) => $i->only([
                     'stock_item_code', 'name', 'qty', 'uom',
                 ]))->values(),

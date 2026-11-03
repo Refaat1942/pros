@@ -63,6 +63,10 @@ Route::prefix('adjustments')
             Route::delete('adjustments/{case}/items/{bomItem}', [AdjustmentsController::class, 'removeItem'])
                 ->name('adjustments.remove-item');
 
+            // تصنيع ⇄ صرف سريع — بيتسجّل على الصنف في المخزن/الكتالوج ويتسمّع في نِسَب الاعتماد.
+            Route::post('adjustments/{case}/items/{bomItem}/kind', [AdjustmentsController::class, 'setItemKind'])
+                ->name('adjustments.item-kind');
+
             Route::post('adjustments/{case}/complete', [AdjustmentsController::class, 'complete'])
                 ->name('adjustments.complete');
 
