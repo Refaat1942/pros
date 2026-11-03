@@ -18,6 +18,8 @@
     $supplyPrintUrl = $supply_print_url ?? null;
     $addCatalogItemUrl = $add_catalog_item_url ?? null;
     $receiveInboundUrl = $receive_inbound_url ?? null;
+    $supplySwapsUrl = $supply_swaps_url ?? str_replace('/supply/requests', '/supply/swaps', $supplyRequestsStoreUrl);
+    $canManageSwaps = auth()->user()?->can('manage-item-swaps') ?? false;
 @endphp
 <div class="section-view" id="{{ $deskSectionId }}">
     <div id="analytics-inventory-charts">@include('partials.dashboard-analytics-empty', ['stats' => $invStats, 'hide_charts' => true])</div>
@@ -94,6 +96,170 @@
             </div>
         </form>
     </div>
+
+    @if ($canManageSwaps)
+    {{-- تبديل صنف مع المورد: يتسجّل هنا ويتنفّذ (خصم القديم + إضافة الجديد) بعد اعتماد أدمن المخازن من «اعتمادات المخزن». --}}
+    <div class="panel inventory-wrap" style="margin-bottom:16px;" id="supplySwapPanel">
+        <div class="panel-header">
+            <h3>🔁 تبديل صنف مع المورد</h3>
+        </div>
+        <form id="supplySwapForm" class="panel-body" style="padding:16px;">
+            <p style="margin:0 0 12px;font-size:13px;color:var(--text-muted);line-height:1.7;">
+                بنسلّم المورد صنف من مخزوننا وبناخد بداله صنف تاني. بعد الاعتماد: الصنف الخارج يتخصم من المخزون بتكلفته الفعلية، والبديل يتضاف (ولو جديد يتعمل في الكتالوج تلقائياً باسمه ومواصفاته). مديونية المورد بتزيد بفرق السعر بس.
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+                <div class="form-group">
+                    <label for="swapOutSearch">الصنف الخارج من مخزوننا</label>
+                    <input type="text" id="swapOutSearch" class="form-control" placeholder="كود أو اسم..." autocomplete="off">
+                    <input type="hidden" id="swapOutItemId">
+                    <div id="swapOutResults" class="supply-search-results" style="display:none;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="swapOutQty">الكمية الخارجة</label>
+                    <input type="number" id="swapOutQty" class="form-control" min="0.01" step="any" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="swapSupplierId">المورد</label>
+                    <select id="swapSupplierId" class="form-control">
+                        <option value="">— اختر المورد —</option>
+                        @foreach (\App\Models\Supplier::query()->orderBy('name')->get(['id', 'name']) as $sup)
+                            <option value="{{ $sup->id }}">{{ $sup->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin:12px 0;display:flex;flex-wrap:wrap;gap:16px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:14px;">
+                    <input type="radio" name="swapInMode" value="existing" checked> البديل صنف موجود بالكتالوج
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:14px;">
+                    <input type="radio" name="swapInMode" value="new"> البديل صنف جديد
+                </label>
+            </div>
+
+            <div id="swapInExisting" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+                <div class="form-group">
+                    <label for="swapInSearch">الصنف البديل</label>
+                    <input type="text" id="swapInSearch" class="form-control" placeholder="كود أو اسم..." autocomplete="off">
+                    <input type="hidden" id="swapInItemId">
+                    <div id="swapInResults" class="supply-search-results" style="display:none;"></div>
+                </div>
+            </div>
+            <div id="swapInNew" style="display:none;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                <div class="form-group"><label for="swapNewName">اسم الصنف الجديد</label><input type="text" id="swapNewName" class="form-control" maxlength="255"></div>
+                <div class="form-group"><label for="swapNewUom">الوحدة</label><input type="text" id="swapNewUom" class="form-control" maxlength="50" placeholder="نفس وحدة الخارج لو فاضية"></div>
+                <div class="form-group"><label for="swapNewBrand">الماركة</label><input type="text" id="swapNewBrand" class="form-control" maxlength="255"></div>
+                <div class="form-group"><label for="swapNewSpec">المواصفات</label><input type="text" id="swapNewSpec" class="form-control" maxlength="1000"></div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;">
+                <div class="form-group"><label for="swapInQty">الكمية الداخلة</label><input type="number" id="swapInQty" class="form-control" min="0.01" step="any" value="1"></div>
+                <div class="form-group"><label for="swapPriceDiff">فرق السعر للمورد (ج.م)</label><input type="number" id="swapPriceDiff" class="form-control" min="0" step="0.01" value="0"></div>
+                <div class="form-group"><label for="swapNotes">ملاحظات</label><input type="text" id="swapNotes" class="form-control" maxlength="1000"></div>
+            </div>
+            <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button type="submit" class="btn-action success" id="btnSubmitSwap">🔁 تسجيل طلب التبديل</button>
+                <span id="swapFormMessage" style="font-size:13px;"></span>
+            </div>
+        </form>
+    </div>
+    <script>
+    (function () {
+      var form = document.getElementById('supplySwapForm');
+      if (!form) return;
+      var swapUrl = @json($supplySwapsUrl);
+      var csrf = document.querySelector('meta[name="csrf-token"]');
+      function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+      function wire(inputId, hiddenId, resultsId) {
+        var input = document.getElementById(inputId), hidden = document.getElementById(hiddenId), box = document.getElementById(resultsId), t;
+        input.addEventListener('input', function () {
+          hidden.value = '';
+          clearTimeout(t);
+          var q = input.value.trim();
+          if (q.length < 1) { box.style.display = 'none'; return; }
+          t = setTimeout(function () {
+            fetch(((window.__SUPPLY_REQUEST_API || {}).search || '') + '?q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+              .then(function (r) { return r.json(); })
+              .then(function (res) {
+                var items = res.items || res.data || res || [];
+                if (!Array.isArray(items) || !items.length) { box.innerHTML = '<div style="padding:8px;font-size:12px;color:var(--text-muted);">لا نتائج</div>'; box.style.display = 'block'; return; }
+                box.innerHTML = items.map(function (it) {
+                  var label = (it.code ? it.code + ' — ' : '') + it.name;
+                  return '<button type="button" data-id="' + it.id + '" data-label="' + esc(label) + '">' + esc(label) + (it.uom ? ' <small>(' + esc(it.uom) + ')</small>' : '') + '</button>';
+                }).join('');
+                box.style.display = 'block';
+              }).catch(function () { box.style.display = 'none'; });
+          }, 250);
+        });
+        box.addEventListener('click', function (e) {
+          var b = e.target.closest('button[data-id]');
+          if (!b) return;
+          hidden.value = b.dataset.id;
+          input.value = b.dataset.label;
+          box.style.display = 'none';
+        });
+      }
+      wire('swapOutSearch', 'swapOutItemId', 'swapOutResults');
+      wire('swapInSearch', 'swapInItemId', 'swapInResults');
+      function mode() { var r = form.querySelector('input[name="swapInMode"]:checked'); return r ? r.value : 'existing'; }
+      form.querySelectorAll('input[name="swapInMode"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          document.getElementById('swapInExisting').style.display = mode() === 'existing' ? 'grid' : 'none';
+          document.getElementById('swapInNew').style.display = mode() === 'new' ? 'grid' : 'none';
+        });
+      });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var msg = document.getElementById('swapFormMessage');
+        function show(text, color) { msg.textContent = text; msg.style.color = color; }
+        var body = {
+          out_stock_item_id: document.getElementById('swapOutItemId').value,
+          out_qty: document.getElementById('swapOutQty').value,
+          supplier_id: document.getElementById('swapSupplierId').value,
+          in_qty: document.getElementById('swapInQty').value,
+          price_difference: document.getElementById('swapPriceDiff').value || 0,
+          notes: document.getElementById('swapNotes').value,
+        };
+        if (!body.out_stock_item_id) return show('اختر الصنف الخارج من نتائج البحث.', '#dc2626');
+        if (!body.supplier_id) return show('اختر المورد.', '#dc2626');
+        if (mode() === 'existing') {
+          body.in_stock_item_id = document.getElementById('swapInItemId').value;
+          if (!body.in_stock_item_id) return show('اختر الصنف البديل من نتائج البحث أو اختار «صنف جديد».', '#dc2626');
+        } else {
+          body.new_item = {
+            name: document.getElementById('swapNewName').value.trim(),
+            uom: document.getElementById('swapNewUom').value.trim(),
+            brand: document.getElementById('swapNewBrand').value.trim(),
+            spec: document.getElementById('swapNewSpec').value.trim(),
+          };
+          if (!body.new_item.name) return show('اكتب اسم الصنف الجديد.', '#dc2626');
+        }
+        var btn = document.getElementById('btnSubmitSwap');
+        btn.disabled = true;
+        fetch(swapUrl, {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+          body: JSON.stringify(body),
+        }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+          .then(function (res) {
+            show(res.message || 'تم تسجيل طلب التبديل.', '#b45309');
+            form.reset();
+            document.getElementById('swapOutItemId').value = '';
+            document.getElementById('swapInItemId').value = '';
+            document.getElementById('swapInExisting').style.display = 'grid';
+            document.getElementById('swapInNew').style.display = 'none';
+          })
+          .catch(function (err) {
+            var m = err && err.errors ? Object.values(err.errors)[0][0] : (err && err.message) || 'تعذّر تسجيل طلب التبديل';
+            show(m, '#dc2626');
+          })
+          .finally(function () { btn.disabled = false; });
+      });
+    })();
+    </script>
+    @endif
 
     <div class="panel inventory-wrap" style="margin-bottom:16px;">
         <div class="panel-header">

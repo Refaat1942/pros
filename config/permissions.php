@@ -63,6 +63,10 @@ return [
             'label_ar' => 'اعتماد استلام الوارد — إضافة الرصيد (أدمن المخازن)',
             'dashboard' => 'technical',
         ],
+        'manage-item-swaps' => [
+            'label_ar' => 'تبديل صنف مع المورد — طلب واعتماد (أدمن المخازن)',
+            'dashboard' => 'technical',
+        ],
         'grant-cash-discount' => [
             'label_ar' => 'منح خصم للعميل المدني الكاش (عند الاعتماد)',
             'dashboard' => 'costing',
@@ -164,6 +168,7 @@ return [
             'approve-services',
             'approve-supply-requests',
             'approve-stock-receipts',
+            'manage-item-swaps',
             'super-admin',
         ],
     ],

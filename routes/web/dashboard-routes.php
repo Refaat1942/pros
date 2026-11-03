@@ -103,5 +103,7 @@ if (! function_exists('registerStockApprovalRoutes')) {
         Route::post('stock-approvals/supply/{supplyRequest}/reject', [$c, 'rejectSupply'])->name('stock-approvals.supply.reject');
         Route::post('stock-approvals/receipts/{receiptRequest}/approve', [$c, 'approveReceipt'])->name('stock-approvals.receipts.approve');
         Route::post('stock-approvals/receipts/{receiptRequest}/reject', [$c, 'rejectReceipt'])->name('stock-approvals.receipts.reject');
+        Route::post('stock-approvals/swaps/{swapRequest}/approve', [$c, 'approveSwap'])->name('stock-approvals.swaps.approve');
+        Route::post('stock-approvals/swaps/{swapRequest}/reject', [$c, 'rejectSwap'])->name('stock-approvals.swaps.reject');
     }
 }

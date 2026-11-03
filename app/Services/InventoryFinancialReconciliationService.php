@@ -30,6 +30,9 @@ class InventoryFinancialReconciliationService
         $receivedValue = $this->movementValue(StockMovement::TYPE_RECEIVE, $from, $to);
         $issuedValue = $this->movementValue(StockMovement::TYPE_ISSUE, $from, $to);
         $returnedValue = $this->movementValue(StockMovement::TYPE_RETURN, $from, $to);
+        // تبديل مع المورد: منفصل عن التوريد والصرف عشان مايأثرش على أرقامهم.
+        $swapOutValue = $this->movementValue(StockMovement::TYPE_SWAP_OUT, $from, $to);
+        $swapInValue = $this->movementValue(StockMovement::TYPE_SWAP_IN, $from, $to);
 
         $delivered = CaseRecord::query()
             ->where('stage_key', CaseRecord::STAGE_DELIVERED)
@@ -64,6 +67,8 @@ class InventoryFinancialReconciliationService
                 'issued_value' => $issuedValue,
                 'returned_value' => $returnedValue,
                 'net_outflow' => round($issuedValue - $returnedValue, 2),
+                'swap_out_value' => $swapOutValue,
+                'swap_in_value' => $swapInValue,
             ],
             'revenue' => [
                 'delivered_count' => $delivered->count(),

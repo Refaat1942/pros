@@ -137,6 +137,10 @@ Route::prefix('admin')
             Route::post('supply/requests/batch', [SupplyRequestController::class, 'storeBatch'])
                 ->name('supply.requests.store-batch');
 
+            // تبديل صنف مع المورد — الطلب هنا والاعتماد في «اعتمادات المخزن» (صلاحية manage-item-swaps).
+            Route::post('supply/swaps', [\App\Http\Controllers\Stock\StockApprovalController::class, 'storeSwap'])
+                ->name('supply.swaps.store');
+
             Route::post('supply/requests/{supplyRequestLine}/resolve', [SupplyRequestController::class, 'resolve'])
                 ->name('supply.requests.resolve');
 
