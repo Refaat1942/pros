@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Support\StockCatalogPicker;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * مسح كatalog الأصناف بالكامل — للاستعداد لرفع/import بيانات جديدة.
@@ -28,6 +29,12 @@ class StockCatalogPurgeService
         $counts = [];
 
         DB::transaction(function () use (&$counts) {
+            // طلبات استلام الوارد وتبديل الأصناف مربوطة بالأصناف (من غير حذف تلقائي) — لازم تتمسح الأول.
+            foreach (['stock_swap_requests', 'stock_receipt_requests'] as $table) {
+                if (Schema::hasTable($table)) {
+                    $counts[$table] = DB::table($table)->delete();
+                }
+            }
             $counts['stock_movements'] = DB::table('stock_movements')->delete();
             $counts['stock_item_prices'] = DB::table('stock_item_prices')->delete();
             $counts['supply_request_lines'] = DB::table('supply_request_lines')->delete();
