@@ -127,6 +127,7 @@
     if (!canSeeRates) return;
 
     if ($('costingMaterialsTotal')) $('costingMaterialsTotal').textContent = fmt(costing.materials_total) + ' ج.م';
+    currentMaterials = parseFloat(costing.materials_total) || 0;
 
     var linesEl = $('costingComponentLines');
     if (linesEl) {
@@ -319,7 +320,9 @@
           }).join('');
         }
 
+        currentMaterials = 0;
         renderBreakdown(costing);
+        renderNetRows();
 
         var modal = $('costingModal');
         if (modal) modal.classList.add('visible');
@@ -341,7 +344,32 @@
     return Math.round((isPct ? discountGross * v / 100 : v) * 100) / 100;
   }
 
+  // صفوف حسبة اللائحة: الخصم ← المبلغ بعد الخصم ← نسبة الربح = (الصافي − المواد) ÷ المواد.
+  var currentMaterials = 0;
+
+  function renderNetRows() {
+    var amt = discountAmount();
+    var valid = amt > 0 && amt < discountGross;
+    var net = valid ? discountGross - amt : discountGross;
+    var t = ($('cashDiscountType') || {}).value;
+    var v = parseFloat(($('cashDiscountValue') || {}).value || '0') || 0;
+    if ($('costingDiscountRow')) $('costingDiscountRow').style.display = valid ? '' : 'none';
+    if ($('costingNetRow')) $('costingNetRow').style.display = valid ? '' : 'none';
+    if ($('costingDiscountLabel')) $('costingDiscountLabel').textContent = 'خصم إضافي' + (t === 'percent' && v > 0 ? ' (' + v + '%)' : '');
+    if ($('costingDiscountAmount')) $('costingDiscountAmount').textContent = '− ' + fmt2(amt) + ' ج.م';
+    if ($('costingNetAmount')) $('costingNetAmount').textContent = fmt2(net) + ' ج.م';
+    var profitRow = $('costingMaterialsProfitRow');
+    if (profitRow) {
+      var show = canSeeRates && currentMaterials > 0 && discountGross > 0;
+      profitRow.style.display = show ? '' : 'none';
+      if (show && $('costingMaterialsProfit')) {
+        $('costingMaterialsProfit').textContent = ((net - currentMaterials) / currentMaterials * 100).toFixed(2) + '%';
+      }
+    }
+  }
+
   function updateDiscountPreview() {
+    renderNetRows();
     var p = $('cashDiscountPreview');
     if (!p) return;
     var amt = discountAmount();

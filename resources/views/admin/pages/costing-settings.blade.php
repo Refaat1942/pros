@@ -7,7 +7,7 @@
     <div class="panel">
         <div class="panel-header">
             <h3>⚙️ إعدادات التكاليف الإضافية</h3>
-            <span class="badge" id="costingSettingsSumBadge">{{ rtrim(rtrim(number_format((float) $ratesSum, 2, '.', ''), '0'), '.') }}%</span>
+            <span class="badge" id="costingSettingsSumBadge" title="كل بند نسبة مستقلة من تكلفة المواد — مش لازم المجموع 100%">مجموع النسب {{ rtrim(rtrim(number_format((float) $ratesSum, 2, '.', ''), '0'), '.') }}%</span>
         </div>
 
 
@@ -148,9 +148,8 @@
             sum += parseFloat(input.value || '0') || 0;
         });
 
-        badge.textContent = sum.toFixed(2).replace(/\.?0+$/, '') + '%';
-        badge.style.background = Math.abs(sum - 100) < 0.01 ? '#dcfce7' : '#fee2e2';
-        badge.style.color = Math.abs(sum - 100) < 0.01 ? '#166534' : '#dc2626';
+        // للعلم بس — كل بند نسبة مستقلة من المواد، فمفيش لون أحمر لو المجموع مش 100%.
+        badge.textContent = 'مجموع النسب ' + sum.toFixed(2).replace(/\.?0+$/, '') + '%';
     }
 
     document.getElementById('costingSettingsForm')?.addEventListener('input', updateSumBadge);

@@ -80,8 +80,21 @@
               </div>
             </div>
             <div class="costing-overhead-row costing-overhead-row--final">
-              <span>سعر البيع (عرض السعر)</span>
+              <span>سعر البيع (عرض السعر) — المبلغ قبل الخصم</span>
               <strong id="costingSellingPrice">—</strong>
+            </div>
+            {{-- زي حسبة اللائحة: خصم إضافي اختياري ← المبلغ بعد الخصم ← نسبة الربح على تكلفة المواد. --}}
+            <div class="costing-overhead-row" id="costingDiscountRow" style="display:none;">
+              <span id="costingDiscountLabel">خصم إضافي</span>
+              <strong id="costingDiscountAmount" style="color:#b91c1c;">—</strong>
+            </div>
+            <div class="costing-overhead-row costing-overhead-row--final" id="costingNetRow" style="display:none;">
+              <span>المبلغ بعد الخصم</span>
+              <strong id="costingNetAmount">—</strong>
+            </div>
+            <div class="costing-overhead-row costing-overhead-row--highlight" id="costingMaterialsProfitRow" style="display:none;">
+              <span>نسبة الربح (على تكلفة المواد)</span>
+              <strong id="costingMaterialsProfit">—</strong>
             </div>
           </div>
         </div>
