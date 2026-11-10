@@ -199,7 +199,7 @@
         var c = res.data.case || {};
         var pricing = res.data.pricing || {};
         var costing = res.data.costing || null;
-        setupCashDiscount(c);
+        setupCashDiscount(c, c.discount_types);
         canSeeInternal = !!res.data.can_see_internal;
         canSeeRates = !!res.data.can_see_rates;
         currentInternalTotal = pricing.internal_total || 0;
@@ -379,15 +379,44 @@
     p.style.color = amt >= discountGross && amt > 0 ? '#b91c1c' : '#0f766e';
   }
 
-  function setupCashDiscount(c) {
+  // أنواع الخصم المعتمدة من «سياسة الخصومات» — كل نوع بطرقه المسموحة وحدّه الأقصى.
+  var discountTypes = [];
+
+  function currentDiscountType() {
+    var key = ($('cashDiscountCategory') || {}).value;
+    return discountTypes.filter(function (t) { return t.key === key; })[0] || null;
+  }
+
+  function syncDiscountTypeOptions() {
+    var t = currentDiscountType();
+    var sel = $('cashDiscountType');
+    if (!sel || !t) return;
+    Array.prototype.forEach.call(sel.options, function (o) {
+      o.disabled = (o.value === 'percent' && !t.allow_percent) || (o.value === 'amount' && !t.allow_amount);
+    });
+    if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) {
+      sel.value = t.allow_percent ? 'percent' : 'amount';
+    }
+    if ($('cashDiscountLimit')) {
+      $('cashDiscountLimit').textContent = t.max_percent ? ('الحد الأقصى: ' + t.max_percent + '% من سعر البيع') : '';
+    }
+    updateDiscountPreview();
+  }
+
+  function setupCashDiscount(c, types) {
     var box = $('cashDiscountBox');
     if (!box) return;
-    box.hidden = !c.can_grant_cash_discount;
+    discountTypes = types || [];
+    var cat = $('cashDiscountCategory');
+    if (cat) {
+      cat.innerHTML = discountTypes.map(function (t) { return '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; }).join('');
+    }
+    box.hidden = !c.can_grant_cash_discount || !discountTypes.length;
     discountGross = Number(c.selling_price || c.computed_total || 0);
     if ($('cashDiscountValue')) $('cashDiscountValue').value = '';
     if ($('cashDiscountReason')) $('cashDiscountReason').value = '';
     if ($('cashDiscountType')) $('cashDiscountType').value = 'percent';
-    updateDiscountPreview();
+    syncDiscountTypeOptions();
   }
 
   function discountPayload() {
@@ -399,6 +428,7 @@
       discount_type: ($('cashDiscountType') || {}).value || 'percent',
       discount_value: v,
       discount_reason: (($('cashDiscountReason') || {}).value || '').trim(),
+      discount_category: ($('cashDiscountCategory') || {}).value || null,
     };
   }
 
@@ -412,8 +442,9 @@
     if (!activeCaseId) return;
 
     var payload = discountPayload();
-    if (payload.discount_value && !payload.discount_reason) {
-      toast('اكتب سبب الخصم.', true);
+    var t = currentDiscountType();
+    if (payload.discount_value && t && t.max_percent && discountAmount() > discountGross * t.max_percent / 100 + 0.009) {
+      toast('الخصم يتجاوز الحد الأقصى لنوع «' + t.label + '» (' + t.max_percent + '%).', true);
       return;
     }
 
@@ -437,6 +468,7 @@
     if ($('closeCostingModal')) $('closeCostingModal').addEventListener('click', closeModal);
     if ($('btnCancelCosting')) $('btnCancelCosting').addEventListener('click', closeModal);
     if ($('btnConfirmCosting')) $('btnConfirmCosting').addEventListener('click', confirmCosting);
+    if ($('cashDiscountCategory')) $('cashDiscountCategory').addEventListener('change', syncDiscountTypeOptions);
     ['cashDiscountValue', 'cashDiscountType'].forEach(function (id) {
       if ($(id)) $(id).addEventListener('input', updateDiscountPreview);
       if ($(id)) $(id).addEventListener('change', updateDiscountPreview);

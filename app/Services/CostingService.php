@@ -254,20 +254,38 @@ class CostingService
             abort(422, 'مفيش سعر بيع للحالة — مينفعش خصم.');
         }
 
-        $reason = trim((string) ($input['reason'] ?? ''));
-        if ($reason === '') {
-            abort(422, 'اكتب سبب الخصم.');
+        // سياسة الخصومات (السوبر أدمن): الفئة مسموح لها؟ ونوع الخصم معتمد وفي حدوده؟
+        $policy = app(DiscountPolicyService::class);
+        if (! $policy->allowsCase($case)) {
+            abort(422, 'الخصم غير مفعّل لفئة '.DiscountPolicyService::PATHWAYS[$policy->pathwayOf($case)].' — راجع سياسة الخصومات.');
+        }
+        $type = $policy->findType($input['category'] ?? null);
+        if ($type === null) {
+            abort(422, 'اختر نوع الخصم من الأنواع المعتمدة.');
         }
 
         $isPercent = ($input['type'] ?? 'amount') === 'percent';
+        if ($isPercent && ! $type['allow_percent']) {
+            abort(422, 'نوع الخصم «'.$type['label'].'» لا يُطبَّق كنسبة مئوية.');
+        }
+        if (! $isPercent && ! $type['allow_amount']) {
+            abort(422, 'نوع الخصم «'.$type['label'].'» لا يُطبَّق كمبلغ ثابت.');
+        }
         if ($isPercent && $value >= 100) {
-            abort(422, 'نسبة الخصم لازم تكون أقل من 100%.');
+            abort(422, 'يجب أن تكون نسبة الخصم أقل من 100%.');
         }
 
         $amount = $isPercent ? round($gross * $value / 100, 2) : $value;
         if ($amount >= $gross) {
-            abort(422, 'الخصم لا يمكن أن يساوي أو يتجاوز إجمالي السعر ('.number_format($gross, 2).' ج.م).');
+            abort(422, 'لا يجوز أن يساوي الخصم إجمالي السعر أو يتجاوزه ('.number_format($gross, 2).' ج.م).');
         }
+        if ($type['max_percent'] !== null && $amount > round($gross * $type['max_percent'] / 100, 2) + 0.009) {
+            abort(422, 'الخصم يتجاوز الحد الأقصى لنوع «'.$type['label'].'» ('.$type['max_percent'].'% = '.number_format($gross * $type['max_percent'] / 100, 2).' ج.م).');
+        }
+
+        // السبب = نوع الخصم + الملاحظة (اختيارية).
+        $note = trim((string) ($input['reason'] ?? ''));
+        $reason = $type['label'].($note !== '' ? ' — '.$note : '');
 
         return [
             'amount' => $amount,

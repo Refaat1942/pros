@@ -242,6 +242,8 @@ class DashboardPageDataService
             'overhead_rate_definitions' => $settings->overheadRateDefinitions(),
             'overhead_rates_sum' => $settings->overheadRatesSum(),
             'costing_modes' => app(CostingModeService::class)->allModes(),
+            'discount_policy' => app(\App\Services\DiscountPolicyService::class)->policy(),
+            'discount_pathways' => \App\Services\DiscountPolicyService::PATHWAYS,
         ];
     }
 

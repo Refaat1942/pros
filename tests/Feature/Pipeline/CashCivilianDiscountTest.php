@@ -66,7 +66,7 @@ class CashCivilianDiscountTest extends TestCase
         $show->assertJsonPath('case.is_cash_civilian', true)->assertJsonPath('case.can_grant_cash_discount', true);
 
         $this->actingAs($costing)->postJson("/costing/queue/{$case->id}/confirm", [
-            'discount_type' => 'percent', 'discount_value' => 10, 'discount_reason' => 'حالة إنسانية',
+            'discount_type' => 'percent', 'discount_value' => 10, 'discount_reason' => 'حالة إنسانية', 'discount_category' => 'administrative',
         ])->assertOk();
 
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
@@ -108,7 +108,7 @@ class CashCivilianDiscountTest extends TestCase
     {
         $case = $this->caseAtCosting($this->cashPatient());
         $this->actingAs($this->costingUser(true))->postJson("/costing/queue/{$case->id}/confirm", [
-            'discount_type' => 'amount', 'discount_value' => 5, 'discount_reason' => 'موافقة المدير',
+            'discount_type' => 'amount', 'discount_value' => 5, 'discount_reason' => 'موافقة المدير', 'discount_category' => 'administrative',
         ])->assertOk();
 
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
@@ -126,7 +126,7 @@ class CashCivilianDiscountTest extends TestCase
         $this->actingAs($costing)->getJson("/costing/queue/{$entity->id}")->assertJsonPath('case.can_grant_cash_discount', true);
 
         $this->actingAs($costing)->postJson("/costing/queue/{$entity->id}/confirm", [
-            'discount_type' => 'percent', 'discount_value' => 25, 'discount_reason' => 'قرار الإدارة',
+            'discount_type' => 'percent', 'discount_value' => 25, 'discount_reason' => 'قرار الإدارة', 'discount_category' => 'administrative',
         ])->assertOk();
 
         $quote = Quote::where('case_id', $entity->id)->firstOrFail();
@@ -145,7 +145,7 @@ class CashCivilianDiscountTest extends TestCase
         $this->assertGreaterThan(0, $gross);
 
         $this->actingAs($costing)->postJson("/costing/queue/{$military->id}/confirm", [
-            'discount_type' => 'percent', 'discount_value' => 25, 'discount_reason' => 'قرار الجهة',
+            'discount_type' => 'percent', 'discount_value' => 25, 'discount_reason' => 'قرار الجهة', 'discount_category' => 'administrative',
         ])->assertOk();
 
         $case = $military->fresh();
@@ -166,20 +166,20 @@ class CashCivilianDiscountTest extends TestCase
 
         $cash = $this->caseAtCosting($this->cashPatient());
         $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
-            'discount_type' => 'percent', 'discount_value' => 10,
+            'discount_type' => 'percent', 'discount_value' => 10, // من غير نوع خصم معتمد
         ])->assertStatus(422);
         $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
-            'discount_type' => 'percent', 'discount_value' => 100, 'discount_reason' => 'x',
+            'discount_type' => 'percent', 'discount_value' => 100, 'discount_reason' => 'x', 'discount_category' => 'administrative',
         ])->assertStatus(422);
         $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
-            'discount_type' => 'amount', 'discount_value' => 999999, 'discount_reason' => 'x',
+            'discount_type' => 'amount', 'discount_value' => 999999, 'discount_reason' => 'x', 'discount_category' => 'administrative',
         ])->assertStatus(422);
 
         $noPerm = User::create(['name' => 'c2', 'username' => 'costing2', 'password' => 'secret123', 'role_id' => $costing->role_id, 'status' => 'active']);
         $costing->role->permissions()->detach(Permission::where('slug', 'grant-cash-discount')->pluck('id'));
         $this->actingAs($noPerm->fresh(['role']))->getJson("/costing/queue/{$cash->id}")->assertJsonPath('case.can_grant_cash_discount', false);
         $this->actingAs($noPerm->fresh(['role']))->postJson("/costing/queue/{$cash->id}/confirm", [
-            'discount_type' => 'percent', 'discount_value' => 10, 'discount_reason' => 'x',
+            'discount_type' => 'percent', 'discount_value' => 10, 'discount_reason' => 'x', 'discount_category' => 'administrative',
         ])->assertForbidden();
 
         // بدون خصم: يمشي عادي والعرض بالإجمالي.
@@ -196,5 +196,44 @@ class CashCivilianDiscountTest extends TestCase
 
         $actions = app(PermissionCatalogService::class)->matrixPageData()['dashboards']['costing']['actions'];
         $this->assertContains('grant-cash-discount', $actions->pluck('slug')->all());
+    }
+
+    public function test_super_admin_discount_policy_controls_pathways_types_and_limits(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $this->actingAs($admin)->putJson('/admin/discount-policy', [
+            'pathways' => ['cash' => true, 'contracted' => false, 'military' => true],
+            'types' => [
+                ['label' => 'حالة إنسانية', 'allow_percent' => true, 'allow_amount' => false, 'max_percent' => 30],
+                ['label' => 'خصم إداري', 'allow_percent' => true, 'allow_amount' => true, 'max_percent' => null],
+            ],
+        ])->assertOk();
+
+        $policy = app(\App\Services\DiscountPolicyService::class)->policy();
+        $humanitarian = $policy['types'][0]['key'];
+        $costing = $this->costingUser(true);
+
+        // الجهات المتعاقدة مقفولة في السياسة → مفيش خصم ليها.
+        $entity = $this->caseAtCosting($this->civilianPatient($this->civilianCompany()));
+        $this->actingAs($costing)->getJson("/costing/queue/{$entity->id}")->assertJsonPath('case.can_grant_cash_discount', false);
+        $this->actingAs($costing)->postJson("/costing/queue/{$entity->id}/confirm", [
+            'discount_type' => 'percent', 'discount_value' => 10, 'discount_category' => $humanitarian,
+        ])->assertStatus(422);
+
+        $cash = $this->caseAtCosting($this->cashPatient());
+        $show = $this->actingAs($costing)->getJson("/costing/queue/{$cash->id}")->assertOk();
+        $this->assertCount(2, $show->json('case.discount_types'));
+        // فوق الحد الأقصى (30%) / بطريقة مش مسموحة (مبلغ) → مرفوض.
+        $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
+            'discount_type' => 'percent', 'discount_value' => 35, 'discount_category' => $humanitarian,
+        ])->assertStatus(422);
+        $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
+            'discount_type' => 'amount', 'discount_value' => 5, 'discount_category' => $humanitarian,
+        ])->assertStatus(422);
+        // داخل الحد ومن غير ملاحظة → يمشي، والسبب = اسم النوع.
+        $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
+            'discount_type' => 'percent', 'discount_value' => 30, 'discount_category' => $humanitarian,
+        ])->assertOk();
+        $this->assertSame('حالة إنسانية', Quote::where('case_id', $cash->id)->value('discount_reason'));
     }
 }

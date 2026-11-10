@@ -141,6 +141,7 @@ class CostingController extends Controller
             'discount_type' => ['nullable', 'in:percent,amount'],
             'discount_value' => ['nullable', 'numeric', 'min:0'],
             'discount_reason' => ['nullable', 'string', 'max:255'],
+            'discount_category' => ['nullable', 'string', 'max:64'],
         ]);
 
         $discount = null;
@@ -150,6 +151,7 @@ class CostingController extends Controller
                 'type' => $data['discount_type'] ?? 'amount',
                 'value' => (float) $data['discount_value'],
                 'reason' => (string) ($data['discount_reason'] ?? ''),
+                'category' => $data['discount_category'] ?? null,
             ];
         }
 
@@ -176,7 +178,8 @@ class CostingController extends Controller
             // خانة الخصم اليدوي تظهر للمدني الكاش فقط ولمن عنده الصلاحية.
             'is_cash_civilian' => $case->isCashCivilian(),
             // خصم إضافي اختياري لكل المسارات (كاش / تعاقد / عسكري) — بصلاحية «منح خصم».
-            'can_grant_cash_discount' => Gate::allows('grant-cash-discount'),
+            'can_grant_cash_discount' => Gate::allows('grant-cash-discount') && app(\App\Services\DiscountPolicyService::class)->allowsCase($case),
+            'discount_types' => app(\App\Services\DiscountPolicyService::class)->policy()['types'],
             'display_entity' => $case->displayEntity(),
             'tech_notes' => $case->resolvedTechNotes(),
             'computed_total' => $pricing ? (float) $pricing->computed_total : null,

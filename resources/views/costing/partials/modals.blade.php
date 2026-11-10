@@ -102,10 +102,15 @@
 
       {{-- خصم إضافي اختياري — لكل المسارات لمن عنده صلاحية «منح خصم إضافي». --}}
       <div id="cashDiscountBox" class="cash-discount-box" hidden>
-        <h4 style="margin:0 0 10px;font-size:15px;">🏷️ خصم إضافي (اختياري) — بيتخصم من سعر البيع ويتسجّل في الحسابات</h4>
+        <h4 style="margin:0 0 10px;font-size:15px;">🏷️ خصم إضافي (اختياري) — يُخصم من سعر البيع ويُسجَّل في الحسابات</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
+          <div class="form-group" style="margin:0;grid-column:span 2;">
+            <label for="cashDiscountCategory">نوع الخصم</label>
+            <select id="cashDiscountCategory" class="form-control"></select>
+            <small id="cashDiscountLimit" style="color:var(--text-muted);"></small>
+          </div>
           <div class="form-group" style="margin:0;">
-            <label for="cashDiscountType">نوع الخصم</label>
+            <label for="cashDiscountType">طريقة الخصم</label>
             <select id="cashDiscountType" class="form-control">
               <option value="percent">نسبة %</option>
               <option value="amount">مبلغ ج.م</option>
@@ -116,8 +121,8 @@
             <input type="number" id="cashDiscountValue" class="form-control" min="0" step="0.01" placeholder="0">
           </div>
           <div class="form-group" style="margin:0;grid-column:span 2;">
-            <label for="cashDiscountReason">سبب الخصم</label>
-            <input type="text" id="cashDiscountReason" class="form-control" maxlength="255" placeholder="مثال: حالة إنسانية / موافقة المدير">
+            <label for="cashDiscountReason">ملاحظة (اختيارية)</label>
+            <input type="text" id="cashDiscountReason" class="form-control" maxlength="255" placeholder="مثال: بموافقة المدير العام">
           </div>
         </div>
         <p id="cashDiscountPreview" style="margin:10px 0 0;font-weight:700;color:#0f766e;"></p>
