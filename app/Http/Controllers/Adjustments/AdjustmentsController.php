@@ -138,12 +138,12 @@ class AdjustmentsController extends Controller
     public function setItemKind(\Illuminate\Http\Request $request, CaseRecord $case, BomItem $bomItem): JsonResponse
     {
         $quick = (bool) $request->validate(['quick' => ['required', 'boolean']])['quick'];
-        abort_unless($case->isInAdjustments(), 422, 'تغيير نوع الصنف متاح والحالة في المعدلات بس.');
+        abort_unless($case->isInAdjustments(), 422, 'لا يمكن تغيير نوع الصنف إلا أثناء وجود الحالة في مرحلة المعدلات.');
         $bom = $case->bom()->with('items')->firstOrFail();
         abort_unless((int) $bomItem->bom_id === (int) $bom->id, 404);
 
         $stockItem = StockItem::findByOperationalCode((string) $bomItem->stock_item_code);
-        abort_unless($stockItem, 422, 'الصنف مش موجود في المخزن.');
+        abort_unless($stockItem, 422, 'الصنف غير موجود في المخزن.');
 
         if ((bool) $stockItem->is_quick_dispense !== $quick) {
             $stockItem->update(['is_quick_dispense' => $quick]);
@@ -158,7 +158,7 @@ class AdjustmentsController extends Controller
         }
 
         return response()->json([
-            'message' => $quick ? 'اتسجّل «صرف سريع» على الصنف في المخزن والكتالوج.' : 'اتسجّل «تصنيع» على الصنف في المخزن والكتالوج.',
+            'message' => $quick ? 'تم تصنيف الصنف «صرف سريع» في المخزن والكتالوج.' : 'تم تصنيف الصنف «تصنيع» في المخزن والكتالوج.',
             'bom' => [
                 'id' => $bom->id,
                 'items' => $this->mapBomItems($bom->fresh('items')->items)->values(),

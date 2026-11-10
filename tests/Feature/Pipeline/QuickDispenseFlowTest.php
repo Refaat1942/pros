@@ -30,7 +30,7 @@ class QuickDispenseFlowTest extends TestCase
         $this->assertSame(CaseRecord::STAGE_CASHIER, $case->fresh()->stage_key);
 
         $res = $this->payAtCashier($case);
-        $this->assertStringContainsString('صرف سريع', $res->json('message'));
+        $this->assertStringContainsString('الصرف السريع', $res->json('message'));
 
         $case->refresh();
         $this->assertSame(CaseRecord::STAGE_MANUFACTURING, $case->stage_key);

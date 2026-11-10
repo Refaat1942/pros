@@ -1,4 +1,4 @@
-{{-- «اعتمادات المخزن» — طلبات التوريد واستلام الوارد بانتظار أدمن المخازن (مشتركة بين الإدارة والمخزن). --}}
+{{-- «اعتمادات المخزن» — طلبات التوريد واستلام الوارد بانتظار مسؤول المخازن (مشتركة بين الإدارة والمخزن). --}}
 <div class="stock-approvals-desk">
     <div class="panel inventory-wrap" style="margin-bottom:16px;">
         <div class="panel-header">
@@ -18,7 +18,7 @@
             <h3>📥 استلام وارد بانتظار الاعتماد</h3>
             <span class="badge" id="saReceiptCount">0</span>
         </div>
-        <p style="margin:10px 16px 0;font-size:13px;color:var(--text-muted);">الرصيد ودفعة السعر ومديونية المورد بتتسجّل لحظة الاعتماد بس.</p>
+        <p style="margin:10px 16px 0;font-size:13px;color:var(--text-muted);">يُسجَّل الرصيد ودفعة السعر ومديونية المورد عند الاعتماد فقط.</p>
         <div class="stock-table-wrap" style="padding:0 16px 16px;">
             <table data-no-paginate class="stock-table" style="width:100%;">
                 <thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>المورد / الفاتورة</th><th>طلب توريد</th><th>استلمه</th><th style="width:190px;">إجراء</th></tr></thead>
@@ -31,7 +31,7 @@
             <h3>🔁 تبديل أصناف مع المورد بانتظار الاعتماد</h3>
             <span class="badge" id="saSwapCount">0</span>
         </div>
-        <p style="margin:10px 16px 0;font-size:13px;color:var(--text-muted);">عند الاعتماد: الصنف الخارج يتخصم بتكلفته الفعلية، والبديل يتضاف بقيمة الخارج + فرق السعر (ولو جديد يتعمل في الكتالوج). مديونية المورد = فرق السعر بس.</p>
+        <p style="margin:10px 16px 0;font-size:13px;color:var(--text-muted);">عند الاعتماد يُخصم الصنف الخارج بتكلفته الفعلية، ويُضاف البديل بقيمة الخارج مضافاً إليها فرق السعر (وإن كان جديداً يُنشأ في الكتالوج). مديونية المورد تساوي فرق السعر فقط.</p>
         <div class="stock-table-wrap" style="padding:0 16px 16px;">
             <table data-no-paginate class="stock-table" style="width:100%;">
                 <thead><tr><th>رقم التبديل</th><th>الخارج من مخزوننا</th><th>البديل الداخل</th><th>فرق السعر</th><th>المورد</th><th>طلبه</th><th style="width:190px;">إجراء</th></tr></thead>
@@ -59,7 +59,7 @@
             var reason = window.prompt('سبب الرفض:');
             if (!reason || !reason.trim()) return;
             body.reason = reason.trim();
-        } else if (!window.confirm(kind === 'receipts' ? 'اعتماد الاستلام وإضافة الرصيد؟' : (kind === 'swaps' ? 'اعتماد التبديل؟ هيتخصم الصنف الخارج ويتضاف البديل للمخزون.' : 'اعتماد طلب التوريد؟'))) {
+        } else if (!window.confirm(kind === 'receipts' ? 'اعتماد الاستلام وإضافة الرصيد؟' : (kind === 'swaps' ? 'اعتماد التبديل؟ سيُخصم الصنف الخارج ويُضاف البديل إلى المخزون.' : 'اعتماد طلب التوريد؟'))) {
             return;
         }
         post(base + '/' + kind + '/' + id + '/' + decision, body)
@@ -67,7 +67,7 @@
             .catch(function (err) { say((err && err.message) || 'تعذّر التنفيذ', false); });
     }
     function buttons(kind, id, allowed) {
-        if (!allowed) return '<span style="font-size:12px;color:var(--text-muted);">بانتظار أدمن المخازن</span>';
+        if (!allowed) return '<span style="font-size:12px;color:var(--text-muted);">بانتظار مسؤول المخازن</span>';
         return '<button type="button" class="btn-action success" data-act="approve" data-kind="' + kind + '" data-id="' + id + '">✓ اعتماد</button> ' +
             '<button type="button" class="btn-action danger" data-act="reject" data-kind="' + kind + '" data-id="' + id + '">✕ رفض</button>';
     }

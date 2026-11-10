@@ -9,7 +9,7 @@
     <div class="panel">
         <div class="panel-header">
             <h3>⚙️ إعدادات التكاليف الإضافية</h3>
-            <span class="badge" id="costingSettingsSumBadge" title="كل بند نسبة مستقلة من تكلفة المواد — مش لازم المجموع 100%">مجموع النسب {{ rtrim(rtrim(number_format((float) $ratesSum, 2, '.', ''), '0'), '.') }}%</span>
+            <span class="badge" id="costingSettingsSumBadge" title="كل بند نسبة مستقلة من تكلفة المواد، ولا يُشترط أن يساوي المجموع 100%">مجموع النسب {{ rtrim(rtrim(number_format((float) $ratesSum, 2, '.', ''), '0'), '.') }}%</span>
         </div>
 
 

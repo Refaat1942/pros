@@ -54,7 +54,7 @@ class SupplyRequestController extends Controller
 
         return response()->json([
             'message' => sprintf('تم تسجيل طلب التوريد %s (%d صنف)', $supplyRequest->request_no, $supplyRequest->lines->count())
-                .($supplyRequest->isApproved() ? '.' : ' — بانتظار اعتماد أدمن المخازن.'),
+                .($supplyRequest->isApproved() ? '.' : ' — بانتظار اعتماد مسؤول المخازن.'),
             'pending_approval' => ! $supplyRequest->isApproved(),
             'request_no' => $supplyRequest->request_no,
             'lines' => $supplyRequest->lines->map(fn ($line) => $this->supplyRequestService->formatLine($line))->values(),
@@ -71,7 +71,7 @@ class SupplyRequestController extends Controller
         $approved = $line->supplyRequest?->isApproved() ?? true;
 
         return response()->json([
-            'message' => $approved ? 'تم تسجيل طلب التوريد.' : 'تم تسجيل طلب التوريد — بانتظار اعتماد أدمن المخازن.',
+            'message' => $approved ? 'تم تسجيل طلب التوريد.' : 'تم تسجيل طلب التوريد — بانتظار اعتماد مسؤول المخازن.',
             'pending_approval' => ! $approved,
             'line' => $this->supplyRequestService->formatLine($line),
         ], 201);

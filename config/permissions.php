@@ -56,15 +56,15 @@ return [
             'dashboard' => 'cashier',
         ],
         'approve-supply-requests' => [
-            'label_ar' => 'اعتماد طلبات التوريد (أدمن المخازن)',
+            'label_ar' => 'اعتماد طلبات التوريد (مسؤول المخازن)',
             'dashboard' => 'technical',
         ],
         'approve-stock-receipts' => [
-            'label_ar' => 'اعتماد استلام الوارد — إضافة الرصيد (أدمن المخازن)',
+            'label_ar' => 'اعتماد استلام الوارد — إضافة الرصيد (مسؤول المخازن)',
             'dashboard' => 'technical',
         ],
         'manage-item-swaps' => [
-            'label_ar' => 'تبديل صنف مع المورد — طلب واعتماد (أدمن المخازن)',
+            'label_ar' => 'تبديل صنف مع المورد — طلب واعتماد (مسؤول المخازن)',
             'dashboard' => 'technical',
         ],
         'grant-cash-discount' => [

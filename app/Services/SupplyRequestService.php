@@ -30,7 +30,7 @@ class SupplyRequestService
      */
     public function createRequest(array $lines, User $user, ?string $notes = null): SupplyRequest
     {
-        // من غير صلاحية «اعتماد طلبات التوريد» الطلب يفضل بانتظار اعتماد أدمن المخازن.
+        // من غير صلاحية «اعتماد طلبات التوريد» الطلب يفضل بانتظار اعتماد مسؤول المخازن.
         $needsApproval = app(StockApprovalService::class)->supplyNeedsApproval($user);
 
         $request = DB::transaction(function () use ($lines, $user, $notes, $needsApproval) {

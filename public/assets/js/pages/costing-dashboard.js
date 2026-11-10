@@ -304,7 +304,7 @@
             var head = '';
             if (both && quick !== prevQuick) {
               head = '<tr><td colspan="6" style="background:' + (quick ? '#ecfdf5' : '#f8fafc') + ';font-weight:700;padding:8px 10px;">' +
-                (quick ? '🩼 منتجات الصرف السريع — ربح مباشر بدون تكلفة تشغيل' : '🏭 مواد التصنيع — عليها تكلفة تشغيل') + '</td></tr>';
+                (quick ? '🩼 منتجات الصرف السريع — ربح مباشر بدون تكلفة تشغيل' : '🏭 مواد التصنيع — تُحمَّل بتكلفة التشغيل') + '</td></tr>';
             }
             prevQuick = quick;
             var badge = quick

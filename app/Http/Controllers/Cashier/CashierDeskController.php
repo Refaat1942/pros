@@ -68,7 +68,7 @@ class CashierDeskController extends Controller
 
         $quickToWarehouse = $result['fully_paid'] && $case->fresh()?->stage_key === CaseRecord::STAGE_MANUFACTURING;
         $message = $quickToWarehouse
-            ? 'تم تأكيد استلام المبلغ بالكامل — منتجات صرف سريع: الحالة اتحولت للمخزن للصرف والتسليم على طول (بدون قسم الإنتاج).'
+            ? 'تم تأكيد استلام المبلغ بالكامل — يقتصر الطلب على منتجات الصرف السريع، وقد حُوِّلت الحالة إلى المخزن للصرف والتسليم المباشر دون المرور بقسم الإنتاج.'
             : ($result['fully_paid']
             ? 'تم تأكيد استلام المبلغ بالكامل — أُعيدت الحالة لمكتب التشغيل لاعتماد إصدار أمر الشغل.'
             : 'تم تسجيل دفعة جزئية — المتبقي '.number_format($result['remaining'], 2).' ج.م على المريض.');

@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-/** «اعتمادات المخزن» — طلبات التوريد واستلام الوارد بانتظار أدمن المخازن. */
+/** «اعتمادات المخزن» — طلبات التوريد واستلام الوارد بانتظار مسؤول المخازن. */
 class StockApprovalController extends Controller
 {
     public function __construct(
@@ -83,7 +83,7 @@ class StockApprovalController extends Controller
         $swap = $this->swaps->request($data, Auth::user());
 
         return response()->json([
-            'message' => "تم تسجيل طلب التبديل {$swap->swap_no} — بانتظار اعتماد أدمن المخازن (لسه ماتخصمش ولا اتضاف حاجة).",
+            'message' => "تم تسجيل طلب التبديل {$swap->swap_no} — بانتظار اعتماد مسؤول المخازن، ولن يُجرى أي خصم أو إضافة قبل الاعتماد.",
             'swap_no' => $swap->swap_no,
         ], 201);
     }
@@ -92,7 +92,7 @@ class StockApprovalController extends Controller
     {
         $swap = $this->swaps->approve($swapRequest, Auth::user());
 
-        return response()->json(['message' => "تم اعتماد التبديل {$swap->swap_no}: اتخصم «{$swap->outItem?->name}» واتضاف «{$swap->inItem?->name}» للمخزون."]);
+        return response()->json(['message' => "تم اعتماد التبديل {$swap->swap_no}: خُصم «{$swap->outItem?->name}» من المخزون وأُضيف «{$swap->inItem?->name}»."]);
     }
 
     public function rejectSwap(Request $request, StockSwapRequest $swapRequest): JsonResponse

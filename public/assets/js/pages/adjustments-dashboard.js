@@ -483,7 +483,7 @@
       return ' <span class="badge" style="' + style + 'font-size:11px;">' + label + '</span>';
     }
     return ' <button type="button" class="badge adj-kind-toggle" data-item-id="' + esc(it.id) + '" data-quick="' + (quick ? '1' : '0') + '"' +
-      ' title="اضغط للتغيير إلى «' + (quick ? 'تصنيع' : 'صرف سريع') + '» — بيتسجّل في المخزن والكتالوج"' +
+      ' title="اضغط للتغيير إلى «' + (quick ? 'تصنيع' : 'صرف سريع') + '» — يُحفظ التصنيف في المخزن والكتالوج"' +
       ' style="' + style + 'font-size:11px;border:1px dashed currentColor;cursor:pointer;">' + label + ' ⇄</button>';
   }
 
@@ -515,7 +515,7 @@
 
   function kindHeaderRow(quick, colspan) {
     return '<tr class="adj-kind-group"><td colspan="' + colspan + '" style="background:' + (quick ? '#ecfdf5' : '#f8fafc') +
-      ';font-weight:700;padding:8px 10px;">' + (quick ? '🩼 منتجات الصرف السريع — بتتصرف من المخزن مباشرة' : '🏭 مواد التصنيع — عليها تكلفة تشغيل') + '</td></tr>';
+      ';font-weight:700;padding:8px 10px;">' + (quick ? '🩼 منتجات الصرف السريع — تُصرف من المخزن مباشرة' : '🏭 مواد التصنيع — تُحمَّل بتكلفة التشغيل') + '</td></tr>';
   }
 
   function renderSpecBlock() {
@@ -1041,7 +1041,7 @@
       }).join('، ');
       return '<div class="adj-group-suggestion" data-idx="' + idx + '">' +
         '<div class="adj-group-suggestion__text">💡 <strong>' + names + '</strong>' +
-          '<span> — اتضافوا مع بعض في ' + esc(s.case_count) + ' حالات. نعملهم مجموعة؟</span></div>' +
+          '<span> — أُضيفت معاً في ' + esc(s.case_count) + ' حالات. هل تريد حفظها كمجموعة؟</span></div>' +
         '<div class="adj-group-suggestion__actions">' +
           '<button type="button" class="btn-action success btn-accept-adj-group-suggestion">✓ نعم</button>' +
           '<button type="button" class="btn-action btn-dismiss-adj-group-suggestion">✕ لا</button>' +
@@ -1081,7 +1081,7 @@
     openGroupsManager(null);
     startNewGroupEditor();
     $('adjGroupName').value = s.suggested_name || '';
-    $('adjGroupNotes').value = 'اقتراح تلقائي — اتضافت مع بعض في ' + s.case_count + ' حالات';
+    $('adjGroupNotes').value = 'اقتراح تلقائي — أُضيفت معاً في ' + s.case_count + ' حالات';
     groupEditorLines = (s.items || []).map(function (item) {
       return {
         stock_item_code: item.code,

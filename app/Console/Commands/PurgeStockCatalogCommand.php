@@ -39,7 +39,7 @@ class PurgeStockCatalogCommand extends Command
 
         $counts = $purge->purge();
 
-        $this->info('تم مسح كatalog الأصناف.');
+        $this->info('تم مسح كتالوج الأصناف.');
         $this->table(
             ['الجدول', 'عدد المحذوف'],
             collect($counts)->map(fn (int $count, string $key) => [$key, $count])->values()->all(),

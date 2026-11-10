@@ -192,7 +192,7 @@ class CashierPaymentService
             report($e);
             AuditService::log(
                 action: 'skip',
-                description: "صرف سريع: تعذّر التحويل التلقائي للمخزن — {$case->case_no} — يكمل من مكتب التشغيل ({$e->getMessage()})",
+                description: "صرف سريع: تعذّر التحويل التلقائي للمخزن — {$case->case_no} — تُستكمل من مكتب التشغيل ({$e->getMessage()})",
                 tag: 'operations',
             );
         }

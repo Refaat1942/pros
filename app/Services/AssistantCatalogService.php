@@ -46,7 +46,7 @@ class AssistantCatalogService
                 $title = trim((string) ($page['title'] ?? $label));
                 $assistant = is_array($page['assistant'] ?? null) ? $page['assistant'] : [];
 
-                $defaultAnswer = "صفحة «{$label}» في لوحة {$dashLabel}. افتحها من القائمة الجانبية. لو محتاج خطوات تفصيلية، اسأل باسم المهمة (مثلاً: صرف مواد، تسليم، عرض سعر).";
+                $defaultAnswer = "صفحة «{$label}» في لوحة {$dashLabel}. افتحها من القائمة الجانبية. للحصول على خطوات تفصيلية، اسأل باسم المهمة (مثلاً: صرف مواد، تسليم، عرض سعر).";
                 $defaultSteps = [
                     "من القائمة الجانبية في لوحة {$dashLabel} اختار «{$label}».",
                     'نفّذ المطلوب في الشاشة ثم احفظ.',

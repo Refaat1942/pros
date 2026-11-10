@@ -589,7 +589,7 @@
       var chips = (s.items || []).map(function (i) {
         return '<span class="kit-suggestion__chip">' + esc(i.name) + ' ×' + esc(i.qty) + '</span>';
       }).join('');
-      var meta = 'اتعملت في ' + s.case_count + ' حالات' +
+      var meta = 'استُخدمت في ' + s.case_count + ' حالات' +
         (s.last_used_at ? ' — آخرها ' + esc(s.last_used_at) : '') +
         (s.spec_group_label ? ' — مجموعة: ' + esc(s.spec_group_label) : '');
       return '<div class="kit-suggestion" data-idx="' + idx + '">' +
@@ -640,7 +640,7 @@
       $('stockKitSpecGroup').value = s.spec_group;
       renderTemplateChips(s.spec_group);
     }
-    $('stockKitDescription').value = 'اقتراح تلقائي — اتعملت في ' + s.case_count + ' حالات';
+    $('stockKitDescription').value = 'اقتراح تلقائي — استُخدمت في ' + s.case_count + ' حالات';
     $('stockKitModalSubtitle').textContent = '💡 من اقتراحات التجميع التلقائي — راجع المكوّنات والكميات ثم احفظ';
     selectedComponents = (s.items || []).map(function (item) {
       return {

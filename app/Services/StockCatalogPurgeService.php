@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * مسح كatalog الأصناف بالكامل — للاستعداد لرفع/import بيانات جديدة.
+ * مسح كتالوج الأصناف بالكامل — للاستعداد لرفع/import بيانات جديدة.
  */
 class StockCatalogPurgeService
 {
@@ -47,7 +47,7 @@ class StockCatalogPurgeService
 
             AuditService::log(
                 action: 'purge',
-                description: 'مسح كatalog الأصناف بالكامل — استعداد لرفع بيانات جديدة',
+                description: 'مسح كتالوج الأصناف بالكامل — استعداد لرفع بيانات جديدة',
                 tag: 'admin',
             );
         });
