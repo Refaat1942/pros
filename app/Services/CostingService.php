@@ -265,6 +265,11 @@ class CostingService
         }
 
         $isPercent = ($input['type'] ?? 'amount') === 'percent';
+        // نوع بنسبة ثابتة: النسبة دايماً قيمته المحددة.
+        if (($type['fixed_percent'] ?? null) !== null) {
+            $isPercent = true;
+            $value = (float) $type['fixed_percent'];
+        }
         if ($isPercent && ! $type['allow_percent']) {
             abort(422, 'نوع الخصم «'.$type['label'].'» لا يُطبَّق كنسبة مئوية.');
         }

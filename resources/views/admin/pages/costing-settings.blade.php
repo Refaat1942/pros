@@ -72,11 +72,11 @@
             </div>
             <table data-no-paginate class="stock-table" style="width:100%;">
                 <thead>
-                    <tr><th>نوع الخصم</th><th style="width:110px;">نسبة مئوية</th><th style="width:110px;">مبلغ ثابت</th><th style="width:150px;">الحد الأقصى (% من السعر)</th><th style="width:60px;"></th></tr>
+                    <tr><th>نوع الخصم</th><th style="width:130px;">نسبة ثابتة %</th><th style="width:110px;">نسبة مئوية</th><th style="width:110px;">مبلغ ثابت</th><th style="width:150px;">الحد الأقصى (% من السعر)</th><th style="width:60px;"></th></tr>
                 </thead>
                 <tbody id="discountTypesBody"></tbody>
             </table>
-            <p style="margin:10px 0 0;font-size:12px;color:var(--text-muted);">اترك «الحد الأقصى» فارغاً لعدم تقييد النسبة. يُطبَّق الخصم على سعر البيع ويُسجَّل في عرض السعر والفاتورة ومديونية الجهة.</p>
+            <p style="margin:10px 0 0;font-size:12px;color:var(--text-muted);">«نسبة ثابتة»: الخصم يُطبَّق بهذه النسبة تحديداً (مثل خصم 15% وخصم 25% في حسبة اللائحة). اترك «الحد الأقصى» فارغاً لعدم تقييد النسبة. يُطبَّق الخصم على سعر البيع ويُسجَّل في عرض السعر والفاتورة ومديونية الجهة.</p>
             <div id="discountPolicyError" class="costing-settings-error" style="display:none;"></div>
             <div class="costing-settings-actions">
                 <button type="button" class="btn-action success" id="btnSaveDiscountPolicy">💾 حفظ سياسة الخصومات</button>
@@ -99,6 +99,7 @@
                 allow_percent: tr.querySelector('.dt-percent').checked,
                 allow_amount: tr.querySelector('.dt-amount').checked,
                 max_percent: tr.querySelector('.dt-max').value === '' ? null : parseFloat(tr.querySelector('.dt-max').value),
+                fixed_percent: tr.querySelector('.dt-fixed').value === '' ? null : parseFloat(tr.querySelector('.dt-fixed').value),
             };
         });
         return types;
@@ -107,6 +108,7 @@
         body.innerHTML = types.map(function (t, i) {
             return '<tr data-key="' + esc(t.key) + '">' +
                 '<td><input type="text" class="form-control dt-label" maxlength="100" value="' + esc(t.label) + '" placeholder="مثال: حالة إنسانية"></td>' +
+                '<td><input type="number" class="form-control dt-fixed" min="0.01" max="99.99" step="0.01" value="' + (t.fixed_percent == null ? '' : esc(t.fixed_percent)) + '" placeholder="حرة"></td>' +
                 '<td style="text-align:center;"><input type="checkbox" class="dt-percent"' + (t.allow_percent ? ' checked' : '') + '></td>' +
                 '<td style="text-align:center;"><input type="checkbox" class="dt-amount"' + (t.allow_amount ? ' checked' : '') + '></td>' +
                 '<td><input type="number" class="form-control dt-max" min="0.01" max="99.99" step="0.01" value="' + (t.max_percent == null ? '' : esc(t.max_percent)) + '" placeholder="بدون حد"></td>' +
@@ -118,7 +120,7 @@
     }
     render();
     document.getElementById('btnAddDiscountType').addEventListener('click', function () {
-        readRows(); types.push({ key: '', label: '', allow_percent: true, allow_amount: true, max_percent: null }); render();
+        readRows(); types.push({ key: '', label: '', allow_percent: true, allow_amount: true, max_percent: null, fixed_percent: null }); render();
     });
     document.getElementById('btnSaveDiscountPolicy').addEventListener('click', function () {
         var err = document.getElementById('discountPolicyError');

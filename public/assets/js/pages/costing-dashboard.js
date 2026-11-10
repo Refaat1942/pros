@@ -338,6 +338,7 @@
   }
 
   function discountAmount() {
+    if (!currentDiscountType()) return 0;
     var v = parseFloat(($('cashDiscountValue') || {}).value || '0') || 0;
     if (v <= 0) return 0;
     var isPct = (($('cashDiscountType') || {}).value || 'percent') === 'percent';
@@ -390,15 +391,33 @@
   function syncDiscountTypeOptions() {
     var t = currentDiscountType();
     var sel = $('cashDiscountType');
-    if (!sel || !t) return;
+    if (!sel) return;
+    if (!t) {
+      // «بدون خصم»: مفيش قيمة ولا حسبة خصم.
+      if ($('cashDiscountValue')) { $('cashDiscountValue').value = ''; $('cashDiscountValue').readOnly = true; $('cashDiscountValue').dataset.fixed = ''; }
+      if ($('cashDiscountLimit')) $('cashDiscountLimit').textContent = '';
+      updateDiscountPreview();
+      return;
+    }
     Array.prototype.forEach.call(sel.options, function (o) {
       o.disabled = (o.value === 'percent' && !t.allow_percent) || (o.value === 'amount' && !t.allow_amount);
     });
     if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) {
       sel.value = t.allow_percent ? 'percent' : 'amount';
     }
+    // نوع بنسبة ثابتة (خصم 15% / 25%): القيمة بتتملى لوحدها ومتتغيرش.
+    var valueInput = $('cashDiscountValue');
+    var fixed = t.fixed_percent != null && t.fixed_percent !== '';
+    if (valueInput) {
+      valueInput.readOnly = fixed;
+      if (fixed) { sel.value = 'percent'; valueInput.value = t.fixed_percent; }
+      else if (valueInput.dataset.fixed === '1') { valueInput.value = ''; }
+      valueInput.dataset.fixed = fixed ? '1' : '';
+    }
     if ($('cashDiscountLimit')) {
-      $('cashDiscountLimit').textContent = t.max_percent ? ('الحد الأقصى: ' + t.max_percent + '% من سعر البيع') : '';
+      $('cashDiscountLimit').textContent = fixed
+        ? ('نسبة ثابتة: ' + t.fixed_percent + '% من سعر البيع')
+        : (t.max_percent ? ('الحد الأقصى: ' + t.max_percent + '% من سعر البيع') : '');
     }
     updateDiscountPreview();
   }
@@ -409,7 +428,8 @@
     discountTypes = types || [];
     var cat = $('cashDiscountCategory');
     if (cat) {
-      cat.innerHTML = discountTypes.map(function (t) { return '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; }).join('');
+      cat.innerHTML = '<option value="">— بدون خصم —</option>' +
+        discountTypes.map(function (t) { return '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; }).join('');
     }
     box.hidden = !c.can_grant_cash_discount || !discountTypes.length;
     discountGross = Number(c.selling_price || c.computed_total || 0);
@@ -423,7 +443,7 @@
     var box = $('cashDiscountBox');
     if (!box || box.hidden) return {};
     var v = parseFloat(($('cashDiscountValue') || {}).value || '0') || 0;
-    if (v <= 0) return {};
+    if (v <= 0 || !currentDiscountType()) return {};
     return {
       discount_type: ($('cashDiscountType') || {}).value || 'percent',
       discount_value: v,

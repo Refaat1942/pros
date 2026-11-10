@@ -236,4 +236,22 @@ class CashCivilianDiscountTest extends TestCase
         ])->assertOk();
         $this->assertSame('حالة إنسانية', Quote::where('case_id', $cash->id)->value('discount_reason'));
     }
+
+    public function test_sheet_fixed_discounts_15_and_25_are_available_by_default(): void
+    {
+        $types = collect(app(\App\Services\DiscountPolicyService::class)->policy()['types'])->keyBy('key');
+        $this->assertEquals(15.0, $types['regulation_15']['fixed_percent']);
+        $this->assertEquals(25.0, $types['regulation_25']['fixed_percent']);
+
+        $costing = $this->costingUser(true);
+        $cash = $this->caseAtCosting($this->cashPatient());
+        // النسبة الثابتة بتتطبق بقيمتها مهما اتبعت قيمة تانية.
+        $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
+            'discount_type' => 'amount', 'discount_value' => 1, 'discount_category' => 'regulation_25',
+        ])->assertOk();
+        $quote = Quote::where('case_id', $cash->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $quote->gross_total * 0.25, (float) $quote->discount_amount, 0.01);
+        $this->assertEquals(25.0, (float) $quote->discount_percent);
+        $this->assertSame('خصم 25%', $quote->discount_reason);
+    }
 }
