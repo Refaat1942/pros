@@ -175,7 +175,8 @@ class CostingController extends Controller
             'pathway_label' => $case->isMilitary() ? 'عسكري' : 'مدني',
             // خانة الخصم اليدوي تظهر للمدني الكاش فقط ولمن عنده الصلاحية.
             'is_cash_civilian' => $case->isCashCivilian(),
-            'can_grant_cash_discount' => $case->isCashCivilian() && Gate::allows('grant-cash-discount'),
+            // خصم إضافي اختياري لكل المسارات (كاش / تعاقد / عسكري) — بصلاحية «منح خصم».
+            'can_grant_cash_discount' => Gate::allows('grant-cash-discount'),
             'display_entity' => $case->displayEntity(),
             'tech_notes' => $case->resolvedTechNotes(),
             'computed_total' => $pricing ? (float) $pricing->computed_total : null,

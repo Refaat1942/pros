@@ -20,7 +20,7 @@ use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
 /**
- * خصم يدوي عند الاعتماد — للعميل المدني الكاش فقط، بصلاحية، بسبب، ويظهر في العرض والفاتورة
+ * خصم إضافي عند الاعتماد — كاش / تعاقد / عسكري، بصلاحية، بسبب، ويظهر في العرض والفاتورة والمديونية
  * والخزنة تطلب الصافي.
  */
 class CashCivilianDiscountTest extends TestCase
@@ -119,21 +119,50 @@ class CashCivilianDiscountTest extends TestCase
         $this->assertMatchesRegularExpression('/<td class="t-label">الخصم<\/td>/u', $html);
     }
 
-    public function test_discount_is_refused_for_contracted_and_military_and_without_permission_or_reason(): void
+    public function test_contracted_discount_reduces_quote_before_contract_split(): void
     {
         $costing = $this->costingUser(true);
-
         $entity = $this->caseAtCosting($this->civilianPatient($this->civilianCompany()));
-        $this->actingAs($costing)->getJson("/costing/queue/{$entity->id}")->assertJsonPath('case.can_grant_cash_discount', false);
-        $this->actingAs($costing)->postJson("/costing/queue/{$entity->id}/confirm", [
-            'discount_type' => 'percent', 'discount_value' => 10, 'discount_reason' => 'x',
-        ])->assertStatus(422);
-        $this->assertSame(CaseRecord::STAGE_COST_CALC, $entity->fresh()->stage_key, 'لا يتغير شيء عند الرفض');
+        $this->actingAs($costing)->getJson("/costing/queue/{$entity->id}")->assertJsonPath('case.can_grant_cash_discount', true);
 
+        $this->actingAs($costing)->postJson("/costing/queue/{$entity->id}/confirm", [
+            'discount_type' => 'percent', 'discount_value' => 25, 'discount_reason' => 'قرار الإدارة',
+        ])->assertOk();
+
+        $quote = Quote::where('case_id', $entity->id)->firstOrFail();
+        $this->assertGreaterThan(0, (float) $quote->gross_total);
+        $this->assertEqualsWithDelta((float) $quote->gross_total * 0.25, (float) $quote->discount_amount, 0.01);
+        $this->assertEqualsWithDelta((float) $quote->gross_total - (float) $quote->discount_amount, (float) $quote->total, 0.01);
+        // تقسيم الجهة/المريض بيتحسب على الصافي بعد الخصم.
+        $this->assertEqualsWithDelta((float) $quote->total, (float) $entity->fresh()->quote_total, 0.01);
+    }
+
+    public function test_military_debt_is_sheet_price_after_discount(): void
+    {
+        $costing = $this->costingUser(true);
         $military = $this->caseAtCosting($this->militaryPatient($this->militaryCompany()));
+        $gross = (float) $this->actingAs($costing)->getJson("/costing/queue/{$military->id}")->assertOk()->json('costing.selling_price');
+        $this->assertGreaterThan(0, $gross);
+
         $this->actingAs($costing)->postJson("/costing/queue/{$military->id}/confirm", [
-            'discount_type' => 'amount', 'discount_value' => 10, 'discount_reason' => 'x',
-        ])->assertStatus(422);
+            'discount_type' => 'percent', 'discount_value' => 25, 'discount_reason' => 'قرار الجهة',
+        ])->assertOk();
+
+        $case = $military->fresh();
+        $net = round($gross - round($gross * 0.25, 2), 2);
+        $this->assertEqualsWithDelta($gross, (float) $case->costing_gross_price, 0.01);
+        $this->assertEqualsWithDelta($net, (float) $case->military_selling_price, 0.01);
+
+        if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
+            $case = app(\App\Services\OperationsService::class)->approve($case, 'اختبار');
+        }
+        // المديونية العسكرية = سعر الحسبة بعد الخصم (مش WAC).
+        $this->assertEqualsWithDelta($net, (float) $case->fresh()->total_cost, 0.01);
+    }
+
+    public function test_discount_needs_permission_reason_and_valid_amount(): void
+    {
+        $costing = $this->costingUser(true);
 
         $cash = $this->caseAtCosting($this->cashPatient());
         $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [

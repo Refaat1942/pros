@@ -100,9 +100,9 @@
         </div>
       </div>
 
-      {{-- خصم يدوي — يظهر للعميل المدني الكاش فقط ولمن عنده صلاحية «منح خصم للعميل المدني الكاش». --}}
+      {{-- خصم إضافي اختياري — لكل المسارات لمن عنده صلاحية «منح خصم إضافي». --}}
       <div id="cashDiscountBox" class="cash-discount-box" hidden>
-        <h4 style="margin:0 0 10px;font-size:15px;">🏷️ خصم للعميل الكاش (اختياري)</h4>
+        <h4 style="margin:0 0 10px;font-size:15px;">🏷️ خصم إضافي (اختياري) — بيتخصم من سعر البيع ويتسجّل في الحسابات</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
           <div class="form-group" style="margin:0;">
             <label for="cashDiscountType">نوع الخصم</label>

@@ -305,8 +305,11 @@ class ChecklistFeaturesTest extends TestCase
 
         $case = $this->operationsReadyCase($patient, ['RM-MIL']);
 
-        $this->assertEqualsWithDelta(300.0, (float) $case->military_selling_price, 0.01);
-        $this->assertEqualsWithDelta(200.0, (float) $case->military_markup_pct, 0.01);
+        // سعر العسكري = حسبة التكاليف (مواد + مكوّنات + ربح) — مش سعر المواد بس.
+        $sheetPrice = (float) $case->pricingRequest->selling_price;
+        $this->assertGreaterThan(300.0, $sheetPrice);
+        $this->assertEqualsWithDelta($sheetPrice, (float) $case->military_selling_price, 0.01);
+        $this->assertEqualsWithDelta(round(($sheetPrice - 100) / 100 * 100, 2), (float) $case->military_markup_pct, 0.01);
         $this->assertEqualsWithDelta(100.0, (float) $case->internal_cost, 0.01);
     }
 

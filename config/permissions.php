@@ -68,7 +68,7 @@ return [
             'dashboard' => 'technical',
         ],
         'grant-cash-discount' => [
-            'label_ar' => 'منح خصم للعميل المدني الكاش (عند الاعتماد)',
+            'label_ar' => 'منح خصم إضافي عند الاعتماد (كاش / تعاقد / عسكري)',
             'dashboard' => 'costing',
         ],
         'manage-inventory' => [

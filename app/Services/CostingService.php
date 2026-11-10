@@ -108,6 +108,14 @@ class CostingService
                 );
             }
 
+            // خصم إضافي اختياري (كاش / تعاقد / عسكري) — على سعر البيع حسب حسبة التكاليف.
+            $discount = $this->resolveCashDiscount($case, $quoteAmount, $cashDiscount);
+
+            // عسكري: مالوش عرض سعر — مديونية الجهة = سعر البيع − الخصم (يتسجّل على الحالة).
+            if ($case->isMilitary()) {
+                $this->applyMilitaryPrice($case, $quoteAmount, $discount, $confirmedBy);
+            }
+
             if ($case->needsServicesApproval()) {
                 $this->workflowService->advance($case, WorkflowEvent::ServicesApprovalRequired->value);
                 app(ServicesApprovalService::class)->openForCase($case);
@@ -125,8 +133,6 @@ class CostingService
 
                 return;
             }
-
-            $discount = $this->resolveCashDiscount($case, $quoteAmount, $cashDiscount);
 
             $this->workflowService->advance($case, WorkflowEvent::CostingCompleted->value);
 
@@ -203,6 +209,40 @@ class CostingService
      * @param  array{type?: string, value?: float|int|string, reason?: string|null}|null  $input
      * @return array{amount: float, percent: float|null, reason: string}|null
      */
+    /**
+     * سعر الحالة العسكرية حسب حسبة التكاليف (مواد + مكوّنات + ربح) ناقص الخصم الإضافي.
+     * عند اعتماد التشغيل: total_cost (مديونية الجهة) = هذا السعر بدل WAC.
+     *
+     * @param  array{amount: float, percent: ?float, reason: string}|null  $discount
+     */
+    private function applyMilitaryPrice(CaseRecord $case, float $gross, ?array $discount, ?string $confirmedBy): void
+    {
+        $gross = round(max(0, $gross), 2);
+        $net = round($gross - (float) ($discount['amount'] ?? 0), 2);
+        $cost = (float) $case->internal_cost;
+
+        CaseRecord::where('id', $case->id)->update([
+            'costing_gross_price' => $gross,
+            'costing_discount_amount' => (float) ($discount['amount'] ?? 0),
+            'costing_discount_percent' => $discount['percent'] ?? null,
+            'costing_discount_reason' => $discount['reason'] ?? null,
+            'military_selling_price' => $net,
+            'military_markup_pct' => $cost > 0 ? round((($net - $cost) / $cost) * 100, 2) : 0,
+        ]);
+
+        AuditService::log(
+            action: $discount ? 'discount' : 'confirm',
+            description: sprintf(
+                'سعر حالة عسكرية %s: %s ج.م%s',
+                $case->case_no,
+                number_format($net, 2),
+                $discount ? sprintf(' (قبل الخصم %s − خصم %s — السبب: %s)', number_format($gross, 2), number_format($discount['amount'], 2), $discount['reason']) : '',
+            ),
+            tag: 'pricing',
+            after: ['case_id' => $case->id, 'gross' => $gross, 'discount' => $discount, 'net' => $net, 'by' => $confirmedBy],
+        );
+    }
+
     private function resolveCashDiscount(CaseRecord $case, float $gross, ?array $input): ?array
     {
         $value = round((float) ($input['value'] ?? 0), 2);
@@ -210,8 +250,8 @@ class CostingService
             return null;
         }
 
-        if (! $case->isCashCivilian()) {
-            abort(422, 'الخصم اليدوي متاح للعميل المدني الكاش فقط.');
+        if ($gross <= 0) {
+            abort(422, 'مفيش سعر بيع للحالة — مينفعش خصم.');
         }
 
         $reason = trim((string) ($input['reason'] ?? ''));

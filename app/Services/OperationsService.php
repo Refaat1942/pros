@@ -144,7 +144,11 @@ class OperationsService
 
             // عسكري: التكلفة المعتمدة = التكلفة الداخلية (WAC) للمديونية السيادية.
             if ($case->isMilitary()) {
-                $case->update(['total_cost' => (float) $case->internal_cost]);
+                // حالات اتعتمدت بحسبة التكاليف الجديدة: المديونية = سعر البيع بعد الخصم.
+                // الحالات القديمة (من غير costing_gross_price) زي ما هي على WAC.
+                $case->update(['total_cost' => $case->costing_gross_price !== null
+                    ? (float) $case->military_selling_price
+                    : (float) $case->internal_cost]);
             } else {
                 $case->update([
                     'approval_date' => now()->toDateString(),
