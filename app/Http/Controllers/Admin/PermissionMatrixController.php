@@ -30,7 +30,7 @@ class PermissionMatrixController extends Controller
         if (! $actor?->isSuperAdmin()) {
             return redirect()
                 ->route('admin.permissions')
-                ->with('error', 'فقط حساب السوبر أدمن (superadmin) يمكنه حفظ مصفوفة الصلاحيات.');
+                ->with('error', 'فقط حساب مدير النظام يمكنه حفظ مصفوفة الصلاحيات.');
         }
 
         app(PermissionCatalogService::class)->syncToDatabase();

@@ -60,7 +60,7 @@ class DocumentTemplateSettingsTest extends TestCase
                 'quote' => [
                     'doc_title' => 'عرض سعر عام',
                     '_scopes' => [
-                        'cashier:*' => ['doc_title' => 'عرض سعر — الخزنة'],
+                        'cashier:*' => ['doc_title' => 'عرض سعر — الخزينة'],
                     ],
                 ],
             ], JSON_UNESCAPED_UNICODE)],
@@ -70,8 +70,8 @@ class DocumentTemplateSettingsTest extends TestCase
         $service = app(DocumentTemplateService::class);
 
         $this->assertSame('عرض سعر عام', $service->for('quote')['doc_title']);
-        $this->assertSame('عرض سعر — الخزنة', $service->for('quote', 'cashier', null)['doc_title']);
-        $this->assertSame('عرض سعر — الخزنة', $service->for('quote', 'cashier', 'cashier')['doc_title']);
+        $this->assertSame('عرض سعر — الخزينة', $service->for('quote', 'cashier', null)['doc_title']);
+        $this->assertSame('عرض سعر — الخزينة', $service->for('quote', 'cashier', 'cashier')['doc_title']);
     }
 
     public function test_scoped_template_update_persists_under_scope_key(): void

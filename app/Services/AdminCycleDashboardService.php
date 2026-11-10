@@ -79,7 +79,7 @@ class AdminCycleDashboardService
             [
                 'key' => 'cashier',
                 'icon' => '💵',
-                'label' => 'الخزنة',
+                'label' => 'الخزينة',
                 'hint' => 'بانتظار تحصيل الدفع النقدي',
                 'count' => $this->queues->cashierQueueCount($from, $to),
                 'color' => '#0e7490',

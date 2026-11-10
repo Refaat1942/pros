@@ -580,7 +580,7 @@
         @endif
         @if ($isInvoice && $doc['paid'] !== null)
             <tr>
-                <td class="t-label">المدفوع بالخزنة</td>
+                <td class="t-label">المدفوع بالخزينة</td>
                 <td class="t-value">ج.م. <span class="num">{{ QuotePrintPresenter::money((float) $doc['paid']) }}</span></td>
             </tr>
             <tr class="t-net">

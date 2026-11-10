@@ -72,9 +72,9 @@ class FinalInvoicePrintTest extends ProstheticTestCase
         $this->actingAs(CaseJourneyRunner::userFor('admin'))
             ->get("/admin/cases/{$case->id}/invoice?embed=1")
             ->assertOk()
-            ->assertSee('المدفوع بالخزنة', false)
+            ->assertSee('المدفوع بالخزينة', false)
             ->assertSee('المتبقي', false)
-            ->assertSee('المريض — نقداً بالخزنة', false)
+            ->assertSee('المريض — نقداً بالخزينة', false)
             // تصميم الكروت: سجل الدفعات، حالة السداد، والمبلغ بالحروف.
             ->assertSee('💳 الدفعات', false)
             ->assertSee((string) \App\Models\Payment::where('case_id', $case->id)->value('payment_no'), false)
@@ -90,7 +90,7 @@ class FinalInvoicePrintTest extends ProstheticTestCase
             ->get("/admin/cases/{$case->id}/invoice?embed=1")
             ->assertOk()
             ->assertSee('بدون تحصيل من المريض', false)
-            ->assertDontSee('المدفوع بالخزنة', false);
+            ->assertDontSee('المدفوع بالخزينة', false);
     }
 
     public function test_case_detail_points_delivered_cases_to_the_invoice(): void

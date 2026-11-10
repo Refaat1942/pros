@@ -67,7 +67,7 @@
                             }
                         @endphp
                         <select class="form-control" name="patient_classification" id="newPatientClassification" data-v-rules="required,select">
-                            <option value="cash" @selected($classification === 'cash')>💵 مدني — كاش</option>
+                            <option value="cash" @selected($classification === 'cash')>💵 مدني — نقدي</option>
                             <option value="entity" @selected($classification === 'entity')>🏢 جهات</option>
                             <option value="military" @selected($classification === 'military')>🪖 عسكري</option>
                         </select>
@@ -159,7 +159,7 @@
                     <div class="form-group" id="grpCashHint" style="display:{{ $classification === 'cash' ? '' : 'none' }};">
                         <label>الفوترة</label>
                         <p class="field-hint" style="font-size:13px;color:var(--text-muted);margin:0;padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
-                            💵 <strong>كاش</strong> — المريض يتحاسب نقداً على حسابه الشخصي.
+                            💵 <strong>نقدي</strong> — المريض يتحاسب نقداً على حسابه الشخصي.
                         </p>
                     </div>
                     <div class="form-group" id="grpVisitType">

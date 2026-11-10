@@ -277,7 +277,7 @@
         refreshList();
       })
       .catch(function (err) {
-        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر التسليم — تحقق من حالة BOM.';
+        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر التسليم — تحقق من حالة قائمة المواد.';
         showError(msg);
         setConfirmButtonsDisabled(false);
       });
@@ -334,7 +334,7 @@
             '<p class="font-bold text-slate-800">' + (c.patient && c.patient.name || '—') + '</p>' +
             '<p class="text-xs text-slate-500 mt-1">' + c.case_no + ' · ' + (c.work_order_no || '—') + '</p>' +
             '<p class="text-xs text-slate-400">' + (c.company_name || '—') + '</p>' + typeBadge + '</div>' +
-            '<span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">BOM تام</span></div></li>';
+            '<span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">قائمة المواد تامة</span></div></li>';
         }).join('');
 
         bindListEvents();

@@ -225,7 +225,7 @@ class AdminCaseDetailTest extends TestCase
             'company_name' => null,
             'quote_date' => now()->toDateString(),
             'status' => Quote::STATUS_ISSUED,
-            'status_label' => 'بانتظار الدفع في الخزنة',
+            'status_label' => 'بانتظار الدفع في الخزينة',
             'total' => 1000.00,
         ]);
 
@@ -240,14 +240,14 @@ class AdminCaseDetailTest extends TestCase
             'amount' => 1000.00,
             'method' => 'bank_transfer',
             'reference' => 'TRF-998877',
-            'received_by' => 'موظف الخزنة',
+            'received_by' => 'موظف الخزينة',
             'received_at' => now(),
         ]);
 
         $this->actingAs($admin)
             ->getJson('/admin/cases/'.$case->id.'/detail')
             ->assertOk()
-            ->assertJsonPath('quote.status_label', 'تم الدفع في الخزنة')
+            ->assertJsonPath('quote.status_label', 'تم الدفع في الخزينة')
             ->assertJsonPath('payment.method', 'bank_transfer')
             ->assertJsonPath('payment.method_label', 'تحويل على الحساب');
     }

@@ -93,7 +93,7 @@ class DeliveryService
         }
 
         if ($case->bom->stage !== Bom::STAGE_FINISHED) {
-            return 'BOM لم تُغلَق بعد — التصنيع غير مكتمل.';
+            return 'قائمة المواد لم تُغلَق بعد — التصنيع غير مكتمل.';
         }
 
         return 'الحالة غير جاهزة للتسليم.';

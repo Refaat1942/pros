@@ -11,7 +11,7 @@ use Tests\Support\ProstheticTestHelper;
 use Tests\TestCase;
 
 /**
- * C-1: منع التحصيل المزدوج في الخزنة.
+ * C-1: منع التحصيل المزدوج في الخزينة.
  *
  * لا يمكن محاكاة تزامن حقيقي على SQLite بذاكرة واحدة، لذا نتحقق من الضمانتين
  * القابلتين للاختبار:
@@ -39,7 +39,7 @@ class CashierPaymentConcurrencyTest extends TestCase
         $case = $this->cashierAwaitingCase();
         $service = app(CashierPaymentService::class);
 
-        // أول تأكيد كامل — ينجح ويحوّل الحالة خارج الخزنة.
+        // أول تأكيد كامل — ينجح ويحوّل الحالة خارج الخزينة.
         $first = $service->confirmPayment($case, ['method' => 'cash']);
         $this->assertTrue($first['fully_paid']);
         $this->assertSame(CaseRecord::STAGE_OPERATIONS, $case->fresh()->stage_key);

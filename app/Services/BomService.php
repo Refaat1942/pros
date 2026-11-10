@@ -59,7 +59,7 @@ class BomService
 
                 AuditService::log(
                     action: 'insufficient',
-                    description: "فشل فحص المخزون عند إنشاء BOM — الصنف: {$e->stockItemCode}",
+                    description: "فشل فحص المخزون عند إنشاء قائمة المواد — الصنف: {$e->stockItemCode}",
                     tag: 'pricing',
                     after: [
                         'pricing_request_id' => $e->pricingRequestId,
@@ -139,7 +139,7 @@ class BomService
 
             AuditService::log(
                 action: 'create',
-                description: "BOM خام من التوصيف — {$bom->bom_no}",
+                description: "قائمة مواد خام من التوصيف — {$bom->bom_no}",
                 tag: 'spec',
                 after: $bom->load('items')->only(['id', 'bom_no', 'case_id', 'stage']),
             );
@@ -287,7 +287,7 @@ class BomService
 
             AuditService::log(
                 action: 'update',
-                description: "تحديث بنود التوصيف في BOM — {$bom->bom_no}",
+                description: "تحديث بنود التوصيف في قائمة المواد — {$bom->bom_no}",
                 tag: 'spec',
                 after: [
                     'bom_id' => $bom->id,
@@ -429,7 +429,7 @@ class BomService
 
             AuditService::log(
                 action: 'update',
-                description: "تحديث بنود المعدلات في BOM — {$bom->bom_no}",
+                description: "تحديث بنود المعدلات في قائمة المواد — {$bom->bom_no}",
                 tag: 'spec',
                 after: ['bom_id' => $bom->id, 'items' => $items],
             );
@@ -587,7 +587,7 @@ class BomService
             }
 
             if (! $case->isMilitary() && empty($case->work_order_no)) {
-                abort(422, 'لا يمكن إنشاء BOM — أمر الشغل غير موجود (مسار مدني).');
+                abort(422, 'لا يمكن إنشاء قائمة المواد — أمر الشغل غير موجود (مسار مدني).');
             }
 
             if ($existing = Bom::where('case_id', $case->id)->first()) {
@@ -619,7 +619,7 @@ class BomService
 
             AuditService::log(
                 action: 'create',
-                description: "إنشاء BOM {$bom->bom_no}",
+                description: "إنشاء قائمة المواد {$bom->bom_no}",
                 tag: 'warehouse',
                 after: $bom->load('items')->toArray(),
             );
@@ -659,7 +659,7 @@ class BomService
 
         AuditService::log(
             action: 'update',
-            description: "تفعيل BOM خام للصرف — {$bom->bom_no}",
+            description: "تفعيل قائمة المواد (خام) للصرف — {$bom->bom_no}",
             tag: 'warehouse',
             after: ['bom_id' => $bom->id, 'stage' => $bom->stage],
         );
@@ -838,7 +838,7 @@ class BomService
         $bom->loadMissing(['items', 'caseRecord']);
 
         if ($bom->stage !== Bom::STAGE_RAW) {
-            abort(422, 'BOM ليست في مرحلة raw — لا يمكن الصرف.');
+            abort(422, 'قائمة المواد ليست في مرحلة raw — لا يمكن الصرف.');
         }
 
         $rawLines = $this->normalizeDispenseInput($dispenseInput);
@@ -906,7 +906,7 @@ class BomService
 
         foreach ($dispensedByCode as $code => $got) {
             if (! isset($expectedByCode[$code])) {
-                throw BarcodeDispenseMismatchException::forItem('باركود زائد لا يطابق بنود BOM');
+                throw BarcodeDispenseMismatchException::forItem('باركود زائد لا يطابق بنود قائمة المواد');
             }
         }
     }
@@ -1027,7 +1027,7 @@ class BomService
 
             AuditService::log(
                 action: 'dispense',
-                description: "صرف BOM بالباركود — {$bom->bom_no}",
+                description: "صرف قائمة المواد بالباركود — {$bom->bom_no}",
                 tag: 'warehouse',
                 before: $stockBefore,
                 after: $stockAfter,
@@ -1197,7 +1197,7 @@ class BomService
             $this->assertReleasedToWorkshop($case);
 
             if ($bom->stage !== Bom::STAGE_WIP) {
-                abort(422, 'BOM ليست تحت التشغيل — لا يمكن إتمام التصنيع.');
+                abort(422, 'قائمة المواد ليست تحت التشغيل — لا يمكن إتمام التصنيع.');
             }
 
             $case->update([
@@ -1218,7 +1218,7 @@ class BomService
             $bom = Bom::lockForUpdate()->with(['items', 'caseRecord'])->findOrFail($bom->id);
 
             if ($bom->stage !== Bom::STAGE_WIP) {
-                abort(422, 'BOM ليست في مرحلة wip — لا يمكن الإغلاق.');
+                abort(422, 'قائمة المواد ليست في مرحلة wip — لا يمكن الإغلاق.');
             }
 
             foreach ($bom->items as $item) {
@@ -1242,7 +1242,7 @@ class BomService
 
             AuditService::log(
                 action: 'finish',
-                description: "إغلاق BOM — تام — {$bom->bom_no}",
+                description: "إغلاق قائمة المواد — تام — {$bom->bom_no}",
                 tag: 'warehouse',
                 before: $before,
                 after: [

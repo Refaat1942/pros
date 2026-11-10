@@ -403,9 +403,9 @@ class AdminPatientJourneyService
                     $bom->released_at,
                     'manufacturing',
                     'التصنيع',
-                    'صرف خامات من المخزن — BOM '.($bom->bom_no ?? '—'),
+                    'صرف خامات من المخزن — قائمة المواد '.($bom->bom_no ?? '—'),
                     [
-                        'مرحلة BOM: '.$this->bomStageLabel($bom->stage),
+                        'مرحلة قائمة المواد: '.$this->bomStageLabel($bom->stage),
                         'مرحلة التصنيع: '.ManufacturingStage::labelFor($case->manufacturing_stage),
                     ],
                     null,

@@ -28,7 +28,7 @@ class StockDispenseRequestService
             $bom = Bom::lockForUpdate()->with(['caseRecord', 'items'])->findOrFail($bomId);
 
             if ($bom->stage !== Bom::STAGE_RAW) {
-                abort(422, 'BOM ليست جاهزة للصرف.');
+                abort(422, 'قائمة المواد ليست جاهزة للصرف.');
             }
 
             $case = $bom->caseRecord;
@@ -42,7 +42,7 @@ class StockDispenseRequestService
                 ->where('bom_id', $bom->id)
                 ->where('status', StockDispenseRequest::STATUS_PENDING)
                 ->exists()) {
-                abort(422, 'يوجد طلب صرف معلّق لهذه BOM.');
+                abort(422, 'يوجد طلب صرف معلّق لقائمة المواد هذه.');
             }
 
             $this->bomService->validateDispenseLines($bom, $dispensePayload);
@@ -60,7 +60,7 @@ class StockDispenseRequestService
 
             AuditService::log(
                 action: 'create',
-                description: "طلب صرف مخزني — {$case->case_no} — BOM {$bom->bom_no}",
+                description: "طلب صرف مخزني — {$case->case_no} — قائمة المواد {$bom->bom_no}",
                 tag: 'warehouse',
                 after: $request->only(['id', 'case_id', 'bom_id', 'status']),
             );

@@ -12,7 +12,7 @@ return [
         'adjustments' => ['label_ar' => 'لوحة المعدلات', 'icon' => '📏'],
         'costing' => ['label_ar' => 'لوحة الاعتماد', 'icon' => '✅'],
         'operations' => ['label_ar' => 'مكتب التشغيل', 'icon' => '🎯'],
-        'cashier' => ['label_ar' => 'الخزنة', 'icon' => '💵'],
+        'cashier' => ['label_ar' => 'الخزينة', 'icon' => '💵'],
         'workshop' => ['label_ar' => 'قسم الإنتاج', 'icon' => '🏭'],
         'technical' => ['label_ar' => 'لوحة المخزن', 'icon' => '📦'],
         'admin' => ['label_ar' => 'لوحة الإدارة', 'icon' => '⚙️'],
@@ -44,7 +44,7 @@ return [
             'dashboard' => 'admin',
         ],
         'super-admin' => [
-            'label_ar' => 'سوبر أدمن — صلاحية كاملة على النظام',
+            'label_ar' => 'مدير النظام — صلاحية كاملة على النظام',
             'dashboard' => 'admin',
         ],
         'approve-pricing' => [
@@ -52,7 +52,7 @@ return [
             'dashboard' => 'operations',
         ],
         'confirm-cash-payment' => [
-            'label_ar' => 'تأكيد استلام المبلغ في الخزنة',
+            'label_ar' => 'تأكيد استلام المبلغ في الخزينة',
             'dashboard' => 'cashier',
         ],
         'approve-supply-requests' => [
@@ -68,7 +68,7 @@ return [
             'dashboard' => 'technical',
         ],
         'grant-cash-discount' => [
-            'label_ar' => 'منح خصم إضافي عند الاعتماد (كاش / تعاقد / عسكري)',
+            'label_ar' => 'منح خصم إضافي عند الاعتماد (نقدي / تعاقد / عسكري)',
             'dashboard' => 'costing',
         ],
         'manage-inventory' => [

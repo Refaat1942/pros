@@ -208,7 +208,7 @@
           <span class="badge" id="returnsBadge">0</span>
         </div>
         <p style="padding:0 24px 12px;margin:0;color:var(--text-muted);font-size:13px;">
-          ارتجاع داخلي مرتبط بـ <strong>BOM وأمر التشغيل</strong> — كامل أو جزئي. متاح فقط أثناء «تحت التشغيل». لا يؤثر على مديونية الجهة.
+          ارتجاع داخلي مرتبط بـ <strong>قائمة المواد وأمر التشغيل</strong> — كامل أو جزئي. متاح فقط أثناء «تحت التشغيل». لا يؤثر على مديونية الجهة.
         </p>
         <div class="bom-summary" id="returnsSummary"></div>
         <div class="inventory-toolbar bom-toolbar">

@@ -50,7 +50,7 @@ class PricingService
             $bom = Bom::with('items')->where('case_id', $case->id)->first();
 
             if (! $bom || $bom->items->isEmpty()) {
-                abort(422, 'لا توجد قائمة مواد (BOM) لاحتساب تكلفتها.');
+                abort(422, 'لا توجد قائمة مواد لاحتساب تكلفتها.');
             }
 
             $doctor = MedicalRecord::where('case_id', $case->id)
@@ -100,7 +100,7 @@ class PricingService
         $bom = Bom::with('items')->where('case_id', $case->id)->first();
 
         if (! $bom || $bom->items->isEmpty()) {
-            abort(422, 'لا توجد قائمة مواد (BOM) لاحتساب تكلفتها.');
+            abort(422, 'لا توجد قائمة مواد لاحتساب تكلفتها.');
         }
 
         $request->items()->delete();

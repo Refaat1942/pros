@@ -140,7 +140,7 @@
         detailRow('المريض', '<strong>' + esc(note.patient_name || '—') + '</strong>') +
         detailRow('رقم الحالة', esc(note.case_no || note.order_ref || '—')) +
         detailRow('أمر التشغيل', '<span style="font-family:monospace;color:#0e7490;">' + esc(note.work_order_no || '—') + '</span>') +
-        detailRow('قائمة المواد (BOM)', esc(note.bom && note.bom.bom_no ? note.bom.bom_no : '—')) +
+        detailRow('قائمة المواد', esc(note.bom && note.bom.bom_no ? note.bom.bom_no : '—')) +
         detailRow('مرجع الطلب', esc(note.order_ref || '—')) +
         detailRow('الحالة', '<span class="badge ' + statusClass(note.status) + '">' + statusLabel(note.status) + '</span>') +
         detailRow('أرسله (التشغيل)', esc(note.created_by_name || note.created_by || '—')) +

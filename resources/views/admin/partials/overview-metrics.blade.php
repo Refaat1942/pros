@@ -31,7 +31,7 @@
                 </div>
                 <div class="report-bar-name">{{ $item['name'] }}</div>
             @empty
-                <p class="overview-empty-hint">لا توجد بنود BOM مسجّلة بعد.</p>
+                <p class="overview-empty-hint">لا توجد بنود قوائم مواد مسجّلة بعد.</p>
             @endforelse
         </div>
 

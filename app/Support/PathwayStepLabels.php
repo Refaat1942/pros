@@ -21,7 +21,7 @@ final class PathwayStepLabels
         'operations_release' => 'مكتب التشغيل — إصدار أمر صرف',
         'warehouse' => 'المخزن — صرف مواد',
         'workshop' => 'قسم الإنتاج — تصنيع',
-        'cashier' => 'الخزنة — تحصيل الدفع',
+        'cashier' => 'الخزينة — تحصيل الدفع',
         'delivery' => 'التسليم للمريض',
     ];
 

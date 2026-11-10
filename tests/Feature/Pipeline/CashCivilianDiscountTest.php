@@ -21,7 +21,7 @@ use Tests\TestCase;
 
 /**
  * خصم إضافي عند الاعتماد — كاش / تعاقد / عسكري، بصلاحية، بسبب، ويظهر في العرض والفاتورة والمديونية
- * والخزنة تطلب الصافي.
+ * والخزينة تطلب الصافي.
  */
 class CashCivilianDiscountTest extends TestCase
 {
@@ -79,7 +79,7 @@ class CashCivilianDiscountTest extends TestCase
         $this->assertSame(CaseRecord::STAGE_CASHIER, $case->fresh()->stage_key);
         $this->assertTrue(AuditLog::where('action', 'discount')->exists());
 
-        // الخزنة تطلب الصافي وتقبل دفعه كامل.
+        // الخزينة تطلب الصافي وتقبل دفعه كامل.
         $cashier = $this->userWithRole('cashier');
         $row = collect($this->actingAs($cashier)->getJson('/cashier/payments/list')->assertOk()->json('data'))
             ->firstWhere('id', $case->id);

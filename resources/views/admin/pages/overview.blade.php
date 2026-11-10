@@ -65,8 +65,8 @@
                 @if (isset($case_strip['awaiting_cashier']))
                     <button type="button" class="overview-case-link overview-case-link--cashier" data-goto-cases="awaiting_cashier">
                         <div class="overview-case-link__text">
-                            <strong>بانتظار الدفع النقدي — الخزنة</strong>
-                            <span class="overview-case-link__hint">مرضى الكاش — تحصيل المبلغ</span>
+                            <strong>بانتظار الدفع النقدي — الخزينة</strong>
+                            <span class="overview-case-link__hint">المرضى النقديون — تحصيل المبلغ</span>
                         </div>
                         <span id="overviewCashierCount" class="overview-case-link__count" data-server-rendered="1">{{ $case_strip['awaiting_cashier'] }}</span>
                     </button>

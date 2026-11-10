@@ -15,9 +15,9 @@
         <div>
             <h3 class="perm-page-title">🛡️ إدارة الصلاحيات</h3>
             <p class="perm-page-subtitle">
-                <strong>سوبر أدمن</strong> يتحكم في كل شيء ويضبط من هنا ما يراه كل دور —
+                <strong>مدير النظام</strong> يتحكم في كل شيء ويضبط من هنا ما يراه كل دور —
                 بما في ذلك حسابات «مسؤول النظام (محدود)» التي تُنشأ من صفحة الموظفين.
-                السوبر أدمن نفسه لا يظهر في المصفوفة لأنه يملك كل الصلاحيات تلقائياً.
+                مدير النظام نفسه لا يظهر في المصفوفة لأنه يملك كل الصلاحيات تلقائياً.
                 <br>
             </p>
         </div>
@@ -57,7 +57,7 @@
         مسجّل كـ <strong>{{ auth()->user()?->username }}</strong>
         — دور: <code>{{ auth()->user()?->role?->slug ?? '—' }}</code>
         @if (auth()->user()?->isSuperAdmin())
-            <span class="perm-session-ok">✓ سوبر أدمن — الحفظ مفعّل</span>
+            <span class="perm-session-ok">✓ مدير النظام — الحفظ مفعّل</span>
         @else
             <span class="perm-session-warn">✗ ليس super_admin — الحفظ معطّل</span>
         @endif
@@ -214,7 +214,7 @@
                 <button type="submit" class="btn-action success perm-save-btn">💾 حفظ الصلاحيات</button>
             @else
                 <button type="button" class="btn-action perm-save-btn" disabled title="متاح لـ superadmin فقط">
-                    💾 حفظ الصلاحيات (سوبر أدمن فقط)
+                    💾 حفظ الصلاحيات (مدير النظام فقط)
                 </button>
             @endif
         </footer>

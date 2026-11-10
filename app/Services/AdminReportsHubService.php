@@ -162,7 +162,7 @@ class AdminReportsHubService
         foreach ([
             // صفحة «مسار المرضى» مدمجة في «متابعة المرضى» — تقريرها (يشمل مرضى الاستقبال بلا حالة) باقٍ.
             ['id' => 'patient-tracks', 'label' => 'مسار المرضى', 'icon' => '📍', 'group' => 'مسار المرضى والحالات', 'description' => 'كل مريض ومرحلته الحالية — من الاستقبال حتى التسليم'],
-            ['id' => 'cash-income', 'label' => 'التحصيل النقدي — الخزنة', 'icon' => '💵', 'group' => 'التعاقد والمالية', 'description' => 'المبالغ النقدية المُحصّلة من الخزنة (كاش / إنستاباي / فودافون كاش)'],
+            ['id' => 'cash-income', 'label' => 'التحصيل النقدي — الخزينة', 'icon' => '💵', 'group' => 'التعاقد والمالية', 'description' => 'المبالغ النقدية المُحصّلة من الخزينة (كاش / إنستاباي / فودافون كاش)'],
             ['id' => 'financial', 'label' => 'الإيرادات والمالية', 'icon' => '💰', 'group' => 'رؤية عامة', 'description' => 'إيرادات التسليم وأوامر التشغيل'],
             ['id' => 'inventory', 'label' => 'تحليلات المخزون', 'icon' => '📦', 'group' => 'رؤية عامة', 'description' => 'الأصناف الراكدة والشغالة ومنخفضة المخزون'],
             ['id' => 'inventory-valuation', 'label' => 'تقييم المخزون', 'icon' => '💎', 'group' => 'المخزون والتوريد', 'description' => 'رصيد كل صنف وكمياته وأسعاره وقيمته بالمخزن'],
@@ -174,8 +174,8 @@ class AdminReportsHubService
             ['id' => 'bom', 'label' => 'قوائم المواد', 'icon' => '📋', 'group' => 'رؤية عامة', 'description' => 'تقييم قوائم المواد حسب أعلى سعر دفعة شراء'],
             ['id' => 'authorizations', 'label' => 'جميع الأذون والاعتمادات', 'icon' => '📜', 'group' => 'المخزون والتوريد', 'description' => 'أذون الصرف، تعديل التوصيف، تصديقات الخدمات، وموافقات التعاقد'],
             ['id' => 'production-assignment', 'label' => 'تخصيص الإنتاج — قبل الصرف', 'icon' => '👷', 'group' => 'قسم الإنتاج', 'description' => 'أوامر الشغل بانتظار تخصيص القسم والفني واعتماد التخصيص'],
-            ['id' => 'opening-balance', 'label' => 'رصيد أول المدة', 'icon' => '🏦', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الافتتاحية للخزنة والمديونيات وقيمة المخزون في بداية الفترة'],
-            ['id' => 'closing-balance', 'label' => 'رصيد آخر المدة', 'icon' => '🧾', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الختامية بعد حركة الفترة للخزنة والمديونيات وقيمة المخزون'],
+            ['id' => 'opening-balance', 'label' => 'رصيد أول المدة', 'icon' => '🏦', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الافتتاحية للخزينة والمديونيات وقيمة المخزون في بداية الفترة'],
+            ['id' => 'closing-balance', 'label' => 'رصيد آخر المدة', 'icon' => '🧾', 'group' => 'التعاقد والمالية', 'description' => 'الأرصدة الختامية بعد حركة الفترة للخزينة والمديونيات وقيمة المخزون'],
             ['id' => 'profitability', 'label' => 'مراجعة التكاليف والربحية', 'icon' => '📈', 'group' => 'التعاقد والمالية', 'description' => 'مقارنة الإيراد بالتكلفة الداخلية (WAC) للحالات المُسلَّمة ومجمل الربح'],
         ] as $extra) {
             $cards[] = $extra;
@@ -277,7 +277,7 @@ class AdminReportsHubService
         ])->values()->all();
 
         return [
-            'title' => 'التحصيل النقدي — الخزنة',
+            'title' => 'التحصيل النقدي — الخزينة',
             'period_label' => $this->periodLabel($from, $to),
             'summary' => [],
             'headers' => ['التاريخ', 'رقم الدفعة', 'المريض', 'رقم الحالة', 'الوسيلة', 'رقم العملية', 'المُحصِّل', 'المبلغ'],
@@ -1502,7 +1502,7 @@ class AdminReportsHubService
     private function financeDomains(): array
     {
         $domains = [
-            ['key' => FinancialBalanceService::DOMAIN_CASH, 'label' => 'الخزنة النقدية'],
+            ['key' => FinancialBalanceService::DOMAIN_CASH, 'label' => 'الخزينة النقدية'],
             ['key' => FinancialBalanceService::DOMAIN_CIVILIAN, 'label' => 'مديونية الجهات المدنية'],
         ];
 

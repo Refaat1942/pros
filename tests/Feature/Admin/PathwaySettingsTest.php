@@ -108,7 +108,7 @@ class PathwaySettingsTest extends TestCase
         $service->resetToDefaults(PathwayStep::PATHWAY_MILITARY);
         $military = $service->steps(PathwayStep::PATHWAY_MILITARY);
         $this->assertCount(11, $military);
-        $this->assertTrue($military[9]['auto_skip'] ?? false, 'الخزنة تُتخطى في المسار العسكري');
+        $this->assertTrue($military[9]['auto_skip'] ?? false, 'الخزينة تُتخطى في المسار العسكري');
 
         $service->resetToDefaults(PathwayStep::PATHWAY_ENTITY);
         $entity = $service->steps(PathwayStep::PATHWAY_ENTITY);

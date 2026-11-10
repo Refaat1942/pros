@@ -148,12 +148,12 @@ class QuoteService
         return DB::transaction(function () use ($quote, $before) {
             $quote->update([
                 'status' => Quote::STATUS_ISSUED,
-                'status_label' => 'بانتظار الدفع في الخزنة',
+                'status_label' => 'بانتظار الدفع في الخزينة',
             ]);
 
             AuditService::log(
                 action: 'issue',
-                description: "إصدار عرض سعر نقدي للخزنة — {$quote->quote_no}",
+                description: "إصدار عرض سعر نقدي للخزينة — {$quote->quote_no}",
                 tag: 'quotes',
                 before: $before,
                 after: $quote->only(['status', 'status_label']),
@@ -208,12 +208,12 @@ class QuoteService
         return DB::transaction(function () use ($quote, $before) {
             $quote->update([
                 'status' => Quote::STATUS_APPROVED,
-                'status_label' => 'تم الدفع في الخزنة',
+                'status_label' => 'تم الدفع في الخزينة',
             ]);
 
             AuditService::log(
                 action: 'approve',
-                description: "تأكيد الدفع النقدي في الخزنة — {$quote->quote_no}",
+                description: "تأكيد الدفع النقدي في الخزينة — {$quote->quote_no}",
                 tag: 'quotes',
                 before: $before,
                 after: $quote->only(['status', 'status_label']),

@@ -32,7 +32,7 @@ class AdminOverviewScopingTest extends TestCase
         $response->assertSee('تخصيص الإنتاج', false);
         $response->assertSee('id="bi-board-3"', false);
         $response->assertDontSee('id="bi-board-4"', false);
-        $response->assertDontSee('محصّل نقدي — الخزنة', false);
+        $response->assertDontSee('محصّل نقدي — الخزينة', false);
         $response->assertDontSee('مديونيات محصّلة', false);
         $response->assertDontSee('id="bi-board-1"', false);
     }
@@ -54,7 +54,7 @@ class AdminOverviewScopingTest extends TestCase
         $response->assertDontSee('قيمة المخزون — سعر البيع', false);
         $response->assertDontSee('id="bi-board-2"', false);
         $response->assertDontSee('id="bi-board-3"', false);
-        $response->assertDontSee('محصّل نقدي — الخزنة', false);
+        $response->assertDontSee('محصّل نقدي — الخزينة', false);
         $response->assertDontSee('مديونيات بانتظار التحصيل', false);
         $response->assertDontSee('التكلفة المجمعة — عسكري', false);
     }
@@ -69,8 +69,8 @@ class AdminOverviewScopingTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/overview')
             ->assertOk()
-            ->assertDontSee('الخزنة', false)
-            ->assertDontSee('بانتظار الدفع النقدي — الخزنة', false)
+            ->assertDontSee('الخزينة', false)
+            ->assertDontSee('بانتظار الدفع النقدي — الخزينة', false)
             ->assertDontSee('data-cycle-key="cashier"', false);
 
         $from = Carbon::now()->startOfMonth();
@@ -112,7 +112,7 @@ class AdminOverviewScopingTest extends TestCase
             ->assertOk()
             ->assertDontSee('data-cycle-key="cashier"', false)
             ->assertDontSee('مديونيات بانتظار التحصيل', false)
-            ->assertDontSee('محصّل نقدي — الخزنة', false);
+            ->assertDontSee('محصّل نقدي — الخزينة', false);
 
         $from = Carbon::now()->startOfMonth();
         $to = Carbon::now()->endOfDay();
@@ -165,7 +165,7 @@ class AdminOverviewScopingTest extends TestCase
         $response->assertSee('التكلفة التراكمية — مدني', false);
         $response->assertDontSee('مديونيات جهات التعاقد', false);
         $response->assertDontSee('مديونيات بانتظار التحصيل', false);
-        $response->assertDontSee('محصّل نقدي — الخزنة', false);
+        $response->assertDontSee('محصّل نقدي — الخزينة', false);
 
         $from = Carbon::now()->startOfMonth();
         $to = Carbon::now()->endOfDay();
@@ -276,7 +276,7 @@ class AdminOverviewScopingTest extends TestCase
             ->assertSee('id="bi-board-4"', false)
             ->assertSee('id="bi-board-5"', false)
             ->assertSee('الاستقبال', false)
-            ->assertSee('الخزنة', false);
+            ->assertSee('الخزينة', false);
 
         $from = Carbon::now()->startOfMonth();
         $to = Carbon::now()->endOfDay();
@@ -309,7 +309,7 @@ class AdminOverviewScopingTest extends TestCase
         $response->assertSee('التكلفة التراكمية — مدني', false);
         $response->assertDontSee('مديونيات جهات التعاقد', false);
         $response->assertDontSee('مديونيات بانتظار التحصيل', false);
-        $response->assertDontSee('محصّل نقدي — الخزنة', false);
+        $response->assertDontSee('محصّل نقدي — الخزينة', false);
     }
 
     public function test_full_default_admin_permissions_receive_complete_overview(): void
@@ -347,7 +347,7 @@ class AdminOverviewScopingTest extends TestCase
             ->assertOk()
             ->assertSee('id="bi-board-1"', false)
             ->assertSee('id="bi-board-4"', false)
-            ->assertSee('الخزنة', false);
+            ->assertSee('الخزينة', false);
     }
 
     /** @param list<string> $permissionSlugs */

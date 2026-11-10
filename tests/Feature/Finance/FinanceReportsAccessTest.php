@@ -99,7 +99,7 @@ class FinanceReportsAccessTest extends TestCase
             ->get('/admin/reports/opening-balance?from='.$from.'&to='.$to)
             ->assertOk()
             ->assertSee('رصيد أول المدة', false)
-            ->assertSee('الخزنة النقدية', false);
+            ->assertSee('الخزينة النقدية', false);
 
         $this->actingAs($admin)
             ->get('/admin/reports/closing-balance?from='.$from.'&to='.$to)
@@ -192,7 +192,7 @@ class FinanceReportsAccessTest extends TestCase
         $report = $hub->build('closing-balance', $dates['from'], $dates['to']);
 
         $labels = array_column($report['rows'], 0);
-        $this->assertContains('الخزنة النقدية', $labels);
+        $this->assertContains('الخزينة النقدية', $labels);
         $this->assertContains('مديونية الجهات المدنية', $labels);
         $this->assertNotContains('المستحق السيادي (عسكري)', $labels);
     }

@@ -68,7 +68,7 @@ class AdminCycleDashboardTest extends TestCase
         $cards = collect(app(AdminCycleDashboardService::class)->build($from, $to))->keyBy('key');
 
         $this->assertSame(1, $cards['cashier']['count']);
-        $this->assertSame('الخزنة', $cards['cashier']['label']);
+        $this->assertSame('الخزينة', $cards['cashier']['label']);
     }
 
     public function test_overview_page_shows_cycle_dashboard_cards(): void
@@ -107,7 +107,7 @@ class AdminCycleDashboardTest extends TestCase
             ->assertSee('التوصيف الفني')
             ->assertSee('المعدلات')
             ->assertSee('مكتب التشغيل')
-            ->assertSee('الخزنة')
+            ->assertSee('الخزينة')
             ->assertSee('بانتظار تحصيل الدفع النقدي', false)
             ->assertSee('تخصيص الإنتاج')
             ->assertSee('قسم الإنتاج')

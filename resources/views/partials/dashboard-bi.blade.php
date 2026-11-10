@@ -232,11 +232,11 @@
                 @endif
                 @if (is_array($b4Cash))
                     <div class="bi-kpi">
-                        <div class="bi-kpi-label">💵 محصّل نقدي — الخزنة</div>
+                        <div class="bi-kpi-label">💵 محصّل نقدي — الخزينة</div>
                         <div class="bi-kpi-value bi-tone-green">{{ $fmtMoney($b4Cash['cash_collected_total'] ?? 0) }} <small>ج.م</small></div>
                     </div>
                     <div class="bi-kpi">
-                        <div class="bi-kpi-label">💵 بانتظار الدفع — الخزنة</div>
+                        <div class="bi-kpi-label">💵 بانتظار الدفع — الخزينة</div>
                         <div class="bi-kpi-value bi-tone-cyan">{{ $b4Cash['cash_awaiting_payment'] ?? 0 }}</div>
                     </div>
                 @endif

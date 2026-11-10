@@ -23,7 +23,7 @@ class StoreReturnNoteRequest extends BaseRequest
     public function messages(): array
     {
         return [
-            'bom_id.exists' => 'BOM غير موجودة.',
+            'bom_id.exists' => 'قائمة المواد غير موجودة.',
             'reason.required' => 'سبب الارتجاع مطلوب.',
             'lines.min' => 'يجب إضافة بند واحد على الأقل.',
         ];

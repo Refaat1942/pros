@@ -21,7 +21,7 @@ class PurgeUsersCommandTest extends TestCase
 
         $this->artisan('prosthetics:purge-users --force')
             ->assertSuccessful()
-            ->expectsOutputToContain('السوبر أدمن محفوظ');
+            ->expectsOutputToContain('مدير النظام محفوظ');
 
         $remaining = User::query()->where('status', User::STATUS_ACTIVE)->pluck('username')->all();
 

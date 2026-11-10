@@ -57,13 +57,13 @@ class ResourceAuthorizationService
         abort_unless(
             $this->isCashierEligibleCaseType($case),
             403,
-            'لا يمكن تأكيد تحصيل هذه الحالة في الخزنة.',
+            'لا يمكن تأكيد تحصيل هذه الحالة في الخزينة.',
         );
 
         abort_unless(
             $case->isAwaitingCashier(),
             403,
-            'الحالة ليست بانتظار الدفع في الخزنة.',
+            'الحالة ليست بانتظار الدفع في الخزينة.',
         );
     }
 

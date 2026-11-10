@@ -283,7 +283,7 @@ class AdminCaseTrackingTest extends TestCase
             'company_name' => $case->company_name,
             'quote_date' => now()->toDateString(),
             'status' => Quote::STATUS_ISSUED,
-            'status_label' => 'بانتظار الدفع في الخزنة',
+            'status_label' => 'بانتظار الدفع في الخزينة',
             'total' => 1500,
         ]);
 

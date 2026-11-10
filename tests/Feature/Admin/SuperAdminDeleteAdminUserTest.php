@@ -65,7 +65,7 @@ class SuperAdminDeleteAdminUserTest extends TestCase
         $this->actingAs($super)
             ->deleteJson(route('admin.employees.destroy', $otherSuper))
             ->assertStatus(422)
-            ->assertJson(['message' => 'لا يمكن حذف حساب السوبر أدمن.']);
+            ->assertJson(['message' => 'لا يمكن حذف حساب مدير النظام.']);
 
         $this->assertDatabaseHas('users', ['id' => $otherSuper->id]);
     }
@@ -98,7 +98,7 @@ class SuperAdminDeleteAdminUserTest extends TestCase
         $this->actingAs($admin)
             ->deleteJson(route('admin.employees.destroy', $otherAdmin))
             ->assertStatus(422)
-            ->assertJson(['message' => 'لا يمكن حذف مسؤول النظام — السوبر أدمن فقط.']);
+            ->assertJson(['message' => 'حذف مسؤول النظام من صلاحيات مدير النظام فقط.']);
 
         $this->assertDatabaseHas('users', ['id' => $otherAdmin->id]);
     }

@@ -221,7 +221,7 @@
                     </div>
                 @endif
                 @if ($doc['paid'] !== null)
-                    <div><span>المدفوع بالخزنة</span><span class="num">{{ $money($doc['paid']) }}</span></div>
+                    <div><span>المدفوع بالخزينة</span><span class="num">{{ $money($doc['paid']) }}</span></div>
                     <div><span>المتبقي</span><span class="num">{{ $money($doc['remaining']) }}</span></div>
                 @endif
             </div>

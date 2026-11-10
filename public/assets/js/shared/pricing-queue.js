@@ -3,7 +3,7 @@
  */
 var PricingQueue = (function () {
   var STORAGE_KEY = 'clinic_pricing_queue';
-  var STEP_LABELS = ['موافقة الأدمن', 'إرسال للاستقبال — عرض سعر'];
+  var STEP_LABELS = ['موافقة الإدارة', 'إرسال للاستقبال — عرض سعر'];
 
   function noop() {}
   function empty() { return []; }

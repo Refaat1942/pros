@@ -84,17 +84,20 @@ class Quote extends Model
      */
     public function resolvedStatusLabel(?CaseRecord $case = null): string
     {
+        // السجلات القديمة متخزّن فيها «الخزنة» — تُعرض بالمصطلح الحالي «الخزينة».
+        $label = $this->status_label !== null ? str_replace('الخزنة', 'الخزينة', $this->status_label) : null;
+
         if ($this->status === self::STATUS_APPROVED) {
-            return $this->status_label ?: 'معتمد';
+            return $label ?: 'معتمد';
         }
 
         $case ??= $this->relationLoaded('caseRecord') ? $this->caseRecord : null;
 
-        if ($case && $this->status_label === 'بانتظار الدفع في الخزنة' && $this->cashierPaymentSettled($case)) {
-            return 'تم الدفع في الخزنة';
+        if ($case && $label === 'بانتظار الدفع في الخزينة' && $this->cashierPaymentSettled($case)) {
+            return 'تم الدفع في الخزينة';
         }
 
-        return $this->status_label ?: ($this->status ?? '—');
+        return $label ?: ($this->status ?? '—');
     }
 
     private function cashierPaymentSettled(CaseRecord $case): bool

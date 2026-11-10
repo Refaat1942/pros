@@ -151,7 +151,7 @@ class CostingService
                     AuditService::log(
                         action: 'discount',
                         description: sprintf(
-                            'خصم للعميل الكاش %s ج.م على عرض %s — %s — السبب: %s',
+                            'خصم للعميل النقدي %s ج.م على عرض %s — %s — السبب: %s',
                             number_format($discount['amount'], 2),
                             $quote->quote_no,
                             $case->case_no,

@@ -548,7 +548,7 @@ class DashboardPageDataService
                 ['key' => 'ready', 'icon' => '✅', 'label' => 'جاهز للتسليم', 'value' => (string) $cases->count(), 'color' => '#059669', 'bg' => 'rgba(5,150,105,0.1)'],
                 ['key' => 'military', 'icon' => '🪖', 'label' => 'عسكري', 'value' => (string) $cases->filter(fn ($c) => $c->isMilitary())->count(), 'color' => '#4f46e5', 'bg' => 'rgba(79,70,229,0.1)'],
                 ['key' => 'civilian', 'icon' => '🌐', 'label' => 'مدني', 'value' => (string) $cases->filter(fn ($c) => ! $c->isMilitary())->count(), 'color' => '#0e7490', 'bg' => 'rgba(14,116,144,0.1)'],
-                ['key' => 'bom_finished', 'icon' => '📋', 'label' => 'BOM تام', 'value' => (string) $cases->count(), 'bg' => 'rgba(5,150,105,0.1)'],
+                ['key' => 'bom_finished', 'icon' => '📋', 'label' => 'قائمة المواد تامة', 'value' => (string) $cases->count(), 'bg' => 'rgba(5,150,105,0.1)'],
             ],
         ];
     }

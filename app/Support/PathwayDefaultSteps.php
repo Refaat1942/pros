@@ -264,7 +264,7 @@ final class PathwayDefaultSteps
                 'label' => 'المخزن — صرف مواد',
                 'sort' => $sort++,
                 'owner_department' => 'warehouse',
-                'action_summary' => 'صرف خامات BOM بالباركود — إذن صرف',
+                'action_summary' => 'صرف خامات قائمة المواد بالباركود — إذن صرف',
                 'on_complete' => 'ينتقل لقسم الإنتاج',
                 'next_step_key' => 'workshop',
                 'stage_keys' => [CaseRecord::STAGE_MANUFACTURING],
@@ -293,7 +293,7 @@ final class PathwayDefaultSteps
                 'sort' => $sort++,
                 'owner_department' => 'operations',
                 'action_summary' => 'طباعة إذن الصرف النهائي — تجهيز للتحصيل',
-                'on_complete' => 'ينتقل للخزنة',
+                'on_complete' => 'ينتقل للخزينة',
                 'next_step_key' => 'cashier',
                 'stage_keys' => [CaseRecord::STAGE_READY_DELIVERY],
                 'required' => true,
@@ -303,7 +303,7 @@ final class PathwayDefaultSteps
             ],
             [
                 'key' => 'cashier',
-                'label' => 'الخزنة — إصدار إيصال دفع',
+                'label' => 'الخزينة — إصدار إيصال دفع',
                 'sort' => $sort++,
                 'owner_department' => 'cashier',
                 'action_summary' => $cashierAutoSkip

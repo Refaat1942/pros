@@ -255,7 +255,7 @@ class DocumentTemplateController extends Controller
             'amount_words' => 'خمسة عشر ألف جنيه مصري لا غير',
             'method_label' => 'نقدي',
             'received_at' => now()->format('d/m/Y H:i'),
-            'received_by' => 'أمين الخزنة',
+            'received_by' => 'أمين الخزينة',
             'fully_paid' => true,
             'installment_label' => 'دفعة 1',
         ];

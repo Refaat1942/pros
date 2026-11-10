@@ -195,13 +195,13 @@ return [
         'guard' => 'operations',
     ],
     'cashier' => [
-        'title' => 'لوحة الخزنة — مركز الأطراف الصناعية',
+        'title' => 'لوحة الخزينة — مركز الأطراف الصناعية',
         'layout' => 'layouts.dashboard-page',
         'default_page' => 'payments',
-        'sidebar' => ['icon' => '💵', 'title' => 'الخزنة', 'subtitle' => 'تحصيل الدفع'],
+        'sidebar' => ['icon' => '💵', 'title' => 'الخزينة', 'subtitle' => 'تحصيل الدفع'],
         'pages' => [
-            'payments' => ['title' => 'الخزنة — بانتظار الدفع النقدي', 'icon' => '💵', 'label' => 'تحصيل الدفع'],
-            'statistics' => ['title' => 'إحصائيات الخزنة — التحصيل النقدي', 'icon' => '📊', 'label' => 'الإحصائيات'],
+            'payments' => ['title' => 'الخزينة — بانتظار الدفع النقدي', 'icon' => '💵', 'label' => 'تحصيل الدفع'],
+            'statistics' => ['title' => 'إحصائيات الخزينة — التحصيل النقدي', 'icon' => '📊', 'label' => 'الإحصائيات'],
             'staff' => ['title' => 'إدارة موظفي القسم', 'icon' => '👥', 'label' => 'موظفي القسم'],
             'notifications' => ['title' => 'الإشعارات', 'icon' => '🔔', 'label' => 'الإشعارات', 'hidden' => true],
         ],
@@ -393,7 +393,7 @@ return [
                 ],
             ],
             'inventory-overview' => ['title' => 'متابعة حركة الأصناف', 'icon' => '🔬', 'label' => 'متابعة حركة الأصناف'],
-            'dispense-approvals' => ['title' => 'اعتمادات صرف المخزن — BOM', 'icon' => '✅', 'label' => 'اعتماد الصرف'],
+            'dispense-approvals' => ['title' => 'اعتمادات صرف المخزن — قائمة المواد', 'icon' => '✅', 'label' => 'اعتماد الصرف'],
             'suppliers' => ['title' => 'الموردون', 'icon' => '🏭', 'label' => 'الموردون'],
             'returns' => ['title' => 'طلبات ارتجاع المواد — مراقبة وقراءة فقط', 'icon' => '↩️', 'label' => 'طلبات الارتجاع'],
             // ── التعاقد والمالية ───────────────────────────────────────────────

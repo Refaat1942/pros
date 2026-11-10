@@ -9,7 +9,7 @@ var CasesWorkflow = (function () {
     { key: 'exam', label: 'كشف' },
     { key: 'technical', label: 'توصيف فني' },
     { key: 'cost_calc', label: 'حساب تكلفة' },
-    { key: 'admin_approval', label: 'انتظار موافقة الأدمن' },
+    { key: 'admin_approval', label: 'انتظار موافقة الإدارة' },
     { key: 'quote', label: 'عرض سعر' },
     { key: 'waiting_return', label: 'بانتظار موافقة الجهة' },
     { key: 'manufacturing', label: 'جاري التصنيع' },

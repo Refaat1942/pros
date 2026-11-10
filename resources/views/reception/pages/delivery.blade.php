@@ -133,7 +133,7 @@
                                     <span class="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-100 text-cyan-700">🌐 مدني</span>
                                 @endif
                             </div>
-                            <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">BOM تام</span>
+                            <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">قائمة المواد تامة</span>
                         </div>
                     </li>
                 @empty

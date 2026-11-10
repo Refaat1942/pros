@@ -33,7 +33,7 @@ final class DocumentScopeCatalog
             CaseRecord::STAGE_SERVICES_APPROVAL => 'اعتماد الخدمات',
             CaseRecord::STAGE_QUOTE => 'عرض السعر',
             CaseRecord::STAGE_OPERATIONS => 'مكتب التشغيل',
-            CaseRecord::STAGE_CASHIER => 'الخزنة',
+            CaseRecord::STAGE_CASHIER => 'الخزينة',
             CaseRecord::STAGE_MANUFACTURING => 'الإنتاج',
             CaseRecord::STAGE_READY_DELIVERY => 'جاهز للتسليم',
             CaseRecord::STAGE_DELIVERED => 'تم التسليم',

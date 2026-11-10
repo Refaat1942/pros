@@ -16,7 +16,7 @@ class AssistantCatalogService
         'adjustments' => 'المعدلات',
         'costing' => 'التكاليف',
         'operations' => 'التشغيل',
-        'cashier' => 'الخزنة',
+        'cashier' => 'الخزينة',
         'workshop' => 'قسم الإنتاج',
         'technical' => 'المخزن',
         'admin' => 'الإدارة',

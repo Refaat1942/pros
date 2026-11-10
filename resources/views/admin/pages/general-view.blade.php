@@ -26,7 +26,7 @@
         </div>
 
         <div class="report-card">
-          <h4>🔥 الأصناف الأكثر طلباً (BOM)</h4>
+          <h4>🔥 الأصناف الأكثر طلباً (قوائم المواد)</h4>
           @forelse ($financial['top_items'] ?? [] as $item)
             <div class="report-bar">
               <span style="min-width:72px;font-weight:600;">{{ $item['code'] }}</span>
@@ -38,7 +38,7 @@
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin:-6px 0 8px 82px;">{{ $item['name'] }}</div>
           @empty
-            <p style="color:var(--text-muted);font-size:13px;">لا توجد بنود BOM مسجّلة بعد.</p>
+            <p style="color:var(--text-muted);font-size:13px;">لا توجد بنود قوائم مواد مسجّلة بعد.</p>
           @endforelse
         </div>
 
@@ -122,7 +122,7 @@
 
         <div class="reports-bom-row">
         <div class="report-card report-card--bom" id="bomAdminPanel">
-          <h4>📋 BOM — خام / تحت التشغيل / تام (قيمة Highest Batch Cost)</h4>
+          <h4>📋 قوائم المواد — خام / تحت التشغيل / تامة (القيمة بأعلى سعر شراء)</h4>
           <div id="bomAdminSummary" class="bom-admin-summary">
             @foreach (['raw' => 'خام', 'wip' => 'تحت التشغيل', 'finished' => 'تام'] as $key => $label)
               @php $stat = $bomSummary[$key] ?? ['count' => 0, 'value' => 0, 'lines' => 0]; @endphp
@@ -142,7 +142,7 @@
                   <th>أمر التشغيل</th>
                   <th>المرحلة</th>
                   <th>البنود</th>
-                  <th>قيمة BOM</th>
+                  <th>قيمة قائمة المواد</th>
                 </tr>
               </thead>
               <tbody id="bomAdminTable">
@@ -155,7 +155,7 @@
                     <td style="font-weight:700;">{{ number_format($row['value'], 2) }} ج.م</td>
                   </tr>
                 @empty
-                  <tr><td colspan="5" class="empty-cell">لا توجد قوائم BOM</td></tr>
+                  <tr><td colspan="5" class="empty-cell">لا توجد قوائم مواد</td></tr>
                 @endforelse
               </tbody>
             </table>
