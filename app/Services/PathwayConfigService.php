@@ -42,7 +42,7 @@ class PathwayConfigService
             ['value' => 'spec', 'label' => 'التوصيف'],
             ['value' => 'adjustments', 'label' => 'المعدلات'],
             ['value' => 'operations', 'label' => 'التشغيل'],
-            ['value' => 'cashier', 'label' => 'الخزنة'],
+            ['value' => 'cashier', 'label' => 'الخزينة'],
         ];
     }
 

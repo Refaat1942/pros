@@ -12,7 +12,7 @@ return [
         'adjustments' => ['label_ar' => 'لوحة المعدلات', 'icon' => '📏'],
         'costing' => ['label_ar' => 'لوحة الاعتماد', 'icon' => '✅'],
         'operations' => ['label_ar' => 'مكتب التشغيل', 'icon' => '🎯'],
-        'cashier' => ['label_ar' => 'الخزنة', 'icon' => '💵'],
+        'cashier' => ['label_ar' => 'الخزينة', 'icon' => '💵'],
         'workshop' => ['label_ar' => 'قسم الإنتاج', 'icon' => '🏭'],
         'technical' => ['label_ar' => 'لوحة المخزن', 'icon' => '📦'],
         'admin' => ['label_ar' => 'لوحة الإدارة', 'icon' => '⚙️'],
@@ -44,7 +44,7 @@ return [
             'dashboard' => 'admin',
         ],
         'super-admin' => [
-            'label_ar' => 'سوبر أدمن — صلاحية كاملة على النظام',
+            'label_ar' => 'مدير النظام — صلاحية كاملة على النظام',
             'dashboard' => 'admin',
         ],
         'approve-pricing' => [
@@ -52,23 +52,23 @@ return [
             'dashboard' => 'operations',
         ],
         'confirm-cash-payment' => [
-            'label_ar' => 'تأكيد استلام المبلغ في الخزنة',
+            'label_ar' => 'تأكيد استلام المبلغ في الخزينة',
             'dashboard' => 'cashier',
         ],
         'approve-supply-requests' => [
-            'label_ar' => 'اعتماد طلبات التوريد (أدمن المخازن)',
+            'label_ar' => 'اعتماد طلبات التوريد (مسؤول المخازن)',
             'dashboard' => 'technical',
         ],
         'approve-stock-receipts' => [
-            'label_ar' => 'اعتماد استلام الوارد — إضافة الرصيد (أدمن المخازن)',
+            'label_ar' => 'اعتماد استلام الوارد — إضافة الرصيد (مسؤول المخازن)',
             'dashboard' => 'technical',
         ],
         'manage-item-swaps' => [
-            'label_ar' => 'تبديل صنف مع المورد — طلب واعتماد (أدمن المخازن)',
+            'label_ar' => 'تبديل صنف مع المورد — طلب واعتماد (مسؤول المخازن)',
             'dashboard' => 'technical',
         ],
         'grant-cash-discount' => [
-            'label_ar' => 'منح خصم للعميل المدني الكاش (عند الاعتماد)',
+            'label_ar' => 'منح خصم إضافي عند الاعتماد (نقدي / تعاقد / عسكري)',
             'dashboard' => 'costing',
         ],
         'manage-inventory' => [

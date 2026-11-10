@@ -69,7 +69,7 @@
       .then(function (res) {
         var el = document.getElementById('receiveFormMessage');
         el.style.display = 'block';
-        // بانتظار اعتماد أدمن المخازن: الرسالة تفضل ظاهرة (الرصيد لسه ماتضافش).
+        // بانتظار اعتماد مسؤول المخازن: الرسالة تفضل ظاهرة (الرصيد لسه ماتضافش).
         el.style.color = res.pending_approval ? '#b45309' : '#059669';
         el.textContent = res.message || 'تم الاستلام';
         form.reset();

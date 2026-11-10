@@ -18,7 +18,7 @@ class PurgeUsersCommand extends Command
     public function handle(UserPurgeService $purge): int
     {
         if (! $purge->hasSuperAdmin()) {
-            $this->error('لا يوجد حساب سوبر أدمن — لن يتم الحذف حتى لا يُغلق النظام.');
+            $this->error('لا يوجد حساب مدير النظام — لن يتم الحذف حتى لا يُغلق النظام.');
 
             return self::FAILURE;
         }
@@ -26,13 +26,13 @@ class PurgeUsersCommand extends Command
         $count = $purge->purgeableQuery()->count();
 
         if ($count === 0) {
-            $this->info('لا يوجد مستخدمون غير السوبر أدمن.');
+            $this->info('لا يوجد مستخدمون غير مدير النظام.');
 
             return self::SUCCESS;
         }
 
         if (! $this->option('force') && ! $this->confirm(
-            "سيتم حذف {$count} مستخدم. يبقى: السوبر أدمن — الأدوار — الصلاحيات — الإعدادات — سجل الرقابة. متابعة؟",
+            "سيتم حذف {$count} مستخدم. يبقى: مدير النظام — الأدوار — الصلاحيات — الإعدادات — سجل الرقابة. متابعة؟",
             false,
         )) {
             $this->warn('تم الإلغاء.');
@@ -42,7 +42,7 @@ class PurgeUsersCommand extends Command
 
         $result = $purge->purge();
 
-        $this->info('تم مسح حسابات الموظفين — السوبر أدمن محفوظ.');
+        $this->info('تم مسح حسابات الموظفين — مدير النظام محفوظ.');
         $this->table(['البند', 'العدد'], [
             ['deleted', $result['deleted']],
             ['deactivated', $result['deactivated']],

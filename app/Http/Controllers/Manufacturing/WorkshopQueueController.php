@@ -245,7 +245,7 @@ class WorkshopQueueController extends Controller
         $case->load('bom');
 
         if (! $case->bom) {
-            abort(422, 'لا توجد BOM مرتبطة بهذه الحالة.');
+            abort(422, 'لا توجد قائمة مواد مرتبطة بهذه الحالة.');
         }
 
         $bom = $this->bomService->finish($case->bom);
@@ -283,7 +283,7 @@ class WorkshopQueueController extends Controller
 
         $case->load(['patient', 'contractCompany', 'bom.items']);
 
-        abort_unless($case->bom, 404, 'لا توجد BOM مرتبطة بهذه الحالة.');
+        abort_unless($case->bom, 404, 'لا توجد قائمة مواد مرتبطة بهذه الحالة.');
 
         return view('prints.work-order', [
             'case' => $case,

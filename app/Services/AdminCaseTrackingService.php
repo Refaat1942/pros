@@ -226,7 +226,7 @@ class AdminCaseTrackingService
         }
 
         if ($bom?->stage !== Bom::STAGE_FINISHED) {
-            return 'BOM لم يُغلق بعد — يجب أن يكون «تام»';
+            return 'قائمة المواد لم تُغلق بعد — يجب أن تكون «تامة»';
         }
 
         return 'غير جاهز للتسليم';

@@ -465,7 +465,7 @@
 
         var skipBlock = '<div class="pf-skip-row">'
                 + '<p class="pf-skip-title">⏭️ تخطي هذه الخطوة — أنت تختار</p>'
-                + '<p class="pf-skip-desc">كل خطوة في المسار يمكن جعلها إلزامية أو اختيارية — للحالات المختلفة (بدون كشف، بدون معدلات، تخطي الخزنة، …).</p>'
+                + '<p class="pf-skip-desc">كل خطوة في المسار يمكن جعلها إلزامية أو اختيارية — للحالات المختلفة (بدون كشف، بدون معدلات، تخطي الخزينة، …).</p>'
                 + '<label class="pf-field"><span>هل الخطوة إلزامية؟</span><select data-f="required">'
                 + '<option value="1"' + (step.required !== false ? ' selected' : '') + '>نعم — إلزامية (لا تُتخطى)</option>'
                 + '<option value="0"' + (step.required === false ? ' selected' : '') + '>لا — اختيارية (يمكن تخطيها)</option>'

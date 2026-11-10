@@ -96,7 +96,7 @@ class AdminReportsScopingTest extends TestCase
             ->get('/admin/reports')
             ->assertOk()
             ->assertDontSee('الإيرادات والمالية', false)
-            ->assertDontSee('التحصيل النقدي — الخزنة', false)
+            ->assertDontSee('التحصيل النقدي — الخزينة', false)
             ->assertDontSee('تقييم المخزون', false)
             ->assertDontSee('مسار المرضى', false)
             ->assertDontSee('سجل الرقابة', false)
@@ -223,7 +223,7 @@ class AdminReportsScopingTest extends TestCase
             ->assertOk()
             ->assertSee('تقييم المخزون', false)
             ->assertSee('هامش الربح بالأصناف', false)
-            ->assertDontSee('التحصيل النقدي — الخزنة', false)
+            ->assertDontSee('التحصيل النقدي — الخزينة', false)
             ->assertDontSee('مسار المرضى', false);
 
         $this->actingAs($user)
@@ -239,7 +239,7 @@ class AdminReportsScopingTest extends TestCase
             ->get('/admin/reports')
             ->assertOk()
             ->assertSee('الإيرادات والمالية', false)
-            ->assertSee('التحصيل النقدي — الخزنة', false)
+            ->assertSee('التحصيل النقدي — الخزينة', false)
             ->assertSee('تقييم المخزون', false)
             ->assertSee('مسار المرضى', false)
             ->assertSee('سجل الرقابة', false)

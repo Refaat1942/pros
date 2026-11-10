@@ -442,7 +442,7 @@
       var filtered = getFilteredCases();
       var titles = {
         waiting_return: '📁 المرضى — بانتظار موافقة الجهة',
-        awaiting_cashier: '💵 المرضى — بانتظار الدفع في الخزنة',
+        awaiting_cashier: '💵 المرضى — بانتظار الدفع في الخزينة',
         awaiting_assignment: '👷 المرضى — بانتظار تخصيص الإنتاج',
         in_progress: '📁 المرضى — تحت التنفيذ',
         delivered: '📁 المرضى — تم التسليم'
@@ -457,13 +457,13 @@
           hintEl.innerHTML = '';
           hintEl.style.display = 'none';
         } else if (casesFilter === 'awaiting_cashier') {
-          hintEl.innerHTML = 'مرضى الكاش — صدر لهم عرض سعر من مكتب التشغيل وبانتظار تحصيل المبلغ في الخزنة قبل الصرف من المخزن.';
+          hintEl.innerHTML = 'المرضى النقديون — صدر لهم عرض سعر من مكتب التشغيل وبانتظار تحصيل المبلغ في الخزينة قبل الصرف من المخزن.';
           hintEl.style.display = 'block';
         } else if (casesFilter === 'awaiting_assignment') {
           hintEl.innerHTML = 'أمر الشغل صادر — يجب تخصيص القسم والفني واعتماد التخصيص من قسم الإنتاج قبل أن يُسمح للمخزن بالصرف.';
           hintEl.style.display = 'block';
         } else if (casesFilter === 'in_progress') {
-          hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/قسم الإنتاج. التسليم للمريض يتم بعد BOM «تام» فقط.';
+          hintEl.innerHTML = 'العميل رجع بخطاب الموافقة — الشغل جاري في المخزن/قسم الإنتاج. التسليم للمريض يتم بعد قائمة المواد «تام» فقط.';
           hintEl.style.display = 'block';
         } else {
           hintEl.innerHTML = '';
@@ -565,7 +565,7 @@
           return [c.patient, c.company, c.quoteId, c.pricingRef || '—', ExportKit.formatDateForExport(c.quoteDate), c.quoteDaysWaiting || 0, c.stageLabel];
         });
       } else if (casesFilter === 'awaiting_cashier') {
-        title = 'حالات بانتظار الدفع في الخزنة';
+        title = 'حالات بانتظار الدفع في الخزينة';
         headers = ['المريض', 'جهة التعاقد', 'سريال عرض السعر', 'تاريخ العرض', 'إجمالي العرض', 'الحالة'];
         rows = filtered.map(function(c) {
           return [c.patient, c.company, c.quoteId, ExportKit.formatDateForExport(c.quoteDate), c.totalCost, c.stageLabel];
@@ -578,7 +578,7 @@
         });
       } else if (casesFilter === 'in_progress') {
         title = 'حالات تحت التنفيذ';
-        headers = ['المريض', 'جهة التعاقد', 'مرحلة الشغل', 'BOM', 'تاريخ الموافقة'];
+        headers = ['المريض', 'جهة التعاقد', 'مرحلة الشغل', 'قائمة المواد', 'تاريخ الموافقة'];
         rows = filtered.map(function(c) {
           return [c.patient, c.company, c.manufacturingLabel || '—', c.bom ? c.bom.stageLabel : '—', ExportKit.formatDateForExport(c.approvalDate)];
         });
@@ -592,7 +592,7 @@
       if (type === 'excel') {
         var caseNames = {
           waiting_return: 'حالات_بانتظار_موافقة_الجهة',
-          awaiting_cashier: 'حالات_بانتظار_الدفع_الخزنة',
+          awaiting_cashier: 'حالات_بانتظار_الدفع_الخزينة',
           awaiting_assignment: 'حالات_بانتظار_تخصيص_الإنتاج',
           in_progress: 'حالات_تحت_التنفيذ',
           delivered: 'حالات_مسلّمة'
@@ -2588,7 +2588,7 @@
       window.exportAdminReturnNotes = function () {
         var rows = visibleNoteRows();
         if (!rows.length) { alert('لا توجد بيانات للتصدير'); return; }
-        var headers = ['رقم الطلب', 'BOM', 'أمر التشغيل', 'المريض', 'سبب الارتجاع', 'البنود', 'الحالة', 'أرسله', 'تاريخ الإرسال', 'تاريخ الاستلام'];
+        var headers = ['رقم الطلب', 'قائمة المواد', 'أمر التشغيل', 'المريض', 'سبب الارتجاع', 'البنود', 'الحالة', 'أرسله', 'تاريخ الإرسال', 'تاريخ الاستلام'];
         var data = rows.map(function (row) {
           var d = row.dataset;
           var lines = getReturnNoteLines(row);
@@ -2618,7 +2618,7 @@
         });
         if (!filtered.length) { alert('لا توجد بيانات للتصدير'); return; }
         var headers = [
-          'رقم الطلب', 'الحالة', 'BOM', 'أمر التشغيل', 'رقم الحالة', 'المريض', 'مرجع الطلب',
+          'رقم الطلب', 'الحالة', 'قائمة المواد', 'أمر التشغيل', 'رقم الحالة', 'المريض', 'مرجع الطلب',
           'كود الصنف', 'اسم الصنف', 'الباركود', 'الكمية المرجعة',
           'سبب الارتجاع', 'أرسله', 'تاريخ الإرسال', 'تاريخ الاستلام',
         ];

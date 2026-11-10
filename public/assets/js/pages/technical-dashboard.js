@@ -390,7 +390,7 @@ function renderPricing() {
   document.getElementById('prSent').textContent = sentCount;
   document.getElementById('pricingCount').textContent = pricingQueue.length;
   document.getElementById('pricingFooter').textContent =
-    'عرض ' + filtered.length + ' من ' + pricingQueue.length + ' طلبات — في انتظار موافقة الأدمن ثم الإرسال للاستقبال';
+    'عرض ' + filtered.length + ' من ' + pricingQueue.length + ' طلبات — في انتظار موافقة الإدارة ثم الإرسال للاستقبال';
 
   if (filtered.length === 0) {
     document.getElementById('pricingTable').innerHTML =
@@ -619,7 +619,7 @@ if (specFormEl) specFormEl.addEventListener('submit', function (e) {
     return s + normalizeRecItem(rec).qty;
   }, 0);
 
-  showToast('تم حساب التكلفة — في انتظار موافقة الأدمن');
+  showToast('تم حساب التكلفة — في انتظار موافقة الإدارة');
 
   saveTechOrderSpec(selectedOrder);
 
@@ -672,7 +672,7 @@ function getFilteredBom() {
 
 function exportBom(type) {
   var data = getFilteredBom();
-    var headers = ['رقم BOM', 'المريض', 'أمر التشغيل', 'المرحلة', 'عدد الأصناف', 'تاريخ الإنشاء'];
+    var headers = ['رقم قائمة المواد', 'المريض', 'أمر التشغيل', 'المرحلة', 'عدد الأصناف', 'تاريخ الإنشاء'];
   var rows = data.map(function (b) {
     return [
       b.id,
@@ -684,7 +684,7 @@ function exportBom(type) {
     ];
   });
   if (type === 'excel') ExportKit.toExcel(ExportKit.buildFilename('قوائم_صرف_المواد'), headers, rows);
-  else ExportKit.toPDF('قائمة مواد BOM', headers, rows);
+  else ExportKit.toPDF('قائمة المواد', headers, rows);
 }
 window.exportBom = exportBom;
 
@@ -702,7 +702,7 @@ function handleBomAction(bomId, action) {
   updateInventoryAnalyticsCards();
   renderBomSection();
   if (typeof renderOperations === 'function') renderOperations();
-  showToast('✅ تم إغلاق BOM — المنتج تام وجاهز للتسليم');
+  showToast('✅ تم إغلاق قائمة المواد — المنتج تام وجاهز للتسليم');
 }
 window.handleBomAction = handleBomAction;
 
@@ -1039,7 +1039,7 @@ function openReturnCreateModal() {
   var boms = InventoryReturns.getEligibleBoms();
   var sel = document.getElementById('returnBomSelect');
   if (!boms.length) {
-    showToast('⚠️ لا توجد BOM في «مخزن إنتاج»');
+    showToast('⚠️ لا توجد قائمة مواد في «مخزن إنتاج»');
     return;
   }
   sel.innerHTML = boms.map(function (b) {
@@ -1210,7 +1210,7 @@ function renderBomSection() {
         actionBtn = '<button type="button" class="btn-action primary" onclick="handleBomAction(\'' + b.id + '\',\'release\')"' +
           (check.ok ? '' : ' disabled title="' + check.reason + '"') + '>صرف بالباركود</button>';
       } else if (b.stage === 'wip') {
-        actionBtn = '<button type="button" class="btn-action success" onclick="handleBomAction(\'' + b.id + '\',\'finish\')">إغلاق BOM — تام</button>';
+        actionBtn = '<button type="button" class="btn-action success" onclick="handleBomAction(\'' + b.id + '\',\'finish\')">إغلاق قائمة المواد — تام</button>';
       } else {
         actionBtn = '<span class="badge done">مكتمل</span>';
       }

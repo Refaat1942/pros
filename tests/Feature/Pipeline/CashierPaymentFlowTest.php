@@ -100,7 +100,7 @@ class CashierPaymentFlowTest extends TestCase
 
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
         $this->assertSame(Quote::STATUS_APPROVED, $quote->status);
-        $this->assertSame('تم الدفع في الخزنة', $quote->status_label);
+        $this->assertSame('تم الدفع في الخزينة', $quote->status_label);
     }
 
     public function test_paid_cash_case_shows_in_operations_and_approval_issues_work_order(): void
@@ -217,7 +217,7 @@ class CashierPaymentFlowTest extends TestCase
             $this->userWithRole('admin'),
         );
 
-        $this->assertSame('التحصيل النقدي — الخزنة', $report['title']);
+        $this->assertSame('التحصيل النقدي — الخزينة', $report['title']);
         $this->assertCount(1, $report['rows']);
         $this->assertSame([], $report['summary']);
     }
@@ -283,7 +283,7 @@ class CashierPaymentFlowTest extends TestCase
         $this->assertEqualsWithDelta(1500.0, (float) $fresh->quote_total, 0.01);
     }
 
-    /** يقود مريض كاش حتى مرحلة الخزنة (بانتظار الدفع). */
+    /** يقود مريض كاش حتى مرحلة الخزينة (بانتظار الدفع). */
     private function cashierAwaitingCase(): CaseRecord
     {
         $case = $this->operationsReadyCase($this->cashPatient());

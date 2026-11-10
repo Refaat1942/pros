@@ -55,7 +55,7 @@ class DemoJourneysCommandTest extends ProstheticTestCase
             $this->artisan('prosthetics:demo-journeys', ['--items' => '1101:1,1102:0.5', '--seed' => true, '--print' => true])
                 ->expectsOutputToContain('5 من 5 حالات وصلت للتسليم')
                 ->expectsOutputToContain('إذن صرف الخامات')
-                ->expectsOutputToContain('إيصال الخزنة')
+                ->expectsOutputToContain('إيصال الخزينة')
                 ->assertSuccessful();
         }
 

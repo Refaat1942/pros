@@ -12,7 +12,7 @@ class SupplyRequest extends Model
 
     public const STATUS_CLOSED = 'closed';
 
-    /** بانتظار اعتماد أدمن المخازن — لا يُستلم عليه وارد قبل الاعتماد. */
+    /** بانتظار اعتماد مسؤول المخازن — لا يُستلم عليه وارد قبل الاعتماد. */
     public const STATUS_PENDING_APPROVAL = 'pending_approval';
 
     public const STATUS_REJECTED = 'rejected';

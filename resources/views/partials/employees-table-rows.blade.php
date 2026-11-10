@@ -14,9 +14,9 @@
             || $isSuperAdminUser
             || ($isLimitedAdmin && ! $isSuperAdmin);
         $bulkDeleteTitle = $isSuperAdminUser
-            ? 'لا يمكن حذف السوبر أدمن'
+            ? 'لا يمكن حذف مدير النظام'
             : ($isLimitedAdmin && ! $isSuperAdmin
-                ? 'لا يمكن حذف مسؤول النظام — السوبر أدمن فقط'
+                ? 'حذف مسؤول النظام من صلاحيات مدير النظام فقط'
                 : (auth()->id() === $employee->id ? 'لا يمكن حذف حسابك الحالي' : ''));
         $canDeleteEmployee = auth()->id() !== $employee->id
             && ! $isSuperAdminUser
@@ -90,7 +90,7 @@
                 @if ($canDeleteEmployee)
                     <button type="button"
                             class="btn-action danger"
-                            title="{{ $canManageLimitedAdmin ? 'حذف مسؤول النظام (سوبر أدمن)' : 'حذف الموظف' }}"
+                            title="{{ $canManageLimitedAdmin ? 'حذف مسؤول النظام' : 'حذف الموظف' }}"
                             onclick="deleteEmployee({{ $employee->id }}, {{ json_encode($employee->name) }})">
                         🗑️ حذف
                     </button>

@@ -40,7 +40,7 @@ class CashierPaymentService
             abort(422, 'وسيلة دفع غير صالحة.');
         }
 
-        $receivedBy = Auth::user()?->name ?? 'الخزنة';
+        $receivedBy = Auth::user()?->name ?? 'الخزينة';
         $caseId = $case->id;
 
         // C-1: كل القراءات المالية (الحالة، المدفوع، المتبقي) تتم داخل المعاملة تحت قفل
@@ -50,7 +50,7 @@ class CashierPaymentService
             $case = CaseRecord::lockForUpdate()->findOrFail($caseId);
 
             if (! $case->isAwaitingCashier()) {
-                abort(422, 'الحالة ليست بانتظار الدفع في الخزنة.');
+                abort(422, 'الحالة ليست بانتظار الدفع في الخزينة.');
             }
 
             $case->loadMissing('patient:id,name');
@@ -123,14 +123,14 @@ class CashierPaymentService
             // H-1: توضيح — التسعير اليدوي (manualDue) يُحدِّد قيمة العرض عند التحصيل
             // (حالة الكاش المباشر بلا عرض مُسعّر). نُعلّمه صراحةً في سجل الرقابة للتتبّع.
             $manualPricingDescription = $manualDue
-                ? ' — تسعير يدوي بالخزنة (عرض بلا قيمة مُسبقة)'
+                ? ' — تسعير يدوي بالخزينة (عرض بلا قيمة مُسبقة)'
                 : '';
 
             AuditService::log(
                 action: $manualDue ? 'manual_price' : 'payment',
                 description: ($fullyPaid
-                    ? "تحصيل دفعة نقدية بالخزنة — {$payment->payment_no} — ".PaymentMethod::labelFor($method)
-                    : "تحصيل دفعة جزئية بالخزنة — {$payment->payment_no} — متبقي {$remaining} ج.م")
+                    ? "تحصيل دفعة نقدية بالخزينة — {$payment->payment_no} — ".PaymentMethod::labelFor($method)
+                    : "تحصيل دفعة جزئية بالخزينة — {$payment->payment_no} — متبقي {$remaining} ج.م")
                     .$manualPricingDescription,
                 tag: 'financial',
                 after: [
@@ -192,7 +192,7 @@ class CashierPaymentService
             report($e);
             AuditService::log(
                 action: 'skip',
-                description: "صرف سريع: تعذّر التحويل التلقائي للمخزن — {$case->case_no} — يكمل من مكتب التشغيل ({$e->getMessage()})",
+                description: "صرف سريع: تعذّر التحويل التلقائي للمخزن — {$case->case_no} — تُستكمل من مكتب التشغيل ({$e->getMessage()})",
                 tag: 'operations',
             );
         }

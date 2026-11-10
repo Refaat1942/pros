@@ -480,7 +480,7 @@
     var addBtn = $('btnAddQuickItem');
     if (addBtn) addBtn.classList.toggle('hidden', !!state.locked);
     if (!state.quickItems.length) {
-      body.innerHTML = '<tr><td colspan="3" class="px-2 py-4 text-center text-slate-400 text-xs">مفيش منتجات صرف سريع — اضغط «➕ إضافة منتج» لو المريض محتاج عكاز أو كرسي…</td></tr>';
+      body.innerHTML = '<tr><td colspan="3" class="px-2 py-4 text-center text-slate-400 text-xs">لا توجد منتجات صرف سريع — اضغط «➕ إضافة منتج» إذا احتاج المريض عكازاً أو كرسياً متحركاً…</td></tr>';
       return;
     }
     var dis = state.locked ? ' disabled' : '';

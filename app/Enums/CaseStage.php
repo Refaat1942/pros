@@ -31,7 +31,7 @@ enum CaseStage: string
             self::CostCalc => 'حساب التكاليف',
             self::Quote => 'عرض السعر',
             self::Operations => 'مكتب التشغيل',
-            self::Cashier => 'بانتظار الدفع في الخزنة',
+            self::Cashier => 'بانتظار الدفع في الخزينة',
             self::Manufacturing => 'جاري التصنيع',
             self::ReadyDelivery => 'جاهز للتسليم',
             self::Delivered => 'تم التسليم',
@@ -53,7 +53,7 @@ enum CaseStage: string
     private static function legacyLabelFor(string $key): ?string
     {
         return match ($key) {
-            'admin_approval' => 'انتظار موافقة الأدمن',
+            'admin_approval' => 'انتظار موافقة الإدارة',
             'waiting_return' => 'بانتظار موافقة الجهة',
             default => null,
         };

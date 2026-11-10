@@ -476,7 +476,7 @@
         <div class="report-card"><h4>📥 استلام من الموردين</h4></div>
         <div class="report-card"><h4>🏷️ الدفعات النشطة (Batch Tracking)</h4></div>
         <div class="report-card wide" id="bomAdminPanel">
-          <h4>📋 BOM — خام / تحت التشغيل / تام (قيمة Highest Batch Cost)</h4>
+          <h4>📋 قوائم المواد — خام / تحت التشغيل / تامة (القيمة بأعلى سعر شراء)</h4>
           <div id="bomAdminSummary" class="bom-admin-summary">
             <div class="bom-admin-stat raw">
               <div class="bas-label">خام</div>
@@ -505,11 +505,11 @@
                   <th>أمر التشغيل</th>
                   <th>المرحلة</th>
                   <th>البنود</th>
-                  <th>قيمة BOM</th>
+                  <th>قيمة قائمة المواد</th>
                 </tr>
               </thead>
               <tbody id="bomAdminTable">
-                <tr><td colspan="5" class="empty-cell">لا توجد قوائم BOM</td></tr>
+                <tr><td colspan="5" class="empty-cell">لا توجد قوائم مواد</td></tr>
               </tbody>
             </table>
           </div>

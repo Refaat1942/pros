@@ -150,7 +150,7 @@
     loadEligibleBoms()
       .then(function (boms) {
         if (!boms.length) {
-          toast('⚠️ لا توجد BOM في «تحت التشغيل» ببنود قابلة للارتجاع — قد تكون الكمية محجوزة في طلب ارتجاع معلّق أو لا يتبقى سوى وحدة واحدة في قسم الإنتاج.', true);
+          toast('⚠️ لا توجد قائمة مواد في «تحت التشغيل» ببنود قابلة للارتجاع — قد تكون الكمية محجوزة في طلب ارتجاع معلّق أو لا يتبقى سوى وحدة واحدة في قسم الإنتاج.', true);
           return;
         }
 
@@ -167,7 +167,7 @@
         $('returnCreateModal').classList.add('visible');
       })
       .catch(function (err) {
-        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل BOM';
+        var msg = (err.response && err.response.data && err.response.data.message) || 'تعذّر تحميل قائمة المواد';
         toast(msg, true);
       });
   }
@@ -242,7 +242,7 @@
 
     if (!bom || !(bom.items || []).length) {
       el.innerHTML = '<p class="return-lines-empty">' +
-        (bom ? 'لا بنود قابلة للارتجاع في هذا BOM' : 'اختر BOM لعرض البنود') +
+        (bom ? 'لا بنود قابلة للارتجاع في قائمة المواد هذه' : 'اختر قائمة المواد لعرض البنود') +
         '</p>';
       return;
     }

@@ -40,7 +40,7 @@
      */
     function quoteCompanyLabel(name) {
       var s = (name == null || name === undefined) ? '' : String(name).trim();
-      if (!s || s.toLowerCase() === 'null') return 'كاش';
+      if (!s || s.toLowerCase() === 'null') return 'نقدي';
       return s;
     }
 
@@ -1277,7 +1277,7 @@
       var ready = BomInventory.getReadyForDelivery();
       if (countEl) countEl.textContent = ready.length;
       if (!ready.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات جاهزة للتسليم — BOM يجب أن تكون «تام»</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد حالات جاهزة للتسليم — قائمة المواد يجب أن تكون «تام»</td></tr>';
         return;
       }
       tbody.innerHTML = ready.map(function(c) {
@@ -1324,7 +1324,7 @@
           '<strong>' + escapeHtml(c.case_no || '—') + ' — ' + escapeHtml(c.stage_label) + '</strong>' +
           '<div>مرجع الطلب: ' + escapeHtml(c.order_ref || '—') + '</div>' +
           (c.work_order_no ? '<div>أمر الشغل: ' + escapeHtml(c.work_order_no) + '</div>' : '') +
-          (c.bom_stage_label ? '<div>مرحلة BOM: ' + escapeHtml(c.bom_stage_label) + '</div>' : '') +
+          (c.bom_stage_label ? '<div>مرحلة قائمة المواد: ' + escapeHtml(c.bom_stage_label) + '</div>' : '') +
           (c.delivered_at ? '<div>تاريخ التسليم: ' + escapeHtml(c.delivered_at) + '</div>' : '') +
           '</div>';
       }).join('');

@@ -81,7 +81,7 @@ class StockReceiveController extends Controller
             $receipt = $approvals->submitReceipt($data, $user, $document);
 
             return response()->json([
-                'message' => 'تم تسجيل الاستلام وبانتظار اعتماد أدمن المخازن — الرصيد يتضاف بعد الاعتماد.',
+                'message' => 'تم تسجيل الاستلام وهو بانتظار اعتماد مسؤول المخازن، وسيُضاف الرصيد بعد الاعتماد.',
                 'pending_approval' => true,
                 'receipt_request_id' => $receipt->id,
             ], 202);

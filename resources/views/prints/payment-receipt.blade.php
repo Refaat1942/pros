@@ -77,7 +77,7 @@
 
 <div class="{{ $sheetClass }}">
     @include('prints.partials.org-header', [
-        'dept' => $tpl['dept_label'] ?? 'الخزنة',
+        'dept' => $tpl['dept_label'] ?? 'الخزينة',
         'seal' => (bool) ($tpl['show_seal'] ?? true),
         'showLogo' => (bool) ($tpl['show_logo'] ?? true),
         'headerMeta' => '<div class="serial-red">'.e($receipt['payment_no']).'</div><div>التاريخ: <span class="fill">'.e($receipt['received_at'] ?? now()->format('d/m/Y H:i')).'</span></div>',
@@ -139,7 +139,7 @@
     </table>
 
     <div class="sign-row">
-        <span>{{ $tpl['signature_1'] ?? 'أمين الخزنة' }}: <span class="fill">{{ $receipt['received_by'] ?? '' }}</span></span>
+        <span>{{ $tpl['signature_1'] ?? 'أمين الخزينة' }}: <span class="fill">{{ $receipt['received_by'] ?? '' }}</span></span>
         <span>{{ $tpl['signature_2'] ?? 'توقيع المستلم' }}: <span class="fill">&nbsp;</span></span>
     </div>
 

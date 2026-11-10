@@ -227,7 +227,7 @@ class CaseJourneyRunner
             ['operations', 'أمر الشغل', "/operations/case/{$case->id}/print-work-order"],
             ['workshop', 'أمر الشغل — قسم الإنتاج', "/workshop/work-order/{$case->id}/print"],
             $bom ? ['technical', 'إذن صرف الخامات', "/technical/bom/{$bom->id}/print-issue-voucher"] : null,
-            $payment ? ['cashier', 'إيصال الخزنة', "/cashier/payments/{$payment->id}/receipt"] : null,
+            $payment ? ['cashier', 'إيصال الخزينة', "/cashier/payments/{$payment->id}/receipt"] : null,
             $case->stage_key === CaseRecord::STAGE_DELIVERED ? ['admin', 'الفاتورة', "/admin/cases/{$case->id}/invoice"] : null,
         ]);
 
@@ -270,14 +270,14 @@ class CaseJourneyRunner
     {
         // الاعتماد يحوّل حالة الكاش للخزنة تلقائياً؛ إصدار العرض يدوياً فقط لو بقيت في التشغيل.
         if ($case->fresh()->stage_key === CaseRecord::STAGE_OPERATIONS) {
-            $this->step($journey, 'التشغيل — إصدار عرض السعر وتحويله للخزنة', fn () => $this->expectOk(
+            $this->step($journey, 'التشغيل — إصدار عرض السعر وتحويله للخزينة', fn () => $this->expectOk(
                 $this->as('operations')->postJson("/operations/pending/{$case->id}/release-quote")
             ));
         }
 
         $this->expectStage($journey, $case, CaseRecord::STAGE_CASHIER);
 
-        $this->step($journey, 'الخزنة — تحصيل المبلغ كاش', function () use ($case) {
+        $this->step($journey, 'الخزينة — تحصيل المبلغ نقداً', function () use ($case) {
             $total = (float) Quote::query()->where('case_id', $case->id)->latest('id')->value('total');
             $this->expectOk($this->as('cashier')->postJson("/cashier/payments/{$case->id}/confirm", [
                 'method' => 'cash',

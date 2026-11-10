@@ -98,9 +98,9 @@ class PathwayTransitionMessageServiceTest extends TestCase
 
         $this->assertNotNull($payload);
         $this->assertSame(Role::SLUG_CASHIER, $payload['role']);
-        $this->assertStringContainsString('الخزنة', $payload['title']);
+        $this->assertStringContainsString('الخزينة', $payload['title']);
         $this->assertStringContainsString('تم التحويل', $payload['body']);
-        $this->assertStringContainsString('الخزنة', $payload['body']);
+        $this->assertStringContainsString('الخزينة', $payload['body']);
     }
 
     public function test_military_quote_issued_notification_suppressed(): void
@@ -239,7 +239,7 @@ class PathwayTransitionMessageServiceTest extends TestCase
             CaseRecord::STAGE_OPERATIONS,
         );
 
-        $this->assertStringContainsString('الخزنة', $message);
+        $this->assertStringContainsString('الخزينة', $message);
         $this->assertStringNotContainsString('operations_wo', $message);
         $this->assertStringNotContainsString('cashier', $message);
     }

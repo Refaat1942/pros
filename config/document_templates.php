@@ -92,7 +92,7 @@ return [
         'payment_receipt' => [
             'group' => 'المالية والاستقبال',
             'title' => 'إيصال دفع',
-            'description' => 'إيصال الخزنة بعد التحصيل',
+            'description' => 'إيصال الخزينة بعد التحصيل',
             'view' => 'prints.payment-receipt',
             'print_route' => null,
             'fields' => [
@@ -108,10 +108,10 @@ return [
             ],
             'defaults' => [
                 'doc_title' => 'إيصال استلام نقدية',
-                'dept_label' => 'الخزنة',
+                'dept_label' => 'الخزينة',
                 'subtitle' => 'إيصال دفع — مركز الأطراف الصناعية',
                 'footer_note' => '',
-                'signature_1' => 'أمين الخزنة',
+                'signature_1' => 'أمين الخزينة',
                 'signature_2' => 'المستلم',
                 'show_logo' => true,
                 'show_seal' => true,
@@ -122,7 +122,7 @@ return [
         'issue_voucher' => [
             'group' => 'المخزن والتوريد',
             'title' => 'إذن صرف مواد',
-            'description' => 'صرف BOM لقسم الإنتاج — من المخزن',
+            'description' => 'صرف قائمة المواد لقسم الإنتاج — من المخزن',
             'view' => 'prints.issue-voucher',
             'print_route' => null,
             'fields' => [

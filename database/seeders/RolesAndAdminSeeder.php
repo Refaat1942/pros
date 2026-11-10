@@ -17,7 +17,7 @@ class RolesAndAdminSeeder extends Seeder
     public function run(): void
     {
         $roles = [
-            ['slug' => Role::SLUG_SUPER_ADMIN, 'label_ar' => 'سوبر أدمن'],
+            ['slug' => Role::SLUG_SUPER_ADMIN, 'label_ar' => 'مدير النظام'],
             ['slug' => Role::SLUG_ADMIN,       'label_ar' => 'مسؤول النظام (محدود)'],
             ['slug' => Role::SLUG_RECEPTION,   'label_ar' => 'الاستقبال'],
             ['slug' => Role::SLUG_DOCTOR,      'label_ar' => 'الطبيب'],
@@ -25,7 +25,7 @@ class RolesAndAdminSeeder extends Seeder
             ['slug' => Role::SLUG_ADJUSTMENTS, 'label_ar' => 'المعدلات'],
             ['slug' => Role::SLUG_COSTING,     'label_ar' => 'الاعتماد'],
             ['slug' => Role::SLUG_OPERATIONS,  'label_ar' => 'مكتب التشغيل'],
-            ['slug' => Role::SLUG_CASHIER,     'label_ar' => 'الخزنة'],
+            ['slug' => Role::SLUG_CASHIER,     'label_ar' => 'الخزينة'],
             ['slug' => Role::SLUG_WORKSHOP,    'label_ar' => 'قسم الإنتاج'],
             ['slug' => Role::SLUG_TECHNICAL,   'label_ar' => 'المخزن'],
         ];
@@ -93,7 +93,7 @@ class RolesAndAdminSeeder extends Seeder
         if (app()->environment('production')) {
             if (! $accountExists) {
                 throw new \RuntimeException(
-                    'SEED_SUPER_ADMIN_PASSWORD مطلوب في الإنتاج لإنشاء حساب السوبر أدمن — لن تُستخدم كلمة مرور افتراضية ضعيفة.'
+                    'SEED_SUPER_ADMIN_PASSWORD مطلوب في الإنتاج لإنشاء حساب مدير النظام — لن تُستخدم كلمة مرور افتراضية ضعيفة.'
                 );
             }
 

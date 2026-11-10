@@ -129,7 +129,7 @@ class PathwayTransitionMessageService
 
         $title = match ($event) {
             WorkflowEvent::BomFinished->value => "{$prefix} طرف جاهز للتسليم — الاستقبال",
-            WorkflowEvent::SentToCashier->value => "{$prefix} عرض سعر بانتظار الدفع — الخزنة",
+            WorkflowEvent::SentToCashier->value => "{$prefix} عرض سعر بانتظار الدفع — الخزينة",
             WorkflowEvent::Delivered->value => "{$prefix} تم تسليم وإغلاق حالة",
             WorkflowEvent::ServicesApprovalRequired->value => "{$prefix} بانتظار تصديق إدارة الخدمات",
             default => "{$prefix} حالة جديدة — {$toLabel}",

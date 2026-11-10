@@ -105,7 +105,7 @@
         </div>
         <form id="supplySwapForm" class="panel-body" style="padding:16px;">
             <p style="margin:0 0 12px;font-size:13px;color:var(--text-muted);line-height:1.7;">
-                بنسلّم المورد صنف من مخزوننا وبناخد بداله صنف تاني. بعد الاعتماد: الصنف الخارج يتخصم من المخزون بتكلفته الفعلية، والبديل يتضاف (ولو جديد يتعمل في الكتالوج تلقائياً باسمه ومواصفاته). مديونية المورد بتزيد بفرق السعر بس.
+                نُسلِّم المورد صنفاً من مخزوننا ونستلم بديلاً عنه. بعد الاعتماد يُخصم الصنف الخارج من المخزون بتكلفته الفعلية، ويُضاف البديل (وإن كان جديداً يُنشأ في الكتالوج تلقائياً باسمه ومواصفاته). تزيد مديونية المورد بفرق السعر فقط.
             </p>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
                 <div class="form-group">
@@ -148,7 +148,7 @@
             </div>
             <div id="swapInNew" style="display:none;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
                 <div class="form-group"><label for="swapNewName">اسم الصنف الجديد</label><input type="text" id="swapNewName" class="form-control" maxlength="255"></div>
-                <div class="form-group"><label for="swapNewUom">الوحدة</label><input type="text" id="swapNewUom" class="form-control" maxlength="50" placeholder="نفس وحدة الخارج لو فاضية"></div>
+                <div class="form-group"><label for="swapNewUom">الوحدة</label><input type="text" id="swapNewUom" class="form-control" maxlength="50" placeholder="تُستخدم وحدة الصنف الخارج إن تُركت فارغة"></div>
                 <div class="form-group"><label for="swapNewBrand">الماركة</label><input type="text" id="swapNewBrand" class="form-control" maxlength="255"></div>
                 <div class="form-group"><label for="swapNewSpec">المواصفات</label><input type="text" id="swapNewSpec" class="form-control" maxlength="1000"></div>
             </div>
@@ -225,7 +225,7 @@
         if (!body.supplier_id) return show('اختر المورد.', '#dc2626');
         if (mode() === 'existing') {
           body.in_stock_item_id = document.getElementById('swapInItemId').value;
-          if (!body.in_stock_item_id) return show('اختر الصنف البديل من نتائج البحث أو اختار «صنف جديد».', '#dc2626');
+          if (!body.in_stock_item_id) return show('اختر الصنف البديل من نتائج البحث أو اختر «صنف جديد».', '#dc2626');
         } else {
           body.new_item = {
             name: document.getElementById('swapNewName').value.trim(),

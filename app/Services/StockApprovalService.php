@@ -93,7 +93,7 @@ class StockApprovalService
                 ->where('supply_request_line_id', $lineId)
                 ->where('status', StockReceiptRequest::STATUS_PENDING)
                 ->lockForUpdate()->exists()) {
-                abort(422, 'فيه استلام لنفس بند التوريد بانتظار الاعتماد بالفعل.');
+                abort(422, 'يوجد استلام لبند التوريد نفسه بانتظار الاعتماد بالفعل.');
             }
             if ($lineId) {
                 $this->assertLineReceivable(SupplyRequestLine::query()->with('supplyRequest')->findOrFail($lineId));
@@ -138,7 +138,7 @@ class StockApprovalService
 
         return DB::transaction(function () use ($receipt, $approver) {
             $receipt = StockReceiptRequest::query()->lockForUpdate()->findOrFail($receipt->id);
-            abort_unless($receipt->status === StockReceiptRequest::STATUS_PENDING, 422, 'طلب الاستلام اتعالج بالفعل.');
+            abort_unless($receipt->status === StockReceiptRequest::STATUS_PENDING, 422, 'طلب الاستلام تمت معالجته مسبقاً.');
 
             // الحركة باسم اللي استلم فعلاً؛ الاعتماد مسجّل على الطلب وفي سجل الرقابة.
             $movement = $this->executeReceipt([
@@ -182,7 +182,7 @@ class StockApprovalService
 
         return DB::transaction(function () use ($receipt, $approver, $reason) {
             $receipt = StockReceiptRequest::query()->lockForUpdate()->findOrFail($receipt->id);
-            abort_unless($receipt->status === StockReceiptRequest::STATUS_PENDING, 422, 'طلب الاستلام اتعالج بالفعل.');
+            abort_unless($receipt->status === StockReceiptRequest::STATUS_PENDING, 422, 'طلب الاستلام تمت معالجته مسبقاً.');
 
             $receipt->update([
                 'status' => StockReceiptRequest::STATUS_REJECTED,
@@ -210,7 +210,7 @@ class StockApprovalService
 
         return DB::transaction(function () use ($request, $approver) {
             $request = SupplyRequest::query()->lockForUpdate()->findOrFail($request->id);
-            abort_unless($request->status === SupplyRequest::STATUS_PENDING_APPROVAL, 422, 'طلب التوريد اتعالج بالفعل.');
+            abort_unless($request->status === SupplyRequest::STATUS_PENDING_APPROVAL, 422, 'طلب التوريد تمت معالجته مسبقاً.');
 
             $request->update([
                 'status' => SupplyRequest::STATUS_OPEN,
@@ -237,7 +237,7 @@ class StockApprovalService
 
         return DB::transaction(function () use ($request, $approver, $reason) {
             $request = SupplyRequest::query()->lockForUpdate()->findOrFail($request->id);
-            abort_unless($request->status === SupplyRequest::STATUS_PENDING_APPROVAL, 422, 'طلب التوريد اتعالج بالفعل.');
+            abort_unless($request->status === SupplyRequest::STATUS_PENDING_APPROVAL, 422, 'طلب التوريد تمت معالجته مسبقاً.');
 
             $request->update([
                 'status' => SupplyRequest::STATUS_REJECTED,
@@ -261,7 +261,7 @@ class StockApprovalService
     public function assertLineReceivable(SupplyRequestLine $line): void
     {
         $request = $line->supplyRequest;
-        abort_if($request && ! $request->isApproved(), 422, 'طلب التوريد '.$request->request_no.' لسه بانتظار اعتماد أدمن المخازن.');
+        abort_if($request && ! $request->isApproved(), 422, 'طلب التوريد '.$request->request_no.' لا يزال بانتظار اعتماد مسؤول المخازن.');
     }
 
     public function notifySupplyPending(SupplyRequest $request): void

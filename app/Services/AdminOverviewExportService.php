@@ -45,7 +45,7 @@ class AdminOverviewExportService
         if ($strip !== []) {
             $labelMap = [
                 'waiting_return' => 'بانتظار موافقة جهات التعاقد',
-                'awaiting_cashier' => 'بانتظار الدفع النقدي — الخزنة',
+                'awaiting_cashier' => 'بانتظار الدفع النقدي — الخزينة',
                 'awaiting_assignment' => 'بانتظار تخصيص الإنتاج',
                 'in_progress' => 'تحت التنفيذ',
                 'delivered' => 'تم التسليم',
@@ -85,11 +85,11 @@ class AdminOverviewExportService
         if ($this->scope->canSeeBundle($user, 'export_finance_cash_kpis')) {
             $cash = $board4['cash'] ?? [];
             $kpiRows[] = [
-                'محصّل نقدي — الخزنة',
+                'محصّل نقدي — الخزينة',
                 number_format((float) ($cash['cash_collected_total'] ?? 0), 2).' ج.م',
             ];
             $kpiRows[] = [
-                'بانتظار الدفع — الخزنة',
+                'بانتظار الدفع — الخزينة',
                 (string) ($cash['cash_awaiting_payment'] ?? 0),
             ];
         }
@@ -148,7 +148,7 @@ class AdminOverviewExportService
             }
 
             $sections[] = [
-                'title' => 'الأصناف الأكثر طلباً (BOM)',
+                'title' => 'الأصناف الأكثر طلباً (قوائم المواد)',
                 'headers' => ['رقم الصنف', 'الاسم', 'الرصيد'],
                 'rows' => $topItemRows ?: [['—', 'لا توجد بيانات', '0']],
             ];
@@ -218,7 +218,7 @@ class AdminOverviewExportService
             }
 
             $sections[] = [
-                'title' => 'قوائم BOM',
+                'title' => 'قوائم المواد',
                 'headers' => $canShowPatients
                     ? ['المريض', 'أمر التشغيل', 'المرحلة', 'البنود', 'قيمة الاصناف (ج.م)']
                     : ['أمر التشغيل', 'المرحلة', 'البنود', 'قيمة الاصناف (ج.م)'],

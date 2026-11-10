@@ -2,12 +2,14 @@
     $rateRows = $overhead_rate_definitions ?? [];
     $ratesSum = $overhead_rates_sum ?? 0;
     $costingModes = $costing_modes ?? [];
+    $discountPolicy = $discount_policy ?? ['pathways' => [], 'types' => []];
+    $discountPathways = $discount_pathways ?? [];
 @endphp
 <div class="section-view" id="section-costing-settings">
     <div class="panel">
         <div class="panel-header">
             <h3>⚙️ إعدادات التكاليف الإضافية</h3>
-            <span class="badge" id="costingSettingsSumBadge">{{ rtrim(rtrim(number_format((float) $ratesSum, 2, '.', ''), '0'), '.') }}%</span>
+            <span class="badge" id="costingSettingsSumBadge" title="كل بند نسبة مستقلة من تكلفة المواد، ولا يُشترط أن يساوي المجموع 100%">مجموع النسب {{ rtrim(rtrim(number_format((float) $ratesSum, 2, '.', ''), '0'), '.') }}%</span>
         </div>
 
 
@@ -51,7 +53,97 @@
             <button type="button" class="btn-action success" id="btnSaveCostingModes">💾 حفظ الأنماط</button>
         </div>
     </div>
+
+    {{-- سياسة الخصومات — السوبر أدمن يحدد مين يستفيد من الخصم وأنواع الخصومات المعتمدة وحدودها. --}}
+    <div class="panel" id="discountPolicyPanel">
+        <div class="panel-header">
+            <h3>🏷️ سياسة الخصومات</h3>
+            <button type="button" class="btn-action" id="btnAddDiscountType">➕ إضافة نوع خصم</button>
+        </div>
+        <div style="padding:16px;">
+            <p style="margin:0 0 10px;font-weight:700;">الفئات المسموح بمنحها خصماً عند الاعتماد:</p>
+            <div style="display:flex;flex-wrap:wrap;gap:18px;margin-bottom:16px;">
+                @foreach ($discountPathways as $key => $label)
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input type="checkbox" class="discount-pathway" value="{{ $key }}" @checked($discountPolicy['pathways'][$key] ?? false)>
+                        {{ $label }}
+                    </label>
+                @endforeach
+            </div>
+            <table data-no-paginate class="stock-table" style="width:100%;">
+                <thead>
+                    <tr><th>نوع الخصم</th><th style="width:130px;">نسبة ثابتة %</th><th style="width:110px;">نسبة مئوية</th><th style="width:110px;">مبلغ ثابت</th><th style="width:150px;">الحد الأقصى (% من السعر)</th><th style="width:60px;"></th></tr>
+                </thead>
+                <tbody id="discountTypesBody"></tbody>
+            </table>
+            <p style="margin:10px 0 0;font-size:12px;color:var(--text-muted);">«نسبة ثابتة»: الخصم يُطبَّق بهذه النسبة تحديداً (مثل خصم 15% وخصم 25% في حسبة اللائحة). اترك «الحد الأقصى» فارغاً لعدم تقييد النسبة. يُطبَّق الخصم على سعر البيع ويُسجَّل في عرض السعر والفاتورة ومديونية الجهة.</p>
+            <div id="discountPolicyError" class="costing-settings-error" style="display:none;"></div>
+            <div class="costing-settings-actions">
+                <button type="button" class="btn-action success" id="btnSaveDiscountPolicy">💾 حفظ سياسة الخصومات</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+(function () {
+    var types = @json($discountPolicy['types']);
+    var body = document.getElementById('discountTypesBody');
+    if (!body) return;
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function readRows() {
+        types = Array.prototype.map.call(body.querySelectorAll('tr'), function (tr) {
+            return {
+                key: tr.dataset.key || '',
+                label: tr.querySelector('.dt-label').value.trim(),
+                allow_percent: tr.querySelector('.dt-percent').checked,
+                allow_amount: tr.querySelector('.dt-amount').checked,
+                max_percent: tr.querySelector('.dt-max').value === '' ? null : parseFloat(tr.querySelector('.dt-max').value),
+                fixed_percent: tr.querySelector('.dt-fixed').value === '' ? null : parseFloat(tr.querySelector('.dt-fixed').value),
+            };
+        });
+        return types;
+    }
+    function render() {
+        body.innerHTML = types.map(function (t, i) {
+            return '<tr data-key="' + esc(t.key) + '">' +
+                '<td><input type="text" class="form-control dt-label" maxlength="100" value="' + esc(t.label) + '" placeholder="مثال: حالة إنسانية"></td>' +
+                '<td><input type="number" class="form-control dt-fixed" min="0.01" max="99.99" step="0.01" value="' + (t.fixed_percent == null ? '' : esc(t.fixed_percent)) + '" placeholder="حرة"></td>' +
+                '<td style="text-align:center;"><input type="checkbox" class="dt-percent"' + (t.allow_percent ? ' checked' : '') + '></td>' +
+                '<td style="text-align:center;"><input type="checkbox" class="dt-amount"' + (t.allow_amount ? ' checked' : '') + '></td>' +
+                '<td><input type="number" class="form-control dt-max" min="0.01" max="99.99" step="0.01" value="' + (t.max_percent == null ? '' : esc(t.max_percent)) + '" placeholder="بدون حد"></td>' +
+                '<td><button type="button" class="btn-action danger dt-remove" data-i="' + i + '">حذف</button></td></tr>';
+        }).join('');
+        body.querySelectorAll('.dt-remove').forEach(function (b) {
+            b.addEventListener('click', function () { readRows(); types.splice(+b.dataset.i, 1); render(); });
+        });
+    }
+    render();
+    document.getElementById('btnAddDiscountType').addEventListener('click', function () {
+        readRows(); types.push({ key: '', label: '', allow_percent: true, allow_amount: true, max_percent: null, fixed_percent: null }); render();
+    });
+    document.getElementById('btnSaveDiscountPolicy').addEventListener('click', function () {
+        var err = document.getElementById('discountPolicyError');
+        var pathways = {};
+        document.querySelectorAll('.discount-pathway').forEach(function (c) { pathways[c.value] = c.checked; });
+        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+        fetch('/admin/discount-policy', {
+            method: 'PUT', credentials: 'same-origin',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ pathways: pathways, types: readRows() }),
+        }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+          .then(function (res) {
+              types = res.discount_policy.types; render();
+              err.style.display = 'block'; err.style.background = '#dcfce7'; err.style.color = '#166534';
+              err.textContent = res.message || 'تم الحفظ.';
+          })
+          .catch(function (e) {
+              err.style.display = 'block'; err.style.background = ''; err.style.color = '';
+              err.textContent = (e && e.errors) ? Object.values(e.errors)[0][0] : ((e && e.message) || 'تعذّر الحفظ.');
+          });
+    });
+})();
+</script>
 
 <style>
     #section-costing-settings .costing-settings-hint {
@@ -148,9 +240,8 @@
             sum += parseFloat(input.value || '0') || 0;
         });
 
-        badge.textContent = sum.toFixed(2).replace(/\.?0+$/, '') + '%';
-        badge.style.background = Math.abs(sum - 100) < 0.01 ? '#dcfce7' : '#fee2e2';
-        badge.style.color = Math.abs(sum - 100) < 0.01 ? '#166534' : '#dc2626';
+        // للعلم بس — كل بند نسبة مستقلة من المواد، فمفيش لون أحمر لو المجموع مش 100%.
+        badge.textContent = 'مجموع النسب ' + sum.toFixed(2).replace(/\.?0+$/, '') + '%';
     }
 
     document.getElementById('costingSettingsForm')?.addEventListener('input', updateSumBadge);

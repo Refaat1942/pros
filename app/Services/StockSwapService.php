@@ -28,18 +28,18 @@ class StockSwapService
     /** @param  array<string, mixed>  $data */
     public function request(array $data, User $user): StockSwapRequest
     {
-        abort_unless($user->can(self::PERMISSION), 403, 'تبديل الأصناف لأدمن المخازن فقط.');
+        abort_unless($user->can(self::PERMISSION), 403, 'تبديل الأصناف من صلاحيات مسؤول المخازن فقط.');
 
         $out = StockItem::findOrFail($data['out_stock_item_id']);
         $outQty = round((float) $data['out_qty'], 4);
         abort_if($outQty > (float) $out->availableQty() + 0.0001, 422, 'الكمية الخارجة أكبر من المتاح من «'.$out->name.'» ('.$out->availableQty().').');
 
         $inItemId = ! empty($data['in_stock_item_id']) ? (int) $data['in_stock_item_id'] : null;
-        abort_if($inItemId === $out->id, 422, 'الصنف البديل لازم يختلف عن الصنف الخارج.');
+        abort_if($inItemId === $out->id, 422, 'يجب أن يختلف الصنف البديل عن الصنف الخارج.');
         $newItem = null;
         if ($inItemId === null) {
             $name = trim((string) ($data['new_item']['name'] ?? ''));
-            abort_if($name === '', 422, 'اكتب اسم الصنف الجديد أو اختر صنف موجود.');
+            abort_if($name === '', 422, 'اكتب اسم الصنف الجديد أو اختر صنفاً موجوداً.');
             $newItem = array_filter([
                 'name' => $name,
                 'uom' => trim((string) ($data['new_item']['uom'] ?? '')) ?: $out->uom,
@@ -79,11 +79,11 @@ class StockSwapService
 
     public function approve(StockSwapRequest $swap, User $approver): StockSwapRequest
     {
-        abort_unless($approver->can(self::PERMISSION), 403, 'اعتماد تبديل الأصناف لأدمن المخازن فقط.');
+        abort_unless($approver->can(self::PERMISSION), 403, 'اعتماد تبديل الأصناف من صلاحيات مسؤول المخازن فقط.');
 
         return DB::transaction(function () use ($swap, $approver) {
             $swap = StockSwapRequest::query()->lockForUpdate()->findOrFail($swap->id);
-            abort_unless($swap->status === StockSwapRequest::STATUS_PENDING, 422, 'طلب التبديل اتعالج بالفعل.');
+            abort_unless($swap->status === StockSwapRequest::STATUS_PENDING, 422, 'طلب التبديل تمت معالجته مسبقاً.');
 
             $supplier = Supplier::findOrFail($swap->supplier_id);
             $performer = $swap->requestedBy ?? $approver;
@@ -92,7 +92,7 @@ class StockSwapService
             // 1) خروج الصنف القديم من المخزون بتكلفته الفعلية (دفعات FIFO).
             $out = StockItem::query()->lockForUpdate()->findOrFail($swap->out_stock_item_id);
             $outQty = (float) $swap->out_qty;
-            abort_if($outQty > (float) $out->availableQty() + 0.0001, 422, 'المتاح من «'.$out->name.'» بقى أقل من كمية التبديل ('.$out->availableQty().').');
+            abort_if($outQty > (float) $out->availableQty() + 0.0001, 422, 'المتاح من «'.$out->name.'» أصبح أقل من كمية التبديل ('.$out->availableQty().').');
 
             $allocations = $this->batches->allocateForDispense($out, $outQty);
             $this->batches->applyDecrements($allocations);
@@ -166,13 +166,13 @@ class StockSwapService
 
     public function reject(StockSwapRequest $swap, User $approver, string $reason): StockSwapRequest
     {
-        abort_unless($approver->can(self::PERMISSION), 403, 'اعتماد تبديل الأصناف لأدمن المخازن فقط.');
+        abort_unless($approver->can(self::PERMISSION), 403, 'اعتماد تبديل الأصناف من صلاحيات مسؤول المخازن فقط.');
         $reason = trim($reason);
         abort_if($reason === '', 422, 'اكتب سبب الرفض.');
 
         return DB::transaction(function () use ($swap, $approver, $reason) {
             $swap = StockSwapRequest::query()->lockForUpdate()->findOrFail($swap->id);
-            abort_unless($swap->status === StockSwapRequest::STATUS_PENDING, 422, 'طلب التبديل اتعالج بالفعل.');
+            abort_unless($swap->status === StockSwapRequest::STATUS_PENDING, 422, 'طلب التبديل تمت معالجته مسبقاً.');
             $swap->update([
                 'status' => StockSwapRequest::STATUS_REJECTED,
                 'approved_by_user_id' => $approver->id,

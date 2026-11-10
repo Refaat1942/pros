@@ -24,8 +24,8 @@ class PurgeStockCatalogCommand extends Command
         }
 
         if ($purge->hasBlockingReferences()) {
-            $this->warn('تحذير: فيه حالات أو BOM أو طلبات تسعير مرتبطة بأكواد الأصناف الحالية.');
-            $this->line('الأكواد في التوصيف/BOM هتفضل موجودة كنص — الأفضل تمسح بيانات المرضى الأول: prosthetics:purge-patient-data');
+            $this->warn('تحذير: توجد حالات أو قوائم مواد أو طلبات تسعير مرتبطة بأكواد الأصناف الحالية.');
+            $this->line('ستبقى الأكواد في التوصيف وقوائم المواد كنص — يُفضَّل مسح بيانات المرضى أولاً: prosthetics:purge-patient-data');
         }
 
         if (! $this->option('force') && ! $this->confirm(
@@ -39,7 +39,7 @@ class PurgeStockCatalogCommand extends Command
 
         $counts = $purge->purge();
 
-        $this->info('تم مسح كatalog الأصناف.');
+        $this->info('تم مسح كتالوج الأصناف.');
         $this->table(
             ['الجدول', 'عدد المحذوف'],
             collect($counts)->map(fn (int $count, string $key) => [$key, $count])->values()->all(),

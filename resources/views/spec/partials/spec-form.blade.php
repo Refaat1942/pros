@@ -31,7 +31,7 @@
     <section class="spec-form-section spec-form-section--wide">
         <h6 class="spec-form-section__title">{{ $specForm['other_title'] }}</h6>
         <textarea id="specFormOther" rows="3" class="spec-form-other" maxlength="2000"
-                  placeholder="أي مواصفات تانية — كل بند في سطر"></textarea>
+                  placeholder="أي مواصفات أخرى — كل بند في سطر"></textarea>
     </section>
 
     {{-- التخزين الفعلي (نفس الحقل القديم) — يتملى تلقائياً من الاستمارة قبل الحفظ. --}}

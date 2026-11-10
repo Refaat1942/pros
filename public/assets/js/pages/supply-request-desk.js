@@ -314,7 +314,7 @@
         cart.push(line);
         clearLineFields();
         renderCart();
-        showMsg('اتضاف للطلب — أضف صنف تاني أو سجّل الطلب.', true);
+        showMsg('أُضيف الصنف إلى الطلب — أضف صنفاً آخر أو سجّل الطلب.', true);
       });
     }
 

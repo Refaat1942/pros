@@ -299,6 +299,9 @@ Route::prefix('admin')
 
             Route::put('costing-modes', [CostingSettingsController::class, 'updateModes'])
                 ->name('costing-modes.update');
+
+            Route::put('discount-policy', [CostingSettingsController::class, 'updateDiscountPolicy'])
+                ->name('discount-policy.update');
         });
 
         Route::middleware('dashboard.page:admin,branding-settings')->group(function () {

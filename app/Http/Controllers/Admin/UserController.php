@@ -47,13 +47,13 @@ class UserController extends Controller
         if ($user->role?->slug === Role::SLUG_SUPER_ADMIN) {
             return redirect()
                 ->route('admin.employees')
-                ->with('error', 'لا يمكن تعطيل حساب السوبر أدمن.');
+                ->with('error', 'لا يمكن تعطيل حساب مدير النظام.');
         }
 
         if ($user->role?->slug === Role::SLUG_ADMIN && ! $actor?->isSuperAdmin()) {
             return redirect()
                 ->route('admin.employees')
-                ->with('error', 'لا يمكن تعطيل مسؤول النظام — السوبر أدمن فقط.');
+                ->with('error', 'تعطيل مسؤول النظام من صلاحيات مدير النظام فقط.');
         }
 
         $user = $this->userService->toggleStatus($user);
@@ -77,11 +77,11 @@ class UserController extends Controller
         $user->loadMissing('role:id,slug');
 
         if ($user->role?->slug === Role::SLUG_SUPER_ADMIN) {
-            return response()->json(['message' => 'لا يمكن حذف حساب السوبر أدمن.'], 422);
+            return response()->json(['message' => 'لا يمكن حذف حساب مدير النظام.'], 422);
         }
 
         if ($user->role?->slug === Role::SLUG_ADMIN && ! $actor?->isSuperAdmin()) {
-            return response()->json(['message' => 'لا يمكن حذف مسؤول النظام — السوبر أدمن فقط.'], 422);
+            return response()->json(['message' => 'حذف مسؤول النظام من صلاحيات مدير النظام فقط.'], 422);
         }
 
         $this->userService->delete($user);
@@ -95,7 +95,7 @@ class UserController extends Controller
         $actor = Auth::user();
 
         if (! $actor?->isSuperAdmin()) {
-            return response()->json(['message' => 'غير مصرّح — هذه العملية للسوبر أدمن فقط.'], 403);
+            return response()->json(['message' => 'غير مصرّح — هذه العملية للمدير النظام فقط.'], 403);
         }
 
         if ($actor->id === $user->id) {

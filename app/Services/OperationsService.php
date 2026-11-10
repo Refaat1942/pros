@@ -40,11 +40,11 @@ class OperationsService
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             if ($case->stage_key !== CaseRecord::STAGE_OPERATIONS) {
-                abort(422, 'الحالة ليست في مكتب التشغيل — لا يمكن التحويل للخزنة.');
+                abort(422, 'الحالة ليست في مكتب التشغيل — لا يمكن التحويل للخزينة.');
             }
 
             if (! $case->isCashCivilian()) {
-                abort(422, 'التحويل للخزنة مخصص للمرضى على نفقتهم الشخصية (كاش) فقط.');
+                abort(422, 'التحويل للخزينة مخصص للمرضى على نفقتهم الشخصية (نقدي) فقط.');
             }
 
             $before = ['stage_key' => $case->stage_key];
@@ -55,7 +55,7 @@ class OperationsService
 
             AuditService::log(
                 action: 'issue',
-                description: "تحويل مريض كاش للخزنة لتحصيل الدفع — {$case->case_no}",
+                description: "تحويل مريض نقدي للخزينة لتحصيل الدفع — {$case->case_no}",
                 tag: 'operations',
                 before: $before,
                 after: ['stage_key' => CaseRecord::STAGE_CASHIER, 'quote_no' => $quote->quote_no],
@@ -144,7 +144,11 @@ class OperationsService
 
             // عسكري: التكلفة المعتمدة = التكلفة الداخلية (WAC) للمديونية السيادية.
             if ($case->isMilitary()) {
-                $case->update(['total_cost' => (float) $case->internal_cost]);
+                // حالات اتعتمدت بحسبة التكاليف الجديدة: المديونية = سعر البيع بعد الخصم.
+                // الحالات القديمة (من غير costing_gross_price) زي ما هي على WAC.
+                $case->update(['total_cost' => $case->costing_gross_price !== null
+                    ? (float) $case->military_selling_price
+                    : (float) $case->internal_cost]);
             } else {
                 $case->update([
                     'approval_date' => now()->toDateString(),

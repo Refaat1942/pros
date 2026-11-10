@@ -127,6 +127,7 @@
     if (!canSeeRates) return;
 
     if ($('costingMaterialsTotal')) $('costingMaterialsTotal').textContent = fmt(costing.materials_total) + ' ج.م';
+    currentMaterials = parseFloat(costing.materials_total) || 0;
 
     var linesEl = $('costingComponentLines');
     if (linesEl) {
@@ -198,7 +199,7 @@
         var c = res.data.case || {};
         var pricing = res.data.pricing || {};
         var costing = res.data.costing || null;
-        setupCashDiscount(c);
+        setupCashDiscount(c, c.discount_types);
         canSeeInternal = !!res.data.can_see_internal;
         canSeeRates = !!res.data.can_see_rates;
         currentInternalTotal = pricing.internal_total || 0;
@@ -303,7 +304,7 @@
             var head = '';
             if (both && quick !== prevQuick) {
               head = '<tr><td colspan="6" style="background:' + (quick ? '#ecfdf5' : '#f8fafc') + ';font-weight:700;padding:8px 10px;">' +
-                (quick ? '🩼 منتجات الصرف السريع — ربح مباشر بدون تكلفة تشغيل' : '🏭 مواد التصنيع — عليها تكلفة تشغيل') + '</td></tr>';
+                (quick ? '🩼 منتجات الصرف السريع — ربح مباشر بدون تكلفة تشغيل' : '🏭 مواد التصنيع — تُحمَّل بتكلفة التشغيل') + '</td></tr>';
             }
             prevQuick = quick;
             var badge = quick
@@ -319,7 +320,9 @@
           }).join('');
         }
 
+        currentMaterials = 0;
         renderBreakdown(costing);
+        renderNetRows();
 
         var modal = $('costingModal');
         if (modal) modal.classList.add('visible');
@@ -335,13 +338,39 @@
   }
 
   function discountAmount() {
+    if (!currentDiscountType()) return 0;
     var v = parseFloat(($('cashDiscountValue') || {}).value || '0') || 0;
     if (v <= 0) return 0;
     var isPct = (($('cashDiscountType') || {}).value || 'percent') === 'percent';
     return Math.round((isPct ? discountGross * v / 100 : v) * 100) / 100;
   }
 
+  // صفوف حسبة اللائحة: الخصم ← المبلغ بعد الخصم ← نسبة الربح = (الصافي − المواد) ÷ المواد.
+  var currentMaterials = 0;
+
+  function renderNetRows() {
+    var amt = discountAmount();
+    var valid = amt > 0 && amt < discountGross;
+    var net = valid ? discountGross - amt : discountGross;
+    var t = ($('cashDiscountType') || {}).value;
+    var v = parseFloat(($('cashDiscountValue') || {}).value || '0') || 0;
+    if ($('costingDiscountRow')) $('costingDiscountRow').style.display = valid ? '' : 'none';
+    if ($('costingNetRow')) $('costingNetRow').style.display = valid ? '' : 'none';
+    if ($('costingDiscountLabel')) $('costingDiscountLabel').textContent = 'خصم إضافي' + (t === 'percent' && v > 0 ? ' (' + v + '%)' : '');
+    if ($('costingDiscountAmount')) $('costingDiscountAmount').textContent = '− ' + fmt2(amt) + ' ج.م';
+    if ($('costingNetAmount')) $('costingNetAmount').textContent = fmt2(net) + ' ج.م';
+    var profitRow = $('costingMaterialsProfitRow');
+    if (profitRow) {
+      var show = canSeeRates && currentMaterials > 0 && discountGross > 0;
+      profitRow.style.display = show ? '' : 'none';
+      if (show && $('costingMaterialsProfit')) {
+        $('costingMaterialsProfit').textContent = ((net - currentMaterials) / currentMaterials * 100).toFixed(2) + '%';
+      }
+    }
+  }
+
   function updateDiscountPreview() {
+    renderNetRows();
     var p = $('cashDiscountPreview');
     if (!p) return;
     var amt = discountAmount();
@@ -351,26 +380,75 @@
     p.style.color = amt >= discountGross && amt > 0 ? '#b91c1c' : '#0f766e';
   }
 
-  function setupCashDiscount(c) {
+  // أنواع الخصم المعتمدة من «سياسة الخصومات» — كل نوع بطرقه المسموحة وحدّه الأقصى.
+  var discountTypes = [];
+
+  function currentDiscountType() {
+    var key = ($('cashDiscountCategory') || {}).value;
+    return discountTypes.filter(function (t) { return t.key === key; })[0] || null;
+  }
+
+  function syncDiscountTypeOptions() {
+    var t = currentDiscountType();
+    var sel = $('cashDiscountType');
+    if (!sel) return;
+    if (!t) {
+      // «بدون خصم»: مفيش قيمة ولا حسبة خصم.
+      if ($('cashDiscountValue')) { $('cashDiscountValue').value = ''; $('cashDiscountValue').readOnly = true; $('cashDiscountValue').dataset.fixed = ''; }
+      if ($('cashDiscountLimit')) $('cashDiscountLimit').textContent = '';
+      updateDiscountPreview();
+      return;
+    }
+    Array.prototype.forEach.call(sel.options, function (o) {
+      o.disabled = (o.value === 'percent' && !t.allow_percent) || (o.value === 'amount' && !t.allow_amount);
+    });
+    if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) {
+      sel.value = t.allow_percent ? 'percent' : 'amount';
+    }
+    // نوع بنسبة ثابتة (خصم 15% / 25%): القيمة بتتملى لوحدها ومتتغيرش.
+    var valueInput = $('cashDiscountValue');
+    var fixed = t.fixed_percent != null && t.fixed_percent !== '';
+    if (valueInput) {
+      valueInput.readOnly = fixed;
+      if (fixed) { sel.value = 'percent'; valueInput.value = t.fixed_percent; }
+      else if (valueInput.dataset.fixed === '1') { valueInput.value = ''; }
+      valueInput.dataset.fixed = fixed ? '1' : '';
+    }
+    if ($('cashDiscountLimit')) {
+      $('cashDiscountLimit').textContent = fixed
+        ? ('نسبة ثابتة: ' + t.fixed_percent + '% من سعر البيع')
+        : (t.max_percent ? ('الحد الأقصى: ' + t.max_percent + '% من سعر البيع') : '');
+    }
+    updateDiscountPreview();
+  }
+
+  function setupCashDiscount(c, types) {
     var box = $('cashDiscountBox');
     if (!box) return;
-    box.hidden = !c.can_grant_cash_discount;
+    discountTypes = types || [];
+    var cat = $('cashDiscountCategory');
+    if (cat) {
+      cat.innerHTML = '<option value="">— بدون خصم —</option>' +
+        discountTypes.map(function (t) { return '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; }).join('');
+    }
+    box.hidden = !c.can_grant_cash_discount || !discountTypes.length;
     discountGross = Number(c.selling_price || c.computed_total || 0);
     if ($('cashDiscountValue')) $('cashDiscountValue').value = '';
     if ($('cashDiscountReason')) $('cashDiscountReason').value = '';
     if ($('cashDiscountType')) $('cashDiscountType').value = 'percent';
-    updateDiscountPreview();
+    syncDiscountTypeOptions();
   }
 
   function discountPayload() {
     var box = $('cashDiscountBox');
     if (!box || box.hidden) return {};
     var v = parseFloat(($('cashDiscountValue') || {}).value || '0') || 0;
-    if (v <= 0) return {};
+    if (v <= 0 || !currentDiscountType()) return {};
     return {
       discount_type: ($('cashDiscountType') || {}).value || 'percent',
       discount_value: v,
       discount_reason: (($('cashDiscountReason') || {}).value || '').trim(),
+      discount_category: ($('cashDiscountCategory') || {}).value || null,
     };
   }
 
@@ -384,8 +462,9 @@
     if (!activeCaseId) return;
 
     var payload = discountPayload();
-    if (payload.discount_value && !payload.discount_reason) {
-      toast('اكتب سبب الخصم.', true);
+    var t = currentDiscountType();
+    if (payload.discount_value && t && t.max_percent && discountAmount() > discountGross * t.max_percent / 100 + 0.009) {
+      toast('الخصم يتجاوز الحد الأقصى لنوع «' + t.label + '» (' + t.max_percent + '%).', true);
       return;
     }
 
@@ -409,6 +488,7 @@
     if ($('closeCostingModal')) $('closeCostingModal').addEventListener('click', closeModal);
     if ($('btnCancelCosting')) $('btnCancelCosting').addEventListener('click', closeModal);
     if ($('btnConfirmCosting')) $('btnConfirmCosting').addEventListener('click', confirmCosting);
+    if ($('cashDiscountCategory')) $('cashDiscountCategory').addEventListener('change', syncDiscountTypeOptions);
     ['cashDiscountValue', 'cashDiscountType'].forEach(function (id) {
       if ($(id)) $(id).addEventListener('input', updateDiscountPreview);
       if ($(id)) $(id).addEventListener('change', updateDiscountPreview);

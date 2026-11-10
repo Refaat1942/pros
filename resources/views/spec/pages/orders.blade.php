@@ -162,7 +162,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h5 class="font-bold text-slate-800">🩼 منتجات الصرف السريع</h5>
-                    <p class="text-xs text-slate-500 mt-1">عكاكيز، كراسي متحركة، ووكر… بتتصرف من المخزن مباشرة. لو المريض محتاج صرف سريع بس، يستلم بعد الدفع من غير قسم الإنتاج.</p>
+                    <p class="text-xs text-slate-500 mt-1">عكاكيز، كراسي متحركة، مشايات… تُصرف من المخزن مباشرة. إذا اقتصر طلب المريض عليها، يستلمها بعد الدفع دون المرور بقسم الإنتاج.</p>
                 </div>
                 <button type="button" id="btnAddCatalogItem"
                         class="inline-flex items-center gap-2 rounded-xl bg-spec hover:bg-spec-dark text-white text-sm font-bold px-4 py-2 transition-colors">
@@ -195,7 +195,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <h5 class="font-bold text-slate-800">🩼 منتجات الصرف السريع</h5>
-                        <p class="text-xs text-slate-500 mt-1">اكتب اسم المنتج والكمية (عكاز إبط، كرسي متحرك، ووكر…). المعدلات والتكاليف بتحدده من المخزن.</p>
+                        <p class="text-xs text-slate-500 mt-1">اكتب اسم المنتج والكمية (عكاز إبط، كرسي متحرك، مشاية…)، وتتولى المعدلات والتكاليف تحديد الأصناف المقابلة من المخزن.</p>
                     </div>
                     <button type="button" id="btnAddQuickItem"
                             class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 transition-colors">

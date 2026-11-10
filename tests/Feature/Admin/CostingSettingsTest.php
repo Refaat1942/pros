@@ -38,19 +38,21 @@ class CostingSettingsTest extends TestCase
         $this->assertSame('30', Setting::where('key', SettingService::KEY_TECHNICAL_CHECK)->value('value'));
     }
 
-    public function test_update_rejects_rates_not_summing_to_100(): void
+    public function test_update_accepts_independent_rates_not_summing_to_100(): void
     {
         $admin = $this->userWithRole('admin');
 
+        // كل بند نسبة مستقلة من المواد (زي حسبة اللائحة: 25% + 24.66% + 15% + 23%).
         $this->actingAs($admin)
             ->putJson(route('admin.costing-settings.update'), [
-                SettingService::KEY_TECHNICAL_CHECK => 30,
-                SettingService::KEY_COMPONENTS_INTEGRATION => 25,
-                SettingService::KEY_MACHINERY_DEPRECIATION => 23,
-                SettingService::KEY_REHABILITATION_ASSESSMENT => 20,
+                SettingService::KEY_TECHNICAL_CHECK => 25,
+                SettingService::KEY_COMPONENTS_INTEGRATION => 24.66,
+                SettingService::KEY_MACHINERY_DEPRECIATION => 15,
+                SettingService::KEY_REHABILITATION_ASSESSMENT => 23,
             ])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['rates_sum']);
+            ->assertOk();
+
+        $this->assertSame('24.66', Setting::where('key', SettingService::KEY_COMPONENTS_INTEGRATION)->value('value'));
     }
 
     public function test_admin_can_save_costing_modes_and_components(): void

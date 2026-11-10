@@ -108,6 +108,14 @@ class CostingService
                 );
             }
 
+            // خصم إضافي اختياري (كاش / تعاقد / عسكري) — على سعر البيع حسب حسبة التكاليف.
+            $discount = $this->resolveCashDiscount($case, $quoteAmount, $cashDiscount);
+
+            // عسكري: مالوش عرض سعر — مديونية الجهة = سعر البيع − الخصم (يتسجّل على الحالة).
+            if ($case->isMilitary()) {
+                $this->applyMilitaryPrice($case, $quoteAmount, $discount, $confirmedBy);
+            }
+
             if ($case->needsServicesApproval()) {
                 $this->workflowService->advance($case, WorkflowEvent::ServicesApprovalRequired->value);
                 app(ServicesApprovalService::class)->openForCase($case);
@@ -126,8 +134,6 @@ class CostingService
                 return;
             }
 
-            $discount = $this->resolveCashDiscount($case, $quoteAmount, $cashDiscount);
-
             $this->workflowService->advance($case, WorkflowEvent::CostingCompleted->value);
 
             if (! $case->isMilitary()) {
@@ -145,7 +151,7 @@ class CostingService
                     AuditService::log(
                         action: 'discount',
                         description: sprintf(
-                            'خصم للعميل الكاش %s ج.م على عرض %s — %s — السبب: %s',
+                            'خصم للعميل النقدي %s ج.م على عرض %s — %s — السبب: %s',
                             number_format($discount['amount'], 2),
                             $quote->quote_no,
                             $case->case_no,
@@ -203,6 +209,40 @@ class CostingService
      * @param  array{type?: string, value?: float|int|string, reason?: string|null}|null  $input
      * @return array{amount: float, percent: float|null, reason: string}|null
      */
+    /**
+     * سعر الحالة العسكرية حسب حسبة التكاليف (مواد + مكوّنات + ربح) ناقص الخصم الإضافي.
+     * عند اعتماد التشغيل: total_cost (مديونية الجهة) = هذا السعر بدل WAC.
+     *
+     * @param  array{amount: float, percent: ?float, reason: string}|null  $discount
+     */
+    private function applyMilitaryPrice(CaseRecord $case, float $gross, ?array $discount, ?string $confirmedBy): void
+    {
+        $gross = round(max(0, $gross), 2);
+        $net = round($gross - (float) ($discount['amount'] ?? 0), 2);
+        $cost = (float) $case->internal_cost;
+
+        CaseRecord::where('id', $case->id)->update([
+            'costing_gross_price' => $gross,
+            'costing_discount_amount' => (float) ($discount['amount'] ?? 0),
+            'costing_discount_percent' => $discount['percent'] ?? null,
+            'costing_discount_reason' => $discount['reason'] ?? null,
+            'military_selling_price' => $net,
+            'military_markup_pct' => $cost > 0 ? round((($net - $cost) / $cost) * 100, 2) : 0,
+        ]);
+
+        AuditService::log(
+            action: $discount ? 'discount' : 'confirm',
+            description: sprintf(
+                'سعر حالة عسكرية %s: %s ج.م%s',
+                $case->case_no,
+                number_format($net, 2),
+                $discount ? sprintf(' (قبل الخصم %s − خصم %s — السبب: %s)', number_format($gross, 2), number_format($discount['amount'], 2), $discount['reason']) : '',
+            ),
+            tag: 'pricing',
+            after: ['case_id' => $case->id, 'gross' => $gross, 'discount' => $discount, 'net' => $net, 'by' => $confirmedBy],
+        );
+    }
+
     private function resolveCashDiscount(CaseRecord $case, float $gross, ?array $input): ?array
     {
         $value = round((float) ($input['value'] ?? 0), 2);
@@ -210,24 +250,47 @@ class CostingService
             return null;
         }
 
-        if (! $case->isCashCivilian()) {
-            abort(422, 'الخصم اليدوي متاح للعميل المدني الكاش فقط.');
+        if ($gross <= 0) {
+            abort(422, 'لا يوجد سعر بيع للحالة، ولا يمكن تطبيق خصم.');
         }
 
-        $reason = trim((string) ($input['reason'] ?? ''));
-        if ($reason === '') {
-            abort(422, 'اكتب سبب الخصم.');
+        // سياسة الخصومات (السوبر أدمن): الفئة مسموح لها؟ ونوع الخصم معتمد وفي حدوده؟
+        $policy = app(DiscountPolicyService::class);
+        if (! $policy->allowsCase($case)) {
+            abort(422, 'الخصم غير مفعّل لفئة '.DiscountPolicyService::PATHWAYS[$policy->pathwayOf($case)].' — راجع سياسة الخصومات.');
+        }
+        $type = $policy->findType($input['category'] ?? null);
+        if ($type === null) {
+            abort(422, 'اختر نوع الخصم من الأنواع المعتمدة.');
         }
 
         $isPercent = ($input['type'] ?? 'amount') === 'percent';
+        // نوع بنسبة ثابتة: النسبة دايماً قيمته المحددة.
+        if (($type['fixed_percent'] ?? null) !== null) {
+            $isPercent = true;
+            $value = (float) $type['fixed_percent'];
+        }
+        if ($isPercent && ! $type['allow_percent']) {
+            abort(422, 'نوع الخصم «'.$type['label'].'» لا يُطبَّق كنسبة مئوية.');
+        }
+        if (! $isPercent && ! $type['allow_amount']) {
+            abort(422, 'نوع الخصم «'.$type['label'].'» لا يُطبَّق كمبلغ ثابت.');
+        }
         if ($isPercent && $value >= 100) {
-            abort(422, 'نسبة الخصم لازم تكون أقل من 100%.');
+            abort(422, 'يجب أن تكون نسبة الخصم أقل من 100%.');
         }
 
         $amount = $isPercent ? round($gross * $value / 100, 2) : $value;
         if ($amount >= $gross) {
-            abort(422, 'الخصم لا يمكن أن يساوي أو يتجاوز إجمالي السعر ('.number_format($gross, 2).' ج.م).');
+            abort(422, 'لا يجوز أن يساوي الخصم إجمالي السعر أو يتجاوزه ('.number_format($gross, 2).' ج.م).');
         }
+        if ($type['max_percent'] !== null && $amount > round($gross * $type['max_percent'] / 100, 2) + 0.009) {
+            abort(422, 'الخصم يتجاوز الحد الأقصى لنوع «'.$type['label'].'» ('.$type['max_percent'].'% = '.number_format($gross * $type['max_percent'] / 100, 2).' ج.م).');
+        }
+
+        // السبب = نوع الخصم + الملاحظة (اختيارية).
+        $note = trim((string) ($input['reason'] ?? ''));
+        $reason = $type['label'].($note !== '' ? ' — '.$note : '');
 
         return [
             'amount' => $amount,

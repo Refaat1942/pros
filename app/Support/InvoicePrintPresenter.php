@@ -76,7 +76,7 @@ final class InvoicePrintPresenter
 
         $payer = match (true) {
             $isMilitary => 'على حساب '.($case->sovereign_entity ?: 'القوات المسلحة').' — بدون تحصيل من المريض',
-            $kind === PatientEntityPresenter::KIND_CASH => 'المريض — نقداً بالخزنة',
+            $kind === PatientEntityPresenter::KIND_CASH => 'المريض — نقداً بالخزينة',
             $kind === PatientEntityPresenter::KIND_CONTRACTED => 'جهة التعاقد — '.($entity['label'] ?? ''),
             default => $entity['label'] ?? '—',
         };

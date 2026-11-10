@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** طلب استلام وارد بانتظار اعتماد أدمن المخازن — الرصيد يتضاف عند الاعتماد فقط. */
+/** طلب استلام وارد بانتظار اعتماد مسؤول المخازن — الرصيد يتضاف عند الاعتماد فقط. */
 class StockReceiptRequest extends Model
 {
     public const STATUS_PENDING = 'pending';

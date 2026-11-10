@@ -278,7 +278,7 @@
             <div class="form-group" id="grpEditCompany" style="display:none;">
               <label>جهة التعاقد</label>
               <select class="form-control" id="editCompanyId">
-                <option value="">— كاش / بدون جهة —</option>
+                <option value="">— نقدي / بدون جهة —</option>
               </select>
             </div>
             <div class="form-group" id="grpEditRank" style="display:none;">

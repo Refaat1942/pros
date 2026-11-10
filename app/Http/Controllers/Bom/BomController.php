@@ -73,11 +73,11 @@ class BomController extends Controller
         abort_unless($case->stage_key === CaseRecord::STAGE_MANUFACTURING, 422, 'الحالة ليست في مرحلة التصنيع.');
 
         if (! $case->isMilitary() && empty($case->work_order_no)) {
-            abort(422, 'لا يمكن إنشاء BOM — أمر الشغل غير موجود.');
+            abort(422, 'لا يمكن إنشاء قائمة المواد — أمر الشغل غير موجود.');
         }
 
         if ($case->bom) {
-            abort(422, 'توجد BOM لهذه الحالة بالفعل.');
+            abort(422, 'توجد قائمة مواد لهذه الحالة بالفعل.');
         }
 
         $case->load('pricingRequest.items', 'techOrderSpec.items');
@@ -100,7 +100,7 @@ class BomController extends Controller
         $bom = $this->bomService->create($case, $request->validated('items'));
 
         return response()->json([
-            'message' => 'تم إنشاء BOM بنجاح.',
+            'message' => 'تم إنشاء قائمة المواد بنجاح.',
             'bom' => $this->formatDetail($bom),
         ], 201);
     }
@@ -195,7 +195,7 @@ class BomController extends Controller
         return response()->json([
             'message' => $case
                 ? $this->transitions->transferMessage($case, WorkflowEvent::BomFinished->value, $fromStage)
-                : 'تم إغلاق BOM — الحالة جاهزة للتسليم.',
+                : 'تم إغلاق قائمة المواد — الحالة جاهزة للتسليم.',
             'bom' => $this->formatDetail($bom),
             'can_deliver' => $this->bomService->canDeliver($bom->caseRecord),
         ]);

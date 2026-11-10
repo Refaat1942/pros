@@ -33,7 +33,7 @@
         <div class="catalog-modal-header"><h3>📦 تفاصيل طلب الصرف</h3></div>
         <div class="catalog-modal-body">
             <div id="dispenseDetailMeta" class="dispense-detail-meta"></div>
-            <h4 style="margin:12px 0 8px;font-size:14px;">بنود BOM</h4>
+            <h4 style="margin:12px 0 8px;font-size:14px;">بنود قائمة المواد</h4>
             <table class="table-compact">
                 <thead>
                     <tr><th>كود الصنف</th><th>الاسم</th><th>مطلوب</th><th>ممسوح</th><th></th></tr>

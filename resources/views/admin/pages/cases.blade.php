@@ -40,8 +40,8 @@
         </button>
         <button type="button" class="cases-quick-btn cashier" data-cases-filter="awaiting_cashier">
           <span class="cq-icon">💵</span>
-          <span class="cq-title">بانتظار الدفع — الخزنة</span>
-          <span class="cq-desc">مرضى الكاش — عرض سعر صادر وبانتظار تحصيل المبلغ</span>
+          <span class="cq-title">بانتظار الدفع — الخزينة</span>
+          <span class="cq-desc">المرضى النقديون — عرض سعر صادر وبانتظار تحصيل المبلغ</span>
           <span class="cq-count" id="casesCashierCount">{{ $counts['awaiting_cashier'] ?? 0 }}</span>
         </button>
         @if(config('workshop.enabled', true))

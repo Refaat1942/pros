@@ -17,7 +17,7 @@ final class PathwayDepartments
             ['value' => 'adjustments', 'label' => 'المعدلات', 'icon' => '📏'],
             ['value' => 'costing', 'label' => 'التكاليف', 'icon' => '💰'],
             ['value' => 'operations', 'label' => 'مكتب التشغيل', 'icon' => '🎯'],
-            ['value' => 'cashier', 'label' => 'الخزنة', 'icon' => '💵'],
+            ['value' => 'cashier', 'label' => 'الخزينة', 'icon' => '💵'],
             ['value' => 'warehouse', 'label' => 'المخزن', 'icon' => '📦'],
             ['value' => 'workshop', 'label' => 'قسم الإنتاج', 'icon' => '🏭'],
             ['value' => 'delivery', 'label' => 'التسليمات', 'icon' => '📦'],

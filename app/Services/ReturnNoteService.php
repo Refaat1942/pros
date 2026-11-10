@@ -77,7 +77,7 @@ class ReturnNoteService
                 $bomItem = $bom->items->firstWhere('stock_item_code', $code);
 
                 if (! $bomItem) {
-                    abort(422, "الصنف {$code} غير موجود في BOM.");
+                    abort(422, "الصنف {$code} غير موجود في قائمة المواد.");
                 }
 
                 $max = $bomItem->returnRequestMaxQty(null, $bom->stage);

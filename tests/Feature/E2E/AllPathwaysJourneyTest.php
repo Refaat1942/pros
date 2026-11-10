@@ -70,7 +70,7 @@ class AllPathwaysJourneyTest extends ProstheticTestCase
         $steps = collect($runner->log())->where('ok', true)->groupBy('journey')->map->pluck('step');
         $this->assertContains('إدارة الخدمات — التصديق', $steps[CaseJourneyRunner::JOURNEY_MILITARY_SERVICES]);
         $this->assertNotContains('إدارة الخدمات — التصديق', $steps[CaseJourneyRunner::JOURNEY_MILITARY]);
-        $this->assertContains('الخزنة — تحصيل المبلغ كاش', $steps[CaseJourneyRunner::JOURNEY_CASH]);
+        $this->assertContains('الخزينة — تحصيل المبلغ نقداً', $steps[CaseJourneyRunner::JOURNEY_CASH]);
         $this->assertContains('الاستقبال — طباعة العرض وتسجيل خطاب الموافقة', $steps[CaseJourneyRunner::JOURNEY_ENTITY_NON_CONTRACTED]);
 
         $count = count(CaseJourneyRunner::journeys());

@@ -59,13 +59,13 @@ class NotificationService
         ],
         WorkflowEvent::SentToCashier->value => [
             'role' => Role::SLUG_CASHIER,
-            'title' => '💵 مريض بانتظار الدفع في الخزنة',
-            'body' => 'المريض {patient} (حالة {case}) صدر له عرض سعر نقدي — بانتظار تحصيل المبلغ في الخزنة.',
+            'title' => '💵 مريض بانتظار الدفع في الخزينة',
+            'body' => 'المريض {patient} (حالة {case}) صدر له عرض سعر نقدي — بانتظار تحصيل المبلغ في الخزينة.',
         ],
         WorkflowEvent::CashierPaid->value => [
             'role' => Role::SLUG_OPERATIONS,
             'title' => '💰 حالة مدفوعة بانتظار اعتماد التشغيل',
-            'body' => 'المريض {patient} (حالة {case}) سدد المبلغ في الخزنة — بانتظار اعتماد مكتب التشغيل لإصدار أمر الشغل.',
+            'body' => 'المريض {patient} (حالة {case}) سدد المبلغ في الخزينة — بانتظار اعتماد مكتب التشغيل لإصدار أمر الشغل.',
         ],
         WorkflowEvent::OperationsApproved->value => [
             'role' => Role::SLUG_WORKSHOP,

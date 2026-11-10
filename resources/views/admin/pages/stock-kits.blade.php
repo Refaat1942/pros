@@ -7,7 +7,7 @@
         <span class="toolbar-count" id="stockKitSuggestionsCount"></span>
     </div>
     <p class="catalog-table-hint" style="margin:12px 16px 0;">
-        خامات اتعملت مع بعض في <strong>أكتر من حالة</strong> — تحب نعملها طقم؟
+        خامات استُخدمت معاً في <strong>أكثر من حالة</strong> — هل تريد حفظها كطقم؟
     </p>
     <div class="panel-body" id="stockKitSuggestionsList"></div>
 </div>
@@ -16,8 +16,8 @@
     <div class="panel-header">
         <h3>🧩 عمل المجموعات — أطقم جاهزة ومخصصات</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn-action" id="btnExportStockKits" title="ملف بكل المجموعات لنقلها لسيرفر تاني (مثلاً الأوفلاين)">⬇️ تصدير المجموعات</button>
-            <button type="button" class="btn-action" id="btnImportStockKits" title="استيراد ملف مجموعات من سيرفر تاني">⬆️ استيراد</button>
+            <button type="button" class="btn-action" id="btnExportStockKits" title="ملف بكل المجموعات لنقلها إلى خادم آخر (مثل النسخة غير المتصلة)">⬇️ تصدير المجموعات</button>
+            <button type="button" class="btn-action" id="btnImportStockKits" title="استيراد ملف مجموعات من خادم آخر">⬆️ استيراد</button>
             <input type="file" id="stockKitsImportFile" accept=".json,application/json" hidden>
             <button type="button" class="btn-add-rank" id="btnAddStockKit">➕ إضافة طقم</button>
         </div>

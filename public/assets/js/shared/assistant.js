@@ -95,7 +95,7 @@
 
     function renderResults(results) {
         if (!results || !results.length) {
-            resultsBox.innerHTML = '<div class="assistant-empty">مفيش نتيجة مطابقة. جرّب كلمة تانية زي «طباعة» أو «صرف مواد» أو «ارسم مسار الحالة».</div>';
+            resultsBox.innerHTML = '<div class="assistant-empty">لا توجد نتيجة مطابقة. جرّب كلمة أخرى مثل «طباعة» أو «صرف مواد» أو «ارسم مسار الحالة».</div>';
             return;
         }
 
@@ -144,7 +144,7 @@
                 if (token !== lastToken) {
                     return;
                 }
-                resultsBox.innerHTML = '<div class="assistant-empty">حصلت مشكلة في التحميل. حاول تاني.</div>';
+                resultsBox.innerHTML = '<div class="assistant-empty">حدثت مشكلة أثناء التحميل. حاول مرة أخرى.</div>';
             });
     }
 
@@ -180,7 +180,7 @@
                 '<input type="search" autocomplete="off" placeholder="اكتب سؤالك بالعامية… مثلاً: أطبع عرض السعر إزاي؟ أو: ارسم مسار الحالة">' +
             '</div>' +
             '<div class="assistant-panel__body">' +
-                '<div class="assistant-hint">اسألني عن أي شاشة أو خطوة. لو عايز رسم توضيحي، اكتب «بالرسم» أو «ارسم».</div>' +
+                '<div class="assistant-hint">اسألني عن أي شاشة أو خطوة. للحصول على رسم توضيحي، اكتب «بالرسم» أو «ارسم».</div>' +
                 '<div class="assistant-results"></div>' +
             '</div>';
 

@@ -45,7 +45,7 @@ class UserPurgeService
     public function purge(): array
     {
         if (! $this->hasSuperAdmin()) {
-            throw new \RuntimeException('لا يوجد حساب سوبر أدمن — تم إيقاف المسح حتى لا يُغلق النظام.');
+            throw new \RuntimeException('لا يوجد حساب مدير النظام — تم إيقاف المسح حتى لا يُغلق النظام.');
         }
 
         $deleted = 0;
@@ -77,7 +77,7 @@ class UserPurgeService
 
         AuditService::log(
             action: 'purge',
-            description: 'مسح حسابات الموظفين — الإبقاء على السوبر أدمن فقط',
+            description: 'مسح حسابات الموظفين — الإبقاء على مدير النظام فقط',
             tag: 'admin',
             after: $counts,
         );

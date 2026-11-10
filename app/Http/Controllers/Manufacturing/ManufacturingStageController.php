@@ -19,7 +19,7 @@ class ManufacturingStageController extends Controller
 
         $case->load(['patient', 'contractCompany', 'bom.items']);
 
-        abort_unless($case->bom, 404, 'لا توجد BOM مرتبطة بهذه الحالة.');
+        abort_unless($case->bom, 404, 'لا توجد قائمة مواد مرتبطة بهذه الحالة.');
 
         return view('prints.work-order', [
             'case' => $case,

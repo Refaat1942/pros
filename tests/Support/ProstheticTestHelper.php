@@ -45,7 +45,7 @@ trait ProstheticTestHelper
             'adjustments' => 'فني تعديلات',
             'costing' => 'فني تكاليف',
             'operations' => 'مكتب عمليات',
-            'cashier' => 'موظف الخزنة',
+            'cashier' => 'موظف الخزينة',
             'workshop' => 'قسم الإنتاج',
             'technical' => 'مسؤول مخزن',
         ];
@@ -265,7 +265,7 @@ trait ProstheticTestHelper
      * توصيف (BOM خام) → معدلات → تكاليف → عرض السعر → مكتب التشغيل.
      *
      * المدني التعاقدي يتوقف في STAGE_OPERATIONS بانتظار الاعتماد.
-     * المدني الكاش يُحوَّل تلقائياً للخزنة (STAGE_CASHIER) بعد إصدار العرض.
+     * المدني الكاش يُحوَّل تلقائياً للخزينة (STAGE_CASHIER) بعد إصدار العرض.
      * العسكري يُعتمَد صامتاً تلقائياً ويصل STAGE_MANUFACTURING/MFG_WAREHOUSE.
      *
      * @param  list<string>  $codes

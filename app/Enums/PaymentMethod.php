@@ -14,7 +14,7 @@ enum PaymentMethod: string
     public function label(): string
     {
         return match ($this) {
-            self::Cash => 'كاش',
+            self::Cash => 'نقدي',
             self::BankTransfer => 'تحويل على الحساب',
             self::BankCheque => 'شيك مصرفي',
         };
