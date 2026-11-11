@@ -292,6 +292,17 @@ Route::prefix('admin')
                 ->name('military-ranks.destroy');
         });
 
+        // ── حذف البيانات — مدير النظام فقط (كلمة مرور + نسخة احتياطية) ────────
+        Route::middleware(['dashboard.page:admin,data-purge', 'throttle:20,1'])->group(function () {
+            Route::get('data-purge/patients', [\App\Http\Controllers\Admin\DataPurgeController::class, 'patients'])
+                ->name('data-purge.patients');
+            Route::post('data-purge/patients', [\App\Http\Controllers\Admin\DataPurgeController::class, 'purgePatients'])
+                ->name('data-purge.patients.purge');
+            Route::post('data-purge/{target}', [\App\Http\Controllers\Admin\DataPurgeController::class, 'purge'])
+                ->where('target', 'patients-all|stock-catalog|users|notifications|everything')
+                ->name('data-purge.purge');
+        });
+
         // ── Costing overhead settings ───────────────────────────────────────
         Route::middleware('dashboard.page:admin,costing-settings')->group(function () {
             Route::put('costing-settings', [CostingSettingsController::class, 'update'])
