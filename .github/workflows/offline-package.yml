@@ -1,0 +1,49 @@
+name: Offline package
+
+# يبني باكدج الأوفلاين (ZIP فيه الكود + vendor + UPDATE.bat / INSTALL.bat)
+# وينشرها كـ Release باسم «offline-latest» — تتنزّل من المتصفح وتتنقل بفلاشة.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: offline-package
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, intl, pdo_mysql, pdo_sqlite, zip, gd, bcmath
+          tools: composer:v2
+          coverage: none
+
+      - name: Build package
+        run: bash scripts/offline-package/build.sh
+
+      - name: Publish release "offline-latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          ZIP=$(ls dist/*.zip)
+          gh release delete offline-latest --yes --cleanup-tag || true
+          gh release create offline-latest "$ZIP" \
+            --title "Offline package $(date -u +%Y-%m-%d) (${GITHUB_SHA::7})" \
+            --notes "نزّل الملف ده، انقله بفلاشة لجهاز العميل، فك الضغط، ودوس دبل كليك على UPDATE.bat (أو INSTALL.bat لجهاز جديد). التعليمات كاملة في README-AR.txt جوه الملف." \
+            --target "$GITHUB_SHA"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-package
+          path: dist/*.zip
+          retention-days: 14
