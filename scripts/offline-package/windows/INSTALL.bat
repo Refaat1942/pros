@@ -29,6 +29,12 @@ if errorlevel 1 (
   echo ERROR: php was not found. Install/start Laragon, then run this file from the Laragon terminal.
   goto fail
 )
+php -r "exit(version_compare(PHP_VERSION, '8.3.0', '>=') ? 0 : 1);"
+if errorlevel 1 (
+  echo ERROR: this version needs PHP 8.3 or newer. In Laragon: Menu - PHP - Version - choose 8.3+
+  php -v
+  goto fail
+)
 
 set "DBHOST=127.0.0.1"
 set "DBPORT=3306"
