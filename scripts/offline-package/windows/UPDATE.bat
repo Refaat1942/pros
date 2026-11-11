@@ -37,6 +37,12 @@ if errorlevel 1 (
   echo        or right-click Laragon - Terminal, and type:  "%~f0"
   goto fail
 )
+php -r "exit(version_compare(PHP_VERSION, '8.3.0', '>=') ? 0 : 1);"
+if errorlevel 1 (
+  echo ERROR: this version needs PHP 8.3 or newer. In Laragon: Menu - PHP - Version - choose 8.3+
+  php -v
+  goto fail
+)
 
 echo [1/7] Backup before update...
 pushd "%APP%"

@@ -6,7 +6,7 @@
 -------------------------------------------------
 1) انقل ملف الـ ZIP للجهاز (فلاشة).
 2) كليك يمين على الملف ← Extract All (فك الضغط كامل).
-3) شغّل Laragon (Start All).
+3) شغّل Laragon (Start All) — لازم PHP 8.3 أو أحدث (من قائمة Laragon ← PHP ← Version).
 4) افتح المجلد اللي اتفك ودوس دبل كليك على UPDATE.bat
    (لو قال php مش موجود: من Laragon اضغط Terminal واكتب مسار الملف، مثال:
     "C:\Users\...\Downloads\prosthetics-offline-...\UPDATE.bat")
