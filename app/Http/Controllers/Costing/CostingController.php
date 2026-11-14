@@ -142,6 +142,8 @@ class CostingController extends Controller
             'discount_value' => ['nullable', 'numeric', 'min:0'],
             'discount_reason' => ['nullable', 'string', 'max:255'],
             'discount_category' => ['nullable', 'string', 'max:64'],
+            'updown_category' => ['nullable', 'string', 'max:64'],
+            'updown_value' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
         ]);
 
         $discount = null;
@@ -155,7 +157,14 @@ class CostingController extends Controller
             ];
         }
 
-        $case = $this->costingService->confirmAndIssueQuote($case, Auth::user()?->name, $discount);
+        // Up/Down (ظاهري في عرض السعر فقط) — نفس صلاحية منح الخصم.
+        $updown = null;
+        if (! empty($data['updown_category'])) {
+            abort_unless(Gate::allows('grant-cash-discount'), 403, 'ليس لديك صلاحية منح خصم.');
+            $updown = ['category' => $data['updown_category'], 'value' => $data['updown_value'] ?? null];
+        }
+
+        $case = $this->costingService->confirmAndIssueQuote($case, Auth::user()?->name, $discount, $updown);
 
         return response()->json([
             'message' => $this->transitions->transferMessage(

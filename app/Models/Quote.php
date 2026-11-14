@@ -24,6 +24,9 @@ class Quote extends Model
     public const STATUS_ISSUED = 'issued';
 
     protected $fillable = [
+        'updown_list_price',
+        'updown_discount_amount',
+        'updown_discount_percent',
         'quote_no',
         'order_ref',
         'case_id',
@@ -42,6 +45,9 @@ class Quote extends Model
     ];
 
     protected $casts = [
+        'updown_list_price' => 'decimal:2',
+        'updown_discount_amount' => 'decimal:2',
+        'updown_discount_percent' => 'decimal:2',
         'quote_date' => 'date',
         'total' => 'decimal:2',
         'gross_total' => 'decimal:2',

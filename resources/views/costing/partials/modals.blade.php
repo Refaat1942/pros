@@ -96,6 +96,12 @@
               <span>نسبة الربح (على تكلفة المواد)</span>
               <strong id="costingMaterialsProfit">—</strong>
             </div>
+            {{-- Up/Down: ما يُطبع في عرض السعر (السعر المرفوع − الخصم الظاهري = الصافي نفسه). --}}
+            <div id="costingUpdownRows" style="display:none;border-top:1px dashed var(--border);margin-top:6px;padding-top:6px;">
+              <div class="costing-overhead-row"><span>📄 في عرض السعر — السعر قبل الخصم</span><strong id="costingUpdownList">—</strong></div>
+              <div class="costing-overhead-row"><span id="costingUpdownLabel">📄 خصم Up/Down</span><strong id="costingUpdownAmount" style="color:#b45309;">—</strong></div>
+              <div class="costing-overhead-row costing-overhead-row--final"><span>📄 الصافي في عرض السعر</span><strong id="costingUpdownNet">—</strong></div>
+            </div>
           </div>
         </div>
       </div>
@@ -126,6 +132,22 @@
           </div>
         </div>
         <p id="cashDiscountPreview" style="margin:10px 0 0;font-weight:700;color:#0f766e;"></p>
+
+        {{-- Up/Down: خصم ظاهري في عرض السعر — يرفع السعر بنفس النسبة، فالصافي (والحسابات) لا يتغير. --}}
+        <div id="updownBox" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);" hidden>
+          <h4 style="margin:0 0 6px;font-size:15px;">📈 خصم Up/Down (يظهر في عرض السعر فقط)</h4>
+          <p style="margin:0 0 10px;font-size:12px;color:var(--text-muted);">يُرفع السعر في عرض السعر بنفس النسبة ثم يُخصم، فيبقى الصافي كما هو (التكلفة + هامش الربح، أو بعد الخصم الحقيقي إن وُجد). الخصم الحقيقي لا يظهر في عرض السعر.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
+            <div class="form-group" style="margin:0;grid-column:span 2;">
+              <label for="updownCategory">نوع Up/Down</label>
+              <select id="updownCategory" class="form-control"></select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label for="updownValue">النسبة %</label>
+              <input type="number" id="updownValue" class="form-control" min="0" max="99.99" step="0.01" placeholder="0">
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">

@@ -166,7 +166,7 @@
                 <dt>الجهة</dt><dd>{{ $doc['entity'] ?: '—' }}</dd>
                 <dt>السداد</dt><dd>{{ $doc['payer'] ?: '—' }}</dd>
                 @if (! empty($totals['has_discount']))
-                    <dt>{{ ! empty($totals['discount_is_amount']) ? 'الخصم' : 'التعاقد' }}</dt>
+                    <dt>{{ ! empty($totals['discount_is_amount']) || ! empty($totals['is_updown']) ? 'الخصم' : 'التعاقد' }}</dt>
                     <dd>{{ ! empty($totals['discount_is_amount']) ? $money($totals['discount_amount']).' ج.م' : 'خصم '.$discountPct.'%' }}</dd>
                 @endif
                 @if (($doc['approval_ref'] ?? '') !== '')

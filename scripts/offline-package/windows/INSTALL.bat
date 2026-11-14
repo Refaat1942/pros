@@ -24,6 +24,16 @@ if exist "%APP%\.env" (
   echo The system is already installed in %APP% - use UPDATE.bat instead.
   goto fail
 )
+REM Double-click outside the Laragon terminal: php/mysql are not on PATH - use Laragon's own.
+set "LARAGON=C:\laragon"
+if defined LARAGON_ROOT set "LARAGON=%LARAGON_ROOT%"
+where php >nul 2>&1
+if errorlevel 1 (
+  for /d %%P in ("%LARAGON%\bin\php\php-*") do if exist "%%~fP\php.exe" set "LARAGON_PHP=%%~fP"
+)
+if defined LARAGON_PHP set "PATH=%LARAGON_PHP%;%PATH%"
+for /d %%M in ("%LARAGON%\bin\mysql\*") do if exist "%%~fM\bin\mysqldump.exe" set "LARAGON_MYSQL=%%~fM\bin"
+if defined LARAGON_MYSQL set "PATH=%PATH%;%LARAGON_MYSQL%"
 where php >nul 2>&1
 if errorlevel 1 (
   echo ERROR: php was not found. Install/start Laragon, then run this file from the Laragon terminal.

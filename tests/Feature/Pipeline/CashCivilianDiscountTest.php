@@ -237,21 +237,79 @@ class CashCivilianDiscountTest extends TestCase
         $this->assertSame('حالة إنسانية', Quote::where('case_id', $cash->id)->value('discount_reason'));
     }
 
-    public function test_sheet_fixed_discounts_15_and_25_are_available_by_default(): void
+    public function test_sheet_15_and_25_are_updown_and_keep_the_real_price(): void
     {
         $types = collect(app(\App\Services\DiscountPolicyService::class)->policy()['types'])->keyBy('key');
-        $this->assertEquals(15.0, $types['regulation_15']['fixed_percent']);
-        $this->assertEquals(25.0, $types['regulation_25']['fixed_percent']);
+        $this->assertSame('updown', $types['regulation_25']['mode']);
+        $this->assertSame('updown', $types['regulation_15']['mode']);
+        $this->assertSame('real', $types['administrative']['mode']);
 
         $costing = $this->costingUser(true);
         $cash = $this->caseAtCosting($this->cashPatient());
-        // النسبة الثابتة بتتطبق بقيمتها مهما اتبعت قيمة تانية.
+        $gross = (float) $this->actingAs($costing)->getJson("/costing/queue/{$cash->id}")->json('costing.selling_price');
+
+        // خصم 25% كخصم حقيقي مرفوض (نوعه Up/Down).
         $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
-            'discount_type' => 'amount', 'discount_value' => 1, 'discount_category' => 'regulation_25',
+            'discount_type' => 'percent', 'discount_value' => 25, 'discount_category' => 'regulation_25',
+        ])->assertStatus(422);
+
+        // Up/Down 25%: الصافي = سعر البيع نفسه، والمطبوع مرفوع ÷ 0.75 ثم خصم 25%.
+        $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
+            'updown_category' => 'regulation_25',
         ])->assertOk();
         $quote = Quote::where('case_id', $cash->id)->firstOrFail();
-        $this->assertEqualsWithDelta((float) $quote->gross_total * 0.25, (float) $quote->discount_amount, 0.01);
-        $this->assertEquals(25.0, (float) $quote->discount_percent);
-        $this->assertSame('خصم 25%', $quote->discount_reason);
+        $this->assertEqualsWithDelta($gross, (float) $quote->total, 0.01, 'الإيراد ما يقلش');
+        $this->assertEquals(0.0, (float) $quote->discount_amount, 'مفيش خصم حقيقي');
+        $list = round($gross / 0.75, 2);
+        $this->assertEqualsWithDelta($list, (float) $quote->updown_list_price, 0.01);
+
+        $totals = \App\Support\QuotePrintPresenter::fromQuote($quote->fresh());
+        $this->assertEqualsWithDelta($list, $totals['gross_total'], 0.01);
+        $this->assertEquals(25.0, $totals['discount_percent']);
+        $this->assertEqualsWithDelta($list - $gross, $totals['discount_amount'], 0.01);
+        $this->assertEqualsWithDelta($gross, $totals['display_total'], 0.01);
+        $this->assertEqualsWithDelta($gross, (float) $cash->fresh()->quote_total, 0.01, 'الخزينة بالصافي');
+    }
+
+    public function test_real_discount_then_updown_prints_only_updown(): void
+    {
+        $costing = $this->costingUser(true);
+        $cash = $this->caseAtCosting($this->cashPatient());
+        $gross = (float) $this->actingAs($costing)->getJson("/costing/queue/{$cash->id}")->json('costing.selling_price');
+
+        $this->actingAs($costing)->postJson("/costing/queue/{$cash->id}/confirm", [
+            'discount_type' => 'percent', 'discount_value' => 10, 'discount_category' => 'administrative',
+            'updown_category' => 'regulation_25',
+        ])->assertOk();
+
+        $quote = Quote::where('case_id', $cash->id)->firstOrFail();
+        $net = round($gross - round($gross * 0.10, 2), 2);
+        $this->assertEqualsWithDelta($net, (float) $quote->total, 0.01, 'الخصم الحقيقي اتسجّل في الإيراد');
+        $this->assertEqualsWithDelta(round($gross * 0.10, 2), (float) $quote->discount_amount, 0.01);
+
+        $totals = \App\Support\QuotePrintPresenter::fromQuote($quote->fresh());
+        $list = round($net / 0.75, 2);
+        $this->assertEqualsWithDelta($list, $totals['gross_total'], 0.01);
+        $this->assertEquals(25.0, $totals['discount_percent'], 'المطبوع Up/Down بس — مش 10%');
+        $this->assertEqualsWithDelta($net, $totals['display_total'], 0.01);
+
+        $html = $this->actingAs($this->userWithRole('admin'))->get("/admin/cases/{$cash->id}/quote?embed=1")->assertOk()->getContent();
+        $this->assertStringContainsString('نسبة الخصم (25%)', $html);
+        $this->assertStringNotContainsString('نسبة الخصم (10%)', $html);
+    }
+
+    public function test_military_updown_keeps_debt_at_net_and_prints_list_price(): void
+    {
+        $costing = $this->costingUser(true);
+        $military = $this->caseAtCosting($this->militaryPatient($this->militaryCompany()));
+        $gross = (float) $this->actingAs($costing)->getJson("/costing/queue/{$military->id}")->json('costing.selling_price');
+
+        $this->actingAs($costing)->postJson("/costing/queue/{$military->id}/confirm", ['updown_category' => 'regulation_15'])->assertOk();
+        $case = $military->fresh();
+        if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
+            $case = app(\App\Services\OperationsService::class)->approve($case, 'اختبار');
+        }
+        $this->assertEqualsWithDelta($gross, (float) $case->fresh()->total_cost, 0.01, 'مديونية الجهة بالصافي');
+        $this->assertEqualsWithDelta(round($gross / 0.85, 2), (float) $case->fresh()->updown_list_price, 0.01);
     }
 }

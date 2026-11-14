@@ -24,9 +24,10 @@ class DiscountPolicyService
         'pathways' => ['cash' => true, 'contracted' => true, 'military' => true],
         // زي حسبة اللائحة: خصم 15% وخصم 25% بنسبة ثابتة، وخصم إداري حر.
         'types' => [
-            ['key' => 'regulation_15', 'label' => 'خصم 15%', 'fixed_percent' => 15],
-            ['key' => 'regulation_25', 'label' => 'خصم 25%', 'fixed_percent' => 25],
-            ['key' => 'administrative', 'label' => 'خصم إداري', 'allow_percent' => true, 'allow_amount' => true, 'max_percent' => null],
+            // Up/Down: خصم ظاهري في عرض السعر — السعر يُرفع بنفس النسبة فالصافي = التكلفة + الربح.
+            ['key' => 'regulation_15', 'label' => 'خصم 15%', 'fixed_percent' => 15, 'mode' => 'updown'],
+            ['key' => 'regulation_25', 'label' => 'خصم 25%', 'fixed_percent' => 25, 'mode' => 'updown'],
+            ['key' => 'administrative', 'label' => 'خصم إداري', 'allow_percent' => true, 'allow_amount' => true, 'max_percent' => null, 'mode' => 'real'],
         ],
     ];
 
@@ -73,11 +74,11 @@ class DiscountPolicyService
         return (bool) ($this->policy()['pathways'][$this->pathwayOf($case)] ?? false);
     }
 
-    /** @return array{key: string, label: string, allow_percent: bool, allow_amount: bool, max_percent: ?float}|null */
-    public function findType(?string $key): ?array
+    /** @return array{key: string, label: string, allow_percent: bool, allow_amount: bool, max_percent: ?float, fixed_percent: ?float, mode: string}|null */
+    public function findType(?string $key, ?string $mode = null): ?array
     {
         foreach ($this->policy()['types'] as $type) {
-            if ($type['key'] === $key) {
+            if ($type['key'] === $key && ($mode === null || $type['mode'] === $mode)) {
                 return $type;
             }
         }
@@ -122,6 +123,13 @@ class DiscountPolicyService
                 $allowAmount = false;
                 $max = $fixed;
             }
+            $mode = in_array($row['mode'] ?? null, ['real', 'updown'], true)
+                ? $row['mode']
+                : ($fixed !== null ? 'updown' : 'real');
+            if ($mode === 'updown') {
+                $allowPercent = true;
+                $allowAmount = false;
+            }
 
             $types[] = [
                 'key' => $key,
@@ -130,6 +138,9 @@ class DiscountPolicyService
                 'allow_amount' => $allowAmount,
                 'max_percent' => $max,
                 'fixed_percent' => $fixed,
+                // real = خصم حقيقي يقلل الإيراد | updown = ظاهري في عرض السعر فقط (نسبة دائماً).
+                // سياسات قديمة من غير mode: النسبة الثابتة (15% / 25%) = updown، غير كده حقيقي.
+                'mode' => $mode,
             ];
         }
 

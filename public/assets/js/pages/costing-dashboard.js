@@ -359,6 +359,20 @@
     if ($('costingDiscountLabel')) $('costingDiscountLabel').textContent = 'خصم إضافي' + (t === 'percent' && v > 0 ? ' (' + v + '%)' : '');
     if ($('costingDiscountAmount')) $('costingDiscountAmount').textContent = '− ' + fmt2(amt) + ' ج.م';
     if ($('costingNetAmount')) $('costingNetAmount').textContent = fmt2(net) + ' ج.م';
+    // ما يُطبع في عرض السعر (Up/Down على الصافي بعد الخصم الحقيقي).
+    var up = updownPercent();
+    var upRows = $('costingUpdownRows');
+    if (upRows) {
+      var showUp = up > 0 && up < 100 && net > 0;
+      upRows.style.display = showUp ? '' : 'none';
+      if (showUp) {
+        var list = Math.round(net / (1 - up / 100) * 100) / 100;
+        if ($('costingUpdownList')) $('costingUpdownList').textContent = fmt2(list) + ' ج.م';
+        if ($('costingUpdownLabel')) $('costingUpdownLabel').textContent = '📄 خصم Up/Down (' + up + '%)';
+        if ($('costingUpdownAmount')) $('costingUpdownAmount').textContent = '− ' + fmt2(list - net) + ' ج.م';
+        if ($('costingUpdownNet')) $('costingUpdownNet').textContent = fmt2(net) + ' ج.م';
+      }
+    }
     var profitRow = $('costingMaterialsProfitRow');
     if (profitRow) {
       var show = canSeeRates && currentMaterials > 0 && discountGross > 0;
@@ -382,6 +396,46 @@
 
   // أنواع الخصم المعتمدة من «سياسة الخصومات» — كل نوع بطرقه المسموحة وحدّه الأقصى.
   var discountTypes = [];
+  var allDiscountTypes = [];
+  var updownTypes = [];
+
+  // ── Up/Down: السعر المعروض = الصافي ÷ (1 − النسبة) ─────────────────────
+  function currentUpdownType() {
+    var key = ($('updownCategory') || {}).value;
+    return updownTypes.filter(function (t) { return t.key === key; })[0] || null;
+  }
+
+  function updownPercent() {
+    var t = currentUpdownType();
+    if (!t) return 0;
+    if (t.fixed_percent != null && t.fixed_percent !== '') return parseFloat(t.fixed_percent) || 0;
+    return parseFloat(($('updownValue') || {}).value || '0') || 0;
+  }
+
+  function setupUpdown(c) {
+    updownTypes = allDiscountTypes.filter(function (t) { return t.mode === 'updown'; });
+    var box = $('updownBox');
+    if (box) box.hidden = !c.can_grant_cash_discount || !updownTypes.length;
+    var sel = $('updownCategory');
+    if (sel) {
+      sel.innerHTML = '<option value="">— بدون Up/Down —</option>' +
+        updownTypes.map(function (t) { return '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; }).join('');
+    }
+    if ($('updownValue')) $('updownValue').value = '';
+    syncUpdown();
+  }
+
+  function syncUpdown() {
+    var t = currentUpdownType();
+    var input = $('updownValue');
+    if (input) {
+      var fixed = t && t.fixed_percent != null && t.fixed_percent !== '';
+      input.readOnly = !t || fixed;
+      if (!t) input.value = '';
+      else if (fixed) input.value = t.fixed_percent;
+    }
+    renderNetRows();
+  }
 
   function currentDiscountType() {
     var key = ($('cashDiscountCategory') || {}).value;
@@ -425,13 +479,17 @@
   function setupCashDiscount(c, types) {
     var box = $('cashDiscountBox');
     if (!box) return;
-    discountTypes = types || [];
+    allDiscountTypes = types || [];
+    discountTypes = allDiscountTypes.filter(function (t) { return (t.mode || 'real') === 'real'; });
+    setupUpdown(c);
     var cat = $('cashDiscountCategory');
     if (cat) {
       cat.innerHTML = '<option value="">— بدون خصم —</option>' +
         discountTypes.map(function (t) { return '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; }).join('');
     }
-    box.hidden = !c.can_grant_cash_discount || !discountTypes.length;
+    box.hidden = !c.can_grant_cash_discount || !allDiscountTypes.length;
+    var realWrap = $('cashDiscountCategory') && $('cashDiscountCategory').closest('.form-group') && $('cashDiscountCategory').closest('.form-group').parentElement;
+    if (realWrap) realWrap.style.display = discountTypes.length ? '' : 'none';
     discountGross = Number(c.selling_price || c.computed_total || 0);
     if ($('cashDiscountValue')) $('cashDiscountValue').value = '';
     if ($('cashDiscountReason')) $('cashDiscountReason').value = '';
@@ -462,6 +520,10 @@
     if (!activeCaseId) return;
 
     var payload = discountPayload();
+    if (currentUpdownType() && updownPercent() > 0) {
+      payload.updown_category = currentUpdownType().key;
+      payload.updown_value = updownPercent();
+    }
     var t = currentDiscountType();
     if (payload.discount_value && t && t.max_percent && discountAmount() > discountGross * t.max_percent / 100 + 0.009) {
       toast('الخصم يتجاوز الحد الأقصى لنوع «' + t.label + '» (' + t.max_percent + '%).', true);
@@ -489,6 +551,8 @@
     if ($('btnCancelCosting')) $('btnCancelCosting').addEventListener('click', closeModal);
     if ($('btnConfirmCosting')) $('btnConfirmCosting').addEventListener('click', confirmCosting);
     if ($('cashDiscountCategory')) $('cashDiscountCategory').addEventListener('change', syncDiscountTypeOptions);
+    if ($('updownCategory')) $('updownCategory').addEventListener('change', syncUpdown);
+    if ($('updownValue')) $('updownValue').addEventListener('input', renderNetRows);
     ['cashDiscountValue', 'cashDiscountType'].forEach(function (id) {
       if ($(id)) $(id).addEventListener('input', updateDiscountPreview);
       if ($(id)) $(id).addEventListener('change', updateDiscountPreview);

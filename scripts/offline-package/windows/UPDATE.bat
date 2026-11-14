@@ -31,10 +31,20 @@ if not exist "%APP%\.env" (
   echo ERROR: %APP%\.env is missing - the system is not configured on this computer.
   goto fail
 )
+REM Double-click outside the Laragon terminal: php/mysql are not on PATH - use Laragon's own.
+set "LARAGON=C:\laragon"
+if defined LARAGON_ROOT set "LARAGON=%LARAGON_ROOT%"
 where php >nul 2>&1
 if errorlevel 1 (
-  echo ERROR: php was not found. Start Laragon, then run this file from the Laragon terminal
-  echo        or right-click Laragon - Terminal, and type:  "%~f0"
+  for /d %%P in ("%LARAGON%\bin\php\php-*") do if exist "%%~fP\php.exe" set "LARAGON_PHP=%%~fP"
+)
+if defined LARAGON_PHP set "PATH=%LARAGON_PHP%;%PATH%"
+for /d %%M in ("%LARAGON%\bin\mysql\*") do if exist "%%~fM\bin\mysqldump.exe" set "LARAGON_MYSQL=%%~fM\bin"
+if defined LARAGON_MYSQL set "PATH=%PATH%;%LARAGON_MYSQL%"
+where php >nul 2>&1
+if errorlevel 1 (
+  echo ERROR: php was not found in PATH or in %LARAGON%\bin\php. Is Laragon installed?
+  echo        Or open Laragon - Terminal and type:  "%~f0"
   goto fail
 )
 php -r "exit(version_compare(PHP_VERSION, '8.3.0', '>=') ? 0 : 1);"

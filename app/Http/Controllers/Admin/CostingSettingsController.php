@@ -78,6 +78,7 @@ class CostingSettingsController extends Controller
             'types.*.allow_amount' => ['boolean'],
             'types.*.max_percent' => ['nullable', 'numeric', 'min:0.01', 'max:99.99'],
             'types.*.fixed_percent' => ['nullable', 'numeric', 'min:0.01', 'max:99.99'],
+            'types.*.mode' => ['nullable', 'in:real,updown'],
         ], [
             'types.*.label.required' => 'اكتب اسم نوع الخصم.',
             'types.min' => 'أضف نوع خصم واحداً على الأقل.',
