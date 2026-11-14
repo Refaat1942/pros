@@ -73,13 +73,13 @@ class CostingService
     /**
      * @param  array{type: string, value: float, reason: string}|null  $cashDiscount  خصم يدوي — للمدني الكاش فقط.
      */
-    public function confirmAndIssueQuote(CaseRecord $case, ?string $confirmedBy = null, ?array $cashDiscount = null): CaseRecord
+    public function confirmAndIssueQuote(CaseRecord $case, ?string $confirmedBy = null, ?array $cashDiscount = null, ?array $updown = null): CaseRecord
     {
         if ($case->stage_key !== CaseRecord::STAGE_COST_CALC) {
             abort(422, 'الحالة ليست في مرحلة التكاليف — لا يمكن التأكيد.');
         }
 
-        DB::transaction(function () use ($case, $confirmedBy, $cashDiscount) {
+        DB::transaction(function () use ($case, $confirmedBy, $cashDiscount, $updown) {
             $case = CaseRecord::lockForUpdate()->findOrFail($case->id);
 
             $this->editRequestService->assertNoPendingForCase($case);
@@ -110,6 +110,14 @@ class CostingService
 
             // خصم إضافي اختياري (كاش / تعاقد / عسكري) — على سعر البيع حسب حسبة التكاليف.
             $discount = $this->resolveCashDiscount($case, $quoteAmount, $cashDiscount);
+
+            // Up/Down (ظاهري): على الصافي بعد الخصم الحقيقي — للطباعة فقط، الصافي ما بيتغيرش.
+            $display = $this->resolveUpDown($case, round($quoteAmount - (float) ($discount['amount'] ?? 0), 2), $updown);
+            CaseRecord::where('id', $case->id)->update([
+                'updown_list_price' => $display['list_price'] ?? null,
+                'updown_discount_amount' => $display['amount'] ?? null,
+                'updown_discount_percent' => $display['percent'] ?? null,
+            ]);
 
             // عسكري: مالوش عرض سعر — مديونية الجهة = سعر البيع − الخصم (يتسجّل على الحالة).
             if ($case->isMilitary()) {
@@ -145,6 +153,9 @@ class CostingService
                     'discount_percent' => $discount['percent'] ?? null,
                     'discount_reason' => $discount['reason'] ?? null,
                     'discount_by' => $discount ? ($confirmedBy ?? 'الاعتماد') : null,
+                    'updown_list_price' => $display['list_price'] ?? null,
+                    'updown_discount_amount' => $display['amount'] ?? null,
+                    'updown_discount_percent' => $display['percent'] ?? null,
                 ]);
 
                 if ($discount) {
@@ -243,6 +254,54 @@ class CostingService
         );
     }
 
+    /**
+     * خصم Up/Down: السعر المعروض = الصافي ÷ (1 − النسبة) — فبعد الخصم المعروض يرجع الصافي نفسه
+     * (التكلفة + هامش الربح، أو بعد الخصم الحقيقي لو فيه). مش بيأثر على الإيراد ولا المديونية.
+     *
+     * @param  array{category?: ?string, value?: float|int|string|null}|null  $input
+     * @return array{list_price: float, amount: float, percent: float, label: string}|null
+     */
+    private function resolveUpDown(CaseRecord $case, float $net, ?array $input): ?array
+    {
+        if ($input === null || empty($input['category'])) {
+            return null;
+        }
+
+        $policy = app(DiscountPolicyService::class);
+        if (! $policy->allowsCase($case)) {
+            abort(422, 'الخصم غير مفعّل لفئة '.DiscountPolicyService::PATHWAYS[$policy->pathwayOf($case)].' — راجع سياسة الخصومات.');
+        }
+        $type = $policy->findType($input['category'], 'updown');
+        if ($type === null) {
+            abort(422, 'اختر نوع خصم Up/Down من الأنواع المعتمدة.');
+        }
+
+        $percent = $type['fixed_percent'] !== null
+            ? (float) $type['fixed_percent']
+            : round((float) ($input['value'] ?? 0), 2);
+        if ($percent <= 0) {
+            return null;
+        }
+        if ($percent >= 100) {
+            abort(422, 'يجب أن تكون نسبة خصم Up/Down أقل من 100%.');
+        }
+        if ($type['max_percent'] !== null && $percent > (float) $type['max_percent'] + 0.0001) {
+            abort(422, 'نسبة Up/Down تتجاوز الحد الأقصى لنوع «'.$type['label'].'» ('.$type['max_percent'].'%).');
+        }
+        if ($net <= 0) {
+            abort(422, 'لا يوجد سعر بيع للحالة، ولا يمكن تطبيق خصم.');
+        }
+
+        $listPrice = round($net / (1 - $percent / 100), 2);
+
+        return [
+            'list_price' => $listPrice,
+            'amount' => round($listPrice - $net, 2),
+            'percent' => $percent,
+            'label' => $type['label'],
+        ];
+    }
+
     private function resolveCashDiscount(CaseRecord $case, float $gross, ?array $input): ?array
     {
         $value = round((float) ($input['value'] ?? 0), 2);
@@ -259,7 +318,7 @@ class CostingService
         if (! $policy->allowsCase($case)) {
             abort(422, 'الخصم غير مفعّل لفئة '.DiscountPolicyService::PATHWAYS[$policy->pathwayOf($case)].' — راجع سياسة الخصومات.');
         }
-        $type = $policy->findType($input['category'] ?? null);
+        $type = $policy->findType($input['category'] ?? null, 'real');
         if ($type === null) {
             abort(422, 'اختر نوع الخصم من الأنواع المعتمدة.');
         }

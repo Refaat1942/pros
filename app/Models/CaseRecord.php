@@ -73,6 +73,9 @@ class CaseRecord extends Model
     protected $table = 'cases';
 
     protected $fillable = [
+        'updown_list_price',
+        'updown_discount_amount',
+        'updown_discount_percent',
         'case_no',
         'order_ref',
         'tracking_uid',
@@ -121,6 +124,9 @@ class CaseRecord extends Model
     ];
 
     protected $casts = [
+        'updown_list_price' => 'decimal:2',
+        'updown_discount_amount' => 'decimal:2',
+        'updown_discount_percent' => 'decimal:2',
         'quote_date' => 'date',
         'quote_total' => 'decimal:2',
         'invoice_total' => 'decimal:2',

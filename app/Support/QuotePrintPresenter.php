@@ -32,6 +32,28 @@ final class QuotePrintPresenter
             return self::withoutDiscount($gross);
         }
 
+        // Up/Down: يُطبع السعر المرفوع وخصم Up/Down فقط — الخصم الحقيقي لا يظهر، والصافي كما هو.
+        $listPrice = round((float) ($quote->updown_list_price ?? 0), 2);
+        if ($listPrice > 0) {
+            $split = ContractBillingSplit::forCase($case, $gross);
+            $display = round((float) $split['patient_share'], 2);
+            $discount = round($listPrice - $display, 2);
+            $percent = abs($display - $gross) < 0.01 && $quote->updown_discount_percent !== null
+                ? (float) $quote->updown_discount_percent
+                : ($listPrice > 0 ? round($discount / $listPrice * 100, 2) : 0.0);
+
+            return [
+                'gross_total' => $listPrice,
+                'discount_percent' => $percent,
+                'discount_amount' => $discount,
+                'net_total' => $display,
+                'display_total' => $display,
+                'has_discount' => $discount > 0,
+                'discount_is_amount' => false,
+                'is_updown' => true,
+            ];
+        }
+
         // خصم يدوي للعميل المدني الكاش: quotes.total هو الصافي، والإجمالي قبل الخصم محفوظ في gross_total.
         $manual = round((float) ($quote->discount_amount ?? 0), 2);
         $manualGross = round((float) ($quote->gross_total ?? 0), 2);
