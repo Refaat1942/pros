@@ -20,6 +20,22 @@ class UpdateCostingModesRequest extends BaseRequest
         ];
     }
 
+    /** نمطا «طرف صناعي» و«الصرف السريع» إلزاميان — من غيرهم الاعتماد يحسب 0% تكلفة وربح. */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $keys = collect((array) $this->input('modes', []))->pluck('key')->all();
+            foreach ([
+                \App\Services\CostingModeService::MODE_LIMB => 'طرف صناعي (prosthetic_limb)',
+                \App\Services\CostingModeService::MODE_QUICK => 'الصرف السريع (quick_dispense)',
+            ] as $key => $label) {
+                if (! in_array($key, $keys, true)) {
+                    $validator->errors()->add('modes', "لا يمكن حذف نمط «{$label}» أو تغيير مفتاحه — الاعتماد يعتمد عليه.");
+                }
+            }
+        });
+    }
+
     public function messages(): array
     {
         return [

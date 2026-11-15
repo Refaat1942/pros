@@ -103,6 +103,7 @@ class CostingController extends Controller
             'case' => $this->formatSummary($case),
             'pricing' => $pricing ? $this->formatPricingDetail($pricing, $case) : null,
             'costing' => $pricing ? $this->formatCostingBreakdown($pricing, $canSeeRates) : null,
+            'costing_warnings' => $canSeeRates ? $this->costingWarnings() : [],
             'bom' => $case->bom ? [
                 'id' => $case->bom->id,
                 'bom_no' => $case->bom->bom_no,
@@ -207,6 +208,25 @@ class CostingController extends Controller
     /**
      * تفصيل التكاليف التلقائي (طرف صناعي 95% + صرف سريع 40%) — الأساس لعرض السعر.
      */
+    /** @return list<string> تحذيرات إعدادات التكاليف — علشان النِسَب ماتطلعش صفر من غير ما حد ياخد باله. */
+    private function costingWarnings(): array
+    {
+        $modes = app(\App\Services\CostingModeService::class);
+        $warnings = array_map(
+            fn ($label) => "نمط «{$label}» غير موجود في إعدادات التكاليف — تُستخدم القيم الافتراضية. راجع «إعدادات التكاليف ← أنماط التكاليف».",
+            $modes->missingCoreModes(),
+        );
+        $limb = $modes->find(\App\Services\CostingModeService::MODE_LIMB);
+        if ($limb !== null && (float) $limb['profit_rate'] <= 0) {
+            $warnings[] = 'نسبة ربح التصنيع في إعدادات التكاليف = 0%.';
+        }
+        if ($limb !== null && (! $limb['has_components'] || array_sum(array_column($limb['components'], 'rate')) <= 0)) {
+            $warnings[] = 'تكاليف التشغيل للتصنيع غير مُعرَّفة (0%) في إعدادات التكاليف.';
+        }
+
+        return $warnings;
+    }
+
     private function formatCostingBreakdown(PricingRequest $pricing, bool $canSeeRates = true): array
     {
         $b = $this->snapshotService->breakdown($pricing);
@@ -240,6 +260,11 @@ class CostingController extends Controller
 
     private function formatPricingDetail(PricingRequest $pricing, CaseRecord $case): array
     {
+        $resolvedItems = $pricing->relationLoaded('items')
+            ? \App\Models\StockItem::resolveCodes($pricing->items->pluck('stock_item_code')->all())
+            : [];
+        collect($resolvedItems)->each(fn ($si) => $si->loadMissing('attributeValues.field'));
+
         $canSeeInternal = CaseFinancialSummary::canSeeInternalCost();
         $company = $case->contractCompany ?? $case->patient?->contractCompany;
         $materialsTotal = round((float) $pricing->items->sum('line_total'), 2);
@@ -258,10 +283,9 @@ class CostingController extends Controller
                 'net_offer_total' => $breakdown['net_offer_total'],
             ],
             'items' => $pricing->relationLoaded('items')
-                ? $pricing->items->map(function ($item) {
-                    $stockItem = $item->relationLoaded('stockItem') ? $item->stockItem : null;
-                    // البنود ممكن تتخزن بالكود التشغيلي (alt_codes) — العلاقة بتربط بـ code بس.
-                    $stockItem ??= \App\Models\StockItem::findByOperationalCode((string) $item->stock_item_code);
+                ? $pricing->items->map(function ($item) use ($resolvedItems) {
+                    // الصنف بنفس أولوية التسعير والصرف (العلاقة بتربط بعمود code بس وممكن تجيب صنف تاني).
+                    $stockItem = $resolvedItems[trim((string) $item->stock_item_code)] ?? null;
                     $criteria = $stockItem
                         ? $this->categorySchema->formatCriteriaSummary($stockItem)
                         : '—';

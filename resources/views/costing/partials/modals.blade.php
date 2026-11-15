@@ -48,7 +48,10 @@
           <div id="costingBreakdown" class="costing-breakdown">
             <h4 class="costing-breakdown__title" id="costingBreakdownTitle">📊 تفصيل التكلفة وسعر البيع</h4>
             {{-- التفاصيل الداخلية (نِسَب/مكوّنات/تكلفة) تظهر للأدمن فقط --}}
+            <div id="costingWarnings" style="display:none;margin-bottom:10px;padding:10px 12px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-size:13px;font-weight:700;line-height:1.7;"></div>
             <div id="costingInternalRows" style="display:contents;">
+              {{-- أقسام واضحة: 🏭 التصنيع (مواد + تكاليف تشغيل + ربح التصنيع) — 🩼 الصرف السريع (مواد + ربحه) — ثم الإجمالي. --}}
+              <div id="costingSections"></div>
               <div class="costing-overhead-row">
                 <span>إجمالي المواد (أعلى سعر شراء)</span>
                 <strong id="costingMaterialsTotal">—</strong>

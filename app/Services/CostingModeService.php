@@ -77,7 +77,22 @@ class CostingModeService
      */
     public function limbProfile(): ?array
     {
-        return $this->find(self::MODE_LIMB);
+        // لو النمط اتمسح/اتغيّر مفتاحه: القيم الافتراضية بدل 0% تكلفة وربح (والاعتماد بيعرض تحذير).
+        return $this->find(self::MODE_LIMB) ?? self::DEFAULTS[0];
+    }
+
+    /** أنماط أساسية ناقصة من الإعدادات — للتحذير في شاشة الاعتماد. @return list<string> */
+    public function missingCoreModes(): array
+    {
+        $missing = [];
+        if ($this->find(self::MODE_LIMB) === null) {
+            $missing[] = 'طرف صناعي (تصنيع)';
+        }
+        if ($this->find(self::MODE_QUICK) === null) {
+            $missing[] = 'الصرف السريع';
+        }
+
+        return $missing;
     }
 
     /**
@@ -87,7 +102,7 @@ class CostingModeService
      */
     public function quickProfile(): ?array
     {
-        return $this->find(self::MODE_QUICK);
+        return $this->find(self::MODE_QUICK) ?? self::DEFAULTS[1];
     }
 
     /**

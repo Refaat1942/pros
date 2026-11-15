@@ -124,7 +124,12 @@ final class CatalogColumns
         }
 
         if ($key === 'name') {
-            return ['html' => e($item['name'] ?? ''), 'class' => ''];
+            // نوع الصنف ظاهر جنب الاسم — نفس اللي بيتحدد/يتغيّر من المعدلات (ونِسَبه في الاعتماد).
+            $kind = ! empty($item['is_quick_dispense'])
+                ? '<span style="display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:11px;font-weight:700;">🩼 صرف سريع</span>'
+                : '<span style="display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:11px;font-weight:700;">🏭 تصنيع</span>';
+
+            return ['html' => e($item['name'] ?? '').$kind, 'class' => ''];
         }
 
         if ($key === 'brand') {

@@ -336,6 +336,13 @@
         var hasCompWrap = h('label', { class: 'cm-field' }, ['له مكوّنات', hasComp]);
 
         var del = h('button', { type: 'button', class: 'cm-btn-sm cm-btn-danger' }, ['🗑 حذف النمط']);
+        // نمطا التصنيع والصرف السريع أساس الاعتماد — مفتاحهما ثابت ولا يُحذفان.
+        var core = mode.key === 'prosthetic_limb' || mode.key === 'quick_dispense';
+        if (core) {
+            keyInput.readOnly = true;
+            keyInput.title = 'مفتاح أساسي يعتمد عليه الاعتماد — لا يمكن تغييره';
+            del.style.display = 'none';
+        }
 
         var head = h('div', { class: 'costing-mode-card__head' }, [
             field('اسم النمط', labelInput),
