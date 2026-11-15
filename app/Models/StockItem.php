@@ -157,8 +157,143 @@ class StockItem extends Model
         return $code !== '' ? $code : null;
     }
 
-    /** كود الظهور في التوصيف/المعدلات — alt_codes أو رقم الصنف أو الكود الداخلي. */
+    protected static function booted(): void
+    {
+        static::saved(fn () => self::flushLineCodes());
+        static::deleted(fn () => self::flushLineCodes());
+    }
+
+    /** @var array<int, string> كود الاختيار المحسوم لكل صنف — يتصفّر مع أي تعديل على الأصناف. */
+    private static array $lineCodeCache = [];
+
+    public static function flushLineCodes(): void
+    {
+        self::$lineCodeCache = [];
+    }
+
+    /**
+     * كود الظهور في التوصيف/المعدلات: الكود الطبيعي (alt_codes ← code ← رقم الصنف) لو بيوصل
+     * للصنف ده نفسه؛ ولو نفس الرقم موجود في صنف تاني بأولوية أعلى (زي «17» في عمودين) يرجع
+     * الكود الداخلي الفريد — علشان البند ميتربطش بصنف غلط (وحدة/سعر/صرف مختلف).
+     */
     public function pickerCode(): string
+    {
+        if ($this->id !== null && isset(self::$lineCodeCache[$this->id])) {
+            return self::$lineCodeCache[$this->id];
+        }
+
+        $code = $this->computeLineCode();
+        if ($this->id !== null) {
+            self::$lineCodeCache[$this->id] = $code;
+        }
+
+        return $code;
+    }
+
+    /** أول كود بيوصل للصنف ده نفسه: الطبيعي ← الكود الداخلي ← الباركود (فريد دايماً). */
+    private function computeLineCode(): string
+    {
+        $natural = $this->naturalPickerCode();
+        if ($this->id === null || $natural === '') {
+            return $natural;
+        }
+
+        foreach (array_unique(array_filter([$natural, trim((string) $this->code), trim((string) $this->barcode)])) as $candidate) {
+            $winner = static::resolveCodes([$candidate])[$candidate] ?? null;
+            if ($winner !== null && (int) $winner->id === (int) $this->id) {
+                return $candidate;
+            }
+        }
+
+        return $natural;
+    }
+
+    /**
+     * يحسم أكواد الاختيار لمجموعة أصناف باستعلام واحد (للقوائم الكبيرة).
+     *
+     * @param  iterable<self>  $items
+     */
+    public static function primeLineCodes(iterable $items): void
+    {
+        $byNatural = [];
+        foreach ($items as $item) {
+            if ($item->id === null || isset(self::$lineCodeCache[$item->id])) {
+                continue;
+            }
+            $natural = $item->naturalPickerCode();
+            if ($natural === '') {
+                self::$lineCodeCache[$item->id] = '';
+
+                continue;
+            }
+            $byNatural[$natural][] = $item;
+        }
+        if ($byNatural === []) {
+            return;
+        }
+
+        foreach (array_chunk(array_keys($byNatural), 500) as $chunk) {
+            $resolved = static::resolveCodes($chunk);
+            foreach ($chunk as $natural) {
+                foreach ($byNatural[$natural] as $item) {
+                    $winner = $resolved[$natural] ?? null;
+                    self::$lineCodeCache[$item->id] = ($winner === null || (int) $winner->id === (int) $item->id)
+                        ? $natural
+                        : $item->computeLineCode(); // نادر: رقم مكرر في صنف تاني
+                }
+            }
+        }
+    }
+
+    /**
+     * كود → صنف بنفس أولوية findByOperationalCode (alt_codes ثم code ثم رقم الصنف، والأقدم عند التساوي).
+     *
+     * @param  list<string>  $codes
+     * @return array<string, self>
+     */
+    public static function resolveCodes(array $codes): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map(fn ($c) => trim((string) $c), $codes), fn ($c) => $c !== '')));
+        if ($codes === []) {
+            return [];
+        }
+        $hasCatalog = Schema::hasColumn('stock_items', 'catalog_number');
+
+        $candidates = static::query()
+            ->where(function ($builder) use ($codes, $hasCatalog) {
+                $builder->whereIn('alt_codes', $codes)->orWhereIn('code', $codes)->orWhereIn('barcode', $codes);
+                if ($hasCatalog) {
+                    $builder->orWhereIn('catalog_number', $codes);
+                }
+            })
+            ->orderBy('id')
+            ->get();
+
+        $best = [];
+        $rank = [];
+        foreach ($candidates as $item) {
+            $fields = [
+                0 => trim((string) ($item->alt_codes ?? '')),
+                1 => trim((string) ($item->code ?? '')),
+                2 => $hasCatalog ? trim((string) ($item->catalog_number ?? '')) : '',
+                3 => trim((string) ($item->barcode ?? '')),
+            ];
+            foreach ($fields as $r => $value) {
+                if ($value === '' || ! in_array($value, $codes, true)) {
+                    continue;
+                }
+                if (! isset($rank[$value]) || $r < $rank[$value]) {
+                    $rank[$value] = $r;
+                    $best[$value] = $item;
+                }
+            }
+        }
+
+        return $best;
+    }
+
+    /** الكود الطبيعي للظهور — alt_codes أو الكود الداخلي أو رقم الصنف. */
+    public function naturalPickerCode(): string
     {
         $operational = $this->operationalCode();
         if ($operational !== null) {
@@ -260,7 +395,7 @@ class StockItem extends Model
             return null;
         }
 
-        $query = static::query()->where('alt_codes', $code);
+        $query = static::query()->where('alt_codes', $code)->orderBy('id');
 
         if ($lockForUpdate) {
             $query->lockForUpdate();
@@ -272,7 +407,7 @@ class StockItem extends Model
         }
 
         // توافق خلفي: بيانات/BOM قديمة تُشير برقم الصنف (code) قبل تعبئة alt_codes.
-        $legacyQuery = static::query()->where('code', $code);
+        $legacyQuery = static::query()->where('code', $code)->orderBy('id');
 
         if ($lockForUpdate) {
             $legacyQuery->lockForUpdate();
@@ -283,12 +418,23 @@ class StockItem extends Model
             return $item;
         }
 
-        $catalogQuery = static::query()->where('catalog_number', $code);
+        $catalogQuery = static::query()->where('catalog_number', $code)->orderBy('id');
         if ($lockForUpdate) {
             $catalogQuery->lockForUpdate();
         }
 
-        return $catalogQuery->first();
+        $item = $catalogQuery->first();
+        if ($item !== null) {
+            return $item;
+        }
+
+        // الباركود فريد — آخر أولوية (كود اختيار لصنف رقمه مكرر في صنف تاني).
+        $barcodeQuery = static::query()->where('barcode', $code);
+        if ($lockForUpdate) {
+            $barcodeQuery->lockForUpdate();
+        }
+
+        return $barcodeQuery->first();
     }
 
     /**
@@ -297,29 +443,10 @@ class StockItem extends Model
      */
     public static function mapByOperationalCodes(array $codes, string $column): array
     {
-        $codes = array_values(array_unique(array_filter(array_map('trim', $codes))));
-
-        if ($codes === []) {
-            return [];
-        }
-
-        $query = static::query()->where(function ($builder) use ($codes) {
-            $builder->whereIn('alt_codes', $codes)
-                ->orWhereIn('code', $codes);
-
-            if (Schema::hasColumn('stock_items', 'catalog_number')) {
-                $builder->orWhereIn('catalog_number', $codes);
-            }
-        });
-
+        // نفس أولوية الربط في التسعير والصرف — مش «آخر صنف اتقرى» (كان بيجيب وحدة/سعر صنف تاني).
         $map = [];
-        foreach ($query->get() as $item) {
-            $value = $item->{$column};
-            foreach ($codes as $requested) {
-                if ($item->matchesPickerCode($requested)) {
-                    $map[$requested] = $value;
-                }
-            }
+        foreach (static::resolveCodes($codes) as $code => $item) {
+            $map[$code] = $item->{$column};
         }
 
         return $map;
@@ -332,31 +459,11 @@ class StockItem extends Model
      */
     public static function mapDisplayBarcodesByOperationalCodes(array $codes): array
     {
-        $codes = array_values(array_unique(array_filter(array_map('trim', $codes))));
-
-        if ($codes === []) {
-            return [];
-        }
-
-        $query = static::query()->where(function ($builder) use ($codes) {
-            $builder->whereIn('alt_codes', $codes)
-                ->orWhereIn('code', $codes);
-
-            if (Schema::hasColumn('stock_items', 'catalog_number')) {
-                $builder->orWhereIn('catalog_number', $codes);
-            }
-        });
-
         $map = [];
-        foreach ($query->get() as $item) {
+        foreach (static::resolveCodes($codes) as $code => $item) {
             $display = $item->displayBarcode();
-            if ($display === null) {
-                continue;
-            }
-            foreach ($codes as $requested) {
-                if ($item->matchesPickerCode($requested)) {
-                    $map[$requested] = $display;
-                }
+            if ($display !== null) {
+                $map[$code] = $display;
             }
         }
 
@@ -370,7 +477,7 @@ class StockItem extends Model
      */
     public static function pickerCatalogRows(): array
     {
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'is_quick_dispense', 'alt_codes', 'price'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'is_quick_dispense', 'alt_codes', 'price', 'barcode'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
@@ -386,6 +493,7 @@ class StockItem extends Model
 
         return $query
             ->get($columns)
+            ->tap(fn ($items) => static::primeLineCodes($items))
             ->map(function (self $item) {
                 $pickerCode = $item->pickerCode();
                 $catalogCode = trim((string) ($item->catalog_number ?? '')) !== ''
@@ -430,7 +538,7 @@ class StockItem extends Model
             return [];
         }
 
-        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'is_quick_dispense', 'alt_codes', 'price'];
+        $columns = ['id', 'code', 'name', 'spec', 'qty', 'reserved', 'uom', 'is_quick_dispense', 'alt_codes', 'price', 'barcode'];
         if (Schema::hasColumn('stock_items', 'catalog_number')) {
             $columns[] = 'catalog_number';
         }
@@ -446,6 +554,7 @@ class StockItem extends Model
             })
             ->orderBy('name')
             ->get($columns)
+            ->tap(fn ($items) => static::primeLineCodes($items))
             ->map(function (self $item) {
                 $pickerCode = $item->pickerCode();
 
@@ -508,6 +617,7 @@ class StockItem extends Model
             ->orderBy('name')
             ->limit(max(10, min(60, $limit)))
             ->get($columns)
+            ->tap(fn ($items) => static::primeLineCodes($items))
             ->map(function (self $item) {
                 $pickerCode = $item->pickerCode();
 

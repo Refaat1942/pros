@@ -23,7 +23,13 @@ final class QuickDispense
 
     public static function isQuickItem(?StockItem $item, ?string $code): bool
     {
-        return $item !== null ? (bool) $item->is_quick_dispense : self::isQuickCode($code);
+        // العلاقة stockItem بتربط بعمود code بس — لو نفس الرقم في صنف تاني بتجيب صنف غلط؛
+        // فالكود بيتحسم بنفس أولوية التسعير والصرف.
+        if (trim((string) $code) !== '') {
+            return self::isQuickCode($code);
+        }
+
+        return (bool) $item?->is_quick_dispense;
     }
 
     /** الحالة كل بنودها (بكمية > 0) منتجات صرف سريع — يعني مالهاش دعوة بقسم الإنتاج. */

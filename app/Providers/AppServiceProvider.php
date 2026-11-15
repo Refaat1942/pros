@@ -29,6 +29,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \App\Models\StockItem::flushLineCodes();
+
         Relation::enforceMorphMap([
             'bom' => Bom::class,
             'return_note' => ReturnNote::class,

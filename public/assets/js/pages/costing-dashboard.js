@@ -113,6 +113,59 @@
       });
   }
 
+  // أقسام التفصيل: كل نوع بنِسَبه — التصنيع (تكاليف تشغيل + ربح) والصرف السريع (ربح فقط).
+  function renderSections(costing) {
+    var box = $('costingSections');
+    if (!box) return;
+    // الصفوف القديمة المتفرقة بقت جوه الأقسام.
+    ['costingComponentLines', 'costingComponentsTotalRow', 'costingBaseSellingRow', 'costingQuickRow'].forEach(function (id) {
+      if ($(id)) $(id).style.display = 'none';
+    });
+    var mt = $('costingMaterialsTotal');
+    if (mt && mt.closest('.costing-overhead-row')) mt.closest('.costing-overhead-row').style.display = 'none';
+
+    function row(label, value, extra) {
+      return '<div class="costing-overhead-row' + (extra ? ' ' + extra : '') + '"><span>' + label + '</span><strong>' + value + '</strong></div>';
+    }
+    function money(v) { return fmt(v) + ' ج.م'; }
+    var base = parseFloat(costing.base_materials) || 0;
+    var quick = parseFloat(costing.quick_materials) || 0;
+    var html = '';
+
+    if (base > 0) {
+      var comps = costing.components || [];
+      var compRate = comps.reduce(function (s, c) { return s + (parseFloat(c.rate) || 0); }, 0);
+      html += '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;margin-bottom:10px;">' +
+        '<div style="font-weight:800;color:#334155;margin-bottom:4px;">🏭 التصنيع</div>' +
+        row('مواد التصنيع (أعلى سعر شراء)', money(base)) +
+        comps.map(function (c) { return row('&nbsp;&nbsp;+ ' + esc(c.label) + ' (' + esc(c.rate) + '%)', money(c.amount)); }).join('') +
+        row('إجمالي تكلفة التصنيع' + (compRate ? ' (المواد + ' + Math.round(compRate * 100) / 100 + '% تكاليف تشغيل)' : ''), money(costing.base_total_cost), 'costing-overhead-row--highlight') +
+        row('ربح التصنيع (' + (costing.base_profit_rate || 0) + '%)', money(costing.base_profit_amount)) +
+        row('سعر بيع التصنيع', money(costing.base_selling), 'costing-overhead-row--highlight') +
+        '</div>';
+    }
+    if (quick > 0) {
+      html += '<div style="border:1px solid #a7f3d0;border-radius:10px;padding:8px 10px;margin-bottom:10px;background:#f0fdf4;">' +
+        '<div style="font-weight:800;color:#047857;margin-bottom:4px;">🩼 الصرف السريع (بدون تكاليف تشغيل)</div>' +
+        row('مواد الصرف السريع (أعلى سعر شراء)', money(quick)) +
+        row('ربح الصرف السريع (' + (costing.quick_profit_rate || 0) + '%)', money(costing.quick_profit_amount)) +
+        row('سعر بيع الصرف السريع', money(costing.quick_selling), 'costing-overhead-row--highlight') +
+        '</div>';
+    }
+    if (base > 0 && quick > 0) {
+      html += '<div style="font-weight:800;color:#334155;margin:4px 0;">Σ الإجمالي (تصنيع + صرف سريع)</div>';
+    }
+    box.innerHTML = html;
+  }
+
+  function renderWarnings(list) {
+    var el = $('costingWarnings');
+    if (!el) return;
+    list = list || [];
+    el.style.display = list.length ? '' : 'none';
+    el.innerHTML = list.map(function (w) { return '⚠️ ' + esc(w); }).join('<br>');
+  }
+
   function renderBreakdown(costing) {
     if (!costing) return;
 
@@ -183,6 +236,7 @@
     }
 
     if ($('costingTotalCost')) $('costingTotalCost').textContent = fmt(costing.total_cost) + ' ج.م';
+    if ($('costingTotalCostLabel')) $('costingTotalCostLabel').textContent = 'إجمالي التكلفة (تصنيع + صرف سريع)';
 
     if ($('costingWacRow')) $('costingWacRow').style.display = canSeeInternal ? '' : 'none';
     if ($('costingWacTotal') && canSeeInternal) $('costingWacTotal').textContent = fmt(currentInternalTotal) + ' ج.م';
@@ -190,6 +244,9 @@
     if ($('costingProfitLabel')) $('costingProfitLabel').textContent = 'إجمالي هامش الربح (' + (costing.profit_rate || 0) + '%)';
     if ($('costingProfitAmount')) $('costingProfitAmount').textContent = fmt(costing.profit_amount) + ' ج.م';
     if ($('costingSellingPrice')) $('costingSellingPrice').textContent = fmt(costing.selling_price) + ' ج.م';
+
+    // الأقسام آخر حاجة — بتخفي الصفوف القديمة المتفرقة.
+    renderSections(costing);
   }
 
   function openModal(caseId) {
@@ -321,6 +378,7 @@
         }
 
         currentMaterials = 0;
+        renderWarnings(res.data.costing_warnings);
         renderBreakdown(costing);
         renderNetRows();
 
