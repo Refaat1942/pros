@@ -28,6 +28,9 @@ jobs:
           coverage: none
 
       - name: Build package
+        env:
+          # المفتاح السري للتوقيع — Settings → Secrets → Actions → OFFLINE_SIGNING_KEY
+          OFFLINE_SIGNING_KEY: ${{ secrets.OFFLINE_SIGNING_KEY }}
         run: bash scripts/offline-package/build.sh
 
       - name: Publish release "offline-latest"

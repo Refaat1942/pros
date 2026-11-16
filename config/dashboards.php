@@ -342,7 +342,7 @@ return [
             [
                 'label' => 'الموظفون والصلاحيات',
                 'icon' => '👥',
-                'pages' => ['employees', 'permissions', 'data-purge'],
+                'pages' => ['employees', 'permissions', 'data-purge', 'system-update'],
             ],
             [
                 'label' => 'إعدادات النظام',
@@ -410,6 +410,7 @@ return [
             'permissions' => ['title' => 'مصفوفة الصلاحيات', 'icon' => '🛡️', 'label' => 'الصلاحيات'],
             // مدير النظام فقط — لا تُمنح لأي دور افتراضياً.
             'data-purge' => ['title' => 'حذف البيانات — مدير النظام', 'icon' => '🗑️', 'label' => 'حذف البيانات', 'default_off' => true],
+            'system-update' => ['title' => 'تحديث النظام — مدير النظام', 'icon' => '⬆️', 'label' => 'تحديث النظام', 'default_off' => true],
             'military-ranks' => ['title' => 'الرتب العسكرية', 'icon' => '🪖', 'label' => 'الرتب العسكرية'],
             'costing-settings' => ['title' => 'إعدادات التكاليف الإضافية', 'icon' => '💰', 'label' => 'إعدادات التكاليف'],
             'branding-settings' => ['title' => 'الهوية البصرية — الشعار والترويسة', 'icon' => '🎨', 'label' => 'الهوية البصرية'],

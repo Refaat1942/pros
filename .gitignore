@@ -26,3 +26,7 @@ yarn-error.log
 firebase-adminsdk-*.json
 composer.phar
 /dist
+
+# مفتاح توقيع التحديثات — عمره ما يتحط في المستودع
+*.pem
+/dist

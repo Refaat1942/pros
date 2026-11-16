@@ -292,6 +292,14 @@ Route::prefix('admin')
                 ->name('military-ranks.destroy');
         });
 
+        // ── تحديث النظام من المتصفح — مدير النظام فقط، باكدج موقّع فقط ──────────
+        Route::middleware(['dashboard.page:admin,system-update', 'throttle:600,1'])->group(function () {
+            $c = \App\Http\Controllers\Admin\SystemUpdateController::class;
+            Route::post('system-update/start', [$c, 'start'])->name('system-update.start');
+            Route::post('system-update/{id}/chunk', [$c, 'chunk'])->where('id', '[a-z0-9]{24}')->name('system-update.chunk');
+            Route::post('system-update/{id}/finish', [$c, 'finish'])->where('id', '[a-z0-9]{24}')->name('system-update.finish');
+        });
+
         // ── حذف البيانات — مدير النظام فقط (كلمة مرور + نسخة احتياطية) ────────
         Route::middleware(['dashboard.page:admin,data-purge', 'throttle:20,1'])->group(function () {
             Route::get('data-purge/patients', [\App\Http\Controllers\Admin\DataPurgeController::class, 'patients'])
