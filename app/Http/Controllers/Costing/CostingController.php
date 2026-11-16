@@ -217,9 +217,7 @@ class CostingController extends Controller
             $modes->missingCoreModes(),
         );
         $limb = $modes->find(\App\Services\CostingModeService::MODE_LIMB);
-        if ($limb !== null && (float) $limb['profit_rate'] <= 0) {
-            $warnings[] = 'نسبة ربح التصنيع في إعدادات التكاليف = 0%.';
-        }
+        // ربح التصنيع 0% مقصود (نسب التصنيع 87.66% هي الهامش) — مش تحذير.
         if ($limb !== null && (! $limb['has_components'] || array_sum(array_column($limb['components'], 'rate')) <= 0)) {
             $warnings[] = 'تكاليف التشغيل للتصنيع غير مُعرَّفة (0%) في إعدادات التكاليف.';
         }

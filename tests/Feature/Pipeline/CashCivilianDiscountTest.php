@@ -312,4 +312,54 @@ class CashCivilianDiscountTest extends TestCase
         $this->assertEqualsWithDelta($gross, (float) $case->fresh()->total_cost, 0.01, 'مديونية الجهة بالصافي');
         $this->assertEqualsWithDelta(round($gross / 0.85, 2), (float) $case->fresh()->updown_list_price, 0.01);
     }
+
+    public function test_real_discount_without_updown_is_printed_for_contracted(): void
+    {
+        $costing = $this->costingUser(true);
+        $entity = $this->caseAtCosting($this->civilianPatient($this->civilianCompany()));
+        $this->actingAs($costing)->postJson("/costing/queue/{$entity->id}/confirm", [
+            'discount_type' => 'percent', 'discount_value' => 10, 'discount_category' => 'administrative',
+        ])->assertOk();
+
+        $quote = Quote::where('case_id', $entity->id)->firstOrFail();
+        $totals = \App\Support\QuotePrintPresenter::fromQuote($quote->fresh());
+        $this->assertTrue($totals['has_discount'], 'الخصم الحقيقي ظاهر في عرض السعر');
+        $this->assertEqualsWithDelta((float) $quote->gross_total, $totals['gross_total'], 0.01, 'السعر قبل الخصم الحقيقي');
+        $this->assertEqualsWithDelta($totals['gross_total'] - $totals['discount_amount'], $totals['display_total'], 0.01);
+    }
+
+    public function test_real_discount_without_updown_is_printed_on_military_invoice(): void
+    {
+        $costing = $this->costingUser(true);
+        $military = $this->caseAtCosting($this->militaryPatient($this->militaryCompany()));
+        $gross = (float) $this->actingAs($costing)->getJson("/costing/queue/{$military->id}")->json('costing.selling_price');
+        $this->actingAs($costing)->postJson("/costing/queue/{$military->id}/confirm", [
+            'discount_type' => 'percent', 'discount_value' => 10, 'discount_category' => 'administrative',
+        ])->assertOk();
+        $case = $military->fresh();
+        if ($case->stage_key === CaseRecord::STAGE_OPERATIONS) {
+            $case = app(\App\Services\OperationsService::class)->approve($case, 'اختبار');
+        }
+
+        $doc = \App\Support\InvoicePrintPresenter::document($case->fresh());
+        $this->assertTrue($doc['totals']['has_discount']);
+        $this->assertEqualsWithDelta($gross, $doc['totals']['gross_total'], 0.01);
+        $this->assertEquals(10.0, $doc['totals']['discount_percent']);
+        $this->assertEqualsWithDelta(round($gross - round($gross * 0.10, 2), 2), $doc['totals']['display_total'], 0.01);
+    }
+
+    public function test_zero_manufacturing_profit_adds_nothing_after_operating_rates(): void
+    {
+        app(\App\Services\CostingModeService::class)->saveModes([
+            ['key' => 'prosthetic_limb', 'label' => 'طرف صناعي', 'profit_rate' => 0, 'has_components' => true, 'components' => [
+                ['label' => 'فحص', 'rate' => 25], ['label' => 'دمج', 'rate' => 24.66], ['label' => 'إهلاك', 'rate' => 15], ['label' => 'تقييم', 'rate' => 23],
+            ]],
+            ['key' => 'quick_dispense', 'label' => 'الصرف السريع', 'profit_rate' => 40, 'has_components' => false, 'components' => []],
+        ]);
+        $case = $this->caseAtCosting($this->cashPatient());
+        $res = $this->actingAs($this->userWithRole('admin'))->getJson("/costing/queue/{$case->id}")->assertOk();
+        $materials = (float) $res->json('costing.base_materials');
+        $this->assertEqualsWithDelta(round($materials * 1.8766, 2), (float) $res->json('costing.selling_price'), 0.02, 'المواد + 87.66% بس');
+        $this->assertSame([], $res->json('costing_warnings'), 'ربح 0% مش تحذير');
+    }
 }

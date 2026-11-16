@@ -57,7 +57,25 @@ final class QuotePrintPresenter
         // خصم يدوي للعميل المدني الكاش: quotes.total هو الصافي، والإجمالي قبل الخصم محفوظ في gross_total.
         $manual = round((float) ($quote->discount_amount ?? 0), 2);
         $manualGross = round((float) ($quote->gross_total ?? 0), 2);
-        if ($manual > 0 && $manualGross > 0 && $case->isCashCivilian()) {
+
+        // خصم حقيقي من غير Up/Down على جهة متعاقدة: يظهر في عرض السعر — السعر قبل الخصم
+        // ثم الخصم (الحقيقي + نصيب الجهة) = المطلوب من المريض.
+        if ($manual > 0 && $manualGross > 0 && ! $case->isCashCivilian()) {
+            $display = round((float) ContractBillingSplit::forCase($case, $gross)['patient_share'], 2);
+            if (abs($display - $gross) >= 0.01) {
+                return [
+                    'gross_total' => $manualGross,
+                    'discount_percent' => round(($manualGross - $display) / $manualGross * 100, 2),
+                    'discount_amount' => round($manualGross - $display, 2),
+                    'net_total' => $display,
+                    'display_total' => $display,
+                    'has_discount' => true,
+                    'discount_is_amount' => true,
+                ];
+            }
+        }
+
+        if ($manual > 0 && $manualGross > 0) {
             $percent = $quote->discount_percent !== null
                 ? (float) $quote->discount_percent
                 : round($manual / $manualGross * 100, 2);
