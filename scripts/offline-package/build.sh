@@ -32,6 +32,8 @@ echo "==> تثبيت مكتبات PHP للإنتاج (بدون أدوات الت
 ( cd "$PKG/files" && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-scripts --no-progress )
 # لو composer نزّل من المصدر (git) بدل الـ dist — نشيل تاريخ git عشان الحجم.
 find "$PKG/files/vendor" -name .git -type d -prune -exec rm -rf {} +
+# روابط رمزية (symlinks) في ملفات اختبار المكتبات: zip بيتبعها وويندوز مابيدعمهاش — والتوقيع لازم يطابق المحتوى.
+find "$PKG" -type l -delete
 
 echo "==> سكريبتات ويندوز + رقم الإصدار"
 for f in UPDATE.bat INSTALL.bat; do
@@ -43,6 +45,21 @@ cp "$ROOT/scripts/offline-package/windows/create-database.php" "$PKG/tools/"
 sed 's/\r$//; s/$/\r/' "$ROOT/scripts/offline-package/windows/README-AR.txt" > "$PKG/README-AR.txt"
 printf 'version=%s\ncommit=%s\nbuilt_utc=%s\n' "$STAMP" "$(git rev-parse HEAD)" "$(date -u +%FT%TZ)" > "$PKG/files/VERSION.txt"
 cp "$PKG/files/VERSION.txt" "$PKG/VERSION.txt"
+
+echo "==> توقيع الباكدج (للتحديث من صفحة مدير النظام)"
+# المفتاح السري: ملف (OFFLINE_SIGNING_KEY_FILE) أو محتواه (OFFLINE_SIGNING_KEY — GitHub Secret).
+KEY_FILE="${OFFLINE_SIGNING_KEY_FILE:-}"
+if [ -z "$KEY_FILE" ] && [ -n "${OFFLINE_SIGNING_KEY:-}" ]; then
+  KEY_FILE="$STAGE/signing-key.pem"
+  printf '%s\n' "$OFFLINE_SIGNING_KEY" > "$KEY_FILE"
+  chmod 600 "$KEY_FILE"
+fi
+if [ -n "$KEY_FILE" ]; then
+  php "$ROOT/scripts/offline-package/sign.php" "$PKG" "$KEY_FILE"
+  rm -f "$STAGE/signing-key.pem"
+else
+  echo "⚠️  بدون توقيع — UPDATE.bat هيشتغل، لكن صفحة «تحديث النظام» هترفض الملف."
+fi
 
 echo "==> ضغط"
 ( cd "$STAGE" && rm -f "$ROOT/dist/$NAME.zip" && zip -qr -X "$ROOT/dist/$NAME.zip" "$NAME" )

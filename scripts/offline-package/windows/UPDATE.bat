@@ -59,6 +59,8 @@ pushd "%APP%"
 php artisan prosthetics:backup
 if errorlevel 1 (
   echo WARNING: backup did not finish.
+  REM From the web page (no keyboard): never continue without a backup.
+  if defined UPDATE_NONINTERACTIVE ( popd & goto fail )
   choice /C YN /M "Continue WITHOUT a backup"
   if errorlevel 2 ( popd & goto fail )
 )
@@ -114,7 +116,7 @@ echo.
 echo ============================================================
 echo  DONE - update installed. Ask users to press Ctrl+F5 and log in again.
 echo ============================================================
-pause
+if not defined UPDATE_NONINTERACTIVE pause
 exit /b 0
 
 :copyfail
@@ -128,5 +130,5 @@ if defined APPDOWN (
 )
 echo.
 echo UPDATE STOPPED - take a photo of this screen and send it.
-pause
+if not defined UPDATE_NONINTERACTIVE pause
 exit /b 1
