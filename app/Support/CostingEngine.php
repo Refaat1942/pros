@@ -94,7 +94,8 @@ final class CostingEngine
             : [];
         $componentsTotal = round(array_sum(array_column($components, 'amount')), 2);
 
-        $baseProfitRate = $base > 0 && $limbProfile !== null ? round((float) ($limbProfile['profit_rate'] ?? 0), 2) : 0.0;
+        // قرار العميل: سعر التصنيع = المواد + نسب التصنيع (مثلاً 87.66%) فقط — مفيش ربح يتضاف بعدها.
+        $baseProfitRate = 0.0;
         $baseTotalCost = round($base + $componentsTotal, 2);
         $baseSelling = round($baseTotalCost * (1 + ($baseProfitRate / 100)), 2);
         $baseProfitAmount = round($baseSelling - $baseTotalCost, 2);

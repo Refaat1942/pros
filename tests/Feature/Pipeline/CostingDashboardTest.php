@@ -434,20 +434,20 @@ class CostingDashboardTest extends TestCase
         $this->actingAs($this->userWithRole('adjustments'))
             ->postJson("/adjustments/adjustments/{$case->id}/complete");
 
-        // بند عادي (طرف صناعي): مواد 400 ؛ مكوّنات 100% ⇒ 400 ؛ تكلفة 800 ؛ ربح 95% ⇒ 1560.
+        // بند تصنيع: مواد 400 + نسب التصنيع 87.66% = 750.64 (مفيش ربح بعدها).
         $response = $this->actingAs($costing)
             ->getJson("/costing/queue/{$case->id}")
             ->assertOk();
 
         // موظف التكاليف (غير أدمن) يرى سعر البيع فقط.
-        $this->assertEquals(1560.0, (float) $response->json('costing.selling_price'));
+        $this->assertEquals(750.64, (float) $response->json('costing.selling_price'));
         $this->assertNull($response->json('costing.total_cost'));
 
         $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
         $this->assertEquals(400.0, (float) $pricing->computed_total);
-        $this->assertEquals(400.0, (float) $pricing->components_total);
-        $this->assertEquals(800.0, (float) $pricing->total_cost);
-        $this->assertEquals(1560.0, (float) $pricing->selling_price);
+        $this->assertEquals(350.64, (float) $pricing->components_total, 'نسب التصنيع 87.66% من 400');
+        $this->assertEquals(750.64, (float) $pricing->total_cost);
+        $this->assertEquals(750.64, (float) $pricing->selling_price, 'مفيش ربح بعد نسب التصنيع');
     }
 
     public function test_costing_auto_applies_quick_dispense_for_flagged_item(): void
@@ -507,8 +507,8 @@ class CostingDashboardTest extends TestCase
 
         $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
 
-        // الطرف: 400 + مكوّنات 400 = 800 × 1.95 = 1560 ؛ الصرف السريع: 100 × 1.40 = 140 ؛ المجموع 1700.
-        $this->assertEquals(1700.0, (float) $pricing->selling_price);
+        // التصنيع: 400 × 1.8766 = 750.64 ؛ الصرف السريع: 100 × 1.40 = 140 ؛ المجموع 890.64.
+        $this->assertEquals(890.64, (float) $pricing->selling_price);
         $this->assertEquals(500.0, (float) $pricing->computed_total);
     }
 
@@ -528,11 +528,11 @@ class CostingDashboardTest extends TestCase
             ->getJson("/costing/queue/{$case->id}")
             ->assertOk();
 
-        // طرف صناعي تلقائي: مواد 3×200=600 ؛ مكوّنات 600 ؛ تكلفة 1200 ؛ ربح 95% ⇒ 2340.
-        $this->assertEquals(2340.0, (float) $response->json('costing.selling_price'));
+        // تصنيع: مواد 3×200=600 × 1.8766 = 1125.96.
+        $this->assertEquals(1125.96, (float) $response->json('costing.selling_price'));
         $pricing = PricingRequest::where('case_id', $case->id)->firstOrFail();
         $this->assertEquals(600.0, (float) $pricing->computed_total);
-        $this->assertEquals(2340.0, (float) $pricing->selling_price);
+        $this->assertEquals(1125.96, (float) $pricing->selling_price);
     }
 
     public function test_costing_hides_rates_and_components_from_non_admin(): void
@@ -567,9 +567,9 @@ class CostingDashboardTest extends TestCase
             ->postJson("/costing/queue/{$case->id}/confirm")
             ->assertOk();
 
-        // طرف صناعي تلقائي ⇒ سعر البيع 1560 يصبح قيمة عرض السعر.
+        // تصنيع: 400 × 1.8766 ⇒ سعر البيع 750.64 يصبح قيمة عرض السعر.
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
-        $this->assertEquals(1560.00, (float) $quote->total);
+        $this->assertEquals(750.64, (float) $quote->total);
     }
 
     public function test_military_costing_confirm_auto_approves_to_warehouse(): void

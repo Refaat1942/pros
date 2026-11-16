@@ -507,8 +507,10 @@ class AdjustmentsListTest extends TestCase
 
         $this->assertNotNull($specLine);
         $this->assertNotNull($adjLine);
-        $this->assertEqualsWithDelta(200.0, (float) $specLine['price'] * (float) $specLine['qty'], 0.01);
-        $this->assertEqualsWithDelta(150.0, (float) $adjLine['price'] * (float) $adjLine['qty'], 0.01);
+        // السعر في المعدلات = نفس سعر الاعتماد (أعلى سعر شراء) — علشان السعر النهائي يطابق.
+        $highest = app(\App\Services\StockPriceService::class)->highestUnitPrice('RM-001');
+        $this->assertEqualsWithDelta($highest * (float) $specLine['qty'], (float) $specLine['price'] * (float) $specLine['qty'], 0.01);
+        $this->assertEqualsWithDelta($highest * 1.5, (float) $adjLine['price'] * (float) $adjLine['qty'], 0.01);
     }
 
     private function seedStockWithPriceBatch(): void

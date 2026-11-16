@@ -149,9 +149,9 @@ class CivilianQueryChainE2eTest extends TestCase
 
         $this->assertContains($case->id, $queues->operationsPendingCaseIds());
 
-        // تسعير تلقائي (طرف صناعي): مواد 400 + مكوّنات 400 = 800 × 1.95 = 1560.
+        // تسعير تلقائي (تصنيع): مواد 400 + نسب التصنيع 87.66% = 750.64 (مفيش ربح بعدها).
         $quote = Quote::where('case_id', $case->id)->firstOrFail();
-        $this->assertEquals(1560.00, (float) $quote->total);
+        $this->assertEquals(750.64, (float) $quote->total);
         $this->assertEquals(Quote::STATUS_PENDING, $quote->status);
 
         // ── Step 5: مكتب التشغيل — إصدار عرض السعر للاستقبال ───────────────
@@ -258,7 +258,7 @@ class CivilianQueryChainE2eTest extends TestCase
         $patient->refresh();
         $this->assertEquals(CaseRecord::STAGE_DELIVERED, $case->stage_key);
         $this->assertNotNull($case->invoice_no);
-        $this->assertEquals(1560.00, (float) $case->invoice_total);
+        $this->assertEquals(750.64, (float) $case->invoice_total);
         $this->assertTrue($queues->patientIsArchived($patient->id));
         $this->assertNotContains($case->id, $queues->receptionDeliveryReadyCaseIds());
         $this->assertContains($case->id, $queues->deliveredCaseIds());

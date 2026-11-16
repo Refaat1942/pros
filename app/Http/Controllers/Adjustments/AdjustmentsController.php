@@ -99,7 +99,25 @@ class AdjustmentsController extends Controller
             'stock_catalog' => $stockCatalog,
             'spec_group_matcher' => \App\Support\StockKitGroups::forClientMatcher(),
             'price_tier_alerts' => $this->priceTierAlertsForCase($case),
+            'pricing_rates' => self::pricingRates(),
         ]);
+    }
+
+    /**
+     * نِسَب السعر النهائي — نفس محرك الاعتماد: التصنيع = المواد + مجموع البنود، الصرف السريع = المواد + ربحه.
+     *
+     * @return array{manufacturing: float, quick: float}
+     */
+    public static function pricingRates(): array
+    {
+        $modes = app(\App\Services\CostingModeService::class);
+        $limb = $modes->limbProfile();
+        $quick = $modes->quickProfile();
+
+        return [
+            'manufacturing' => round(($limb['has_components'] ?? false) ? array_sum(array_map(fn ($c) => (float) $c['rate'], $limb['components'] ?? [])) : 0, 2),
+            'quick' => round((float) ($quick['profit_rate'] ?? 0), 2),
+        ];
     }
 
     public function addItems(StoreAdjustmentItemsRequest $request, CaseRecord $case): JsonResponse
@@ -232,7 +250,10 @@ class AdjustmentsController extends Controller
     private function mapBomItems($items): Collection
     {
         $uomMap = StockItemUomLookup::forCodes($items->pluck('stock_item_code')->all());
-        $priceMap = StockItem::mapByOperationalCodes($items->pluck('stock_item_code')->all(), 'price');
+        // نفس سعر الاعتماد (أعلى سعر شراء) — علشان السعر النهائي في المعدلات = اللي هيظهر في الاعتماد.
+        $prices = app(\App\Services\StockPriceService::class);
+        $priceMap = $items->pluck('stock_item_code')->unique()
+            ->mapWithKeys(fn ($code) => [$code => $prices->highestUnitPrice((string) $code)])->all();
         $quickMap = StockItem::mapByOperationalCodes($items->pluck('stock_item_code')->all(), 'is_quick_dispense');
 
         return $items->map(fn (BomItem $i) => $this->formatBomItem($i, $uomMap, $priceMap, $quickMap));
