@@ -449,6 +449,43 @@
     return Math.round(itemQtyNumber(it) * price * 100) / 100;
   }
 
+  // ── السعر النهائي للعميل: كل خامة بنسبتها (تصنيع 87.66% / صرف سريع 40%) — نفس حساب الاعتماد ──
+  var pricingRates = { manufacturing: 0, quick: 0 };
+
+  function itemRate(it) {
+    return isQuickItem(it) ? (parseFloat(pricingRates.quick) || 0) : (parseFloat(pricingRates.manufacturing) || 0);
+  }
+
+  function itemLineFinal(it) {
+    return Math.round(itemLineCatalogTotal(it) * (1 + itemRate(it) / 100) * 100) / 100;
+  }
+
+  function finalPriceNote(it) {
+    return '<div style="font-size:11px;font-weight:700;color:' + (isQuickItem(it) ? '#047857' : '#4338ca') + ';margin-top:2px;">' +
+      'النهائي: ' + fmtCatalogPrice(itemLineFinal(it)) + ' (+' + itemRate(it) + '%)</div>';
+  }
+
+  function renderFinalSummary() {
+    var box = $('adjFinalSummary');
+    if (!box) return;
+    var items = (activeCase && activeCase.bom && activeCase.bom.items) || [];
+    if (!items.length) { box.hidden = true; return; }
+    var made = items.filter(function (it) { return !isQuickItem(it); });
+    var quick = items.filter(function (it) { return isQuickItem(it); });
+    var madeMat = bomCatalogGrandTotal(made), quickMat = bomCatalogGrandTotal(quick);
+    var madeFinal = made.reduce(function (s, it) { return s + itemLineFinal(it); }, 0);
+    var quickFinal = quick.reduce(function (s, it) { return s + itemLineFinal(it); }, 0);
+    function line(label, value, strong) {
+      return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;' + (strong ? 'font-weight:800;font-size:15px;' : '') + '"><span>' + label + '</span><span>' + fmtCatalogPrice(value) + ' ج.م</span></div>';
+    }
+    var html = '<div style="font-weight:800;color:#3730a3;margin-bottom:6px;">💰 السعر النهائي للعميل (قبل أي خصم)</div>';
+    if (made.length) html += line('🏭 تصنيع: مواد ' + fmtCatalogPrice(madeMat) + ' + ' + pricingRates.manufacturing + '%', madeFinal);
+    if (quick.length) html += line('🩼 صرف سريع: مواد ' + fmtCatalogPrice(quickMat) + ' + ' + pricingRates.quick + '%', quickFinal);
+    html += '<div style="border-top:1px dashed #a5b4fc;margin:6px 0;"></div>' + line('الإجمالي النهائي — ده اللي هيظهر في الاعتماد', madeFinal + quickFinal, true);
+    box.innerHTML = html;
+    box.hidden = false;
+  }
+
   function bomCatalogGrandTotal(items) {
     return (items || []).reduce(function (sum, it) {
       return sum + itemLineCatalogTotal(it);
@@ -547,7 +584,7 @@
           '<td>' + esc(it.name) + kindBadge(it) + '</td>' +
           '<td>' + esc(it.qty) + '</td>' +
           '<td>' + esc(it.uom || 'قطعة') + '</td>' +
-          '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td></tr>';
+          '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + finalPriceNote(it) + '</td></tr>';
       });
     });
     var specTotal = bomCatalogGrandTotal(specs);
@@ -575,7 +612,7 @@
         '<td><input type="number" class="form-control adj-edit-qty" data-idx="' + idx + '" min="0.001" step="0.001" value="' + esc(it.qty) + '"' +
         (activeCase && activeCase.has_pending_edit_request ? ' disabled' : '') + ' style="width:72px;padding:4px 8px;"></td>' +
         '<td>' + esc(it.uom || findCatalogItem(it.stock_item_code)?.uom || 'قطعة') + '</td>' +
-        '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td>' +
+        '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + finalPriceNote(it) + '</td>' +
         '<td><span class="badge done">معدّلات</span></td>' +
         '<td class="adj-col-action">' +
         (activeCase && activeCase.has_pending_edit_request ? '' :
@@ -742,6 +779,7 @@
 
     if (!adjItems.length) {
       tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">لا توجد بنود معدّلات — أضف بنداً من الكاتلوج.</td></tr>';
+      renderFinalSummary();
       return;
     }
 
@@ -767,13 +805,14 @@
         '<td><input type="number" class="form-control adj-item-qty-input" data-item-id="' + esc(it.id) + '"' +
         ' data-qty="' + esc(it.qty) + '" min="0.001" step="0.001" value="' + esc(it.qty) + '" style="width:82px;padding:4px 8px;"></td>' +
         '<td>' + esc(it.uom || 'قطعة') + '</td>' +
-        '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + '</td>' +
+        '<td class="catalog-price-cell" style="text-align:center;">' + itemCatalogPrice(it) + finalPriceNote(it) + '</td>' +
         '<td><span class="badge done">معدّلات</span></td>' +
         removeBtn +
         '</tr>';
     }).join('');
     rows += renderCatalogGrandTotalRow(5, bomCatalogGrandTotal(adjItems), 2);
     tbody.innerHTML = rows;
+    renderFinalSummary();
   }
 
   function updateAdjItemQty(itemId, newQty, inputEl) {
@@ -855,6 +894,7 @@
       .then(function (res) {
         activeCase = res.data.case;
         catalogCache = res.data.stock_catalog || [];
+        pricingRates = res.data.pricing_rates || pricingRates;
         specGroupMatcher = res.data.spec_group_matcher || [];
         modalMode = activeCase.can_modify_directly ? 'direct' : 'edit_request';
         editRequestItems = [];

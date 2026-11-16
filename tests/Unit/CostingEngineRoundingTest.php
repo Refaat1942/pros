@@ -39,7 +39,8 @@ class CostingEngineRoundingTest extends TestCase
         $result = (new CostingEngine)->calculateSplit($this->mode(), ['profit_rate' => 40], 2.72, 0);
 
         $this->assertSame(2.72, $result['components_total']);
-        $this->assertSame(10.61, $result['selling_price']);
+        // التصنيع: المواد + المكوّنات فقط — مفيش ربح بعدها.
+        $this->assertSame(5.44, $result['selling_price']);
     }
 
     public function test_many_amounts_keep_lines_equal_to_total(): void

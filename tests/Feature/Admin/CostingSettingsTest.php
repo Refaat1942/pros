@@ -85,7 +85,8 @@ class CostingSettingsTest extends TestCase
             ->assertJsonPath('costing_modes.0.key', 'prosthetic_limb')
             ->assertJsonPath('costing_modes.1.has_components', false);
 
-        $this->assertDatabaseHas('costing_modes', ['key' => 'prosthetic_limb', 'profit_rate' => 90]);
+        // التصنيع: نسبة الربح دايماً 0 (الهامش = مجموع البنود).
+        $this->assertDatabaseHas('costing_modes', ['key' => 'prosthetic_limb', 'profit_rate' => 0]);
         $this->assertDatabaseHas('costing_components', ['label' => 'فحص فني', 'rate' => 40]);
         $this->assertDatabaseCount('costing_components', 2);
     }

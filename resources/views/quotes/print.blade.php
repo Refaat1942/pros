@@ -432,6 +432,12 @@
 <div class="no-print">
     <button type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
+@if (($quote->status ?? null) === \App\Models\Quote::STATUS_PENDING)
+    {{-- مسودة للمراجعة في مكتب التشغيل — لسه ماتصدرتش للاستقبال. --}}
+    <div style="margin:8px auto;max-width:210mm;padding:8px 12px;border:2px dashed #b45309;color:#92400e;background:#fffbeb;text-align:center;font-weight:800;font-size:14px;">
+        مسودة للمراجعة — لم يُصدر هذا العرض بعد
+    </div>
+@endif
 
 <div class="{{ $sheetClass }}">
     <div class="corner corner--top" aria-hidden="true"></div>

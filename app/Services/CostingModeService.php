@@ -23,13 +23,14 @@ class CostingModeService
         [
             'key' => self::MODE_LIMB,
             'label' => 'طرف صناعي',
-            'profit_rate' => 95.0,
+            // هامش التصنيع = مجموع البنود (87.66%) — مفيش ربح إضافي بعدها.
+            'profit_rate' => 0.0,
             'has_components' => true,
             'components' => [
-                ['label' => 'تكاليف الفحص الفني والمطابقة الحركية', 'rate' => 30.0],
-                ['label' => 'تكاليف دمج المكونات والمفاصل الذكية', 'rate' => 25.0],
-                ['label' => 'مصروفات إهلاك الآلات والمعدات', 'rate' => 23.0],
-                ['label' => 'رسوم التقييم والتأهيل الحركي', 'rate' => 22.0],
+                ['label' => 'تكاليف الفحص الفني والمطابقة الحركية', 'rate' => 25.0],
+                ['label' => 'تكاليف دمج المكونات والمفاصل الذكية', 'rate' => 24.66],
+                ['label' => 'مصروفات إهلاك الآلات والمعدات', 'rate' => 15.0],
+                ['label' => 'رسوم التقييم والتأهيل الحركي', 'rate' => 23.0],
             ],
         ],
         [
@@ -145,7 +146,8 @@ class CostingModeService
                     ['key' => $key],
                     [
                         'label' => trim((string) ($mode['label'] ?? $key)),
-                        'profit_rate' => round((float) ($mode['profit_rate'] ?? 0), 2),
+                        // التصنيع: الهامش = مجموع البنود — نسبة الربح دايماً 0.
+                        'profit_rate' => $key === self::MODE_LIMB ? 0 : round((float) ($mode['profit_rate'] ?? 0), 2),
                         'has_components' => (bool) ($mode['has_components'] ?? false),
                         'active' => true,
                         'sort' => $sort,

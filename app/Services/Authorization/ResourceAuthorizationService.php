@@ -157,8 +157,14 @@ class ResourceAuthorizationService
             404,
         );
 
+        // مكتب التشغيل يقدر يطبع العرض «مسودة» قبل إصداره للاستقبال — للمراجعة وإرجاعه للتعديل لو فيه غلط.
+        $allowed = [Quote::STATUS_ISSUED, Quote::STATUS_APPROVED];
+        if ($dashboard === 'operations') {
+            $allowed[] = Quote::STATUS_PENDING;
+        }
+
         abort_unless(
-            in_array($quote->status, [Quote::STATUS_ISSUED, Quote::STATUS_APPROVED], true),
+            in_array($quote->status, $allowed, true),
             403,
             'عرض السعر غير متاح للطباعة في هذه المرحلة.',
         );

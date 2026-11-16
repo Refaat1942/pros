@@ -343,6 +343,12 @@
             keyInput.title = 'مفتاح أساسي يعتمد عليه الاعتماد — لا يمكن تغييره';
             del.style.display = 'none';
         }
+        if (mode.key === 'prosthetic_limb') {
+            // هامش التصنيع = مجموع البنود (مثلاً 87.66%) — مفيش ربح بعدها.
+            profitInput.value = 0;
+            profitInput.readOnly = true;
+            profitInput.title = 'التصنيع: سعر البيع = المواد + مجموع البنود فقط — لا يُضاف ربح بعدها';
+        }
 
         var head = h('div', { class: 'costing-mode-card__head' }, [
             field('اسم النمط', labelInput),

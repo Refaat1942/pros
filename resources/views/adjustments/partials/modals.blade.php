@@ -76,6 +76,9 @@
           </table>
         </div>
 
+        {{-- السعر النهائي للعميل — نفس حساب الاعتماد: التصنيع = المواد + نسب التصنيع، الصرف السريع = المواد + ربحه. --}}
+        <div id="adjFinalSummary" hidden style="margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid #c7d2fe;background:#eef2ff;"></div>
+
         <div id="adjDirectModifySection" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border,#e2e8f0);">
           <div class="adj-saved-groups-block" id="adjSavedGroupsBlock">
             <div class="adj-saved-groups-head">
