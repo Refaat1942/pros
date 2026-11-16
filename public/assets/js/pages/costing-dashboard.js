@@ -139,9 +139,12 @@
         '<div style="font-weight:800;color:#334155;margin-bottom:4px;">🏭 التصنيع</div>' +
         row('مواد التصنيع (أعلى سعر شراء)', money(base)) +
         comps.map(function (c) { return row('&nbsp;&nbsp;+ ' + esc(c.label) + ' (' + esc(c.rate) + '%)', money(c.amount)); }).join('') +
-        row('إجمالي تكلفة التصنيع' + (compRate ? ' (المواد + ' + Math.round(compRate * 100) / 100 + '% تكاليف تشغيل)' : ''), money(costing.base_total_cost), 'costing-overhead-row--highlight') +
-        row('ربح التصنيع (' + (costing.base_profit_rate || 0) + '%)', money(costing.base_profit_amount)) +
-        row('سعر بيع التصنيع', money(costing.base_selling), 'costing-overhead-row--highlight') +
+        // ربح التصنيع 0%: سعر البيع = المواد + نسب التصنيع بس — من غير أي إضافة بعدها.
+        ((parseFloat(costing.base_profit_rate) || 0) > 0
+          ? row('إجمالي تكلفة التصنيع' + (compRate ? ' (المواد + ' + Math.round(compRate * 100) / 100 + '%)' : ''), money(costing.base_total_cost), 'costing-overhead-row--highlight') +
+            row('ربح التصنيع (' + costing.base_profit_rate + '%)', money(costing.base_profit_amount))
+          : '') +
+        row('سعر بيع التصنيع' + (compRate ? ' (المواد + ' + Math.round(compRate * 100) / 100 + '%' + ((parseFloat(costing.base_profit_rate) || 0) > 0 ? ' + ربح ' + costing.base_profit_rate + '%' : '') + ')' : ''), money(costing.base_selling), 'costing-overhead-row--highlight') +
         '</div>';
     }
     if (quick > 0) {
@@ -235,14 +238,16 @@
       }
     }
 
-    if ($('costingTotalCost')) $('costingTotalCost').textContent = fmt(costing.total_cost) + ' ج.م';
-    if ($('costingTotalCostLabel')) $('costingTotalCostLabel').textContent = 'إجمالي التكلفة (تصنيع + صرف سريع)';
+    // الإجمالي: المواد + الإضافات (نسب التصنيع وربح الصرف السريع) = سعر البيع.
+    if ($('costingTotalCost')) $('costingTotalCost').textContent = fmt(costing.materials_total) + ' ج.م';
+    if ($('costingTotalCostLabel')) $('costingTotalCostLabel').textContent = 'إجمالي المواد (تصنيع + صرف سريع)';
 
     if ($('costingWacRow')) $('costingWacRow').style.display = canSeeInternal ? '' : 'none';
     if ($('costingWacTotal') && canSeeInternal) $('costingWacTotal').textContent = fmt(currentInternalTotal) + ' ج.م';
 
-    if ($('costingProfitLabel')) $('costingProfitLabel').textContent = 'إجمالي هامش الربح (' + (costing.profit_rate || 0) + '%)';
-    if ($('costingProfitAmount')) $('costingProfitAmount').textContent = fmt(costing.profit_amount) + ' ج.م';
+    // الإجمالي = مجموع الأقسام فقط (تصنيع + صرف سريع) — من غير نسبة إضافية.
+    if ($('costingProfitLabel')) $('costingProfitLabel').textContent = 'إجمالي الإضافات على المواد (تصنيع + صرف سريع)';
+    if ($('costingProfitAmount')) $('costingProfitAmount').textContent = fmt((parseFloat(costing.selling_price) || 0) - (parseFloat(costing.materials_total) || 0)) + ' ج.م';
     if ($('costingSellingPrice')) $('costingSellingPrice').textContent = fmt(costing.selling_price) + ' ج.م';
 
     // الأقسام آخر حاجة — بتخفي الصفوف القديمة المتفرقة.

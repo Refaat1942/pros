@@ -70,7 +70,7 @@
                 <strong id="costingQuickSelling">—</strong>
               </div>
               <div class="costing-overhead-row costing-overhead-row--highlight">
-                <span>إجمالي التكلفة</span>
+                <span id="costingTotalCostLabel">إجمالي المواد (تصنيع + صرف سريع)</span>
                 <strong id="costingTotalCost">—</strong>
               </div>
               <div class="costing-overhead-row costing-overhead-row--muted" id="costingWacRow" style="display:none;">

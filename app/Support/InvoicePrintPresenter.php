@@ -70,6 +70,20 @@ final class InvoicePrintPresenter
             ]);
         }
 
+        // عسكري بخصم حقيقي (من غير Up/Down): يظهر السعر قبل الخصم والخصم في الفاتورة.
+        if ($isMilitary && (float) ($case->updown_list_price ?? 0) <= 0 && (float) ($case->costing_discount_amount ?? 0) > 0
+            && (float) ($case->costing_gross_price ?? 0) > 0) {
+            $gross = round((float) $case->costing_gross_price, 2);
+            $totals = array_merge($totals, [
+                'gross_total' => $gross,
+                'discount_amount' => round($gross - (float) $totals['display_total'], 2),
+                'discount_percent' => (float) ($case->costing_discount_percent ?? 0),
+                'has_discount' => true,
+                'discount_is_amount' => $case->costing_discount_percent === null,
+                'is_real_discount' => true,
+            ]);
+        }
+
         // عسكري بخصم Up/Down: السعر المرفوع − الخصم الظاهري = مستحق الجهة نفسه.
         if ($isMilitary && (float) ($case->updown_list_price ?? 0) > 0) {
             $list = round((float) $case->updown_list_price, 2);
