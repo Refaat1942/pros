@@ -34,6 +34,9 @@ echo "==> تثبيت مكتبات PHP للإنتاج (بدون أدوات الت
 find "$PKG/files/vendor" -name .git -type d -prune -exec rm -rf {} +
 # روابط رمزية (symlinks) في ملفات اختبار المكتبات: zip بيتبعها وويندوز مابيدعمهاش — والتوقيع لازم يطابق المحتوى.
 find "$PKG" -type l -delete
+# اختبارات المكتبات (vendor/<pkg>/tests) مش بتستخدم في التشغيل — وهي اللي فيها أطول مسارات
+# (ويندوز بيرفض فك مسار أطول من 260 حرف).
+find "$PKG/files/vendor" -mindepth 3 -maxdepth 3 -type d \( -name tests -o -name Tests \) -prune -exec rm -rf {} +
 
 echo "==> سكريبتات ويندوز + رقم الإصدار"
 for f in UPDATE.bat INSTALL.bat; do
